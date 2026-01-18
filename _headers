@@ -1,0 +1,36 @@
+# Netlify headers file
+# Workers United
+# Fixes "stale deploy" by ensuring HTML/CSS/JS are always revalidated.
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# Always revalidate HTML (prevents stale deploys)
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sitemap.xml
+  Cache-Control: public, max-age=0, must-revalidate
+
+/robots.txt
+  Cache-Control: public, max-age=0, must-revalidate
+
+/humans.txt
+  Cache-Control: public, max-age=0, must-revalidate
+
+# If you use standalone CSS/JS files, keep them fresh too
+/*.css
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Cache static assets (images/icons) for 1 year
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
