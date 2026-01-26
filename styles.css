@@ -805,9 +805,9 @@ textarea {
 
 .radio-row {
   display: flex;
-  flex-wrap: wrap;
-  /* Allow wrap on very small screens, but row on normal */
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .radio-pill {
