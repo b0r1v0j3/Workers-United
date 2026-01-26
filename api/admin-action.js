@@ -39,13 +39,20 @@ export default async function handler(req, res) {
           <p>Thank you for your patience.</p>
           <p>We are pleased to inform you that your profile has passed our initial screening.</p>
           <p class="info-box">Before we can proceed to the next stage of your application, we require verification of your documents.</p>
-          <p><strong>Please reply to this email with the following documents:</strong></p>
-          <ul>
-            <li><strong>Passport Copy</strong> (Photo Page)</li>
-            <li><strong>Proof of Education</strong> (Diploma or Certificate)</li>
-            <li>Current <strong>Residence Permit</strong> (if applicable)</li>
-            <li>Updated <strong>CV</strong> (Resume)</li>
-          </ul>
+            <p><strong>Please upload your documents securely via the link below:</strong></p>
+            <p style="text-align: center; margin: 20px 0;">
+                <a href="https://www.workersunited.eu/upload?email=${encodeURIComponent(email)}" 
+                   style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                   Upload Documents Check
+                </a>
+            </p>
+            <p><strong>Required Documents:</strong></p>
+            <ul>
+                <li><strong>Passport Copy</strong> (Photo Page)</li>
+                <li><strong>Proof of Education</strong> (Diploma or Certificate)</li>
+                <li>Current <strong>Residence Permit</strong> (if applicable)</li>
+                <li>Updated <strong>CV</strong> (Resume)</li>
+            </ul>
         `;
                 break;
 
