@@ -108,9 +108,35 @@ export default async function handler(req) {
           </div>
           <p>Once payment is confirmed, you will receive your official <strong>Service Agreement</strong> and we will submit your application to the relevant authorities immediately.</p>
         `;
-                break;
+            case 'delete':
+                // No email template for delete, just API action
+                const deleteRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'accept': 'application/json',
+                        'api-key': apiKey
+                    }
+                });
 
-            default:
+                if (!deleteRes.ok) {
+                    // Check if 404 (already deleted) - we treat as success
+                    if (deleteRes.status !== 404) {
+                        const delErr = await deleteRes.text();
+                        return new Response(JSON.stringify({
+                            success: false,
+                            message: `Failed to delete from Brevo: ${delErr}`
+                        }), { status: 400 });
+                    }
+                }
+
+                return new Response(JSON.stringify({
+                    success: true,
+                    message: `Contact ${email} deleted successfully.`
+                }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+
                 return new Response(JSON.stringify({ success: false, message: 'Invalid action' }), { status: 400 });
         }
 

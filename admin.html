@@ -431,6 +431,9 @@
             } else {
                 buttons += baseBtn('request_docs', 'Start Process', 'btn-action');
             }
+            // Always add a small delete button at the end
+            buttons += `<button onclick="triggerAction('delete', '${lead.email}', '${lead.name.replace(/'/g, "\\'")}', this)" class="btn-sm" style="background:none; border:1px solid #fee2e2; color:#ef4444; margin-left:8px;" title="Delete Permanently">🗑️</button>`;
+
             return buttons;
         }
 
