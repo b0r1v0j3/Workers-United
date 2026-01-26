@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { name, email, phone, country, role, message } = req.body;
+    const { name, email, phone, country, role, message, job_preference } = req.body;
 
     if (!name || !email || !phone || !message) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -113,6 +113,7 @@ export default async function handler(req, res) {
               PHONE: phone,
               COUNTRY: country,
               ROLE: role,
+              JOB_PREFERENCE: job_preference || '',
               LEAD_STATUS: 'NEW'
             },
             updateEnabled: true
