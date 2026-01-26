@@ -840,10 +840,7 @@ textarea {
   box-shadow: 0 4px 12px rgba(47, 111, 237, 0.3);
 }
 
-border-radius: 16px;
-min-height: 110px;
-resize: vertical;
-}
+
 
 /* ============================================
    ANIMATIONS & NEW FEATURES
