@@ -33,7 +33,7 @@ export default async function handler(req) {
 
     // 1. Send Email to Owner
     const emailToOwner = {
-      sender: { name: "Workers United Site", email: "no-reply@workersunited.eu" },
+      sender: { name: "Workers United Site", email: "contact@workersunited.eu" },
       to: [{ email: "contact@workersunited.eu", name: "Workers United Team" }],
       cc: [{ email: "cvetkovicborivoje@gmail.com", name: "Borivoje" }],
       subject: `New Inquiry from ${name} (${role})`,
