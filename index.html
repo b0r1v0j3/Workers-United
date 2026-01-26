@@ -568,15 +568,16 @@
 
             <!-- Netlify form -->
             <div class="contact-form-card">
-              <form action="https://formspree.io/contact@workersunited.eu" method="POST">
-                <!-- Honeypot -->
-                <!-- Honeypot (optional for Formspree spam filtering if enabled there, but removing Netlify specific one) -->
-                <div style="display:none;">
-                  <label>
-                    Don't fill this out if you're human:
-                    <input name="_gotcha" />
-                  </label>
-                </div>
+              <form id="contact-form" action="https://api.web3forms.com/submit" method="POST">
+                <!-- Web3Forms Access Key -->
+                <input type="hidden" name="access_key" value="9119999f-e25a-45f4-807d-dd75c8b22afa">
+                <!-- Redirect after submission (optional) -->
+                <input type="hidden" name="redirect" value="https://www.workersunited.eu/?success=true">
+                <!-- Honeypot for spam protection -->
+                <input type="checkbox" name="botcheck" class="hidden" style="display:none;">
+
+                <!-- Success/Error message container -->
+                <div id="form-result" style="display:none; padding:12px; border-radius:8px; margin-bottom:16px;"></div>
 
                 <div class="contact-grid">
                   <div class="field">
@@ -622,8 +623,8 @@
                 </div>
 
                 <div class="contact-submit-row">
-                  <button type="submit" class="btn btn-primary">
-                    Send message
+                  <button type="submit" class="btn btn-primary" id="submit-btn">
+                    <span id="btn-text">Send message</span>
                   </button>
                   <div class="contact-submit-helper">
                     By sending this form you agree that we may contact you back regarding your request.
@@ -785,6 +786,65 @@
 
       window.addEventListener('scroll', toggleBackToTop, { passive: true });
       toggleBackToTop();
+    })();
+
+    // Web3Forms Contact Form Handler
+    (function () {
+      const form = document.getElementById('contact-form');
+      const submitBtn = document.getElementById('submit-btn');
+      const btnText = document.getElementById('btn-text');
+      const resultDiv = document.getElementById('form-result');
+
+      if (!form) return;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const originalText = btnText.textContent;
+
+        // Update button state
+        btnText.textContent = 'Sending...';
+        submitBtn.disabled = true;
+        resultDiv.style.display = 'none';
+
+        try {
+          const response = await fetch('https://api.web3forms.com/submit', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            // Success
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = 'rgba(29, 191, 115, 0.1)';
+            resultDiv.style.border = '1px solid rgba(29, 191, 115, 0.4)';
+            resultDiv.style.color = '#1dbf73';
+            resultDiv.innerHTML = '<strong>✓ Success!</strong> Your message has been sent. We will reply to you as soon as possible.';
+            form.reset();
+          } else {
+            // Error
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = 'rgba(231, 76, 60, 0.1)';
+            resultDiv.style.border = '1px solid rgba(231, 76, 60, 0.4)';
+            resultDiv.style.color = '#e74c3c';
+            resultDiv.innerHTML = '<strong>✗ Error:</strong> ' + (data.message || 'Something went wrong. Please try again.');
+          }
+        } catch (error) {
+          // Network error
+          resultDiv.style.display = 'block';
+          resultDiv.style.background = 'rgba(231, 76, 60, 0.1)';
+          resultDiv.style.border = '1px solid rgba(231, 76, 60, 0.4)';
+          resultDiv.style.color = '#e74c3c';
+          resultDiv.innerHTML = '<strong>✗ Error:</strong> Network error. Please check your connection and try again.';
+        } finally {
+          // Reset button state
+          btnText.textContent = originalText;
+          submitBtn.disabled = false;
+        }
+      });
     })();
   </script>
 
