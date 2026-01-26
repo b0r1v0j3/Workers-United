@@ -265,6 +265,43 @@
             d.innerHTML += `<div>${new Date().toLocaleTimeString()} - ${msg}</div>`;
         }
 
+        // Unregister Service Workers
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
+                    registration.unregister();
+                    log('Unregistered generic Service Worker');
+                }
+            });
+        }
+
+        async function probe() {
+            log('Probing endpoints...');
+            const endpoints = [
+                '/api/auth-challenge',
+                'https://workersunited.eu/api/auth-challenge',
+                'https://www.workersunited.eu/api/auth-challenge'
+            ];
+
+            for (let url of endpoints) {
+                try {
+                    const start = Date.now();
+                    log(`Probing ${url}...`);
+                    // We expect 405 or 200, but not timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    const res = await fetch(url, { method: 'OPTIONS', signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    log(`[${Date.now() - start}ms] ${url} -> ${res.status}`);
+                } catch (e) {
+                    log(`FAIL ${url}: ${e.name}`);
+                }
+            }
+        }
+
+        // Run probe on load
+        setTimeout(probe, 1000);
+
         let challengeData = null;
 
         // Auto-login check
