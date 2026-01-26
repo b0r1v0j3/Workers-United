@@ -294,11 +294,18 @@
             err.classList.add('hidden');
 
             try {
+                // Add Timeout to fetch
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
                 const res = await fetch('/api/auth-challenge', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: pwd })
+                    body: JSON.stringify({ password: pwd }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
+
                 const data = await res.json();
 
                 if (res.ok) {
@@ -311,7 +318,8 @@
                     err.classList.remove('hidden');
                 }
             } catch (e) {
-                err.innerText = 'Network Error';
+                console.error(e);
+                err.innerText = e.name === 'AbortError' ? 'Request timed out' : 'Network Error';
                 err.classList.remove('hidden');
             } finally {
                 btn.innerText = 'Next';
@@ -382,9 +390,14 @@
             indicator?.classList.remove('hidden');
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
                 const response = await fetch('/api/get-leads', {
-                    headers: { 'x-auth-token': token }
+                    headers: { 'x-auth-token': token },
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 if (response.status === 401) {
                     logout(); // Token expired
@@ -398,7 +411,9 @@
                 indicator?.classList.add('hidden');
             } catch (err) {
                 console.error(err);
-                indicator?.classList.add('hidden');
+                indicator?.innerHTML = err.name === 'AbortError' ? 'Timed out' : 'Fetch Error';
+                indicator?.classList.remove('hidden');
+                // Don't clear table yet, show old data if any? No, leadsBody is cleared in renderLeads.
             }
         }
 
