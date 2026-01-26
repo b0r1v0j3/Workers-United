@@ -61,8 +61,10 @@ export default async function handler(req, res) {
                 statusLabel = 'UNDER REVIEW';
                 bodyContent = `
           <p>Dear ${name},</p>
-          <p>We confirm receipt of your documents.</p>
-          <p>Our team is currently reviewing your file to assess eligibility.</p>
+          <p><strong>We confirm that we have received your documents.</strong></p>
+          <p>Our legal team has started the review process.</p>
+          <p class="info-box">Please allow <strong>24-48 hours</strong> for this assessment. We will contact you immediately once the review is complete with the next steps.</p>
+          <p>You do not need to take any further action at this moment.</p>
         `;
                 break;
 
