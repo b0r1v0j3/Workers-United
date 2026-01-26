@@ -40,19 +40,14 @@ export default async function handler(req) {
             return new Response(JSON.stringify({ message: 'Server configuration error' }), { status: 500 });
         }
 
-        // Fetch contacts from Brevo with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
-
+        // Fetch contacts from Brevo
         const res = await fetch('https://api.brevo.com/v3/contacts?limit=50&sort=desc', {
             method: 'GET',
             headers: {
                 'accept': 'application/json',
                 'api-key': apiKey
-            },
-            signal: controller.signal
+            }
         });
-        clearTimeout(timeoutId);
 
         if (!res.ok) {
             const errorText = await res.text();

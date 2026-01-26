@@ -58,10 +58,6 @@ export default async function handler(req) {
                 <p>If you did not request this code, please ignore this email.</p>
             `;
 
-            // Add timeout for email send
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
-
             await fetch('https://api.brevo.com/v3/smtp/email', {
                 method: 'POST',
                 headers: {
@@ -74,10 +70,8 @@ export default async function handler(req) {
                     to: [{ email: "cvetkovicborivoje@gmail.com", name: "Admin" }],
                     subject: subject,
                     htmlContent: getEmailTemplate('Secure Login Verification', bodyContent)
-                }),
-                signal: controller.signal
+                })
             });
-            clearTimeout(timeoutId);
         } else {
             console.warn("No BREVO_API_KEY found, OTP not sent.");
         }
