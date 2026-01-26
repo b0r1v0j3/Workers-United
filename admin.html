@@ -413,7 +413,7 @@
         function getActionButtons(lead) {
             // Logic to show relevant buttons
             const baseBtn = (action, label, cls) =>
-                `<button onclick="triggerAction('${action}', '${lead.email}', '${lead.name.replace(/'/g, "\\'")}', this)" class="btn-sm ${cls}">${label}</button>`;
+                `<button onclick="triggerAction('${action}', '${lead.email}', '${lead.id}', '${lead.name.replace(/'/g, "\\'")}', this)" class="btn-sm ${cls}">${label}</button>`;
 
             let buttons = '';
             if (lead.status === 'NEW') {
@@ -432,7 +432,7 @@
                 buttons += baseBtn('request_docs', 'Start Process', 'btn-action');
             }
             // Always add a small delete button at the end
-            buttons += `<button onclick="triggerAction('delete', '${lead.email}', '${lead.name.replace(/'/g, "\\'")}', this)" class="btn-sm" style="background:none; border:1px solid #fee2e2; color:#ef4444; margin-left:8px;" title="Delete Permanently">🗑️</button>`;
+            buttons += `<button onclick="triggerAction('delete', '${lead.email}', '${lead.id}', '${lead.name.replace(/'/g, "\\'")}', this)" class="btn-sm" style="background:none; border:1px solid #fee2e2; color:#ef4444; margin-left:8px;" title="Delete Permanently">🗑️</button>`;
 
             return buttons;
         }

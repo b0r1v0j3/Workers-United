@@ -113,7 +113,7 @@ export default async function handler(req) {
         `;
             case 'delete':
                 // No email template for delete, just API action
-                const deleteRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
+                const deleteRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(identifier)}`, {
                     method: 'DELETE',
                     headers: {
                         'accept': 'application/json',
