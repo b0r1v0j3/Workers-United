@@ -50,25 +50,27 @@ export default async function handler(req, res) {
         const data = await fetchRes.json();
         const contacts = data.contacts || [];
 
-        const leads = contacts.map(c => {
-            const attrs = c.attributes || {};
-            return {
-                id: c.id,
-                email: c.email,
-                name: `${attrs.FIRSTNAME || ''} ${attrs.LASTNAME || ''}`.trim(),
-                phone: attrs.PHONE || '',
-                country: attrs.COUNTRY || 'Unknown',
-                role: attrs.ROLE || 'Unknown',
-                job_preference: attrs.JOB_PREFERENCE || '-',
-                status: attrs.LEAD_STATUS || 'NEW',
-                date: c.createdAt
-            };
-        });
+        const attrs = c.attributes || {};
+        // Helper to find attribute case-insensitively
+        const getAttr = (key) => attrs[key] || attrs[key.toUpperCase()] || attrs[key.charAt(0).toUpperCase() + key.slice(1).toLowerCase()];
 
-        return res.status(200).json({ leads });
+        return {
+            id: c.id,
+            email: c.email,
+            name: `${attrs.FIRSTNAME || ''} ${attrs.LASTNAME || ''}`.trim(),
+            phone: getAttr('PHONE') || '',
+            country: getAttr('COUNTRY') || 'Unknown',
+            role: getAttr('ROLE') || 'Unknown',
+            job_preference: getAttr('JOB_PREFERENCE') || '-',
+            status: getAttr('LEAD_STATUS') || 'NEW',
+            date: c.createdAt
+        };
+    });
 
-    } catch (error) {
-        console.error('Get Leads Error:', error);
-        return res.status(500).json({ success: false, message: error.message });
-    }
+    return res.status(200).json({ leads });
+
+} catch (error) {
+    console.error('Get Leads Error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+}
 }
