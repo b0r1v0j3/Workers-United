@@ -1,6 +1,5 @@
-export const config = {
-    runtime: 'edge',
-};
+// Node.js runtime for stability
+// export const config = { runtime: 'edge' };
 
 async function verifyToken(token) {
     if (!token) return false;

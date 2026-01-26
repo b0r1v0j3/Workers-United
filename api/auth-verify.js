@@ -1,6 +1,5 @@
-export const config = {
-    runtime: 'edge',
-};
+// Node.js runtime
+// export const config = { runtime: 'edge' };
 
 // HELPER: HMAC SHA-256
 async function hmacSha256(key, data) {

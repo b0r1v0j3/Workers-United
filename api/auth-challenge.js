@@ -1,8 +1,7 @@
 import { getEmailTemplate } from './email-template.js';
 
-export const config = {
-    runtime: 'edge',
-};
+// Node.js runtime
+// export const config = { runtime: 'edge' };
 
 // Simple HMAC SHA-256 implementation using Web Crypto API
 async function hmacSha256(key, data) {

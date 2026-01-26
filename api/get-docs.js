@@ -1,8 +1,7 @@
 import { list } from '@vercel/blob';
 
-export const config = {
-    runtime: 'edge',
-};
+// Node.js runtime
+// export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
     const { searchParams } = new URL(req.url);
