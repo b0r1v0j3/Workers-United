@@ -127,24 +127,35 @@ export default async function handler(req, res) {
       }
     };
 
-    // Execute sequentially to avoid race conditions causing hangs
+    // Execute sequentially/parallel but MUST await in Serverless
     try {
+      // 1. Send Owner Email (Must succeed)
       const ownerRes = await sendBrevoEmail(emailToOwner);
       if (!ownerRes.ok) {
-        console.error('Owner email failed:', await ownerRes.text());
-        // Proceed anyway to try user email? No, owner email is critical.
-        throw new Error('Failed to send owner notification');
+        const errText = await ownerRes.text();
+        console.error('Owner email failed:', errText);
+        throw new Error('Failed to send owner notification: ' + errText);
       }
 
-      // We don't block on these
-      sendBrevoEmail(emailToUser).catch(e => console.error('User auto-reply failed', e));
-      saveBrevoContact().catch(e => console.error('CRM save failed', e));
+      // 2. Send User Email & Save to CRM (Attempt both, don't fail if they error)
+      const results = await Promise.allSettled([
+        sendBrevoEmail(emailToUser),
+        saveBrevoContact()
+      ]);
+
+      // Log any failures
+      results.forEach((result, index) => {
+        const label = index === 0 ? 'User Auto-reply' : 'CRM Contact Save';
+        if (result.status === 'rejected') {
+          console.error(`${label} failed:`, result.reason);
+        }
+      });
 
       return res.status(200).json({ success: true, message: 'Message sent successfully' });
 
     } catch (innerErr) {
       console.error("Inner Email Logic Error:", innerErr);
-      throw innerErr;
+      return res.status(500).json({ success: false, message: 'Failed to send email: ' + innerErr.message });
     }
 
   } catch (error) {
