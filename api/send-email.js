@@ -1,50 +1,47 @@
 import { getEmailTemplate } from './email-template.js';
 
-// Node.js runtime
-// export const config = { runtime: 'edge' };
+export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'x-auth-token, Authorization, Content-Type');
 
-export default async function handler(req) {
-  // Only allow POST requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ message: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
   try {
-    const { name, email, phone, country, role, message } = await req.json();
+    const { name, email, phone, country, role, message } = req.body;
 
     if (!name || !email || !phone || !message) {
-      return new Response(JSON.stringify({ message: 'Missing required fields' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
     const apiKey = process.env.BREVO_API_KEY;
 
     if (!apiKey) {
       console.error('Missing BREVO_API_KEY');
-      return new Response(JSON.stringify({ message: 'Server configuration error' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(500).json({ message: 'Server configuration error' });
     }
 
-    // 1. Send Email to Owner (Internal Notification - Keep simple or brand as well)
-    // We'll keep it simple HTML for owner or brand it? Let's brand it for consistency.
+    // 1. Send Email to Owner
     const ownerContent = `
-        <h2>New Website Inquiry</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Country:</strong> ${country}</p>
-        <p><strong>Role:</strong> ${role}</p>
-        <hr/>
-        <h3>Message:</h3>
-        <p>${message}</p>
-    `;
+            <h2>New Website Inquiry</h2>
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Phone:</strong> ${phone}</p>
+            <p><strong>Country:</strong> ${country}</p>
+            <p><strong>Role:</strong> ${role}</p>
+            <hr/>
+            <h3>Message:</h3>
+            <p>${message}</p>
+        `;
 
     const emailToOwner = {
       sender: { name: "Workers United Site", email: "contact@workersunited.eu" },
@@ -56,12 +53,12 @@ export default async function handler(req) {
 
     // 2. Send Auto-Reply to User
     const userBody = `
-        <p>Dear ${name},</p>
-        <p>Thank you for contacting Workers United.</p>
-        <p>We have received your inquiry regarding <strong>${role}</strong> opportunities.</p>
-        <p class="info-box">Our team is currently reviewing your details. We usually reply within 24-48 hours with specific information valid for your country (${country}).</p>
-        <p>Thank you for your patience.</p>
-    `;
+            <p>Dear ${name},</p>
+            <p>Thank you for contacting Workers United.</p>
+            <p>We have received your inquiry regarding <strong>${role}</strong> opportunities.</p>
+            <p class="info-box">Our team is currently reviewing your details. We usually reply within 24-48 hours with specific information valid for your country (${country}).</p>
+            <p>Thank you for your patience.</p>
+        `;
 
     const emailToUser = {
       sender: { name: "Workers United", email: "contact@workersunited.eu" },
@@ -70,69 +67,88 @@ export default async function handler(req) {
       htmlContent: getEmailTemplate('Message Received', userBody)
     };
 
-    // Function to call Brevo API for triggering emails
+    // Function to call Brevo API
     const sendBrevoEmail = async (payload) => {
-      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'api-key': apiKey,
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      return res;
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'api-key': apiKey,
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return res;
+      } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+      }
     };
 
     // Function to Create/Update Contact in Brevo CRM
     const saveBrevoContact = async () => {
-      // First, try to create the contact
-      let res = await fetch('https://api.brevo.com/v3/contacts', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'api-key': apiKey,
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: email,
-          attributes: {
-            FIRSTNAME: name.split(' ')[0],
-            LASTNAME: name.split(' ').slice(1).join(' ') || '',
-            PHONE: phone,
-            COUNTRY: country,
-            ROLE: role,
-            LEAD_STATUS: 'NEW' // Custom attribute for our funnel
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch('https://api.brevo.com/v3/contacts', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'api-key': apiKey,
+            'content-type': 'application/json'
           },
-          updateEnabled: true // If exists, update it
-        })
-      });
-      return res;
+          body: JSON.stringify({
+            email: email,
+            attributes: {
+              FIRSTNAME: name.split(' ')[0],
+              LASTNAME: name.split(' ').slice(1).join(' ') || '',
+              PHONE: phone,
+              COUNTRY: country,
+              ROLE: role,
+              LEAD_STATUS: 'NEW'
+            },
+            updateEnabled: true
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return res;
+      } catch (err) {
+        clearTimeout(timeoutId);
+        console.warn("Contact save failed lightly:", err);
+        return { ok: true }; // Ignore CRM errors for now to ensure email sends
+      }
     };
 
-    // Execute all in parallel
-    const [ownerRes, userRes, contactRes] = await Promise.all([
-      sendBrevoEmail(emailToOwner),
-      sendBrevoEmail(emailToUser),
-      saveBrevoContact()
-    ]);
+    // Execute sequentially to avoid race conditions causing hangs
+    try {
+      const ownerRes = await sendBrevoEmail(emailToOwner);
+      if (!ownerRes.ok) {
+        console.error('Owner email failed:', await ownerRes.text());
+        // Proceed anyway to try user email? No, owner email is critical.
+        throw new Error('Failed to send owner notification');
+      }
 
-    if (!ownerRes.ok) {
-      const errorData = await ownerRes.text();
-      console.error('Brevo Error (Owner):', errorData);
-      throw new Error('Failed to send email to owner');
+      // We don't block on these
+      sendBrevoEmail(emailToUser).catch(e => console.error('User auto-reply failed', e));
+      saveBrevoContact().catch(e => console.error('CRM save failed', e));
+
+      return res.status(200).json({ success: true, message: 'Message sent successfully' });
+
+    } catch (innerErr) {
+      console.error("Inner Email Logic Error:", innerErr);
+      throw innerErr;
     }
-
-    return new Response(JSON.stringify({ success: true, message: 'Message sent successfully' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
 
   } catch (error) {
     console.error('Handler Error:', error);
-    return new Response(JSON.stringify({ success: false, message: 'Failed to process request: ' + error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ success: false, message: 'Failed to process request: ' + error.message });
   }
 }
