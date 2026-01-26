@@ -1,31 +1,52 @@
+export const config = {
+    runtime: 'edge',
+};
+
 export default async function handler(req) {
     const apiKey = process.env.BREVO_API_KEY;
+
+    // HTML Helper
+    const htmlResponse = (title, message, color, detail = '') => {
+        return new Response(
+            `<!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; text-align: center; background: #f9fafb; }
+                    .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+                    h1 { color: ${color}; margin-bottom: 20px; }
+                    p { color: #4b5563; line-height: 1.5; }
+                    code { background: #f3f4f6; padding: 4px 8px; border-radius: 4px; display: block; margin: 20px 0; word-break: break-all; }
+                    .btn { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 20px; }
+                    .btn:hover { background: #1d4ed8; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h1>${title}</h1>
+                    <p>${message}</p>
+                    ${detail ? `<code>${detail}</code>` : ''}
+                    <a href="/admin" class="btn">Return to Dashboard</a>
+                </div>
+            </body>
+            </html>`,
+            {
+                status: 200,
+                headers: { 'content-type': 'text/html' }
+            }
+        );
+    };
+
     if (!apiKey) {
-        return new Response('Missing API Key', { status: 500 });
+        return htmlResponse('Configuration Error', 'Missing BREVO_API_KEY environment variable.', '#dc2626');
     }
 
     try {
-        // 1. List existing attributes to see if it's there
-        const listRes = await fetch('https://api.brevo.com/v3/contacts/attributes', {
-            method: 'GET',
-            headers: { 'api-key': apiKey }
-        });
-
-        if (!listRes.ok) {
-            return new Response(`Failed to list attributes: ${await listRes.text()}`, { status: 400 });
-        }
-
-        const data = await listRes.json();
-        const attributes = data.attributes || [];
-        const exists = attributes.find(a => a.name === 'LEAD_STATUS');
-
-        if (exists) {
-            return new Response(`SUCCESS: Attribute LEAD_STATUS already exists! You are good to go.`, { status: 200 });
-        }
-
-        // 2. If not exists, try to create it using the "standard" path structure
-        // According to docs: POST /contacts/attributes/{category}/{name}
-        const createRes = await fetch('https://api.brevo.com/v3/contacts/attributes/normal/LEAD_STATUS', {
+        // Direct attempt to create the attribute
+        // Endpoint: POST https://api.brevo.com/v3/contacts/attributes/normal/LEAD_STATUS
+        const response = await fetch('https://api.brevo.com/v3/contacts/attributes/normal/LEAD_STATUS', {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -35,30 +56,19 @@ export default async function handler(req) {
             body: JSON.stringify({ type: "text" })
         });
 
-        if (createRes.ok) {
-            return new Response(`SUCCESS: Created LEAD_STATUS.`, { status: 200 });
+        const text = await response.text();
+
+        if (response.ok) {
+            return htmlResponse('Success! 🎉', 'The LEAD_STATUS attribute has been successfully created.', '#059669', 'Status: Created');
         }
 
-        const errorText = await createRes.text();
-
-        // 3. Fallback: Try the "body" method if the URL path method failed
-        const createRes2 = await fetch('https://api.brevo.com/v3/contacts/attributes/normal', {
-            method: 'POST',
-            headers: {
-                'accept': 'application/json',
-                'api-key': apiKey,
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify({ value: "LEAD_STATUS", type: "text" })
-        });
-
-        if (createRes2.ok) {
-            return new Response(`SUCCESS: Created LEAD_STATUS (fallback method).`, { status: 200 });
+        if (text.includes("already exists")) {
+            return htmlResponse('All Good! 👍', 'The LEAD_STATUS attribute already exists.', '#2563eb', 'Status: Already Exists');
         }
 
-        return new Response(`Failed to create. \nMethod 1 Error: ${errorText} \nMethod 2 Error: ${await createRes2.text()}`, { status: 400 });
+        return htmlResponse('Failed 😔', 'Could not create attribute.', '#dc2626', text);
 
-    } catch (error) {
-        return new Response(`Script Error: ${error.message}`, { status: 500 });
+    } catch (e) {
+        return htmlResponse('Script Error', 'Something went wrong executing the script.', '#dc2626', e.message);
     }
 }
