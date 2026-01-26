@@ -1,4 +1,5 @@
 import { getEmailTemplate } from './email-template.js';
+import { list, del } from '@vercel/blob';
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -90,6 +91,21 @@ export default async function handler(req, res) {
                 break;
 
             case 'delete':
+                // 1. Delete files from Vercel Blob
+                try {
+                    const prefix = `candidates/${email}/`;
+                    const { blobs } = await list({ prefix, token: process.env.BLOB_READ_WRITE_TOKEN });
+                    if (blobs.length > 0) {
+                        const urls = blobs.map(b => b.url);
+                        await del(urls, { token: process.env.BLOB_READ_WRITE_TOKEN });
+                        console.log(`Deleted ${urls.length} files for ${email}`);
+                    }
+                } catch (blobErr) {
+                    console.error('Blob cleanup failed:', blobErr);
+                    // Don't fail the whole request, just log it
+                }
+
+                // 2. Delete from Brevo
                 const deleteRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
                     method: 'DELETE',
                     headers: { 'accept': 'application/json', 'api-key': apiKey }
