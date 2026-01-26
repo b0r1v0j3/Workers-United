@@ -6,8 +6,8 @@ export const getEmailTemplate = (title, bodyContent) => `
   <style>
     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f7; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
     .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .header { background-color: #ffffff; padding: 30px; text-align: center; border-bottom: 2px solid #2563eb; }
-    .logo { max-width: 180px; height: auto; display: inline-block; }
+    .header { background-color: #ffffff; padding: 0; text-align: center; border-bottom: 2px solid #2563eb; }
+    .logo { width: 100%; max-width: 600px; height: auto; display: block; pointer-events: none; }
     .content { padding: 40px 30px; color: #333333; line-height: 1.6; font-size: 16px; }
     .footer { background-color: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #999999; border-top: 1px solid #eeeeee; }
     h1 { color: #111827; font-size: 22px; margin-top: 0; margin-bottom: 20px; }
