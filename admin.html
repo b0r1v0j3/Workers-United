@@ -480,7 +480,7 @@
                     actionsCell.innerHTML = getActionButtons(simpleLeadMock);
 
                     // Also refresh in background just in case
-                    loadLeads();
+                    // loadLeads(); // Commented out to prevent flickering
                 } else {
                     alert('Error: ' + data.message);
                     if (res.status === 401) logout();
