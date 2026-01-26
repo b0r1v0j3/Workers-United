@@ -458,6 +458,28 @@
                 const data = await res.json();
                 if (res.ok) {
                     alert('Success: ' + data.message);
+
+                    // Optimistic UI Update
+                    const row = btnElement.closest('tr');
+                    const badgeCell = row.cells[4];
+                    const actionsCell = row.cells[5];
+
+                    let newStatus = 'UNKNOWN';
+                    if (action === 'request_docs') newStatus = 'DOCS REQUESTED';
+                    else if (action === 'docs_received') newStatus = 'UNDER REVIEW';
+                    else if (action === 'approve_payment') newStatus = 'PAYMENT REQUESTED';
+                    else if (action === 'reject') newStatus = 'REJECTED';
+
+                    badgeCell.innerHTML = getStatusBadge(newStatus);
+
+                    const simpleLeadMock = {
+                        email: email,
+                        name: name,
+                        status: newStatus
+                    };
+                    actionsCell.innerHTML = getActionButtons(simpleLeadMock);
+
+                    // Also refresh in background just in case
                     loadLeads();
                 } else {
                     alert('Error: ' + data.message);
