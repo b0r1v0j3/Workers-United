@@ -437,7 +437,7 @@
             return buttons;
         }
 
-        async function triggerAction(action, email, name, btnElement) {
+        async function triggerAction(action, email, id, name, btnElement) {
             if (!confirm(`Are you sure you want to ${action.replace('_', ' ')} for ${name}?`)) return;
 
             const token = localStorage.getItem('auth_token'); // Use Token
@@ -453,6 +453,7 @@
                     body: JSON.stringify({
                         action: action,
                         email: email,
+                        id: id,
                         name: name,
                         token: token // Use Token
                     })

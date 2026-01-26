@@ -63,6 +63,7 @@ export default async function handler(req) {
         const leads = contacts.map(c => {
             const attrs = c.attributes || {};
             return {
+                id: c.id,
                 email: c.email,
                 name: `${attrs.FIRSTNAME || ''} ${attrs.LASTNAME || ''}`.trim(),
                 country: attrs.COUNTRY || 'Unknown',

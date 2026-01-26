@@ -30,7 +30,10 @@ export default async function handler(req) {
     }
 
     try {
-        const { action, email, name, token } = await req.json();
+        const { action, email, id, name, token } = await req.json();
+
+        // Use ID if available, fallback to Email
+        const identifier = id || email;
 
         // Security check
         const isValid = await verifyToken(token);
