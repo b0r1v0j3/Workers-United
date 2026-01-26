@@ -949,20 +949,26 @@ textarea:focus {
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.12);
-  color: var(--primary);
+  color: #1b2430;
   opacity: 1;
-  transition: transform 0.15s ease, background 0.15s ease;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .wu-social:hover {
   transform: translateY(-1px);
   background: rgba(0, 0, 0, 0.10);
+  color: var(--primary-soft);
 }
 
 .wu-social svg {
   width: 20px;
   height: 20px;
-  fill: currentColor;
+  fill: #1b2430;
+  stroke: none;
+}
+
+.wu-social:hover svg {
+  fill: var(--primary-soft);
 }
 
 .wu-social-img {
@@ -1157,4 +1163,259 @@ textarea:focus {
 
 .form-success-card .btn {
   margin: 0 auto;
+}
+
+/* ============================================
+   SKIP TO MAIN CONTENT (Accessibility)
+   ============================================ */
+
+.skip-to-main {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  background: var(--primary);
+  color: #fff;
+  padding: 12px 20px;
+  text-decoration: none;
+  font-weight: 600;
+  z-index: 1000;
+  border-radius: 0 0 8px 0;
+  transition: top 0.2s ease;
+}
+
+.skip-to-main:focus {
+  top: 0;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   BACK TO TOP BUTTON
+   ============================================ */
+
+.back-to-top {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2f6fed, #1c4dd6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(47, 111, 237, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 100;
+}
+
+.back-to-top.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(47, 111, 237, 0.5);
+}
+
+.back-to-top:focus {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.back-to-top svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  fill: none;
+}
+
+@media (max-width: 768px) {
+  .back-to-top {
+    bottom: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ============================================
+   SMOOTH SCROLL
+   ============================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   HOVER EFFECTS ON CARDS
+   ============================================ */
+
+.step-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.step-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px rgba(9, 30, 66, 0.2);
+}
+
+.reason-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reason-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px rgba(9, 30, 66, 0.2);
+}
+
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px rgba(9, 30, 66, 0.25);
+}
+
+/* ============================================
+   HERO ANIMATIONS
+   ============================================ */
+
+.hero-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.hero-right {
+  animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   MOBILE MENU ANIMATION
+   ============================================ */
+
+@media (max-width: 899px) {
+  .nav {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  
+  .nav:not(.nav-open) {
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+  }
+  
+  .nav.nav-open {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+}
+
+/* ============================================
+   IMPROVED FOCUS INDICATORS
+   ============================================ */
+
+a:focus,
+button:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 3px solid var(--primary-soft);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.nav a:focus {
+  outline-offset: 4px;
+}
+
+.btn:focus {
+  outline-offset: 3px;
+}
+
+/* ============================================
+   FOOTER COL STYLES (for legal pages)
+   ============================================ */
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-company-name {
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 8px;
+}
+
+.footer-company-address {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ============================================
+   BREADCRUMBS
+   ============================================ */
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.breadcrumbs a {
+  color: var(--primary-soft);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.breadcrumbs a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.breadcrumbs span[aria-hidden="true"] {
+  color: var(--border);
+  margin: 0 4px;
+}
+
+.breadcrumbs > span:last-child {
+  color: var(--text);
+  font-weight: 500;
 }

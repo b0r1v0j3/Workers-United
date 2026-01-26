@@ -10,9 +10,17 @@
     <priority>1.0</priority>
   </url>
   
-  <!-- Legal Page -->
+  <!-- Privacy Policy -->
   <url>
-    <loc>https://workersunited.eu/legal.html</loc>
+    <loc>https://workersunited.eu/privacy-policy.html</loc>
+    <lastmod>2026-01-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Terms and Conditions -->
+  <url>
+    <loc>https://workersunited.eu/terms.html</loc>
     <lastmod>2026-01-09</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
