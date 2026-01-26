@@ -407,7 +407,7 @@
             tbody.innerHTML = '';
 
             if (leads.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#6b7280; padding:20px;">No candidates found yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#6b7280; padding:20px;">No candidates found yet.</td></tr>';
                 return;
             }
 
@@ -493,8 +493,8 @@
 
                     // Optimistic UI Update
                     const row = btnElement.closest('tr');
-                    const badgeCell = row.cells[4];
-                    const actionsCell = row.cells[5];
+                    const badgeCell = row.cells[6];
+                    const actionsCell = row.cells[7];
 
                     let newStatus = 'UNKNOWN';
                     if (action === 'request_docs') newStatus = 'DOCS REQUESTED';

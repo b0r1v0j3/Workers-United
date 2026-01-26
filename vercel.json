@@ -19,6 +19,11 @@
       "source": "/admin",
       "destination": "/admin.html",
       "permanent": true
+    },
+    {
+      "source": "/upload",
+      "destination": "/upload.html",
+      "permanent": true
     }
   ],
   "headers": [
