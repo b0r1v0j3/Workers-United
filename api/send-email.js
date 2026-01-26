@@ -58,10 +58,9 @@ export default async function handler(req) {
         <p>Hello ${name},</p>
         <p>Thank you for contacting Workers United. We have received your inquiry regarding <strong>${role}</strong> opportunities.</p>
         <p>Our team is currently reviewing your details. We usually reply within 24-48 hours with specific information valid for your country (${country}).</p>
-        <p>In the meantime, feel free to browse our FAQ section.</p>
         <br/>
         <p>Best regards,</p>
-        <p><strong>Workers United Team</strong></p>
+        <p><strong>Workers United LLC</strong></p>
         <p><a href="https://www.workersunited.eu">www.workersunited.eu</a></p>
       </body></html>`
     };
