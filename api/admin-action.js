@@ -107,6 +107,8 @@ export default async function handler(req) {
           </div>
           <p>Once payment is confirmed, you will receive your official <strong>Service Agreement</strong> and we will submit your application to the relevant authorities immediately.</p>
         `;
+                break;
+
             case 'delete':
                 // No email template for delete, just API action
                 const deleteRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(identifier)}`, {
@@ -136,6 +138,7 @@ export default async function handler(req) {
                     headers: { 'Content-Type': 'application/json' },
                 });
 
+            default:
                 return new Response(JSON.stringify({ success: false, message: 'Invalid action' }), { status: 400 });
         }
 
