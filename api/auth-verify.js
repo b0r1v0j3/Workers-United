@@ -1,31 +1,36 @@
-export default async function handler(req) {
+export default async function handler(req, res) {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
+
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+
     if (req.method !== 'POST') {
-        return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
+        return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
     try {
-        const { otp, hash, expiry } = await req.json();
+        const { otp, hash } = req.body;
 
-        // 1. Check if Emergency Mode
         if (otp === '111111' && hash === 'EMERGENCY_HASH') {
-            // Success! Generate a fake token or simple token
-            const token = `AUTH_SESSION.${Date.now() + 24 * 60 * 60 * 1000}`; // Simple token
-
-            return new Response(JSON.stringify({
+            const token = `AUTH_SESSION.${Date.now() + 24 * 60 * 60 * 1000}`;
+            return res.status(200).json({
                 success: true,
                 token: token
-            }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' },
             });
         }
 
-        return new Response(JSON.stringify({ success: false, message: 'Invalid code.' }), { status: 401 });
+        return res.status(401).json({ success: false, message: 'Invalid code.' });
 
     } catch (error) {
-        return new Response(JSON.stringify({ success: false, message: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }

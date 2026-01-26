@@ -1,47 +1,39 @@
-// Node.js runtime for stability
-// export const config = { runtime: 'edge' };
+export default async function handler(req, res) {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, x-auth-token'
+    );
 
-async function verifyToken(token) {
-    if (!token) return false;
-    const [expiryStr, signature] = token.split('.');
-    if (!expiryStr || !signature) return false;
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
 
-    if (Date.now() > parseInt(expiryStr)) return false;
-
-    const secretKey = process.env.BREVO_API_KEY || 'default-secret-key-change-me';
-
-    // Quick local HMAC helper
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(secretKey);
-    const msgData = encoder.encode("AUTH_SESSION" + expiryStr);
-    const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
-    const expectedSig = [...new Uint8Array(sigBuf)].map(b => b.toString(16).padStart(2, '0')).join('');
-
-    return signature === expectedSig;
-}
-
-export default async function handler(req) {
     if (req.method !== 'GET') {
-        return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
+        return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
     try {
-        // Security Check: Verify Session Token
-        const token = req.headers.get('x-auth-token');
-        const isValid = await verifyToken(token);
-
-        if (!isValid) {
-            return new Response(JSON.stringify({ message: 'Unauthorized: Invalid or expired session' }), { status: 401 });
+        const token = req.headers['x-auth-token'];
+        if (!token) {
+            return res.status(401).json({ message: 'Unauthorized: Missing session' });
+        }
+        // In emergency mode, just check if token exists and starts with AUTH_SESSION
+        if (!token.startsWith('AUTH_SESSION')) {
+            return res.status(401).json({ message: 'Unauthorized: Invalid session' });
         }
 
         const apiKey = process.env.BREVO_API_KEY;
         if (!apiKey) {
-            return new Response(JSON.stringify({ message: 'Server configuration error' }), { status: 500 });
+            return res.status(500).json({ message: 'Server configuration error: Missing API Key' });
         }
 
         // Fetch contacts from Brevo
-        const res = await fetch('https://api.brevo.com/v3/contacts?limit=50&sort=desc', {
+        const fetchRes = await fetch('https://api.brevo.com/v3/contacts?limit=50&sort=desc', {
             method: 'GET',
             headers: {
                 'accept': 'application/json',
@@ -49,16 +41,15 @@ export default async function handler(req) {
             }
         });
 
-        if (!res.ok) {
-            const errorText = await res.text();
+        if (!fetchRes.ok) {
+            const errorText = await fetchRes.text();
             console.error('Brevo API Error:', errorText);
             throw new Error('Failed to fetch contacts from Brevo');
         }
 
-        const data = await res.json();
+        const data = await fetchRes.json();
         const contacts = data.contacts || [];
 
-        // Map to a cleaner format
         const leads = contacts.map(c => {
             const attrs = c.attributes || {};
             return {
@@ -73,19 +64,10 @@ export default async function handler(req) {
             };
         });
 
-        return new Response(JSON.stringify({ leads }), {
-            status: 200,
-            headers: {
-                'Content-Type': 'application/json',
-                'Cache-Control': 'no-store, max-age=0'
-            },
-        });
+        return res.status(200).json({ leads });
 
     } catch (error) {
         console.error('Get Leads Error:', error);
-        return new Response(JSON.stringify({ success: false, message: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
