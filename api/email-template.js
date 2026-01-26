@@ -21,8 +21,8 @@ export const getEmailTemplate = (title, bodyContent) => `
   <div style="padding: 40px 0;">
     <div class="container">
       <div class="header">
-        <!-- Using a versioned filename to bust Gmail cache -->
-        <img src="https://workersunited.eu/assets/logo-v2.png" alt="Workers United" class="logo">
+        <!-- Using the final confirmed logo -->
+        <img src="https://workersunited.eu/assets/logo-final.jpg" alt="Workers United" class="logo">
       </div>
       <div class="content">
         ${bodyContent}

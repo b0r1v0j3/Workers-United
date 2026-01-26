@@ -62,8 +62,10 @@ export default async function handler(req) {
             return htmlResponse('Success! 🎉', 'The LEAD_STATUS attribute has been successfully created.', '#059669', 'Status: Created');
         }
 
-        if (text.includes("already exists")) {
-            return htmlResponse('All Good! 👍', 'The LEAD_STATUS attribute already exists.', '#2563eb', 'Status: Already Exists');
+        // Handle "Already Exists" errors
+        // Brevo returns: {"code":"invalid_parameter","message":"Attribute name must be unique"} or "already exists"
+        if (text.includes("already exists") || text.includes("must be unique")) {
+            return htmlResponse('All Good! 👍', 'The database is ready. The attribute LEAD_STATUS already exists.', '#2563eb', 'Status: Active');
         }
 
         return htmlResponse('Failed 😔', 'Could not create attribute.', '#dc2626', text);
