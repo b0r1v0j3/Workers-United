@@ -11,6 +11,7 @@
         body {
             background-color: #f3f4f6;
             color: #111827;
+            font-family: 'Inter', sans-serif;
         }
 
         .admin-container {
@@ -54,17 +55,13 @@
             text-align: left;
             padding: 12px;
             border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
         }
 
         .leads-table th {
             background-color: #f9fafb;
             font-weight: 600;
             color: #6b7280;
-            font-size: 14px;
-        }
-
-        .leads-table td {
-            font-size: 14px;
         }
 
         .badge {
@@ -115,20 +112,10 @@
             color: white;
         }
 
-        .btn-action:hover {
-            background-color: #1d4ed8;
-        }
-
         .btn-reject {
             background-color: white;
             border: 1px solid #d1d5db;
             color: #374151;
-        }
-
-        .btn-reject:hover {
-            background-color: #f3f4f6;
-            color: #ef4444;
-            border-color: #fca5a5;
         }
 
         .btn-approve {
@@ -136,13 +123,20 @@
             color: white;
         }
 
-        .btn-approve:hover {
-            background-color: #047857;
+        .btn-primary {
+            width: 100%;
+            background: #2563eb;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
         }
 
-        .btn-loading {
-            opacity: 0.7;
-            cursor: not-allowed;
+        .btn-primary:disabled {
+            opacity: 0.5;
         }
 
         .hidden {
@@ -163,10 +157,6 @@
             font-size: 14px;
         }
 
-        .refresh-btn:hover {
-            color: #111827;
-        }
-
         input {
             width: 100%;
             padding: 10px;
@@ -176,59 +166,50 @@
             box-sizing: border-box;
         }
 
-        .btn-primary {
-            width: 100%;
-            background: #2563eb;
-            color: white;
+        .error-msg {
+            color: #ef4444;
+            background: #fee2e2;
             padding: 10px;
             border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
+            margin-top: 10px;
+            font-size: 14px;
         }
     </style>
 </head>
 
 <body>
-
-    <!-- Login Screen: Step 1 Password -->
+    <!-- Step 1 Password -->
     <div id="step1" class="admin-container login-screen card">
         <h1>Workers United Admin</h1>
-        <p style="margin-bottom: 20px; color: #6b7280;">Secure Login</p>
         <input type="password" id="adminPassword" placeholder="Enter Password">
         <button onclick="doChallenge()" id="btnStep1" class="btn-primary">Next</button>
-        <p id="error1" style="color: red; margin-top: 10px; font-size: 14px;" class="hidden"></p>
+        <div id="error1" class="error-msg hidden"></div>
     </div>
 
-    <!-- Login Screen: Step 2 OTP -->
+    <!-- Step 2 OTP -->
     <div id="step2" class="admin-container login-screen card hidden">
         <h1>2-Factor Auth</h1>
-        <p style="margin-bottom: 20px; color: #6b7280;">Enter the code sent to your email.</p>
         <input type="text" id="otpCode" placeholder="Enter 6-digit code" maxlength="6"
             style="text-align: center; letter-spacing: 5px; font-size: 20px;">
         <button onclick="doVerify()" id="btnStep2" class="btn-primary">Verify</button>
-        <p id="error2" style="color: red; margin-top: 10px; font-size: 14px;" class="hidden"></p>
+        <div id="error2" class="error-msg hidden"></div>
         <button onclick="location.reload()"
-            style="background:none; border:none; color:#6b7280; margin-top:10px; cursor:pointer;">Cancel</button>
+            style="background:none; border:none; color:#6b7280; margin-top:20px; cursor:pointer;">Cancel</button>
     </div>
 
-    <!-- Dashboard Screen -->
+    <!-- Dashboard -->
     <div id="dashboardScreen" class="admin-container dashboard-screen">
         <div class="card flex-between">
             <h1>Candidate Pipeline</h1>
             <div>
                 <span id="loadingIndicator" class="hidden"
-                    style="margin-right: 10px; font-size: 14px; color: #6b7280;">Refreshing...</span>
+                    style="margin-right: 10px; font-size: 14px; color: #6b7280;">Loading...</span>
                 <button onclick="loadLeads()" class="refresh-btn">↻ Refresh</button>
                 <button onclick="logout()" class="refresh-btn"
                     style="margin-left: 15px; color: #ef4444;">Logout</button>
             </div>
         </div>
-
+        <div id="dashboardError" class="error-msg hidden" style="margin-bottom: 20px;"></div>
         <div class="card">
             <div style="overflow-x: auto;">
                 <table class="leads-table">
@@ -260,12 +241,10 @@
                 <button onclick="document.getElementById('docsModal').style.display='none'"
                     style="background:none; border:none; font-size:20px; cursor:pointer;">✖</button>
             </div>
-            <div id="docsList" style="display:flex; flex-direction:column; gap:10px;">
-                Loading...
-            </div>
+            <div id="docsList" style="display:flex; flex-direction:column; gap:10px;">Loading...</div>
             <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
             <div style="font-size:12px; color:#6b7280;">
-                <strong>Upload Link for User:</strong><br>
+                <strong>Upload Link:</strong><br>
                 <span id="uploadLinkDisplay"
                     style="user-select:all; background:#f3f4f6; padding:4px; border-radius:4px;"></span>
             </div>
@@ -273,57 +252,40 @@
     </div>
 
     <script>
-        // State for Multi-step Login
         let challengeData = null;
 
-        // Check if already logged in (Token exists and not expired)
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-            verifyAndShowDashboard();
-        }
+        // Auto-login check
+        const storedToken = localStorage.getItem('auth_token');
+        if (storedToken) { showDashboard(); }
 
         async function doChallenge() {
             const pwd = document.getElementById('adminPassword').value;
             const btn = document.getElementById('btnStep1');
             const err = document.getElementById('error1');
-
             if (!pwd) return;
-
-            btn.innerText = 'Checking...';
-            btn.disabled = true;
-            err.classList.add('hidden');
-
+            btn.innerText = 'Checking...'; btn.disabled = true; err.classList.add('hidden');
             try {
-                // Add Timeout to fetch
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
                 const res = await fetch('/api/auth-challenge', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: pwd }),
-                    signal: controller.signal
+                    body: JSON.stringify({ password: pwd })
                 });
-                clearTimeout(timeoutId);
-
                 const data = await res.json();
-
                 if (res.ok) {
                     challengeData = data.challenge;
                     document.getElementById('step1').classList.add('hidden');
                     document.getElementById('step2').classList.remove('hidden');
                     document.getElementById('otpCode').focus();
                 } else {
-                    err.innerText = data.message || 'Error occurred';
+                    err.innerText = data.message || 'Error: ' + res.status;
                     err.classList.remove('hidden');
                 }
             } catch (e) {
                 console.error(e);
-                err.innerText = e.name === 'AbortError' ? 'Request timed out' : 'Network Error';
+                err.innerText = 'Network Error: ' + e.message;
                 err.classList.remove('hidden');
             } finally {
-                btn.innerText = 'Next';
-                btn.disabled = false;
+                btn.innerText = 'Next'; btn.disabled = false;
             }
         }
 
@@ -331,25 +293,15 @@
             const otp = document.getElementById('otpCode').value;
             const btn = document.getElementById('btnStep2');
             const err = document.getElementById('error2');
-
             if (!otp) return;
-
-            btn.innerText = 'Verifying...';
-            btn.disabled = true;
-            err.classList.add('hidden');
-
+            btn.innerText = 'Verifying...'; btn.disabled = true; err.classList.add('hidden');
             try {
                 const res = await fetch('/api/auth-verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        otp: otp,
-                        hash: challengeData.hash,
-                        expiry: challengeData.expiry
-                    })
+                    body: JSON.stringify({ otp, hash: challengeData.hash, expiry: challengeData.expiry })
                 });
                 const data = await res.json();
-
                 if (res.ok) {
                     localStorage.setItem('auth_token', data.token);
                     showDashboard();
@@ -358,17 +310,11 @@
                     err.classList.remove('hidden');
                 }
             } catch (e) {
-                err.innerText = 'Network Error';
+                err.innerText = 'Network Error: ' + e.message;
                 err.classList.remove('hidden');
             } finally {
-                btn.innerText = 'Verify';
-                btn.disabled = false;
+                btn.innerText = 'Verify'; btn.disabled = false;
             }
-        }
-
-        function logout() {
-            localStorage.removeItem('auth_token');
-            location.reload();
         }
 
         function showDashboard() {
@@ -378,207 +324,105 @@
             loadLeads();
         }
 
-        async function verifyAndShowDashboard() {
-            showDashboard();
-        }
+        function logout() { localStorage.removeItem('auth_token'); location.reload(); }
 
         async function loadLeads() {
             const token = localStorage.getItem('auth_token');
             if (!token) return logout();
-
             const indicator = document.getElementById('loadingIndicator');
-            indicator?.classList.remove('hidden');
-
+            const errDiv = document.getElementById('dashboardError');
+            indicator.classList.remove('hidden');
+            errDiv.classList.add('hidden');
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-                const response = await fetch('/api/get-leads', {
-                    headers: { 'x-auth-token': token },
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                if (response.status === 401) {
-                    logout(); // Token expired
-                    return;
-                }
-
-                if (!response.ok) throw new Error('Failed to load');
-
+                const response = await fetch('/api/get-leads', { headers: { 'x-auth-token': token } });
+                if (response.status === 401) return logout();
                 const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Failed to fetch leads');
                 renderLeads(data.leads || []);
-                indicator?.classList.add('hidden');
             } catch (err) {
                 console.error(err);
-                indicator?.innerHTML = err.name === 'AbortError' ? 'Timed out' : 'Fetch Error';
-                indicator?.classList.remove('hidden');
-                // Don't clear table yet, show old data if any? No, leadsBody is cleared in renderLeads.
+                errDiv.innerText = 'Error loading candidates: ' + err.message;
+                errDiv.classList.remove('hidden');
+            } finally {
+                indicator.classList.add('hidden');
             }
         }
 
         function renderLeads(leads) {
             const tbody = document.getElementById('leadsBody');
             tbody.innerHTML = '';
-
             if (leads.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#6b7280; padding:20px;">No candidates found yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#6b7280; padding:40px;">No candidates found in database.</td></tr>';
                 return;
             }
-
             leads.forEach(lead => {
-                try {
-                    const tr = document.createElement('tr');
-                    const safePhone = (lead.phone || '').replace(/[^0-9]/g, '');
-                    const displayDate = lead.date ? new Date(lead.date).toLocaleDateString() : 'Unknown';
-
-                    tr.innerHTML = `
-                        <td><strong>${lead.name || 'Unknown'}</strong><br><span style="font-size:12px; color:#9ca3af;">${displayDate}</span></td>
-                        <td>${lead.email || ''}</td>
-                        <td>${lead.phone ? `<a href="https://wa.me/${safePhone}" target="_blank" style="color:#2563eb; text-decoration:underline;">${lead.phone}</a>` : '-'}</td>
-                        <td>
-                            <button onclick="viewDocs('${lead.email}')" style="background:none; border:1px solid #dde3ec; border-radius:6px; cursor:pointer;">📂</button>
-                        </td>
-                        <td>${lead.country || ''}</td>
-                        <td>${lead.role || ''}</td>
-                        <td>${getStatusBadge(lead.status)}</td>
-                        <td>${getActionButtons(lead)}</td>
-                    `;
-                    tbody.appendChild(tr);
-                } catch (err) {
-                    console.error('Error rendering lead:', lead, err);
-                }
+                const tr = document.createElement('tr');
+                const safePhone = (lead.phone || '').replace(/[^0-9]/g, '');
+                const displayDate = lead.date ? new Date(lead.date).toLocaleDateString() : 'N/A';
+                tr.innerHTML = `
+                    <td><strong>${lead.name || 'N/A'}</strong><br><span style="font-size:11px; color:#9ca3af;">${displayDate}</span></td>
+                    <td>${lead.email}</td>
+                    <td>${lead.phone ? `<a href="https://wa.me/${safePhone}" target="_blank" style="color:#2563eb;">${lead.phone}</a>` : '-'}</td>
+                    <td><button onclick="viewDocs('${lead.email}')" style="background:none; border:1px solid #eee; border-radius:4px; cursor:pointer;">📂</button></td>
+                    <td>${lead.country || '-'}</td>
+                    <td>${lead.role || '-'}</td>
+                    <td>${getStatusBadge(lead.status)}</td>
+                    <td>${getActionButtons(lead)}</td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        function getStatusBadge(status) {
+        function getStatusBadge(s) {
             let cls = 'badge-new';
-            if (status === 'DOCS REQUESTED') cls = 'badge-docs-requested';
-            else if (status === 'UNDER REVIEW') cls = 'badge-under-review';
-            else if (status === 'PAYMENT REQUESTED') cls = 'badge-payment-requested';
-            else if (status === 'REJECTED') cls = 'badge-rejected';
-            return `<span class="badge ${cls}">${status}</span>`;
+            if (s === 'DOCS REQUESTED') cls = 'badge-docs-requested';
+            else if (s === 'UNDER REVIEW') cls = 'badge-under-review';
+            else if (s === 'PAYMENT REQUESTED') cls = 'badge-payment-requested';
+            else if (s === 'REJECTED') cls = 'badge-rejected';
+            return `<span class="badge ${cls}">${s || 'NEW'}</span>`;
         }
 
         function getActionButtons(lead) {
-            // Logic to show relevant buttons
-            const baseBtn = (action, label, cls) =>
-                `<button onclick="triggerAction('${action}', '${lead.email}', '${lead.id}', '${lead.name.replace(/'/g, "\\'")}', this)" class="btn-sm ${cls}">${label}</button>`;
-
-            let buttons = '';
-            if (lead.status === 'NEW') {
-                buttons += baseBtn('request_docs', 'Request Docs', 'btn-action');
-                buttons += baseBtn('reject', 'Reject', 'btn-reject');
-            } else if (lead.status === 'DOCS REQUESTED') {
-                buttons += baseBtn('docs_received', 'Confirm Docs Received', 'btn-action');
-            } else if (lead.status === 'UNDER REVIEW') {
-                buttons += baseBtn('approve_payment', 'Approve & Request Pay', 'btn-approve');
-                buttons += baseBtn('reject', 'Reject', 'btn-reject');
-            } else if (lead.status === 'PAYMENT REQUESTED') {
-                buttons += `<span style="color:#059669; font-size:12px;">Waiting for payment</span>`;
-            } else if (lead.status === 'REJECTED') {
-                buttons += `<span style="color:#991b1b; font-size:12px;">Rejected</span>`;
-            } else {
-                buttons += baseBtn('request_docs', 'Start Process', 'btn-action');
-            }
-            // Always add a small delete button at the end
-            buttons += `<button onclick="triggerAction('delete', '${lead.email}', '${lead.id}', '${lead.name.replace(/'/g, "\\'")}', this)" class="btn-sm" style="background:none; border:1px solid #fee2e2; color:#ef4444; margin-left:8px;" title="Delete Permanently">🗑️</button>`;
-
-            return buttons;
+            const btn = (a, l, c) => `<button onclick="triggerAction('${a}', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}', this)" class="btn-sm ${c}">${l}</button>`;
+            let btns = '';
+            if (lead.status === 'NEW') { btns += btn('request_docs', 'Req Docs', 'btn-action'); btns += btn('reject', 'Reject', 'btn-reject'); }
+            else if (lead.status === 'DOCS REQUESTED') { btns += btn('docs_received', 'Confirm Docs', 'btn-action'); }
+            else if (lead.status === 'UNDER REVIEW') { btns += btn('approve_payment', 'Approve', 'btn-approve'); btns += btn('reject', 'Reject', 'btn-reject'); }
+            else { btns += `<span style="font-size:12px; color:#6b7280;">Processing...</span>`; }
+            btns += `<button onclick="triggerAction('delete', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}', this)" class="btn-sm" style="color:#ef4444; border:1px solid #fee2e2; margin-left:10px;">🗑️</button>`;
+            return btns;
         }
 
-        async function triggerAction(action, email, id, name, btnElement) {
-            if (!confirm(`Are you sure you want to ${action.replace('_', ' ')} for ${name}?`)) return;
-
-            const token = localStorage.getItem('auth_token'); // Use Token
-            const originalText = btnElement.innerText;
-            btnElement.innerText = '...';
-            btnElement.classList.add('btn-loading');
-            btnElement.disabled = true;
-
+        async function triggerAction(action, email, id, name, btn) {
+            if (!confirm(`Are you sure you want to ${action} for ${name}?`)) return;
+            const token = localStorage.getItem('auth_token');
+            const originalText = btn.innerText; btn.innerText = '...'; btn.disabled = true;
             try {
                 const res = await fetch('/api/admin-action', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: action,
-                        email: email,
-                        id: id,
-                        name: name,
-                        token: token // Use Token
-                    })
+                    body: JSON.stringify({ action, email, id, name, token })
                 });
-
                 const data = await res.json();
-                if (res.ok) {
-                    alert('Success: ' + data.message);
-
-                    // Optimistic UI Update
-                    const row = btnElement.closest('tr');
-                    const badgeCell = row.cells[6];
-                    const actionsCell = row.cells[7];
-
-                    let newStatus = 'UNKNOWN';
-                    if (action === 'request_docs') newStatus = 'DOCS REQUESTED';
-                    else if (action === 'docs_received') newStatus = 'UNDER REVIEW';
-                    else if (action === 'approve_payment') newStatus = 'PAYMENT REQUESTED';
-                    else if (action === 'reject') newStatus = 'REJECTED';
-
-                    badgeCell.innerHTML = getStatusBadge(newStatus);
-
-                    const simpleLeadMock = {
-                        email: email,
-                        name: name,
-                        status: newStatus
-                    };
-                    actionsCell.innerHTML = getActionButtons(simpleLeadMock);
-
-                    // Also refresh in background just in case
-                    // loadLeads(); // Commented out to prevent flickering
-                } else {
-                    alert('Error: ' + data.message);
-                    if (res.status === 401) logout();
-                    btnElement.innerText = originalText;
-                    btnElement.classList.remove('btn-loading');
-                    btnElement.disabled = false;
-                }
-            } catch (err) {
-                alert('Network Error');
-                btnElement.innerText = originalText;
-                btnElement.classList.remove('btn-loading');
-                btnElement.disabled = false;
-            }
+                if (res.ok) { alert('Success!'); loadLeads(); }
+                else { alert('Error: ' + data.message); btn.innerText = originalText; btn.disabled = false; }
+            } catch (err) { alert('Network Error'); btn.innerText = originalText; btn.disabled = false; }
         }
+
         async function viewDocs(email) {
             const modal = document.getElementById('docsModal');
-            const list = document.getElementById('docsList');
-            const linkDisplay = document.getElementById('uploadLinkDisplay');
-
+            document.getElementById('uploadLinkDisplay').innerText = `https://workersunited.eu/upload?email=${encodeURIComponent(email)}`;
             modal.style.display = 'flex';
-            list.innerHTML = 'Loading...';
-            linkDisplay.innerText = `https://workersunited.eu/upload?email=${encodeURIComponent(email)}`;
-
+            document.getElementById('docsList').innerHTML = 'Loading...';
             try {
                 const res = await fetch(`/api/get-docs?email=${encodeURIComponent(email)}`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
                 });
                 const data = await res.json();
-
                 if (data.files && data.files.length > 0) {
-                    list.innerHTML = data.files.map(f => `
-                        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px; border:1px solid #eee; border-radius:8px;">
-                            <a href="${f.url}" target="_blank" style="text-decoration:none; color:#2563eb; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:300px;">
-                                📄 ${f.pathname.split('/').pop()}
-                            </a>
-                            <span style="font-size:11px; color:#999;">${new Date(f.uploadedAt).toLocaleDateString()}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    list.innerHTML = '<div style="text-align:center; color:#6b7280; padding:20px;">No documents uploaded yet.</div>';
-                }
-            } catch (err) {
-                list.innerHTML = '<div style="color:red;">Failed to load documents.</div>';
-            }
+                    document.getElementById('docsList').innerHTML = data.files.map(f => `<div style="padding:10px; border:1px solid #eee; border-radius:8px;"><a href="${f.url}" target="_blank" style="color:#2563eb;">📄 ${f.pathname.split('/').pop()}</a></div>`).join('');
+                } else { document.getElementById('docsList').innerHTML = 'No documents found.'; }
+            } catch (err) { document.getElementById('docsList').innerHTML = 'Error loading documents.'; }
         }
     </script>
 </body>
