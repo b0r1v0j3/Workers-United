@@ -251,20 +251,7 @@
         </div>
     </div>
 
-    <!-- Debug Console -->
-    <div id="debugConsole"
-        style="background:#000; color:#0f0; padding:10px; margin:20px; border-radius:8px; font-family:monospace; font-size:12px; display:none;">
-        <strong>Debug Log:</strong><br>
-    </div>
-
     <script>
-        function log(msg) {
-            console.log(msg);
-            const d = document.getElementById('debugConsole');
-            d.style.display = 'block';
-            d.innerHTML += `<div>${new Date().toLocaleTimeString()} - ${msg}</div>`;
-        }
-
         // Unregister Service Workers
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function (registrations) {
