@@ -59,6 +59,7 @@ export default async function handler(req, res) {
                 phone: attrs.PHONE || '',
                 country: attrs.COUNTRY || 'Unknown',
                 role: attrs.ROLE || 'Unknown',
+                job_preference: attrs.JOB_PREFERENCE || '-',
                 status: attrs.LEAD_STATUS || 'NEW',
                 date: c.createdAt
             };
