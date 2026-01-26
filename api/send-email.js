@@ -14,9 +14,9 @@ export default async function handler(req) {
   }
 
   try {
-    const { name, email, country, role, message } = await req.json();
+    const { name, email, phone, country, role, message } = await req.json();
 
-    if (!name || !email || !message) {
+    if (!name || !email || !phone || !message) {
       return new Response(JSON.stringify({ message: 'Missing required fields' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -39,6 +39,7 @@ export default async function handler(req) {
         <h2>New Website Inquiry</h2>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
         <p><strong>Country:</strong> ${country}</p>
         <p><strong>Role:</strong> ${role}</p>
         <hr/>
@@ -99,6 +100,7 @@ export default async function handler(req) {
           attributes: {
             FIRSTNAME: name.split(' ')[0],
             LASTNAME: name.split(' ').slice(1).join(' ') || '',
+            PHONE: phone,
             COUNTRY: country,
             ROLE: role,
             LEAD_STATUS: 'NEW' // Custom attribute for our funnel

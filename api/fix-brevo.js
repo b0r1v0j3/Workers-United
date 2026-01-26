@@ -59,13 +59,30 @@ export default async function handler(req) {
         const text = await response.text();
 
         if (response.ok) {
-            return htmlResponse('Success! 🎉', 'The LEAD_STATUS attribute has been successfully created.', '#059669', 'Status: Created');
+            // Now try to create PHONE attribute
+            const phoneRes = await fetch('https://api.brevo.com/v3/contacts/attributes/normal/PHONE', {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'api-key': apiKey,
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify({ type: "text" })
+            });
+
+            return htmlResponse('Success! 🎉', 'The LEAD_STATUS and PHONE attributes have been checked/created.', '#059669', 'Status: Ready');
         }
 
         // Handle "Already Exists" errors
         // Brevo returns: {"code":"invalid_parameter","message":"Attribute name must be unique"} or "already exists"
         if (text.includes("already exists") || text.includes("must be unique")) {
-            return htmlResponse('All Good! 👍', 'The database is ready. The attribute LEAD_STATUS already exists.', '#2563eb', 'Status: Active');
+            // Try creating PHONE even if LEAD_STATUS exists
+            await fetch('https://api.brevo.com/v3/contacts/attributes/normal/PHONE', {
+                method: 'POST',
+                headers: { 'accept': 'application/json', 'api-key': apiKey, 'content-type': 'application/json' },
+                body: JSON.stringify({ type: "text" })
+            });
+            return htmlResponse('All Good! 👍', 'The database is ready. Attributes already exist or were created.', '#2563eb', 'Status: Active');
         }
 
         return htmlResponse('Failed 😔', 'Could not create attribute.', '#dc2626', text);

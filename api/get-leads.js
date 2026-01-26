@@ -66,6 +66,7 @@ export default async function handler(req) {
                 id: c.id,
                 email: c.email,
                 name: `${attrs.FIRSTNAME || ''} ${attrs.LASTNAME || ''}`.trim(),
+                phone: attrs.PHONE || '',
                 country: attrs.COUNTRY || 'Unknown',
                 role: attrs.ROLE || 'Unknown',
                 status: attrs.LEAD_STATUS || 'NEW',

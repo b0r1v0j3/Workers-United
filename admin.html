@@ -236,6 +236,7 @@
                         <tr>
                             <th>Name</th>
                             <th>Email</th>
+                            <th>Phone</th>
                             <th>Country</th>
                             <th>Role</th>
                             <th>Status (Stage)</th>
@@ -392,6 +393,7 @@
                 tr.innerHTML = `
                     <td><strong>${lead.name}</strong><br><span style="font-size:12px; color:#9ca3af;">${new Date(lead.date).toLocaleDateString()}</span></td>
                     <td>${lead.email}</td>
+                    <td><a href="https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}" target="_blank" style="color:#2563eb; text-decoration:underline;">${lead.phone}</a></td>
                     <td>${lead.country}</td>
                     <td>${lead.role}</td>
                     <td>${getStatusBadge(lead.status)}</td>
