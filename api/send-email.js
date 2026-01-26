@@ -65,7 +65,7 @@ export default async function handler(req) {
       </body></html>`
     };
 
-    // Function to call Brevo API
+    // Function to call Brevo API for triggering emails
     const sendBrevoEmail = async (payload) => {
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
@@ -79,10 +79,36 @@ export default async function handler(req) {
       return res;
     };
 
-    // Execute both in parallel
-    const [ownerRes, userRes] = await Promise.all([
+    // Function to Create/Update Contact in Brevo CRM
+    const saveBrevoContact = async () => {
+      // First, try to create the contact
+      let res = await fetch('https://api.brevo.com/v3/contacts', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': apiKey,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: email,
+          attributes: {
+            FIRSTNAME: name.split(' ')[0],
+            LASTNAME: name.split(' ').slice(1).join(' ') || '',
+            COUNTRY: country,
+            ROLE: role,
+            LEAD_STATUS: 'NEW' // Custom attribute for our funnel
+          },
+          updateEnabled: true // If exists, update it
+        })
+      });
+      return res;
+    };
+
+    // Execute all in parallel
+    const [ownerRes, userRes, contactRes] = await Promise.all([
       sendBrevoEmail(emailToOwner),
-      sendBrevoEmail(emailToUser)
+      sendBrevoEmail(emailToUser),
+      saveBrevoContact()
     ]);
 
     if (!ownerRes.ok) {
