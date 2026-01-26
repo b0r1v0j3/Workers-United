@@ -1,70 +1,107 @@
-const brevo = require('@getbrevo/brevo');
+export const config = {
+  runtime: 'edge', // Using Edge runtime for faster cold starts and standard fetch API
+};
 
-module.exports = async (req, res) => {
+export default async function handler(req) {
   // Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
+    return new Response(JSON.stringify({ message: 'Method Not Allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-
-  // Parse fields
-  const { name, email, country, role, message } = req.body;
-
-  if (!name || !email || !message) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
-
-  // Initialize Brevo Client
-  let defaultClient = brevo.ApiClient.instance;
-  let apiKey = defaultClient.authentications['api-key'];
-  apiKey.apiKey = process.env.BREVO_API_KEY;
-
-  let apiInstance = new brevo.TransactionalEmailsApi();
 
   try {
-    // 1. Send Email to Owner (You)
-    let sendSmtpEmailToOwner = new brevo.SendSmtpEmail();
-    sendSmtpEmailToOwner.subject = `New Inquiry from ${name} (${role})`;
-    sendSmtpEmailToOwner.htmlContent = `<html><body>
-      <h2>New Website Inquiry</h2>
-      <p><strong>Name:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Country:</strong> ${country}</p>
-      <p><strong>Role:</strong> ${role}</p>
-      <hr/>
-      <h3>Message:</h3>
-      <p>${message}</p>
-    </body></html>`;
-    sendSmtpEmailToOwner.sender = { "name": "Workers United Site", "email": "no-reply@workersunited.eu" };
-    sendSmtpEmailToOwner.to = [{ "email": "contact@workersunited.eu", "name": "Workers United Team" }];
-    
-    // Also CC your personal email just in case
-    sendSmtpEmailToOwner.cc = [{ "email": "cvetkovicborivoje@gmail.com", "name": "Borivoje" }];
+    const { name, email, country, role, message } = await req.json();
 
-    await apiInstance.sendTransacEmail(sendSmtpEmailToOwner);
+    if (!name || !email || !message) {
+      return new Response(JSON.stringify({ message: 'Missing required fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const apiKey = process.env.BREVO_API_KEY;
+
+    if (!apiKey) {
+      console.error('Missing BREVO_API_KEY');
+      return new Response(JSON.stringify({ message: 'Server configuration error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 1. Send Email to Owner
+    const emailToOwner = {
+      sender: { name: "Workers United Site", email: "no-reply@workersunited.eu" },
+      to: [{ email: "contact@workersunited.eu", name: "Workers United Team" }],
+      cc: [{ email: "cvetkovicborivoje@gmail.com", name: "Borivoje" }],
+      subject: `New Inquiry from ${name} (${role})`,
+      htmlContent: `<html><body>
+        <h2>New Website Inquiry</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Country:</strong> ${country}</p>
+        <p><strong>Role:</strong> ${role}</p>
+        <hr/>
+        <h3>Message:</h3>
+        <p>${message}</p>
+      </body></html>`
+    };
 
     // 2. Send Auto-Reply to User
-    let sendSmtpEmailToUser = new brevo.SendSmtpEmail();
-    sendSmtpEmailToUser.subject = "We received your message - Workers United";
-    sendSmtpEmailToUser.htmlContent = `<html><body>
-      <p>Hello ${name},</p>
-      <p>Thank you for contacting Workers United. We have received your inquiry regarding <strong>${role}</strong> opportunities.</p>
-      <p>Our team is currently reviewing your details. We usually reply within 24-48 hours with specific information valid for your country (${country}).</p>
-      <p>In the meantime, feel free to browse our FAQ section.</p>
-      <br/>
-      <p>Best regards,</p>
-      <p><strong>Workers United Team</strong></p>
-      <p><a href="https://www.workersunited.eu">www.workersunited.eu</a></p>
-    </body></html>`;
-    sendSmtpEmailToUser.sender = { "name": "Workers United", "email": "contact@workersunited.eu" };
-    sendSmtpEmailToUser.to = [{ "email": email, "name": name }];
+    const emailToUser = {
+      sender: { name: "Workers United", email: "contact@workersunited.eu" },
+      to: [{ email: email, name: name }],
+      subject: "We received your message - Workers United",
+      htmlContent: `<html><body>
+        <p>Hello ${name},</p>
+        <p>Thank you for contacting Workers United. We have received your inquiry regarding <strong>${role}</strong> opportunities.</p>
+        <p>Our team is currently reviewing your details. We usually reply within 24-48 hours with specific information valid for your country (${country}).</p>
+        <p>In the meantime, feel free to browse our FAQ section.</p>
+        <br/>
+        <p>Best regards,</p>
+        <p><strong>Workers United Team</strong></p>
+        <p><a href="https://www.workersunited.eu">www.workersunited.eu</a></p>
+      </body></html>`
+    };
 
-    await apiInstance.sendTransacEmail(sendSmtpEmailToUser);
+    // Function to call Brevo API
+    const sendBrevoEmail = async (payload) => {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': apiKey,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      return res;
+    };
 
-    // Success response
-    return res.status(200).json({ success: true, message: 'Message sent successfully' });
+    // Execute both in parallel
+    const [ownerRes, userRes] = await Promise.all([
+      sendBrevoEmail(emailToOwner),
+      sendBrevoEmail(emailToUser)
+    ]);
+
+    if (!ownerRes.ok) {
+      const errorData = await ownerRes.text();
+      console.error('Brevo Error (Owner):', errorData);
+      throw new Error('Failed to send email to owner');
+    }
+
+    return new Response(JSON.stringify({ success: true, message: 'Message sent successfully' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
-    console.error('Brevo Error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to send email' });
+    console.error('Handler Error:', error);
+    return new Response(JSON.stringify({ success: false, message: 'Failed to process request: ' + error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-};
+}
