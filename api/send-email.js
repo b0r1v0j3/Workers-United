@@ -1,3 +1,5 @@
+import { getEmailTemplate } from './email-template.js';
+
 export const config = {
   runtime: 'edge', // Using Edge runtime for faster cold starts and standard fetch API
 };
@@ -31,13 +33,9 @@ export default async function handler(req) {
       });
     }
 
-    // 1. Send Email to Owner
-    const emailToOwner = {
-      sender: { name: "Workers United Site", email: "contact@workersunited.eu" },
-      to: [{ email: "contact@workersunited.eu", name: "Workers United Team" }],
-      cc: [{ email: "cvetkovicborivoje@gmail.com", name: "Borivoje" }],
-      subject: `New Inquiry from ${name} (${role})`,
-      htmlContent: `<html><body>
+    // 1. Send Email to Owner (Internal Notification - Keep simple or brand as well)
+    // We'll keep it simple HTML for owner or brand it? Let's brand it for consistency.
+    const ownerContent = `
         <h2>New Website Inquiry</h2>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
@@ -46,23 +44,30 @@ export default async function handler(req) {
         <hr/>
         <h3>Message:</h3>
         <p>${message}</p>
-      </body></html>`
+    `;
+
+    const emailToOwner = {
+      sender: { name: "Workers United Site", email: "contact@workersunited.eu" },
+      to: [{ email: "contact@workersunited.eu", name: "Workers United Team" }],
+      cc: [{ email: "cvetkovicborivoje@gmail.com", name: "Borivoje" }],
+      subject: `New Inquiry from ${name} (${role})`,
+      htmlContent: getEmailTemplate(`New Inquiry: ${name}`, ownerContent)
     };
 
     // 2. Send Auto-Reply to User
+    const userBody = `
+        <p>Dear ${name},</p>
+        <p>Thank you for contacting Workers United.</p>
+        <p>We have received your inquiry regarding <strong>${role}</strong> opportunities.</p>
+        <p class="info-box">Our team is currently reviewing your details. We usually reply within 24-48 hours with specific information valid for your country (${country}).</p>
+        <p>Thank you for your patience.</p>
+    `;
+
     const emailToUser = {
       sender: { name: "Workers United", email: "contact@workersunited.eu" },
       to: [{ email: email, name: name }],
       subject: "We received your message - Workers United",
-      htmlContent: `<html><body>
-        <p>Hello ${name},</p>
-        <p>Thank you for contacting Workers United. We have received your inquiry regarding <strong>${role}</strong> opportunities.</p>
-        <p>Our team is currently reviewing your details. We usually reply within 24-48 hours with specific information valid for your country (${country}).</p>
-        <br/>
-        <p>Best regards,</p>
-        <p><strong>Workers United LLC</strong></p>
-        <p><a href="https://www.workersunited.eu">www.workersunited.eu</a></p>
-      </body></html>`
+      htmlContent: getEmailTemplate('Message Received', userBody)
     };
 
     // Function to call Brevo API for triggering emails

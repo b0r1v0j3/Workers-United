@@ -1,3 +1,5 @@
+import { getEmailTemplate } from './email-template.js';
+
 export const config = {
     runtime: 'edge',
 };
@@ -42,85 +44,78 @@ export default async function handler(req) {
         }
 
         let subject = '';
-        let htmlContent = '';
+        let bodyContent = '';
         let statusLabel = '';
 
         // Define Email Templates based on Action
         switch (action) {
             case 'request_docs':
-                subject = 'Next steps - Workers United';
+                subject = 'Next Steps with Workers United';
                 statusLabel = 'DOCS REQUESTED';
-                htmlContent = `
-          <p>Hello ${name},</p>
-          <p>Thank you for your message and for your interest in working with Workers United.</p>
-          <p>Before we can confirm whether we can assist you, we first need to review your basic information and documents.</p>
-          <p>This step is free of charge and allows us to determine if your case is realistic and legally viable.</p>
-          <p><strong>Please send the following documents and information:</strong></p>
+                bodyContent = `
+          <p>Dear ${name},</p>
+          <p>Thank you for your patience.</p>
+          <p>We are pleased to inform you that your profile has passed our initial screening.</p>
+          <p class="info-box">Before we can proceed to the next stage of your application, we require verification of your documents.</p>
+          <p><strong>Please reply to this email with the following documents:</strong></p>
           <ul>
-            <li>Passport (photo page)</li>
-            <li>Diploma or certificate of completed education</li>
-            <li>Country you are currently residing in</li>
-            <li>Type of job you are looking for</li>
+            <li><strong>Passport Copy</strong> (Photo Page)</li>
+            <li><strong>Proof of Education</strong> (Diploma or Certificate)</li>
+            <li>Current <strong>Residence Permit</strong> (if applicable)</li>
+            <li>Updated <strong>CV</strong> (Resume)</li>
           </ul>
-          <p><em>Please note that a completed education diploma is required for the work visa process and is a mandatory document.</em></p>
-          <p>Once we receive and review these documents, we will inform you whether we can proceed and explain the next steps.</p>
-          <br/>
-          <p>Kind regards,</p>
-          <p><strong>Workers United LLC</strong></p>
+          <p>Our legal team will review these documents to ensure eligibility for the work visa process.</p>
+          <p>This review is complimentary.</p>
         `;
                 break;
 
             case 'docs_received':
-                subject = 'Documents received - under review';
+                subject = 'Documents Received - Under Review';
                 statusLabel = 'UNDER REVIEW';
-                htmlContent = `
-          <p>Hello ${name},</p>
-          <p>We have received your documents. Thank you.</p>
-          <p>Our team will now review your information and assess whether we can realistically assist you with the process.</p>
-          <p>This review may take some time, as we want to be precise and transparent.</p>
-          <p>We will contact you once the review is completed.</p>
-          <br/>
-          <p>Best regards,</p>
-          <p><strong>Workers United LLC</strong></p>
+                bodyContent = `
+          <p>Dear ${name},</p>
+          <p>We confirm receipt of your documents.</p>
+          <p>Our team is currently reviewing your file to assess eligibility.</p>
+          <p class="info-box">We aim to complete all reviews within 48-72 hours.</p>
+          <p>You do not need to take any further action at this time. We will contact you immediately once a decision has been made.</p>
         `;
                 break;
 
             case 'reject':
-                subject = 'Update regarding your request';
+                subject = 'Update on your Application - Workers United';
                 statusLabel = 'REJECTED';
-                htmlContent = `
-          <p>Hello ${name},</p>
-          <p>Thank you for your time and for providing the requested information.</p>
-          <p>After reviewing your documents, we regret to inform you that at this moment we are not able to assist with your case.</p>
-          <p>This may be due to legal limitations, employer requirements, or current market conditions.</p>
-          <p>We appreciate your understanding and wish you success in your future efforts.</p>
-          <br/>
-          <p>Kind regards,</p>
-          <p><strong>Workers United LLC</strong></p>
+                bodyContent = `
+          <p>Dear ${name},</p>
+          <p>Thank you for your interest in Workers United.</p>
+          <p>After a careful review of your application and documents, we regret to inform you that we cannot proceed with your case at this time.</p>
+          <p>This decision is based on current strict visa regulations and employer requirements specific to your profile.</p>
+          <p>We will keep your details in our database and contact you should more suitable opportunities arise in the future.</p>
+          <p>We wish you the best in your professional endeavors.</p>
         `;
                 break;
 
             case 'approve_payment':
-                subject = 'Eligibility confirmed';
+                subject = 'IMPORTANT: Eligibility Confirmed - Next Steps';
                 statusLabel = 'PAYMENT REQUESTED';
-                htmlContent = `
-          <p>Hello ${name},</p>
-          <p>Thank you for your patience.</p>
-          <p>After reviewing your documents, we confirm that your case is <strong>eligible for further processing</strong> with Workers United.</p>
-          <p>To proceed, a service fee is required.</p>
-          <p>The coordination and work visa application process officially starts only after payment is completed.</p>
-          <p>You can complete the payment securely using the link below:</p>
-          <p><a href="#" style="background: #1dbf73; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">PAYMENT LINK (Coming Soon)</a></p>
-          <p>Once payment is confirmed, we will begin the preparation and submission of your work visa application and keep you informed at each stage of the process.</p>
-          <br/>
-          <p>Kind regards,</p>
-          <p><strong>Workers United LLC</strong></p>
+                bodyContent = `
+          <p>Dear ${name},</p>
+          <p><strong>Good news!</strong> After reviewing your documents, our legal team has confirmed your eligibility for the work visa program.</p>
+          <p>We are ready to begin the official process.</p>
+          <p class="info-box">To officially open your file and start coordination with the employer, a one-time processing fee is required.</p>
+          <p>Please use the secure link below to complete the payment:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="#" class="btn">SECURE PAYMENT LINK (Coming Soon)</a>
+          </div>
+          <p>Once payment is confirmed, you will receive your official <strong>Service Agreement</strong> and we will submit your application to the relevant authorities immediately.</p>
         `;
                 break;
 
             default:
                 return new Response(JSON.stringify({ success: false, message: 'Invalid action' }), { status: 400 });
         }
+
+        // Generate Full HTML
+        const htmlContent = getEmailTemplate(subject, bodyContent);
 
         // 1. Update Lead Status in Brevo CRM
         const updateRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
@@ -140,8 +135,6 @@ export default async function handler(req) {
         if (!updateRes.ok) {
             const updateErr = await updateRes.text();
             console.error('Brevo Update Error:', updateErr);
-            // We continue to try sending email, but we should note this error
-            // Or better, failing to update status is critical for the funnel state
             return new Response(JSON.stringify({
                 success: false,
                 message: `Failed to update status. check if LEAD_STATUS attribute exists in Brevo. Error: ${updateRes.status}`

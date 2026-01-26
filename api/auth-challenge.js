@@ -1,3 +1,5 @@
+import { getEmailTemplate } from './email-template.js';
+
 export const config = {
     runtime: 'edge',
 };
@@ -44,7 +46,19 @@ export default async function handler(req) {
 
         // 4. Send OTP via Email (Brevo)
         const apiKey = process.env.BREVO_API_KEY;
+
         if (apiKey) {
+            const subject = `Your Login Code: ${otp}`;
+            const bodyContent = `
+                <p>Hello Admin,</p>
+                <p>We received a request to access the Workers United Dashboard.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2563eb; background: #eff6ff; padding: 10px 20px; border-radius: 8px;">${otp}</span>
+                </div>
+                <p>This code is valid for <strong>5 minutes</strong>.</p>
+                <p>If you did not request this code, please ignore this email.</p>
+            `;
+
             await fetch('https://api.brevo.com/v3/smtp/email', {
                 method: 'POST',
                 headers: {
@@ -55,8 +69,8 @@ export default async function handler(req) {
                 body: JSON.stringify({
                     sender: { name: "Workers United Admin", email: "contact@workersunited.eu" },
                     to: [{ email: "cvetkovicborivoje@gmail.com", name: "Admin" }],
-                    subject: `Your Login Code: ${otp}`,
-                    htmlContent: `<p>Your verification code is: <strong>${otp}</strong></p><p>Valid for 5 minutes.</p>`
+                    subject: subject,
+                    htmlContent: getEmailTemplate('Secure Login Verification', bodyContent)
                 })
             });
         } else {
