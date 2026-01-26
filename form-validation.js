@@ -54,7 +54,7 @@
     function createErrorElement(fieldName) {
       const errorId = `${fieldName}-error`;
       let errorEl = document.getElementById(errorId);
-      
+
       if (!errorEl) {
         errorEl = document.createElement('div');
         errorEl.id = errorId;
@@ -62,7 +62,7 @@
         errorEl.setAttribute('role', 'alert');
         errorEl.setAttribute('aria-live', 'polite');
       }
-      
+
       return errorEl;
     }
 
@@ -98,7 +98,7 @@
     function clearError(fieldName) {
       const field = fields[fieldName];
       const errorEl = document.getElementById(`${fieldName}-error`);
-      
+
       if (errorEl) {
         errorEl.remove();
       }
@@ -203,31 +203,20 @@
 
       if (!isValid) {
         e.preventDefault();
-        
+        e.stopImmediatePropagation(); // Stop other listeners if invalid
+
         // Focus first invalid field
         const firstError = form.querySelector('.field-invalid');
         if (firstError) {
           firstError.focus();
-          // Smooth scroll to error
           firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // Show error notification
         showNotification('Please fix the errors above before submitting', 'error');
         return false;
       }
 
-      // If valid, show loading state
-      const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Sending...';
-        submitBtn.style.opacity = '0.6';
-      }
-
-      // Netlify will handle the actual submission
-      // If there's an error, Netlify will show it
-      // We'll add a success message handler via URL parameter
+      // If valid, we let the other listener (in index.html) handle the AJAX submission
     });
 
     // Check for success parameter in URL (Netlify redirects to ?success=true)
