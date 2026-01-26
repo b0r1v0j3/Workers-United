@@ -38,6 +38,7 @@ export default async function handler(req, res) {
             <p><strong>Phone:</strong> ${phone}</p>
             <p><strong>Country:</strong> ${country}</p>
             <p><strong>Role:</strong> ${role}</p>
+            <p><strong>Preferred Job:</strong> ${job_preference || 'Not specified'}</p>
             <hr/>
             <h3>Message:</h3>
             <p>${message}</p>
