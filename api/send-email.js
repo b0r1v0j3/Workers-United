@@ -35,7 +35,6 @@ export default async function handler(req) {
     const emailToOwner = {
       sender: { name: "Workers United Site", email: "contact@workersunited.eu" },
       to: [{ email: "contact@workersunited.eu", name: "Workers United Team" }],
-      cc: [{ email: "cvetkovicborivoje@gmail.com", name: "Borivoje" }],
       subject: `New Inquiry from ${name} (${role})`,
       htmlContent: `<html><body>
         <h2>New Website Inquiry</h2>
