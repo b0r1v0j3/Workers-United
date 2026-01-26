@@ -1392,7 +1392,8 @@ textarea:focus {
 
 .back-to-top {
   position: fixed;
-  bottom: 24px;
+  bottom: 100px;
+  /* Raised to avoid Chatbot */
   right: 24px;
   width: 48px;
   height: 48px;
@@ -1437,7 +1438,8 @@ textarea:focus {
 
 @media (max-width: 768px) {
   .back-to-top {
-    bottom: 20px;
+    bottom: 90px;
+    /* Raised on mobile too */
     right: 20px;
     width: 44px;
     height: 44px;
