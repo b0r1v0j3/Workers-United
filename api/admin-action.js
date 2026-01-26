@@ -82,7 +82,10 @@ export default async function handler(req, res) {
                 statusLabel = 'PAYMENT REQUESTED';
                 bodyContent = `
           <p>Dear ${name},</p>
-          <p><strong>Good news!</strong> After reviewing your documents, our legal team has confirmed your eligibility.</p>
+          <p><strong>Good news!</strong> After reviewing your documents, our legal team has confirmed your eligibility for the work visa program.</p>
+          <p>We are ready to begin the official process.</p>
+          <p class="info-box">We are currently preparing your service agreement and invoice. You will receive a separate email with payment instructions and the contract within 24 hours.</p>
+          <p>Welcome to Workers United!</p>
         `;
                 break;
 
