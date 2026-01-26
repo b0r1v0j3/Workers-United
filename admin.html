@@ -274,7 +274,9 @@
                 // or we can protect the GET route too. For now let's assume GET is open or we pass key header if we had one.
                 // Wait, our get-leads.js doesn't require password. We might want to fix that later.
 
-                const response = await fetch('/api/get-leads');
+                const response = await fetch('/api/get-leads', {
+                    headers: { 'x-admin-password': pwd }
+                });
                 if (!response.ok) throw new Error('Failed to load');
 
                 const data = await response.json();

@@ -8,13 +8,18 @@ export default async function handler(req) {
     }
 
     try {
+        // Security Check
+        const adminPassword = req.headers.get('x-admin-password');
+        if (adminPassword !== 'admin123') {
+            return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+        }
+
         const apiKey = process.env.BREVO_API_KEY;
         if (!apiKey) {
             return new Response(JSON.stringify({ message: 'Server configuration error' }), { status: 500 });
         }
 
         // Fetch contacts from Brevo
-        // We filter by attributes used in our funnel if possible, or just get all and filter in frontend
         const res = await fetch('https://api.brevo.com/v3/contacts?limit=50&sort=desc', {
             method: 'GET',
             headers: {
@@ -32,7 +37,7 @@ export default async function handler(req) {
         const data = await res.json();
         const contacts = data.contacts || [];
 
-        // Map to a cleaner format for our dashboard
+        // Map to a cleaner format
         const leads = contacts.map(c => {
             const attrs = c.attributes || {};
             return {
@@ -49,7 +54,7 @@ export default async function handler(req) {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Cache-Control': 'no-store, max-age=0' // Ensure fresh data
+                'Cache-Control': 'no-store, max-age=0'
             },
         });
 
