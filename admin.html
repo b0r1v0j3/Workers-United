@@ -527,6 +527,37 @@
                 btnElement.disabled = false;
             }
         }
+        async function viewDocs(email) {
+            const modal = document.getElementById('docsModal');
+            const list = document.getElementById('docsList');
+            const linkDisplay = document.getElementById('uploadLinkDisplay');
+
+            modal.style.display = 'flex';
+            list.innerHTML = 'Loading...';
+            linkDisplay.innerText = `https://workersunited.eu/upload?email=${encodeURIComponent(email)}`;
+
+            try {
+                const res = await fetch(`/api/get-docs?email=${encodeURIComponent(email)}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+                });
+                const data = await res.json();
+
+                if (data.files && data.files.length > 0) {
+                    list.innerHTML = data.files.map(f => `
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px; border:1px solid #eee; border-radius:8px;">
+                            <a href="${f.url}" target="_blank" style="text-decoration:none; color:#2563eb; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:300px;">
+                                📄 ${f.pathname.split('/').pop()}
+                            </a>
+                            <span style="font-size:11px; color:#999;">${new Date(f.uploadedAt).toLocaleDateString()}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div style="text-align:center; color:#6b7280; padding:20px;">No documents uploaded yet.</div>';
+                }
+            } catch (err) {
+                list.innerHTML = '<div style="color:red;">Failed to load documents.</div>';
+            }
+        }
     </script>
 </body>
 
