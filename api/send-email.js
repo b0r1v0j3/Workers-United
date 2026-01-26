@@ -1,8 +1,7 @@
 import { getEmailTemplate } from './email-template.js';
 
-export const config = {
-  runtime: 'edge', // Using Edge runtime for faster cold starts and standard fetch API
-};
+// Node.js runtime
+// export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
   // Only allow POST requests

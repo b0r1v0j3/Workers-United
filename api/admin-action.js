@@ -1,9 +1,5 @@
 import { getEmailTemplate } from './email-template.js';
 
-export const config = {
-    runtime: 'edge',
-};
-
 async function verifyToken(token) {
     if (!token) return false;
     const [expiryStr, signature] = token.split('.');
