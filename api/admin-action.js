@@ -2,17 +2,38 @@ export const config = {
     runtime: 'edge',
 };
 
+async function verifyToken(token) {
+    if (!token) return false;
+    const [expiryStr, signature] = token.split('.');
+    if (!expiryStr || !signature) return false;
+
+    if (Date.now() > parseInt(expiryStr)) return false;
+
+    const secretKey = process.env.BREVO_API_KEY || 'default-secret-key-change-me';
+
+    // Quick local HMAC helper
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secretKey);
+    const msgData = encoder.encode("AUTH_SESSION" + expiryStr);
+    const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+    const expectedSig = [...new Uint8Array(sigBuf)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+    return signature === expectedSig;
+}
+
 export default async function handler(req) {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
     }
 
     try {
-        const { action, email, name, password } = await req.json();
+        const { action, email, name, token } = await req.json();
 
         // Security check
-        if (password !== 'admin123') { // Temporary password
-            return new Response(JSON.stringify({ success: false, message: 'Unauthorized' }), { status: 401 });
+        const isValid = await verifyToken(token);
+        if (!isValid) {
+            return new Response(JSON.stringify({ success: false, message: 'Unauthorized: Invalid or expired session' }), { status: 401 });
         }
 
         const apiKey = process.env.BREVO_API_KEY;
@@ -102,7 +123,7 @@ export default async function handler(req) {
         }
 
         // 1. Update Lead Status in Brevo CRM
-        const updateContactRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
+        await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
             method: 'PUT',
             headers: {
                 'accept': 'application/json',

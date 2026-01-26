@@ -2,16 +2,38 @@ export const config = {
     runtime: 'edge',
 };
 
+async function verifyToken(token) {
+    if (!token) return false;
+    const [expiryStr, signature] = token.split('.');
+    if (!expiryStr || !signature) return false;
+
+    if (Date.now() > parseInt(expiryStr)) return false;
+
+    const secretKey = process.env.BREVO_API_KEY || 'default-secret-key-change-me';
+
+    // Quick local HMAC helper
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secretKey);
+    const msgData = encoder.encode("AUTH_SESSION" + expiryStr);
+    const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+    const expectedSig = [...new Uint8Array(sigBuf)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+    return signature === expectedSig;
+}
+
 export default async function handler(req) {
     if (req.method !== 'GET') {
         return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
     }
 
     try {
-        // Security Check
-        const adminPassword = req.headers.get('x-admin-password');
-        if (adminPassword !== 'admin123') {
-            return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+        // Security Check: Verify Session Token
+        const token = req.headers.get('x-auth-token');
+        const isValid = await verifyToken(token);
+
+        if (!isValid) {
+            return new Response(JSON.stringify({ message: 'Unauthorized: Invalid or expired session' }), { status: 401 });
         }
 
         const apiKey = process.env.BREVO_API_KEY;

@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Admin Specific Styles overriding main site for dashboard layout */
         body {
             background-color: #f3f4f6;
             color: #111827;
@@ -44,7 +43,6 @@
             color: #111827;
         }
 
-        /* Table Styles */
         .leads-table {
             width: 100%;
             border-collapse: collapse;
@@ -69,7 +67,6 @@
             font-size: 14px;
         }
 
-        /* Badges */
         .badge {
             padding: 4px 8px;
             border-radius: 9999px;
@@ -102,7 +99,6 @@
             color: #991b1b;
         }
 
-        /* Buttons */
         .btn-sm {
             padding: 6px 12px;
             font-size: 12px;
@@ -149,7 +145,6 @@
             cursor: not-allowed;
         }
 
-        /* Utility */
         .hidden {
             display: none !important;
         }
@@ -171,20 +166,54 @@
         .refresh-btn:hover {
             color: #111827;
         }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: #2563eb;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+        }
     </style>
 </head>
 
 <body>
 
-    <!-- Login Screen -->
-    <div id="loginScreen" class="admin-container login-screen card">
+    <!-- Login Screen: Step 1 Password -->
+    <div id="step1" class="admin-container login-screen card">
         <h1>Workers United Admin</h1>
-        <p style="margin-bottom: 20px; color: #6b7280;">Please enter your password to access the dashboard.</p>
-        <input type="password" id="adminPassword" placeholder="Enter Password"
-            style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 10px;">
-        <button onclick="login()" class="btn"
-            style="width: 100%; background: #2563eb; color: white; padding: 10px; border-radius: 6px; border: none; cursor: pointer;">Login</button>
-        <p id="loginError" style="color: red; margin-top: 10px; font-size: 14px;" class="hidden">Invalid password</p>
+        <p style="margin-bottom: 20px; color: #6b7280;">Secure Login</p>
+        <input type="password" id="adminPassword" placeholder="Enter Password">
+        <button onclick="doChallenge()" id="btnStep1" class="btn-primary">Next</button>
+        <p id="error1" style="color: red; margin-top: 10px; font-size: 14px;" class="hidden"></p>
+    </div>
+
+    <!-- Login Screen: Step 2 OTP -->
+    <div id="step2" class="admin-container login-screen card hidden">
+        <h1>2-Factor Auth</h1>
+        <p style="margin-bottom: 20px; color: #6b7280;">Enter the code sent to your email.</p>
+        <input type="text" id="otpCode" placeholder="Enter 6-digit code" maxlength="6"
+            style="text-align: center; letter-spacing: 5px; font-size: 20px;">
+        <button onclick="doVerify()" id="btnStep2" class="btn-primary">Verify</button>
+        <p id="error2" style="color: red; margin-top: 10px; font-size: 14px;" class="hidden"></p>
+        <button onclick="location.reload()"
+            style="background:none; border:none; color:#6b7280; margin-top:10px; cursor:pointer;">Cancel</button>
     </div>
 
     <!-- Dashboard Screen -->
@@ -213,80 +242,139 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="leadsBody">
-                        <!-- Leads will be injected here -->
-                    </tbody>
+                    <tbody id="leadsBody"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        // Use local storage for simple session persistence
-        const storedPassword = localStorage.getItem('admin_pwd');
+        // State for Multi-step Login
+        let challengeData = null;
 
-        if (storedPassword) {
-            verifyAndShowDashboard(storedPassword);
+        // Check if already logged in (Token exists and not expired)
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            verifyAndShowDashboard();
         }
 
-        async function login() {
+        async function doChallenge() {
             const pwd = document.getElementById('adminPassword').value;
+            const btn = document.getElementById('btnStep1');
+            const err = document.getElementById('error1');
+
             if (!pwd) return;
 
-            // Basic client-side check just for UI switching, real auth happens on every API call anyway
-            // We'll try to load leads to verify password
-            const success = await loadLeads(pwd);
-            if (success) {
-                localStorage.setItem('admin_pwd', pwd);
-                showDashboard();
-            } else {
-                document.getElementById('loginError').classList.remove('hidden');
+            btn.innerText = 'Checking...';
+            btn.disabled = true;
+            err.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth-challenge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    challengeData = data.challenge;
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+                    document.getElementById('otpCode').focus();
+                } else {
+                    err.innerText = data.message || 'Error occurred';
+                    err.classList.remove('hidden');
+                }
+            } catch (e) {
+                err.innerText = 'Network Error';
+                err.classList.remove('hidden');
+            } finally {
+                btn.innerText = 'Next';
+                btn.disabled = false;
+            }
+        }
+
+        async function doVerify() {
+            const otp = document.getElementById('otpCode').value;
+            const btn = document.getElementById('btnStep2');
+            const err = document.getElementById('error2');
+
+            if (!otp) return;
+
+            btn.innerText = 'Verifying...';
+            btn.disabled = true;
+            err.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        otp: otp,
+                        hash: challengeData.hash,
+                        expiry: challengeData.expiry
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('auth_token', data.token);
+                    showDashboard();
+                } else {
+                    err.innerText = data.message || 'Invalid code';
+                    err.classList.remove('hidden');
+                }
+            } catch (e) {
+                err.innerText = 'Network Error';
+                err.classList.remove('hidden');
+            } finally {
+                btn.innerText = 'Verify';
+                btn.disabled = false;
             }
         }
 
         function logout() {
-            localStorage.removeItem('admin_pwd');
+            localStorage.removeItem('auth_token');
             location.reload();
         }
 
         function showDashboard() {
-            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
             document.getElementById('dashboardScreen').style.display = 'block';
+            loadLeads();
         }
 
-        async function verifyAndShowDashboard(pwd) {
-            // Optimistic UI
+        async function verifyAndShowDashboard() {
             showDashboard();
-            loadLeads(pwd);
         }
 
-        async function loadLeads(passwordOverride = null) {
-            const pwd = passwordOverride || localStorage.getItem('admin_pwd');
-            if (!pwd) return false;
+        async function loadLeads() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) return logout();
 
             const indicator = document.getElementById('loadingIndicator');
             indicator?.classList.remove('hidden');
 
             try {
-                // Fetch leads (currently public endpoint but in real app should be protected)
-                // For this V1 without auth middleware, we just fetch
-                // The ACTIONS are protected by password. The VIEW is technically public in this simple version
-                // or we can protect the GET route too. For now let's assume GET is open or we pass key header if we had one.
-                // Wait, our get-leads.js doesn't require password. We might want to fix that later.
-
                 const response = await fetch('/api/get-leads', {
-                    headers: { 'x-admin-password': pwd }
+                    headers: { 'x-auth-token': token }
                 });
+
+                if (response.status === 401) {
+                    logout(); // Token expired
+                    return;
+                }
+
                 if (!response.ok) throw new Error('Failed to load');
 
                 const data = await response.json();
                 renderLeads(data.leads || []);
                 indicator?.classList.add('hidden');
-                return true;
             } catch (err) {
                 console.error(err);
                 indicator?.classList.add('hidden');
-                return false;
             }
         }
 
@@ -295,7 +383,7 @@
             tbody.innerHTML = '';
 
             if (leads.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#6b7280;">No candidates found. app is waiting for new leads.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#6b7280; padding:20px;">No candidates found yet.</td></tr>';
                 return;
             }
 
@@ -314,33 +402,24 @@
         }
 
         function getStatusBadge(status) {
-            // Map statuses from Brevo/Admin Action to CSS classes
             let cls = 'badge-new';
-            let label = status;
-
             if (status === 'DOCS REQUESTED') cls = 'badge-docs-requested';
             else if (status === 'UNDER REVIEW') cls = 'badge-under-review';
             else if (status === 'PAYMENT REQUESTED') cls = 'badge-payment-requested';
             else if (status === 'REJECTED') cls = 'badge-rejected';
-
-            return `<span class="badge ${cls}">${label}</span>`;
+            return `<span class="badge ${cls}">${status}</span>`;
         }
 
         function getActionButtons(lead) {
-            // Logic to show relevant buttons based on current status
-            const pwd = localStorage.getItem('admin_pwd');
+            // Logic to show relevant buttons
             const baseBtn = (action, label, cls) =>
                 `<button onclick="triggerAction('${action}', '${lead.email}', '${lead.name.replace(/'/g, "\\'")}', this)" class="btn-sm ${cls}">${label}</button>`;
 
             let buttons = '';
-
-            // Flow logic
             if (lead.status === 'NEW') {
                 buttons += baseBtn('request_docs', 'Request Docs', 'btn-action');
                 buttons += baseBtn('reject', 'Reject', 'btn-reject');
             } else if (lead.status === 'DOCS REQUESTED') {
-                // Maybe they sent docs via email and we manually move them to review?
-                // Or we have a button "Mark Docs Received" which sends the "Under Review" email
                 buttons += baseBtn('docs_received', 'Confirm Docs Received', 'btn-action');
             } else if (lead.status === 'UNDER REVIEW') {
                 buttons += baseBtn('approve_payment', 'Approve & Request Pay', 'btn-approve');
@@ -350,17 +429,15 @@
             } else if (lead.status === 'REJECTED') {
                 buttons += `<span style="color:#991b1b; font-size:12px;">Rejected</span>`;
             } else {
-                // Fallback for unknown states
                 buttons += baseBtn('request_docs', 'Start Process', 'btn-action');
             }
-
             return buttons;
         }
 
         async function triggerAction(action, email, name, btnElement) {
             if (!confirm(`Are you sure you want to ${action.replace('_', ' ')} for ${name}?`)) return;
 
-            const pwd = localStorage.getItem('admin_pwd');
+            const token = localStorage.getItem('auth_token'); // Use Token
             const originalText = btnElement.innerText;
             btnElement.innerText = '...';
             btnElement.classList.add('btn-loading');
@@ -374,23 +451,22 @@
                         action: action,
                         email: email,
                         name: name,
-                        password: pwd
+                        token: token // Use Token
                     })
                 });
 
                 const data = await res.json();
-
                 if (res.ok) {
                     alert('Success: ' + data.message);
-                    loadLeads(); // Refresh table
+                    loadLeads();
                 } else {
                     alert('Error: ' + data.message);
+                    if (res.status === 401) logout();
                     btnElement.innerText = originalText;
                     btnElement.classList.remove('btn-loading');
                     btnElement.disabled = false;
                 }
             } catch (err) {
-                console.error(err);
                 alert('Network Error');
                 btnElement.innerText = originalText;
                 btnElement.classList.remove('btn-loading');
