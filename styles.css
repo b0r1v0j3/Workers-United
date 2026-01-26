@@ -799,9 +799,50 @@ textarea {
 }
 
 textarea {
-  border-radius: 16px;
-  min-height: 110px;
   resize: vertical;
+  min-height: 100px;
+}
+
+.radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  /* Allow wrap on very small screens, but row on normal */
+  gap: 10px;
+}
+
+.radio-pill {
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.radio-pill input {
+  display: none;
+}
+
+.radio-pill span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: white;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.radio-pill input:checked+span {
+  background: var(--primary-soft);
+  color: white;
+  border-color: var(--primary-soft);
+  box-shadow: 0 4px 12px rgba(47, 111, 237, 0.3);
+}
+
+border-radius: 16px;
+min-height: 110px;
+resize: vertical;
 }
 
 /* ============================================
