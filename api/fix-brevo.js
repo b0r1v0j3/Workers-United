@@ -9,8 +9,8 @@ export default async function handler(req) {
     }
 
     try {
-        // 1. Try to create the attribute
-        const res = await fetch('https://api.brevo.com/v3/contacts/attributes/normal', {
+        // Correct Endpoint: /contacts/attributes/normal/{attributeName}
+        const res = await fetch('https://api.brevo.com/v3/contacts/attributes/normal/LEAD_STATUS', {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -18,7 +18,6 @@ export default async function handler(req) {
                 'content-type': 'application/json'
             },
             body: JSON.stringify({
-                value: "LEAD_STATUS",
                 type: "text"
             })
         });
@@ -28,11 +27,11 @@ export default async function handler(req) {
         if (res.ok) {
             return new Response(`SUCCESS! Created LEAD_STATUS attribute. Now your buttons will work. Refresh your admin panel.`, { status: 200 });
         } else {
-            // If it fails, maybe it already exists?
+            // "Attribute already exists" error handling
             if (text.includes("already exists")) {
                 return new Response(`Attribute LEAD_STATUS already exists. If status is still not saving, please check Brevo manually. Error: ${text}`, { status: 200 });
             }
-            return new Response(`Failed to create attribute: ${text}`, { status: 400 });
+            return new Response(`Failed to create attribute. API Response: ${text}`, { status: 400 });
         }
 
     } catch (error) {
