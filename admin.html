@@ -251,36 +251,59 @@
         </div>
     </div>
 
+    <!-- Debug Console -->
+    <div id="debugConsole"
+        style="background:#000; color:#0f0; padding:10px; margin:20px; border-radius:8px; font-family:monospace; font-size:12px; display:none;">
+        <strong>Debug Log:</strong><br>
+    </div>
+
     <script>
+        function log(msg) {
+            console.log(msg);
+            const d = document.getElementById('debugConsole');
+            d.style.display = 'block';
+            d.innerHTML += `<div>${new Date().toLocaleTimeString()} - ${msg}</div>`;
+        }
+
         let challengeData = null;
 
         // Auto-login check
         const storedToken = localStorage.getItem('auth_token');
-        if (storedToken) { showDashboard(); }
+        if (storedToken) { log('Found stored token'); showDashboard(); }
 
         async function doChallenge() {
             const pwd = document.getElementById('adminPassword').value;
             const btn = document.getElementById('btnStep1');
             const err = document.getElementById('error1');
             if (!pwd) return;
+
+            log('Starting Challenge...');
             btn.innerText = 'Checking...'; btn.disabled = true; err.classList.add('hidden');
+
             try {
+                log('Fetching /api/auth-challenge...');
                 const res = await fetch('/api/auth-challenge', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: pwd })
                 });
+                log(`Response status: ${res.status}`);
+
                 const data = await res.json();
+
                 if (res.ok) {
+                    log('Challenge Success');
                     challengeData = data.challenge;
                     document.getElementById('step1').classList.add('hidden');
                     document.getElementById('step2').classList.remove('hidden');
                     document.getElementById('otpCode').focus();
                 } else {
+                    log(`Challenge Failed: ${data.message}`);
                     err.innerText = data.message || 'Error: ' + res.status;
                     err.classList.remove('hidden');
                 }
             } catch (e) {
+                log(`Network Error: ${e.message}`);
                 console.error(e);
                 err.innerText = 'Network Error: ' + e.message;
                 err.classList.remove('hidden');
@@ -294,22 +317,28 @@
             const btn = document.getElementById('btnStep2');
             const err = document.getElementById('error2');
             if (!otp) return;
+            log('Verifying OTP...');
             btn.innerText = 'Verifying...'; btn.disabled = true; err.classList.add('hidden');
             try {
+                log('Fetching /api/auth-verify...');
                 const res = await fetch('/api/auth-verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ otp, hash: challengeData.hash, expiry: challengeData.expiry })
                 });
+                log(`Verify status: ${res.status}`);
                 const data = await res.json();
                 if (res.ok) {
+                    log('Verify Success');
                     localStorage.setItem('auth_token', data.token);
                     showDashboard();
                 } else {
+                    log(`Verify Failed: ${data.message}`);
                     err.innerText = data.message || 'Invalid code';
                     err.classList.remove('hidden');
                 }
             } catch (e) {
+                log(`Verify Error: ${e.message}`);
                 err.innerText = 'Network Error: ' + e.message;
                 err.classList.remove('hidden');
             } finally {
