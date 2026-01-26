@@ -2,6 +2,7 @@
     "name": "workers-united-backend",
     "version": "1.0.0",
     "dependencies": {
-        "@getbrevo/brevo": "^2.0.0"
+        "@getbrevo/brevo": "^2.0.0",
+        "@vercel/blob": "^0.22.1"
     }
 }
