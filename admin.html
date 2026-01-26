@@ -265,7 +265,7 @@
             if (!pwd) return;
             btn.innerText = 'Checking...'; btn.disabled = true; err.classList.add('hidden');
             try {
-                const res = await fetch('/api/auth-challenge', {
+                const res = await fetch('https://www.workersunited.eu/api/auth-challenge', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: pwd })
@@ -296,7 +296,7 @@
             if (!otp) return;
             btn.innerText = 'Verifying...'; btn.disabled = true; err.classList.add('hidden');
             try {
-                const res = await fetch('/api/auth-verify', {
+                const res = await fetch('https://www.workersunited.eu/api/auth-verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ otp, hash: challengeData.hash, expiry: challengeData.expiry })
@@ -334,7 +334,7 @@
             indicator.classList.remove('hidden');
             errDiv.classList.add('hidden');
             try {
-                const response = await fetch('/api/get-leads', { headers: { 'x-auth-token': token } });
+                const response = await fetch('https://www.workersunited.eu/api/get-leads', { headers: { 'x-auth-token': token } });
                 if (response.status === 401) return logout();
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.message || 'Failed to fetch leads');
@@ -398,7 +398,7 @@
             const token = localStorage.getItem('auth_token');
             const originalText = btn.innerText; btn.innerText = '...'; btn.disabled = true;
             try {
-                const res = await fetch('/api/admin-action', {
+                const res = await fetch('https://www.workersunited.eu/api/admin-action', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action, email, id, name, token })
