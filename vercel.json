@@ -1,29 +1,20 @@
 {
-  "redirects": [
+  "rewrites": [
     {
       "source": "/privacy-policy",
-      "destination": "/privacy-policy.html",
-      "permanent": true
+      "destination": "/privacy-policy.html"
     },
     {
       "source": "/terms",
-      "destination": "/terms.html",
-      "permanent": true
-    },
-    {
-      "source": "/contact",
-      "destination": "/#contact",
-      "permanent": true
+      "destination": "/terms.html"
     },
     {
       "source": "/admin",
-      "destination": "/admin.html",
-      "permanent": true
+      "destination": "/admin.html"
     },
     {
       "source": "/upload",
-      "destination": "/upload.html",
-      "permanent": true
+      "destination": "/upload.html"
     }
   ],
   "headers": [
