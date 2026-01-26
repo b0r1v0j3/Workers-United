@@ -568,13 +568,7 @@
 
             <!-- Netlify form -->
             <div class="contact-form-card">
-              <form id="contact-form" action="https://api.web3forms.com/submit" method="POST">
-                <!-- Web3Forms Access Key -->
-                <input type="hidden" name="access_key" value="9119999f-e25a-45f4-807d-dd75c8b22afa">
-                <!-- Redirect after submission (optional) -->
-                <input type="hidden" name="redirect" value="https://www.workersunited.eu/?success=true">
-                <!-- Honeypot for spam protection -->
-                <input type="checkbox" name="botcheck" class="hidden" style="display:none;">
+              <form id="contact-form">
 
                 <!-- Success/Error message container -->
                 <div id="form-result" style="display:none; padding:12px; border-radius:8px; margin-bottom:16px;"></div>
@@ -809,9 +803,12 @@
         resultDiv.style.display = 'none';
 
         try {
-          const response = await fetch('https://api.web3forms.com/submit', {
+          const response = await fetch('/api/send-email', {
             method: 'POST',
-            body: formData
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
           });
 
           const data = await response.json();
