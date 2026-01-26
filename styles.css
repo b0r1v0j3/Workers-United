@@ -784,6 +784,7 @@ section {
 
 input[type="text"],
 input[type="email"],
+input[type="tel"],
 select,
 textarea {
   border-radius: 999px;
