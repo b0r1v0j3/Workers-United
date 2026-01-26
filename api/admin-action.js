@@ -123,7 +123,7 @@ export default async function handler(req) {
         }
 
         // 1. Update Lead Status in Brevo CRM
-        await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
+        const updateRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
             method: 'PUT',
             headers: {
                 'accept': 'application/json',
@@ -136,6 +136,17 @@ export default async function handler(req) {
                 }
             })
         });
+
+        if (!updateRes.ok) {
+            const updateErr = await updateRes.text();
+            console.error('Brevo Update Error:', updateErr);
+            // We continue to try sending email, but we should note this error
+            // Or better, failing to update status is critical for the funnel state
+            return new Response(JSON.stringify({
+                success: false,
+                message: `Failed to update status. check if LEAD_STATUS attribute exists in Brevo. Error: ${updateRes.status}`
+            }), { status: 400 });
+        }
 
         // 2. Send the Email
         const sendEmailRes = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -154,7 +165,8 @@ export default async function handler(req) {
         });
 
         if (!sendEmailRes.ok) {
-            throw new Error('Failed to send email');
+            const emailErr = await sendEmailRes.text();
+            throw new Error(`Failed to send email: ${emailErr}`);
         }
 
         return new Response(JSON.stringify({ success: true, message: `Action ${action} executed successfully` }), {
