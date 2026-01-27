@@ -66,7 +66,7 @@ export default async function handler(req, res) {
             <h3>What Happens Next?</h3>
             <ol style="line-height: 2;">
                 <li><strong>Initial Review</strong> – Our team will evaluate your profile against current job openings in Europe</li>
-                <li><strong>Country-Specific Information</strong> – You will receive tailored information about work visa opportunities in ${country} and target European countries</li>
+                <li><strong>Tailored Information</strong> – You will receive specific information about work visa opportunities that match your profile and target European countries</li>
                 <li><strong>Document Requirements</strong> – If there is a good match, we will guide you through the document preparation process</li>
                 <li><strong>Legal Support</strong> – Our legal team will assist with all visa paperwork and employment contracts</li>
             </ol>
