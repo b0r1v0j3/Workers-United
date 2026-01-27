@@ -15,6 +15,10 @@
     {
       "source": "/upload",
       "destination": "/upload.html"
+    },
+    {
+      "source": "/setup-attributes",
+      "destination": "/api/setup-attributes.js"
     }
   ],
   "headers": [

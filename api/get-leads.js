@@ -63,6 +63,7 @@ export default async function handler(req, res) {
                 country: getAttr('COUNTRY') || 'Unknown',
                 role: getAttr('ROLE') || 'Unknown',
                 job_preference: getAttr('JOB_PREFERENCE') || '-',
+                has_documents: getAttr('HAS_DOCUMENTS') === true,
                 status: getAttr('LEAD_STATUS') || 'NEW',
                 date: c.createdAt
             };

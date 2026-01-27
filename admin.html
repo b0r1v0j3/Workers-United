@@ -409,7 +409,7 @@
             const tbody = document.getElementById('leadsBody');
             tbody.innerHTML = '';
             if (leads.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#6b7280; padding:40px;">No candidates found in database.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#6b7280; padding:40px;">No candidates found in database.</td></tr>';
                 return;
             }
             leads.forEach(lead => {
@@ -420,7 +420,12 @@
                     <td><strong>${lead.name || 'N/A'}</strong><br><span style="font-size:11px; color:#9ca3af;">${displayDate}</span></td>
                     <td>${lead.email}</td>
                     <td>${lead.phone ? `<a href="https://wa.me/${safePhone}" target="_blank" style="color:#2563eb;">${lead.phone}</a>` : '-'}</td>
-                    <td><button onclick="viewDocs('${lead.email}')" style="background:none; border:1px solid #eee; border-radius:4px; cursor:pointer;">📂</button></td>
+                    <td style="text-align:center;">
+                        ${lead.has_documents
+                        ? `<span title="Has Documents">✅</span> <button onclick="viewDocs('${lead.email}')" style="background:none; border:1px solid #eee; border-radius:4px; cursor:pointer;">📂</button>`
+                        : `<button onclick="viewDocs('${lead.email}')" style="background:none; border:1px solid #eee; border-radius:4px; cursor:pointer;">📂</button>`
+                    }
+                    </td>
                     <td>${lead.country || '-'}</td>
                     <td>${lead.role || '-'}</td>
                     <td style="font-weight: 500; color: #2563eb;">${lead.job_preference || '-'}</td>
