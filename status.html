@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Status - Workers United</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background-color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logo img {
+            height: 40px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 22px;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: 0.2s;
+        }
+
+        input:focus {
+            border-color: #2563eb;
+            outline: none;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-login:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .error {
+            color: #ef4444;
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 16px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <div class="logo">
+            <img src="assets/workers-united-logo.png" alt="Workers United">
+        </div>
+        <h1>Candidate Portal</h1>
+        <p>Enter your email to check your application status and tasks.</p>
+
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="name@example.com" required>
+            <button type="submit" class="btn-login" id="btnSubmit">Check Status</button>
+            <div id="errorMsg" class="error"></div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const btn = document.getElementById('btnSubmit');
+        const errorDiv = document.getElementById('errorMsg');
+
+        // Check if already logged in
+        if (localStorage.getItem('candidate_email')) {
+            window.location.href = 'dashboard.html';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value.trim();
+            if (!email) return;
+
+            btn.innerText = "Checking...";
+            btn.disabled = true;
+            errorDiv.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/candidate-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                if (res.ok) {
+                    // Success
+                    localStorage.setItem('candidate_email', email);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    const data = await res.json();
+                    errorDiv.innerText = data.message || "Email not found in our system.";
+                    errorDiv.style.display = 'block';
+                    btn.innerText = "Check Status";
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                errorDiv.innerText = "Network error. Please try again.";
+                errorDiv.style.display = 'block';
+                btn.innerText = "Check Status";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>
