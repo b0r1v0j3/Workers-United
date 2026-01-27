@@ -1726,13 +1726,23 @@ select:focus {
 
 .iti input[type="tel"]:focus {
   background: #fff;
-  border-color: var(--border);
-  /* Keep border subtle */
-  box-shadow: none;
+  border-color: var(--primary-soft) !important;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15) !important;
+  outline: none !important;
 }
 
 @media (max-width: 640px) {
   .iti__country-list {
     max-height: 150px;
   }
+}
+
+/* Force blue boxy effect on phone input container when focused */
+.iti.iti--allow-dropdown.iti--show-flags {
+  transition: border 0.12s ease, box-shadow 0.12s ease;
+}
+
+.iti.iti--allow-dropdown.iti--show-flags:has(input:focus) {
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
 }
