@@ -75,10 +75,11 @@ export default async function handler(req, res) {
                     const types = docTypes.split(',').map(t => t.trim());
                     for (const type of types) {
                         if (!type) continue;
-                        // We don't have the URL here unfortunately, but we can log that they have it.
-                        // Ideally we would fetch files from Blob list, but for now let's just create a placeholder or skip
-                        // Actually, let's skip creating "dummy" document rows to avoid broken links.
-                        // Only real uploads (via upload-file.js) will create valid document rows.
+                        // Insert placeholder for legacy documents so they appear in the UI
+                        await sql`
+                            INSERT INTO documents (candidate_id, file_url, file_type)
+                            VALUES (${candidateId}, 'legacy://brevo-import', ${type})
+                        `;
                     }
                 }
 
