@@ -1,6 +1,7 @@
 // International Tel Input Initialization
 document.addEventListener('DOMContentLoaded', function () {
     const phoneInput = document.querySelector("#phone");
+    const countryInput = document.querySelector("#country");
 
     if (phoneInput && window.intlTelInput) {
         const iti = window.intlTelInput(phoneInput, {
@@ -21,6 +22,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Clear default placeholder
         phoneInput.placeholder = "";
+
+        // Auto-populate country field when phone country is selected
+        if (countryInput) {
+            // Listen for country change in phone input
+            phoneInput.addEventListener('countrychange', function () {
+                const selectedCountryData = iti.getSelectedCountryData();
+                if (selectedCountryData && selectedCountryData.name) {
+                    // Only auto-fill if country field is empty (don't override user's choice)
+                    if (!countryInput.value || countryInput.value.trim() === '') {
+                        countryInput.value = selectedCountryData.name;
+                    }
+                }
+            });
+
+            // Initial population when page loads
+            setTimeout(() => {
+                const selectedCountryData = iti.getSelectedCountryData();
+                if (selectedCountryData && selectedCountryData.name && !countryInput.value) {
+                    countryInput.value = selectedCountryData.name;
+                }
+            }, 500); // Small delay to let IP detection finish
+        }
 
         // Validation on blur
         phoneInput.addEventListener('blur', function () {

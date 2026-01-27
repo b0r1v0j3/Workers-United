@@ -1671,7 +1671,7 @@ select:focus {
 }
 
 .iti__country-list {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   max-height: 200px;
   font-family: 'Montserrat', sans-serif;
@@ -1712,18 +1712,21 @@ select:focus {
 
 .iti input[type="tel"] {
   width: 100%;
-  padding: 0.8rem !important;
+  padding: 12px 14px !important;
   padding-left: 52px !important;
-  border: 1.5px solid #d1d5db;
-  border-radius: 6px;
+  border: 2px solid transparent;
+  background: var(--bg);
+  border-radius: 8px;
   font-size: 16px;
   font-family: 'Montserrat', sans-serif;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+  outline: none;
 }
 
 .iti input[type="tel"]:focus {
-  outline: none;
-  border-color: #2563eb !important;
+  background: #fff;
+  border-color: var(--primary-soft);
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
 }
 
 @media (max-width: 640px) {
