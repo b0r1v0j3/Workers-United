@@ -44,15 +44,17 @@ export const faqDatabase = [
         question: "Which European countries can I work in?",
         keywords: ["country", "countries", "where", "location", "destination", "europe"],
         answer: {
-            short: "We currently place workers in Germany, Poland, Czech Republic, Romania, and Hungary.",
-            detailed: `Popular destinations:
-        🇩🇪 Germany - Strong economy, high wages, manufacturing & healthcare
-        🇵🇱 Poland - Growing IT sector, logistics, construction
-        🇨🇿 Czech Republic - Automotive, engineering, hospitality
-        🇷🇴 Romania - Agriculture, tech, customer service
-        🇭🇺 Hungary - Food processing, warehousing, IT
+            short: "We place workers across multiple European countries based on job availability and your qualifications.",
+            detailed: `European Opportunities:
         
-        💼 Country depends on your skills and employer availability.`
+        🇪🇺 We operate across the territory of Europe
+        💼 Placement depends on:
+           • Your skills and qualifications
+           • Current employer demand
+           • Work visa requirements for your nationality
+           • Language abilities
+        
+        📧 Specific country options will be discussed during your personal consultation based on available positions that match your profile.`
         }
     },
     {
