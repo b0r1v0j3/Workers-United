@@ -4,17 +4,21 @@ export const getEmailTemplate = (title, bodyContent) => `
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f7; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-    .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .header { background-color: #ffffff; padding: 0; text-align: center; border-bottom: 2px solid #2563eb; }
-    .logo { width: 100%; max-width: 600px; height: auto; display: block; pointer-events: none; }
-    .content { padding: 40px 30px; color: #333333; line-height: 1.6; font-size: 16px; }
-    .footer { background-color: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #999999; border-top: 1px solid #eeeeee; }
-    h1 { color: #111827; font-size: 22px; margin-top: 0; margin-bottom: 20px; }
-    p { margin-bottom: 15px; }
-    .btn { display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px; }
+    body { font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7f9; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+    .container { width: 100%; max-width: 650px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .header { background-color: #ffffff; padding: 0; text-align: center; border-bottom: 3px solid #2563eb; }
+    .logo { width: 100%; max-width: 650px; height: auto; display: block; pointer-events: none; }
+    .content { padding: 45px 35px; color: #1f2937; line-height: 1.7; font-size: 16px; }
+    .footer { background-color: #f9fafb; padding: 25px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+    h1 { color: #111827; font-size: 26px; margin-top: 0; margin-bottom: 20px; font-weight: 700; }
+    h3 { color: #374151; font-size: 19px; margin-top: 30px; margin-bottom: 15px; font-weight: 600; }
+    p { margin-bottom: 16px; color: #374151; }
+    ul, ol { margin: 15px 0; padding-left: 25px; color: #374151; }
+    li { margin-bottom: 8px; }
+    .btn { display: inline-block; background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 15px; transition: background-color 0.3s; }
     .btn:hover { background-color: #1d4ed8; }
-    .info-box { background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; font-size: 14px; }
+    .info-box { background-color: #eff6ff; border-left: 5px solid #2563eb; padding: 18px 20px; margin: 25px 0; font-size: 15px; border-radius: 4px; }
+    strong { color: #111827; }
   </style>
 </head>
 <body>

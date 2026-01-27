@@ -52,13 +52,46 @@ export default async function handler(req, res) {
       htmlContent: getEmailTemplate(`New Inquiry: ${name}`, ownerContent)
     };
 
-    // 2. Send Auto-Reply to User
+    // 2. Send Enhanced Auto-Reply to User
     const userBody = `
+            <h1>🎉 Thank You for Your Interest, ${name}!</h1>
             <p>Dear ${name},</p>
-            <p>Thank you for contacting Workers United.</p>
-            <p>We have received your inquiry regarding <strong>${role}</strong> opportunities.</p>
-            <p class="info-box">Our team is currently reviewing your details. We usually reply within 24-48 hours with specific information valid for your country (${country}).</p>
-            <p>Thank you for your patience.</p>
+            <p>We are delighted that you have chosen Workers United to explore <strong>${role}</strong> opportunities abroad.</p>
+            
+            <div class="info-box">
+                <strong>✅ Your Application Has Been Received</strong><br>
+                We have successfully recorded your details and will review your profile within the next 24-48 hours.
+            </div>
+
+            <h3>What Happens Next?</h3>
+            <ol style="line-height: 2;">
+                <li><strong>Initial Review</strong> – Our team will evaluate your profile against current job openings in Europe</li>
+                <li><strong>Country-Specific Information</strong> – You will receive tailored information about work visa opportunities in ${country} and target European countries</li>
+                <li><strong>Document Requirements</strong> – If there is a good match, we will guide you through the document preparation process</li>
+                <li><strong>Legal Support</strong> – Our legal team will assist with all visa paperwork and employment contracts</li>
+            </ol>
+
+            <h3>💼 Why Choose Workers United?</h3>
+            <ul style="line-height: 1.8;">
+                <li>✅ <strong>100% Legal Process</strong> – Full compliance with EU labor laws</li>
+                <li>✅ <strong>Transparent Pricing</strong> – No hidden fees, clear service agreements</li>
+                <li>✅ <strong>End-to-End Support</strong> – From application to arrival in Europe</li>
+                <li>✅ <strong>Verified Employers</strong> – We only work with licensed, reputable companies</li>
+            </ul>
+
+            <p style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+                <strong>📧 Check Your Email</strong><br>
+                Our response will come from <strong>contact@workersunited.eu</strong>. Please check your spam folder if you don't see it in your inbox.
+            </p>
+
+            <p>In the meantime, feel free to explore our website to learn more about our services:</p>
+            <p style="text-align: center;">
+                <a href="https://workersunited.eu" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Visit Our Website</a>
+            </p>
+
+            <p>If you have any urgent questions, you can reply directly to this email.</p>
+            
+            <p style="margin-top: 30px;"><strong>Best regards,</strong><br>Workers United Team<br><em>Legal International Hiring & Work Visa Support</em></p>
         `;
 
     const emailToUser = {
