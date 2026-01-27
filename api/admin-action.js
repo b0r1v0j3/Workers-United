@@ -71,7 +71,7 @@ export default async function handler(req, res) {
           <h3>🔒 Your Privacy & Security</h3>
           <p>All documents are encrypted and stored securely. We comply with GDPR and EU data protection regulations. Your information will only be used for visa processing purposes.</p>
 
-          <p style="margin-top: 30px;">If you have any questions about which documents to upload, feel free to reply to this email.</p>
+          <p style="margin-top: 30px;"><strong>Need help?</strong> Check our <a href="https://workersunited.eu/faq" style="color: #2563eb; font-weight: bold;">FAQ page</a> for detailed guides on document requirements.</p>
           
           <p><strong>We look forward to helping you achieve your career goals!</strong></p>
           
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
           </div>
 
           <h3>📞 Need Help?</h3>
-          <p>If you have any questions or need to update any information, simply reply to this email or contact us at <strong>contact@workersunited.eu</strong>.</p>
+          <p><strong>Track Your Progress:</strong> Log into your candidate portal anytime to check your application status.</p>
 
           <p style="margin-top: 30px;"><strong>Thank you for your patience!</strong></p>
           
@@ -166,7 +166,7 @@ export default async function handler(req, res) {
           <h3>🌍 Welcome to the Workers United Family!</h3>
           <p>You are one step closer to your career goals in Europe. Our team is committed to making this process as smooth and stress-free as possible.</p>
 
-          <p>If you have any questions before receiving the official documents, please don't hesitate to contact us.</p>
+          <p>Check our <a href="https://workersunited.eu/faq" style="color: #2563eb; font-weight: bold;">FAQ page</a> for answers to common questions about payments, contracts, and next steps.</p>
 
           <p style="margin-top: 30px; font-size: 16px;"><strong>Congratulations again, and welcome aboard!</strong></p>
           
