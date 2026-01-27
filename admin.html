@@ -216,18 +216,30 @@
         </div>
         <div id="dashboardError" class="error-msg hidden" style="margin-bottom: 20px;"></div>
         <div class="card">
+            <!-- Filters -->
+            <div
+                style="display:flex; gap:20px; border-bottom:1px solid #e5e7eb; margin-bottom:16px; padding-bottom:px;">
+                <button onclick="setFilter('ALL')" class="filter-tab" data-filter="ALL"
+                    style="background:none; border:none; border-bottom:2px solid #2563eb; color:#2563eb; padding:8px 16px; font-weight:600; cursor:pointer;">All
+                    Candidates</button>
+                <button onclick="setFilter('ACTION_REQUIRED')" class="filter-tab" data-filter="ACTION_REQUIRED"
+                    style="background:none; border:none; color:#6b7280; padding:8px 16px; font-weight:600; cursor:pointer;">Action
+                    Required 🔴</button>
+                <button onclick="setFilter('WAITING')" class="filter-tab" data-filter="WAITING"
+                    style="background:none; border:none; color:#6b7280; padding:8px 16px; font-weight:600; cursor:pointer;">Waiting
+                    ⏳</button>
+            </div>
+
             <div style="overflow-x: auto;">
                 <table class="leads-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Email</th>
+                            <th>Candidate</th>
                             <th>Phone</th>
-                            <th>Docs</th>
+                            <th>Documents (Who Sent What)</th>
                             <th>Country</th>
                             <th>Role</th>
-                            <th>Job</th>
-                            <th>Status (Stage)</th>
+                            <th>Status (Phase)</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -410,32 +422,100 @@
             }
         }
 
-        function renderLeads(leads) {
+                </table >
+            </div >
+        </div >
+    </div >
+
+            <!-- ... (Docs Modal remains same) ... -->
+
+            <script>
+        // ... (Previous scripts remain) ...
+
+                let allLeads = [];
+                let currentFilter = 'ALL';
+
+                function showDashboard() {
+                    document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('dashboardScreen').style.display = 'block';
+                loadLeads();
+        }
+
+                async function loadLeads() {
+            const token = localStorage.getItem('auth_token');
+                if (!token) return logout();
+                const indicator = document.getElementById('loadingIndicator');
+                indicator.classList.remove('hidden');
+                try {
+                const response = await fetch('/api/get-leads', {headers: {'x-auth-token': token } });
+                if (response.status === 401) return logout();
+                const data = await response.json();
+                allLeads = data.leads || [];
+                renderLeads();
+            } catch (err) {
+                    console.error(err);
+                alert('Error loading candidates');
+            } finally {
+                    indicator.classList.add('hidden');
+            }
+        }
+
+                function setFilter(filter) {
+                    currentFilter = filter;
+            // Update UI tabs
+            document.querySelectorAll('.filter-tab').forEach(b => {
+                    b.style.borderBottom = b.dataset.filter === filter ? '2px solid #2563eb' : 'none';
+                b.style.color = b.dataset.filter === filter ? '#2563eb' : '#6b7280';
+            });
+                renderLeads();
+        }
+
+                function renderLeads() {
             const tbody = document.getElementById('leadsBody');
-            tbody.innerHTML = '';
-            if (leads.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#6b7280; padding:40px;">No candidates found in database.</td></tr>';
+                tbody.innerHTML = '';
+
+            const filtered = allLeads.filter(l => {
+                if (currentFilter === 'ALL') return true;
+                if (currentFilter === 'ACTION_REQUIRED') return l.status === 'DOCS RECEIVED' || l.status === 'NEW';
+                if (currentFilter === 'WAITING') return l.status === 'DOCS REQUESTED' || l.status === 'UNDER REVIEW';
+                return true;
+            });
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px;">No candidates found for this filter.</td></tr>';
                 return;
             }
-            leads.forEach(lead => {
+
+            filtered.forEach(lead => {
                 const tr = document.createElement('tr');
                 const safePhone = (lead.phone || '').replace(/[^0-9]/g, '');
-                const displayDate = lead.date ? new Date(lead.date).toLocaleDateString() : 'N/A';
-                tr.innerHTML = `
-                    <td><strong>${lead.name || 'N/A'}</strong><br><span style="font-size:11px; color:#9ca3af;">${displayDate}</span></td>
-                    <td>${lead.email}</td>
-                    <td>${lead.phone ? `<a href="https://wa.me/${safePhone}" target="_blank" style="color:#2563eb;">${lead.phone}</a>` : '-'}</td>
-                    <td style="text-align:center;">
-                        ${lead.has_documents
-                        ? `<span title="Has Documents">✅</span> <button onclick="viewDocs('${lead.email}')" style="background:none; border:1px solid #eee; border-radius:4px; cursor:pointer;">📂</button>`
-                        : `<button onclick="viewDocs('${lead.email}')" style="background:none; border:1px solid #eee; border-radius:4px; cursor:pointer;">📂</button>`
+
+                // Parse Doc Types
+                let docTags = '';
+                if (lead.has_documents) {
+                    if (lead.doc_types) {
+                    docTags = lead.doc_types.split(',').map(t =>
+                        `<span style="background:#eff6ff; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:10px; margin-right:4px;">${t.trim()}</span>`
+                    ).join('');
+                    } else {
+                    docTags = `<span style="font-size:10px; color:#6b7280;">Generic Files</span>`;
                     }
-                    </td>
-                    <td>${lead.country || '-'}</td>
-                    <td>${lead.role || '-'}</td>
-                    <td style="font-weight: 500; color: #2563eb;">${lead.job_preference || '-'}</td>
-                    <td>${getStatusBadge(lead.status)}</td>
-                    <td>${getActionButtons(lead)}</td>
+                }
+
+                tr.innerHTML = `
+                <td><strong>${lead.name || 'N/A'}</strong><br><span style="font-size:11px; color:#9ca3af;">${lead.email}</span></td>
+                <td><a href="https://wa.me/${safePhone}" target="_blank" style="color:#2563eb; text-decoration:none;">${lead.phone || '-'}</a></td>
+                <td style="max-width:200px;">
+                    ${lead.has_documents
+                        ? `<button onclick="viewDocs('${lead.email}')" style="background:#ecfccb; border:1px solid #d9f99d; border-radius:4px; cursor:pointer; font-size:12px; margin-bottom:4px;">📂 Open Docs</button><br>${docTags}`
+                        : `<span style="color:#9ca3af; font-size:12px;">No docs</span>`
+                    }
+                </td>
+                <td>${lead.country || '-'}</td>
+                <td>${lead.role || '-'}</td>
+                <td>${getStatusBadge(lead.status)}</td>
+                <td>${getActionButtons(lead)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -443,17 +523,17 @@
 
 
 
-        function getStatusBadge(s) {
-            let cls = 'badge-new';
-            if (s === 'DOCS REQUESTED') cls = 'badge-docs-requested';
-            else if (s === 'DOCS RECEIVED') cls = 'badge-docs-received'; // New Purple Badge
-            else if (s === 'UNDER REVIEW') cls = 'badge-under-review';
-            else if (s === 'PAYMENT REQUESTED') cls = 'badge-payment-requested';
-            else if (s === 'REJECTED') cls = 'badge-rejected';
-            return `<span class="badge ${cls}">${s || 'NEW'}</span>`;
+                function getStatusBadge(s) {
+                    let cls = 'badge-new';
+                if (s === 'DOCS REQUESTED') cls = 'badge-docs-requested';
+                else if (s === 'DOCS RECEIVED') cls = 'badge-docs-received'; // New Purple Badge
+                else if (s === 'UNDER REVIEW') cls = 'badge-under-review';
+                else if (s === 'PAYMENT REQUESTED') cls = 'badge-payment-requested';
+                else if (s === 'REJECTED') cls = 'badge-rejected';
+                return `<span class="badge ${cls}">${s || 'NEW'}</span>`;
         }
 
-        function getActionButtons(lead) {
+                function getActionButtons(lead) {
             const btn = (a, l, c) => `<button onclick="triggerAction('${a}', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}', this)" class="btn-sm ${c}">${l}</button>`;
             let btns = '';
 
@@ -478,11 +558,11 @@
                 btns += btn('reject', 'Reject', 'btn-reject');
             }
             else {
-                btns += `<span style="font-size:12px; color:#6b7280;">Processing...</span>`;
+                btns += `< span style = "font-size:12px; color:#6b7280;" > Processing...</span > `;
             }
 
-            btns += `<button onclick="triggerAction('delete', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}', this)" class="btn-sm" style="color:#ef4444; border:1px solid #fee2e2; margin-left:10px;">🗑️</button>`;
-            return btns;
+            btns += `< button onclick = "triggerAction('delete', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}', this) " class="btn - sm" style="color: #ef4444; border: 1px solid #fee2e2; margin - left: 10px; ">🗑️</button>`;
+        return btns;
         }
 
         async function triggerAction(action, email, id, name, btn) {

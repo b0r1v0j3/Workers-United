@@ -71,6 +71,28 @@ export default async function handler(req, res) {
 
                 // --- NEW: UPDATE CONTACT ATTRIBUTE ---
                 try {
+                    // 1. Get current attributes to append to DOC_TYPES
+                    const getRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
+                        method: 'GET',
+                        headers: { 'accept': 'application/json', 'api-key': apiKey }
+                    });
+
+                    let currentDocs = '';
+                    if (getRes.ok) {
+                        const data = await getRes.json();
+                        const attrs = data.attributes || {};
+                        // Handle case sensitivity just in case
+                        currentDocs = attrs.DOC_TYPES || attrs.doc_types || '';
+                    }
+
+                    // 2. Append new type if not already present
+                    const newType = type || 'Document';
+                    let newDocsList = currentDocs;
+                    if (!currentDocs.includes(newType)) {
+                        newDocsList = currentDocs ? `${currentDocs}, ${newType}` : newType;
+                    }
+
+                    // 3. Update Brevo
                     await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
                         method: 'PUT',
                         headers: {
@@ -81,11 +103,12 @@ export default async function handler(req, res) {
                         body: JSON.stringify({
                             attributes: {
                                 HAS_DOCUMENTS: true,
-                                LEAD_STATUS: 'DOCS RECEIVED'
+                                LEAD_STATUS: 'DOCS RECEIVED',
+                                DOC_TYPES: newDocsList // e.g. "Passport, CV"
                             }
                         })
                     });
-                    console.log('Updated HAS_DOCUMENTS and LEAD_STATUS for', email);
+                    console.log('Updated DOC_TYPES:', newDocsList, 'for', email);
                 } catch (attrErr) {
                     console.error('Failed to update contact attribute:', attrErr);
                 }

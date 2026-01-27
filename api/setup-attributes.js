@@ -6,29 +6,40 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Missing BREVO_API_KEY' });
     }
 
-    try {
-        const response = await fetch('https://api.brevo.com/v3/contacts/attributes/normal/HAS_DOCUMENTS', {
-            method: 'POST',
-            headers: {
-                'accept': 'application/json',
-                'api-key': apiKey,
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify({
-                type: 'boolean'
-            })
-        });
+    const attributes = [
+        { name: 'HAS_DOCUMENTS', type: 'boolean' },
+        { name: 'DOC_TYPES', type: 'text' },
+        { name: 'LEAD_STATUS', type: 'text' },
+        { name: 'JOB_PREFERENCE', type: 'text' },
+        { name: 'ROLE', type: 'text' },
+        { name: 'COUNTRY', type: 'text' }
+    ];
 
-        if (response.ok) {
-            return res.status(200).json({ message: 'HAS_DOCUMENTS attribute created successfully' });
-        } else {
-            const data = await response.json();
-            if (data.code === 'duplicate_parameter') {
-                return res.status(200).json({ message: 'Attribute HAS_DOCUMENTS already exists' });
+    try {
+        const results = [];
+        for (const attr of attributes) {
+            const response = await fetch(`https://api.brevo.com/v3/contacts/attributes/normal/${attr.name}`, {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'api-key': apiKey,
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify({ type: attr.type })
+            });
+
+            if (response.ok) {
+                results.push(`Created ${attr.name}`);
             } else {
-                return res.status(400).json({ error: data });
+                const data = await response.json();
+                if (data.code === 'duplicate_parameter') {
+                    results.push(`Exists ${attr.name}`);
+                } else {
+                    results.push(`Error ${attr.name}: ${JSON.stringify(data)}`);
+                }
             }
         }
+        return res.status(200).json({ results });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
