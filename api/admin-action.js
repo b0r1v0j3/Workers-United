@@ -1,5 +1,6 @@
 import { getEmailTemplate } from './email-template.js';
 import { list, del } from '@vercel/blob';
+import { sql } from '@vercel/postgres';
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -102,18 +103,17 @@ export default async function handler(req, res) {
                     }
                 } catch (blobErr) {
                     console.error('Blob cleanup failed:', blobErr);
-                    // Don't fail the whole request, just log it
                 }
 
-                // 2. Delete from Brevo
+                // 2. Delete from Postgres (CASCADE will delete documents and audit logs)
+                await sql`DELETE FROM candidates WHERE LOWER(email) = LOWER(${email})`;
+
+                // 3. Delete from Brevo (Legacy cleanup)
                 const deleteRes = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
                     method: 'DELETE',
                     headers: { 'accept': 'application/json', 'api-key': apiKey }
-                });
+                }).catch(err => console.log('Brevo delete failed (non-critical):', err.message));
 
-                if (!deleteRes.ok && deleteRes.status !== 404) {
-                    return res.status(400).json({ success: false, message: 'Failed to delete from Brevo' });
-                }
                 return res.status(200).json({ success: true, message: `Contact deleted successfully.` });
 
             default:
@@ -122,14 +122,28 @@ export default async function handler(req, res) {
 
         const htmlContent = getEmailTemplate(subject, bodyContent);
 
-        // 1. Update Lead Status
+        // 1. Update Status in POSTGRES
+        await sql`
+            UPDATE candidates 
+            SET status = ${statusLabel}, updated_at = NOW() 
+            WHERE LOWER(email) = LOWER(${email})
+        `;
+
+        // 2. Log Action in Audit Trail
+        await sql`
+            INSERT INTO audit_logs (candidate_id, action, performed_by, details)
+            SELECT id, ${`STATUS_CHANGE_${action}`}, 'Admin', ${JSON.stringify({ previous_status: 'UNKNOWN', new_status: statusLabel })}::jsonb
+            FROM candidates WHERE LOWER(email) = LOWER(${email})
+        `;
+
+        // 3. Update in Brevo (Legacy - for email compatibility)
         await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
             method: 'PUT',
             headers: { 'accept': 'application/json', 'api-key': apiKey, 'content-type': 'application/json' },
             body: JSON.stringify({ attributes: { LEAD_STATUS: statusLabel } })
-        });
+        }).catch(err => console.log('Brevo update failed (non-critical):', err.message));
 
-        // 2. Send Email
+        // 4. Send Email
         const sendEmailRes = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: { 'accept': 'application/json', 'api-key': apiKey, 'content-type': 'application/json' },
