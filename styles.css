@@ -1712,21 +1712,23 @@ select:focus {
 
 .iti input[type="tel"] {
   width: 100%;
-  padding: 12px 14px !important;
+  padding: 9px 12px !important;
   padding-left: 52px !important;
-  border: 2px solid transparent;
-  background: var(--bg);
-  border-radius: 8px;
+  border-radius: 999px !important;
+  border: 1px solid var(--border);
+  background: #f9fbff;
   font-size: 16px;
-  font-family: 'Montserrat', sans-serif;
-  transition: all 0.2s ease;
+  font-family: inherit;
+  transition: border 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
   outline: none;
+  height: auto;
 }
 
 .iti input[type="tel"]:focus {
   background: #fff;
-  border-color: var(--primary-soft);
-  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
+  border-color: var(--border);
+  /* Keep border subtle */
+  box-shadow: none;
 }
 
 @media (max-width: 640px) {
