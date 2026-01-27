@@ -16,23 +16,21 @@ export default async function handler(req, res) {
         // 2. Process each blob file
         for (const blob of blobs) {
             try {
-                // Extract email from pathname (format: uploads/{email}/{filename})
+                // Extract email from pathname (format: candidates/{email}/{type}-{timestamp}-{filename})
                 const pathParts = blob.pathname.split('/');
-                if (pathParts[0] !== 'uploads' || !pathParts[1]) {
+                if (pathParts[0] !== 'candidates' || !pathParts[1]) {
                     skipped++;
+                    console.log(`⏭️ Skipped: ${blob.pathname} (not in candidates folder)`);
                     continue;
                 }
 
                 const email = decodeURIComponent(pathParts[1]);
-                const filename = pathParts[2] || 'unknown';
+                const filenameWithPrefix = pathParts[2] || 'unknown';
 
-                // Guess document type from filename
-                let docType = 'Document';
-                const lowerName = filename.toLowerCase();
-                if (lowerName.includes('passport') || lowerName.includes('pasosh')) docType = 'Passport';
-                else if (lowerName.includes('cv') || lowerName.includes('resume')) docType = 'CV';
-                else if (lowerName.includes('diploma') || lowerName.includes('certificate')) docType = 'Diploma';
-                else if (lowerName.includes('photo') || lowerName.includes('picture')) docType = 'Photo';
+                // Extract actual filename (format: {type}-{timestamp}-{filename})
+                const parts = filenameWithPrefix.split('-');
+                const docType = parts[0] || 'Document'; // First part is type
+                const filename = parts.slice(2).join('-') || filenameWithPrefix; // Rest is filename
 
                 // Find candidate by email
                 const candidateRes = await sql`
