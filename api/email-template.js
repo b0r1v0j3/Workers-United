@@ -1,3 +1,4 @@
+// Email Template - Last Updated: 2026-01-27 17:38 (Force redeploy)
 export const getEmailTemplate = (title, bodyContent) => `
 <!DOCTYPE html>
 <html>
