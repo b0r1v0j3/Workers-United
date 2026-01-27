@@ -11,21 +11,22 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
-        // 2. Fetch Candidates
-        // Group by ALL non-aggregated columns to ensure SQL compatibility
-        const { rows } = await sql`
-            SELECT
-                c.id, c.email, c.name, c.phone, c.country, c.role, c.status, c.created_at,
-                STRING_AGG(d.file_type, ', ') as doc_types,
-                COUNT(d.id) > 0 as has_documents
-            FROM candidates c
-            LEFT JOIN documents d ON c.id = d.candidate_id
-            GROUP BY c.id, c.email, c.name, c.phone, c.country, c.role, c.status, c.created_at
-            ORDER BY c.created_at DESC;
-        `;
+        // 2. Fetch Candidates and Documents Separately (Robust Method)
+        const candidatesRes = await sql`SELECT * FROM candidates ORDER BY created_at DESC`;
+        const documentsRes = await sql`SELECT * FROM documents`;
+
+        const candidates = candidatesRes.rows;
+        const documents = documentsRes.rows;
+
+        // Group documents by candidate_id
+        const docsMap = {};
+        documents.forEach(doc => {
+            if (!docsMap[doc.candidate_id]) docsMap[doc.candidate_id] = [];
+            docsMap[doc.candidate_id].push(doc.file_type);
+        });
 
         // 3. Map to format expected by Admin Panel
-        const leads = rows.map(row => ({
+        const leads = candidates.map(row => ({
             id: row.id,
             email: row.email,
             name: row.name || row.email.split('@')[0],
@@ -34,8 +35,8 @@ export default async function handler(req, res) {
             role: row.role || '-',
             // Ensure status matches frontend expectation (uppercase)
             status: row.status ? row.status.toUpperCase() : 'NEW',
-            has_documents: row.has_documents, // Boolean from SQL
-            doc_types: row.doc_types || '' // "Passport, CV"
+            has_documents: (docsMap[row.id] && docsMap[row.id].length > 0),
+            doc_types: (docsMap[row.id] || []).join(', ')
         }));
 
         return res.status(200).json({ leads });
