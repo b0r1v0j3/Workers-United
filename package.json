@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "dependencies": {
         "@getbrevo/brevo": "^2.0.0",
-        "@vercel/blob": "^0.22.1"
+        "@vercel/blob": "^0.22.1",
+        "@vercel/postgres": "^0.10.0"
     }
 }
