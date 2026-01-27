@@ -122,29 +122,29 @@ export default async function handler(req, res) {
 
         // --- POSTGRES WRITE START ---
         try {
-            const { default: query } = await import('./db.js');
+            const { sql } = await import('@vercel/postgres');
 
             // 1. Ensure candidate exists (Upsert)
-            const candidateRes = await query(`
+            const candidateRes = await sql`
                 INSERT INTO candidates (email, name, status)
-                VALUES ($1, $2, 'DOCS RECEIVED')
+                VALUES (${email}, ${email.split('@')[0]}, 'DOCS RECEIVED')
                 ON CONFLICT (email) DO UPDATE 
                 SET status = 'DOCS RECEIVED', updated_at = NOW()
                 RETURNING id;
-            `, [email, email.split('@')[0]]);
+            `;
 
             const candidateId = candidateRes.rows[0]?.id;
 
             // 2. Insert document record
             if (candidateId) {
-                await query(`
+                await sql`
                     INSERT INTO documents (candidate_id, file_url, file_type)
-                    VALUES ($1, $2, $3)
-                `, [candidateId, blob.url, type || 'Document']);
-                console.log('Saved to Postgres Documents:', filename);
+                    VALUES (${candidateId}, ${blob.url}, ${type || 'Document'})
+                `;
+                console.log('✅ Saved to Postgres:', filename, 'for candidate', candidateId);
             }
         } catch (dbErr) {
-            console.error('Postgres Write Error:', dbErr);
+            console.error('❌ Postgres Write Error:', dbErr);
             // Don't fail the request if DB fails, just log it (Migration phase)
         }
         // --- POSTGRES WRITE END ---
