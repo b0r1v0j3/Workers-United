@@ -436,9 +436,17 @@
             });
         }
 
+        .badge - docs - received {
+            background - color: #f3e8ff;
+            color: #6b21a8;
+        }
+
+        /* ... existing styles ... */
+
         function getStatusBadge(s) {
             let cls = 'badge-new';
             if (s === 'DOCS REQUESTED') cls = 'badge-docs-requested';
+            else if (s === 'DOCS RECEIVED') cls = 'badge-docs-received'; // New Purple Badge
             else if (s === 'UNDER REVIEW') cls = 'badge-under-review';
             else if (s === 'PAYMENT REQUESTED') cls = 'badge-payment-requested';
             else if (s === 'REJECTED') cls = 'badge-rejected';
@@ -448,10 +456,31 @@
         function getActionButtons(lead) {
             const btn = (a, l, c) => `<button onclick="triggerAction('${a}', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}', this)" class="btn-sm ${c}">${l}</button>`;
             let btns = '';
-            if (lead.status === 'NEW') { btns += btn('request_docs', 'Req Docs', 'btn-action'); btns += btn('reject', 'Reject', 'btn-reject'); }
-            else if (lead.status === 'DOCS REQUESTED') { btns += btn('docs_received', 'Confirm Docs', 'btn-action'); }
-            else if (lead.status === 'UNDER REVIEW') { btns += btn('approve_payment', 'Approve', 'btn-approve'); btns += btn('reject', 'Reject', 'btn-reject'); }
-            else { btns += `<span style="font-size:12px; color:#6b7280;">Processing...</span>`; }
+
+            // STATUS: NEW
+            if (lead.status === 'NEW') {
+                btns += btn('request_docs', 'Req Docs', 'btn-action');
+                btns += btn('reject', 'Reject', 'btn-reject');
+            }
+            // STATUS: DOCS REQUESTED (Waiting for user)
+            else if (lead.status === 'DOCS REQUESTED') {
+                btns += btn('docs_received', 'Confirm Docs', 'btn-action'); // Manual confirm
+                btns += btn('request_docs', 'Resend Req', 'btn-sm'); // NEW: Resend Button
+            }
+            // STATUS: DOCS RECEIVED (User uploaded, waiting for Admin)
+            else if (lead.status === 'DOCS RECEIVED') {
+                btns += btn('docs_received', 'Start Review', 'btn-action'); // Moves to UNDER REVIEW
+                btns += btn('approve_payment', 'Fast Approve', 'btn-approve');
+            }
+            // STATUS: UNDER REVIEW (Admin is working)
+            else if (lead.status === 'UNDER REVIEW') {
+                btns += btn('approve_payment', 'Approve', 'btn-approve');
+                btns += btn('reject', 'Reject', 'btn-reject');
+            }
+            else {
+                btns += `<span style="font-size:12px; color:#6b7280;">Processing...</span>`;
+            }
+
             btns += `<button onclick="triggerAction('delete', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}', this)" class="btn-sm" style="color:#ef4444; border:1px solid #fee2e2; margin-left:10px;">🗑️</button>`;
             return btns;
         }

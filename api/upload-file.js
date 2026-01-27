@@ -79,10 +79,13 @@ export default async function handler(req, res) {
                             'content-type': 'application/json'
                         },
                         body: JSON.stringify({
-                            attributes: { HAS_DOCUMENTS: true }
+                            attributes: {
+                                HAS_DOCUMENTS: true,
+                                LEAD_STATUS: 'DOCS RECEIVED'
+                            }
                         })
                     });
-                    console.log('Updated HAS_DOCUMENTS for', email);
+                    console.log('Updated HAS_DOCUMENTS and LEAD_STATUS for', email);
                 } catch (attrErr) {
                     console.error('Failed to update contact attribute:', attrErr);
                 }
