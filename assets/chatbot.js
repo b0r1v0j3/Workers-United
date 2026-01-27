@@ -80,8 +80,7 @@
                     showOptions([
                         { text: "I need a Job 👷", action: 'job' },
                         { text: "Check Status 🔍", action: 'status' },
-                        { text: "Upload Documents 📂", action: 'upload' },
-                        { text: "Talk to Human 👤", action: 'human' }
+                        { text: "Upload Documents 📂", action: 'upload' }
                     ]);
                 }, 600);
             }
@@ -148,7 +147,6 @@
         if (action === 'job') addUserMessage("I need a Job");
         else if (action === 'status') addUserMessage("Check Application Status");
         else if (action === 'upload') addUserMessage("Upload Documents");
-        else if (action === 'human') addUserMessage("Talk to a Human");
         else if (action === 'restart') addUserMessage("Start Over");
 
         showTyping();
@@ -171,18 +169,12 @@
                 addBotMessage("I can generate a secure upload link for you. Please enter your **Email Address**.");
                 setInputMode('email_upload');
             }
-            else if (action === 'human') {
-                addBotMessage("Sure. Please leave a short message and our team will email you back.");
-                addBotMessage("First, what is your **Email Address**?");
-                setInputMode('email_human');
-            }
             else if (action === 'restart') {
                 addBotMessage("How can I help you?");
                 showOptions([
                     { text: "I need a Job", action: 'job' },
                     { text: "Check Status", action: 'status' },
-                    { text: "Upload Documents", action: 'upload' },
-                    { text: "Talk to Human", action: 'human' }
+                    { text: "Upload Documents", action: 'upload' }
                 ]);
             }
         }, 600);
@@ -211,14 +203,6 @@
         }
         else if (mode === 'email_upload') {
             await generateUploadLink(text);
-        }
-        else if (mode === 'email_human') {
-            userData.email = text;
-            addBotMessage("Thanks. Now please type your **Message**:");
-            setInputMode('message_human');
-        }
-        else if (mode === 'message_human') {
-            await sendHumanMessage(text);
         }
     }
 
