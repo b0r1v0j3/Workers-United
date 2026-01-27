@@ -17,6 +17,14 @@
       "destination": "/upload.html"
     },
     {
+      "source": "/status",
+      "destination": "/status.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/dashboard.html"
+    },
+    {
       "source": "/setup-attributes",
       "destination": "/api/setup-attributes.js"
     }
