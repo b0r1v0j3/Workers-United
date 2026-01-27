@@ -89,7 +89,7 @@ export default async function handler(req, res) {
                 <a href="https://workersunited.eu" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Visit Our Website</a>
             </p>
 
-            <p style="margin-top: 30px;"><strong>Best regards,</strong><br>Workers United Team<br><em>Legal International Hiring & Work Visa Support</em></p>
+            <p style="margin-top: 40px;"><strong>Best regards,</strong><br>The Workers United Team</p>
         `;
 
     const emailToUser = {
