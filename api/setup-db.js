@@ -7,6 +7,10 @@ export default async function handler(req, res) {
     // But for now, let's keep it simple as a setup script.
 
     try {
+        if (!process.env.POSTGRES_URL) {
+            throw new Error('POSTGRES_URL is missing. Did you Connect the database and Redeploy?');
+        }
+
         // 1. Create Candidates Table
         await sql`
             CREATE TABLE IF NOT EXISTS candidates (
