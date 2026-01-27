@@ -1661,3 +1661,73 @@ select:focus {
   color: var(--text);
   font-weight: 500;
 }
+
+/* ============================================
+   International Phone Input Customization
+   ============================================ */
+.iti {
+  width: 100%;
+  display: block;
+}
+
+.iti__country-list {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  border-radius: 8px;
+  max-height: 200px;
+  font-family: 'Montserrat', sans-serif;
+  z-index: 1000;
+}
+
+.iti__selected-flag {
+  padding: 0 12px;
+  transition: background-color 0.2s;
+  background-color: transparent;
+}
+
+.iti__selected-flag:hover,
+.iti__selected-flag:focus {
+  background-color: #f0f9ff;
+}
+
+.iti__flag {
+  width: 20px;
+  height: 15px;
+  margin-right: 8px;
+}
+
+.iti__country-name {
+  margin-left: 6px;
+}
+
+.iti__dial-code {
+  color: #6b7280;
+  margin-left: auto;
+}
+
+.iti--separate-dial-code .iti__selected-dial-code {
+  margin-left: 8px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.iti input[type="tel"] {
+  width: 100%;
+  padding: 0.8rem !important;
+  padding-left: 52px !important;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 16px;
+  font-family: 'Montserrat', sans-serif;
+  transition: border-color 0.2s;
+}
+
+.iti input[type="tel"]:focus {
+  outline: none;
+  border-color: #2563eb !important;
+}
+
+@media (max-width: 640px) {
+  .iti__country-list {
+    max-height: 150px;
+  }
+}
