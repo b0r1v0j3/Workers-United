@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS documents (
     candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
     file_url TEXT NOT NULL,
     file_type TEXT NOT NULL, -- 'Passport', 'CV', 'Diploma', 'Other'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
