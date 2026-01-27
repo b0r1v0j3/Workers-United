@@ -12,73 +12,49 @@ export default async function handler(req, res) {
         res.status(200).end();
         return;
     }
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
 
-    if (req.method !== 'GET') {
-        return res.status(405).json({ message: 'Method Not Allowed' });
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
-        const token = req.headers['x-auth-token'];
-        if (!token) {
-            return res.status(401).json({ message: 'Unauthorized: Missing session' });
-        }
-        // In emergency mode, just check if token exists and starts with AUTH_SESSION
-        if (!token.startsWith('AUTH_SESSION')) {
-            return res.status(401).json({ message: 'Unauthorized: Invalid session' });
-        }
+        // 2. Fetch Candidates with their Document Types
+        // We use string_agg to comma-separate document types, similar to how we formatted it before
+        const { rows } = await sql`
+            SELECT 
+                c.id, 
+                c.email, 
+                c.name, 
+                c.phone, 
+                c.country, 
+                c.role, 
+                c.status,
+                c.created_at,
+                STRING_AGG(d.file_type, ', ') as doc_types,
+                COUNT(d.id) > 0 as has_documents
+            FROM candidates c
+            LEFT JOIN documents d ON c.id = d.candidate_id
+            GROUP BY c.id
+            ORDER BY c.created_at DESC;
+        `;
 
-        const apiKey = process.env.BREVO_API_KEY;
-        if (!apiKey) {
-            return res.status(500).json({ message: 'Server configuration error: Missing API Key' });
-        }
-
-        // Fetch contacts from Brevo
-        const fetchRes = await fetch('https://api.brevo.com/v3/contacts?limit=50&sort=desc', {
-            method: 'GET',
-            headers: {
-                'accept': 'application/json',
-                'api-key': apiKey
-            }
-        });
-
-        if (!fetchRes.ok) {
-            const errorText = await fetchRes.text();
-            console.error('Brevo API Error:', errorText);
-            throw new Error('Failed to fetch contacts from Brevo');
-        }
-
-        const data = await fetchRes.json();
-        const contacts = data.contacts || [];
-
-        const leads = contacts.map(c => {
-            const attrs = c.attributes || {};
-            // Create a normalized upper-case key map for robust retrieval
-            const normalizedAttrs = {};
-            Object.keys(attrs).forEach(key => {
-                normalizedAttrs[key.toUpperCase()] = attrs[key];
-            });
-
-            const getAttr = (key) => normalizedAttrs[key] || normalizedAttrs[key.replace('_', ' ')] || '';
-
-            return {
-                id: c.id,
-                email: c.email,
-                name: `${normalizedAttrs['FIRSTNAME'] || normalizedAttrs['NAME'] || ''} ${normalizedAttrs['LASTNAME'] || ''}`.trim(),
-                phone: getAttr('PHONE') || getAttr('SMS') || '',
-                country: getAttr('COUNTRY') || 'Unknown',
-                role: getAttr('ROLE') || 'Unknown',
-                job_preference: getAttr('JOB_PREFERENCE') || '-',
-                has_documents: getAttr('HAS_DOCUMENTS') === true,
-                doc_types: getAttr('DOC_TYPES') || '',
-                status: getAttr('LEAD_STATUS') || 'NEW',
-                date: c.createdAt
-            };
-        });
+        // 3. Map to format expected by Admin Panel
+        const leads = rows.map(row => ({
+            id: row.id,
+            email: row.email,
+            name: row.name || row.email.split('@')[0],
+            phone: row.phone || '',
+            country: row.country || '-',
+            role: row.role || '-',
+            // Ensure status matches frontend expectation (uppercase)
+            status: row.status ? row.status.toUpperCase() : 'NEW',
+            has_documents: row.has_documents, // Boolean from SQL
+            doc_types: row.doc_types || '' // "Passport, CV"
+        }));
 
         return res.status(200).json({ leads });
 
     } catch (error) {
-        console.error('Get Leads Error:', error);
-        return res.status(500).json({ success: false, message: error.message });
+        console.error('Database Error:', error);
+        return res.status(500).json({ error: 'Failed to fetch leads from Database' });
     }
 }
