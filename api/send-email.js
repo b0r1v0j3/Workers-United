@@ -94,7 +94,6 @@ export default async function handler(req, res) {
 
     // Function to Create/Update Contact in Brevo CRM
     const saveBrevoContact = async () => {
-      // Add timeout to prevent hanging
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       try {
@@ -129,6 +128,32 @@ export default async function handler(req, res) {
       }
     };
 
+    // Function to Save Contact to Postgres (NEW!)
+    const savePostgresContact = async () => {
+      try {
+        const { sql } = await import('@vercel/postgres');
+
+        await sql`
+          INSERT INTO candidates (email, name, phone, country, role, job_preference, status)
+          VALUES (${email}, ${name}, ${phone}, ${country}, ${role}, ${job_preference || ''}, 'NEW')
+          ON CONFLICT (email) 
+          DO UPDATE SET 
+            name = EXCLUDED.name,
+            phone = EXCLUDED.phone,
+            country = EXCLUDED.country,
+            role = EXCLUDED.role,
+            job_preference = EXCLUDED.job_preference,
+            updated_at = NOW()
+        `;
+
+        console.log(`✅ Saved ${email} to Postgres`);
+        return { ok: true };
+      } catch (err) {
+        console.error('❌ Postgres save failed:', err);
+        return { ok: false, error: err.message };
+      }
+    };
+
     // Execute sequentially/parallel but MUST await in Serverless
     try {
       // 1. Send Owner Email (Must succeed)
@@ -139,17 +164,20 @@ export default async function handler(req, res) {
         throw new Error('Failed to send owner notification: ' + errText);
       }
 
-      // 2. Send User Email & Save to CRM (Attempt both, don't fail if they error)
+      // 2. Send User Email & Save to both Brevo CRM and Postgres (Attempt all, don't fail if they error)
       const results = await Promise.allSettled([
         sendBrevoEmail(emailToUser),
-        saveBrevoContact()
+        saveBrevoContact(),
+        savePostgresContact() // NEW: Also save to Postgres
       ]);
 
       // Log any failures
       results.forEach((result, index) => {
-        const label = index === 0 ? 'User Auto-reply' : 'CRM Contact Save';
+        const labels = ['User Auto-reply', 'Brevo CRM Save', 'Postgres DB Save'];
         if (result.status === 'rejected') {
-          console.error(`${label} failed:`, result.reason);
+          console.error(`${labels[index]} failed:`, result.reason);
+        } else if (index === 2 && result.value?.ok === false) {
+          console.error(`${labels[index]} failed:`, result.value.error);
         }
       });
 
