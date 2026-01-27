@@ -73,8 +73,6 @@ export default async function handler(req, res) {
 
           <p style="margin-top: 30px;"><strong>We look forward to helping you achieve your career goals!</strong></p>
           
-          <p><strong>We look forward to helping you achieve your career goals!</strong></p>
-          
           <p style="margin-top: 40px;"><strong>Best regards,</strong><br>The Workers United Team</p>
         `;
                 break;
@@ -166,9 +164,7 @@ export default async function handler(req, res) {
           <h3>🌍 Welcome to the Workers United Family!</h3>
           <p>You are one step closer to your career goals in Europe. Our team is committed to making this process as smooth and stress-free as possible.</p>
 
-          <p><strong>Congratulations again, and welcome aboard!</strong></p>
-
-          <p style="margin-top: 30px; font-size: 16px;"><strong>Congratulations again, and welcome aboard!</strong></p>
+          <p style="margin-top: 30px;"><strong>Congratulations again, and welcome aboard!</strong></p>
           
           <p style="margin-top: 40px;"><strong>Best regards,</strong><br>The Workers United Team</p>
         `;
