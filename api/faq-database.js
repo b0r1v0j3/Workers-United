@@ -154,7 +154,7 @@ export const faqDatabase = [
         🚚 LOGISTICS: Warehouse workers, drivers, forklift operators
         🌾 AGRICULTURE: Farm workers, harvesting, food processing
         
-        💼 Salary range: €1,200 - €3,500/month (depending on role & country)`
+        💼 Salary and benefits vary by country, employer, and role. Details will be provided during the placement process.`
         }
     },
     {
