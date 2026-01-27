@@ -1,3 +1,5 @@
+import { sql } from '@vercel/postgres';
+
 export default async function handler(req, res) {
     // CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -8,39 +10,37 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'GET') return res.status(405).json({ message: 'Method Not Allowed' });
 
-    // In a real app, we would verify JWT token here.
-    // For V1 "Email Access", we pass email as query param (secured by obscurity/low stakes).
-    // TODO for V2: Implement proper Session/JWT.
-
     const { searchParams } = new URL(req.url, `http://${req.headers.host}`);
     const email = searchParams.get('email');
 
     if (!email) return res.status(400).json({ message: 'Email required' });
 
-    const apiKey = process.env.BREVO_API_KEY;
     try {
-        const response = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
-            method: 'GET',
-            headers: {
-                'accept': 'application/json',
-                'api-key': apiKey
-            }
-        });
+        // Fetch candidate data from Postgres
+        const candidateRes = await sql`
+            SELECT id, email, name, phone, country, role, status 
+            FROM candidates 
+            WHERE LOWER(email) = LOWER(${email})
+        `;
 
-        if (response.status === 404) return res.status(404).json({ message: 'Not found' });
-        if (!response.ok) throw new Error('Brevo API Error');
+        if (candidateRes.rows.length === 0) {
+            return res.status(404).json({ message: 'Not found' });
+        }
 
-        const data = await response.json();
-        const attrs = data.attributes || {};
+        const c = candidateRes.rows[0];
 
-        // Map Brevo Attributes to clean frontend object
-        // NOTE: Ensure these attribute names match your Brevo CRM fields exactly
+        // Check if candidate has documents
+        const docsRes = await sql`
+            SELECT COUNT(*) as count FROM documents WHERE candidate_id = ${c.id}
+        `;
+        const hasDocuments = parseInt(docsRes.rows[0].count) > 0;
+
         const candidate = {
-            name: attrs.FIRSTNAME || attrs.NAME || 'Candidate', // Adjust based on your Brevo setup
-            status: attrs.LEAD_STATUS || 'NEW', // NEW, DOCS REQUESTED, UNDER REVIEW, APPROVED
-            hasDocs: attrs.HAS_DOCUMENTS === true,
-            jobPreference: attrs.JOB_PREFERENCE || 'General',
-            country: attrs.COUNTRY || 'Unknown'
+            name: c.name || 'Candidate',
+            status: c.status || 'NEW',
+            hasDocs: hasDocuments,
+            jobPreference: c.role || 'General',
+            country: c.country || 'Unknown'
         };
 
         return res.status(200).json({ candidate });

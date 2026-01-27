@@ -1,3 +1,5 @@
+import { sql } from '@vercel/postgres';
+
 export default async function handler(req, res) {
     // CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -11,31 +13,19 @@ export default async function handler(req, res) {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: 'Email required' });
 
-    const apiKey = process.env.BREVO_API_KEY;
-    if (!apiKey) return res.status(500).json({ message: 'Server Config Error' });
-
     try {
-        // Search contact by email in Brevo
-        const response = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
-            method: 'GET',
-            headers: {
-                'accept': 'application/json',
-                'api-key': apiKey
-            }
-        });
+        // Check if candidate exists in Postgres
+        const result = await sql`
+            SELECT id, email, name FROM candidates 
+            WHERE LOWER(email) = LOWER(${email})
+        `;
 
-        if (response.status === 404) {
+        if (result.rows.length === 0) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (!response.ok) {
-            throw new Error('Brevo API error');
-        }
-
-        // We don't return the full data here for security (just success)
-        // In a real app we would issue a JWT token here.
-        // For "Zero Employee" V1 (Low Friction), we trust the email existence.
-
+        // In production, generate and send OTP here
+        // For now, just confirm email exists
         return res.status(200).json({ success: true });
 
     } catch (error) {
