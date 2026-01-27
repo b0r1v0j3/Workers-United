@@ -58,15 +58,20 @@ export default async function handler(req, res) {
 
         return res.status(200).json({ message: 'Database schema initialized successfully' });
     } catch (error) {
-        // If "uuid_generate_v4" does not exist, we need to enable the extension
+        // Handle uuid extension error specifically
         if (error.message.includes('uuid_generate_v4')) {
             try {
                 await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`;
                 return res.status(200).json({ message: 'Extension uuid-ossp created. Please run this script again to create tables.' });
             } catch (extError) {
-                return res.status(500).json({ error: 'Failed to create extension: ' + extError.message });
+                return res.status(200).json({ error: 'Failed to create extension: ' + extError.message });
             }
         }
-        return res.status(500).json({ error: error.message });
+        // Return 200 with error property to avoid 500 Crash Page
+        return res.status(200).json({
+            error: 'Database Setup Failed',
+            details: error.message,
+            hint: !process.env.POSTGRES_URL ? 'POSTGRES_URL is missing. Connect Database and Redeploy.' : 'Check logs.'
+        });
     }
 }
