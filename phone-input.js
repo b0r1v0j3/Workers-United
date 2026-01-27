@@ -14,10 +14,14 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             preferredCountries: ["rs", "ng", "pk", "in", "uz", "bd", "ph", "eg"],
             separateDialCode: true,
-            nationalMode: false,
+            nationalMode: true, // Changed to true to show local format in placeholder
             utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js",
             formatOnDisplay: true,
-            autoPlaceholder: "aggressive"
+            autoPlaceholder: "aggressive",
+            customPlaceholder: function (selectedCountryPlaceholder, selectedCountryData) {
+                // Return placeholder without country code (e.g. "60 123 4567" instead of "+381 60 123 4567")
+                return selectedCountryPlaceholder;
+            }
         });
 
         // Clear default placeholder
