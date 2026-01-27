@@ -89,11 +89,6 @@ export default async function handler(req, res) {
                 <a href="https://workersunited.eu" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Visit Our Website</a>
             </p>
 
-            <p><strong>📚 Have Questions?</strong> Visit our FAQ page for instant answers to common questions:</p>
-            <p style="text-align: center;">
-                <a href="https://workersunited.eu/faq" style="background-color: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">📖 Browse FAQ</a>
-            </p>
-            
             <p style="margin-top: 30px;"><strong>Best regards,</strong><br>Workers United Team<br><em>Legal International Hiring & Work Visa Support</em></p>
         `;
 

@@ -6,16 +6,20 @@ export const faqDatabase = [
         question: "How much does the work visa process cost?",
         keywords: ["cost", "price", "fee", "pay", "much", "expensive"],
         answer: {
-            short: "Our service fee is €2,500-€3,500 depending on your destination country and job type.",
-            detailed: `Our transparent pricing includes:
-        ✅ Legal consultation and case evaluation
-        ✅ Complete document preparation and verification  
-        ✅ Work visa application processing
-        ✅ Employer matching and job placement
-        ✅ Employment contract review
-        ✅ 3 months of post-arrival support
+            short: "Our service fees vary depending on your country, destination, and job type. We provide personalized quotes via email.",
+            detailed: `Pricing Information:
         
-        💳 Payment plans available. No hidden fees.`
+        Our service fees are customized based on several factors:
+        • Your country of origin
+        • Destination country in Europe  
+        • Type of work visa required
+        • Job sector and role complexity
+        
+        📧 **To receive a personalized quote:**
+        Submit your application through our website, and our team will send you a detailed breakdown of costs via email within 24-48 hours.
+        
+        💳 We offer flexible payment plans to suit your needs.
+        🔒 No hidden fees - all costs will be clearly outlined in your service agreement.`
         }
     },
     {
@@ -97,9 +101,9 @@ export const faqDatabase = [
         👨‍👩‍👧 Spouse + children allowed
         ⏱️ Available 6-12 months after your arrival
         📄 Requires proof of stable income & accommodation
-        💰 Additional fee: €1,500 per family member
+        💰 Fees apply - details provided during consultation
         
-        🏠 We assist with family visa applications.`
+        🏠 We assist with family visa applications and provide full support throughout the process.`
         }
     },
     {
@@ -108,17 +112,20 @@ export const faqDatabase = [
         question: "How do I pay? Can I pay in installments?",
         keywords: ["payment", "installment", "plan", "split", "deposit"],
         answer: {
-            short: "Yes! We offer flexible payment plans: 30% deposit + 3 monthly installments.",
+            short: "Yes! We offer flexible payment plans tailored to your situation.",
             detailed: `Payment options:
-        💳 OPTION 1: Full payment (€X) - 5% discount
-        💳 OPTION 2: 50% now + 50% before visa submission
-        💳 OPTION 3: 30% deposit + 3 monthly installments
         
-        Accepted methods:
-        ✅ Bank transfer
-        ✅ PayPal
-        ✅ Wise (TransferWise)
-        ✅ Credit/Debit card
+        ✅ We understand that work visa fees can be a significant investment
+        ✅ Flexible payment plans available (deposits + installments)
+        ✅ Multiple payment methods accepted
+        
+        Accepted payment methods:
+        💳 Bank transfer
+        💳 PayPal
+        💳 Wise (TransferWise)
+        💳 Credit/Debit card
+        
+        📧 **Payment details and plan options will be included in your personalized service agreement** sent via email after your initial consultation.
         
         🔒 Secure payment gateway. Money-back guarantee if visa denied due to our error.`
         }
