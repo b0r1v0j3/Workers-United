@@ -411,7 +411,7 @@
 
             filtered.forEach(lead => {
                 const tr = document.createElement('tr');
-                const safePhone = (lead.phone || '').replace(/[^0-9]/g, '');
+                const safePhone = (lead.phone || '').replace(/[^0-9+]/g, '');
 
                 // Parse Doc Types
                 let docTags = '';
