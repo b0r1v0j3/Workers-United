@@ -52,8 +52,91 @@ export default async function handler(req, res) {
       htmlContent: getEmailTemplate(`New Inquiry: ${name}`, ownerContent)
     };
 
-    // 2. Send Enhanced Auto-Reply to User
-    const userBody = `
+    // 2. Send Role-Based Auto-Reply to User
+    let userBody = '';
+    let userSubject = '';
+
+    if (role === 'Employer') {
+      // EMPLOYER EMAIL - Ask for company details
+      userSubject = 'Thank you for your interest - Workers United';
+      userBody = `
+            <h1>🏢 Thank You for Reaching Out, ${name}!</h1>
+            <p>Dear ${name},</p>
+            <p>We're pleased to hear from potential employers! Workers United specializes in connecting EU businesses with qualified, vetted international workers.</p>
+            
+            <div class="info-box">
+                <strong>✅ Your Inquiry Has Been Received</strong><br>
+                Our employer relations team will review your inquiry and respond within 24 hours.
+            </div>
+
+            <h3>📋 To Better Assist You, Please Provide:</h3>
+            <p>Kindly reply to this email with the following information so we can match you with suitable candidates:</p>
+            
+            <ul style="line-height: 2.2; font-size: 15px;">
+                <li>🏭 <strong>Company Name</strong> – Full legal name of your business</li>
+                <li>📍 <strong>Company Location</strong> – City and country where workers are needed</li>
+                <li>👥 <strong>Number of Workers Needed</strong> – How many positions are you looking to fill?</li>
+                <li>💼 <strong>Type of Work</strong> – What industry/job roles? (e.g., manufacturing, construction, hospitality)</li>
+                <li>📅 <strong>Start Date</strong> – When do you need workers to begin?</li>
+                <li>🏠 <strong>Accommodation</strong> – Do you provide housing for workers?</li>
+            </ul>
+
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="mailto:contact@workersunited.eu?subject=Employer%20Details%20-%20${encodeURIComponent(name)}" 
+                   style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
+                   📧 Reply With Details
+                </a>
+            </p>
+
+            <h3>💼 Why Partner With Workers United?</h3>
+            <ul style="line-height: 1.8;">
+                <li>✅ <strong>Pre-Screened Workers</strong> – All candidates are vetted and verified</li>
+                <li>✅ <strong>Legal Compliance</strong> – We handle all visa and work permit paperwork</li>
+                <li>✅ <strong>Fast Turnaround</strong> – Workers ready within weeks, not months</li>
+                <li>✅ <strong>Ongoing Support</strong> – We assist with onboarding and integration</li>
+            </ul>
+
+            <p style="margin-top: 40px;"><strong>Best regards,</strong><br>The Workers United Employer Relations Team</p>
+        `;
+    } else if (role === 'Other') {
+      // OTHER EMAIL - Simple "How can we help?"
+      userSubject = 'We received your message - Workers United';
+      userBody = `
+            <h1>👋 Hello ${name}!</h1>
+            <p>Dear ${name},</p>
+            <p>Thank you for contacting Workers United. We've received your message and appreciate you reaching out.</p>
+            
+            <div class="info-box">
+                <strong>📬 Message Received</strong><br>
+                A member of our team will review your inquiry and get back to you as soon as possible.
+            </div>
+
+            <h3>How Can We Help You?</h3>
+            <p>If you have a specific question or need, please feel free to reply to this email with more details so we can better assist you.</p>
+
+            <p>Whether you're looking for information about:</p>
+            <ul style="line-height: 1.8;">
+                <li>🌍 Work opportunities in Europe</li>
+                <li>📄 Visa and legal requirements</li>
+                <li>🤝 Partnership opportunities</li>
+                <li>❓ General questions about our services</li>
+            </ul>
+
+            <p>We're here to help!</p>
+
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="mailto:contact@workersunited.eu?subject=Re:%20My%20Inquiry" 
+                   style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                   Reply to This Message
+                </a>
+            </p>
+
+            <p style="margin-top: 40px;"><strong>Best regards,</strong><br>The Workers United Team</p>
+        `;
+    } else {
+      // WORKER / DEFAULT EMAIL - Standard job seeker flow
+      userSubject = 'We received your message - Workers United';
+      userBody = `
             <h1>🎉 Thank You for Your Interest, ${name}!</h1>
             <p>Dear ${name},</p>
             <p>We are delighted that you have chosen Workers United to explore <strong>${role}</strong> opportunities abroad.</p>
@@ -91,11 +174,12 @@ export default async function handler(req, res) {
 
             <p style="margin-top: 40px;"><strong>Best regards,</strong><br>The Workers United Team</p>
         `;
+    }
 
     const emailToUser = {
       sender: { name: "Workers United", email: "contact@workersunited.eu" },
       to: [{ email: email, name: name }],
-      subject: "We received your message - Workers United",
+      subject: userSubject,
       htmlContent: getEmailTemplate('Message Received', userBody)
     };
 

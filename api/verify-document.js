@@ -183,7 +183,7 @@ async function verifyDocumentWithAI(imageUrl, documentType, candidateName) {
 3. Nationality
 4. Date of birth
 5. Expiry date
-6. Is the passport valid (not expired, readable, genuine-looking)?
+6. Is the passport valid (not expired, must be valid for at least 1 YEAR from today, readable, genuine-looking)?
 
 The candidate claims their name is: "${candidateName}"
 
@@ -286,7 +286,7 @@ Respond in JSON format:
         if (documentType === 'passport') {
             verified = extractedData.isValid && extractedData.nameMatches;
             if (!extractedData.isValid) {
-                error = 'Passport appears invalid or expired. Please upload a valid passport.';
+                error = 'Passport appears invalid or expires too soon. Your passport must be valid for at least 1 year.';
             } else if (!extractedData.nameMatches) {
                 error = `Name mismatch: Passport shows "${extractedData.fullName}" but you entered "${candidateName}". Please check your information.`;
             } else {
