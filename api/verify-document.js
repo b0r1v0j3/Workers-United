@@ -51,7 +51,10 @@ export default async function handler(req, res) {
         `;
 
         if (candidateResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Candidate not found' });
+            return res.status(404).json({
+                verified: false,
+                error: 'Your application was not found. Please make sure you used the correct link from your email.'
+            });
         }
 
         const candidateId = candidateResult.rows[0].id;
@@ -67,10 +70,10 @@ export default async function handler(req, res) {
         // If no OpenAI key, skip AI verification but accept the document
         if (!OPENAI_API_KEY) {
             console.log('⚠️ No OpenAI key - skipping AI verification');
-            
+
             // Mark as verified (manual review later)
             await updateVerificationStatus(candidateId, type, true);
-            
+
             return res.status(200).json({
                 verified: true,
                 message: 'Document uploaded successfully. Manual review pending.',
@@ -119,28 +122,28 @@ export default async function handler(req, res) {
 async function parseFormData(req) {
     return new Promise((resolve, reject) => {
         const chunks = [];
-        
+
         req.on('data', chunk => chunks.push(chunk));
         req.on('end', () => {
             const buffer = Buffer.concat(chunks);
             const contentType = req.headers['content-type'];
-            
+
             // Simple multipart parser
             const boundary = contentType.split('boundary=')[1];
             const parts = buffer.toString().split(`--${boundary}`);
-            
+
             const result = {};
-            
+
             for (const part of parts) {
                 if (part.includes('name="file"')) {
                     const filenameMatch = part.match(/filename="([^"]+)"/);
                     const contentTypeMatch = part.match(/Content-Type: ([^\r\n]+)/);
-                    
+
                     // Extract binary data
                     const headerEnd = part.indexOf('\r\n\r\n');
                     const dataStart = headerEnd + 4;
                     const dataEnd = part.lastIndexOf('\r\n');
-                    
+
                     result.file = {
                         filename: filenameMatch ? filenameMatch[1] : 'document',
                         contentType: contentTypeMatch ? contentTypeMatch[1] : 'application/octet-stream',
@@ -154,7 +157,7 @@ async function parseFormData(req) {
                     result.candidateName = extractFormValue(part);
                 }
             }
-            
+
             resolve(result);
         });
         req.on('error', reject);
@@ -259,13 +262,13 @@ Respond in JSON format:
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error?.message || 'OpenAI API error');
         }
 
         const content = data.choices[0].message.content;
-        
+
         // Parse JSON from response
         let extractedData;
         try {
@@ -374,7 +377,7 @@ async function checkAllDocumentsVerified(candidateId, email) {
 
     if (passport_verified && photo_verified && diploma_verified) {
         console.log(`🎉 All documents verified for ${email} - triggering auto-approval`);
-        
+
         // Update status
         await sql`
             UPDATE document_requirements
