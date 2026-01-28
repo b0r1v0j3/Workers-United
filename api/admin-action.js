@@ -49,18 +49,17 @@ export default async function handler(req, res) {
           <p>To move forward with your application, we need to verify your documents. This is a standard requirement for all legal work visa processes.</p>
 
           <p style="text-align: center; margin: 30px 0;">
-              <a href="https://www.workersunited.eu/upload?email=${encodeURIComponent(email)}" 
+              <a href="https://www.workersunited.eu/document-wizard.html?email=${encodeURIComponent(email)}" 
                  style="background-color: #10b981; color: white; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
-                 📤 Upload Your Documents Now
+                 📤 Start Document Submission
               </a>
           </p>
 
-          <h3>📄 Required Documents:</h3>
+          <h3>📄 You Will Need:</h3>
           <ul style="line-height: 2; font-size: 15px;">
-              <li>✅ <strong>Passport Copy</strong> – Clear scan/photo of the photo page</li>
-              <li>✅ <strong>Educational Certificates</strong> – Diploma, degree, or relevant certifications</li>
-              <li>✅ <strong>Updated CV/Resume</strong> – Include work experience and skills</li>
-              <li>✅ <strong>Residence Permit</strong> (if currently living outside your home country)</li>
+              <li>✅ <strong>Passport</strong> – Clear photo of the data page (must be valid 6+ months)</li>
+              <li>✅ <strong>Passport-Style Photo</strong> – Recent photo with white background</li>
+              <li>✅ <strong>Diploma or Certificate</strong> – Educational qualification document</li>
           </ul>
 
           <div class="info-box">
