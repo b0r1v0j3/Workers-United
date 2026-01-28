@@ -1,7 +1,20 @@
-// International Tel Input Initialization
+// International Tel Input Initialization - ROBUST VERSION
+// Guarantees phone numbers are submitted with + prefix
+
 document.addEventListener('DOMContentLoaded', function () {
     const phoneInput = document.querySelector("#phone");
     const countryInput = document.querySelector("#country");
+    const form = phoneInput ? phoneInput.closest('form') : null;
+
+    // Create hidden input for the full international number
+    let hiddenPhoneInput = document.querySelector("#phone_full");
+    if (!hiddenPhoneInput && form) {
+        hiddenPhoneInput = document.createElement('input');
+        hiddenPhoneInput.type = 'hidden';
+        hiddenPhoneInput.name = 'phone_full';
+        hiddenPhoneInput.id = 'phone_full';
+        form.appendChild(hiddenPhoneInput);
+    }
 
     if (phoneInput && window.intlTelInput) {
         const iti = window.intlTelInput(phoneInput, {
@@ -14,31 +27,53 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             preferredCountries: ["rs", "ng", "pk", "in", "uz", "bd", "ph", "eg"],
             separateDialCode: true,
-            nationalMode: true,
+            nationalMode: false, // CHANGED: Force international format
             utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js",
             formatOnDisplay: true,
             autoPlaceholder: "aggressive",
             customPlaceholder: function (selectedCountryPlaceholder, selectedCountryData) {
-                // Remove leading zero if present (common in Balkan/European local formats)
-                // e.g. "060 1234567" -> "60 1234567"
+                // Remove leading zero for cleaner display
                 return selectedCountryPlaceholder.replace(/^0/, '');
             }
         });
 
+        // Store iti instance globally for debugging
+        window.phoneIti = iti;
+
         // Clear default placeholder
         phoneInput.placeholder = "";
 
+        // STRICT INPUT: Only allow numbers, spaces, and basic formatting
+        phoneInput.addEventListener('input', function (e) {
+            // Remove anything that's not a number or space
+            let cleaned = this.value.replace(/[^\d\s]/g, '');
+            if (this.value !== cleaned) {
+                this.value = cleaned;
+            }
+
+            // Update hidden field with full international number
+            updateHiddenPhone();
+        });
+
+        // Update hidden field on any change
+        function updateHiddenPhone() {
+            if (hiddenPhoneInput) {
+                const fullNumber = iti.getNumber();
+                hiddenPhoneInput.value = fullNumber;
+                console.log('📞 Phone updated:', fullNumber);
+            }
+        }
+
         // Auto-populate country field when phone country is selected
         if (countryInput) {
-            // Listen for country change in phone input
             phoneInput.addEventListener('countrychange', function () {
                 const selectedCountryData = iti.getSelectedCountryData();
                 if (selectedCountryData && selectedCountryData.name) {
-                    // Only auto-fill if country field is empty (don't override user's choice)
                     if (!countryInput.value || countryInput.value.trim() === '') {
                         countryInput.value = selectedCountryData.name;
                     }
                 }
+                updateHiddenPhone();
             });
 
             // Initial population when page loads
@@ -47,39 +82,51 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (selectedCountryData && selectedCountryData.name && !countryInput.value) {
                     countryInput.value = selectedCountryData.name;
                 }
-            }, 500); // Small delay to let IP detection finish
+                updateHiddenPhone();
+            }, 500);
         }
 
-        // Validation on blur
+        // Validation on blur - visual feedback
         phoneInput.addEventListener('blur', function () {
             if (phoneInput.value.trim()) {
                 if (iti.isValidNumber()) {
-                    phoneInput.style.borderColor = '#10b981'; // Green when valid
+                    phoneInput.style.borderColor = '#10b981'; // Green
+                    phoneInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.15)';
                 } else {
-                    phoneInput.style.borderColor = '#ef4444'; // Red when invalid
+                    phoneInput.style.borderColor = '#ef4444'; // Red
+                    phoneInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.15)';
                 }
             }
+            updateHiddenPhone();
         });
 
-        // Get full international number on form submit
-        const form = phoneInput.closest('form');
+        // CRITICAL: Form submit handler - FORCE international format
         if (form) {
             form.addEventListener('submit', function (e) {
+                // Get the full international number
+                const fullNumber = iti.getNumber();
+
+                // Validate
                 if (phoneInput.value.trim()) {
                     if (!iti.isValidNumber()) {
                         e.preventDefault();
-                        alert('Please enter a valid phone number');
+                        e.stopPropagation();
+                        alert('Please enter a valid phone number with your country code');
                         phoneInput.focus();
                         phoneInput.style.borderColor = '#ef4444';
                         return false;
                     }
 
-                    // Set the full international number format (e.g. +381601234567)
-                    const fullNumber = iti.getNumber();
+                    // FORCE the phone input value to be the full international number
+                    // This ensures + prefix is ALWAYS included
                     phoneInput.value = fullNumber;
-                    console.log('Phone number validated:', fullNumber);
+                    if (hiddenPhoneInput) {
+                        hiddenPhoneInput.value = fullNumber;
+                    }
+
+                    console.log('✅ Phone submitted:', fullNumber);
                 }
-            });
+            }, true); // Use capture phase to run FIRST
         }
     }
 });
