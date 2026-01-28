@@ -19,6 +19,9 @@ export default async function handler(req, res) {
   try {
     const { name, email, phone, country, role, message, job_preference } = req.body;
 
+    // Normalize role to lowercase for case-insensitive comparison
+    const normalizedRole = (role || '').toLowerCase();
+
     if (!name || !email || !phone || !message) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
@@ -56,7 +59,7 @@ export default async function handler(req, res) {
     let userBody = '';
     let userSubject = '';
 
-    if (role === 'Employer') {
+    if (normalizedRole === 'employer') {
       // EMPLOYER EMAIL - Ask for company details
       userSubject = 'Thank you for your interest - Workers United';
       userBody = `
@@ -98,7 +101,7 @@ export default async function handler(req, res) {
 
             <p style="margin-top: 40px;"><strong>Best regards,</strong><br>The Workers United Employer Relations Team</p>
         `;
-    } else if (role === 'Other') {
+    } else if (normalizedRole === 'other') {
       // OTHER EMAIL - Simple "How can we help?"
       userSubject = 'We received your message - Workers United';
       userBody = `
