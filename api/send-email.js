@@ -272,6 +272,31 @@ export default async function handler(req, res) {
       }
     };
 
+    // Function to Queue Scheduled Emails (for automated sequences)
+    const queueScheduledEmails = async () => {
+      // Only queue for workers - employers have different flow
+      if (normalizedRole !== 'worker') {
+        return { ok: true, message: 'Not a worker, skipping email queue' };
+      }
+
+      try {
+        const { sql } = await import('@vercel/postgres');
+
+        // Queue "review_complete" email for 24 hours from now
+        await sql`
+          INSERT INTO email_queue (candidate_email, candidate_name, email_type, send_at)
+          VALUES (${email}, ${name}, 'review_complete', NOW() + INTERVAL '24 hours')
+          ON CONFLICT DO NOTHING
+        `;
+
+        console.log(`📧 Queued 24h review email for ${email}`);
+        return { ok: true };
+      } catch (err) {
+        console.error('❌ Email queue failed:', err);
+        return { ok: false, error: err.message };
+      }
+    };
+
     // Execute sequentially/parallel but MUST await in Serverless
     try {
       // 1. Send Owner Email (Must succeed)
@@ -286,15 +311,16 @@ export default async function handler(req, res) {
       const results = await Promise.allSettled([
         sendBrevoEmail(emailToUser),
         saveBrevoContact(),
-        savePostgresContact() // NEW: Also save to Postgres
+        savePostgresContact()
+        // queueScheduledEmails() // DISABLED: Auto sequences paused until Stripe is ready
       ]);
 
       // Log any failures
       results.forEach((result, index) => {
-        const labels = ['User Auto-reply', 'Brevo CRM Save', 'Postgres DB Save'];
+        const labels = ['User Auto-reply', 'Brevo CRM Save', 'Postgres DB Save', 'Email Queue'];
         if (result.status === 'rejected') {
           console.error(`${labels[index]} failed:`, result.reason);
-        } else if (index === 2 && result.value?.ok === false) {
+        } else if (result.value?.ok === false) {
           console.error(`${labels[index]} failed:`, result.value.error);
         }
       });
