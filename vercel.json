@@ -25,6 +25,14 @@
       "destination": "/dashboard.html"
     },
     {
+      "source": "/payment",
+      "destination": "/payment.html"
+    },
+    {
+      "source": "/payment-success",
+      "destination": "/payment-success.html"
+    },
+    {
       "source": "/setup-attributes",
       "destination": "/api/setup-attributes.js"
     }
