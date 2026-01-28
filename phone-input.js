@@ -32,8 +32,19 @@ document.addEventListener('DOMContentLoaded', function () {
             formatOnDisplay: true,
             autoPlaceholder: "aggressive",
             customPlaceholder: function (selectedCountryPlaceholder, selectedCountryData) {
-                // Remove leading zero for cleaner display
-                return selectedCountryPlaceholder.replace(/^0/, '');
+                // Remove +country_code and leading zero - only show local number
+                // e.g., +381 60 1234567 becomes 60 1234567
+                let placeholder = selectedCountryPlaceholder;
+
+                // Remove country code (e.g., +381)
+                if (selectedCountryData && selectedCountryData.dialCode) {
+                    placeholder = placeholder.replace('+' + selectedCountryData.dialCode, '').trim();
+                }
+
+                // Also remove any leading zeros and clean up
+                placeholder = placeholder.replace(/^0+/, '').trim();
+
+                return placeholder || '60 1234567';
             }
         });
 

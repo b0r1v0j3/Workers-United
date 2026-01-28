@@ -801,6 +801,8 @@ textarea {
 textarea {
   resize: vertical;
   min-height: 100px;
+  border-radius: 16px;
+  padding: 14px 16px;
 }
 
 .radio-row {
