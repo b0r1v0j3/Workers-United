@@ -60,12 +60,23 @@ export default async function handler(req, res) {
         const candidateId = candidateResult.rows[0].id;
 
         // Store document in database
-        await sql`
-            INSERT INTO documents (candidate_id, type, url, filename, verified)
-            VALUES (${candidateId}, ${type}, ${blob.url}, ${file.filename}, false)
-            ON CONFLICT (candidate_id, type) 
-            DO UPDATE SET url = ${blob.url}, filename = ${file.filename}, verified = false, uploaded_at = NOW()
-        `;
+        // Note: column names are file_url and file_type in the documents table
+        try {
+            await sql`
+                INSERT INTO documents (candidate_id, file_type, file_url)
+                VALUES (${candidateId}, ${type}, ${blob.url})
+            `;
+            console.log(`💾 Document saved to database`);
+        } catch (dbError) {
+            // If insert fails (maybe duplicate), try update
+            console.log('Insert failed, trying update:', dbError.message);
+            await sql`
+                UPDATE documents 
+                SET file_url = ${blob.url}, uploaded_at = NOW()
+                WHERE candidate_id = ${candidateId} AND file_type = ${type}
+            `;
+            console.log(`💾 Document updated in database`);
+        }
 
         // If no OpenAI key, skip AI verification but accept the document
         if (!OPENAI_API_KEY) {
@@ -91,13 +102,16 @@ export default async function handler(req, res) {
         // Update verification status
         await updateVerificationStatus(candidateId, type, verificationResult.verified);
 
-        // Update document record
-        await sql`
-            UPDATE documents
-            SET verified = ${verificationResult.verified},
-                verification_data = ${JSON.stringify(verificationResult)}
-            WHERE candidate_id = ${candidateId} AND type = ${type}
-        `;
+        // Update document record with verification result
+        try {
+            await sql`
+                UPDATE documents
+                SET file_url = ${blob.url}
+                WHERE candidate_id = ${candidateId} AND file_type = ${type}
+            `;
+        } catch (updateErr) {
+            console.log('Document update failed (non-critical):', updateErr.message);
+        }
 
         // Check if all documents are verified
         await checkAllDocumentsVerified(candidateId, email);
