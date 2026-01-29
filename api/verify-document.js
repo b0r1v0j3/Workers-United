@@ -109,12 +109,11 @@ export default async function handler(req, res) {
             // AI failed but document was successfully uploaded - allow user to continue
             console.error('⚠️ AI verification failed:', aiError.message, aiError.stack);
 
-            // Provide informative message about what went wrong
-            const errorDetail = aiError.message || 'Unknown error';
+            // Provide informative message about what went wrong (Internal log still has details)
             verificationResult = {
                 verified: true,  // Allow user to continue
-                message: `Document uploaded successfully! AI verification encountered an issue (${errorDetail.substring(0, 100)}) - your document will be reviewed manually.`,
-                debugInfo: `AI Error: ${errorDetail}`
+                message: 'Document uploaded successfully. Manual review pending.',
+                debugInfo: null // Don't expose debug info to user
             };
         }
 
@@ -400,7 +399,7 @@ Respond in JSON format:
         // Return success anyway - document was uploaded, manual review will happen
         return {
             verified: true,  // ALWAYS allow user to continue
-            message: `Document uploaded! AI verification unavailable (${error.message?.substring(0, 80) || 'API error'}) - manual review pending.`,
+            message: 'Document uploaded successfully. Manual review pending.',
             extractedData: null
         };
     }
