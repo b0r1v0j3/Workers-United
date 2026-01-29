@@ -340,59 +340,69 @@ async function updateVerificationStatus(candidateId, documentType, verified) {
     const column = columnMap[documentType];
     if (!column) return;
 
-    // Check if record exists
-    const existing = await sql`
-        SELECT id FROM document_requirements WHERE candidate_id = ${candidateId} LIMIT 1
-    `;
-
-    if (existing.rows.length === 0) {
-        // Create record
-        await sql`
-            INSERT INTO document_requirements (candidate_id, ${sql.identifier([column])})
-            VALUES (${candidateId}, ${verified})
+    try {
+        // Check if record exists
+        const existing = await sql`
+            SELECT id FROM document_requirements WHERE candidate_id = ${candidateId} LIMIT 1
         `;
-    } else {
-        // Update specific column
-        if (documentType === 'passport') {
-            await sql`UPDATE document_requirements SET passport_verified = ${verified} WHERE candidate_id = ${candidateId}`;
-        } else if (documentType === 'photo') {
-            await sql`UPDATE document_requirements SET photo_verified = ${verified} WHERE candidate_id = ${candidateId}`;
-        } else if (documentType === 'diploma') {
-            await sql`UPDATE document_requirements SET diploma_verified = ${verified} WHERE candidate_id = ${candidateId}`;
+
+        if (existing.rows.length === 0) {
+            // Create record
+            await sql`
+                INSERT INTO document_requirements (candidate_id, ${sql.identifier([column])})
+                VALUES (${candidateId}, ${verified})
+            `;
+        } else {
+            // Update specific column
+            if (documentType === 'passport') {
+                await sql`UPDATE document_requirements SET passport_verified = ${verified} WHERE candidate_id = ${candidateId}`;
+            } else if (documentType === 'photo') {
+                await sql`UPDATE document_requirements SET photo_verified = ${verified} WHERE candidate_id = ${candidateId}`;
+            } else if (documentType === 'diploma') {
+                await sql`UPDATE document_requirements SET diploma_verified = ${verified} WHERE candidate_id = ${candidateId}`;
+            }
         }
+    } catch (error) {
+        console.log('document_requirements table may not exist, skipping verification status update:', error.message);
+        // Continue without updating - the document was still uploaded successfully
     }
 }
 
 // Check if all documents are verified and trigger auto-approval
 async function checkAllDocumentsVerified(candidateId, email) {
-    const result = await sql`
-        SELECT passport_verified, photo_verified, diploma_verified
-        FROM document_requirements
-        WHERE candidate_id = ${candidateId}
-    `;
-
-    if (result.rows.length === 0) return;
-
-    const { passport_verified, photo_verified, diploma_verified } = result.rows[0];
-
-    if (passport_verified && photo_verified && diploma_verified) {
-        console.log(`🎉 All documents verified for ${email} - triggering auto-approval`);
-
-        // Update status
-        await sql`
-            UPDATE document_requirements
-            SET all_completed = true, updated_at = NOW()
+    try {
+        const result = await sql`
+            SELECT passport_verified, photo_verified, diploma_verified
+            FROM document_requirements
             WHERE candidate_id = ${candidateId}
         `;
 
-        // Update candidate status to approved
-        await sql`
-            UPDATE candidates
-            SET status = 'APPROVED'
-            WHERE id = ${candidateId}
-        `;
+        if (result.rows.length === 0) return;
 
-        // TODO: Send approval email automatically
-        console.log(`✅ Candidate ${email} auto-approved!`);
+        const { passport_verified, photo_verified, diploma_verified } = result.rows[0];
+
+        if (passport_verified && photo_verified && diploma_verified) {
+            console.log(`🎉 All documents verified for ${email} - triggering auto-approval`);
+
+            // Update status
+            await sql`
+                UPDATE document_requirements
+                SET all_completed = true, updated_at = NOW()
+                WHERE candidate_id = ${candidateId}
+            `;
+
+            // Update candidate status to approved
+            await sql`
+                UPDATE candidates
+                SET status = 'APPROVED'
+                WHERE id = ${candidateId}
+            `;
+
+            // TODO: Send approval email automatically
+            console.log(`✅ Candidate ${email} auto-approved!`);
+        }
+    } catch (error) {
+        console.log('Auto-approval check failed, table may not exist:', error.message);
+        // Continue without auto-approval
     }
 }
