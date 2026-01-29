@@ -118,60 +118,97 @@ export default async function handler(req, res) {
     }
 }
 
-// Parse multipart form data
+// Parse multipart form data - FIXED version that handles binary data properly
 async function parseFormData(req) {
     return new Promise((resolve, reject) => {
         const chunks = [];
 
         req.on('data', chunk => chunks.push(chunk));
         req.on('end', () => {
-            const buffer = Buffer.concat(chunks);
-            const contentType = req.headers['content-type'];
+            try {
+                const buffer = Buffer.concat(chunks);
+                const contentType = req.headers['content-type'] || '';
 
-            // Simple multipart parser
-            const boundary = contentType.split('boundary=')[1];
-            const parts = buffer.toString().split(`--${boundary}`);
-
-            const result = {};
-
-            for (const part of parts) {
-                if (part.includes('name="file"')) {
-                    const filenameMatch = part.match(/filename="([^"]+)"/);
-                    const contentTypeMatch = part.match(/Content-Type: ([^\r\n]+)/);
-
-                    // Extract binary data
-                    const headerEnd = part.indexOf('\r\n\r\n');
-                    const dataStart = headerEnd + 4;
-                    const dataEnd = part.lastIndexOf('\r\n');
-
-                    result.file = {
-                        filename: filenameMatch ? filenameMatch[1] : 'document',
-                        contentType: contentTypeMatch ? contentTypeMatch[1] : 'application/octet-stream',
-                        buffer: Buffer.from(part.slice(dataStart, dataEnd), 'binary')
-                    };
-                } else if (part.includes('name="type"')) {
-                    result.type = extractFormValue(part);
-                } else if (part.includes('name="email"')) {
-                    result.email = extractFormValue(part);
-                } else if (part.includes('name="candidateName"')) {
-                    result.candidateName = extractFormValue(part);
+                // Extract boundary
+                const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^\s;]+))/);
+                if (!boundaryMatch) {
+                    console.error('❌ No boundary found in content-type:', contentType);
+                    return resolve({});
                 }
-            }
+                const boundary = boundaryMatch[1] || boundaryMatch[2];
+                const boundaryBuffer = Buffer.from('--' + boundary);
 
-            resolve(result);
+                const result = {};
+
+                // Find all boundary positions in the buffer
+                const boundaryPositions = [];
+                let pos = 0;
+                while (pos < buffer.length) {
+                    const idx = buffer.indexOf(boundaryBuffer, pos);
+                    if (idx === -1) break;
+                    boundaryPositions.push(idx);
+                    pos = idx + boundaryBuffer.length;
+                }
+
+                console.log(`📦 Found ${boundaryPositions.length} parts in multipart form`);
+
+                // Process each part
+                for (let i = 0; i < boundaryPositions.length - 1; i++) {
+                    const partStart = boundaryPositions[i] + boundaryBuffer.length;
+                    const partEnd = boundaryPositions[i + 1];
+                    const partBuffer = buffer.slice(partStart, partEnd);
+
+                    // Find the header/content separator (double CRLF)
+                    const separatorIndex = partBuffer.indexOf(Buffer.from('\r\n\r\n'));
+                    if (separatorIndex === -1) continue;
+
+                    // Headers are safe to convert to string
+                    const headersStr = partBuffer.slice(0, separatorIndex).toString('utf8');
+
+                    // Content starts after \r\n\r\n and ends before trailing \r\n
+                    const contentStart = separatorIndex + 4;
+                    let contentEnd = partBuffer.length;
+                    // Remove trailing \r\n if present
+                    if (partBuffer[contentEnd - 2] === 0x0d && partBuffer[contentEnd - 1] === 0x0a) {
+                        contentEnd -= 2;
+                    }
+                    const contentBuffer = partBuffer.slice(contentStart, contentEnd);
+
+                    // Parse headers to get field name
+                    const nameMatch = headersStr.match(/name="([^"]+)"/);
+                    if (!nameMatch) continue;
+                    const fieldName = nameMatch[1];
+
+                    if (fieldName === 'file') {
+                        // Binary file - keep as buffer
+                        const filenameMatch = headersStr.match(/filename="([^"]+)"/);
+                        const contentTypeMatch = headersStr.match(/Content-Type:\s*([^\r\n]+)/i);
+
+                        result.file = {
+                            filename: filenameMatch ? filenameMatch[1] : 'document',
+                            contentType: contentTypeMatch ? contentTypeMatch[1].trim() : 'application/octet-stream',
+                            buffer: contentBuffer
+                        };
+                        console.log(`📄 File parsed: ${result.file.filename} (${contentBuffer.length} bytes)`);
+                    } else {
+                        // Text field - convert to string
+                        const value = contentBuffer.toString('utf8').trim();
+                        result[fieldName] = value;
+                        console.log(`📝 Field parsed: ${fieldName} = "${value}"`);
+                    }
+                }
+
+                // Log final result for debugging
+                console.log(`✅ Parsed form data: email="${result.email}", type="${result.type}", candidateName="${result.candidateName}", hasFile=${!!result.file}`);
+
+                resolve(result);
+            } catch (parseError) {
+                console.error('❌ Error parsing multipart form:', parseError);
+                reject(parseError);
+            }
         });
         req.on('error', reject);
     });
-}
-
-function extractFormValue(part) {
-    const lines = part.split('\r\n');
-    for (let i = 0; i < lines.length; i++) {
-        if (lines[i] === '' && lines[i + 1]) {
-            return lines[i + 1].trim();
-        }
-    }
-    return '';
 }
 
 // AI Document Verification with OpenAI Vision
