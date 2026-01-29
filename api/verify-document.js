@@ -45,9 +45,9 @@ export default async function handler(req, res) {
 
         console.log(`📤 File uploaded: ${blob.url}`);
 
-        // Get candidate ID
+        // Get candidate ID (case-insensitive email match)
         const candidateResult = await sql`
-            SELECT id FROM candidates WHERE email = ${email} LIMIT 1
+            SELECT id FROM candidates WHERE LOWER(email) = LOWER(${email}) LIMIT 1
         `;
 
         if (candidateResult.rows.length === 0) {

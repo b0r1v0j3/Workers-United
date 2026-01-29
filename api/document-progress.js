@@ -37,7 +37,7 @@ export default async function handler(req, res) {
                     dr.all_completed
                 FROM candidates c
                 LEFT JOIN document_requirements dr ON c.id = dr.candidate_id
-                WHERE c.email = ${email}
+                WHERE LOWER(c.email) = LOWER(${email})
                 LIMIT 1
             `;
 
@@ -68,9 +68,9 @@ export default async function handler(req, res) {
         if (req.method === 'POST') {
             const { lastStep, personalInfo, completed } = req.body;
 
-            // Get candidate ID
+            // Get candidate ID (case-insensitive)
             const candidateResult = await sql`
-                SELECT id FROM candidates WHERE email = ${email} LIMIT 1
+                SELECT id FROM candidates WHERE LOWER(email) = LOWER(${email}) LIMIT 1
             `;
 
             if (candidateResult.rows.length === 0) {
