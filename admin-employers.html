@@ -195,6 +195,23 @@
         </div>
     </div>
 
+    <!-- Match Modal -->
+    <div id="matchModal" class="modal">
+        <div class="modal-content" style="width: 600px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 id="matchTitle" style="margin:0;">Best Candidates</h2>
+                <button onclick="closeMatchModal()"
+                    style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <div id="matchList" style="max-height:400px; overflow-y:auto;">
+                <!-- Matches injected here -->
+            </div>
+            <div style="margin-top:20px; text-align:right;">
+                <button class="btn btn-secondary" onclick="closeMatchModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Form -->
     <div id="employerModal" class="modal">
         <div class="modal-content">
@@ -298,6 +315,7 @@
                     <td><span class="${emp.status === 'ACTIVE' ? 'status-active' : 'status-new'}">${emp.status}</span></td>
                     <td>
                         <button class="btn btn-secondary" style="padding: 5px 10px;" onclick='editEmployer(${JSON.stringify(emp).replace(/'/g, "&#39;")})'>Edit</button>
+                        <button class="btn btn-primary" style="padding: 5px 10px; background-color:#8b5cf6;" onclick="findMatches(${emp.id}, '${emp.company_name.replace(/'/g, "\\'")}')">Find Candidates</button>
                         <button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteEmployer(${emp.id})">Delete</button>
                     </td>
                 `;
@@ -305,28 +323,80 @@
             });
         }
 
-        function openModal(employer = null) {
-            const modal = document.getElementById('employerModal');
-            const title = document.getElementById('modalTitle');
+        // --- MATCHING LOGIC ---
+        async function findMatches(employerId, companyName) {
+            const modal = document.getElementById('matchModal');
+            const list = document.getElementById('matchList');
+            document.getElementById('matchTitle').innerText = `Best Candidates for ${companyName}`;
+            list.innerHTML = '<div style="padding:20px; text-align:center;">🔍 Searching database for best matches...</div>';
 
-            if (employer) {
-                title.innerText = 'Edit Employer';
-                document.getElementById('employerId').value = employer.id;
-                document.getElementById('companyName').value = employer.company_name;
-                document.getElementById('contactName').value = employer.name || '';
-                document.getElementById('email').value = employer.email;
-                document.getElementById('location').value = employer.location || '';
-                document.getElementById('workersNeeded').value = employer.workers_needed;
-                document.getElementById('industry').value = employer.industry || 'Construction';
-                document.getElementById('housing').value = employer.provides_housing ? 'true' : 'false';
-                document.getElementById('phone').value = employer.phone || '';
-            } else {
-                title.innerText = 'Add New Employer';
-                document.getElementById('employerForm').reset();
-                document.getElementById('employerId').value = '';
-                document.getElementById('industry').value = 'Construction';
-            }
             modal.classList.add('active');
+
+            try {
+                const res = await fetch(`/api/match-candidates?employerId=${employerId}`);
+                const data = await res.json();
+
+                if (data.matches && data.matches.length > 0) {
+                    renderMatches(data.matches);
+                } else {
+                    list.innerHTML = '<div style="padding:20px; text-align:center; color:#6b7280;">No clear matches found yet. <br>Wait for more approved candidates.</div>';
+                }
+            } catch (err) {
+                list.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Error finding matches.</div>';
+            }
+        }
+
+        function renderMatches(matches) {
+            const list = document.getElementById('matchList');
+            list.innerHTML = '';
+
+            matches.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'match-card';
+                div.style.cssText = 'border:1px solid #e5e7eb; padding:15px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; background:#f9fafb;';
+
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold; font-size:16px;">${m.name} <span style="background:#10b981; color:white; font-size:11px; padding:2px 6px; border-radius:99px;">${m.score}% MATCH</span></div>
+                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">${m.country} • ${m.match_reasons.join(', ')}</div>
+                    </div>
+                    <button class="btn btn-primary" style="font-size:13px; padding:8px 12px;" onclick="approveMatch(${m.id})">Select</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function closeMatchModal() {
+            document.getElementById('matchModal').classList.remove('active');
+        }
+
+        function approveMatch(candidateId) {
+            alert('Match Approved! \n\n(Coming Soon: This will generate the Contract PDF)');
+        }
+
+        // --- ORIGINAL LOGIC ---
+
+        const modal = document.getElementById('employerModal');
+        const title = document.getElementById('modalTitle');
+
+        if (employer) {
+            title.innerText = 'Edit Employer';
+            document.getElementById('employerId').value = employer.id;
+            document.getElementById('companyName').value = employer.company_name;
+            document.getElementById('contactName').value = employer.name || '';
+            document.getElementById('email').value = employer.email;
+            document.getElementById('location').value = employer.location || '';
+            document.getElementById('workersNeeded').value = employer.workers_needed;
+            document.getElementById('industry').value = employer.industry || 'Construction';
+            document.getElementById('housing').value = employer.provides_housing ? 'true' : 'false';
+            document.getElementById('phone').value = employer.phone || '';
+        } else {
+            title.innerText = 'Add New Employer';
+            document.getElementById('employerForm').reset();
+            document.getElementById('employerId').value = '';
+            document.getElementById('industry').value = 'Construction';
+        }
+        modal.classList.add('active');
         }
 
         function closeModal() {

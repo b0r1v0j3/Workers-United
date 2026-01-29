@@ -223,15 +223,10 @@
             <!-- Filter Tabs -->
             <div
                 style="display:flex; gap:20px; border-bottom:1px solid #e5e7eb; margin-bottom:16px; padding-bottom:0px;">
-                <button onclick="setFilter('ALL')" class="filter-tab" data-filter="ALL"
-                    style="background:none; border:none; border-bottom:2px solid #2563eb; color:#2563eb; padding:8px 16px; font-weight:600; cursor:pointer;">All
-                    Candidates</button>
-                <button onclick="setFilter('ACTION_REQUIRED')" class="filter-tab" data-filter="ACTION_REQUIRED"
-                    style="background:none; border:none; color:#6b7280; padding:8px 16px; font-weight:600; cursor:pointer;">Action
-                    Required 🔴</button>
-                <button onclick="setFilter('WAITING')" class="filter-tab" data-filter="WAITING"
-                    style="background:none; border:none; color:#6b7280; padding:8px 16px; font-weight:600; cursor:pointer;">Waiting
-                    ⏳</button>
+                <button onclick="setFilter('WORKER')" class="filter-tab" data-filter="WORKER"
+                    style="background:none; border:none; border-bottom:2px solid #2563eb; color:#2563eb; padding:8px 16px; font-weight:600; cursor:pointer;">Workers</button>
+                <button onclick="setFilter('EMPLOYER')" class="filter-tab" data-filter="EMPLOYER"
+                    style="background:none; border:none; color:#6b7280; padding:8px 16px; font-weight:600; cursor:pointer;">Employers</button>
             </div>
 
             <div style="overflow-x: auto;">
@@ -354,7 +349,7 @@
 
         // Dashboard Logic
         let allLeads = [];
-        let currentFilter = 'ALL';
+        let currentFilter = 'WORKER';
 
         async function loadLeads() {
             const token = localStorage.getItem('auth_token');
@@ -398,9 +393,10 @@
             tbody.innerHTML = '';
 
             const filtered = allLeads.filter(l => {
-                if (currentFilter === 'ALL') return true;
-                if (currentFilter === 'ACTION_REQUIRED') return l.status === 'DOCS RECEIVED' || l.status === 'NEW';
-                if (currentFilter === 'WAITING') return l.status === 'DOCS REQUESTED' || l.status === 'UNDER REVIEW';
+                const role = (l.role || '').toLowerCase(); // Normalize role
+                // Default logic: If filter is WORKER, show workers (and empty roles usually implied as workers)
+                if (currentFilter === 'WORKER') return role === 'worker' || role === '';
+                if (currentFilter === 'EMPLOYER') return role === 'employer';
                 return true;
             });
 
