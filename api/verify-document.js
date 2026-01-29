@@ -132,7 +132,7 @@ export default async function handler(req, res) {
         }
 
         // Check if all documents are verified
-        await checkAllDocumentsVerified(candidateId, email);
+        await checkAllDocumentsVerified(candidateId, email, candidate.name);
 
         return res.status(200).json({
             verified: verificationResult.verified,
@@ -445,7 +445,7 @@ async function updateVerificationStatus(candidateId, documentType, verified) {
 }
 
 // Check if all documents are verified and trigger auto-approval
-async function checkAllDocumentsVerified(candidateId, email) {
+async function checkAllDocumentsVerified(candidateId, email, candidateName) {
     try {
         const result = await sql`
             SELECT passport_verified, photo_verified, diploma_verified
@@ -474,7 +474,17 @@ async function checkAllDocumentsVerified(candidateId, email) {
                 WHERE id = ${candidateId}
             `;
 
-            // TODO: Send approval email automatically
+            // Queue approval email
+            try {
+                await sql`
+                    INSERT INTO email_queue (candidate_id, candidate_email, candidate_name, email_type, send_at)
+                    VALUES (${candidateId}, ${email}, ${candidateName}, 'docs_approved', NOW())
+                `;
+                console.log(`📧 Queued approval email for ${email}`);
+            } catch (emailErr) {
+                console.error('Failed to queue email:', emailErr);
+            }
+
             console.log(`✅ Candidate ${email} auto-approved!`);
         }
     } catch (error) {
