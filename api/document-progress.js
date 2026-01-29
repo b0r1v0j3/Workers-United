@@ -22,30 +22,53 @@ export default async function handler(req, res) {
     try {
         // GET: Load saved progress
         if (req.method === 'GET') {
-            const result = await sql`
-                SELECT 
-                    c.id,
-                    c.name,
-                    c.email,
-                    c.phone,
-                    c.country,
-                    dr.last_step,
-                    dr.personal_info,
-                    dr.passport_verified,
-                    dr.photo_verified,
-                    dr.diploma_verified,
-                    dr.all_completed
-                FROM candidates c
-                LEFT JOIN document_requirements dr ON c.id = dr.candidate_id
-                WHERE LOWER(c.email) = LOWER(${email})
+            // First, just check if candidate exists (simple query without JOIN)
+            const candidateCheck = await sql`
+                SELECT id, name, email, phone, country
+                FROM candidates
+                WHERE LOWER(email) = LOWER(${email})
                 LIMIT 1
             `;
 
-            if (result.rows.length === 0) {
+            if (candidateCheck.rows.length === 0) {
                 return res.status(404).json({ error: 'Candidate not found' });
             }
 
-            const candidate = result.rows[0];
+            const candidate = candidateCheck.rows[0];
+
+            // Try to get document_requirements data (may not exist)
+            let progress = {
+                lastStep: 1,
+                personalInfo: {},
+                passportVerified: false,
+                photoVerified: false,
+                diplomaVerified: false,
+                allCompleted: false
+            };
+
+            try {
+                const drResult = await sql`
+                    SELECT last_step, personal_info, passport_verified, photo_verified, diploma_verified, all_completed
+                    FROM document_requirements
+                    WHERE candidate_id = ${candidate.id}
+                    LIMIT 1
+                `;
+
+                if (drResult.rows.length > 0) {
+                    const dr = drResult.rows[0];
+                    progress = {
+                        lastStep: dr.last_step || 1,
+                        personalInfo: dr.personal_info || {},
+                        passportVerified: dr.passport_verified || false,
+                        photoVerified: dr.photo_verified || false,
+                        diplomaVerified: dr.diploma_verified || false,
+                        allCompleted: dr.all_completed || false
+                    };
+                }
+            } catch (drError) {
+                console.log('document_requirements table may not exist yet:', drError.message);
+                // Continue with default progress
+            }
 
             return res.status(200).json({
                 success: true,
@@ -53,14 +76,7 @@ export default async function handler(req, res) {
                     name: candidate.name,
                     email: candidate.email
                 },
-                progress: {
-                    lastStep: candidate.last_step || 1,
-                    personalInfo: candidate.personal_info || {},
-                    passportVerified: candidate.passport_verified || false,
-                    photoVerified: candidate.photo_verified || false,
-                    diplomaVerified: candidate.diploma_verified || false,
-                    allCompleted: candidate.all_completed || false
-                }
+                progress
             });
         }
 

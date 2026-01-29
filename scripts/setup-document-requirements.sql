@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS document_requirements (
     id SERIAL PRIMARY KEY,
-    candidate_id INTEGER REFERENCES candidates(id) ON DELETE CASCADE,
+    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
     
     -- Progress tracking
     last_step INTEGER DEFAULT 1,
