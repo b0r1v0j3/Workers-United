@@ -307,6 +307,10 @@ Respond in JSON format:
     };
 
     try {
+        console.log(`🤖 Starting AI verification for ${documentType}`);
+        console.log(`🔑 OpenAI API key present: ${!!OPENAI_API_KEY} (length: ${OPENAI_API_KEY?.length || 0})`);
+        console.log(`🖼️ Image URL: ${imageUrl}`);
+
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -328,9 +332,11 @@ Respond in JSON format:
             })
         });
 
+        console.log(`📡 OpenAI response status: ${response.status}`);
         const data = await response.json();
 
         if (!response.ok) {
+            console.error('❌ OpenAI API error:', data.error);
             throw new Error(data.error?.message || 'OpenAI API error');
         }
 
