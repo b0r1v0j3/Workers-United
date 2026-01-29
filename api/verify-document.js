@@ -107,11 +107,14 @@ export default async function handler(req, res) {
             console.log(`🤖 AI verification result: verified=${verificationResult.verified}`);
         } catch (aiError) {
             // AI failed but document was successfully uploaded - allow user to continue
-            console.log('⚠️ AI verification failed, but document was uploaded:', aiError.message);
+            console.error('⚠️ AI verification failed:', aiError.message, aiError.stack);
+
+            // Provide informative message about what went wrong
+            const errorDetail = aiError.message || 'Unknown error';
             verificationResult = {
                 verified: true,  // Allow user to continue
-                message: 'Document uploaded successfully. AI verification skipped - manual review pending.',
-                error: null  // Don't show error to user
+                message: `Document uploaded successfully! AI verification encountered an issue (${errorDetail.substring(0, 100)}) - your document will be reviewed manually.`,
+                debugInfo: `AI Error: ${errorDetail}`
             };
         }
 
