@@ -32,8 +32,8 @@ export default async function handler(req, res) {
             } = req.body;
 
             // Basic Validation
-            if (!email || !company_name) {
-                return res.status(400).json({ error: 'Email and Company Name are required' });
+            if (!email || !company_name || !phone) {
+                return res.status(400).json({ error: 'Email, Company Name, and Phone are required' });
             }
 
             try {
