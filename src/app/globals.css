@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #183b56;
+  --color-primary-soft: #2f6fed;
+  --color-accent: #1dbf73;
+  --color-text-main: #1b2430;
+  --color-muted: #6c7a89;
+  --color-bg-main: #f4f6fb;
+  --color-bg-alt: #ffffff;
+  
+  --font-montserrat: var(--font-montserrat);
+}
+
+:root {
+  --background: #f4f6fb;
+  --foreground: #1b2430;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-montserrat), sans-serif;
+}

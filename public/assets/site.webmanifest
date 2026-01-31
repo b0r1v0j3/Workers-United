@@ -1,0 +1,21 @@
+{
+  "name": "Workers United",
+  "short_name": "Workers United",
+  "description": "Legal international hiring & work visa support",
+  "icons": [
+    {
+      "src": "/assets/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#183b56",
+  "background_color": "#f4f6fb",
+  "display": "standalone",
+  "start_url": "/"
+}
