@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { CustomPhoneInput } from "@/components/ui/PhoneInput";
 
 export function Contact() {
     const [formData, setFormData] = useState({
@@ -83,15 +84,10 @@ export function Contact() {
 
                             <div className="flex flex-col gap-1.5">
                                 <label htmlFor="phone" className="text-xs text-muted">Phone Number (WhatsApp) <span className="text-red-500">*</span></label>
-                                <input
-                                    type="tel"
-                                    id="phone"
-                                    name="phone"
-                                    required
-                                    placeholder="+1 234 567 8900"
+                                <CustomPhoneInput
                                     value={formData.phone}
-                                    onChange={handleChange}
-                                    className="rounded-full border border-border px-3 py-2.5 text-base bg-[#f9fbff] outline-none focus:border-primary-soft/50 focus:ring-2 focus:ring-primary-soft/20 transition-all"
+                                    onChange={(val) => setFormData(prev => ({ ...prev, phone: val }))}
+                                    placeholder="+1 234 567 8900"
                                 />
                             </div>
 

@@ -8,8 +8,12 @@
   --color-muted: #6c7a89;
   --color-bg-main: #f4f6fb;
   --color-bg-alt: #ffffff;
-  
+
   --font-montserrat: var(--font-montserrat);
+
+  --shadow-soft: 0 18px 45px rgba(9, 30, 66, 0.16);
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 }
 
 :root {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { CustomPhoneInput } from "@/components/ui/PhoneInput";
 import { Building, MapPin, Users, Phone, FileText } from "lucide-react";
 
 export function CompanyProfileForm() {
@@ -94,11 +95,10 @@ export function CompanyProfileForm() {
                         </div>
                         <div>
                             <label className="text-xs text-gray-500 block mb-1">Phone / WhatsApp</label>
-                            <input
-                                type="text" required placeholder="+49 ..."
-                                className="w-full p-2 border border-border rounded-lg"
+                            <CustomPhoneInput
                                 value={formData.phone}
-                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                onChange={(val) => setFormData({ ...formData, phone: val })}
+                                placeholder="+49 ..."
                             />
                         </div>
                     </div>

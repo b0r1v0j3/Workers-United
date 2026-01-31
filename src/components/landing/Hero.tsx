@@ -7,7 +7,7 @@ export function Hero() {
             <div className="container mx-auto px-5 max-w-[1120px]">
                 <div className="grid md:grid-cols-[1.15fr_0.9fr] gap-8 md:gap-12 items-center">
                     {/* Left Content */}
-                    <div className="bg-[radial-gradient(circle_at_top_left,#e4ebff,#f9fbff)] rounded-[32px] p-6 md:p-8 shadow-soft border border-[#dde3ec]/90 relative overflow-hidden">
+                    <div className="bg-[radial-gradient(circle_at_top_left,#e4ebff,#f9fbff)] rounded-[32px] p-6 md:p-8 shadow-[var(--shadow-soft)] border border-[#dde3ec]/90 relative overflow-hidden">
                         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-[#183b56]/5 text-muted mb-4">
                             <span className="w-2 h-2 rounded-full bg-accent shadow-[0_0_0_4px_rgba(29,191,115,0.25)]" />
                             Safe, legal and personalised support
