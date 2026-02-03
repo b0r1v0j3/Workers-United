@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import DocumentWizard from "@/components/DocumentWizard";
 import { createCheckoutSession } from "@/app/actions/stripe";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
     const supabase = await createClient();
 

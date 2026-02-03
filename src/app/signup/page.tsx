@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { SignupForm } from "./signup-form";
 
+export const dynamic = "force-dynamic";
+
 interface SignupPageProps {
     searchParams: Promise<{ type?: string }>;
 }
