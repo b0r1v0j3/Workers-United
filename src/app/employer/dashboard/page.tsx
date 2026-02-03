@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin, ADMIN_ROLE_COOKIE } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function EmployerDashboardPage() {
     const supabase = await createClient();
 
