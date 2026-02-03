@@ -268,7 +268,7 @@ export default function OnboardingPage() {
         return null;
     };
 
-    const saveProgress = async () => {
+    const saveProgress = async (): Promise<boolean> => {
         setSaving(true);
         setError(null);
 
@@ -285,7 +285,7 @@ export default function OnboardingPage() {
                 if (profileError) {
                     console.error("Profile save error:", profileError);
                     setError(`Profile error: ${profileError.message}`);
-                    return;
+                    return false;
                 }
             }
 
@@ -312,20 +312,22 @@ export default function OnboardingPage() {
             if (updateError) {
                 console.error("Candidate update error:", updateError);
                 setError(`Save error: ${updateError.message}`);
-                return;
+                return false;
             }
 
+            return true;
         } catch (err: any) {
             console.error("Save progress error:", err);
             setError(`Error: ${err.message || "Failed to save"}`);
+            return false;
         } finally {
             setSaving(false);
         }
     };
 
     const handleNext = async () => {
-        await saveProgress();
-        if (currentStep < 3) {
+        const success = await saveProgress();
+        if (success && currentStep < 3) {
             setCurrentStep(currentStep + 1);
         }
     };
@@ -384,19 +386,37 @@ export default function OnboardingPage() {
 
     const handleComplete = async () => {
         setLoading(true);
-        await saveProgress();
+        const saved = await saveProgress();
 
-        const supabase = createClient();
-        await supabase
-            .from("candidates")
-            .update({
-                status: "VERIFIED",
-                onboarding_completed: true,
-                updated_at: new Date().toISOString()
-            })
-            .eq("profile_id", user.id);
+        if (!saved) {
+            setLoading(false);
+            return;
+        }
 
-        router.push("/dashboard");
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("candidates")
+                .update({
+                    status: "VERIFIED",
+                    onboarding_completed: true,
+                    updated_at: new Date().toISOString()
+                })
+                .eq("profile_id", user.id);
+
+            if (error) {
+                console.error("Complete error:", error);
+                setError(`Completion error: ${error.message}`);
+                setLoading(false);
+                return;
+            }
+
+            router.push("/dashboard");
+        } catch (err: any) {
+            console.error("Complete error:", err);
+            setError(`Error: ${err.message || 'Unknown error'}`);
+            setLoading(false);
+        }
     };
 
     const selectedCountry = COUNTRY_CODES.find(c => c.code === formData.countryCode) || COUNTRY_CODES[0];
