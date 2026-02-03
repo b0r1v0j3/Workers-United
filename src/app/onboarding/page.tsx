@@ -13,31 +13,83 @@ const STEPS = [
     { id: 4, title: "Signature", icon: "✍️" },
 ];
 
+// Country codes for phone input
+const COUNTRY_CODES = [
+    { code: "+381", country: "Serbia", flag: "🇷🇸" },
+    { code: "+385", country: "Croatia", flag: "🇭🇷" },
+    { code: "+386", country: "Slovenia", flag: "🇸🇮" },
+    { code: "+387", country: "Bosnia", flag: "🇧🇦" },
+    { code: "+389", country: "N. Macedonia", flag: "🇲🇰" },
+    { code: "+382", country: "Montenegro", flag: "🇲🇪" },
+    { code: "+49", country: "Germany", flag: "🇩🇪" },
+    { code: "+43", country: "Austria", flag: "🇦🇹" },
+    { code: "+41", country: "Switzerland", flag: "🇨🇭" },
+    { code: "+48", country: "Poland", flag: "🇵🇱" },
+    { code: "+420", country: "Czech Rep.", flag: "🇨🇿" },
+    { code: "+421", country: "Slovakia", flag: "🇸🇰" },
+    { code: "+36", country: "Hungary", flag: "🇭🇺" },
+    { code: "+40", country: "Romania", flag: "🇷🇴" },
+    { code: "+359", country: "Bulgaria", flag: "🇧🇬" },
+    { code: "+30", country: "Greece", flag: "🇬🇷" },
+    { code: "+39", country: "Italy", flag: "🇮🇹" },
+    { code: "+34", country: "Spain", flag: "🇪🇸" },
+    { code: "+33", country: "France", flag: "🇫🇷" },
+    { code: "+44", country: "UK", flag: "🇬🇧" },
+    { code: "+1", country: "USA/Canada", flag: "🇺🇸" },
+    { code: "+234", country: "Nigeria", flag: "🇳🇬" },
+    { code: "+91", country: "India", flag: "🇮🇳" },
+    { code: "+63", country: "Philippines", flag: "🇵🇭" },
+    { code: "+92", country: "Pakistan", flag: "🇵🇰" },
+    { code: "+880", country: "Bangladesh", flag: "🇧🇩" },
+];
+
+// Generate days, months, years for DOB
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+const MONTHS = [
+    { value: 1, label: "January" },
+    { value: 2, label: "February" },
+    { value: 3, label: "March" },
+    { value: 4, label: "April" },
+    { value: 5, label: "May" },
+    { value: 6, label: "June" },
+    { value: 7, label: "July" },
+    { value: 8, label: "August" },
+    { value: 9, label: "September" },
+    { value: 10, label: "October" },
+    { value: 11, label: "November" },
+    { value: 12, label: "December" },
+];
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 80 }, (_, i) => currentYear - 18 - i); // 18 to 98 years old
+
 export default function OnboardingPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [user, setUser] = useState<any>(null);
+    const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const router = useRouter();
 
     // Form data
     const [formData, setFormData] = useState({
         // Step 1: Personal Info
-        phone: "",
+        countryCode: "+381",
+        phoneNumber: "",
         nationality: "",
-        currentCountry: "",
-        dateOfBirth: "",
+        dobDay: "",
+        dobMonth: "",
+        dobYear: "",
 
         // Step 2: Work Preferences
         preferredJob: "",
         experience: "",
         languages: "",
-        preferredCountry: "",
 
         // Step 3: Documents
         passportFile: null as File | null,
-        cvFile: null as File | null,
+        photoFile: null as File | null,
+        diplomaFile: null as File | null,
 
         // Step 4: Signature
         signatureData: "",
@@ -63,16 +115,39 @@ export default function OnboardingPage() {
                 .single();
 
             if (candidate) {
+                // Parse phone number if exists
+                let countryCode = "+381";
+                let phoneNumber = "";
+                if (candidate.phone) {
+                    const found = COUNTRY_CODES.find(c => candidate.phone.startsWith(c.code));
+                    if (found) {
+                        countryCode = found.code;
+                        phoneNumber = candidate.phone.replace(found.code, "").trim();
+                    } else {
+                        phoneNumber = candidate.phone;
+                    }
+                }
+
+                // Parse date of birth
+                let dobDay = "", dobMonth = "", dobYear = "";
+                if (candidate.date_of_birth) {
+                    const dob = new Date(candidate.date_of_birth);
+                    dobDay = dob.getDate().toString();
+                    dobMonth = (dob.getMonth() + 1).toString();
+                    dobYear = dob.getFullYear().toString();
+                }
+
                 setFormData(prev => ({
                     ...prev,
-                    phone: candidate.phone || user.user_metadata?.phone || "",
+                    countryCode,
+                    phoneNumber,
                     nationality: candidate.nationality || "",
-                    currentCountry: candidate.current_country || "",
-                    dateOfBirth: candidate.date_of_birth || "",
+                    dobDay,
+                    dobMonth,
+                    dobYear,
                     preferredJob: candidate.preferred_job || "",
                     experience: candidate.experience_years?.toString() || "",
                     languages: candidate.languages?.join(", ") || "",
-                    preferredCountry: candidate.preferred_country || "",
                 }));
             }
         }
@@ -82,6 +157,19 @@ export default function OnboardingPage() {
 
     const updateField = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const getFullPhone = () => {
+        return formData.phoneNumber ? `${formData.countryCode}${formData.phoneNumber}` : "";
+    };
+
+    const getFullDOB = () => {
+        if (formData.dobDay && formData.dobMonth && formData.dobYear) {
+            const month = formData.dobMonth.padStart(2, '0');
+            const day = formData.dobDay.padStart(2, '0');
+            return `${formData.dobYear}-${month}-${day}`;
+        }
+        return null;
     };
 
     const saveProgress = async () => {
@@ -95,14 +183,14 @@ export default function OnboardingPage() {
                 .from("candidates")
                 .upsert({
                     profile_id: user.id,
-                    phone: formData.phone,
+                    phone: getFullPhone(),
                     nationality: formData.nationality,
-                    current_country: formData.currentCountry,
-                    date_of_birth: formData.dateOfBirth || null,
+                    current_country: "Serbia", // Fixed to Serbia
+                    date_of_birth: getFullDOB(),
                     preferred_job: formData.preferredJob,
                     experience_years: formData.experience ? parseInt(formData.experience) : null,
                     languages: formData.languages ? formData.languages.split(",").map(l => l.trim()) : [],
-                    preferred_country: formData.preferredCountry,
+                    preferred_country: "serbia", // Fixed to Serbia
                     updated_at: new Date().toISOString(),
                 }, { onConflict: "profile_id" });
 
@@ -126,12 +214,13 @@ export default function OnboardingPage() {
         }
     };
 
-    const handleFileUpload = async (field: "passportFile" | "cvFile", file: File) => {
+    const handleFileUpload = async (field: "passportFile" | "photoFile" | "diplomaFile", file: File) => {
         updateField(field, file);
 
         const supabase = createClient();
         const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${field}_${Date.now()}.${fileExt}`;
+        const docType = field.replace("File", "");
+        const fileName = `${user.id}/${docType}_${Date.now()}.${fileExt}`;
 
         const { error } = await supabase.storage
             .from("documents")
@@ -142,10 +231,13 @@ export default function OnboardingPage() {
                 .from("documents")
                 .getPublicUrl(fileName);
 
-            const updateField = field === "passportFile" ? "passport_url" : "cv_url";
+            const dbField = field === "passportFile" ? "passport_url"
+                : field === "photoFile" ? "photo_url"
+                    : "diploma_url";
+
             await supabase
                 .from("candidates")
-                .update({ [updateField]: publicUrl })
+                .update({ [dbField]: publicUrl })
                 .eq("profile_id", user.id);
         }
     };
@@ -185,6 +277,8 @@ export default function OnboardingPage() {
         router.push("/dashboard");
     };
 
+    const selectedCountry = COUNTRY_CODES.find(c => c.code === formData.countryCode) || COUNTRY_CODES[0];
+
     if (!user) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -216,8 +310,8 @@ export default function OnboardingPage() {
                             <div key={step.id} className="flex items-center">
                                 <div className={`flex flex-col items-center ${index < STEPS.length - 1 ? "flex-1" : ""}`}>
                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all ${currentStep >= step.id
-                                            ? "bg-[#2f6fed] text-white"
-                                            : "bg-gray-100 text-gray-400"
+                                        ? "bg-[#2f6fed] text-white"
+                                        : "bg-gray-100 text-gray-400"
                                         }`}>
                                         {currentStep > step.id ? "✓" : step.icon}
                                     </div>
@@ -253,23 +347,63 @@ export default function OnboardingPage() {
                                 <p className="text-[#6c7a89]">Tell us a bit about yourself</p>
                             </div>
 
-                            <div className="grid gap-4">
+                            <div className="grid gap-5">
+                                {/* Phone with Country Selector */}
                                 <div>
-                                    <label className="block text-sm font-medium text-[#183b56] mb-2">
+                                    <label className="block text-sm font-semibold text-[#183b56] mb-2">
                                         Phone (WhatsApp) *
                                     </label>
-                                    <input
-                                        type="tel"
-                                        value={formData.phone}
-                                        onChange={(e) => updateField("phone", e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
-                                        placeholder="+1 234 567 8900"
-                                        required
-                                    />
+                                    <div className="flex gap-2">
+                                        {/* Country Code Selector */}
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                                                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-[#dde3ec] bg-white hover:border-[#2f6fed] transition-colors min-w-[130px]"
+                                            >
+                                                <span className="text-xl">{selectedCountry.flag}</span>
+                                                <span className="font-medium text-[#183b56]">{selectedCountry.code}</span>
+                                                <svg className="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+
+                                            {showCountryDropdown && (
+                                                <div className="absolute top-full left-0 mt-1 bg-white border border-[#dde3ec] rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto w-64">
+                                                    {COUNTRY_CODES.map(country => (
+                                                        <button
+                                                            key={country.code}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                updateField("countryCode", country.code);
+                                                                setShowCountryDropdown(false);
+                                                            }}
+                                                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#f4f6fb] text-left transition-colors"
+                                                        >
+                                                            <span className="text-xl">{country.flag}</span>
+                                                            <span className="font-medium text-[#183b56]">{country.country}</span>
+                                                            <span className="text-[#6c7a89] ml-auto">{country.code}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Phone Number */}
+                                        <input
+                                            type="tel"
+                                            value={formData.phoneNumber}
+                                            onChange={(e) => updateField("phoneNumber", e.target.value.replace(/[^0-9]/g, ''))}
+                                            className="flex-1 px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
+                                            placeholder="66 299 4444"
+                                            required
+                                        />
+                                    </div>
                                 </div>
 
+                                {/* Nationality */}
                                 <div>
-                                    <label className="block text-sm font-medium text-[#183b56] mb-2">
+                                    <label className="block text-sm font-semibold text-[#183b56] mb-2">
                                         Nationality *
                                     </label>
                                     <input
@@ -277,35 +411,56 @@ export default function OnboardingPage() {
                                         value={formData.nationality}
                                         onChange={(e) => updateField("nationality", e.target.value)}
                                         className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
-                                        placeholder="e.g., Nigerian, Indian, Philippine"
+                                        placeholder="e.g., Serbian, Nigerian, Indian"
                                         required
                                     />
                                 </div>
 
+                                {/* Date of Birth - 3 Dropdowns */}
                                 <div>
-                                    <label className="block text-sm font-medium text-[#183b56] mb-2">
-                                        Current Country *
+                                    <label className="block text-sm font-semibold text-[#183b56] mb-2">
+                                        Date of Birth *
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={formData.currentCountry}
-                                        onChange={(e) => updateField("currentCountry", e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
-                                        placeholder="Country where you currently live"
-                                        required
-                                    />
-                                </div>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {/* Day */}
+                                        <select
+                                            value={formData.dobDay}
+                                            onChange={(e) => updateField("dobDay", e.target.value)}
+                                            className="px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none bg-white"
+                                            required
+                                        >
+                                            <option value="">Day</option>
+                                            {DAYS.map(day => (
+                                                <option key={day} value={day}>{day}</option>
+                                            ))}
+                                        </select>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-[#183b56] mb-2">
-                                        Date of Birth
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={formData.dateOfBirth}
-                                        onChange={(e) => updateField("dateOfBirth", e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
-                                    />
+                                        {/* Month */}
+                                        <select
+                                            value={formData.dobMonth}
+                                            onChange={(e) => updateField("dobMonth", e.target.value)}
+                                            className="px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none bg-white"
+                                            required
+                                        >
+                                            <option value="">Month</option>
+                                            {MONTHS.map(month => (
+                                                <option key={month.value} value={month.value}>{month.label}</option>
+                                            ))}
+                                        </select>
+
+                                        {/* Year */}
+                                        <select
+                                            value={formData.dobYear}
+                                            onChange={(e) => updateField("dobYear", e.target.value)}
+                                            className="px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none bg-white"
+                                            required
+                                        >
+                                            <option value="">Year</option>
+                                            {YEARS.map(year => (
+                                                <option key={year} value={year}>{year}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -316,18 +471,18 @@ export default function OnboardingPage() {
                         <div className="space-y-6">
                             <div>
                                 <h2 className="text-2xl font-bold text-[#183b56] mb-2">Work Preferences</h2>
-                                <p className="text-[#6c7a89]">Help us find the right job for you</p>
+                                <p className="text-[#6c7a89]">Help us find the right job for you in Serbia</p>
                             </div>
 
-                            <div className="grid gap-4">
+                            <div className="grid gap-5">
                                 <div>
-                                    <label className="block text-sm font-medium text-[#183b56] mb-2">
+                                    <label className="block text-sm font-semibold text-[#183b56] mb-2">
                                         Preferred Job / Industry *
                                     </label>
                                     <select
                                         value={formData.preferredJob}
                                         onChange={(e) => updateField("preferredJob", e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
+                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none bg-white"
                                         required
                                     >
                                         <option value="">Select job type</option>
@@ -338,18 +493,20 @@ export default function OnboardingPage() {
                                         <option value="healthcare">Healthcare</option>
                                         <option value="logistics">Logistics / Warehouse</option>
                                         <option value="cleaning">Cleaning Services</option>
+                                        <option value="it">IT / Technology</option>
+                                        <option value="driving">Driving / Transportation</option>
                                         <option value="other">Other</option>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-[#183b56] mb-2">
+                                    <label className="block text-sm font-semibold text-[#183b56] mb-2">
                                         Years of Experience
                                     </label>
                                     <select
                                         value={formData.experience}
                                         onChange={(e) => updateField("experience", e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
+                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none bg-white"
                                     >
                                         <option value="">Select experience</option>
                                         <option value="0">No experience</option>
@@ -361,7 +518,7 @@ export default function OnboardingPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-[#183b56] mb-2">
+                                    <label className="block text-sm font-semibold text-[#183b56] mb-2">
                                         Languages You Speak
                                     </label>
                                     <input
@@ -369,27 +526,17 @@ export default function OnboardingPage() {
                                         value={formData.languages}
                                         onChange={(e) => updateField("languages", e.target.value)}
                                         className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
-                                        placeholder="e.g., English, French, Arabic"
+                                        placeholder="e.g., English, Serbian, French"
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-[#183b56] mb-2">
-                                        Preferred Work Country
-                                    </label>
-                                    <select
-                                        value={formData.preferredCountry}
-                                        onChange={(e) => updateField("preferredCountry", e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
-                                    >
-                                        <option value="">Any country in Europe</option>
-                                        <option value="serbia">Serbia</option>
-                                        <option value="croatia">Croatia</option>
-                                        <option value="slovenia">Slovenia</option>
-                                        <option value="germany">Germany</option>
-                                        <option value="poland">Poland</option>
-                                        <option value="czech">Czech Republic</option>
-                                    </select>
+                                {/* Info box about Serbia */}
+                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                                    <span className="text-2xl">🇷🇸</span>
+                                    <div>
+                                        <h4 className="font-semibold text-[#183b56] mb-1">Currently Available: Serbia</h4>
+                                        <p className="text-sm text-[#6c7a89]">We are currently placing workers in Serbia. More countries coming soon!</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -403,11 +550,12 @@ export default function OnboardingPage() {
                                 <p className="text-[#6c7a89]">We need these for visa processing</p>
                             </div>
 
-                            <div className="grid gap-6">
-                                <div className="border-2 border-dashed border-[#dde3ec] rounded-xl p-6 text-center hover:border-[#2f6fed] transition-colors">
-                                    <div className="text-4xl mb-3">🛂</div>
-                                    <h3 className="font-semibold text-[#183b56] mb-2">Passport Photo Page</h3>
-                                    <p className="text-sm text-[#6c7a89] mb-4">Clear photo of your passport information page</p>
+                            <div className="grid gap-5">
+                                {/* Passport */}
+                                <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${formData.passportFile ? 'border-green-400 bg-green-50' : 'border-[#dde3ec] hover:border-[#2f6fed]'}`}>
+                                    <div className="text-3xl mb-2">🛂</div>
+                                    <h3 className="font-semibold text-[#183b56] mb-1">Passport Photo Page *</h3>
+                                    <p className="text-sm text-[#6c7a89] mb-3">Clear photo of your passport data page</p>
                                     <input
                                         type="file"
                                         accept="image/*,.pdf"
@@ -417,28 +565,55 @@ export default function OnboardingPage() {
                                     />
                                     <label
                                         htmlFor="passport-upload"
-                                        className="inline-block px-6 py-2 bg-[#2f6fed] text-white rounded-lg font-medium cursor-pointer hover:bg-[#1e5cd6] transition-colors"
+                                        className={`inline-block px-5 py-2 rounded-lg font-medium cursor-pointer transition-colors ${formData.passportFile
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-[#2f6fed] text-white hover:bg-[#1e5cd6]'}`}
                                     >
                                         {formData.passportFile ? "✓ Uploaded" : "Upload Passport"}
                                     </label>
                                 </div>
 
-                                <div className="border-2 border-dashed border-[#dde3ec] rounded-xl p-6 text-center hover:border-[#2f6fed] transition-colors">
-                                    <div className="text-4xl mb-3">📋</div>
-                                    <h3 className="font-semibold text-[#183b56] mb-2">CV / Resume</h3>
-                                    <p className="text-sm text-[#6c7a89] mb-4">Your work history and skills</p>
+                                {/* Biometric Photo */}
+                                <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${formData.photoFile ? 'border-green-400 bg-green-50' : 'border-[#dde3ec] hover:border-[#2f6fed]'}`}>
+                                    <div className="text-3xl mb-2">📷</div>
+                                    <h3 className="font-semibold text-[#183b56] mb-1">Biometric Photo *</h3>
+                                    <p className="text-sm text-[#6c7a89] mb-3">Passport-style photo (35x45mm, white background)</p>
                                     <input
                                         type="file"
-                                        accept=".pdf,.doc,.docx"
-                                        onChange={(e) => e.target.files?.[0] && handleFileUpload("cvFile", e.target.files[0])}
+                                        accept="image/*"
+                                        onChange={(e) => e.target.files?.[0] && handleFileUpload("photoFile", e.target.files[0])}
                                         className="hidden"
-                                        id="cv-upload"
+                                        id="photo-upload"
                                     />
                                     <label
-                                        htmlFor="cv-upload"
-                                        className="inline-block px-6 py-2 bg-[#2f6fed] text-white rounded-lg font-medium cursor-pointer hover:bg-[#1e5cd6] transition-colors"
+                                        htmlFor="photo-upload"
+                                        className={`inline-block px-5 py-2 rounded-lg font-medium cursor-pointer transition-colors ${formData.photoFile
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-[#2f6fed] text-white hover:bg-[#1e5cd6]'}`}
                                     >
-                                        {formData.cvFile ? "✓ Uploaded" : "Upload CV"}
+                                        {formData.photoFile ? "✓ Uploaded" : "Upload Photo"}
+                                    </label>
+                                </div>
+
+                                {/* Diploma */}
+                                <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${formData.diplomaFile ? 'border-green-400 bg-green-50' : 'border-[#dde3ec] hover:border-[#2f6fed]'}`}>
+                                    <div className="text-3xl mb-2">🎓</div>
+                                    <h3 className="font-semibold text-[#183b56] mb-1">Diploma / Certificate</h3>
+                                    <p className="text-sm text-[#6c7a89] mb-3">Education or professional certificate (optional)</p>
+                                    <input
+                                        type="file"
+                                        accept="image/*,.pdf"
+                                        onChange={(e) => e.target.files?.[0] && handleFileUpload("diplomaFile", e.target.files[0])}
+                                        className="hidden"
+                                        id="diploma-upload"
+                                    />
+                                    <label
+                                        htmlFor="diploma-upload"
+                                        className={`inline-block px-5 py-2 rounded-lg font-medium cursor-pointer transition-colors ${formData.diplomaFile
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-[#2f6fed] text-white hover:bg-[#1e5cd6]'}`}
+                                    >
+                                        {formData.diplomaFile ? "✓ Uploaded" : "Upload Diploma"}
                                     </label>
                                 </div>
                             </div>
@@ -473,8 +648,8 @@ export default function OnboardingPage() {
                             onClick={handleBack}
                             disabled={currentStep === 1}
                             className={`px-6 py-3 rounded-xl font-medium transition-colors ${currentStep === 1
-                                    ? "text-gray-300 cursor-not-allowed"
-                                    : "text-[#6c7a89] hover:text-[#183b56] hover:bg-gray-100"
+                                ? "text-gray-300 cursor-not-allowed"
+                                : "text-[#6c7a89] hover:text-[#183b56] hover:bg-gray-100"
                                 }`}
                         >
                             ← Back
@@ -493,8 +668,8 @@ export default function OnboardingPage() {
                                 onClick={handleComplete}
                                 disabled={loading || !formData.signatureData}
                                 className={`px-8 py-3 rounded-xl font-semibold transition-colors ${formData.signatureData
-                                        ? "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/30"
-                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    ? "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/30"
+                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                     }`}
                             >
                                 {loading ? "Completing..." : "Complete Profile ✓"}
