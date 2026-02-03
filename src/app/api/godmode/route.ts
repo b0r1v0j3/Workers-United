@@ -160,17 +160,27 @@ export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError) {
+            console.error("God mode auth error:", authError);
+            return NextResponse.json({ godMode: false, error: authError.message });
+        }
+
         if (!user) {
             return NextResponse.json({ godMode: false });
         }
 
+        const isGod = isGodModeUser(user.email);
+        console.log("God mode check:", { email: user.email, isGod });
+
         return NextResponse.json({
-            godMode: isGodModeUser(user.email),
+            godMode: isGod,
             email: user.email
         });
 
-    } catch (error) {
-        return NextResponse.json({ godMode: false });
+    } catch (error: any) {
+        console.error("God mode GET error:", error);
+        return NextResponse.json({ godMode: false, error: error.message });
     }
 }
