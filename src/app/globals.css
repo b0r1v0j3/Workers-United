@@ -401,6 +401,8 @@ section {
   padding: 12px 16px;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
+}
+
 .file-preview.visible {
   display: flex;
 }
