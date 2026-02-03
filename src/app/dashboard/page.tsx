@@ -102,7 +102,7 @@ export default async function DashboardPage() {
                 {/* Greeting */}
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold text-[#1e293b]">
-                        Hello, {profile?.full_name?.split(' ')[0] || "Candidate"} 👋
+                        Hello, {profile?.full_name?.split(' ')[0] || user.user_metadata?.full_name?.split(' ')[0] || "there"} 👋
                     </h1>
                     <p className="text-[#64748b] text-sm font-medium">Here is the live status of your application.</p>
                 </div>
@@ -227,7 +227,7 @@ export default async function DashboardPage() {
                             </div>
                             <div>
                                 <div className="font-medium text-[#183b56]">Profile Activated</div>
-                                <div className="text-xs text-[#64748b]">{inQueue ? "Searching for jobs" : "Pay $9 to start job search"}</div>
+                                <div className="text-xs text-[#64748b]">{inQueue ? "Searching for jobs" : "Activate to start job search"}</div>
                             </div>
                         </div>
 
@@ -252,15 +252,10 @@ export default async function DashboardPage() {
                 {/* Document Upload (if not ready) */}
                 {!isReady && (
                     <div className="mb-8">
-                        <div className="bg-white rounded-xl overflow-hidden shadow-sm border-2 border-[#dde3ec]">
-                            <div className="bg-[#183b56] p-4 text-white text-center font-bold text-sm">
-                                📄 UPLOAD YOUR DOCUMENTS
-                            </div>
-                            <DocumentWizard
-                                candidateId={user.id}
-                                email={user.email || ""}
-                            />
-                        </div>
+                        <DocumentWizard
+                            candidateId={user.id}
+                            email={user.email || ""}
+                        />
                     </div>
                 )}
 
