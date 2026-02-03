@@ -37,15 +37,12 @@ export default async function Home() {
                 Dashboard
               </Link>
             ) : (
-              <>
-                <Link href="/login" className="hover:text-[#183b56] transition-colors font-medium">Sign in</Link>
-                <Link
-                  href="#contact"
-                  className="px-4 py-2 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-semibold shadow-lg shadow-blue-500/40"
-                >
-                  Contact us
-                </Link>
-              </>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-semibold shadow-lg shadow-blue-500/40"
+              >
+                Log In
+              </Link>
             )}
           </nav>
           {/* Mobile menu button - would need client component for toggle */}
