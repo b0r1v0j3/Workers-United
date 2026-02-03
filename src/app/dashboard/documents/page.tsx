@@ -1,7 +1,6 @@
-import DocumentsClient from "./DocumentsClient";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
+// Documents are now shown directly on dashboard
 export default function DocumentsPage() {
-    return <DocumentsClient />;
+    redirect("/dashboard");
 }
