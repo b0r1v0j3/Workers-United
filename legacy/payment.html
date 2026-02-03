@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Priority Waitlist - Workers United</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .payment-container {
+            max-width: 480px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+
+        .payment-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .payment-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .payment-header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .payment-body {
+            padding: 30px;
+        }
+
+        .price-box {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 2px solid #10b981;
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .price-box .amount {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #047857;
+        }
+
+        .price-box .label {
+            color: #6b7280;
+            font-size: 0.95rem;
+            margin-top: 5px;
+        }
+
+        .features-list {
+            margin: 25px 0;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .feature-item:last-child {
+            border-bottom: none;
+        }
+
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .feature-text {
+            color: #374151;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .guarantee-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+        }
+
+        .guarantee-box .title {
+            font-weight: 600;
+            color: #92400e;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .guarantee-box .text {
+            color: #78350f;
+            font-size: 0.9rem;
+        }
+
+        .pay-button {
+            width: 100%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 18px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .pay-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .pay-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .secure-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .candidate-info {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .candidate-info .label {
+            color: #6b7280;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .candidate-info .value {
+            color: #111827;
+            font-weight: 500;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="payment-container">
+        <div class="payment-header">
+            <h1>🎯 Priority Waitlist</h1>
+            <p>Get matched with employers faster</p>
+        </div>
+
+        <div class="payment-body">
+            <!-- Candidate Info -->
+            <div class="candidate-info" id="candidateInfo" style="display: none;">
+                <div class="label">Paying for</div>
+                <div class="value" id="candidateName">-</div>
+                <div class="value" id="candidateEmail" style="font-size: 0.85rem; color: #6b7280;">-</div>
+            </div>
+
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage"></div>
+
+            <!-- Price -->
+            <div class="price-box">
+                <div class="amount">$9</div>
+                <div class="label">One-time waitlist fee</div>
+            </div>
+
+            <!-- Features -->
+            <div class="features-list">
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <div class="feature-text"><strong>Priority matching</strong> with verified EU employers</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <div class="feature-text"><strong>Dedicated support</strong> throughout the process</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <div class="feature-text"><strong>Visa assistance</strong> and document preparation</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <div class="feature-text"><strong>$9 counts</strong> toward your $199 total package</div>
+                </div>
+            </div>
+
+            <!-- Guarantee -->
+            <div class="guarantee-box">
+                <div class="title">💰 90-Day Money-Back Guarantee</div>
+                <div class="text">If you don't receive a job offer within 90 days, you get a full refund. No questions
+                    asked!</div>
+            </div>
+
+            <!-- Pay Button -->
+            <button class="pay-button" id="payButton" onclick="startPayment()">
+                💳 Pay $9 & Join Waitlist
+            </button>
+
+            <div class="secure-badge">
+                🔒 Secure payment powered by Stripe
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get email from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+
+        // Show candidate info if email provided
+        if (email) {
+            document.getElementById('candidateEmail').textContent = email;
+            document.getElementById('candidateInfo').style.display = 'block';
+
+            // Optionally fetch candidate name from API
+            fetchCandidateInfo(email);
+        }
+
+        async function fetchCandidateInfo(email) {
+            try {
+                const response = await fetch(`/api/get-candidate?email=${encodeURIComponent(email)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.candidate && data.candidate.name) {
+                        document.getElementById('candidateName').textContent = data.candidate.name;
+                    }
+                }
+            } catch (e) {
+                console.log('Could not fetch candidate info');
+            }
+        }
+
+        async function startPayment() {
+            const button = document.getElementById('payButton');
+            const errorDiv = document.getElementById('errorMessage');
+
+            if (!email) {
+                errorDiv.textContent = 'No email provided. Please use the link from your email.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Disable button and show loading
+            button.disabled = true;
+            button.innerHTML = '<span class="loading-spinner"></span> Processing...';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/create-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        product: 'waitlist',
+                        amount: 900 // $9 in cents
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.url) {
+                    // Redirect to Stripe Checkout
+                    window.location.href = data.url;
+                } else {
+                    throw new Error(data.error || 'Failed to create checkout session');
+                }
+
+            } catch (error) {
+                errorDiv.textContent = error.message || 'Payment failed. Please try again.';
+                errorDiv.style.display = 'block';
+                button.disabled = false;
+                button.innerHTML = '💳 Pay $9 & Join Waitlist';
+            }
+        }
+    </script>
+</body>
+
+</html>

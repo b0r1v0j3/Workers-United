@@ -1,0 +1,915 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Workers United – Legal international hiring & work visa support</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description"
+    content="Workers United connects serious employers with reliable workers worldwide and supports both sides with documents, contracts, and the full work visa process." />
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="assets/site.webmanifest">
+  <meta name="theme-color" content="#183b56">
+
+  <!-- Open Graph (for sharing) -->
+  <meta property="og:title" content="Workers United – Legal international hiring & work visa support" />
+  <meta property="og:description"
+    content="Transparent process. Full legal work visa guidance for international workers and companies." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://workersunited.eu/" />
+  <meta property="og:image" content="https://workersunited.eu/assets/og-image.jpg?v=20260109" />
+
+  <!-- Canonical URL to avoid duplicate content issues -->
+  <link rel="canonical" href="https://workersunited.eu/" />
+
+  <!-- Humans.txt -->
+  <link rel="author" href="humans.txt" />
+
+  <!-- Preload critical font -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap"
+    as="style">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=5">
+
+  <!-- International Tel Input Library -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
+
+  <script src="form-validation.js" defer></script>
+  <script src="phone-input.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/intlTelInput.min.js"></script>
+
+  <!-- Google Analytics (replace YOUR-GA-ID with actual ID) -->
+  <!-- Uncomment when ready to use:
+  <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR-GA-ID"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'YOUR-GA-ID');
+  </script>
+  -->
+  <meta name="twitter:description"
+    content="Transparent process. Full legal work visa guidance for international workers and companies." />
+
+  <!-- Keywords for targeted countries -->
+  <meta name="keywords"
+    content="international employment, work visa, legal hiring, EU work permits, visa support, employment agency Europe, international recruitment, work visa guidance, legal work abroad, Balkan workers EU, work permits Europe, visa consulting, fair employment, transparent hiring, global workforce" />
+
+  <!-- Additional meta tags for SEO -->
+  <meta name="author" content="Workers United" />
+  <meta name="robots" content="index, follow" />
+  <meta name="revisit-after" content="7 days" />
+  <meta name="language" content="English" />
+  <meta name="geo.region" content="EU" />
+  <meta name="geo.placename" content="Europe" />
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Workers United",
+    "url": "https://workersunited.eu",
+    "logo": "https://workersunited.eu/assets/workers-united-logo.png",
+    "description": "Workers United connects serious employers with reliable workers worldwide and guides both sides through the full work visa process.",
+    "email": "contact@workersunited.eu",
+    "foundingDate": "2024",
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "EU"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "Customer Service",
+      "email": "contact@workersunited.eu",
+      "availableLanguage": ["English"],
+      "areaServed": "Worldwide"
+    },
+    "sameAs": [
+      "https://www.facebook.com/profile.php?id=61585104076725",
+      "https://www.instagram.com/workersunited.eu/",
+      "https://www.linkedin.com/company/workersunited-eu/",
+      "https://x.com/WorkersUnitedEU",
+      "https://www.tiktok.com/@www.workersunited.eu",
+      "https://www.threads.com/@workersunited.eu"
+    ],
+    "serviceType": [
+      "International Employment Consulting",
+      "Work Visa Support",
+      "Legal Hiring Services",
+      "Worker-Employer Matching"
+    ]
+  }
+  </script>
+
+  <!-- FAQ Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Do you charge workers hidden fees?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "We are against hidden fees and \"surprise payments\". Before we start any process, we explain clearly if there are any costs and who pays what – worker, employer or both."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which countries do you work with?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Our focus is on employers in Europe and workers from different regions who want legal work and long-term cooperation. If your country is not sure, write to us and we will tell you honestly if we can help or not."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need to speak English?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Basic communication is always helpful, but we understand that not everyone speaks perfect English. You may send messages in your local language, and we will do our best to understand and respond clearly."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Are you a classic agency or more like an advisor?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "We help connect workers and employers, but also act as advisors – especially around documents, contracts and expectations. In practice, our role is to protect both sides from misunderstandings and unsafe situations."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Service Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "International Employment and Work Visa Consulting",
+    "provider": {
+      "@type": "Organization",
+      "name": "Workers United"
+    },
+    "areaServed": {
+      "@type": "Place",
+      "name": "Worldwide"
+    },
+    "description": "We help connect workers and employers internationally, guide both sides through documentation, and coordinate the full work visa process step by step.",
+    "offers": {
+      "@type": "Offer",
+      "availability": "https://schema.org/InStock"
+    }
+  }
+  </script>
+</head>
+
+<body>
+  <!-- Skip to main content link for accessibility -->
+  <a href="#main-content" class="skip-to-main">Skip to main content</a>
+  <div class="page">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <span class="logo-mark"><img src="assets/workers-united-logo.png" alt="Workers United logo" /></span>
+          <span class="logo-text">Workers United</span>
+        </div>
+        <nav id="main-nav" class="nav">
+          <a href="index.html">Home</a>
+          <a href="index.html#how-it-works">How it works</a>
+          <a href="index.html#workers">For workers</a>
+          <a href="index.html#employers">For employers</a>
+          <a href="status.html" style="color:#2563eb; font-weight:600;">Check Status</a>
+          <a href="index.html#contact" class="nav-cta">Contact us</a>
+        </nav>
+        <div class="burger" aria-label="Menu" onclick="toggleNav()" role="button" aria-controls="main-nav"
+          aria-expanded="false" tabindex="0">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="container">
+          <div class="hero-inner">
+            <div class="hero-card">
+              <div class="hero-label">
+                <span class="hero-label-dot"></span>
+                Safe, legal and personalised support
+              </div>
+              <h1 class="hero-title fade-in-up">
+                International hiring made simple&nbsp;&amp; legal.
+              </h1>
+              <p class="hero-subtitle fade-in-up delay-100">
+                Workers United connects serious employers with reliable workers worldwide and guides both sides through
+                the full work visa process – without fake promises or hidden conditions.
+              </p>
+              <div class="hero-ctas fade-in-up delay-200">
+                <a href="#workers" class="btn btn-primary">
+                  For workers
+                </a>
+                <a href="#employers" class="btn btn-ghost">
+                  For employers
+                </a>
+              </div>
+              <p class="hero-note">
+                <strong>If you have any questions</strong>, please feel free to contact us by phone or email. A member
+                of our team will reply personally.
+              </p>
+            </div>
+
+            <div class="hero-right">
+              <div class="hero-badge-card fade-in-up delay-300">
+                <div class="hero-badge-title">What you can expect</div>
+                <ul class="hero-badge-list">
+                  <li>
+                    <span class="check-dot">✓</span>
+                    <span>We carefully explain contracts so you know what you are really signing.</span>
+                  </li>
+                  <li>
+                    <span class="check-dot">✓</span>
+                    <span>We support the full work visa process – not only finding a job.</span>
+                  </li>
+                  <li>
+                    <span class="check-dot">✓</span>
+                    <span>We work only with employers who are ready to follow the law and treat workers fairly.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="hero-tagline-card">
+                <div class="hero-mini-pill">
+                  <span>Trusted cooperation</span>
+                </div>
+                <div>
+                  <strong>We talk to people, not only collect documents.</strong><br />
+                  Every worker and employer has direct contact with a real person from our team, before and after
+                  arrival.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section id="how-it-works">
+        <div class="container">
+          <div class="section-header">
+            <div class="section-eyebrow">Step by step</div>
+            <h2 class="section-title">How Workers United process looks</h2>
+            <p class="section-subtitle">
+              Clear steps for both sides – from first contact until the worker arrives and starts working.
+            </p>
+          </div>
+
+          <div class="steps-grid">
+            <div class="step-card">
+              <div class="step-number">1</div>
+              <div class="step-title">You contact us</div>
+              <div class="step-text">
+                Worker or employer sends us a message with basic information. We reply personally – not with automatic
+                messages.
+              </div>
+            </div>
+            <div class="step-card">
+              <div class="step-number">2</div>
+              <div class="step-title">We understand your situation</div>
+              <div class="step-text">
+                We ask specific questions about the job, salary, accommodation and family situation, to see if
+                everything is realistic and legal before we continue.
+              </div>
+            </div>
+            <div class="step-card">
+              <div class="step-number">3</div>
+              <div class="step-title">Documents &amp; visa support</div>
+              <div class="step-text">
+                We help prepare invitations, contracts and other paperwork for work visa. We also explain what every
+                document means so there are no surprises later.
+              </div>
+            </div>
+            <div class="step-card">
+              <div class="step-number">4</div>
+              <div class="step-title">Arrival &amp; follow-up</div>
+              <div class="step-text">
+                After arrival we remain available to both worker and employer, to solve problems early and keep
+                cooperation stable, not only for the first month.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- For workers -->
+      <section id="workers">
+        <div class="container">
+          <div class="split">
+            <div>
+              <div class="pill">For workers</div>
+              <h2 class="split-title">For workers who want a real chance, not empty promises</h2>
+              <p class="split-text">
+                Many people hear big promises and nice stories, and then the reality is completely different. Our goal
+                is to help you understand what you are signing and what you can really expect when you arrive.
+              </p>
+              <ul class="bullet-list">
+                <li>
+                  <span class="bullet-dot">✓</span>
+                  <span>We explain your contract and conditions in simple language – salary, working hours, days off,
+                    accommodation.</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">✓</span>
+                  <span>We tell you honestly if an offer looks unrealistic or dangerous, even if that means we do not
+                    continue the process.</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">✓</span>
+                  <span>We support you with documents for work visa and give clear instructions step by step.</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">✓</span>
+                  <span>You can always ask questions before and after arrival – by call, message or email.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="card">
+              <h3 class="split-title" style="font-size:18px; margin-bottom:6px;">
+                What workers usually ask us
+              </h3>
+              <p class="split-text" style="margin-bottom:10px;">
+                We most often help workers who:
+              </p>
+              <ul class="bullet-list">
+                <li>
+                  <span class="bullet-dot">•</span>
+                  <span>already have an offer but are not sure if it is safe or fair;</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">•</span>
+                  <span>need help to understand what is written in the contract and visa documents;</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">•</span>
+                  <span>want someone neutral to check both the employer and the agent before they decide.</span>
+                </li>
+              </ul>
+              <div class="tag-row">
+                <span class="tag">Simple explanations</span>
+                <span class="tag">Real expectations</span>
+                <span class="tag">Support before &amp; after arrival</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- For employers -->
+      <section id="employers">
+        <div class="container">
+          <div class="split" style="align-items: center;">
+            <div class="card">
+              <h3 class="split-title" style="font-size:18px; margin-bottom:6px;">
+                What serious employers get from us
+              </h3>
+              <p class="split-text" style="margin-bottom:10px;">
+                We help employers who are ready to respect the law and treat workers fairly – but do not have time or
+                experience to manage the full process alone.
+              </p>
+              <ul class="bullet-list">
+                <li>
+                  <span class="bullet-dot">✓</span>
+                  <span>We speak honestly with workers so they clearly understand pay, duties and life conditions before
+                    travelling.</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">✓</span>
+                  <span>We help prepare correct invitations, contracts and other documents for work visa
+                    applications.</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">✓</span>
+                  <span>We reduce misunderstandings and early resignations by aligning expectations on both sides from
+                    the start.</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">✓</span>
+                  <span>We stay available after arrival to help solve small issues before they become big
+                    problems.</span>
+                </li>
+              </ul>
+              <div class="tag-row">
+                <span class="tag">Less risk</span>
+                <span class="tag">Clear communication</span>
+                <span class="tag">Stable cooperation</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="pill">For employers</div>
+              <h2 class="split-title">For employers who want stability, not only "cheap labour"</h2>
+              <p class="split-text">
+                Workers United is not a mass online portal. We focus on realistic offers, transparent communication and
+                long-term cooperation, so you do not have to constantly replace staff.
+              </p>
+              <ul class="bullet-list">
+                <li>
+                  <span class="bullet-dot">•</span>
+                  <span>We speak both "workers language" and "legal language" and help connect them.</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">•</span>
+                  <span>We are available in flexible hours, including evenings and weekends when workers can really
+                    talk.</span>
+                </li>
+                <li>
+                  <span class="bullet-dot">•</span>
+                  <span>We build cooperation step by step – starting from a few positions and growing together.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reasons / trust -->
+      <section>
+        <div class="container">
+          <div class="section-header">
+            <div class="section-eyebrow">Why choose us</div>
+            <h2 class="section-title">What makes Workers United different</h2>
+            <p class="section-subtitle">
+              We do not promise "magic solutions". We focus on honest information, realistic expectations and stable
+              cooperation.
+            </p>
+          </div>
+
+          <div class="reason-grid">
+            <div class="reason-card">
+              <div class="reason-title">Real humans, not just online forms</div>
+              <div class="reason-text">
+                Workers and employers can speak directly with a person who understands both sides – not with a chatbot
+                or anonymous email address.
+              </div>
+            </div>
+            <div class="reason-card">
+              <div class="reason-title">Safety before speed</div>
+              <div class="reason-text">
+                It is better to say "no" to a bad offer than to send people into problems. We prefer safe and legal
+                processes, even if they are slower.
+              </div>
+            </div>
+            <div class="reason-card">
+              <div class="reason-title">Clear communication</div>
+              <div class="reason-text">
+                We explain every important detail: salary, overtime, accommodation, travel costs, paperwork – so
+                everyone knows what to expect.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq">
+        <div class="container">
+          <div class="section-header">
+            <div class="section-eyebrow">Questions &amp; answers</div>
+            <h2 class="section-title">Frequently asked questions</h2>
+            <p class="section-subtitle">
+              If you are not sure, send us a message – it is better to ask now than to regret later.
+            </p>
+          </div>
+
+          <div class="faq-grid">
+            <div class="faq-item">
+              <div class="faq-header" tabindex="0" role="button">
+                <div class="faq-question">Do you charge workers hidden fees?</div>
+                <div class="faq-toggle">+</div>
+              </div>
+              <div class="faq-body">
+                We are against hidden fees and "surprise payments". Before we start any process, we explain clearly if
+                there are any costs and who pays what – worker, employer or both.
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <div class="faq-header" tabindex="0" role="button">
+                <div class="faq-question">Which countries do you work with?</div>
+                <div class="faq-toggle">+</div>
+              </div>
+              <div class="faq-body">
+                Our focus is on employers in Europe and workers from different regions who want legal work and long-term
+                cooperation. If your country is not sure, write to us and we will tell you honestly if we can help or
+                not.
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <div class="faq-header" tabindex="0" role="button">
+                <div class="faq-question">Do I need to speak English?</div>
+                <div class="faq-toggle">+</div>
+              </div>
+              <div class="faq-body">
+                Basic communication is always helpful, but we understand that not everyone speaks perfect English. You
+                may send messages in your local language, and we will do our best to understand and respond clearly.
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <div class="faq-header" tabindex="0" role="button">
+                <div class="faq-question">Are you a classic agency or more like an advisor?</div>
+                <div class="faq-toggle">+</div>
+              </div>
+              <div class="faq-body">
+                We help connect workers and employers, but also act as advisors – especially around documents, contracts
+                and expectations. In practice, our role is to protect both sides from misunderstandings and unsafe
+                situations.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Contact -->
+      <section id="contact">
+        <div class="container">
+          <div class="section-header" style="margin-bottom: 28px;">
+            <div class="section-eyebrow">Contact</div>
+            <h2 class="section-title">Tell us what you need</h2>
+            <p class="section-subtitle">
+              Please provide a brief summary of your situation. We will respond personally as soon as we can—usually
+              within one business day.
+            </p>
+          </div>
+
+          <div class="contact-layout">
+            <div class="contact-info">
+              <p>
+                Workers United is here for both workers and employers seeking lawful and realistic cooperation. There is
+                no need to prepare perfect documents before getting in touch; please describe your circumstances
+                candidly.
+              </p>
+              <p>
+                If it is easier for you, you can also email us directly at:<br />
+                <a href="mailto:contact@workersunited.eu"><strong>contact@workersunited.eu</strong></a>
+              </p>
+              <p>
+                If you require assistance, please do not hesitate to call or message us. We understand the importance of
+                this decision and will treat every enquiry with the utmost professionalism.
+              </p>
+            </div>
+
+            <!-- Netlify form -->
+            <div class="contact-form-card">
+              <form id="contact-form">
+
+                <!-- Success/Error message container -->
+                <div id="form-result" style="display:none; padding:12px; border-radius:8px; margin-bottom:16px;"></div>
+
+                <div class="contact-grid">
+                  <div class="field">
+                    <label class="field-label" for="name">Full name <span>*</span></label>
+                    <input type="text" id="name" name="name" required autocomplete="name" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="email">Email <span>*</span></label>
+                    <input type="email" id="email" name="email" required autocomplete="email" />
+                  </div>
+
+                  <div class="field">
+                    <label class="field-label" for="phone">Phone Number (WhatsApp) <span>*</span></label>
+                    <input type="tel" id="phone" name="phone" required autocomplete="tel"
+                      placeholder="+1 234 567 8900" />
+                  </div>
+
+                  <div class="field">
+                    <label class="field-label" for="country">Country you are currently in</label>
+                    <input type="text" id="country" name="country" autocomplete="country-name" />
+                  </div>
+
+                  <div class="field" style="grid-column: span 2;">
+                    <span class="field-label">I am a <span>*</span></span>
+                    <div class="radio-row">
+                      <label class="radio-pill">
+                        <input type="radio" name="role" value="worker" required />
+                        <span>Worker</span>
+                      </label>
+                      <label class="radio-pill">
+                        <input type="radio" name="role" value="employer" />
+                        <span>Employer</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field" style="margin-top:10px; grid-column: span 2;">
+                  <label class="field-label" for="job_preference">Preferred Job / Industry</label>
+                  <input type="text" id="job_preference" name="job_preference"
+                    placeholder="e.g. Construction, Hospitality, driver..." />
+                </div>
+
+                <div class="field" style="margin-top:10px; grid-column: span 2;">
+                  <label class="field-label" for="message">Message (short overview of your situation)
+                    <span>*</span></label>
+                  <textarea id="message" name="message" required></textarea>
+                  <div class="contact-note">
+                    Please include any important details about job, visa status or deadlines.
+                  </div>
+                </div>
+
+                <div class="contact-submit-row">
+                  <button type="submit" class="btn btn-primary" id="submit-btn">
+                    <span id="btn-text">Send message</span>
+                  </button>
+                  <div class="contact-submit-helper">
+                    By sending this form you agree that we may contact you back regarding your request.
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-main">
+          <div class="footer-copyright">© <span id="year"></span> Workers United. All rights reserved.</div>
+          <div class="footer-contact">
+            <strong>Contact us:</strong> <a href="mailto:contact@workersunited.eu">contact@workersunited.eu</a>
+          </div>
+          <div class="footer-legal-links">
+            <a href="privacy-policy.html">Privacy Policy</a> | <a href="terms.html">Terms and Conditions</a>
+          </div>
+          <div class="footer-company">
+            <div class="footer-company-name"><strong>Workers United LLC</strong></div>
+            <div class="footer-company-address">75 E 3rd St., Sheridan, Wyoming 82801, USA</div>
+          </div>
+        </div>
+        <div class="footer-links">
+          <span>Safe • Legal • Transparent</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // Set current year in footer
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href !== '#' && href.length > 1) {
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            const headerOffset = 80;
+            const elementPosition = target.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
+      });
+    });
+
+    // FAQ toggle - allow multiple open items
+    document.querySelectorAll(".faq-item").forEach(function (item) {
+      const header = item.querySelector(".faq-header");
+      header.addEventListener("click", function () {
+        const isOpen = item.classList.contains("open");
+        if (isOpen) {
+          item.classList.remove("open");
+          const toggle = item.querySelector(".faq-toggle");
+          if (toggle) toggle.textContent = "+";
+        } else {
+          item.classList.add("open");
+          const toggle = item.querySelector(".faq-toggle");
+          if (toggle) toggle.textContent = "–";
+        }
+      });
+      // Allow keyboard activation on FAQ header
+      header.addEventListener("keypress", function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          header.click();
+        }
+      });
+    });
+
+    // Mobile navigation toggle (global)
+    function toggleNav() {
+      var nav = document.getElementById('main-nav');
+      var burger = document.querySelector('.burger');
+      if (!nav || !burger) return;
+      nav.classList.toggle('nav-open');
+      var isOpen = nav.classList.contains('nav-open');
+      burger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    // Close menu helpers
+    (function () {
+      var nav = document.getElementById('main-nav');
+      var burger = document.querySelector('.burger');
+      if (!nav || !burger) return;
+
+      function closeNav() {
+        nav.classList.remove('nav-open');
+        burger.setAttribute('aria-expanded', 'false');
+      }
+
+      // Close on scroll
+      window.addEventListener('scroll', function () {
+        if (nav.classList.contains('nav-open')) closeNav();
+      }, { passive: true });
+
+      // Close when clicking outside
+      document.addEventListener('click', function (e) {
+        if (!nav.classList.contains('nav-open')) return;
+        var target = e.target;
+        if (nav.contains(target) || burger.contains(target)) return;
+        closeNav();
+      });
+
+      // Close when a link is clicked
+      nav.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () { closeNav(); });
+      });
+
+      // Keyboard support for burger
+      burger.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          toggleNav();
+          e.preventDefault();
+        }
+      });
+
+      // ESC closes
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && nav.classList.contains('nav-open')) closeNav();
+      });
+    })();
+
+    // Back to top button
+    (function () {
+      const backToTopBtn = document.createElement('button');
+      backToTopBtn.className = 'back-to-top';
+      backToTopBtn.setAttribute('aria-label', 'Back to top');
+      backToTopBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>';
+      document.body.appendChild(backToTopBtn);
+
+      function toggleBackToTop() {
+        if (window.pageYOffset > 300) {
+          backToTopBtn.classList.add('show');
+        } else {
+          backToTopBtn.classList.remove('show');
+        }
+      }
+
+      backToTopBtn.addEventListener('click', function () {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+
+      window.addEventListener('scroll', toggleBackToTop, { passive: true });
+      toggleBackToTop();
+    })();
+
+    // Web3Forms Contact Form Handler
+    (function () {
+      const form = document.getElementById('contact-form');
+      const submitBtn = document.getElementById('submit-btn');
+      const btnText = document.getElementById('btn-text');
+      const resultDiv = document.getElementById('form-result');
+
+      if (!form) return;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const originalText = btnText.textContent;
+
+        // Update button state
+        btnText.textContent = 'Sending...';
+        submitBtn.disabled = true;
+        resultDiv.style.display = 'none';
+
+        try {
+          const response = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            // Success
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = 'rgba(29, 191, 115, 0.1)';
+            resultDiv.style.border = '1px solid rgba(29, 191, 115, 0.4)';
+            resultDiv.style.color = '#1dbf73';
+            resultDiv.innerHTML = '<strong>✓ Success!</strong> Your message has been sent. We will reply to you as soon as possible.';
+            form.reset();
+          } else {
+            // Error
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = 'rgba(231, 76, 60, 0.1)';
+            resultDiv.style.border = '1px solid rgba(231, 76, 60, 0.4)';
+            resultDiv.style.color = '#e74c3c';
+            resultDiv.innerHTML = '<strong>✗ Error:</strong> ' + (data.message || 'Something went wrong. Please try again.');
+          }
+        } catch (error) {
+          // Network error
+          resultDiv.style.display = 'block';
+          resultDiv.style.background = 'rgba(231, 76, 60, 0.1)';
+          resultDiv.style.border = '1px solid rgba(231, 76, 60, 0.4)';
+          resultDiv.style.color = '#e74c3c';
+          resultDiv.innerHTML = '<strong>✗ Error:</strong> Network error. Please check your connection and try again.';
+        } finally {
+          // Reset button state
+          btnText.textContent = originalText;
+          submitBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+
+  <!-- Custom Chatbot ("Nas Bot") -->
+  <script src="assets/chatbot.js" defer></script>
+
+  <!-- Social Media Links -->
+  <div class="wu-social-row" aria-label="Official social channels">
+    <a class="wu-social" href="https://www.facebook.com/profile.php?id=61585104076725" target="_blank"
+      rel="noopener noreferrer" aria-label="Facebook">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.6 1.6-1.6H16.7V4.9c-.3 0-1.4-.1-2.7-.1-2.7 0-4.5 1.6-4.5 4.6V11H7v3h2.8v8h3.7z" />
+      </svg>
+    </a>
+    <a class="wu-social" href="https://www.instagram.com/workersunited.eu/" target="_blank" rel="noopener noreferrer"
+      aria-label="Instagram">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm9 2h-9A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9A3.5 3.5 0 0 0 20 16.5v-9A3.5 3.5 0 0 0 16.5 4z" />
+        <path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2.1A2.9 2.9 0 1 0 12 15a2.9 2.9 0 0 0 0-5.9z" />
+        <path d="M17.6 6.3a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0z" />
+      </svg>
+    </a>
+    <a class="wu-social" href="https://www.linkedin.com/company/workersunited-eu/?viewAsMember=true" target="_blank"
+      rel="noopener noreferrer" aria-label="Linkedin">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M4.5 3.5A2 2 0 1 1 4.5 7.5a2 2 0 0 1 0-4zM3 9h3v12H3V9zm7 0h2.9v1.6h.1c.4-.8 1.6-1.7 3.2-1.7 3.4 0 4 2.2 4 5.1V21h-3v-6.1c0-1.5 0-3.3-2-3.3s-2.3 1.6-2.3 3.2V21h-3V9z" />
+      </svg>
+    </a>
+    <a class="wu-social" href="https://x.com/WorkersUnitedEU" target="_blank" rel="noopener noreferrer" aria-label="X">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M18.7 2H21l-6.7 7.6L22 22h-6.1l-4.8-6.2L5.6 22H3.3l7.2-8.2L2 2h6.2l4.3 5.6L18.7 2zm-1.1 18h1.2L6.3 3.9H5.1L17.6 20z" />
+      </svg>
+    </a>
+    <a class="wu-social" href="https://www.tiktok.com/@www.workersunited.eu?lang=en" target="_blank"
+      rel="noopener noreferrer" aria-label="Tiktok">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M14 2h2.2c.2 1.8 1.2 3.2 3.8 3.6V8c-1.7 0-3.2-.6-4.1-1.4V14c0 4-2.7 6-6 6-2.5 0-4.9-1.7-4.9-4.9 0-3.1 2.4-5 5.4-5 .5 0 1 .1 1.5.2V13c-.4-.2-.9-.3-1.5-.3-1.3 0-2.6.8-2.6 2.4 0 1.5 1.1 2.4 2.5 2.4 1.7 0 2.6-1.1 2.6-3V2z" />
+      </svg>
+    </a>
+    <a class="wu-social" href="https://www.threads.com/@workersunited.eu" target="_blank" rel="noopener noreferrer"
+      aria-label="Threads">
+      <svg viewBox="0 0 192 192" aria-hidden="true">
+        <path
+          d="M141.537 88.9883C140.71 88.5919 139.87 88.2104 139.019 87.8451C137.537 60.5382 122.616 44.905 97.5619 44.745C97.4484 44.7443 97.3355 44.7443 97.222 44.7443C82.2364 44.7443 69.7731 51.1409 62.102 62.7807L75.881 72.2328C81.6116 63.5383 90.6052 61.6848 97.2286 61.6848C97.3051 61.6848 97.3819 61.6848 97.4576 61.6855C105.707 61.7381 111.932 64.1366 115.961 68.814C118.893 72.2193 120.854 76.925 121.825 82.8638C114.511 81.6207 106.601 81.2385 98.145 81.7233C74.3247 83.0954 59.0111 96.9879 60.0396 116.292C60.5615 126.084 65.4397 134.508 73.775 140.011C80.8224 144.663 89.899 146.938 99.3323 146.423C111.79 145.74 121.563 140.987 128.381 132.296C133.559 125.696 136.834 117.143 138.28 106.366C144.217 109.949 148.617 114.664 151.047 120.332C155.179 129.967 155.42 145.8 142.501 158.708C131.182 170.016 117.576 174.908 97.0135 175.059C74.2042 174.89 56.9538 167.575 45.7381 153.317C35.2355 139.966 29.8077 120.682 29.6052 96C29.8077 71.3178 35.2355 52.0336 45.7381 38.6827C56.9538 24.4249 74.2039 17.11 97.0132 16.9405C119.988 17.1113 137.539 24.4614 149.184 38.788C154.894 45.8136 159.199 54.6488 162.037 64.9503L178.184 60.6422C174.744 47.9622 169.331 37.0357 161.965 27.974C147.036 9.60668 125.202 0.195148 97.0695 0H96.9569C68.8816 0.19447 47.2921 9.6418 32.7883 28.0793C19.8819 44.4864 13.2244 67.3157 13.0007 95.9325L13 96L13.0007 96.0675C13.2244 124.684 19.8819 147.514 32.7883 163.921C47.2921 182.358 68.8816 191.806 96.9569 192H97.0695C122.03 191.827 139.624 185.292 154.118 170.811C173.081 151.866 172.51 128.119 166.26 113.541C161.776 103.087 153.227 94.5962 141.537 88.9883ZM98.4405 129.507C88.0005 130.095 77.1544 125.409 76.6196 115.372C76.2232 107.93 81.9158 99.626 99.0812 98.6368C101.047 98.5234 102.976 98.468 104.871 98.468C111.106 98.468 116.939 99.0737 122.242 100.233C120.264 124.935 108.662 128.946 98.4405 129.507Z" />
+      </svg>
+    </a>
+  </div>
+
+</body>
+
+</html>

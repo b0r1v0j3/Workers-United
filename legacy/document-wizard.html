@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Submission - Workers United</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wizard-container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 700px;
+            overflow: hidden;
+        }
+
+        .wizard-header {
+            background: #183b56;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .wizard-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+
+        .wizard-header p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            padding: 20px 30px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #e2e8f0;
+            z-index: 0;
+        }
+
+        .progress-bar-fill {
+            position: absolute;
+            top: 15px;
+            left: 0;
+            height: 3px;
+            background: #10b981;
+            z-index: 1;
+            transition: width 0.3s ease;
+        }
+
+        .step-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+            background: #f8fafc;
+            padding: 0 5px;
+        }
+
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: #64748b;
+            transition: all 0.3s;
+        }
+
+        .step-circle.active {
+            background: #2f6fed;
+            color: white;
+        }
+
+        .step-circle.completed {
+            background: #10b981;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 11px;
+            margin-top: 6px;
+            color: #64748b;
+            text-align: center;
+        }
+
+        /* Wizard Content */
+        .wizard-content {
+            padding: 30px;
+        }
+
+        .step-content {
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        .step-title {
+            font-size: 20px;
+            color: #183b56;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Form Fields */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2f6fed;
+            box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8fafc;
+        }
+
+        .upload-zone:hover {
+            border-color: #2f6fed;
+            background: rgba(47, 111, 237, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .upload-zone.has-file {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        .file-preview {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .file-preview.visible {
+            display: flex;
+        }
+
+        .file-preview .file-icon {
+            font-size: 24px;
+        }
+
+        .file-preview .file-name {
+            flex: 1;
+            font-size: 14px;
+            color: #166534;
+        }
+
+        .file-preview .remove-btn {
+            background: none;
+            border: none;
+            color: #dc2626;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* Verification Status */
+        .verification-status {
+            display: none;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .verification-status.verifying {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+        }
+
+        .verification-status.success {
+            display: block;
+            background: #d1fae5;
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+        }
+
+        .verification-status.error {
+            display: block;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fcd34d;
+            border-top-color: #92400e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Buttons */
+        .wizard-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-primary {
+            background: #2f6fed;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #1e5bc6;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        /* Requirements List */
+        .requirements-list {
+            background: #eff6ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .requirements-list h4 {
+            margin: 0 0 12px 0;
+            color: #1e40af;
+            font-size: 14px;
+        }
+
+        .req-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 13px;
+            color: #334155;
+        }
+
+        .req-item .check {
+            color: #10b981;
+        }
+
+        .req-item .pending {
+            color: #f59e0b;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .wizard-content {
+                padding: 20px;
+            }
+
+            .step-label {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wizard-container">
+        <div class="wizard-header">
+            <h1>📄 Document Submission</h1>
+            <p id="user-greeting">Complete your application by uploading required documents</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+                <div class="step-indicator">
+                    <div class="step-circle active" data-step="1">1</div>
+                    <span class="step-label">Info</span>
+                </div>
+                <div class="step-indicator">
+                    <div class="step-circle" data-step="2">2</div>
+                    <span class="step-label">Passport</span>
+                </div>
+                <div class="step-indicator">
+                    <div class="step-circle" data-step="3">3</div>
+                    <span class="step-label">Photo</span>
+                </div>
+                <div class="step-indicator">
+                    <div class="step-circle" data-step="4">4</div>
+                    <span class="step-label">Diploma</span>
+                </div>
+                <div class="step-indicator">
+                    <div class="step-circle" data-step="5">5</div>
+                    <span class="step-label">Done</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="wizard-content">
+            <!-- Step 1: Personal Information Confirmation -->
+            <div class="step-content active" data-step="1">
+                <h2 class="step-title">👤 Confirm Your Information</h2>
+                <p style="color:#64748b; margin-bottom:20px;">Please verify these details match your passport exactly.
+                </p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name (as on passport) *</label>
+                        <input type="text" id="full-name" required placeholder="John Smith">
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth *</label>
+                        <input type="date" id="dob" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nationality *</label>
+                        <input type="text" id="nationality" required placeholder="Nigerian">
+                    </div>
+                    <div class="form-group">
+                        <label>Current Address *</label>
+                        <input type="text" id="address" required placeholder="123 Main St, Lagos">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Email (for updates) *</label>
+                    <input type="email" id="confirm-email" required readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label>Preferred Job / Industry *</label>
+                    <select id="preferred-job" required>
+                        <option value="">-- Select a job category --</option>
+                        <option value="Manufacturing">Manufacturing / Factory Work</option>
+                        <option value="Construction">Construction / Building</option>
+                        <option value="Warehouse">Warehouse / Logistics</option>
+                        <option value="Agriculture">Agriculture / Farming</option>
+                        <option value="Hospitality">Hospitality / Hotels / Restaurants</option>
+                        <option value="Healthcare">Healthcare / Caregiving</option>
+                        <option value="IT">IT / Technology</option>
+                        <option value="Driving">Driving / Transportation</option>
+                        <option value="Cleaning">Cleaning / Housekeeping</option>
+                        <option value="Any">Any Job (I'm open to all options)</option>
+                    </select>
+                    <p style="font-size:12px; color:#64748b; margin-top:6px;">
+                        💡 <em>Not sure? Select "Any Job" and we'll match you with available positions.</em>
+                    </p>
+                </div>
+
+                <div class="wizard-buttons">
+                    <button class="btn btn-primary" onclick="nextStep()">Continue to Passport →</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Passport Upload -->
+            <div class="step-content" data-step="2">
+                <h2 class="step-title">🛂 Upload Your Passport</h2>
+
+                <div class="requirements-list">
+                    <h4>📋 Passport Requirements</h4>
+                    <div class="req-item"><span class="check">✓</span> Valid for at least 6 months</div>
+                    <div class="req-item"><span class="check">✓</span> Clear photo of data page</div>
+                    <div class="req-item"><span class="check">✓</span> All text readable</div>
+                    <div class="req-item"><span class="check">✓</span> No glare or shadows</div>
+                </div>
+
+                <div class="upload-zone" id="passport-zone" onclick="document.getElementById('passport-input').click()">
+                    <input type="file" id="passport-input" accept="image/*,.pdf" style="display:none">
+                    <div class="upload-icon">🛂</div>
+                    <div class="upload-text">Click or drag passport photo here</div>
+                    <div class="upload-hint">JPG, PNG or PDF • Max 5MB</div>
+                </div>
+
+                <div class="file-preview" id="passport-preview">
+                    <span class="file-icon">📄</span>
+                    <span class="file-name" id="passport-filename"></span>
+                    <button class="remove-btn" onclick="removeFile('passport')">✕</button>
+                </div>
+
+                <div class="verification-status" id="passport-status">
+                    <div class="spinner"></div>
+                    <span>Verifying passport...</span>
+                </div>
+
+                <div class="wizard-buttons">
+                    <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+                    <button class="btn btn-primary" id="passport-next" onclick="nextStep()" disabled>Continue to Photo
+                        →</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Passport Photo -->
+            <div class="step-content" data-step="3">
+                <h2 class="step-title">📷 Upload Passport-Style Photo</h2>
+
+                <div class="requirements-list">
+                    <h4>📋 Photo Requirements</h4>
+                    <div class="req-item"><span class="check">✓</span> Size: 35mm x 45mm (passport size)</div>
+                    <div class="req-item"><span class="check">✓</span> White or light gray background</div>
+                    <div class="req-item"><span class="check">✓</span> Face clearly visible, eyes open</div>
+                    <div class="req-item"><span class="check">✓</span> No glasses, hats, or head coverings</div>
+                    <div class="req-item"><span class="check">✓</span> Taken within last 6 months</div>
+                </div>
+
+                <div class="upload-zone" id="photo-zone" onclick="document.getElementById('photo-input').click()">
+                    <input type="file" id="photo-input" accept="image/*" style="display:none">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">Click or drag photo here</div>
+                    <div class="upload-hint">JPG or PNG • Max 5MB</div>
+                </div>
+
+                <div class="file-preview" id="photo-preview">
+                    <span class="file-icon">📸</span>
+                    <span class="file-name" id="photo-filename"></span>
+                    <button class="remove-btn" onclick="removeFile('photo')">✕</button>
+                </div>
+
+                <div class="verification-status" id="photo-status"></div>
+
+                <div class="wizard-buttons">
+                    <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+                    <button class="btn btn-primary" id="photo-next" onclick="nextStep()" disabled>Continue to Diploma
+                        →</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Diploma/Certificate -->
+            <div class="step-content" data-step="4">
+                <h2 class="step-title">🎓 Upload Diploma or Certificate</h2>
+
+                <div class="requirements-list">
+                    <h4>📋 Accepted Documents</h4>
+                    <div class="req-item"><span class="check">✓</span> University degree / diploma</div>
+                    <div class="req-item"><span class="check">✓</span> Professional certificate</div>
+                    <div class="req-item"><span class="check">✓</span> Trade qualification</div>
+                    <div class="req-item"><span class="check">✓</span> High school diploma</div>
+                </div>
+
+                <div class="upload-zone" id="diploma-zone" onclick="document.getElementById('diploma-input').click()">
+                    <input type="file" id="diploma-input" accept="image/*,.pdf" style="display:none">
+                    <div class="upload-icon">🎓</div>
+                    <div class="upload-text">Click or drag diploma here</div>
+                    <div class="upload-hint">JPG, PNG or PDF • Max 5MB</div>
+                </div>
+
+                <div class="file-preview" id="diploma-preview">
+                    <span class="file-icon">📜</span>
+                    <span class="file-name" id="diploma-filename"></span>
+                    <button class="remove-btn" onclick="removeFile('diploma')">✕</button>
+                </div>
+
+                <div class="verification-status" id="diploma-status"></div>
+
+                <div class="wizard-buttons">
+                    <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+                    <button class="btn btn-success" id="diploma-next" onclick="submitAll()" disabled>Submit Application
+                        ✓</button>
+                </div>
+            </div>
+
+            <!-- Step 5: Complete -->
+            <div class="step-content" data-step="5">
+                <div style="text-align:center; padding:40px 20px;">
+                    <div style="font-size:80px; margin-bottom:20px;">🎉</div>
+                    <h2 style="color:#10b981; margin-bottom:15px;">Application Complete!</h2>
+                    <p style="color:#64748b; max-width:400px; margin:0 auto 30px;">
+                        All your documents have been received and verified. Our team will review your application and
+                        contact you within 24-48 hours.
+                    </p>
+                    <div
+                        style="background:#f0fdf4; border-radius:12px; padding:20px; text-align:left; max-width:400px; margin:0 auto;">
+                        <h4 style="color:#065f46; margin:0 0 10px 0;">📋 Documents Submitted</h4>
+                        <div style="color:#166534; font-size:14px; line-height:1.8;">
+                            ✅ Personal Information<br>
+                            ✅ Passport<br>
+                            ✅ Photo<br>
+                            ✅ Diploma/Certificate
+                        </div>
+                    </div>
+                    <a href="/" class="btn btn-primary"
+                        style="display:inline-block; margin-top:30px; text-decoration:none;">
+                        Return to Homepage
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get email from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        const token = urlParams.get('token');
+
+        let currentStep = 1;
+        let candidateData = {};
+        let uploadedFiles = {
+            passport: null,
+            photo: null,
+            diploma: null
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!email) {
+                document.querySelector('.wizard-content').innerHTML = `
+                    <div style="text-align:center; padding:40px;">
+                        <div style="font-size:60px;">⚠️</div>
+                        <h2 style="color:#dc2626;">Invalid Link</h2>
+                        <p style="color:#64748b;">Please use the link sent to your email.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            document.getElementById('confirm-email').value = email;
+            document.getElementById('user-greeting').textContent = `Welcome! Complete your application for: ${email}`;
+
+            // Load saved progress
+            await loadProgress();
+
+            // Setup file inputs
+            setupFileInput('passport');
+            setupFileInput('photo');
+            setupFileInput('diploma');
+        });
+
+        // Load saved progress from server
+        async function loadProgress() {
+            try {
+                const response = await fetch(`/api/document-progress?email=${encodeURIComponent(email)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.progress) {
+                        candidateData = data.progress.personalInfo || {};
+                        if (candidateData.fullName) document.getElementById('full-name').value = candidateData.fullName;
+                        if (candidateData.dob) document.getElementById('dob').value = candidateData.dob;
+                        if (candidateData.nationality) document.getElementById('nationality').value = candidateData.nationality;
+                        if (candidateData.address) document.getElementById('address').value = candidateData.address;
+
+                        // Resume from last step
+                        if (data.progress.lastStep > 1) {
+                            goToStep(data.progress.lastStep);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.log('No saved progress');
+            }
+        }
+
+        // Save progress to server
+        async function saveProgress() {
+            try {
+                await fetch('/api/document-progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        lastStep: currentStep,
+                        personalInfo: {
+                            fullName: document.getElementById('full-name').value,
+                            dob: document.getElementById('dob').value,
+                            nationality: document.getElementById('nationality').value,
+                            address: document.getElementById('address').value
+                        }
+                    })
+                });
+            } catch (err) {
+                console.error('Failed to save progress:', err);
+            }
+        }
+
+        // File input setup
+        function setupFileInput(type) {
+            const input = document.getElementById(`${type}-input`);
+            const zone = document.getElementById(`${type}-zone`);
+
+            input.addEventListener('change', (e) => handleFileSelect(type, e.target.files[0]));
+
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                handleFileSelect(type, e.dataTransfer.files[0]);
+            });
+        }
+
+        async function handleFileSelect(type, file) {
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File is too large. Maximum size is 5MB.');
+                return;
+            }
+
+            const zone = document.getElementById(`${type}-zone`);
+            const preview = document.getElementById(`${type}-preview`);
+            const filename = document.getElementById(`${type}-filename`);
+            const status = document.getElementById(`${type}-status`);
+            const nextBtn = document.getElementById(`${type}-next`);
+
+            // Show preview
+            zone.style.display = 'none';
+            preview.classList.add('visible');
+            filename.textContent = file.name;
+            uploadedFiles[type] = file;
+
+            // Start verification
+            status.className = 'verification-status verifying';
+            status.innerHTML = '<div class="spinner"></div><span>Verifying document with AI...</span>';
+
+            try {
+                // Upload and verify
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('type', type);
+                formData.append('email', email);
+                formData.append('candidateName', document.getElementById('full-name').value);
+
+                const response = await fetch('/api/verify-document', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.verified) {
+                    status.className = 'verification-status success';
+                    status.innerHTML = `✅ <strong>Verified!</strong> ${result.message || 'Document accepted.'}`;
+                    nextBtn.disabled = false;
+                    zone.classList.add('has-file');
+                } else {
+                    status.className = 'verification-status error';
+                    status.innerHTML = `❌ <strong>Issue Found:</strong> ${result.error || 'Please try again with a clearer image.'}`;
+                    nextBtn.disabled = true;
+                }
+            } catch (err) {
+                console.error('Verification error:', err);
+                // Allow continue even if verification fails (graceful degradation)
+                status.className = 'verification-status success';
+                status.innerHTML = '✅ Document uploaded. Manual review pending.';
+                nextBtn.disabled = false;
+            }
+        }
+
+        function removeFile(type) {
+            const zone = document.getElementById(`${type}-zone`);
+            const preview = document.getElementById(`${type}-preview`);
+            const status = document.getElementById(`${type}-status`);
+            const nextBtn = document.getElementById(`${type}-next`);
+            const input = document.getElementById(`${type}-input`);
+
+            zone.style.display = 'block';
+            zone.classList.remove('has-file');
+            preview.classList.remove('visible');
+            status.className = 'verification-status';
+            status.innerHTML = '';
+            nextBtn.disabled = true;
+            input.value = '';
+            uploadedFiles[type] = null;
+        }
+
+        // Navigation
+        function nextStep() {
+            if (currentStep === 1) {
+                // Validate personal info
+                const name = document.getElementById('full-name').value;
+                const dob = document.getElementById('dob').value;
+                const nationality = document.getElementById('nationality').value;
+                const address = document.getElementById('address').value;
+
+                if (!name || !dob || !nationality || !address) {
+                    alert('Please fill in all required fields.');
+                    return;
+                }
+
+                candidateData = { fullName: name, dob, nationality, address };
+            }
+
+            goToStep(currentStep + 1);
+            saveProgress();
+        }
+
+        function prevStep() {
+            goToStep(currentStep - 1);
+        }
+
+        function goToStep(step) {
+            currentStep = step;
+
+            // Update content
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.step-content[data-step="${step}"]`).classList.add('active');
+
+            // Update progress indicators
+            document.querySelectorAll('.step-circle').forEach(el => {
+                const s = parseInt(el.dataset.step);
+                el.classList.remove('active', 'completed');
+                if (s === step) el.classList.add('active');
+                if (s < step) el.classList.add('completed');
+            });
+
+            // Update progress bar
+            const progress = ((step - 1) / 4) * 100;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+        }
+
+        async function submitAll() {
+            const submitBtn = document.getElementById('diploma-next');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                // Final submission
+                const response = await fetch('/api/document-progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        lastStep: 5,
+                        completed: true,
+                        personalInfo: candidateData
+                    })
+                });
+
+                if (response.ok) {
+                    goToStep(5);
+                } else {
+                    throw new Error('Submission failed');
+                }
+            } catch (err) {
+                alert('Submission failed. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Application ✓';
+            }
+        }
+    </script>
+</body>
+
+</html>
