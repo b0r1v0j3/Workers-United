@@ -306,7 +306,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                                 </span>
                             )}
                             {uploads.diploma.status === 'missing' && (
-                                <button className="bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
+                                <button className="bg-[#2f6fed] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1e5cd6] transition-colors">
                                     Upload
                                 </button>
                             )}
