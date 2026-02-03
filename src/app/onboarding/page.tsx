@@ -158,7 +158,8 @@ export default function OnboardingPage() {
     // Form data
     const [formData, setFormData] = useState({
         // Step 1: Personal Info
-        fullName: "",
+        firstName: "",
+        lastName: "",
         countryCode: "+381",
         phoneNumber: "",
         nationality: "",
@@ -192,15 +193,19 @@ export default function OnboardingPage() {
 
             setUser(user);
 
-            // Load profile for full_name
+            // Load profile for first_name and last_name
             const { data: profile } = await supabase
                 .from("profiles")
-                .select("full_name")
+                .select("first_name, last_name")
                 .eq("id", user.id)
                 .single();
 
-            if (profile?.full_name) {
-                setFormData(prev => ({ ...prev, fullName: profile.full_name }));
+            if (profile) {
+                setFormData(prev => ({
+                    ...prev,
+                    firstName: profile.first_name || "",
+                    lastName: profile.last_name || ""
+                }));
             }
 
             // Load existing candidate data
@@ -275,11 +280,15 @@ export default function OnboardingPage() {
         try {
             const supabase = createClient();
 
-            // Save full_name to profiles table
-            if (formData.fullName) {
+            // Save first_name and last_name to profiles table
+            if (formData.firstName || formData.lastName) {
                 const { error: profileError } = await supabase
                     .from("profiles")
-                    .update({ full_name: formData.fullName })
+                    .update({
+                        first_name: formData.firstName,
+                        last_name: formData.lastName,
+                        full_name: `${formData.firstName} ${formData.lastName}`.trim()
+                    })
                     .eq("id", user.id);
 
                 if (profileError) {
@@ -512,19 +521,34 @@ export default function OnboardingPage() {
                             </div>
 
                             <div className="grid gap-5">
-                                {/* Full Name */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-[#183b56] mb-2">
-                                        Full Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.fullName}
-                                        onChange={(e) => updateField("fullName", e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:outline-none transition-colors"
-                                        placeholder="Your full name"
-                                        required
-                                    />
+                                {/* First Name & Last Name */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-[#183b56] mb-2">
+                                            First Name *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.firstName}
+                                            onChange={(e) => updateField("firstName", e.target.value)}
+                                            className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:outline-none transition-colors"
+                                            placeholder="First name"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-[#183b56] mb-2">
+                                            Last Name *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.lastName}
+                                            onChange={(e) => updateField("lastName", e.target.value)}
+                                            className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:outline-none transition-colors"
+                                            placeholder="Last name"
+                                            required
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Phone with Country Selector */}
