@@ -172,7 +172,9 @@ export default async function DashboardPage() {
                         <div>
                             <span className="text-[#64748b]">Date of Birth:</span>
                             <div className="font-medium text-[#183b56]">
-                                {candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : "—"}
+                                {candidate?.date_of_birth ? 
+                                    new Date(candidate.date_of_birth).toLocaleDateString('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' }) 
+                                    : "—"}
                             </div>
                         </div>
                         <div>
