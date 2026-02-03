@@ -14,6 +14,10 @@ interface EmployerProfile {
     accommodation_address: string | null;
     company_address: string | null;
     contact_phone: string | null;
+    workers_needed: number | null;
+    job_description: string | null;
+    salary_range: string | null;
+    work_location: string | null;
     status: string;
 }
 
@@ -34,6 +38,10 @@ export default function EmployerProfilePage() {
         company_address: "",
         accommodation_address: "",
         contact_phone: "",
+        workers_needed: 1,
+        job_description: "",
+        salary_range: "",
+        work_location: "",
     });
 
     useEffect(() => {
@@ -59,6 +67,10 @@ export default function EmployerProfilePage() {
                         company_address: emp.company_address || "",
                         accommodation_address: emp.accommodation_address || "",
                         contact_phone: emp.contact_phone || "",
+                        workers_needed: emp.workers_needed || 1,
+                        job_description: emp.job_description || "",
+                        salary_range: emp.salary_range || "",
+                        work_location: emp.work_location || "",
                     });
                 }
             } catch (err) {
@@ -93,6 +105,10 @@ export default function EmployerProfilePage() {
                     company_address: formData.company_address,
                     accommodation_address: formData.accommodation_address,
                     contact_phone: formData.contact_phone,
+                    workers_needed: formData.workers_needed,
+                    job_description: formData.job_description,
+                    salary_range: formData.salary_range,
+                    work_location: formData.work_location,
                 })
                 .eq("id", employer?.id);
 
@@ -254,6 +270,78 @@ export default function EmployerProfilePage() {
                         </div>
                     </div>
 
+                    <div className="card">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Job Requirements</h2>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Tell us about the positions you need to fill.
+                        </p>
+
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="workers_needed" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Number of Workers Needed *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        id="workers_needed"
+                                        name="workers_needed"
+                                        required
+                                        min={1}
+                                        max={100}
+                                        value={formData.workers_needed}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, workers_needed: parseInt(e.target.value) || 1 }))}
+                                        className="input"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="salary_range" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Salary Range (EUR/month)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="salary_range"
+                                        name="salary_range"
+                                        value={formData.salary_range}
+                                        onChange={handleChange}
+                                        className="input"
+                                        placeholder="e.g., 1200-1500 EUR"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="work_location" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Work Location
+                                </label>
+                                <input
+                                    type="text"
+                                    id="work_location"
+                                    name="work_location"
+                                    value={formData.work_location}
+                                    onChange={handleChange}
+                                    className="input"
+                                    placeholder="City or region where work takes place"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="job_description" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Job Description *
+                                </label>
+                                <textarea
+                                    id="job_description"
+                                    name="job_description"
+                                    required
+                                    rows={4}
+                                    value={formData.job_description}
+                                    onChange={handleChange}
+                                    className="input"
+                                    placeholder="Describe the job duties, required skills, working conditions..."
+                                />
+                            </div>
+                        </div>
+                    </div>
                     <div className="flex gap-4">
                         <button
                             type="submit"
