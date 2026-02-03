@@ -289,9 +289,15 @@ export default function OnboardingPage() {
                 }
             }
 
-            // Candidate is auto-created by database trigger on signup
-            // Update all candidate fields
+            // Check if candidate exists first
+            const { data: existingCandidate } = await supabase
+                .from("candidates")
+                .select("id")
+                .eq("profile_id", user.id)
+                .single();
+
             const candidateData = {
+                profile_id: user.id,
                 phone: getFullPhone() || null,
                 nationality: formData.nationality || null,
                 current_country: "Serbia",
@@ -304,13 +310,24 @@ export default function OnboardingPage() {
                 updated_at: new Date().toISOString(),
             };
 
-            const { error: updateError } = await supabase
-                .from("candidates")
-                .update(candidateData)
-                .eq("profile_id", user.id);
+            let updateError;
+            if (!existingCandidate) {
+                // Create candidate if not exists
+                const { error } = await supabase
+                    .from("candidates")
+                    .insert(candidateData);
+                updateError = error;
+            } else {
+                // Update existing candidate
+                const { error } = await supabase
+                    .from("candidates")
+                    .update(candidateData)
+                    .eq("profile_id", user.id);
+                updateError = error;
+            }
 
             if (updateError) {
-                console.error("Candidate update error:", updateError);
+                console.error("Candidate save error:", updateError);
                 setError(`Save error: ${updateError.message}`);
                 return false;
             }
@@ -750,7 +767,7 @@ export default function OnboardingPage() {
                             ← Back
                         </button>
 
-                        {currentStep < 4 ? (
+                        {currentStep < 3 ? (
                             <button
                                 onClick={handleNext}
                                 disabled={saving}
