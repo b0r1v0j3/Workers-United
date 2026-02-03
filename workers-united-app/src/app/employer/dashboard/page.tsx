@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { isAdmin, ADMIN_ROLE_COOKIE } from "@/lib/admin";
 
 export default async function EmployerDashboardPage() {
     const supabase = await createClient();
@@ -8,30 +10,57 @@ export default async function EmployerDashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
-    // Get employer profile
+    // Check if admin in employer mode
+    const cookieStore = await cookies();
+    const adminRole = cookieStore.get(ADMIN_ROLE_COOKIE)?.value;
+    const isAdminUser = isAdmin(user.email);
+    const isAdminEmployerMode = isAdminUser && adminRole === "employer";
+
+    // Get employer profile (optional for admin)
     const { data: employer } = await supabase
         .from("employers")
         .select("*, profiles(*)")
         .eq("profile_id", user.id)
         .single();
 
-    if (!employer) {
-        // Not an employer, redirect
+    // Non-admin without employer record -> redirect
+    if (!employer && !isAdminEmployerMode) {
         redirect("/dashboard");
     }
 
-    // Check if profile is complete
-    const isProfileComplete = employer.pib && employer.accommodation_address && employer.company_name;
+    // For admin mode, create mock employer data
+    const displayEmployer = employer || {
+        company_name: "Admin Test Company",
+        status: "active",
+        pib: "123456789",
+        accommodation_address: "Test Address",
+    };
 
-    // Get job stats
-    const { data: jobs } = await supabase
+    const isProfileComplete = displayEmployer.pib && displayEmployer.accommodation_address && displayEmployer.company_name;
+
+    // Get job stats (will be empty for admin mode)
+    const { data: jobs } = employer ? await supabase
         .from("job_requests")
         .select("*")
-        .eq("employer_id", employer.id);
+        .eq("employer_id", employer.id) : { data: [] };
 
     const openJobs = jobs?.filter(j => j.status === "open" || j.status === "matching").length || 0;
-    const filledJobs = jobs?.filter(j => j.status === "filled").length || 0;
     const totalPositionsFilled = jobs?.reduce((sum, j) => sum + (j.positions_filled || 0), 0) || 0;
+
+    // Get verified candidates from queue (for display)
+    const { data: verifiedCandidates } = await supabase
+        .from("candidate_queue")
+        .select(`
+            *,
+            candidate:candidates(
+                id,
+                status,
+                profile:profiles(full_name, email)
+            )
+        `)
+        .eq("status", "waiting")
+        .order("position", { ascending: true })
+        .limit(10);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -41,21 +70,30 @@ export default async function EmployerDashboardPage() {
                     <div className="flex justify-between h-16">
                         <div className="flex items-center gap-6">
                             <Link href="/" className="flex items-center gap-2 text-xl font-bold text-gray-900">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <path d="M2 12h20" />
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                </svg>
+                                <img src="/logo.png" alt="Workers United" width={28} height={28} style={{ borderRadius: '4px' }} />
                                 Workers United
                             </Link>
                             <span className="text-sm text-teal-600 font-medium bg-teal-50 px-2 py-1 rounded">
                                 Employer Portal
                             </span>
+                            {isAdminEmployerMode && (
+                                <span className="text-sm text-purple-600 font-medium bg-purple-50 px-2 py-1 rounded">
+                                    🔮 God Mode
+                                </span>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-4">
+                            {isAdminUser && (
+                                <Link
+                                    href="/select-role"
+                                    className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                                >
+                                    Switch Role
+                                </Link>
+                            )}
                             <span className="text-sm text-gray-600">
-                                {employer.company_name || employer.profiles?.email}
+                                {displayEmployer.company_name || user.email}
                             </span>
                             <form action="/auth/signout" method="post">
                                 <button type="submit" className="text-sm text-gray-600 hover:text-gray-900">
@@ -68,22 +106,16 @@ export default async function EmployerDashboardPage() {
             </nav>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Profile Incomplete Warning */}
-                {!isProfileComplete && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                {/* Admin Mode Banner */}
+                {isAdminEmployerMode && !employer && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
                         <div className="flex items-start gap-3">
-                            <span className="text-2xl">⚠️</span>
+                            <span className="text-2xl">🔮</span>
                             <div>
-                                <h3 className="font-semibold text-amber-900">Complete Your Company Profile</h3>
-                                <p className="text-amber-800 text-sm mt-1">
-                                    You need to add your PIB (Tax ID), company address, and accommodation details before posting jobs.
+                                <h3 className="font-semibold text-purple-900">God Mode Active</h3>
+                                <p className="text-purple-800 text-sm mt-1">
+                                    You're viewing the Employer Portal as an admin. This is a test view showing verified candidates.
                                 </p>
-                                <Link
-                                    href="/employer/profile"
-                                    className="inline-block mt-2 text-sm font-medium text-amber-900 underline"
-                                >
-                                    Complete Profile →
-                                </Link>
                             </div>
                         </div>
                     </div>
@@ -95,7 +127,7 @@ export default async function EmployerDashboardPage() {
                     style={{ background: 'linear-gradient(135deg, #14B8A6 0%, #10B981 100%)' }}
                 >
                     <h1 className="text-2xl font-bold mb-2">
-                        Welcome, {employer.company_name || "Employer"}! 👋
+                        Welcome, {displayEmployer.company_name || "Employer"}! 👋
                     </h1>
                     <p className="opacity-90">
                         Find pre-verified international workers for your business.
@@ -104,10 +136,56 @@ export default async function EmployerDashboardPage() {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <StatCard title="Active Jobs" value={openJobs} icon="📋" color="teal" />
+                    <StatCard title="Verified Candidates" value={verifiedCandidates?.length || 0} icon="👥" color="teal" />
+                    <StatCard title="Active Jobs" value={openJobs} icon="📋" color="blue" />
                     <StatCard title="Filled Positions" value={totalPositionsFilled} icon="✅" color="green" />
-                    <StatCard title="Total Jobs Posted" value={jobs?.length || 0} icon="📊" color="blue" />
-                    <StatCard title="Status" value={employer.status || "Pending"} icon="🏢" color="amber" isText />
+                    <StatCard title="Status" value={displayEmployer.status || "Active"} icon="🏢" color="amber" isText />
+                </div>
+
+                {/* Verified Candidates Section */}
+                <div className="mb-8">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Verified Candidates Ready for Placement</h2>
+                    <p className="text-sm text-gray-600 mb-4">
+                        These candidates have paid the $9 verification fee and are ready for job matching.
+                    </p>
+
+                    {verifiedCandidates && verifiedCandidates.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {verifiedCandidates.map((item) => (
+                                <div key={item.id} className="card">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-lg">
+                                            👤
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-900">
+                                                {item.candidate?.profile?.full_name || "Anonymous"}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                Queue Position: #{item.position}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                            ✓ Verified
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                            {new Date(item.joined_at).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="card text-center py-12">
+                            <div className="text-4xl mb-4">📭</div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Verified Candidates Yet</h3>
+                            <p className="text-gray-600 text-sm">
+                                Candidates who pay the $9 verification fee will appear here.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Quick Actions */}
@@ -119,14 +197,11 @@ export default async function EmployerDashboardPage() {
                         </p>
                         <Link
                             href="/employer/jobs/new"
-                            className={`btn ${isProfileComplete ? 'btn-primary' : 'bg-gray-300 cursor-not-allowed'}`}
-                            style={isProfileComplete ? {} : { pointerEvents: 'none' }}
+                            className={`btn ${isProfileComplete || isAdminEmployerMode ? 'btn-primary' : 'bg-gray-300 cursor-not-allowed'}`}
+                            style={isProfileComplete || isAdminEmployerMode ? {} : { pointerEvents: 'none' }}
                         >
                             Create Job Request
                         </Link>
-                        {!isProfileComplete && (
-                            <p className="text-xs text-amber-600 mt-2">Complete your profile first</p>
-                        )}
                     </div>
 
                     <div className="card">
@@ -139,43 +214,6 @@ export default async function EmployerDashboardPage() {
                         </Link>
                     </div>
                 </div>
-
-                {/* Recent Jobs */}
-                {jobs && jobs.length > 0 && (
-                    <div className="mt-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Job Requests</h2>
-                        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Positions</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salary</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                    {jobs.slice(0, 5).map((job) => (
-                                        <tr key={job.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {job.title}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {job.positions_filled} / {job.positions_count}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {job.salary_rsd ? `${job.salary_rsd.toLocaleString()} RSD` : "-"}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <StatusBadge status={job.status} />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
             </main>
         </div>
     );
@@ -213,20 +251,5 @@ function StatCard({
                 </div>
             </div>
         </div>
-    );
-}
-
-function StatusBadge({ status }: { status: string }) {
-    const styles: Record<string, string> = {
-        open: "bg-green-100 text-green-800",
-        matching: "bg-amber-100 text-amber-800",
-        filled: "bg-blue-100 text-blue-800",
-        closed: "bg-gray-100 text-gray-800",
-    };
-
-    return (
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status] || "bg-gray-100 text-gray-800"}`}>
-            {status.toUpperCase()}
-        </span>
     );
 }

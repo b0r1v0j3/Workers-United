@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export default function CreateJobPage() {
     const router = useRouter();
-    const supabase = createBrowserSupabaseClient();
+    const supabase = createClient();
+
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");

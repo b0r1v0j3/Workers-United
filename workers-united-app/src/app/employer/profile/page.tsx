@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 interface EmployerProfile {
     id: string;
@@ -17,12 +17,13 @@ interface EmployerProfile {
 
 export default function EmployerProfilePage() {
     const router = useRouter();
-    const supabase = createBrowserSupabaseClient();
+    const supabase = createClient();
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+
     const [employer, setEmployer] = useState<EmployerProfile | null>(null);
 
     const [formData, setFormData] = useState({

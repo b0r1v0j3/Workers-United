@@ -1,217 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
+import { createClient } from "@/lib/supabase/server";
 
-// Disable body parsing - Stripe needs raw body
-export const config = {
-    api: {
-        bodyParser: false,
-    },
-};
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+    apiVersion: "2024-04-10" as any,
+});
 
-export async function POST(request: NextRequest) {
-    const body = await request.text();
-    const signature = request.headers.get("stripe-signature");
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    if (!signature) {
-        return NextResponse.json({ error: "Missing signature" }, { status: 400 });
-    }
+export async function POST(req: NextRequest) {
+    const body = await req.text();
+    const signature = req.headers.get("stripe-signature") as string;
 
     let event: Stripe.Event;
 
     try {
-        event = stripe.webhooks.constructEvent(
-            body,
-            signature,
-            process.env.STRIPE_WEBHOOK_SECRET!
-        );
-    } catch (err) {
-        console.error("Webhook signature verification failed:", err);
+        if (!webhookSecret) throw new Error("Missing STRIPE_WEBHOOK_SECRET");
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err: any) {
+        console.error(`Webhook signature verification failed: ${err.message}`);
         return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
     const supabase = await createClient();
 
-    try {
-        switch (event.type) {
-            case "checkout.session.completed": {
-                const session = event.data.object as Stripe.Checkout.Session;
-                await handleCheckoutCompleted(supabase, session);
-                break;
-            }
+    if (event.type === "checkout.session.completed") {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId;
 
-            case "payment_intent.payment_failed": {
-                const paymentIntent = event.data.object as Stripe.PaymentIntent;
-                await handlePaymentFailed(supabase, paymentIntent);
-                break;
-            }
-
-            default:
-                console.log(`Unhandled event type: ${event.type}`);
+        if (!userId) {
+            console.error("No userId found in session metadata");
+            return NextResponse.json({ error: "No userId in metadata" }, { status: 400 });
         }
 
-        return NextResponse.json({ received: true });
-    } catch (error) {
-        console.error("Webhook handler error:", error);
-        return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
+        try {
+            // Insert payment record
+            const { error } = await supabase.from("payments").insert({
+                user_id: userId,
+                amount: 9, // Activation fee is $9
+                currency: session.currency?.toUpperCase() || "USD",
+                status: "completed",
+                stripe_payment_intent_id: session.payment_intent as string,
+                stripe_checkout_session_id: session.id,
+                payment_type: "find_job_activation",
+                paid_at: new Date().toISOString(),
+            });
+
+            if (error) {
+                // Handle unique constraint violation (idempotency)
+                if (error.code === "23505") {
+                    console.log(`Payment already processed for session ${session.id}`);
+                    return NextResponse.json({ received: true, message: "Duplicate event ignored" });
+                }
+                throw error;
+            }
+
+            console.log(`Successfully processed payment for user ${userId}`);
+        } catch (err: any) {
+            console.error(`Database error: ${err.message}`);
+            return NextResponse.json({ error: "Database error" }, { status: 500 });
+        }
     }
+
+    return NextResponse.json({ received: true });
 }
 
-async function handleCheckoutCompleted(
-    supabase: Awaited<ReturnType<typeof createClient>>,
-    session: Stripe.Checkout.Session
-) {
-    const { payment_id, user_id, payment_type, offer_id } = session.metadata || {};
-
-    if (!payment_id || !user_id || !payment_type) {
-        console.error("Missing metadata in checkout session");
-        return;
-    }
-
-    // Update payment record
-    await supabase
-        .from("payments")
-        .update({
-            status: "completed",
-            stripe_payment_intent_id: session.payment_intent as string,
-            completed_at: new Date().toISOString(),
-        })
-        .eq("id", payment_id);
-
-    if (payment_type === "entry_fee") {
-        await handleEntryFeePayment(supabase, user_id, payment_id);
-    } else if (payment_type === "confirmation_fee" && offer_id) {
-        await handleConfirmationFeePayment(supabase, user_id, offer_id, payment_id);
-    }
-}
-
-async function handleEntryFeePayment(
-    supabase: Awaited<ReturnType<typeof createClient>>,
-    userId: string,
-    paymentId: string
-) {
-    // Get candidate record
-    const { data: candidate } = await supabase
-        .from("candidates")
-        .select("id")
-        .eq("profile_id", userId)
-        .single();
-
-    if (!candidate) {
-        console.error("Candidate not found for entry fee payment");
-        return;
-    }
-
-    // Call Supabase function to add to queue
-    // This assigns queue position and updates status
-    const { data: queuePosition, error } = await supabase
-        .rpc("add_candidate_to_queue", {
-            p_candidate_id: candidate.id,
-            p_payment_id: paymentId,
-        });
-
-    if (error) {
-        console.error("Failed to add candidate to queue:", error);
-        // Fallback: manual update
-        const { data: maxPos } = await supabase
-            .from("candidates")
-            .select("queue_position")
-            .eq("entry_fee_paid", true)
-            .order("queue_position", { ascending: false })
-            .limit(1)
-            .single();
-
-        const newPosition = (maxPos?.queue_position || 0) + 1;
-
-        await supabase
-            .from("candidates")
-            .update({
-                queue_position: newPosition,
-                queue_joined_at: new Date().toISOString(),
-                entry_fee_paid: true,
-                entry_payment_id: paymentId,
-                status: "IN_QUEUE",
-            })
-            .eq("id", candidate.id);
-    }
-
-    console.log(`Candidate ${candidate.id} added to queue at position ${queuePosition}`);
-}
-
-async function handleConfirmationFeePayment(
-    supabase: Awaited<ReturnType<typeof createClient>>,
-    userId: string,
-    offerId: string,
-    paymentId: string
-) {
-    // Get offer details
-    const { data: offer, error: offerError } = await supabase
-        .from("offers")
-        .select("*, job_requests(*)")
-        .eq("id", offerId)
-        .single();
-
-    if (offerError || !offer) {
-        console.error("Offer not found:", offerError);
-        return;
-    }
-
-    // Check offer hasn't expired
-    if (new Date(offer.expires_at) < new Date()) {
-        console.error("Offer expired, cannot process payment");
-        // TODO: Trigger refund
-        return;
-    }
-
-    // Update offer status
-    await supabase
-        .from("offers")
-        .update({
-            status: "accepted",
-            accepted_at: new Date().toISOString(),
-            payment_id: paymentId,
-        })
-        .eq("id", offerId);
-
-    // Update candidate status
-    await supabase
-        .from("candidates")
-        .update({ status: "VISA_PROCESS_STARTED" })
-        .eq("id", offer.candidate_id);
-
-    // Increment positions filled on job request
-    await supabase
-        .from("job_requests")
-        .update({
-            positions_filled: offer.job_requests.positions_filled + 1,
-            status:
-                offer.job_requests.positions_filled + 1 >= offer.job_requests.positions_count
-                    ? "filled"
-                    : "matching",
-        })
-        .eq("id", offer.job_request_id);
-
-    console.log(`Offer ${offerId} accepted, candidate moved to VISA_PROCESS_STARTED`);
-}
-
-async function handlePaymentFailed(
-    supabase: Awaited<ReturnType<typeof createClient>>,
-    paymentIntent: Stripe.PaymentIntent
-) {
-    // Find payment by intent ID
-    const { data: payment } = await supabase
-        .from("payments")
-        .select("*")
-        .eq("stripe_payment_intent_id", paymentIntent.id)
-        .single();
-
-    if (payment) {
-        await supabase
-            .from("payments")
-            .update({ status: "failed" })
-            .eq("id", payment.id);
-    }
-
-    console.log("Payment failed:", paymentIntent.id);
-}
+// Next.js config to ensure raw body is available
+export const config = {
+    api: {
+        bodyParser: false,
+    },
+};

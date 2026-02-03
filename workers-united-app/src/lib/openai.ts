@@ -142,3 +142,138 @@ export function compareNames(aiName: string, signupName: string): boolean {
 
     return allPartsMatch;
 }
+
+export interface DocumentQualityResult {
+    success: boolean;
+    isCorrectType: boolean;
+    qualityIssues: string[];
+    confidence: number;
+    extractedData?: Record<string, string>;
+}
+
+// Verify diploma/certificate quality and authenticity
+export async function verifyDiploma(imageUrl: string): Promise<DocumentQualityResult> {
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "system",
+                    content: `You are a document quality analyzer. Analyze educational certificates and diplomas.
+Return a JSON object:
+{
+  "is_diploma": true/false,
+  "readable": true/false,
+  "quality_issues": ["list of issues like: blurry, too dark, cropped, etc"],
+  "confidence": 0.0-1.0,
+  "institution_name": "name if readable",
+  "degree_type": "type if readable",
+  "graduation_year": "year if readable"
+}
+
+Be strict about quality. Flag if:
+- Image is blurry or low resolution
+- Text is not clearly readable  
+- Document appears cropped or incomplete
+- This is clearly not a diploma/certificate`
+                },
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: "Analyze this document for quality and verify it's an educational diploma or vocational certificate:" },
+                        { type: "image_url", image_url: { url: imageUrl, detail: "high" } }
+                    ]
+                }
+            ],
+            max_tokens: 300,
+            response_format: { type: "json_object" }
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+            return { success: false, isCorrectType: false, qualityIssues: ["No AI response"], confidence: 0 };
+        }
+
+        const parsed = JSON.parse(content);
+
+        return {
+            success: parsed.readable && parsed.is_diploma,
+            isCorrectType: parsed.is_diploma,
+            qualityIssues: parsed.quality_issues || [],
+            confidence: parsed.confidence || 0.5,
+            extractedData: {
+                institution_name: parsed.institution_name,
+                degree_type: parsed.degree_type,
+                graduation_year: parsed.graduation_year
+            }
+        };
+    } catch (error) {
+        console.error("Diploma verification error:", error);
+        return {
+            success: false,
+            isCorrectType: false,
+            qualityIssues: [`Processing error: ${error instanceof Error ? error.message : "Unknown"}`],
+            confidence: 0
+        };
+    }
+}
+
+// Verify biometric photo quality
+export async function verifyBiometricPhoto(imageUrl: string): Promise<DocumentQualityResult> {
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "system",
+                    content: `You are a biometric photo quality analyzer for visa applications.
+Check if the photo meets standard requirements:
+- Single person, face clearly visible
+- Neutral expression
+- Plain/light background
+- Good lighting, no shadows
+- Photo not blurry
+
+Return JSON:
+{
+  "is_valid_photo": true/false,
+  "quality_issues": ["list issues"],
+  "confidence": 0.0-1.0
+}`
+                },
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: "Analyze this biometric photo for visa application quality:" },
+                        { type: "image_url", image_url: { url: imageUrl, detail: "high" } }
+                    ]
+                }
+            ],
+            max_tokens: 200,
+            response_format: { type: "json_object" }
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+            return { success: false, isCorrectType: false, qualityIssues: ["No AI response"], confidence: 0 };
+        }
+
+        const parsed = JSON.parse(content);
+
+        return {
+            success: parsed.is_valid_photo && (parsed.quality_issues?.length === 0),
+            isCorrectType: parsed.is_valid_photo,
+            qualityIssues: parsed.quality_issues || [],
+            confidence: parsed.confidence || 0.5
+        };
+    } catch (error) {
+        console.error("Photo verification error:", error);
+        return {
+            success: false,
+            isCorrectType: false,
+            qualityIssues: [`Processing error: ${error instanceof Error ? error.message : "Unknown"}`],
+            confidence: 0
+        };
+    }
+}
+

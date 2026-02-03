@@ -22,11 +22,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             >
                 <div className="max-w-md text-center text-white">
                     <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold mb-8">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M2 12h20" />
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                        </svg>
+                        <img src="/logo.png" alt="Workers United" width={40} height={40} style={{ borderRadius: '4px' }} />
                         Workers United
                     </Link>
 
@@ -38,7 +34,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     <p className="text-lg opacity-80">
                         {userType === "employer"
                             ? "Access pre-verified international talent and let us handle the visa process. Focus on growing your business."
-                            : "Get verified by AI and connect with verified employers across Europe. Find your dream job."}
+                            : "Get verified quickly and connect with verified employers across Europe. Find your dream job."}
                     </p>
 
                     <div className="mt-12 space-y-4 text-left">
@@ -60,8 +56,8 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                         ) : (
                             <>
                                 <div className="flex items-center gap-3 glass p-3 rounded-lg">
-                                    <span className="text-xl">🤖</span>
-                                    <span>AI-powered verification</span>
+                                    <span className="text-xl">⚡</span>
+                                    <span>Instant verification</span>
                                 </div>
                                 <div className="flex items-center gap-3 glass p-3 rounded-lg">
                                     <span className="text-xl">🏢</span>
@@ -83,11 +79,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     {/* Mobile logo */}
                     <div className="lg:hidden text-center mb-8">
                         <Link href="/" className="inline-flex items-center gap-2 text-xl font-bold text-gray-900">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M2 12h20" />
-                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                            </svg>
+                            <img src="/logo.png" alt="Workers United" width={32} height={32} style={{ borderRadius: '4px' }} />
                             Workers United
                         </Link>
                     </div>
@@ -103,8 +95,8 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                             <Link
                                 href="/signup?type=candidate"
                                 className={`flex-1 text-center py-2 px-4 rounded-md text-sm font-medium transition-all ${userType === "candidate"
-                                        ? "bg-white shadow text-gray-900"
-                                        : "text-gray-600 hover:text-gray-900"
+                                    ? "bg-white shadow text-gray-900"
+                                    : "text-gray-600 hover:text-gray-900"
                                     }`}
                             >
                                 I&apos;m a Candidate
@@ -112,8 +104,8 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                             <Link
                                 href="/signup?type=employer"
                                 className={`flex-1 text-center py-2 px-4 rounded-md text-sm font-medium transition-all ${userType === "employer"
-                                        ? "bg-white shadow text-gray-900"
-                                        : "text-gray-600 hover:text-gray-900"
+                                    ? "bg-white shadow text-gray-900"
+                                    : "text-gray-600 hover:text-gray-900"
                                     }`}
                             >
                                 I&apos;m an Employer

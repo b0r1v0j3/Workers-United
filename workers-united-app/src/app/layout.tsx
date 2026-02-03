@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const montserrat = Montserrat({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -21,6 +22,10 @@ export const metadata: Metadata = {
     "international recruitment",
   ],
   authors: [{ name: "Workers United" }],
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   openGraph: {
     title: "Workers United – Legal International Hiring & Visa Support",
     description:
@@ -28,12 +33,14 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://workersunited.eu",
     siteName: "Workers United",
+    images: ["/logo-full.jpg"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Workers United – Legal International Hiring",
     description:
       "Transparent process. Full legal work visa guidance for international workers and companies.",
+    images: ["/logo-full.jpg"],
   },
 };
 
@@ -44,7 +51,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${montserrat.className} antialiased`}>
         {children}
       </body>
     </html>
