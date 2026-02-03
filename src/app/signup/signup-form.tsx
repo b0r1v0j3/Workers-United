@@ -11,6 +11,8 @@ interface SignupFormProps {
 export function SignupForm({ userType }: SignupFormProps) {
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [companyName, setCompanyName] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -32,6 +34,8 @@ export function SignupForm({ userType }: SignupFormProps) {
                 options: {
                     data: {
                         full_name: fullName,
+                        phone: phone,
+                        company_name: userType === "employer" ? companyName : null,
                         user_type: userType,
                     },
                 },
@@ -48,8 +52,8 @@ export function SignupForm({ userType }: SignupFormProps) {
                 return;
             }
 
-            // If auto-confirmed, redirect to dashboard
-            router.push("/dashboard");
+            // If auto-confirmed, redirect to appropriate dashboard
+            router.push(userType === "employer" ? "/employer/profile" : "/dashboard/profile");
             router.refresh();
         } catch {
             setError("An unexpected error occurred. Please try again.");
@@ -85,7 +89,7 @@ export function SignupForm({ userType }: SignupFormProps) {
 
             <div>
                 <label htmlFor="fullName" className="label">
-                    Full name
+                    {userType === "employer" ? "Contact Person Name" : "Full Name"} <span className="text-red-500">*</span>
                 </label>
                 <input
                     id="fullName"
@@ -93,14 +97,31 @@ export function SignupForm({ userType }: SignupFormProps) {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="input"
-                    placeholder={userType === "employer" ? "Company Representative" : "John Doe"}
+                    placeholder={userType === "employer" ? "John Smith" : "John Doe"}
                     required
                 />
             </div>
 
+            {userType === "employer" && (
+                <div>
+                    <label htmlFor="companyName" className="label">
+                        Company Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        id="companyName"
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="input"
+                        placeholder="Your Company Ltd."
+                        required
+                    />
+                </div>
+            )}
+
             <div>
                 <label htmlFor="email" className="label">
-                    Email address
+                    Email address <span className="text-red-500">*</span>
                 </label>
                 <input
                     id="email"
@@ -114,8 +135,24 @@ export function SignupForm({ userType }: SignupFormProps) {
             </div>
 
             <div>
+                <label htmlFor="phone" className="label">
+                    Phone (WhatsApp) <span className="text-red-500">*</span>
+                </label>
+                <input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="input"
+                    placeholder="+1 234 567 8900"
+                    required
+                />
+                <p className="mt-1 text-xs text-gray-500">We may contact you via WhatsApp for faster communication</p>
+            </div>
+
+            <div>
                 <label htmlFor="password" className="label">
-                    Password
+                    Password <span className="text-red-500">*</span>
                 </label>
                 <input
                     id="password"
@@ -167,7 +204,7 @@ export function SignupForm({ userType }: SignupFormProps) {
                 By creating an account, you agree to our{" "}
                 <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>
                 {" "}and{" "}
-                <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a>.
+                <a href="/privacy-policy" className="text-blue-600 hover:underline">Privacy Policy</a>.
             </p>
         </form>
     );

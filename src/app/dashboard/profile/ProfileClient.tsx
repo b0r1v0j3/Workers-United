@@ -17,7 +17,9 @@ interface Candidate {
     nationality: string;
     date_of_birth: string;
     phone: string;
+    address: string;
     current_country: string;
+    preferred_job: string;
     desired_countries: string[];
     desired_industries: string[];
     years_experience: number;
@@ -40,7 +42,9 @@ export default function ProfilePage() {
         nationality: "",
         date_of_birth: "",
         phone: "",
+        address: "",
         current_country: "",
+        preferred_job: "",
         years_experience: 0,
         education_level: "",
     });
@@ -80,7 +84,9 @@ export default function ProfilePage() {
                     nationality: candidateData.nationality || "",
                     date_of_birth: candidateData.date_of_birth || "",
                     phone: candidateData.phone || "",
+                    address: candidateData.address || "",
                     current_country: candidateData.current_country || "",
+                    preferred_job: candidateData.preferred_job || "",
                     years_experience: candidateData.years_experience || 0,
                     education_level: candidateData.education_level || "",
                 }));
@@ -116,7 +122,9 @@ export default function ProfilePage() {
                         nationality: formData.nationality,
                         date_of_birth: formData.date_of_birth,
                         phone: formData.phone,
+                        address: formData.address,
                         current_country: formData.current_country,
+                        preferred_job: formData.preferred_job,
                         years_experience: formData.years_experience,
                         education_level: formData.education_level,
                     })
@@ -129,7 +137,9 @@ export default function ProfilePage() {
                         nationality: formData.nationality,
                         date_of_birth: formData.date_of_birth,
                         phone: formData.phone,
+                        address: formData.address,
                         current_country: formData.current_country,
+                        preferred_job: formData.preferred_job,
                         years_experience: formData.years_experience,
                         education_level: formData.education_level,
                     });
@@ -257,6 +267,35 @@ export default function ProfilePage() {
                                         onChange={(e) => setFormData({ ...formData, current_country: e.target.value })}
                                         className="input"
                                         placeholder="Where you live now"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="label">Address</label>
+                                    <input
+                                        type="text"
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        className="input"
+                                        placeholder="Your full address"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr className="border-gray-200" />
+
+                        {/* Job Preferences */}
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Job Preferences</h2>
+                            <div className="grid gap-4">
+                                <div>
+                                    <label className="label">Preferred Job / Industry</label>
+                                    <input
+                                        type="text"
+                                        value={formData.preferred_job}
+                                        onChange={(e) => setFormData({ ...formData, preferred_job: e.target.value })}
+                                        className="input"
+                                        placeholder="e.g., Construction, Hospitality, Driver..."
                                     />
                                 </div>
                             </div>
