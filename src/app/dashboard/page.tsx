@@ -107,6 +107,34 @@ export default async function DashboardPage() {
                     <p className="text-[#64748b] text-sm font-medium">Here is the live status of your application.</p>
                 </div>
 
+                {/* Owner Quick Navigation - Only for God Mode user */}
+                {isOwner && (
+                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl text-white">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-xs font-medium text-white/70 mb-1">🔮 Owner Mode</div>
+                                <div className="text-sm font-semibold">Quick Dashboard Switch</div>
+                            </div>
+                            <div className="flex gap-2">
+                                <span className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium">
+                                    👷 Worker
+                                </span>
+                                <Link
+                                    href="/employer/dashboard"
+                                    className="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors"
+                                >
+                                    🏢 Employer
+                                </Link>
+                                <Link
+                                    href="/admin"
+                                    className="px-3 py-1.5 bg-white text-indigo-700 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors"
+                                >
+                                    ⚙️ Admin
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* Status Cards Grid */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
                     {/* Profile Completion */}
@@ -172,8 +200,8 @@ export default async function DashboardPage() {
                         <div>
                             <span className="text-[#64748b]">Date of Birth:</span>
                             <div className="font-medium text-[#183b56]">
-                                {candidate?.date_of_birth ? 
-                                    new Date(candidate.date_of_birth).toLocaleDateString('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' }) 
+                                {candidate?.date_of_birth ?
+                                    new Date(candidate.date_of_birth).toLocaleDateString('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' })
                                     : "—"}
                             </div>
                         </div>
