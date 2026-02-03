@@ -152,7 +152,7 @@ export default async function EmployerDashboardPage() {
                 <div className="mb-8">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Verified Candidates Ready for Placement</h2>
                     <p className="text-sm text-gray-600 mb-4">
-                        These candidates have paid the $9 verification fee and are ready for job matching.
+                        These candidates have been verified and are ready for job matching.
                     </p>
 
                     {verifiedCandidates && verifiedCandidates.length > 0 ? (
@@ -188,7 +188,7 @@ export default async function EmployerDashboardPage() {
                             <div className="text-4xl mb-4">📭</div>
                             <h3 className="text-lg font-medium text-gray-900 mb-2">No Verified Candidates Yet</h3>
                             <p className="text-gray-600 text-sm">
-                                Candidates who pay the $9 verification fee will appear here.
+                                Verified candidates will appear here when they're ready for placement.
                             </p>
                         </div>
                     )}
