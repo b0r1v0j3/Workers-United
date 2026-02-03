@@ -235,6 +235,14 @@ export default async function DashboardPage() {
                     </div>
                 )}
 
+                {/* Document Upload (if not ready) - ABOVE PROGRESS */}
+                {!isReady && (
+                    <DocumentWizard
+                        candidateId={user.id}
+                        email={user.email || ""}
+                    />
+                )}
+
                 {/* Verification Progress */}
                 <div className="bg-white rounded-xl p-6 shadow-sm mb-6 border border-[#dde3ec]">
                     <h2 className="font-bold text-[#183b56] mb-4">Application Progress</h2>
@@ -298,16 +306,6 @@ export default async function DashboardPage() {
                         </div>
                     </div>
                 </div>
-
-                {/* Document Upload (if not ready) */}
-                {!isReady && (
-                    <div className="mb-8">
-                        <DocumentWizard
-                            candidateId={user.id}
-                            email={user.email || ""}
-                        />
-                    </div>
-                )}
 
                 {/* Payment Card (if ready but not in queue) */}
                 {isReady && !inQueue && (

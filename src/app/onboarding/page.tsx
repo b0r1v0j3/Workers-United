@@ -158,6 +158,7 @@ export default function OnboardingPage() {
     // Form data
     const [formData, setFormData] = useState({
         // Step 1: Personal Info
+        fullName: "",
         countryCode: "+381",
         phoneNumber: "",
         nationality: "",
@@ -190,6 +191,17 @@ export default function OnboardingPage() {
             }
 
             setUser(user);
+
+            // Load profile for full_name
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", user.id)
+                .single();
+
+            if (profile?.full_name) {
+                setFormData(prev => ({ ...prev, fullName: profile.full_name }));
+            }
 
             // Load existing candidate data
             const { data: candidate } = await supabase
@@ -263,18 +275,27 @@ export default function OnboardingPage() {
         try {
             const supabase = createClient();
 
+            // Save full_name to profiles table
+            if (formData.fullName) {
+                await supabase
+                    .from("profiles")
+                    .update({ full_name: formData.fullName })
+                    .eq("id", user.id);
+            }
+
+            // Save candidate data
             await supabase
                 .from("candidates")
                 .upsert({
                     profile_id: user.id,
                     phone: getFullPhone(),
                     nationality: formData.nationality,
-                    current_country: "Serbia", // Fixed to Serbia
+                    current_country: "Serbia",
                     date_of_birth: getFullDOB(),
                     preferred_job: formData.preferredJob,
                     experience_years: formData.experience ? parseInt(formData.experience) : null,
                     languages: formData.languages ? formData.languages.split(",").map(l => l.trim()) : [],
-                    preferred_country: "serbia", // Fixed to Serbia
+                    preferred_country: "serbia",
                     updated_at: new Date().toISOString(),
                 }, { onConflict: "profile_id" });
 
@@ -376,6 +397,11 @@ export default function OnboardingPage() {
             {/* Header */}
             <header className="bg-white border-b border-[#dde3ec] sticky top-0 z-50">
                 <div className="max-w-4xl mx-auto px-5 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Link href="/dashboard" className="flex items-center gap-2 text-[#64748b] hover:text-[#183b56] text-sm font-medium">
+                            ← Back to Dashboard
+                        </Link>
+                    </div>
                     <Link href="/" className="flex items-center gap-2">
                         <img src="/logo.png" alt="Workers United" width={32} height={32} className="rounded" />
                         <span className="font-bold text-lg text-[#183b56]">Workers United</span>
@@ -432,6 +458,21 @@ export default function OnboardingPage() {
                             </div>
 
                             <div className="grid gap-5">
+                                {/* Full Name */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-[#183b56] mb-2">
+                                        Full Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.fullName}
+                                        onChange={(e) => updateField("fullName", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:outline-none transition-colors"
+                                        placeholder="Your full name"
+                                        required
+                                    />
+                                </div>
+
                                 {/* Phone with Country Selector */}
                                 <div>
                                     <label className="block text-sm font-semibold text-[#183b56] mb-2">
