@@ -109,28 +109,33 @@ export default async function DashboardPage() {
 
                 {/* Owner Quick Navigation - Only for God Mode user */}
                 {isOwner && (
-                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl text-white">
-                        <div className="flex items-center justify-between">
+                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl">
+                        <div className="flex items-center justify-between flex-wrap gap-3">
                             <div>
                                 <div className="text-xs font-medium text-white/70 mb-1">🔮 Owner Mode</div>
-                                <div className="text-sm font-semibold">Quick Dashboard Switch</div>
+                                <div className="text-sm font-semibold text-white">Quick Dashboard Switch</div>
                             </div>
                             <div className="flex gap-2">
-                                <span className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium">
+                                <span
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-medium"
+                                >
                                     👷 Worker
                                 </span>
-                                <Link
+                                <a
                                     href="/employer/dashboard"
-                                    className="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors"
+                                    style={{ backgroundColor: '#fff', color: '#7c3aed' }}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold no-underline"
                                 >
                                     🏢 Employer
-                                </Link>
-                                <Link
+                                </a>
+                                <a
                                     href="/admin"
-                                    className="px-3 py-1.5 bg-white text-indigo-700 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors"
+                                    style={{ backgroundColor: '#fff', color: '#4f46e5' }}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold no-underline"
                                 >
                                     ⚙️ Admin
-                                </Link>
+                                </a>
                             </div>
                         </div>
                     </div>
