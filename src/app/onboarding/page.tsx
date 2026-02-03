@@ -9,8 +9,7 @@ import { SignaturePad } from "@/components/SignaturePad";
 const STEPS = [
     { id: 1, title: "Personal Info", icon: "👤" },
     { id: 2, title: "Work Preferences", icon: "💼" },
-    { id: 3, title: "Documents", icon: "📄" },
-    { id: 4, title: "Signature", icon: "✍️" },
+    { id: 3, title: "Signature", icon: "✍️" },
 ];
 
 // Country codes for phone input - comprehensive worldwide list
@@ -277,29 +276,61 @@ export default function OnboardingPage() {
 
             // Save full_name to profiles table
             if (formData.fullName) {
-                await supabase
+                const { error: profileError } = await supabase
                     .from("profiles")
                     .update({ full_name: formData.fullName })
                     .eq("id", user.id);
+
+                if (profileError) {
+                    console.error("Profile save error:", profileError);
+                }
             }
 
-            // Save candidate data
-            await supabase
+            // Check if candidate exists
+            const { data: existingCandidate } = await supabase
                 .from("candidates")
-                .upsert({
-                    profile_id: user.id,
-                    phone: getFullPhone(),
-                    nationality: formData.nationality,
-                    current_country: "Serbia",
-                    date_of_birth: getFullDOB(),
-                    preferred_job: formData.preferredJob,
-                    experience_years: formData.experience ? parseInt(formData.experience) : null,
-                    languages: formData.languages ? formData.languages.split(",").map(l => l.trim()) : [],
-                    preferred_country: "serbia",
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: "profile_id" });
+                .select("id")
+                .eq("profile_id", user.id)
+                .single();
+
+            const candidateData = {
+                profile_id: user.id,
+                phone: getFullPhone(),
+                nationality: formData.nationality,
+                current_country: "Serbia",
+                date_of_birth: getFullDOB(),
+                preferred_job: formData.preferredJob,
+                experience_years: formData.experience ? parseInt(formData.experience) : null,
+                languages: formData.languages ? formData.languages.split(",").map(l => l.trim()) : [],
+                preferred_country: "serbia",
+                updated_at: new Date().toISOString(),
+            };
+
+            if (existingCandidate) {
+                // Update existing
+                const { error: updateError } = await supabase
+                    .from("candidates")
+                    .update(candidateData)
+                    .eq("profile_id", user.id);
+
+                if (updateError) {
+                    console.error("Candidate update error:", updateError);
+                    setError("Failed to update profile");
+                }
+            } else {
+                // Insert new
+                const { error: insertError } = await supabase
+                    .from("candidates")
+                    .insert(candidateData);
+
+                if (insertError) {
+                    console.error("Candidate insert error:", insertError);
+                    setError("Failed to create profile");
+                }
+            }
 
         } catch (err) {
+            console.error("Save progress error:", err);
             setError("Failed to save progress");
         } finally {
             setSaving(false);
@@ -308,7 +339,7 @@ export default function OnboardingPage() {
 
     const handleNext = async () => {
         await saveProgress();
-        if (currentStep < 4) {
+        if (currentStep < 3) {
             setCurrentStep(currentStep + 1);
         }
     };
@@ -658,86 +689,8 @@ export default function OnboardingPage() {
                         </div>
                     )}
 
-                    {/* Step 3: Documents */}
+                    {/* Step 3: Signature */}
                     {currentStep === 3 && (
-                        <div className="space-y-6">
-                            <div>
-                                <h2 className="text-2xl font-bold text-[#183b56] mb-2">Upload Documents</h2>
-                                <p className="text-[#6c7a89]">We need these for visa processing</p>
-                            </div>
-
-                            <div className="grid gap-5">
-                                {/* Passport */}
-                                <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${formData.passportFile ? 'border-green-400 bg-green-50' : 'border-[#dde3ec] hover:border-[#2f6fed]'}`}>
-                                    <div className="text-3xl mb-2">🛂</div>
-                                    <h3 className="font-semibold text-[#183b56] mb-1">Passport Photo Page *</h3>
-                                    <p className="text-sm text-[#6c7a89] mb-3">Clear photo of your passport data page</p>
-                                    <input
-                                        type="file"
-                                        accept="image/*,.pdf"
-                                        onChange={(e) => e.target.files?.[0] && handleFileUpload("passportFile", e.target.files[0])}
-                                        className="hidden"
-                                        id="passport-upload"
-                                    />
-                                    <label
-                                        htmlFor="passport-upload"
-                                        className={`inline-block px-5 py-2 rounded-lg font-medium cursor-pointer transition-colors ${formData.passportFile
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-[#2f6fed] text-white hover:bg-[#1e5cd6]'}`}
-                                    >
-                                        {formData.passportFile ? "✓ Uploaded" : "Upload Passport"}
-                                    </label>
-                                </div>
-
-                                {/* Biometric Photo */}
-                                <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${formData.photoFile ? 'border-green-400 bg-green-50' : 'border-[#dde3ec] hover:border-[#2f6fed]'}`}>
-                                    <div className="text-3xl mb-2">📷</div>
-                                    <h3 className="font-semibold text-[#183b56] mb-1">Biometric Photo *</h3>
-                                    <p className="text-sm text-[#6c7a89] mb-3">Passport-style photo (35x45mm, white background)</p>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => e.target.files?.[0] && handleFileUpload("photoFile", e.target.files[0])}
-                                        className="hidden"
-                                        id="photo-upload"
-                                    />
-                                    <label
-                                        htmlFor="photo-upload"
-                                        className={`inline-block px-5 py-2 rounded-lg font-medium cursor-pointer transition-colors ${formData.photoFile
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-[#2f6fed] text-white hover:bg-[#1e5cd6]'}`}
-                                    >
-                                        {formData.photoFile ? "✓ Uploaded" : "Upload Photo"}
-                                    </label>
-                                </div>
-
-                                {/* Diploma */}
-                                <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${formData.diplomaFile ? 'border-green-400 bg-green-50' : 'border-[#dde3ec] hover:border-[#2f6fed]'}`}>
-                                    <div className="text-3xl mb-2">🎓</div>
-                                    <h3 className="font-semibold text-[#183b56] mb-1">Diploma / Certificate</h3>
-                                    <p className="text-sm text-[#6c7a89] mb-3">Education or professional certificate (optional)</p>
-                                    <input
-                                        type="file"
-                                        accept="image/*,.pdf"
-                                        onChange={(e) => e.target.files?.[0] && handleFileUpload("diplomaFile", e.target.files[0])}
-                                        className="hidden"
-                                        id="diploma-upload"
-                                    />
-                                    <label
-                                        htmlFor="diploma-upload"
-                                        className={`inline-block px-5 py-2 rounded-lg font-medium cursor-pointer transition-colors ${formData.diplomaFile
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-[#2f6fed] text-white hover:bg-[#1e5cd6]'}`}
-                                    >
-                                        {formData.diplomaFile ? "✓ Uploaded" : "Upload Diploma"}
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 4: Signature */}
-                    {currentStep === 4 && (
                         <div className="space-y-6">
                             <div>
                                 <h2 className="text-2xl font-bold text-[#183b56] mb-2">Digital Signature</h2>
