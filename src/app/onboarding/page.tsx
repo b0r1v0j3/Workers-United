@@ -300,6 +300,7 @@ export default function OnboardingPage() {
                 experience_years: formData.experience ? parseInt(formData.experience) : null,
                 languages: formData.languages ? formData.languages.split(",").map(l => l.trim()) : [],
                 preferred_country: "serbia",
+                signature_url: formData.signatureData || null,
                 updated_at: new Date().toISOString(),
             };
 
