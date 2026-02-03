@@ -152,6 +152,7 @@ export default function OnboardingPage() {
     const [error, setError] = useState<string | null>(null);
     const [user, setUser] = useState<any>(null);
     const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+    const [countrySearch, setCountrySearch] = useState("");
     const router = useRouter();
 
     // Form data
@@ -289,12 +290,17 @@ export default function OnboardingPage() {
             }
 
             // Candidate is auto-created by database trigger on signup
-            // Only update fields that exist in the candidates table
+            // Update all candidate fields
             const candidateData = {
                 phone: getFullPhone() || null,
-                country: formData.nationality || null,  // Using 'country' field for nationality
+                nationality: formData.nationality || null,
+                country: formData.nationality || null,  // Backup field
+                current_country: "Serbia",
+                date_of_birth: getFullDOB(),
                 preferred_job: formData.preferredJob || null,
                 experience_years: formData.experience ? parseInt(formData.experience) : null,
+                languages: formData.languages ? formData.languages.split(",").map(l => l.trim()) : [],
+                preferred_country: "serbia",
                 updated_at: new Date().toISOString(),
             };
 
@@ -505,22 +511,42 @@ export default function OnboardingPage() {
                                             </button>
 
                                             {showCountryDropdown && (
-                                                <div className="absolute top-full left-0 mt-1 bg-white border border-[#dde3ec] rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto w-64">
-                                                    {COUNTRY_CODES.map(country => (
-                                                        <button
-                                                            key={country.code}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                updateField("countryCode", country.code);
-                                                                setShowCountryDropdown(false);
-                                                            }}
-                                                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#f4f6fb] text-left transition-colors"
-                                                        >
-                                                            <span className="text-xl">{country.flag}</span>
-                                                            <span className="font-medium text-[#183b56]">{country.country}</span>
-                                                            <span className="text-[#6c7a89] ml-auto">{country.code}</span>
-                                                        </button>
-                                                    ))}
+                                                <div className="absolute top-full left-0 mt-1 bg-white border border-[#dde3ec] rounded-xl shadow-lg z-50 w-72">
+                                                    {/* Search Input */}
+                                                    <div className="p-2 border-b border-[#dde3ec]">
+                                                        <input
+                                                            type="text"
+                                                            value={countrySearch}
+                                                            onChange={(e) => setCountrySearch(e.target.value)}
+                                                            placeholder="Search country or code..."
+                                                            className="w-full px-3 py-2 rounded-lg border border-[#dde3ec] focus:border-[#2f6fed] focus:outline-none text-sm"
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                    {/* Filtered Country List */}
+                                                    <div className="max-h-48 overflow-y-auto">
+                                                        {COUNTRY_CODES
+                                                            .filter(c =>
+                                                                c.country.toLowerCase().includes(countrySearch.toLowerCase()) ||
+                                                                c.code.includes(countrySearch)
+                                                            )
+                                                            .map(country => (
+                                                                <button
+                                                                    key={country.code}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        updateField("countryCode", country.code);
+                                                                        setShowCountryDropdown(false);
+                                                                        setCountrySearch("");
+                                                                    }}
+                                                                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#f4f6fb] text-left transition-colors"
+                                                                >
+                                                                    <span className="text-xl">{country.flag}</span>
+                                                                    <span className="font-medium text-[#183b56] text-sm">{country.country}</span>
+                                                                    <span className="text-[#6c7a89] text-sm ml-auto">{country.code}</span>
+                                                                </button>
+                                                            ))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
