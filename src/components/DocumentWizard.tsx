@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 
 interface FileUpload {
     file: File | null;
-    status: "missing" | "uploaded" | "verifying" | "verified" | "rejected";
+    status: "missing" | "uploaded" | "verifying" | "verified" | "rejected" | "error";
     message: string;
 }
 
@@ -142,7 +142,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
     function removeFile(type: string) {
         setUploads(prev => ({
             ...prev,
-            [type]: { file: null, status: "idle", message: "" }
+            [type]: { file: null, status: "missing", message: "" }
         }));
     }
 
@@ -274,7 +274,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         <div className="req-item"><span className="check">✓</span> No glare or shadows</div>
                     </div>
 
-                    <div className={`upload-zone ${uploads.passport.status !== 'idle' ? 'has-file' : ''}`} onClick={() => passportInputRef.current?.click()}>
+                    <div className={`upload-zone ${uploads.passport.status !== 'missing' ? 'has-file' : ''}`} onClick={() => passportInputRef.current?.click()}>
                         <input type="file" ref={passportInputRef} accept="image/*,.pdf" style={{ display: 'none' }} onChange={(e) => handleFileSelect('passport', e.target.files?.[0] || null)} />
                         <div className="upload-icon">🛂</div>
                         <div className="upload-text">Click or drag passport photo here</div>
@@ -287,14 +287,14 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         <button className="remove-btn" onClick={() => removeFile('passport')}>✕</button>
                     </div>
 
-                    <div className={`verification-status ${uploads.passport.status === 'verifying' ? 'verifying visible' : (uploads.passport.status === 'success' || uploads.passport.status === 'verified') ? 'success visible' : (uploads.passport.status === 'error' || uploads.passport.status === 'rejected') ? 'error visible' : ''}`}>
+                    <div className={`verification-status ${uploads.passport.status === 'verifying' ? 'verifying visible' : uploads.passport.status === 'verified' ? 'success visible' : (uploads.passport.status === 'error' || uploads.passport.status === 'rejected') ? 'error visible' : ''}`}>
                         {uploads.passport.status === 'verifying' && <div className="spinner"></div>}
                         <span>{uploads.passport.message}</span>
                     </div>
 
                     <div className="wizard-buttons">
                         <button className="btn btn-secondary" onClick={prevStep}>← Back</button>
-                        <button className="btn btn-primary" onClick={nextStep} disabled={uploads.passport.status !== 'success' && uploads.passport.status !== 'verified'}>Continue to Photo →</button>
+                        <button className="btn btn-primary" onClick={nextStep} disabled={uploads.passport.status !== 'verified'}>Continue to Photo →</button>
                     </div>
                 </div>
 
@@ -341,7 +341,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         <div className="req-item"><span className="check">✓</span> Professional certificate</div>
                     </div>
 
-                    <div className={`upload-zone ${uploads.diploma.status !== 'idle' ? 'has-file' : ''}`} onClick={() => diplomaInputRef.current?.click()}>
+                    <div className={`upload-zone ${uploads.diploma.status !== 'missing' ? 'has-file' : ''}`} onClick={() => diplomaInputRef.current?.click()}>
                         <input type="file" ref={diplomaInputRef} accept="image/*,.pdf" style={{ display: 'none' }} onChange={(e) => handleFileSelect('diploma', e.target.files?.[0] || null)} />
                         <div className="upload-icon">🎓</div>
                         <div className="upload-text">Click or drag diploma here</div>
@@ -354,14 +354,14 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         <button className="remove-btn" onClick={() => removeFile('diploma')}>✕</button>
                     </div>
 
-                    <div className={`verification-status ${uploads.diploma.status === 'verifying' ? 'verifying visible' : (uploads.diploma.status === 'success' || uploads.diploma.status === 'verified') ? 'success visible' : (uploads.diploma.status === 'error' || uploads.diploma.status === 'rejected') ? 'error visible' : ''}`}>
+                    <div className={`verification-status ${uploads.diploma.status === 'verifying' ? 'verifying visible' : uploads.diploma.status === 'verified' ? 'success visible' : (uploads.diploma.status === 'error' || uploads.diploma.status === 'rejected') ? 'error visible' : ''}`}>
                         {uploads.diploma.status === 'verifying' && <div className="spinner"></div>}
                         <span>{uploads.diploma.message}</span>
                     </div>
 
                     <div className="wizard-buttons">
                         <button className="btn btn-secondary" onClick={prevStep}>← Back</button>
-                        <button className="btn btn-success" onClick={submitAll} disabled={uploads.diploma.status !== 'success' && uploads.diploma.status !== 'verified'}>Submit Application ✓</button>
+                        <button className="btn btn-success" onClick={submitAll} disabled={uploads.diploma.status !== 'verified'}>Submit Application ✓</button>
                     </div>
                 </div>
 
