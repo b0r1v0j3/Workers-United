@@ -15,24 +15,39 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
-    // Fetch profile and readiness
+    // Fetch profile
     const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
+    // Fetch candidate data
+    const { data: candidate } = await supabase
+        .from("candidates")
+        .select("*")
+        .eq("profile_id", user.id)
+        .single();
+
+    // Fetch readiness
     const { data: readiness } = await supabase
         .from("candidate_readiness")
         .select("*")
         .eq("user_id", user.id)
         .single();
 
-    // Fetch document statuses
+    // Fetch documents
     const { data: documents } = await supabase
         .from("candidate_documents")
         .select("document_type, status, reject_reason")
         .eq("user_id", user.id);
+
+    // Fetch pending offers
+    const { data: pendingOffers } = await supabase
+        .from("offers")
+        .select("*, job_request:job_requests(title, destination_country, employer:employers(company_name))")
+        .eq("candidate_id", candidate?.id)
+        .eq("status", "pending");
 
     const docStatus = (type: string) => {
         const doc = documents?.find(d => d.document_type === type);
@@ -41,15 +56,39 @@ export default async function DashboardPage() {
 
     const isReady = readiness?.is_ready || false;
     const verifiedCount = readiness?.verified_docs_count || 0;
+    const inQueue = candidate?.status === "IN_QUEUE";
+    const hasPendingOffer = pendingOffers && pendingOffers.length > 0;
+
+    // Calculate profile completion
+    const profileFields = [
+        candidate?.phone,
+        candidate?.nationality,
+        candidate?.current_country,
+        candidate?.preferred_job,
+        documents?.some(d => d.document_type === "passport"),
+        documents?.some(d => d.document_type === "biometric_photo"),
+        candidate?.signature_url
+    ];
+    const completedFields = profileFields.filter(Boolean).length;
+    const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
+
+    // Calculate days remaining (90-day guarantee)
+    let daysRemaining = 0;
+    let refundEligible = candidate?.refund_eligible ?? true;
+    if (candidate?.refund_deadline) {
+        const deadline = new Date(candidate.refund_deadline);
+        const now = new Date();
+        daysRemaining = Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    }
 
     return (
         <div className="min-h-screen bg-[#f1f5f9] font-montserrat">
             {/* Header */}
             <nav className="bg-white px-5 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
-                <div className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2">
                     <img src="/logo.png" alt="Workers United" width={28} height={28} />
                     <span className="font-bold text-[#183b56] text-lg">Workers United</span>
-                </div>
+                </Link>
                 <form action="/auth/signout" method="post">
                     <button type="submit" className="text-[#64748b] text-sm font-semibold hover:text-[#183b56]">
                         Logout
@@ -57,73 +96,163 @@ export default async function DashboardPage() {
                 </form>
             </nav>
 
-            <div className="max-w-[600px] mx-auto px-5 py-8">
+            <div className="max-w-[700px] mx-auto px-5 py-8">
                 {/* Greeting */}
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold text-[#1e293b]">
-                        Hello, {profile?.full_name?.split(' ')[0] || "Candidate"}
+                        Hello, {profile?.full_name?.split(' ')[0] || "Candidate"} 👋
                     </h1>
                     <p className="text-[#64748b] text-sm font-medium">Here is the live status of your application.</p>
                 </div>
 
-                {/* Verification Status Card */}
-                <div className="bg-white rounded-[16px] p-6 shadow-sm mb-6">
-                    <div className="flex flex-col gap-6">
-                        {/* Application Received Step */}
-                        <div className="flex gap-4 relative">
-                            <div className="absolute left-[14px] top-[30px] w-[2px] h-[calc(100%+8px)] bg-[#e2e8f0]"></div>
-                            <div className="w-[30px] h-[30px] rounded-full bg-[#10b981] text-white flex items-center justify-center flex-shrink-0 z-10 text-sm">✓</div>
-                            <div className="pt-1">
-                                <div className="font-bold text-[15px]">Application Received</div>
-                                <div className="text-[13px] text-[#64748b]">We have received your basic information.</div>
-                            </div>
+                {/* Status Cards Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                    {/* Profile Completion */}
+                    <div className="bg-white rounded-xl p-5 shadow-sm border border-[#dde3ec]">
+                        <div className="text-[#64748b] text-xs font-medium mb-2">Profile Completion</div>
+                        <div className="text-2xl font-bold text-[#183b56]">{profileCompletion}%</div>
+                        <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-[#2f6fed] to-[#10b981] rounded-full transition-all"
+                                style={{ width: `${profileCompletion}%` }}
+                            />
                         </div>
+                    </div>
 
-                        {/* Document Review Step */}
-                        <div className="flex gap-4 relative">
-                            <div className="absolute left-[14px] top-[30px] w-[2px] h-[calc(100%+8px)] bg-[#e2e8f0]"></div>
-                            <div className={`w-[30px] h-[30px] rounded-full border-2 flex items-center justify-center flex-shrink-0 z-10 text-sm ${isReady ? 'bg-[#10b981] border-[#10b981] text-white' : 'bg-white border-[#cbd5e1] text-[#64748b]'
-                                }`}>
-                                {isReady ? '✓' : '2'}
-                            </div>
-                            <div className="pt-1">
-                                <div className="font-bold text-[15px]">Documents Review</div>
-                                <div className="text-[13px] text-[#64748b]">
-                                    {isReady
-                                        ? "All mandatory documents verified!"
-                                        : `${verifiedCount} of 3 mandatory documents verified.`}
+                    {/* Queue Status */}
+                    <div className="bg-white rounded-xl p-5 shadow-sm border border-[#dde3ec]">
+                        <div className="text-[#64748b] text-xs font-medium mb-2">Status</div>
+                        <div className={`text-lg font-bold ${hasPendingOffer ? "text-orange-500" :
+                                inQueue ? "text-green-600" :
+                                    isReady ? "text-blue-600" : "text-gray-500"
+                            }`}>
+                            {hasPendingOffer ? "🔔 Job Offer!" :
+                                inQueue ? "🔍 Searching..." :
+                                    isReady ? "✓ Verified" : "📝 Incomplete"}
+                        </div>
+                        <div className="text-xs text-[#64748b] mt-1">
+                            {hasPendingOffer ? "Action required" :
+                                inQueue ? `Position #${candidate?.queue_position || "-"}` :
+                                    isReady ? "Ready for activation" : "Complete your profile"}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 90-Day Countdown (if in queue) */}
+                {inQueue && (
+                    <div className="bg-gradient-to-r from-[#183b56] to-[#2f6fed] rounded-xl p-6 mb-8 text-white">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-white/70 text-sm font-medium mb-1">90-Day Money-Back Guarantee</div>
+                                <div className="text-3xl font-bold">{daysRemaining} days left</div>
+                                <div className="text-white/80 text-sm mt-1">
+                                    {refundEligible
+                                        ? "Full refund if no job found"
+                                        : "Refund eligibility lost due to offer rejection"}
                                 </div>
-                                {!isReady && documents && documents.length > 0 && (
-                                    <div className="mt-2 flex gap-2 flex-wrap">
-                                        {['passport', 'biometric_photo', 'diploma'].map(type => (
-                                            <span key={type} className={`text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${docStatus(type) === 'verified' ? 'bg-green-100 text-green-700' :
-                                                docStatus(type) === 'verifying' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                                                }`}>
-                                                {type === 'biometric_photo' ? 'photo' : type}: {docStatus(type)}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
+                            </div>
+                            <div className="text-6xl opacity-20">⏳</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Pending Offer Alert */}
+                {hasPendingOffer && pendingOffers && (
+                    <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-6 mb-8">
+                        <div className="flex items-start gap-4">
+                            <div className="text-3xl">🎉</div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-orange-800 text-lg mb-1">You have a job offer!</h3>
+                                <p className="text-orange-700 text-sm mb-3">
+                                    <strong>{pendingOffers[0].job_request?.employer?.company_name}</strong> in {" "}
+                                    <strong>{pendingOffers[0].job_request?.destination_country}</strong>
+                                </p>
+                                <p className="text-orange-600 text-xs mb-4">
+                                    ⚠️ This offer expires in 24 hours. Declining may affect your refund eligibility.
+                                </p>
+                                <div className="flex gap-3">
+                                    <Link
+                                        href={`/dashboard/offers/${pendingOffers[0].id}`}
+                                        className="bg-orange-500 text-white px-5 py-2 rounded-lg font-bold text-sm hover:bg-orange-600 transition-colors"
+                                    >
+                                        View Offer
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Verification Progress */}
+                <div className="bg-white rounded-xl p-6 shadow-sm mb-6 border border-[#dde3ec]">
+                    <h2 className="font-bold text-[#183b56] mb-4">Application Progress</h2>
+                    <div className="space-y-4">
+                        {/* Step 1: Application */}
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">✓</div>
+                            <div>
+                                <div className="font-medium text-[#183b56]">Application Received</div>
+                                <div className="text-xs text-[#64748b]">Your account is created</div>
                             </div>
                         </div>
 
-                        {/* Enrollment Step */}
-                        <div className="flex gap-4 relative">
-                            <div className="w-[30px] h-[30px] rounded-full border-2 border-[#cbd5e1] bg-white text-[#64748b] flex items-center justify-center flex-shrink-0 z-10 text-sm">3</div>
-                            <div className="pt-1 text-[#64748b]">
-                                <div className="font-bold text-[15px] text-[#1e293b]">Profile Activation</div>
-                                <div className="text-[13px]">Enroll in the "Find a Job" service to begin matching.</div>
+                        {/* Step 2: Documents */}
+                        <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isReady ? "bg-green-500 text-white" : "bg-blue-100 text-blue-600 border-2 border-blue-300"
+                                }`}>
+                                {isReady ? "✓" : "2"}
+                            </div>
+                            <div className="flex-1">
+                                <div className="font-medium text-[#183b56]">Documents Verified</div>
+                                <div className="text-xs text-[#64748b]">{verifiedCount}/3 documents verified</div>
+                            </div>
+                            {!isReady && (
+                                <div className="flex gap-1">
+                                    {['passport', 'biometric_photo', 'diploma'].map(type => (
+                                        <span key={type} className={`w-2 h-2 rounded-full ${docStatus(type) === 'verified' ? 'bg-green-500' :
+                                                docStatus(type) === 'verifying' ? 'bg-blue-500' : 'bg-gray-300'
+                                            }`} />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Step 3: Payment */}
+                        <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${inQueue ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400 border-2 border-gray-200"
+                                }`}>
+                                {inQueue ? "✓" : "3"}
+                            </div>
+                            <div>
+                                <div className="font-medium text-[#183b56]">Profile Activated</div>
+                                <div className="text-xs text-[#64748b]">{inQueue ? "Searching for jobs" : "Pay $9 to start job search"}</div>
+                            </div>
+                        </div>
+
+                        {/* Step 4: Job Found */}
+                        <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${candidate?.status === "OFFER_ACCEPTED" ? "bg-green-500 text-white" :
+                                    hasPendingOffer ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-400 border-2 border-gray-200"
+                                }`}>
+                                {candidate?.status === "OFFER_ACCEPTED" ? "✓" : hasPendingOffer ? "!" : "4"}
+                            </div>
+                            <div>
+                                <div className="font-medium text-[#183b56]">Job Found</div>
+                                <div className="text-xs text-[#64748b]">
+                                    {candidate?.status === "OFFER_ACCEPTED" ? "Congratulations!" :
+                                        hasPendingOffer ? "Review your offer" : "We'll notify you when matched"}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Document Wizard Area */}
+                {/* Document Upload (if not ready) */}
                 {!isReady && (
-                    <div className="mb-10">
-                        <div className="bg-white rounded-[16px] overflow-hidden shadow-sm border-2 border-[#dde3ec]">
+                    <div className="mb-8">
+                        <div className="bg-white rounded-xl overflow-hidden shadow-sm border-2 border-[#dde3ec]">
                             <div className="bg-[#183b56] p-4 text-white text-center font-bold text-sm">
-                                ACTION REQUIRED
+                                📄 UPLOAD YOUR DOCUMENTS
                             </div>
                             <DocumentWizard
                                 candidateId={user.id}
@@ -133,31 +262,31 @@ export default async function DashboardPage() {
                     </div>
                 )}
 
-                {/* Job Activation Card - ONLY IF READY */}
-                {isReady && (
-                    <div className="mb-10">
-                        <div className="bg-white rounded-[16px] p-8 shadow-sm border-2 border-[#10b981] relative overflow-hidden">
-                            <div className="absolute top-0 right-0 bg-[#10b981] text-white px-4 py-1 text-[11px] font-bold uppercase tracking-widest rounded-bl-lg">
-                                Ready for Activation
+                {/* Payment Card (if ready but not in queue) */}
+                {isReady && !inQueue && (
+                    <div className="mb-8">
+                        <div className="bg-white rounded-xl p-8 shadow-sm border-2 border-green-300 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 bg-green-500 text-white px-4 py-1 text-[11px] font-bold uppercase tracking-widest rounded-bl-lg">
+                                ✓ Ready
                             </div>
 
-                            <h2 className="text-xl font-bold text-[#183b56] mb-2">Find a Job Activation</h2>
+                            <h2 className="text-xl font-bold text-[#183b56] mb-2">Activate Job Search</h2>
                             <p className="text-gray-600 text-[14px] leading-relaxed mb-6">
-                                Your documents are verified. Activate your profile now to start matching with employers.
+                                Your documents are verified! Pay the one-time fee to enter our job matching queue.
                                 <br />
                                 <span className="font-semibold text-[#183b56]">90-day money-back guarantee if no job is found.</span>
                             </p>
 
                             <div className="flex items-center justify-between gap-4">
                                 <div className="text-[#183b56]">
-                                    <span className="text-2xl font-bold">$9</span>
-                                    <span className="text-sm text-gray-500 font-medium"> / one-time</span>
+                                    <span className="text-3xl font-bold">$9</span>
+                                    <span className="text-sm text-gray-500 font-medium ml-1">one-time</span>
                                 </div>
 
                                 {process.env.PAYMENTS_ENABLED === "true" && process.env.STRIPE_SECRET_KEY && process.env.STRIPE_ENTRY_FEE_PRICE_ID && (
                                     <form action={createCheckoutSession}>
-                                        <button className="bg-[#2f6fed] text-white px-8 py-3 rounded-full font-bold text-sm hover:bg-[#1e5bc6] transition-all transform hover:-translate-y-0.5 shadow-lg shadow-blue-200">
-                                            Activate Profile
+                                        <button className="bg-gradient-to-r from-[#2f6fed] to-[#10b981] text-white px-8 py-3 rounded-full font-bold text-sm hover:opacity-90 transition-all transform hover:-translate-y-0.5 shadow-lg">
+                                            Start Job Search →
                                         </button>
                                     </form>
                                 )}
@@ -166,41 +295,22 @@ export default async function DashboardPage() {
                     </div>
                 )}
 
+                {/* Quick Links */}
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                    <Link href="/onboarding" className="bg-white rounded-xl p-4 shadow-sm border border-[#dde3ec] hover:border-[#2f6fed] transition-colors text-center">
+                        <div className="text-2xl mb-2">📝</div>
+                        <div className="text-sm font-medium text-[#183b56]">Edit Profile</div>
+                    </Link>
+                    <Link href="/dashboard/documents" className="bg-white rounded-xl p-4 shadow-sm border border-[#dde3ec] hover:border-[#2f6fed] transition-colors text-center">
+                        <div className="text-2xl mb-2">📄</div>
+                        <div className="text-sm font-medium text-[#183b56]">My Documents</div>
+                    </Link>
+                </div>
+
                 <div className="text-center mt-12 pb-10">
                     <p className="text-[12px] text-[#94a3b8] font-medium">Worker ID: {user.email}</p>
                 </div>
             </div>
-        </div>
-    );
-}
-
-function StatCard({ title, value, icon }: { title: string; value: string; icon: string }) {
-    return (
-        <div className="bg-white border border-[#dde3ec] rounded-[12px] p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm text-gray-500 mb-1 font-medium">{title}</p>
-                    <p className="text-2xl font-bold text-[#183b56]">{value}</p>
-                </div>
-                <div className="w-12 h-12 bg-[#f4f6fb] rounded-lg flex items-center justify-center text-2xl">
-                    {icon}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function ActionCard({ title, description, buttonText, href }: { title: string; description: string; buttonText: string; href: string }) {
-    return (
-        <div className="bg-white border border-[#dde3ec] rounded-[12px] p-8 shadow-sm">
-            <h3 className="text-lg font-bold text-[#183b56] mb-2">{title}</h3>
-            <p className="text-gray-600 text-sm mb-6">{description}</p>
-            <Link
-                href={href}
-                className="bg-[#2f6fed] text-white px-6 py-3 rounded-full font-bold text-sm inline-block hover:bg-[#1e5bc6] transition-colors"
-            >
-                {buttonText}
-            </Link>
         </div>
     );
 }
