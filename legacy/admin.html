@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - Workers United</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background-color: #f3f4f6;
+            color: #111827;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .admin-container {
+            max-width: 98%;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .login-screen {
+            max-width: 400px;
+            margin: 100px auto;
+            text-align: center;
+        }
+
+        .dashboard-screen {
+            display: none;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #111827;
+        }
+
+        /* Table Styles */
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+
+        .admin-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-new {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-docs-requested {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-docs-received {
+            background-color: #f3e8ff;
+            color: #6b21a8;
+        }
+
+        .badge-under-review {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .badge-payment-requested {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-rejected {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+            margin-right: 5px;
+            transition: 0.2s;
+        }
+
+        .btn-action {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .btn-approve {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .btn-reject {
+            background-color: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #d1d5db;
+        }
+
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-danger {
+            background-color: #dc2626;
+            color: white;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: 1px solid #d1d5db;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #4b5563;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 500px;
+            max-width: 90%;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="step1" class="login-screen">
+        <div class="card">
+            <h1>Admin Login</h1>
+            <p style="color:#6b7280; margin-bottom:20px;">Secure Access Only</p>
+            <input type="password" id="adminPassword" placeholder="Enter Password"
+                style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; margin-bottom:15px;">
+            <p id="error1" class="hidden" style="color:#ef4444; font-size:14px; margin-bottom:15px;"></p>
+            <button id="btnStep1" onclick="doAuth()" class="btn-primary" style="width:100%;">Next</button>
+        </div>
+    </div>
+
+    <div id="step2" class="login-screen hidden">
+        <div class="card">
+            <h1>2FA Verification</h1>
+            <p style="color:#6b7280; margin-bottom:20px;">Enter the code from your Authenticator App</p>
+            <input type="text" id="otpCode" placeholder="000 000" maxlength="6"
+                style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; margin-bottom:15px; text-align:center; font-size:20px; letter-spacing:5px;">
+            <p id="error2" class="hidden" style="color:#ef4444; font-size:14px; margin-bottom:15px;"></p>
+            <button id="btnStep2" onclick="doVerify()" class="btn-primary" style="width:100%;">Verify</button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div id="dashboardScreen" class="dashboard-screen admin-container">
+
+        <div class="card flex-between">
+            <div>
+                <h1 style="margin-bottom:0;">Workers United Admin</h1>
+                <span id="loadingIndicator" class="hidden" style="font-size: 14px; color: #6b7280;">Loading...</span>
+            </div>
+            <div>
+                <button id="addEmployerBtn" onclick="openEmployerModal()" class="btn-primary hidden">+ Add
+                    Employer</button>
+                <button onclick="logout()" class="refresh-btn"
+                    style="margin-left: 10px; color: #ef4444;">Logout</button>
+            </div>
+        </div>
+
+        <div id="dashboardError" class="error-msg hidden"
+            style="background:#fee2e2; color:#991b1b; padding:10px; border-radius:8px; margin-bottom: 20px;"></div>
+
+        <div class="card" style="padding-top:0;">
+            <!-- TABS -->
+            <div style="display:flex; gap:20px; border-bottom:1px solid #e5e7eb; margin-bottom:20px;">
+                <button onclick="switchTab('WORKER')" class="filter-tab" id="tab-WORKER"
+                    style="background:none; border:none; border-bottom:2px solid #2563eb; color:#2563eb; padding:15px 20px; font-weight:600; cursor:pointer;">Workers</button>
+                <button onclick="switchTab('EMPLOYER')" class="filter-tab" id="tab-EMPLOYER"
+                    style="background:none; border:none; color:#6b7280; padding:15px 20px; font-weight:600; cursor:pointer;">Employers</button>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- Employer Modal -->
+    <div id="employerModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle" style="margin-top: 0;">Add New Employer</h2>
+            <form id="employerForm" onsubmit="handleEmployerSubmit(event)">
+                <input type="hidden" id="employerId">
+                <div class="form-group">
+                    <label>Company Name *</label>
+                    <input type="text" id="companyName" required placeholder="e.g. Construction Corp GmbH">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Contact Name</label>
+                        <input type="text" id="contactName" placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address *</label>
+                        <input type="email" id="empEmail" required placeholder="hr@company.com">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" id="empLocation" placeholder="Munich, Germany">
+                    </div>
+                    <div class="form-group">
+                        <label>Workers Needed</label>
+                        <input type="number" id="workersNeeded" value="1" min="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Industry</label>
+                        <select id="industry">
+                            <option value="Construction">Construction</option>
+                            <option value="Hospitality">Hospitality</option>
+                            <option value="Manufacturing">Manufacturing</option>
+                            <option value="Agriculture">Agriculture</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="IT">IT / Tech</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Housing?</label>
+                        <select id="housing">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="text" id="empPhone" required placeholder="+49 123 456789">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('employerModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Match Modal -->
+    <div id="matchModal" class="modal">
+        <div class="modal-content" style="width: 600px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 id="matchTitle" style="margin:0;">Best Candidates</h2>
+                <button onclick="closeModal('matchModal')"
+                    style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <div id="matchList" style="max-height:400px; overflow-y:auto;"></div>
+            <div style="margin-top:20px; text-align:right;">
+                <button class="btn-secondary" onclick="closeModal('matchModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Docs Modal -->
+    <div id="docsModal" class="modal">
+        <div class="modal-content" style="text-align:center;">
+            <h2>📄 Candidate Documents</h2>
+            <div id="uploadLinkDisplay"
+                style="margin-bottom:15px; font-size:12px; color:#6b7280; user-select:all; background:#f9fafb; padding:5px;">
+            </div>
+            <div id="docsList" style="text-align:left; margin-bottom:20px; max-height:200px; overflow-y:auto;">
+                Loading...</div>
+            <button onclick="closeModal('docsModal')" class="btn-primary">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // AUTH LOGIC
+        let challengeData = {};
+
+        async function doAuth() {
+            const pwd = document.getElementById('adminPassword').value;
+            const btn = document.getElementById('btnStep1');
+            const err = document.getElementById('error1');
+            if (!pwd) return;
+            btn.innerText = 'Checking...'; btn.disabled = true; err.classList.add('hidden');
+            try {
+                const res = await fetch('/api/auth-challenge', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    challengeData = data.challenge;
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+                    document.getElementById('otpCode').focus();
+                } else { err.innerText = data.message || 'Error'; err.classList.remove('hidden'); }
+            } catch (e) { err.innerText = 'Network Error'; err.classList.remove('hidden'); }
+            finally { btn.innerText = 'Next'; btn.disabled = false; }
+        }
+
+        async function doVerify() {
+            const otp = document.getElementById('otpCode').value;
+            const btn = document.getElementById('btnStep2');
+            const err = document.getElementById('error2');
+            if (!otp) return;
+            btn.innerText = 'Verifying...'; btn.disabled = true; err.classList.add('hidden');
+            try {
+                const res = await fetch('/api/auth-verify', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otp, hash: challengeData.hash, expiry: challengeData.expiry })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('auth_token', data.token);
+                    showDashboard();
+                } else { err.innerText = data.message || 'Invalid code'; err.classList.remove('hidden'); }
+            } catch (e) { err.innerText = 'Network Error'; err.classList.remove('hidden'); }
+            finally { btn.innerText = 'Verify'; btn.disabled = false; }
+        }
+
+        function showDashboard() {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('dashboardScreen').style.display = 'block';
+            loadData('WORKER');
+        }
+
+        function logout() { localStorage.removeItem('auth_token'); location.reload(); }
+
+        // MAIN DASHBOARD LOGIC
+        let currentTab = 'WORKER';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            // Update UI tabs
+            document.querySelectorAll('.filter-tab').forEach(b => {
+                b.style.borderBottom = 'none'; b.style.color = '#6b7280';
+            });
+            document.getElementById(`tab-${tab}`).style.borderBottom = '2px solid #2563eb';
+            document.getElementById(`tab-${tab}`).style.color = '#2563eb';
+
+            // Show/Hide Add Employer Button
+            const empBtn = document.getElementById('addEmployerBtn');
+            if (tab === 'EMPLOYER') empBtn.classList.remove('hidden');
+            else empBtn.classList.add('hidden');
+
+            loadData(tab);
+        }
+
+        async function loadData(tab) {
+            const token = localStorage.getItem('auth_token');
+            if (!token) return document.getElementById('step1').classList.remove('hidden');
+
+            const tbody = document.getElementById('tableBody');
+            const thead = document.getElementById('tableHead');
+            const indicator = document.getElementById('loadingIndicator');
+
+            indicator.classList.remove('hidden');
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading...</td></tr>';
+
+            try {
+                let data = [];
+                if (tab === 'WORKER') {
+                    // Load Workers
+                    thead.innerHTML = `
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Candidate</th>
+                            <th>Phone</th>
+                            <th>Documents</th>
+                            <th>Country</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>`;
+
+                    const res = await fetch('/api/list-candidates', { headers: { 'x-auth-token': token } });
+                    if (res.status === 401) return logout();
+                    const json = await res.json();
+                    data = json.leads || [];
+                    // Client-side filter for 'worker' role just in case
+                    data = data.filter(d => (d.role || '').toLowerCase() !== 'employer');
+                    renderWorkers(data);
+
+                } else {
+                    // Load Employers
+                    thead.innerHTML = `
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Company</th>
+                            <th>Email</th>
+                            <th>Location</th>
+                            <th>Needed</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>`;
+
+                    const res = await fetch('/api/manage-employers'); // Protected by CORS/Env usually, but accessible here
+                    data = await res.json();
+                    renderEmployers(data);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error loading data');
+            } finally {
+                indicator.classList.add('hidden');
+            }
+        }
+
+        function renderWorkers(list) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            if (list.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No workers found.</td></tr>'; return; }
+
+            list.forEach((lead, index) => {
+                const tr = document.createElement('tr');
+                const safePhone = (lead.phone || '').replace(/[^0-9+]/g, '');
+                const docTags = lead.has_documents && lead.doc_types ?
+                    lead.doc_types.split(',').map(t => `<span class="badge" style="background:#eff6ff; color:#1e40af; margin-right:2px;">${t.trim()}</span>`).join('') : '';
+
+                tr.innerHTML = `
+                    <td style="color:#9ca3af; font-size:12px;">${index + 1}</td>
+                    <td><strong>${lead.name || 'N/A'}</strong><br><span style="font-size:11px; color:#9ca3af;">${lead.email}</span></td>
+                    <td><a href="https://wa.me/${safePhone}" target="_blank" style="color:#2563eb;">${lead.phone || '-'}</a></td>
+                    <td>${lead.has_documents ? `<button onclick="viewDocs('${lead.email}')" class="btn-sm" style="background:#ecfccb;">📂 Open</button><br>${docTags}` : '<span style="color:#ccc;">No docs</span>'}</td>
+                    <td>${lead.country || '-'}</td>
+                    <td>${lead.role || 'worker'}</td>
+                    <td>${getStatusBadge(lead.status)}</td>
+                    <td>${getActionButtons(lead)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderEmployers(list) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            if (list.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No employers found.</td></tr>'; return; }
+
+            list.forEach((emp, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:#9ca3af; font-size:12px;">${index + 1}</td>
+                    <td><strong>${emp.company_name}</strong><br><span style="font-size:12px; color:#6b7280">${emp.industry || '-'}</span></td>
+                    <td>${emp.email}</td>
+                    <td>${emp.location || '-'}</td>
+                    <td>${emp.workers_needed}</td>
+                    <td><span class="status-active">${emp.status}</span></td>
+                    <td>
+                        <button class="btn-sm btn-secondary" onclick='openEmployerModal(${JSON.stringify(emp).replace(/'/g, "&#39;")})'>Edit</button>
+                        <button class="btn-sm" style="background-color:#8b5cf6; color:white;" onclick="findMatches(${emp.id}, '${emp.company_name.replace(/'/g, "\\'")}')">Find Candidates</button>
+                        <button class="btn-sm btn-danger" onclick="deleteEmployer(${emp.id})">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // HELPERS
+        function getStatusBadge(s) {
+            let cls = 'badge-new';
+            if (s === 'DOCS REQUESTED') cls = 'badge-docs-requested';
+            else if (s === 'DOCS RECEIVED') cls = 'badge-docs-received';
+            else if (s === 'UNDER REVIEW') cls = 'badge-under-review';
+            else if (s === 'PAYMENT REQUESTED') cls = 'badge-payment-requested';
+            else if (s === 'REJECTED') cls = 'badge-rejected';
+            return `<span class="badge ${cls}">${s || 'NEW'}</span>`;
+        }
+
+        function getActionButtons(lead) {
+            // Actions
+            const btn = (a, l, c) => `<button onclick="triggerAction('${a}', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}')" class="btn-sm ${c}">${l}</button>`;
+            let actions = '<span>-</span>';
+
+            if (lead.status === 'NEW') actions = btn('request_docs', 'Req Docs', 'btn-action');
+            else if (lead.status === 'DOCS REQUESTED') actions = btn('docs_received', 'Confirm Docs', 'btn-action');
+            else if (lead.status === 'DOCS RECEIVED') actions = btn('docs_received', 'Start Review', 'btn-action');
+            else if (lead.status === 'UNDER REVIEW') actions = btn('approve_payment', 'Approve', 'btn-approve') + btn('reject', 'Reject', 'btn-reject');
+
+            // Delete button
+            const del = `<button onclick="triggerAction('delete', '${lead.email}', '${lead.id}', '${(lead.name || '').replace(/'/g, "\\'")}')" class="btn-sm btn-danger" style="margin-left:5px;">🗑️</button>`;
+
+            return `<div style="display:flex; align-items:center;">${actions}${del}</div>`;
+        }
+
+        async function triggerAction(action, email, id, name) {
+            if (!confirm(`Confirm action: ${action} for ${name}?`)) return;
+            const token = localStorage.getItem('auth_token');
+            try {
+                const res = await fetch('/api/admin-action', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, email, id, name, token })
+                });
+                if (res.ok) { alert('Success!'); loadData('WORKER'); }
+                else alert('Error');
+            } catch (err) { alert('Network Error'); }
+        }
+
+        // EMPLOYER MANAGEMENT
+        function openEmployerModal(emp = null) {
+            const modal = document.getElementById('employerModal');
+            document.getElementById('modalTitle').innerText = emp ? 'Edit Employer' : 'Add New Employer';
+            document.getElementById('employerId').value = emp ? emp.id : '';
+            document.getElementById('companyName').value = emp ? emp.company_name : '';
+            document.getElementById('contactName').value = emp ? emp.name || '' : '';
+            document.getElementById('empEmail').value = emp ? emp.email : '';
+            document.getElementById('empLocation').value = emp ? emp.location || '' : '';
+            document.getElementById('workersNeeded').value = emp ? emp.workers_needed : 1;
+            document.getElementById('industry').value = emp ? emp.industry : 'Construction';
+            document.getElementById('housing').value = emp && emp.provides_housing ? 'true' : 'false';
+            document.getElementById('empPhone').value = emp ? emp.phone || '' : '';
+            modal.classList.add('active');
+        }
+
+        async function handleEmployerSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('employerId').value;
+            const payload = {
+                id: id || undefined,
+                company_name: document.getElementById('companyName').value,
+                name: document.getElementById('contactName').value,
+                email: document.getElementById('empEmail').value,
+                location: document.getElementById('empLocation').value,
+                workers_needed: parseInt(document.getElementById('workersNeeded').value),
+                industry: document.getElementById('industry').value,
+                provides_housing: document.getElementById('housing').value === 'true',
+                phone: document.getElementById('empPhone').value,
+                status: 'ACTIVE', start_date: 'ASAP'
+            };
+
+            try {
+                const res = await fetch('/api/manage-employers', {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error((await res.json()).error);
+                closeModal('employerModal');
+                loadData('EMPLOYER');
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        async function deleteEmployer(id) {
+            if (!confirm('Delete this employer?')) return;
+            await fetch(`/api/manage-employers?id=${id}`, { method: 'DELETE' });
+            loadData('EMPLOYER');
+        }
+
+        // MATCHING
+        async function findMatches(employerId, companyName) {
+            const modal = document.getElementById('matchModal');
+            const list = document.getElementById('matchList');
+            document.getElementById('matchTitle').innerText = `Best Candidates for ${companyName}`;
+            list.innerHTML = '<div style="padding:20px; text-align:center;">🔍 Searching...</div>';
+            modal.classList.add('active');
+
+            try {
+                const res = await fetch(`/api/match-candidates?employerId=${employerId}`);
+                const data = await res.json();
+                if (data.matches && data.matches.length > 0) {
+                    list.innerHTML = data.matches.map(m => `
+                        <div style="border:1px solid #e5e7eb; padding:15px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; background:#f9fafb;">
+                            <div>
+                                <div style="font-weight:bold;">${m.name} <span style="background:#10b981; color:white; font-size:11px; padding:2px 6px; border-radius:99px;">${m.score}% MATCH</span></div>
+                                <div style="font-size:13px; color:#6b7280;">${m.country} • ${m.match_reasons.join(', ')}</div>
+                            </div>
+                            <button class="btn-sm btn-primary" onclick="alert('Match approved!')">Select</button>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div style="padding:20px; text-align:center;">No matches found.</div>';
+                }
+            } catch (err) { list.innerHTML = 'Error searching.'; }
+        }
+
+        // UTILS
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        async function viewDocs(email) {
+            document.getElementById('docsModal').classList.add('active');
+            document.getElementById('uploadLinkDisplay').innerText = `https://workersunited.eu/upload?email=${encodeURIComponent(email)}`;
+            const list = document.getElementById('docsList');
+            list.innerHTML = 'Loading...';
+            try {
+                const res = await fetch(`/api/get-docs?email=${encodeURIComponent(email)}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` } });
+                const data = await res.json();
+                list.innerHTML = (data.files || []).map(f => `<div><a href="${f.url}" target="_blank">📄 ${f.pathname.split('/').pop()}</a></div>`).join('') || 'No docs.';
+            } catch (e) { list.innerHTML = 'Error.'; }
+        }
+
+        // Init
+        const storedToken = localStorage.getItem('auth_token');
+        if (storedToken) showDashboard();
+    </script>
+</body>
+
+</html>

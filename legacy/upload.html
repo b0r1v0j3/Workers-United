@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Documents - Workers United</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background-color: #f4f6fb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .upload-card {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        .logo { margin-bottom: 24px; }
+        .logo img { height: 50px; margin: 0 auto; }
+        h1 { color: #183b56; margin-bottom: 10px; font-size: 24px; }
+        p { color: #6c7a89; margin-bottom: 30px; font-size: 14px; }
+        
+        .upload-zone {
+            border: 2px dashed #dde3ec;
+            border-radius: 16px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #2f6fed;
+            background: rgba(47, 111, 237, 0.04);
+        }
+        .icon { font-size: 40px; margin-bottom: 10px; display: block; }
+        .zone-text { font-weight: 600; color: #183b56; margin-bottom: 6px; }
+        .zone-sub { font-size: 12px; color: #9ca3af; }
+        
+        select, input[type="file"] { display: none; }
+        select {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #dde3ec;
+            margin-bottom: 16px;
+            font-family: inherit;
+            color: #183b56;
+        }
+
+        .btn-upload {
+            width: 100%;
+            padding: 14px;
+            background: #2f6fed;
+            color: white;
+            border: none;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-upload:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .btn-upload:hover:not(:disabled) { background: #1c4dd6; transform: translateY(-2px); }
+
+        .file-info {
+            display: none;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: #166534;
+            font-size: 14px;
+            align-items: center;
+            gap: 10px;
+        }
+        .error-msg {
+            display: none;
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="upload-card">
+        <div class="logo">
+            <img src="assets/workers-united-logo.png" alt="Workers United">
+        </div>
+        <h1>Upload Documents</h1>
+        <p id="user-context">Please provide the requested documents to proceed.</p>
+
+        <form id="upload-form">
+            <label style="text-align:left; display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:#64748b;">Document Type</label>
+            <select id="doc-type" required>
+                <option value="passport">Passport</option>
+                <option value="cv">CV / Resume</option>
+                <option value="diploma">Diploma / Certificate</option>
+                <option value="other">Other</option>
+            </select>
+
+            <div class="upload-zone" id="drop-zone">
+                <span class="icon">📄</span>
+                <div class="zone-text">Click or Drop file here</div>
+                <div class="zone-sub">Max 4.5MB (JPG, PNG, PDF)</div>
+                <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.pdf">
+            </div>
+
+            <div class="file-info" id="file-preview">
+                <span style="font-size:18px;">✅</span>
+                <span id="file-name" style="flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">filename.jpg</span>
+                <button type="button" id="remove-file" style="background:none; border:none; color:#166534; cursor:pointer;">✖</button>
+            </div>
+
+            <div class="error-msg" id="error-msg"></div>
+
+            <button type="submit" class="btn-upload" id="submit-btn" disabled>Upload Document</button>
+        </form>
+    </div>
+
+    <script>
+        // Get email from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        const contextText = document.getElementById('user-context');
+        
+        if (email) {
+            contextText.innerText = `Uploading for: ${email}`;
+        } else {
+            // If no email, maybe redirect or show error? For now just show warning
+            contextText.innerText = "Error: No candidate specified. Please use the link using in your email.";
+            contextText.style.color = "#dc2626";
+            document.getElementById('upload-form').innerHTML = ""; // Disable form
+        }
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const filePreview = document.getElementById('file-preview');
+        const fileName = document.getElementById('file-name');
+        const removeFile = document.getElementById('remove-file');
+        const submitBtn = document.getElementById('submit-btn');
+        const form = document.getElementById('upload-form');
+        const errorMsg = document.getElementById('error-msg');
+        const docType = document.getElementById('doc-type');
+
+        // Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+        function handleFile(file) {
+            errorMsg.style.display = 'none';
+            if (!file) return;
+
+            if (file.size > 4.5 * 1024 * 1024) { // 4.5MB limit
+                showError("File is too large. Max 4.5MB.");
+                return;
+            }
+
+            // Preview
+            dropZone.style.display = 'none';
+            filePreview.style.display = 'flex';
+            fileName.innerText = file.name;
+            submitBtn.disabled = false;
+        }
+
+        removeFile.addEventListener('click', () => {
+            fileInput.value = '';
+            dropZone.style.display = 'block';
+            filePreview.style.display = 'none';
+            submitBtn.disabled = true;
+        });
+
+        function showError(msg) {
+            errorMsg.innerText = msg;
+            errorMsg.style.display = 'block';
+        }
+
+        // Upload Handler
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0] || (dropZone.files ? dropZone.files[0] : null);
+            if (!file) return;
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Uploading...";
+
+            try {
+                // Send to API
+                const response = await fetch(`/api/upload-file?filename=${encodeURIComponent(file.name)}&type=${docType.value}&email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    body: file,
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                const data = await response.json();
+                
+                // Success UI
+                document.querySelector('.upload-card').innerHTML = `
+                    <div style="text-align:center; padding:20px;">
+                        <span style="font-size:60px;">🎉</span>
+                        <h2 style="color:#183b56; margin:20px 0;">Upload Successful!</h2>
+                        <p style="color:#6c7a89;">We have received your ${docType.value}.</p>
+                        <button onclick="window.location.reload()" class="btn-upload" style="margin-top:20px;">Upload Another</button>
+                    </div>
+                `;
+
+            } catch (err) {
+                console.error(err);
+                showError("Upload failed. Please try again.");
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Upload Document";
+            }
+        });
+    </script>
+</body>
+</html>
