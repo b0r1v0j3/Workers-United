@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import { ContactForm } from "@/components/ContactForm";
 
 export const dynamic = "force-dynamic";
 
@@ -332,32 +331,60 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Contact */}
+        {/* Get Started CTA */}
         <section id="contact" className="py-16 md:py-20 bg-white">
           <div className="max-w-[1120px] mx-auto px-5">
-            <div className="text-center mb-10">
-              <div className="text-sm font-semibold text-[#2f6fed] uppercase tracking-wider mb-2">Contact</div>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#183b56] mb-3">Tell us what you need</h2>
-              <p className="text-[#6c7a89] max-w-xl mx-auto">
-                Please provide a brief summary of your situation. We will respond personally as soon as we can—usually within one business day.
-              </p>
+            <div className="bg-gradient-to-br from-[#183b56] to-[#2f6fed] rounded-3xl p-10 md:p-16 text-center text-white relative overflow-hidden">
+              {/* Background decoration */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+                <div className="absolute bottom-0 right-0 w-60 h-60 bg-white rounded-full translate-x-1/3 translate-y-1/3"></div>
+              </div>
+
+              <div className="relative z-10">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                  Ready to start your journey?
+                </h2>
+                <p className="text-white/80 text-lg max-w-xl mx-auto mb-8">
+                  Create your free account, complete your profile, and let us find the right job for you.
+                  90-day money-back guarantee if we don&apos;t find a match.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                  <Link
+                    href="/signup"
+                    className="px-8 py-4 rounded-full bg-white text-[#183b56] font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
+                  >
+                    Create Free Account
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="px-8 py-4 rounded-full bg-transparent border-2 border-white/50 text-white font-semibold hover:bg-white/10 transition-all"
+                  >
+                    Already have an account? Log In
+                  </Link>
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-6 text-sm text-white/70">
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-400">✓</span> No hidden fees
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-400">✓</span> 90-day guarantee
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-400">✓</span> Real visa support
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="grid md:grid-cols-[1fr_1.2fr] gap-10">
-              <div className="text-[#6c7a89] space-y-4">
-                <p>
-                  Workers United is here for both workers and employers seeking lawful and realistic cooperation. There is no need to prepare perfect documents before getting in touch; please describe your circumstances candidly.
-                </p>
-                <p>
-                  If it is easier for you, you can also email us directly at:<br />
-                  <a href="mailto:contact@workersunited.eu" className="font-semibold text-[#183b56] hover:text-[#2f6fed]">contact@workersunited.eu</a>
-                </p>
-                <p>
-                  If you require assistance, please do not hesitate to call or message us. We understand the importance of this decision and will treat every enquiry with the utmost professionalism.
-                </p>
-              </div>
-              <div className="bg-[#f4f6fb] rounded-2xl p-8 border border-[#dde3ec]/80">
-                <ContactForm />
-              </div>
+
+            {/* Contact info below CTA */}
+            <div className="mt-10 text-center">
+              <p className="text-[#6c7a89] mb-2">Questions? Contact us directly:</p>
+              <a href="mailto:contact@workersunited.eu" className="text-[#2f6fed] font-semibold hover:underline">
+                contact@workersunited.eu
+              </a>
             </div>
           </div>
         </section>
