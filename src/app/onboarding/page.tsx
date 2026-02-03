@@ -294,7 +294,6 @@ export default function OnboardingPage() {
             const candidateData = {
                 phone: getFullPhone() || null,
                 nationality: formData.nationality || null,
-                country: formData.nationality || null,  // Backup field
                 current_country: "Serbia",
                 date_of_birth: getFullDOB(),
                 preferred_job: formData.preferredJob || null,
