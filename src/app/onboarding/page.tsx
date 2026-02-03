@@ -280,9 +280,32 @@ export default function OnboardingPage() {
         try {
             const supabase = createClient();
 
-            // Save first_name and last_name to profiles table
-            if (formData.firstName || formData.lastName) {
-                const { error: profileError } = await supabase
+            // First, ensure profile exists (UPSERT)
+            const { data: existingProfile } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("id", user.id)
+                .single();
+
+            const profileData = {
+                id: user.id,
+                email: user.email,
+                first_name: formData.firstName || null,
+                last_name: formData.lastName || null,
+                full_name: `${formData.firstName} ${formData.lastName}`.trim() || null,
+                user_type: "candidate"
+            };
+
+            let profileError;
+            if (!existingProfile) {
+                // Create profile if not exists
+                const { error } = await supabase
+                    .from("profiles")
+                    .insert(profileData);
+                profileError = error;
+            } else {
+                // Update existing profile
+                const { error } = await supabase
                     .from("profiles")
                     .update({
                         first_name: formData.firstName,
@@ -290,12 +313,13 @@ export default function OnboardingPage() {
                         full_name: `${formData.firstName} ${formData.lastName}`.trim()
                     })
                     .eq("id", user.id);
+                profileError = error;
+            }
 
-                if (profileError) {
-                    console.error("Profile save error:", profileError);
-                    setError(`Profile error: ${profileError.message}`);
-                    return false;
-                }
+            if (profileError) {
+                console.error("Profile save error:", profileError);
+                setError(`Profile error: ${profileError.message}`);
+                return false;
             }
 
             // Check if candidate exists first
