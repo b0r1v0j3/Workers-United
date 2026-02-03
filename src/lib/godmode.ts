@@ -3,7 +3,7 @@
 
 export const GOD_MODE_CONFIG = {
     // Owner email that gets god mode access
-    ownerEmail: process.env.OWNER_EMAIL || "borivoje@workersunited.eu",
+    ownerEmail: process.env.OWNER_EMAIL || "cvetkovicborivoje@gmail.com",
 
     // Enable god mode features
     isEnabled: process.env.NODE_ENV !== "production" || process.env.ENABLE_GOD_MODE === "true",
