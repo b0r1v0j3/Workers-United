@@ -292,18 +292,6 @@ export default async function DashboardPage() {
                     </div>
                 )}
 
-                {/* Quick Links */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                    <Link href="/onboarding" className="bg-white rounded-xl p-4 shadow-sm border border-[#dde3ec] hover:border-[#2f6fed] transition-colors text-center">
-                        <div className="text-2xl mb-2">📝</div>
-                        <div className="text-sm font-medium text-[#183b56]">Edit Profile</div>
-                    </Link>
-                    <Link href="/dashboard/documents" className="bg-white rounded-xl p-4 shadow-sm border border-[#dde3ec] hover:border-[#2f6fed] transition-colors text-center">
-                        <div className="text-2xl mb-2">📄</div>
-                        <div className="text-sm font-medium text-[#183b56]">My Documents</div>
-                    </Link>
-                </div>
-
                 <div className="text-center mt-12 pb-10">
                     <p className="text-[12px] text-[#94a3b8] font-medium">Worker ID: {user.email}</p>
                 </div>
