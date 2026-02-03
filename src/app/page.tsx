@@ -92,10 +92,16 @@ export default async function Home() {
         </div>
       </main>
 
-      {/* Decorative Bottom Corner Icon */}
-      <div className="fixed bottom-6 left-6 w-10 h-10 bg-[#262626] rounded-full flex items-center justify-center text-white font-bold text-xs shadow-lg opacity-80 hover:opacity-100 transition-opacity cursor-help">
-        N
-      </div>
+      {/* Footer */}
+      <footer className="absolute bottom-0 w-full bg-transparent py-6 px-6 lg:px-12">
+        <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-[#94a3b8]">© 2024 Workers United LLC. All rights reserved.</p>
+          <div className="flex gap-6 text-sm">
+            <Link href="/privacy-policy" className="text-[#94a3b8] hover:text-[#1e293b] transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="text-[#94a3b8] hover:text-[#1e293b] transition-colors">Terms & Conditions</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
