@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DocumentWizard from "@/components/DocumentWizard";
 import { createCheckoutSession } from "@/app/actions/stripe";
+import { isGodModeUser } from "@/lib/godmode";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ export default async function DashboardPage() {
     const verifiedCount = readiness?.verified_docs_count || 0;
     const inQueue = candidate?.status === "IN_QUEUE";
     const hasPendingOffer = pendingOffers && pendingOffers.length > 0;
+    const isOwner = isGodModeUser(user.email);
 
     // Calculate profile completion
     const profileFields = [
@@ -123,8 +125,8 @@ export default async function DashboardPage() {
                     <div className="bg-white rounded-xl p-5 shadow-sm border border-[#dde3ec]">
                         <div className="text-[#64748b] text-xs font-medium mb-2">Status</div>
                         <div className={`text-lg font-bold ${hasPendingOffer ? "text-orange-500" :
-                                inQueue ? "text-green-600" :
-                                    isReady ? "text-blue-600" : "text-gray-500"
+                            inQueue ? "text-green-600" :
+                                isReady ? "text-blue-600" : "text-gray-500"
                             }`}>
                             {hasPendingOffer ? "🔔 Job Offer!" :
                                 inQueue ? "🔍 Searching..." :
@@ -210,7 +212,7 @@ export default async function DashboardPage() {
                                 <div className="flex gap-1">
                                     {['passport', 'biometric_photo', 'diploma'].map(type => (
                                         <span key={type} className={`w-2 h-2 rounded-full ${docStatus(type) === 'verified' ? 'bg-green-500' :
-                                                docStatus(type) === 'verifying' ? 'bg-blue-500' : 'bg-gray-300'
+                                            docStatus(type) === 'verifying' ? 'bg-blue-500' : 'bg-gray-300'
                                             }`} />
                                     ))}
                                 </div>
@@ -232,7 +234,7 @@ export default async function DashboardPage() {
                         {/* Step 4: Job Found */}
                         <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${candidate?.status === "OFFER_ACCEPTED" ? "bg-green-500 text-white" :
-                                    hasPendingOffer ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-400 border-2 border-gray-200"
+                                hasPendingOffer ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-400 border-2 border-gray-200"
                                 }`}>
                                 {candidate?.status === "OFFER_ACCEPTED" ? "✓" : hasPendingOffer ? "!" : "4"}
                             </div>
