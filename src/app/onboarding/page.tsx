@@ -777,7 +777,7 @@ export default function OnboardingPage() {
                                 disabled={saving}
                                 className="px-8 py-3 bg-[#2f6fed] text-white rounded-xl font-semibold hover:bg-[#1e5cd6] transition-colors shadow-lg shadow-blue-500/30"
                             >
-                                {saving ? "Saving..." : "Continue →"}
+                                {saving ? "Saving..." : "Save & Continue →"}
                             </button>
                         ) : (
                             <button
