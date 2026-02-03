@@ -3,8 +3,16 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch (err) {
+    console.error("Supabase client failed to initialize:", err);
+    // Continue rendering homepage without user session
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fbff] font-montserrat overflow-hidden relative">
