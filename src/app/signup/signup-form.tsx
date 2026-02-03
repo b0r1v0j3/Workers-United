@@ -11,9 +11,9 @@ interface SignupFormProps {
 export function SignupForm({ userType }: SignupFormProps) {
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
-    const [phone, setPhone] = useState("");
     const [companyName, setCompanyName] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -22,6 +22,13 @@ export function SignupForm({ userType }: SignupFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        // Check password match
+        if (password !== confirmPassword) {
+            setError("Passwords do not match");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -34,7 +41,6 @@ export function SignupForm({ userType }: SignupFormProps) {
                 options: {
                     data: {
                         full_name: fullName,
-                        phone: phone,
                         company_name: userType === "employer" ? companyName : null,
                         user_type: userType,
                     },
@@ -144,22 +150,6 @@ export function SignupForm({ userType }: SignupFormProps) {
             </div>
 
             <div>
-                <label htmlFor="phone" className="label">
-                    Phone (WhatsApp) <span className="text-red-500">*</span>
-                </label>
-                <input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="input"
-                    placeholder="+1 234 567 8900"
-                    required
-                />
-                <p className="mt-1 text-xs text-gray-500">We may contact you via WhatsApp for faster communication</p>
-            </div>
-
-            <div>
                 <label htmlFor="password" className="label">
                     Password <span className="text-red-500">*</span>
                 </label>
@@ -176,9 +166,31 @@ export function SignupForm({ userType }: SignupFormProps) {
                 <p className="mt-1 text-xs text-gray-500">Must be at least 6 characters</p>
             </div>
 
+            <div>
+                <label htmlFor="confirmPassword" className="label">
+                    Confirm Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={`input ${password && confirmPassword && password !== confirmPassword ? 'border-red-500' : ''}`}
+                    placeholder="••••••••"
+                    minLength={6}
+                    required
+                />
+                {password && confirmPassword && password !== confirmPassword && (
+                    <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                )}
+                {password && confirmPassword && password === confirmPassword && (
+                    <p className="mt-1 text-xs text-green-600">✓ Passwords match</p>
+                )}
+            </div>
+
             <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (password !== confirmPassword)}
                 className={`btn w-full ${userType === "employer" ? "btn-teal" : "btn-primary"}`}
                 style={{ marginTop: "1.5rem" }}
             >

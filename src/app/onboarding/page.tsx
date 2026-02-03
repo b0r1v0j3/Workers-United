@@ -395,7 +395,7 @@ export default function OnboardingPage() {
                                             value={formData.phoneNumber}
                                             onChange={(e) => updateField("phoneNumber", e.target.value.replace(/[^0-9]/g, ''))}
                                             className="flex-1 px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
-                                            placeholder="66 299 4444"
+                                            placeholder="60 123 4567"
                                             required
                                         />
                                     </div>
@@ -471,7 +471,7 @@ export default function OnboardingPage() {
                         <div className="space-y-6">
                             <div>
                                 <h2 className="text-2xl font-bold text-[#183b56] mb-2">Work Preferences</h2>
-                                <p className="text-[#6c7a89]">Help us find the right job for you in Serbia</p>
+                                <p className="text-[#6c7a89]">Help us find the right job for you</p>
                             </div>
 
                             <div className="grid gap-5">
@@ -528,15 +528,6 @@ export default function OnboardingPage() {
                                         className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none"
                                         placeholder="e.g., English, Serbian, French"
                                     />
-                                </div>
-
-                                {/* Info box about Serbia */}
-                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-                                    <span className="text-2xl">🇷🇸</span>
-                                    <div>
-                                        <h4 className="font-semibold text-[#183b56] mb-1">Currently Available: Serbia</h4>
-                                        <p className="text-sm text-[#6c7a89]">We are currently placing workers in Serbia. More countries coming soon!</p>
-                                    </div>
                                 </div>
                             </div>
                         </div>
