@@ -129,35 +129,39 @@ export default function LoginPage() {
                         </button>
                     </form>
 
-                    <div className="relative my-10">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-[#e2e8f0]"></div>
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase font-bold tracking-widest">
-                            <span className="bg-white px-4 text-[#94a3b8]">Or continue with</span>
-                        </div>
-                    </div>
+                    {process.env.NEXT_PUBLIC_OAUTH_ENABLED === "true" && (
+                        <>
+                            <div className="relative my-10">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-[#e2e8f0]"></div>
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase font-bold tracking-widest">
+                                    <span className="bg-white px-4 text-[#94a3b8]">Or continue with</span>
+                                </div>
+                            </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                        <button
-                            onClick={() => handleSocialLogin('google')}
-                            className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
-                        >
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => handleSocialLogin('facebook')}
-                            className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
-                        >
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" alt="Facebook" className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => handleSocialLogin('apple')}
-                            className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
-                        >
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" className="w-4 h-5" />
-                        </button>
-                    </div>
+                            <div className="grid grid-cols-3 gap-3">
+                                <button
+                                    onClick={() => handleSocialLogin('google')}
+                                    className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
+                                >
+                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => handleSocialLogin('facebook')}
+                                    className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
+                                >
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" alt="Facebook" className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => handleSocialLogin('apple')}
+                                    className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
+                                >
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" className="w-4 h-5" />
+                                </button>
+                            </div>
+                        </>
+                    )}
 
                     <p className="mt-12 text-center text-[#64748b] text-[15px] font-medium">
                         Don't have an account? <Link href="/signup" className="text-[#2f6fed] font-bold hover:underline">Sign up</Link>
