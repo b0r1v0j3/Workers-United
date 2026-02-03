@@ -55,8 +55,17 @@ export function SignupForm({ userType }: SignupFormProps) {
             // If auto-confirmed, redirect to appropriate dashboard
             router.push(userType === "employer" ? "/employer/profile" : "/dashboard/profile");
             router.refresh();
-        } catch {
-            setError("An unexpected error occurred. Please try again.");
+        } catch (err: unknown) {
+            // Show more specific error message
+            if (err instanceof Error) {
+                if (err.message.includes("already registered") || err.message.includes("already exists")) {
+                    setError("This email is already registered. Please log in instead.");
+                } else {
+                    setError(err.message);
+                }
+            } else {
+                setError("An unexpected error occurred. Please try again.");
+            }
         } finally {
             setLoading(false);
         }
