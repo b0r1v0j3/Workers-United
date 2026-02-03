@@ -71,22 +71,27 @@ export default async function Home() {
                   Workers United connects serious employers with reliable workers worldwide and guides both sides through
                   the full work visa process – without fake promises or hidden conditions.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <Link
-                    href="#workers"
-                    className="px-6 py-3 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-semibold shadow-lg shadow-blue-500/50 text-center hover:translate-y-[-2px] transition-transform"
+                    href="/signup"
+                    className="px-8 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg shadow-lg shadow-blue-500/40 text-center hover:translate-y-[-2px] transition-transform"
                   >
-                    For workers
+                    Create Free Account
                   </Link>
                   <Link
-                    href="#employers"
-                    className="px-6 py-3 rounded-full bg-white border border-[#dde3ec] text-[#183b56] font-semibold shadow-sm text-center hover:bg-gray-50 transition-colors"
+                    href="/login"
+                    className="px-8 py-4 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-gray-50 transition-colors"
                   >
-                    For employers
+                    Log In
                   </Link>
                 </div>
+                <div className="flex flex-wrap gap-4 text-sm text-[#6c7a89] mb-4">
+                  <span className="flex items-center gap-1"><span className="text-green-500">✓</span> No hidden fees</span>
+                  <span className="flex items-center gap-1"><span className="text-green-500">✓</span> 90-day guarantee</span>
+                  <span className="flex items-center gap-1"><span className="text-green-500">✓</span> Real visa support</span>
+                </div>
                 <p className="text-sm text-[#6c7a89]">
-                  <strong className="text-[#183b56]">If you have any questions</strong>, please feel free to contact us by phone or email. A member of our team will reply personally.
+                  <strong className="text-[#183b56]">Questions?</strong> Contact us at <a href="mailto:contact@workersunited.eu" className="text-[#2f6fed] hover:underline">contact@workersunited.eu</a>
                 </p>
               </div>
 
@@ -327,64 +332,6 @@ export default async function Home() {
                   </div>
                 </details>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Get Started CTA */}
-        <section id="contact" className="py-16 md:py-20 bg-white">
-          <div className="max-w-[1120px] mx-auto px-5">
-            <div className="bg-gradient-to-br from-[#183b56] to-[#2f6fed] rounded-3xl p-10 md:p-16 text-center text-white relative overflow-hidden">
-              {/* Background decoration */}
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-                <div className="absolute bottom-0 right-0 w-60 h-60 bg-white rounded-full translate-x-1/3 translate-y-1/3"></div>
-              </div>
-
-              <div className="relative z-10">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Ready to start your journey?
-                </h2>
-                <p className="text-white/80 text-lg max-w-xl mx-auto mb-8">
-                  Create your free account, complete your profile, and let us find the right job for you.
-                  90-day money-back guarantee if we don&apos;t find a match.
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                  <Link
-                    href="/signup"
-                    className="px-8 py-4 rounded-full bg-white text-[#183b56] font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
-                  >
-                    Create Free Account
-                  </Link>
-                  <Link
-                    href="/login"
-                    className="px-8 py-4 rounded-full bg-transparent border-2 border-white/50 text-white font-semibold hover:bg-white/10 transition-all"
-                  >
-                    Already have an account? Log In
-                  </Link>
-                </div>
-
-                <div className="flex flex-wrap justify-center gap-6 text-sm text-white/70">
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-400">✓</span> No hidden fees
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-400">✓</span> 90-day guarantee
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-400">✓</span> Real visa support
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Contact info below CTA */}
-            <div className="mt-10 text-center">
-              <p className="text-[#6c7a89] mb-2">Questions? Contact us directly:</p>
-              <a href="mailto:contact@workersunited.eu" className="text-[#2f6fed] font-semibold hover:underline">
-                contact@workersunited.eu
-              </a>
             </div>
           </div>
         </section>
