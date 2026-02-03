@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin, ADMIN_ROLE_COOKIE } from "@/lib/admin";
+import { isGodModeUser } from "@/lib/godmode";
 
 export const dynamic = "force-dynamic";
 
@@ -12,21 +13,24 @@ export default async function EmployerDashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
+    // Check if god mode user (owner)
+    const isOwner = isGodModeUser(user.email);
+
     // Check if admin in employer mode
     const cookieStore = await cookies();
     const adminRole = cookieStore.get(ADMIN_ROLE_COOKIE)?.value;
     const isAdminUser = isAdmin(user.email);
     const isAdminEmployerMode = isAdminUser && adminRole === "employer";
 
-    // Get employer profile (optional for admin)
+    // Get employer profile (optional for admin/owner)
     const { data: employer } = await supabase
         .from("employers")
         .select("*, profiles(*)")
         .eq("profile_id", user.id)
         .single();
 
-    // Non-admin without employer record -> redirect
-    if (!employer && !isAdminEmployerMode) {
+    // Non-admin/non-owner without employer record -> redirect
+    if (!employer && !isAdminEmployerMode && !isOwner) {
         redirect("/dashboard");
     }
 
