@@ -283,55 +283,35 @@ export default function OnboardingPage() {
 
                 if (profileError) {
                     console.error("Profile save error:", profileError);
+                    setError(`Profile error: ${profileError.message}`);
+                    return;
                 }
             }
 
-            // Check if candidate exists
-            const { data: existingCandidate } = await supabase
-                .from("candidates")
-                .select("id")
-                .eq("profile_id", user.id)
-                .single();
-
+            // Candidate is auto-created by database trigger on signup
+            // Only update fields that exist in the candidates table
             const candidateData = {
-                profile_id: user.id,
-                phone: getFullPhone(),
-                nationality: formData.nationality,
-                current_country: "Serbia",
-                date_of_birth: getFullDOB(),
-                preferred_job: formData.preferredJob,
+                phone: getFullPhone() || null,
+                country: formData.nationality || null,  // Using 'country' field for nationality
+                preferred_job: formData.preferredJob || null,
                 experience_years: formData.experience ? parseInt(formData.experience) : null,
-                languages: formData.languages ? formData.languages.split(",").map(l => l.trim()) : [],
-                preferred_country: "serbia",
                 updated_at: new Date().toISOString(),
             };
 
-            if (existingCandidate) {
-                // Update existing
-                const { error: updateError } = await supabase
-                    .from("candidates")
-                    .update(candidateData)
-                    .eq("profile_id", user.id);
+            const { error: updateError } = await supabase
+                .from("candidates")
+                .update(candidateData)
+                .eq("profile_id", user.id);
 
-                if (updateError) {
-                    console.error("Candidate update error:", updateError);
-                    setError("Failed to update profile");
-                }
-            } else {
-                // Insert new
-                const { error: insertError } = await supabase
-                    .from("candidates")
-                    .insert(candidateData);
-
-                if (insertError) {
-                    console.error("Candidate insert error:", insertError);
-                    setError("Failed to create profile");
-                }
+            if (updateError) {
+                console.error("Candidate update error:", updateError);
+                setError(`Save error: ${updateError.message}`);
+                return;
             }
 
-        } catch (err) {
+        } catch (err: any) {
             console.error("Save progress error:", err);
-            setError("Failed to save progress");
+            setError(`Error: ${err.message || "Failed to save"}`);
         } finally {
             setSaving(false);
         }
