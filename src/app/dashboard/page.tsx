@@ -108,7 +108,7 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Status Cards Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="grid grid-cols-2 gap-4 mb-6">
                     {/* Profile Completion */}
                     <div className="bg-white rounded-xl p-5 shadow-sm border border-[#dde3ec]">
                         <div className="text-[#64748b] text-xs font-medium mb-2">Profile Completion</div>
@@ -138,6 +138,56 @@ export default async function DashboardPage() {
                                     isReady ? "Ready for activation" : "Complete your profile"}
                         </div>
                     </div>
+                </div>
+
+                {/* Profile Info Card */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-[#dde3ec] mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="font-bold text-[#183b56]">👤 Your Profile</h2>
+                        <Link
+                            href="/onboarding"
+                            className="text-sm text-[#2f6fed] hover:text-[#1e5cd6] font-medium flex items-center gap-1"
+                        >
+                            ✏️ Edit
+                        </Link>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span className="text-[#64748b]">Full Name:</span>
+                            <div className="font-medium text-[#183b56]">{profile?.full_name || "—"}</div>
+                        </div>
+                        <div>
+                            <span className="text-[#64748b]">Email:</span>
+                            <div className="font-medium text-[#183b56]">{user.email || "—"}</div>
+                        </div>
+                        <div>
+                            <span className="text-[#64748b]">Phone:</span>
+                            <div className="font-medium text-[#183b56]">{candidate?.phone || "—"}</div>
+                        </div>
+                        <div>
+                            <span className="text-[#64748b]">Nationality:</span>
+                            <div className="font-medium text-[#183b56]">{candidate?.nationality || "—"}</div>
+                        </div>
+                        <div>
+                            <span className="text-[#64748b]">Date of Birth:</span>
+                            <div className="font-medium text-[#183b56]">
+                                {candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : "—"}
+                            </div>
+                        </div>
+                        <div>
+                            <span className="text-[#64748b]">Preferred Job:</span>
+                            <div className="font-medium text-[#183b56]">{candidate?.preferred_job || "—"}</div>
+                        </div>
+                    </div>
+
+                    {(!candidate?.phone || !candidate?.nationality || !candidate?.preferred_job) && (
+                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-amber-800 text-xs font-medium">
+                                ⚠️ Some profile info is missing. <Link href="/onboarding" className="underline">Complete your profile</Link> to proceed.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* 90-Day Countdown (if in queue) */}
