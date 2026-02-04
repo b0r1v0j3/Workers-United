@@ -365,6 +365,14 @@ export default function OnboardingPage() {
                 return false;
             }
 
+            // Sync phone to Supabase Auth for WhatsApp integration
+            const fullPhone = getFullPhone();
+            if (fullPhone) {
+                await supabase.auth.updateUser({
+                    phone: fullPhone
+                });
+            }
+
             return true;
         } catch (err: any) {
             console.error("Save progress error:", err);
