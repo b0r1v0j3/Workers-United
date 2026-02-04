@@ -78,6 +78,59 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         revalidatePath(`/admin/candidates/${id}`);
     }
 
+    async function deleteDocument(formData: FormData) {
+        "use server";
+        const docId = formData.get("doc_id") as string;
+        const storagePath = formData.get("storage_path") as string;
+
+        const supabase = await createClient();
+
+        // Delete from storage
+        if (storagePath) {
+            await supabase.storage
+                .from("candidate-docs")
+                .remove([storagePath]);
+        }
+
+        // Delete from database
+        await supabase
+            .from("candidate_documents")
+            .delete()
+            .eq("id", docId);
+
+        revalidatePath(`/admin/candidates/${id}`);
+    }
+
+    async function requestNewDocument(formData: FormData) {
+        "use server";
+        const docId = formData.get("doc_id") as string;
+        const storagePath = formData.get("storage_path") as string;
+        const docType = formData.get("doc_type") as string;
+        const reason = formData.get("reason") as string;
+        const userEmail = formData.get("user_email") as string;
+
+        const supabase = await createClient();
+
+        // Delete from storage
+        if (storagePath) {
+            await supabase.storage
+                .from("candidate-docs")
+                .remove([storagePath]);
+        }
+
+        // Delete from database  
+        await supabase
+            .from("candidate_documents")
+            .delete()
+            .eq("id", docId);
+
+        // TODO: Send email notification to user
+        // For now, just log the request
+        console.log(`[Admin] Requested new ${docType} from ${userEmail}. Reason: ${reason}`);
+
+        revalidatePath(`/admin/candidates/${id}`);
+    }
+
     async function updateCandidateStatus(formData: FormData) {
         "use server";
         const newStatus = formData.get("status") as string;
@@ -281,7 +334,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                             )}
 
                                             {/* Verification Form */}
-                                            <form action={updateDocumentStatus} className="bg-[#f8fafc] rounded-lg p-4 border border-[#dde3ec]">
+                                            <form action={updateDocumentStatus} className="bg-[#f8fafc] rounded-lg p-4 border border-[#dde3ec] mb-3">
                                                 <input type="hidden" name="doc_id" value={doc.id} />
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                                     <div>
@@ -304,15 +357,62 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-2">
+                                                <button
+                                                    type="submit"
+                                                    className="bg-[#2f6fed] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#1e5cd6] transition-colors"
+                                                >
+                                                    Save Changes
+                                                </button>
+                                            </form>
+
+                                            {/* Admin Actions */}
+                                            <div className="flex flex-wrap gap-2 mt-3">
+                                                {/* Delete Document */}
+                                                <form action={deleteDocument}>
+                                                    <input type="hidden" name="doc_id" value={doc.id} />
+                                                    <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
                                                     <button
                                                         type="submit"
-                                                        className="bg-[#2f6fed] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#1e5cd6] transition-colors"
+                                                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-red-600 transition-colors"
+                                                        onClick={(e) => {
+                                                            if (!confirm("Are you sure you want to delete this document?")) {
+                                                                e.preventDefault();
+                                                            }
+                                                        }}
                                                     >
-                                                        Save Changes
+                                                        🗑️ Delete Document
                                                     </button>
-                                                </div>
-                                            </form>
+                                                </form>
+
+                                                {/* Request New Document */}
+                                                <details className="group">
+                                                    <summary className="bg-orange-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-orange-600 transition-colors cursor-pointer list-none">
+                                                        📨 Request New Document
+                                                    </summary>
+                                                    <form action={requestNewDocument} className="mt-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                                        <input type="hidden" name="doc_id" value={doc.id} />
+                                                        <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
+                                                        <input type="hidden" name="doc_type" value={doc.document_type} />
+                                                        <input type="hidden" name="user_email" value={candidateProfile.email} />
+                                                        <label className="text-[11px] text-orange-700 uppercase font-bold block mb-1">
+                                                            Reason for requesting new document:
+                                                        </label>
+                                                        <textarea
+                                                            name="reason"
+                                                            required
+                                                            placeholder="e.g., Image is too blurry, document is cropped, wrong document type..."
+                                                            className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm mb-2"
+                                                            rows={2}
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            className="bg-orange-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-orange-700 transition-colors"
+                                                        >
+                                                            Delete & Request New
+                                                        </button>
+                                                    </form>
+                                                </details>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
