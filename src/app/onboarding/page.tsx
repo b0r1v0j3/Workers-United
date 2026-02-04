@@ -191,6 +191,12 @@ export default function OnboardingPage() {
                 return;
             }
 
+            // Redirect employers to their own dashboard
+            if (user.user_metadata?.user_type === 'employer') {
+                router.push("/employer/dashboard");
+                return;
+            }
+
             setUser(user);
 
             // Load profile for first_name and last_name

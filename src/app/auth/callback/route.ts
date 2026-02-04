@@ -16,10 +16,42 @@ export async function GET(request: Request) {
                 return NextResponse.redirect(`${origin}${next}`);
             }
 
-            // Check if user has completed onboarding
+            // Get user and check their type
             const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
+                const userType = user.user_metadata?.user_type;
+
+                // EMPLOYER FLOW
+                if (userType === 'employer') {
+                    // Check if employer profile exists
+                    const { data: employer } = await supabase
+                        .from('employers')
+                        .select('id, pib')
+                        .eq('user_id', user.id)
+                        .single();
+
+                    // No employer record -> create one and go to profile setup
+                    if (!employer) {
+                        // Create employer record
+                        await supabase.from('employers').insert({
+                            user_id: user.id,
+                            company_name: user.user_metadata?.company_name || null,
+                            contact_name: user.user_metadata?.full_name || null,
+                        });
+                        return NextResponse.redirect(`${origin}/employer/profile`);
+                    }
+
+                    // Incomplete profile -> go to profile setup
+                    if (!employer.pib) {
+                        return NextResponse.redirect(`${origin}/employer/profile`);
+                    }
+
+                    // Complete -> go to employer dashboard
+                    return NextResponse.redirect(`${origin}/employer/dashboard`);
+                }
+
+                // CANDIDATE FLOW (default)
                 const { data: candidate } = await supabase
                     .from('candidates')
                     .select('onboarding_completed')
@@ -30,9 +62,12 @@ export async function GET(request: Request) {
                 if (!candidate || !candidate.onboarding_completed) {
                     return NextResponse.redirect(`${origin}/onboarding`);
                 }
+
+                // Completed onboarding -> go to dashboard
+                return NextResponse.redirect(`${origin}/dashboard`);
             }
 
-            // Completed onboarding -> go to dashboard
+            // Fallback
             return NextResponse.redirect(`${origin}/dashboard`);
         }
     }
@@ -40,4 +75,3 @@ export async function GET(request: Request) {
     // Return the user to an error page with instructions
     return NextResponse.redirect(`${origin}/auth/auth-code-error`);
 }
-
