@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ADMIN_ROLE_COOKIE } from "@/lib/admin";
 import { NextResponse } from "next/server";
 
-export async function POST() {
+async function handleSignOut() {
     const supabase = await createClient();
     await supabase.auth.signOut();
 
@@ -18,4 +18,12 @@ export async function POST() {
     });
 
     return response;
+}
+
+export async function POST() {
+    return handleSignOut();
+}
+
+export async function GET() {
+    return handleSignOut();
 }
