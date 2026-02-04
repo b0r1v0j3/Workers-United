@@ -175,12 +175,20 @@ export default async function DashboardPage() {
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-[#dde3ec] mb-6">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="font-bold text-[#183b56]">👤 Your Profile</h2>
-                        <Link
-                            href="/onboarding"
-                            className="text-sm text-[#2f6fed] hover:text-[#1e5cd6] font-medium flex items-center gap-1"
-                        >
-                            ✏️ Edit
-                        </Link>
+                        <div className="flex gap-3">
+                            <Link
+                                href="/dashboard/application"
+                                className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
+                            >
+                                📋 E-Uprava
+                            </Link>
+                            <Link
+                                href="/onboarding"
+                                className="text-sm text-[#2f6fed] hover:text-[#1e5cd6] font-medium flex items-center gap-1"
+                            >
+                                ✏️ Edit
+                            </Link>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
