@@ -55,74 +55,47 @@ export default async function Home() {
       </header>
 
       <main>
-        {/* Hero Section - Cleaner, more impactful */}
-        <section className="py-12 md:py-20">
-          <div className="max-w-[1120px] mx-auto px-5">
-            <div className="grid md:grid-cols-[1.2fr_0.8fr] gap-10 items-center">
-              {/* Left - Main Card */}
-              <div className="bg-gradient-to-br from-[#e4ebff] to-[#f9fbff] rounded-[32px] p-8 md:p-12 shadow-xl border border-[#dde3ec]/90">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 rounded-full text-sm text-[#2f6fed] font-semibold mb-6 border border-[#2f6fed]/20 shadow-sm">
-                  <span className="w-2.5 h-2.5 bg-[#1dbf73] rounded-full animate-pulse"></span>
-                  Safe, legal and transparent
-                </div>
-                <h1 className="text-4xl md:text-[44px] font-bold text-[#183b56] leading-tight tracking-tight mb-5">
-                  International hiring made simple&nbsp;&amp; legal.
-                </h1>
-                <p className="text-[#6c7a89] text-lg mb-8 max-w-lg leading-relaxed">
-                  Workers United connects serious employers with reliable workers and guides both sides through
-                  the full work visa process – without fake promises or hidden conditions.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                  <Link
-                    href="/signup"
-                    className="px-8 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] font-bold text-lg shadow-lg shadow-blue-500/40 text-center hover:translate-y-[-2px] hover:shadow-xl transition-all"
-                    style={{ color: '#ffffff' }}
-                  >
-                    Create Free Account
-                  </Link>
-                  <Link
-                    href="/login"
-                    className="px-8 py-4 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-[#183b56] hover:text-white transition-all"
-                  >
-                    Log In
-                  </Link>
-                </div>
-                <div className="flex flex-wrap gap-5 text-sm text-[#6c7a89]">
-                  <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> No hidden fees</span>
-                  <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> 90-day guarantee</span>
-                  <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> Real visa support</span>
-                </div>
-              </div>
+        {/* Hero Section - Clean, centered, impactful */}
+        <section className="py-16 md:py-24">
+          <div className="max-w-[900px] mx-auto px-5 text-center">
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#e4ebff] to-[#f0f4ff] rounded-full text-sm text-[#2f6fed] font-semibold mb-8 border border-[#2f6fed]/20 shadow-sm">
+              <span className="w-2.5 h-2.5 bg-[#1dbf73] rounded-full animate-pulse"></span>
+              Safe, legal and transparent
+            </div>
 
-              {/* Right - What you can expect */}
-              <div className="bg-white rounded-2xl p-7 shadow-lg border border-[#dde3ec]/80">
-                <h3 className="font-bold text-[#183b56] text-xl mb-5">What you can expect</h3>
-                <ul className="space-y-4 text-[#1b2430]">
-                  <li className="flex items-start gap-3">
-                    <span className="text-[#1dbf73] font-bold text-lg mt-0.5">✓</span>
-                    <span>We connect you only with verified, serious employers – no scams.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-[#1dbf73] font-bold text-lg mt-0.5">✓</span>
-                    <span>We support the full work visa process – not only finding a job.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-[#1dbf73] font-bold text-lg mt-0.5">✓</span>
-                    <span>We work only with employers who follow the law and treat workers fairly.</span>
-                  </li>
-                </ul>
-                <div className="mt-6 pt-5 border-t border-[#dde3ec]">
-                  <p className="text-sm text-[#6c7a89]">
-                    <strong className="text-[#183b56]">Questions?</strong> Email us at{" "}
-                    <a href="mailto:contact@workersunited.eu" className="text-[#2f6fed] hover:underline font-medium">
-                      contact@workersunited.eu
-                    </a>
-                  </p>
-                </div>
-              </div>
+            <h1 className="text-4xl md:text-6xl font-bold text-[#183b56] leading-tight tracking-tight mb-6">
+              International hiring<br />made simple & legal.
+            </h1>
+
+            <p className="text-[#6c7a89] text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
+              Workers United connects serious employers with reliable workers and guides both sides through
+              the full work visa process – without fake promises or hidden conditions.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+              <Link
+                href="/signup"
+                className="px-10 py-5 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] font-bold text-lg shadow-lg shadow-blue-500/40 text-center hover:translate-y-[-2px] hover:shadow-xl transition-all"
+                style={{ color: '#ffffff' }}
+              >
+                Create Free Account
+              </Link>
+              <Link
+                href="/login"
+                className="px-10 py-5 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-[#183b56] hover:text-white transition-all"
+              >
+                Log In
+              </Link>
+            </div>
+
+            <div className="flex flex-wrap gap-6 justify-center text-sm text-[#6c7a89]">
+              <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> No hidden fees</span>
+              <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> 90-day guarantee</span>
+              <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> Real visa support</span>
             </div>
           </div>
         </section>
+
 
         {/* How It Works - Streamlined */}
         <section id="how-it-works" className="py-16 md:py-20 bg-white">
