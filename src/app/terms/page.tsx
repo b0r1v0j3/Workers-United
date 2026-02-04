@@ -12,10 +12,8 @@ export default function TermsPage() {
             {/* Header */}
             <header className="fixed top-0 w-full z-50 bg-[#f8fbff]/80 backdrop-blur-md px-6 py-4 lg:px-12 flex justify-between items-center">
                 <Link href="/" className="flex items-center gap-3 group">
-                    <div className="w-8 h-8 bg-[#1e293b] rounded-lg flex items-center justify-center transition-transform group-hover:scale-105">
-                        <Image src="/logo.png" alt="Logo" width={20} height={20} className="brightness-0 invert" />
-                    </div>
-                    <span className="font-bold text-[#1e293b] text-xl tracking-tight">Workers United</span>
+                    <Image src="/logo.png" alt="Workers United logo" width={56} height={56} className="rounded transition-transform group-hover:scale-105" />
+                    <span className="font-bold text-[#183b56] text-xl tracking-tight">Workers United</span>
                 </Link>
                 <Link
                     href="/login"
