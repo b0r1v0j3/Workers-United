@@ -16,6 +16,12 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
+    // Redirect employers to employer dashboard
+    const userType = user.user_metadata?.user_type;
+    if (userType === 'employer') {
+        redirect("/employer/dashboard");
+    }
+
     // Fetch profile
     const { data: profile } = await supabase
         .from("profiles")
