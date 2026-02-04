@@ -50,10 +50,9 @@ export default async function CandidatesPage() {
             phone,
             entry_fee_paid,
             queue_position,
-            queue_joined_at,
-            created_at
+            queue_joined_at
         `)
-        .order("created_at", { ascending: false });
+        .order("id", { ascending: false });
 
     console.log("Candidates query result:", { candidatesCount: candidates?.length, candidatesError });
 
