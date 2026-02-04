@@ -76,7 +76,7 @@ export default async function EmployerDashboardPage() {
                     <div className="flex justify-between h-16">
                         <div className="flex items-center gap-6">
                             <Link href="/" className="flex items-center gap-2 text-xl font-bold text-gray-900">
-                                <img src="/logo.png" alt="Workers United" width={28} height={28} style={{ borderRadius: '4px' }} />
+                                <img src="/logo.png" alt="Workers United" width={48} height={48} className="rounded" />
                                 Workers United
                             </Link>
                             <span className="text-sm text-teal-600 font-medium bg-teal-50 px-2 py-1 rounded">

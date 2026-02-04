@@ -490,7 +490,7 @@ export default function OnboardingPage() {
                         </Link>
                     </div>
                     <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Workers United" width={32} height={32} className="rounded" />
+                        <img src="/logo.png" alt="Workers United" width={48} height={48} className="rounded" />
                         <span className="font-bold text-lg text-[#183b56]">Workers United</span>
                     </Link>
                     <div className="text-sm text-[#6c7a89]">
