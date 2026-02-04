@@ -74,7 +74,8 @@ export default async function Home() {
                 <div className="flex flex-col sm:flex-row gap-4 mb-8">
                   <Link
                     href="/signup"
-                    className="px-8 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg shadow-lg shadow-blue-500/40 text-center hover:translate-y-[-2px] hover:shadow-xl transition-all"
+                    className="px-8 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] font-bold text-lg shadow-lg shadow-blue-500/40 text-center hover:translate-y-[-2px] hover:shadow-xl transition-all"
+                    style={{ color: '#ffffff' }}
                   >
                     Create Free Account
                   </Link>
@@ -267,7 +268,8 @@ export default async function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/signup"
-                className="px-10 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg shadow-lg shadow-blue-500/40 hover:translate-y-[-2px] hover:shadow-xl transition-all"
+                className="px-10 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] font-bold text-lg shadow-lg shadow-blue-500/40 hover:translate-y-[-2px] hover:shadow-xl transition-all"
+                style={{ color: '#ffffff' }}
               >
                 Create Free Account
               </Link>
