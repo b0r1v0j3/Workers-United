@@ -22,11 +22,30 @@ export default async function CandidatesPage() {
         redirect("/dashboard");
     }
 
-    // Fetch candidate summary from our unified view
+    // Fetch all candidates with their profile info
     const { data: candidates } = await supabase
-        .from("admin_candidate_full_overview")
-        .select("*")
-        .order("paid_at", { ascending: false, nullsFirst: false });
+        .from("candidates")
+        .select(`
+            id,
+            profile_id,
+            status,
+            nationality,
+            current_country,
+            preferred_job,
+            phone,
+            entry_fee_paid,
+            queue_position,
+            queue_joined_at,
+            created_at,
+            profiles!inner(id, email, full_name, created_at)
+        `)
+        .order("created_at", { ascending: false });
+
+    // Fetch payments to check paid status
+    const { data: payments } = await supabase
+        .from("payments")
+        .select("user_id, status, created_at")
+        .eq("status", "completed");
 
     // Fetch all document statuses to show per-doc details
     const { data: allDocs } = await supabase
@@ -88,83 +107,74 @@ export default async function CandidatesPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#f1f5f9]">
-                                {candidates?.map((candidate, index) => (
-                                    <tr key={candidate.user_id} className="hover:bg-[#fbfcfe] transition-colors">
-                                        <td className="px-6 py-5 text-[#64748b] font-medium">{index + 1}</td>
-                                        <td className="px-6 py-5">
-                                            <Link href={`/admin/candidates/${candidate.user_id}`} className="hover:text-[#2f6fed]">
-                                                <div className="font-bold text-[#1e293b]">{candidate.full_name || "Unknown"}</div>
-                                                <div className="text-[13px] text-[#64748b]">{candidate.email}</div>
-                                            </Link>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex gap-2 mb-2">
-                                                {['passport', 'photo', 'diploma'].map(type => (
-                                                    <span key={type} className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${getDocStatus(candidate.user_id, type) === 'verified' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                        getDocStatus(candidate.user_id, type) === 'verifying' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                                                            'bg-gray-100 text-gray-500 border border-gray-200'
-                                                        }`}>
-                                                        {type.charAt(0)}: {getDocStatus(candidate.user_id, type)}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <div className="text-[12px] font-medium text-[#64748b]">
-                                                {candidate.verified_docs_count}/3 Verified
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            {candidate.paid_at ? (
-                                                <div>
-                                                    <div className="text-[#10b981] font-bold text-[14px]">Paid $9.00</div>
-                                                    <div className="text-[12px] text-[#64748b]">
-                                                        {new Date(candidate.paid_at).toLocaleDateString()}
-                                                    </div>
-                                                    {candidate.refund_status !== 'none' && (
-                                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 inline-block ${candidate.refund_status === 'completed' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'
-                                                            }`}>
-                                                            Refund: {candidate.refund_status}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="text-[#94a3b8] italic text-[14px]">Unpaid</div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            {candidate.days_left !== null ? (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex-1 min-w-[80px]">
-                                                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                                            <div
-                                                                className={`h-full ${candidate.days_left < 10 ? 'bg-red-500' : 'bg-[#2f6fed]'}`}
-                                                                style={{ width: `${(candidate.days_left / 90) * 100}%` }}
-                                                            />
-                                                        </div>
-                                                        <div className="text-[12px] font-bold text-[#1e293b] mt-1">
-                                                            {candidate.days_left} Days Left
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <span className="text-[#94a3b8]">-</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex gap-2">
-                                                <Link
-                                                    href={`/admin/candidates/${candidate.user_id}`}
-                                                    className="bg-[#2f6fed] text-white px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#1e5cd6] transition-colors"
-                                                >
-                                                    View
+                                {candidates?.map((candidate: any, index: number) => {
+                                    const profile = candidate.profiles;
+                                    const payment = payments?.find((p: any) => p.user_id === candidate.profile_id);
+                                    const verifiedDocsCount = allDocs?.filter(d => d.user_id === candidate.profile_id && d.status === 'verified').length || 0;
+
+                                    return (
+                                        <tr key={candidate.id} className="hover:bg-[#fbfcfe] transition-colors">
+                                            <td className="px-6 py-5 text-[#64748b] font-medium">{index + 1}</td>
+                                            <td className="px-6 py-5">
+                                                <Link href={`/admin/candidates/${candidate.profile_id}`} className="hover:text-[#2f6fed]">
+                                                    <div className="font-bold text-[#1e293b]">{profile?.full_name || "Unknown"}</div>
+                                                    <div className="text-[13px] text-[#64748b]">{profile?.email}</div>
                                                 </Link>
-                                                {candidate.paid_at && candidate.refund_status === 'none' && (
-                                                    <RefundButton paymentId={candidate.user_id} />
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex gap-2 mb-2">
+                                                    {['passport', 'photo', 'diploma'].map(type => (
+                                                        <span key={type} className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${getDocStatus(candidate.profile_id, type) === 'verified' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                                            getDocStatus(candidate.profile_id, type) === 'verifying' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                                                                'bg-gray-100 text-gray-500 border border-gray-200'
+                                                            }`}>
+                                                            {type.charAt(0)}: {getDocStatus(candidate.profile_id, type)}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <div className="text-[12px] font-medium text-[#64748b]">
+                                                    {verifiedDocsCount}/3 Verified
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                {candidate.entry_fee_paid ? (
+                                                    <div>
+                                                        <div className="text-[#10b981] font-bold text-[14px]">Paid $9.00</div>
+                                                        <div className="text-[12px] text-[#64748b]">
+                                                            {payment?.created_at ? new Date(payment.created_at).toLocaleDateString() : '-'}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-[#94a3b8] italic text-[14px]">Unpaid</div>
                                                 )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {candidates?.length === 0 && (
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                {candidate.queue_joined_at ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex-1 min-w-[80px]">
+                                                            <div className="text-[12px] font-bold text-[#1e293b]">
+                                                                In Queue #{candidate.queue_position || '-'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[#94a3b8]">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex gap-2">
+                                                    <Link
+                                                        href={`/admin/candidates/${candidate.profile_id}`}
+                                                        className="bg-[#2f6fed] text-white px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#1e5cd6] transition-colors"
+                                                    >
+                                                        View
+                                                    </Link>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {(!candidates || candidates.length === 0) && (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-10 text-center text-[#64748b] italic">
                                             No candidates found.
