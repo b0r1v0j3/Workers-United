@@ -146,10 +146,22 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             }
 
         } catch (err) {
-            console.error(err);
+            console.error("Document upload error:", err);
+            const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+
+            // Provide more specific error messages
+            let displayMessage = "Upload failed. Try again.";
+            if (errorMessage.includes("storage")) {
+                displayMessage = "Storage error. Check bucket permissions.";
+            } else if (errorMessage.includes("row-level security") || errorMessage.includes("RLS")) {
+                displayMessage = "Permission denied. Contact support.";
+            } else if (errorMessage.includes("verification") || errorMessage.includes("AI")) {
+                displayMessage = "Verification failed. Try again.";
+            }
+
             setUploads(prev => ({
                 ...prev,
-                [type]: { file: null, status: "error", message: "Upload failed. Try again." }
+                [type]: { file: null, status: "error", message: displayMessage }
             }));
         }
     }
