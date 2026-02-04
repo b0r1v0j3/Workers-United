@@ -1,9 +1,28 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { ADMIN_ROLE_COOKIE } from "@/lib/admin";
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 async function handleSignOut(request: NextRequest) {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+        {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll();
+                },
+                setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        cookieStore.set(name, value, options);
+                    });
+                },
+            },
+        }
+    );
+
     await supabase.auth.signOut();
 
     // Get the origin from request headers or use fallback
@@ -18,8 +37,7 @@ async function handleSignOut(request: NextRequest) {
         baseUrl = `https://${baseUrl}`;
     }
 
-    // Create response with 303 See Other to force GET on the redirect target
-    // This is crucial because forms submit via POST, and we redirect to "/" which is a GET-only page
+    // Create response with redirect to home
     const response = NextResponse.redirect(new URL("/", baseUrl), {
         status: 303,
     });
