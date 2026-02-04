@@ -365,11 +365,13 @@ export default function OnboardingPage() {
                 return false;
             }
 
-            // Sync phone to Supabase Auth for WhatsApp integration
+            // Sync phone and name to Supabase Auth
             const fullPhone = getFullPhone();
             const fullName = `${formData.firstName} ${formData.lastName}`.trim();
 
-            await supabase.auth.updateUser({
+            console.log("Syncing to Auth:", { fullPhone, fullName });
+
+            const { error: authError } = await supabase.auth.updateUser({
                 phone: fullPhone || undefined,
                 data: {
                     full_name: fullName,
@@ -377,6 +379,12 @@ export default function OnboardingPage() {
                     last_name: formData.lastName
                 }
             });
+
+            if (authError) {
+                console.error("Auth update error:", authError);
+            } else {
+                console.log("Auth updated successfully");
+            }
 
             return true;
         } catch (err: any) {
