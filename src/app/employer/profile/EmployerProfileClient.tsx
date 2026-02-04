@@ -1,7 +1,5 @@
 "use client";
 
-
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -19,7 +17,34 @@ interface EmployerProfile {
     salary_range: string | null;
     work_location: string | null;
     status: string;
+    website: string | null;
+    industry: string | null;
+    company_size: string | null;
+    founded_year: string | null;
+    description: string | null;
 }
+
+const INDUSTRIES = [
+    "Construction",
+    "Manufacturing",
+    "Agriculture",
+    "Hospitality",
+    "Healthcare",
+    "Transportation",
+    "Retail",
+    "IT & Technology",
+    "Food Processing",
+    "Warehousing & Logistics",
+    "Other"
+];
+
+const COMPANY_SIZES = [
+    "1-10 employees",
+    "11-50 employees",
+    "51-200 employees",
+    "201-500 employees",
+    "500+ employees"
+];
 
 export default function EmployerProfilePage() {
     const router = useRouter();
@@ -29,7 +54,7 @@ export default function EmployerProfilePage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
-
+    const [user, setUser] = useState<any>(null);
     const [employer, setEmployer] = useState<EmployerProfile | null>(null);
 
     const [formData, setFormData] = useState({
@@ -42,6 +67,11 @@ export default function EmployerProfilePage() {
         job_description: "",
         salary_range: "",
         work_location: "",
+        website: "",
+        industry: "",
+        company_size: "",
+        founded_year: "",
+        description: "",
     });
 
     useEffect(() => {
@@ -52,6 +82,7 @@ export default function EmployerProfilePage() {
                     router.push("/login");
                     return;
                 }
+                setUser(user);
 
                 const { data: emp } = await supabase
                     .from("employers")
@@ -71,6 +102,11 @@ export default function EmployerProfilePage() {
                         job_description: emp.job_description || "",
                         salary_range: emp.salary_range || "",
                         work_location: emp.work_location || "",
+                        website: emp.website || "",
+                        industry: emp.industry || "",
+                        company_size: emp.company_size || "",
+                        founded_year: emp.founded_year || "",
+                        description: emp.description || "",
                     });
                 }
             } catch (err) {
@@ -88,34 +124,52 @@ export default function EmployerProfilePage() {
         setSaving(true);
 
         try {
-            // Validate PIB (8 digits)
-            if (!/^\d{8}$/.test(formData.pib)) {
+            if (formData.pib && !/^\d{8}$/.test(formData.pib)) {
                 throw new Error("PIB must be exactly 8 digits");
             }
 
-            if (!formData.accommodation_address.trim()) {
-                throw new Error("Accommodation address is required");
+            if (!formData.company_name.trim()) {
+                throw new Error("Company name is required");
             }
 
-            const { error: updateError } = await supabase
-                .from("employers")
-                .update({
-                    company_name: formData.company_name,
-                    pib: formData.pib,
-                    company_address: formData.company_address,
-                    accommodation_address: formData.accommodation_address,
-                    contact_phone: formData.contact_phone,
-                    workers_needed: formData.workers_needed,
-                    job_description: formData.job_description,
-                    salary_range: formData.salary_range,
-                    work_location: formData.work_location,
-                })
-                .eq("id", employer?.id);
+            const updateData = {
+                company_name: formData.company_name,
+                pib: formData.pib || null,
+                company_address: formData.company_address || null,
+                accommodation_address: formData.accommodation_address || null,
+                contact_phone: formData.contact_phone || null,
+                workers_needed: formData.workers_needed,
+                job_description: formData.job_description || null,
+                salary_range: formData.salary_range || null,
+                work_location: formData.work_location || null,
+                website: formData.website || null,
+                industry: formData.industry || null,
+                company_size: formData.company_size || null,
+                founded_year: formData.founded_year || null,
+                description: formData.description || null,
+            };
 
-            if (updateError) throw updateError;
+            if (employer) {
+                const { error: updateError } = await supabase
+                    .from("employers")
+                    .update(updateData)
+                    .eq("id", employer.id);
+                if (updateError) throw updateError;
+            } else {
+                const { error: insertError } = await supabase
+                    .from("employers")
+                    .insert({ ...updateData, profile_id: user.id, status: "pending" });
+                if (insertError) throw insertError;
+            }
 
             setSuccess(true);
-            setTimeout(() => router.push("/employer/dashboard"), 1500);
+            const { data: emp } = await supabase
+                .from("employers")
+                .select("*")
+                .eq("profile_id", user.id)
+                .single();
+            if (emp) setEmployer(emp);
+            setTimeout(() => setSuccess(false), 3000);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save");
         } finally {
@@ -123,239 +177,342 @@ export default function EmployerProfilePage() {
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <p className="text-gray-500">Loading...</p>
+            <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+                <div className="animate-spin w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <nav className="bg-white border-b border-gray-200">
-                <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <Link href="/employer/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M19 12H5M12 19l-7-7 7-7" />
-                            </svg>
-                            Back to Dashboard
+        <div className="min-h-screen bg-[#f0f2f5]">
+            {/* Facebook-style Top Nav */}
+            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
+                <div className="max-w-[900px] mx-auto px-4">
+                    <div className="flex justify-between h-14 items-center">
+                        <Link href="/" className="flex items-center gap-2">
+                            <img src="/logo.png" alt="Workers United" width={36} height={36} className="rounded" />
+                            <span className="font-bold text-teal-600 text-lg">Workers United</span>
                         </Link>
+                        <div className="flex items-center gap-2">
+                            <Link
+                                href="/employer/dashboard"
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                                Dashboard
+                            </Link>
+                            <a href="/auth/signout" className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100">
+                                Logout
+                            </a>
+                        </div>
                     </div>
                 </div>
             </nav>
 
-            <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Company Profile</h1>
-                <p className="text-gray-600 mb-6">
-                    Complete your company details to start posting job requests.
-                </p>
+            <div className="max-w-[900px] mx-auto px-4 py-6">
+                {/* Page Header */}
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-gray-900">Company Profile</h1>
+                    <p className="text-gray-500 mt-1">Manage your company information and hiring preferences</p>
+                </div>
 
+                {/* Alerts */}
                 {success && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
-                        ✓ Profile saved successfully! Redirecting...
+                    <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Profile saved successfully!
                     </div>
                 )}
-
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                    <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                         {error}
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="card">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Company Information</h2>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Company Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    id="company_name"
-                                    name="company_name"
-                                    required
-                                    value={formData.company_name}
-                                    onChange={handleChange}
-                                    className="input"
-                                    placeholder="e.g., ABC Construction d.o.o."
-                                />
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                        {/* Basic Info Card */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                                <h2 className="font-semibold text-gray-900 text-[15px]">Basic Information</h2>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${employer?.status === 'active' ? 'bg-green-100 text-green-700' :
+                                        employer?.status === 'verified' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-amber-100 text-amber-700'
+                                    }`}>
+                                    {employer?.status?.toUpperCase() || 'NEW'}
+                                </span>
                             </div>
+                            <div className="p-4 space-y-4">
+                                {/* Row 1 */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Company Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="company_name"
+                                            required
+                                            value={formData.company_name}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="e.g., ABC Construction d.o.o."
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            PIB (Tax ID) <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="pib"
+                                            value={formData.pib}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="12345678"
+                                            maxLength={8}
+                                        />
+                                        <p className="text-[11px] text-gray-500 mt-1">8 digits, required for visa processing</p>
+                                    </div>
+                                </div>
 
-                            <div>
-                                <label htmlFor="pib" className="block text-sm font-medium text-gray-700 mb-1">
-                                    PIB (Tax Identification Number) *
-                                </label>
-                                <input
-                                    type="text"
-                                    id="pib"
-                                    name="pib"
-                                    required
-                                    maxLength={8}
-                                    pattern="\d{8}"
-                                    value={formData.pib}
-                                    onChange={handleChange}
-                                    className="input"
-                                    placeholder="12345678"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Serbian PIB - exactly 8 digits
-                                </p>
-                            </div>
+                                {/* Row 2 */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Industry
+                                        </label>
+                                        <select
+                                            name="industry"
+                                            value={formData.industry}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        >
+                                            <option value="">Select industry...</option>
+                                            {INDUSTRIES.map(ind => (
+                                                <option key={ind} value={ind}>{ind}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Company Size
+                                        </label>
+                                        <select
+                                            name="company_size"
+                                            value={formData.company_size}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        >
+                                            <option value="">Select size...</option>
+                                            {COMPANY_SIZES.map(size => (
+                                                <option key={size} value={size}>{size}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
 
-                            <div>
-                                <label htmlFor="company_address" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Company Address
-                                </label>
-                                <textarea
-                                    id="company_address"
-                                    name="company_address"
-                                    rows={2}
-                                    value={formData.company_address}
-                                    onChange={handleChange}
-                                    className="input"
-                                    placeholder="Full registered business address..."
-                                />
-                            </div>
+                                {/* Row 3 */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Contact Phone
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            name="contact_phone"
+                                            value={formData.contact_phone}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="+381 11 123 4567"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Website
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="website"
+                                            value={formData.website}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="https://yourcompany.com"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Founded Year
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="founded_year"
+                                            value={formData.founded_year}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="2010"
+                                            maxLength={4}
+                                        />
+                                    </div>
+                                </div>
 
-                            <div>
-                                <label htmlFor="contact_phone" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Contact Phone
-                                </label>
-                                <input
-                                    type="tel"
-                                    id="contact_phone"
-                                    name="contact_phone"
-                                    value={formData.contact_phone}
-                                    onChange={handleChange}
-                                    className="input"
-                                    placeholder="+381 11 123 4567"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="card">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                            Worker Accommodation
-                            <span className="text-red-500 ml-1">*</span>
-                        </h2>
-                        <p className="text-sm text-gray-600 mb-4">
-                            Required for visa processing. You must provide housing for international workers.
-                        </p>
-
-                        <div>
-                            <label htmlFor="accommodation_address" className="block text-sm font-medium text-gray-700 mb-1">
-                                Accommodation Address *
-                            </label>
-                            <textarea
-                                id="accommodation_address"
-                                name="accommodation_address"
-                                required
-                                rows={3}
-                                value={formData.accommodation_address}
-                                onChange={handleChange}
-                                className="input"
-                                placeholder="Full address where workers will be accommodated (street, city, postal code)..."
-                            />
-                        </div>
-                    </div>
-
-                    <div className="card">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Job Requirements</h2>
-                        <p className="text-sm text-gray-600 mb-4">
-                            Tell us about the positions you need to fill.
-                        </p>
-
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Description */}
                                 <div>
-                                    <label htmlFor="workers_needed" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Number of Workers Needed *
+                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                        About Company
                                     </label>
-                                    <input
-                                        type="number"
-                                        id="workers_needed"
-                                        name="workers_needed"
-                                        required
-                                        min={1}
-                                        max={100}
-                                        value={formData.workers_needed}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, workers_needed: parseInt(e.target.value) || 1 }))}
-                                        className="input"
+                                    <textarea
+                                        name="description"
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                        rows={3}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        placeholder="Brief description of your company..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Address Card */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                            <div className="px-4 py-3 border-b border-gray-200">
+                                <h2 className="font-semibold text-gray-900 text-[15px]">Addresses</h2>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div>
+                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                        Company Address
+                                    </label>
+                                    <textarea
+                                        name="company_address"
+                                        value={formData.company_address}
+                                        onChange={handleChange}
+                                        rows={2}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        placeholder="Full registered business address..."
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="salary_range" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Salary Range (EUR/month)
+                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                        Worker Accommodation Address <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        name="accommodation_address"
+                                        value={formData.accommodation_address}
+                                        onChange={handleChange}
+                                        rows={2}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        placeholder="Address where international workers will be accommodated..."
+                                    />
+                                    <p className="text-[11px] text-gray-500 mt-1">⚠️ Required for visa processing</p>
+                                </div>
+                                <div>
+                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                        Work Location
                                     </label>
                                     <input
                                         type="text"
-                                        id="salary_range"
-                                        name="salary_range"
-                                        value={formData.salary_range}
+                                        name="work_location"
+                                        value={formData.work_location}
                                         onChange={handleChange}
-                                        className="input"
-                                        placeholder="e.g., 1200-1500 EUR"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        placeholder="City or region, e.g., Belgrade, Serbia"
                                     />
                                 </div>
                             </div>
+                        </div>
 
-                            <div>
-                                <label htmlFor="work_location" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Work Location
-                                </label>
-                                <input
-                                    type="text"
-                                    id="work_location"
-                                    name="work_location"
-                                    value={formData.work_location}
-                                    onChange={handleChange}
-                                    className="input"
-                                    placeholder="City or region where work takes place"
-                                />
+                        {/* Hiring Preferences Card */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                            <div className="px-4 py-3 border-b border-gray-200">
+                                <h2 className="font-semibold text-gray-900 text-[15px]">Hiring Preferences</h2>
                             </div>
-
-                            <div>
-                                <label htmlFor="job_description" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Job Description *
-                                </label>
-                                <textarea
-                                    id="job_description"
-                                    name="job_description"
-                                    required
-                                    rows={4}
-                                    value={formData.job_description}
-                                    onChange={handleChange}
-                                    className="input"
-                                    placeholder="Describe the job duties, required skills, working conditions..."
-                                />
+                            <div className="p-4 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Workers Needed
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="workers_needed"
+                                            value={formData.workers_needed}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, workers_needed: parseInt(e.target.value) || 1 }))}
+                                            min={1}
+                                            max={100}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Salary Range (EUR/month)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="salary_range"
+                                            value={formData.salary_range}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="e.g., 1200-1500"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                        Job Description
+                                    </label>
+                                    <textarea
+                                        name="job_description"
+                                        value={formData.job_description}
+                                        onChange={handleChange}
+                                        rows={4}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        placeholder="Describe typical job duties, required skills, working conditions..."
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="btn btn-primary flex-1"
-                        >
-                            {saving ? "Saving..." : "Save Profile"}
-                        </button>
-                        <Link href="/employer/dashboard" className="btn btn-secondary">
-                            Cancel
-                        </Link>
+
+                        {/* Save Button */}
+                        <div className="flex justify-end gap-3 pt-2">
+                            <Link
+                                href="/employer/dashboard"
+                                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[15px]"
+                            >
+                                Cancel
+                            </Link>
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="px-5 py-2.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 font-medium text-[15px] disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {saving ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        Saving...
+                                    </>
+                                ) : (
+                                    "Save Changes"
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </form>
-            </main>
+            </div>
         </div>
     );
 }
