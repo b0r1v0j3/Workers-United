@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { isGodModeUser } from "@/lib/godmode";
 
 export default async function EmployersPage() {
     const supabase = await createClient();
@@ -8,13 +9,15 @@ export default async function EmployersPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
+    const isOwner = isGodModeUser(user.email);
+
     const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
 
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && !isOwner) {
         redirect("/dashboard");
     }
 
@@ -111,8 +114,8 @@ export default async function EmployersPage() {
                                         </td>
                                         <td className="px-6 py-5">
                                             <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold uppercase ${employer.status === 'active' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                    employer.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
-                                                        'bg-gray-100 text-gray-600 border border-gray-200'
+                                                employer.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                                                    'bg-gray-100 text-gray-600 border border-gray-200'
                                                 }`}>
                                                 {employer.status || "pending"}
                                             </span>

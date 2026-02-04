@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { isGodModeUser } from "@/lib/godmode";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -14,13 +15,15 @@ export default async function CandidateDetailPage({ params }: PageProps) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
+    const isOwner = isGodModeUser(user.email);
+
     const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
 
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && !isOwner) {
         redirect("/dashboard");
     }
 
@@ -206,8 +209,8 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                     </div>
                                                 </div>
                                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${payment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                                        payment.refund_status === 'completed' ? 'bg-orange-100 text-orange-700' :
-                                                            'bg-gray-100 text-gray-600'
+                                                    payment.refund_status === 'completed' ? 'bg-orange-100 text-orange-700' :
+                                                        'bg-gray-100 text-gray-600'
                                                     }`}>
                                                     {payment.refund_status === 'completed' ? 'Refunded' : payment.status}
                                                 </span>
