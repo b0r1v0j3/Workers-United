@@ -31,7 +31,8 @@ export default async function Home() {
             {user ? (
               <Link
                 href="/dashboard"
-                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#1dbf73] to-[#17a864] text-white font-bold shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:scale-105 transition-all"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#1dbf73] to-[#17a864] font-bold shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:scale-105 transition-all"
+                style={{ color: '#ffffff' }}
               >
                 ✓ Dashboard
               </Link>
