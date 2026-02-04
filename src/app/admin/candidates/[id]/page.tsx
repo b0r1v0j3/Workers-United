@@ -58,6 +58,14 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         .eq("user_id", id)
         .order("created_at", { ascending: false });
 
+    // Fetch signatures
+    const { data: signatures } = await supabase
+        .from("signatures")
+        .select("*")
+        .eq("user_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
     async function updateDocumentStatus(formData: FormData) {
         "use server";
         const docId = formData.get("doc_id") as string;
@@ -271,6 +279,30 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                 </div>
                             ) : (
                                 <div className="text-[#94a3b8] italic">No payments found</div>
+                            )}
+                        </div>
+
+                        {/* Signature Card */}
+                        <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
+                            <h2 className="font-bold text-[#1e293b] text-xl mb-4">Digital Signature</h2>
+                            {signatures && signatures.length > 0 ? (
+                                <div className="space-y-4">
+                                    <div className="border border-[#f1f5f9] rounded-lg p-4 bg-[#f8fafc]">
+                                        <img
+                                            src={signatures[0].signature_data}
+                                            alt="User Signature"
+                                            className="max-w-full h-auto bg-white rounded border"
+                                            style={{ maxHeight: '100px' }}
+                                        />
+                                    </div>
+                                    <div className="text-[12px] text-[#64748b] space-y-1">
+                                        <div><strong>Document:</strong> {signatures[0].document_type}</div>
+                                        <div><strong>Signed:</strong> {new Date(signatures[0].created_at).toLocaleString()}</div>
+                                        <div><strong>IP:</strong> {signatures[0].ip_address || 'N/A'}</div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-[#94a3b8] italic">No signature on file</div>
                             )}
                         </div>
                     </div>
