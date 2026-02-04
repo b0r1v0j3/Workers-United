@@ -365,14 +365,12 @@ export default function OnboardingPage() {
                 return false;
             }
 
-            // Sync phone and name to Supabase Auth
-            const fullPhone = getFullPhone();
+            // Sync name to Supabase Auth (phone saved in candidates table)
             const fullName = `${formData.firstName} ${formData.lastName}`.trim();
 
-            console.log("Syncing to Auth:", { fullPhone, fullName });
+            console.log("Syncing to Auth:", { fullName });
 
             const { error: authError } = await supabase.auth.updateUser({
-                phone: fullPhone || undefined,
                 data: {
                     full_name: fullName,
                     first_name: formData.firstName,
