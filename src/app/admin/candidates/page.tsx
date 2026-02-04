@@ -22,8 +22,8 @@ export default async function CandidatesPage() {
         redirect("/dashboard");
     }
 
-    // Fetch all candidates with their profile info
-    const { data: candidates } = await supabase
+    // Fetch all candidates
+    const { data: candidates, error: candidatesError } = await supabase
         .from("candidates")
         .select(`
             id,
@@ -36,10 +36,19 @@ export default async function CandidatesPage() {
             entry_fee_paid,
             queue_position,
             queue_joined_at,
-            created_at,
-            profiles!inner(id, email, full_name, created_at)
+            created_at
         `)
         .order("created_at", { ascending: false });
+
+    console.log("Candidates query result:", { candidates, candidatesError });
+
+    // Fetch all profiles for candidate lookup
+    const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, email, full_name");
+
+    // Create profile lookup map
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
     // Fetch payments to check paid status
     const { data: payments } = await supabase
@@ -108,7 +117,7 @@ export default async function CandidatesPage() {
                             </thead>
                             <tbody className="divide-y divide-[#f1f5f9]">
                                 {candidates?.map((candidate: any, index: number) => {
-                                    const profile = candidate.profiles;
+                                    const profile = profileMap.get(candidate.profile_id);
                                     const payment = payments?.find((p: any) => p.user_id === candidate.profile_id);
                                     const verifiedDocsCount = allDocs?.filter(d => d.user_id === candidate.profile_id && d.status === 'verified').length || 0;
 
