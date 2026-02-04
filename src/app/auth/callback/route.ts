@@ -28,16 +28,17 @@ export async function GET(request: Request) {
                     const { data: employer } = await supabase
                         .from('employers')
                         .select('id, pib')
-                        .eq('user_id', user.id)
+                        .eq('profile_id', user.id)
                         .single();
 
                     // No employer record -> create one and go to profile setup
                     if (!employer) {
-                        // Create employer record
+                        // Create employer record with profile_id (matching existing schema)
                         await supabase.from('employers').insert({
-                            user_id: user.id,
+                            profile_id: user.id,
                             company_name: user.user_metadata?.company_name || null,
-                            contact_name: user.user_metadata?.full_name || null,
+                            contact_person: user.user_metadata?.full_name || null,
+                            status: 'pending'
                         });
                         return NextResponse.redirect(`${origin}/employer/profile`);
                     }

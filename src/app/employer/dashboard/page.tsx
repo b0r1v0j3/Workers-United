@@ -29,9 +29,9 @@ export default async function EmployerDashboardPage() {
         .eq("profile_id", user.id)
         .single();
 
-    // Non-admin/non-owner without employer record -> redirect
+    // Non-admin/non-owner without employer record -> redirect to profile setup
     if (!employer && !isAdminEmployerMode && !isOwner) {
-        redirect("/dashboard");
+        redirect("/employer/profile");
     }
 
     // For admin mode, create mock employer data
