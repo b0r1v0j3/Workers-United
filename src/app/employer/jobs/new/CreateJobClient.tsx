@@ -164,8 +164,8 @@ export default function CreateJobClient() {
                             <div className="flex flex-col items-center">
                                 <div
                                     className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all duration-300 ${currentStep >= step.id
-                                            ? "bg-gradient-to-br from-[#2f6fed] to-[#1e5cd6] text-white shadow-lg shadow-blue-500/30"
-                                            : "bg-[#e2e8f0] text-[#94a3b8]"
+                                        ? "bg-gradient-to-br from-[#2f6fed] to-[#1e5cd6] text-white shadow-lg shadow-blue-500/30"
+                                        : "bg-[#e2e8f0] text-[#94a3b8]"
                                         }`}
                                 >
                                     {step.icon}
@@ -345,9 +345,7 @@ export default function CreateJobClient() {
                                             className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 focus:outline-none transition-all bg-white"
                                         >
                                             <option value="Full-time (40 hours/week)">Full-time (40h)</option>
-                                            <option value="Part-time (20 hours/week)">Part-time (20h)</option>
                                             <option value="Shift work">Shift work</option>
-                                            <option value="Flexible hours">Flexible</option>
                                         </select>
                                     </div>
 
@@ -432,8 +430,8 @@ export default function CreateJobClient() {
                                 onClick={() => setCurrentStep(prev => prev + 1)}
                                 disabled={!canProceed()}
                                 className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all ${canProceed()
-                                        ? "bg-gradient-to-r from-[#2f6fed] to-[#1e5cd6] text-white shadow-lg shadow-blue-500/30 hover:shadow-xl"
-                                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                    ? "bg-gradient-to-r from-[#2f6fed] to-[#1e5cd6] text-white shadow-lg shadow-blue-500/30 hover:shadow-xl"
+                                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
                                     }`}
                             >
                                 Continue →
@@ -443,8 +441,8 @@ export default function CreateJobClient() {
                                 type="submit"
                                 disabled={loading || !canProceed()}
                                 className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all ${canProceed() && !loading
-                                        ? "bg-gradient-to-r from-[#10b981] to-[#059669] text-white shadow-lg shadow-green-500/30 hover:shadow-xl"
-                                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                    ? "bg-gradient-to-r from-[#10b981] to-[#059669] text-white shadow-lg shadow-green-500/30 hover:shadow-xl"
+                                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
                                     }`}
                             >
                                 {loading ? (
