@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
             {/* Header */}
             <header className="fixed top-0 w-full z-50 bg-[#f8fbff]/80 backdrop-blur-md px-6 py-4 lg:px-12 flex justify-between items-center">
                 <Link href="/" className="flex items-center gap-3 group">
-                    <Image src="/logo.png" alt="Workers United logo" width={56} height={56} className="rounded transition-transform group-hover:scale-105" />
+                    <Image src="/logo.png" alt="Workers United logo" width={64} height={64} className="rounded transition-transform group-hover:scale-105" />
                     <span className="font-bold text-[#183b56] text-xl tracking-tight">Workers United</span>
                 </Link>
                 <Link
