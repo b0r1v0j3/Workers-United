@@ -162,9 +162,9 @@ export default async function CandidatesPage() {
                                                         const status = getDocStatus(candidate.profile_id, type);
                                                         return (
                                                             <span key={type} className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${status === 'verified' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                                    status === 'verifying' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                                                                        status === 'manual_review' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                                                                            'bg-gray-100 text-gray-500 border border-gray-200'
+                                                                status === 'verifying' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                                                                    status === 'manual_review' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                                                        'bg-gray-100 text-gray-500 border border-gray-200'
                                                                 }`}>
                                                                 {label}: {status === 'verified' ? '✓' : status === 'missing' ? '✗' : status.substring(0, 3)}
                                                             </span>
@@ -204,7 +204,8 @@ export default async function CandidatesPage() {
                                                 <div className="flex gap-2">
                                                     <Link
                                                         href={`/admin/candidates/${candidate.profile_id}`}
-                                                        className="bg-[#2f6fed] text-white px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#1e5cd6] transition-colors"
+                                                        className="bg-[#2f6fed] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#1e5cd6] transition-colors"
+                                                        style={{ color: 'white' }}
                                                     >
                                                         View
                                                     </Link>
