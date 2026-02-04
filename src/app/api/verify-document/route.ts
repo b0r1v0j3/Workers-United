@@ -135,7 +135,33 @@ export async function POST(request: Request) {
             ocrJson = { error: aiError instanceof Error ? aiError.message : "Unknown AI error" };
         }
 
-        // 4. Update database with results
+        // 4. Handle verification result
+        if (status === 'rejected') {
+            // Delete failed documents to avoid clutter
+            console.log(`[Verify] Document rejected - deleting from storage and database`);
+
+            // Delete from storage
+            await supabase.storage
+                .from("candidate-docs")
+                .remove([document.storage_path]);
+
+            // Delete from database
+            await supabase
+                .from("candidate_documents")
+                .delete()
+                .eq("user_id", candidateId)
+                .eq("document_type", docType);
+
+            return NextResponse.json({
+                success: false,
+                status: 'rejected',
+                message: `Document rejected: ${rejectReason}. Please upload a new document.`,
+                qualityIssues,
+                extractedData: ocrJson
+            });
+        }
+
+        // 5. Update database with results (only for verified/manual_review)
         const { error: updateError } = await supabase
             .from("candidate_documents")
             .update({
@@ -158,9 +184,7 @@ export async function POST(request: Request) {
             status,
             message: status === 'verified'
                 ? 'Document verified successfully'
-                : status === 'manual_review'
-                    ? 'Document needs manual review'
-                    : `Verification failed: ${rejectReason}`,
+                : 'Document needs manual review',
             qualityIssues,
             extractedData: ocrJson
         });
