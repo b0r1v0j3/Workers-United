@@ -91,11 +91,9 @@ export default async function DashboardPage() {
                     <img src="/logo.png" alt="Workers United" width={64} height={64} className="rounded" />
                     <span className="font-bold text-[#183b56] text-lg">Workers United</span>
                 </Link>
-                <form action="/auth/signout" method="post">
-                    <button type="submit" className="text-[#64748b] text-sm font-semibold hover:text-[#183b56]">
-                        Logout
-                    </button>
-                </form>
+                <a href="/auth/signout" className="text-[#64748b] text-sm font-semibold hover:text-[#183b56]">
+                    Logout
+                </a>
             </nav>
 
             <div className="max-w-[700px] mx-auto px-5 py-8">

@@ -122,11 +122,9 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     <div className="bg-[#2f6fed] text-white px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">
                         God Mode
                     </div>
-                    <form action="/auth/signout" method="post">
-                        <button type="submit" className="text-gray-300 text-sm font-semibold hover:text-white transition-colors">
-                            Logout
-                        </button>
-                    </form>
+                    <a href="/auth/signout" className="text-gray-300 text-sm font-semibold hover:text-white transition-colors">
+                        Logout
+                    </a>
                 </div>
             </nav>
 
