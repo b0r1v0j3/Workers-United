@@ -134,10 +134,10 @@ export default async function Home() {
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { num: 1, title: "You contact us", text: "Worker or employer sends us a message with basic information." },
-                { num: 2, title: "We understand your situation", text: "We ask specific questions about the job, salary, and conditions." },
-                { num: 3, title: "Documents & visa support", text: "We help prepare invitations, contracts and visa paperwork." },
-                { num: 4, title: "Arrival & follow-up", text: "After arrival we remain available to solve problems early." }
+                { num: 1, title: "Create your profile", text: "Sign up as a worker or employer. It takes less than 2 minutes." },
+                { num: 2, title: "Upload your documents", text: "Add your passport, CV, and basic information so we can verify you." },
+                { num: 3, title: "We match you with opportunities", text: "We review your profile and connect you with suitable jobs or workers." },
+                { num: 4, title: "Visa & arrival support", text: "We help with visa documents and stay available after you start working." }
               ].map((step) => (
                 <div key={step.num} className="bg-[#f4f6fb] rounded-2xl p-6 border border-[#dde3ec]/80 hover:shadow-lg hover:border-[#2f6fed]/30 transition-all">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg flex items-center justify-center mb-4 shadow-md">
