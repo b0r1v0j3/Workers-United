@@ -101,11 +101,9 @@ export default async function EmployerDashboardPage() {
                             <span className="text-sm text-gray-600">
                                 {displayEmployer.company_name || user.email}
                             </span>
-                            <form action="/auth/signout" method="post">
-                                <button type="submit" className="text-sm text-gray-600 hover:text-gray-900">
-                                    Sign out
-                                </button>
-                            </form>
+                            <a href="/auth/signout" className="text-sm text-gray-600 hover:text-gray-900">
+                                Sign out
+                            </a>
                         </div>
                     </div>
                 </div>
