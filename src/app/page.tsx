@@ -31,20 +31,20 @@ export default async function Home() {
             {user ? (
               <Link
                 href="/dashboard"
-                className="px-4 py-2 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-semibold shadow-lg shadow-blue-500/40"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#1dbf73] to-[#17a864] text-white font-bold shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:scale-105 transition-all"
               >
-                Dashboard
+                ✓ Dashboard
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-semibold shadow-lg shadow-blue-500/40"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-semibold shadow-lg shadow-blue-500/40"
               >
                 Log In
               </Link>
             )}
           </nav>
-          {/* Mobile menu button - would need client component for toggle */}
+          {/* Mobile menu button */}
           <button className="md:hidden p-2" aria-label="Menu">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -54,74 +54,67 @@ export default async function Home() {
       </header>
 
       <main>
-        {/* Hero Section */}
-        <section className="py-10 md:py-16">
+        {/* Hero Section - Cleaner, more impactful */}
+        <section className="py-12 md:py-20">
           <div className="max-w-[1120px] mx-auto px-5">
-            <div className="grid md:grid-cols-[1.15fr_0.9fr] gap-8 md:gap-10 items-center">
+            <div className="grid md:grid-cols-[1.2fr_0.8fr] gap-10 items-center">
               {/* Left - Main Card */}
-              <div className="bg-gradient-to-br from-[#e4ebff] to-[#f9fbff] rounded-[32px] p-8 md:p-10 shadow-lg border border-[#dde3ec]/90">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/60 rounded-full text-sm text-[#2f6fed] font-medium mb-6 border border-[#2f6fed]/20">
-                  <span className="w-2 h-2 bg-[#1dbf73] rounded-full animate-pulse"></span>
-                  Safe, legal and personalised support
+              <div className="bg-gradient-to-br from-[#e4ebff] to-[#f9fbff] rounded-[32px] p-8 md:p-12 shadow-xl border border-[#dde3ec]/90">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 rounded-full text-sm text-[#2f6fed] font-semibold mb-6 border border-[#2f6fed]/20 shadow-sm">
+                  <span className="w-2.5 h-2.5 bg-[#1dbf73] rounded-full animate-pulse"></span>
+                  Safe, legal and transparent
                 </div>
-                <h1 className="text-3xl md:text-[38px] font-bold text-[#183b56] leading-tight tracking-tight mb-4">
+                <h1 className="text-4xl md:text-[44px] font-bold text-[#183b56] leading-tight tracking-tight mb-5">
                   International hiring made simple&nbsp;&amp; legal.
                 </h1>
-                <p className="text-[#6c7a89] text-lg mb-6 max-w-lg">
+                <p className="text-[#6c7a89] text-lg mb-8 max-w-lg leading-relaxed">
                   Workers United connects serious employers with reliable workers worldwide and guides both sides through
                   the full work visa process – without fake promises or hidden conditions.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row gap-4 mb-8">
                   <Link
                     href="/signup"
-                    className="px-8 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg shadow-lg shadow-blue-500/40 text-center hover:translate-y-[-2px] transition-transform"
+                    className="px-8 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg shadow-lg shadow-blue-500/40 text-center hover:translate-y-[-2px] hover:shadow-xl transition-all"
                   >
                     Create Free Account
                   </Link>
                   <Link
                     href="/login"
-                    className="px-8 py-4 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-gray-50 transition-colors"
+                    className="px-8 py-4 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-[#183b56] hover:text-white transition-all"
                   >
                     Log In
                   </Link>
                 </div>
-                <div className="flex flex-wrap gap-4 text-sm text-[#6c7a89] mb-4">
-                  <span className="flex items-center gap-1"><span className="text-green-500">✓</span> No hidden fees</span>
-                  <span className="flex items-center gap-1"><span className="text-green-500">✓</span> 90-day guarantee</span>
-                  <span className="flex items-center gap-1"><span className="text-green-500">✓</span> Real visa support</span>
+                <div className="flex flex-wrap gap-5 text-sm text-[#6c7a89]">
+                  <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> No hidden fees</span>
+                  <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> 90-day guarantee</span>
+                  <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> Real visa support</span>
                 </div>
-                <p className="text-sm text-[#6c7a89]">
-                  <strong className="text-[#183b56]">Questions?</strong> Contact us at <a href="mailto:contact@workersunited.eu" className="text-[#2f6fed] hover:underline">contact@workersunited.eu</a>
-                </p>
               </div>
 
-              {/* Right - Info Cards */}
-              <div className="space-y-5">
-                <div className="bg-white rounded-2xl p-6 shadow-md border border-[#dde3ec]/80">
-                  <h3 className="font-bold text-[#183b56] mb-4">What you can expect</h3>
-                  <ul className="space-y-3 text-sm text-[#1b2430]">
-                    <li className="flex items-start gap-3">
-                      <span className="text-[#1dbf73] font-bold">✓</span>
-                      <span>We carefully explain contracts so you know what you are really signing.</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="text-[#1dbf73] font-bold">✓</span>
-                      <span>We support the full work visa process – not only finding a job.</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="text-[#1dbf73] font-bold">✓</span>
-                      <span>We work only with employers who are ready to follow the law and treat workers fairly.</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="bg-white rounded-2xl p-6 shadow-md border border-[#dde3ec]/80">
-                  <div className="inline-block px-3 py-1 bg-[#f4f6fb] rounded-full text-xs font-semibold text-[#2f6fed] mb-3">
-                    Trusted cooperation
-                  </div>
-                  <p className="text-sm text-[#1b2430]">
-                    <strong>We talk to people, not only collect documents.</strong><br />
-                    Every worker and employer has direct contact with a real person from our team, before and after arrival.
+              {/* Right - What you can expect */}
+              <div className="bg-white rounded-2xl p-7 shadow-lg border border-[#dde3ec]/80">
+                <h3 className="font-bold text-[#183b56] text-xl mb-5">What you can expect</h3>
+                <ul className="space-y-4 text-[#1b2430]">
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#1dbf73] font-bold text-lg mt-0.5">✓</span>
+                    <span>We carefully explain contracts so you know what you are really signing.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#1dbf73] font-bold text-lg mt-0.5">✓</span>
+                    <span>We support the full work visa process – not only finding a job.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#1dbf73] font-bold text-lg mt-0.5">✓</span>
+                    <span>We work only with employers who follow the law and treat workers fairly.</span>
+                  </li>
+                </ul>
+                <div className="mt-6 pt-5 border-t border-[#dde3ec]">
+                  <p className="text-sm text-[#6c7a89]">
+                    <strong className="text-[#183b56]">Questions?</strong> Email us at{" "}
+                    <a href="mailto:contact@workersunited.eu" className="text-[#2f6fed] hover:underline font-medium">
+                      contact@workersunited.eu
+                    </a>
                   </p>
                 </div>
               </div>
@@ -129,150 +122,132 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* How It Works */}
-        <section id="how-it-works" className="py-16 md:py-20">
+        {/* How It Works - Streamlined */}
+        <section id="how-it-works" className="py-16 md:py-20 bg-white">
           <div className="max-w-[1120px] mx-auto px-5">
             <div className="text-center mb-12">
-              <div className="text-sm font-semibold text-[#2f6fed] uppercase tracking-wider mb-2">Step by step</div>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#183b56] mb-3">How Workers United process looks</h2>
-              <p className="text-[#6c7a89] max-w-xl mx-auto">
-                Clear steps for both sides – from first contact until the worker arrives and starts working.
+              <div className="inline-block px-4 py-1.5 bg-[#2f6fed]/10 rounded-full text-sm font-bold text-[#2f6fed] uppercase tracking-wider mb-3">Step by step</div>
+              <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-3">How it works</h2>
+              <p className="text-[#6c7a89] max-w-xl mx-auto text-lg">
+                Clear steps for both sides – from first contact until the worker arrives.
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { num: 1, title: "You contact us", text: "Worker or employer sends us a message with basic information. We reply personally – not with automatic messages." },
-                { num: 2, title: "We understand your situation", text: "We ask specific questions about the job, salary, accommodation and family situation, to see if everything is realistic and legal." },
-                { num: 3, title: "Documents & visa support", text: "We help prepare invitations, contracts and other paperwork for work visa. We also explain what every document means so there are no surprises." },
-                { num: 4, title: "Arrival & follow-up", text: "After arrival we remain available to both worker and employer, to solve problems early and keep cooperation stable." }
+                { num: 1, title: "You contact us", text: "Worker or employer sends us a message with basic information." },
+                { num: 2, title: "We understand your situation", text: "We ask specific questions about the job, salary, and conditions." },
+                { num: 3, title: "Documents & visa support", text: "We help prepare invitations, contracts and visa paperwork." },
+                { num: 4, title: "Arrival & follow-up", text: "After arrival we remain available to solve problems early." }
               ].map((step) => (
-                <div key={step.num} className="bg-white rounded-2xl p-6 shadow-md border border-[#dde3ec]/80">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold flex items-center justify-center mb-4">
+                <div key={step.num} className="bg-[#f4f6fb] rounded-2xl p-6 border border-[#dde3ec]/80 hover:shadow-lg hover:border-[#2f6fed]/30 transition-all">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg flex items-center justify-center mb-4 shadow-md">
                     {step.num}
                   </div>
-                  <h3 className="font-bold text-[#183b56] mb-2">{step.title}</h3>
-                  <p className="text-sm text-[#6c7a89]">{step.text}</p>
+                  <h3 className="font-bold text-[#183b56] mb-2 text-lg">{step.title}</h3>
+                  <p className="text-sm text-[#6c7a89] leading-relaxed">{step.text}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* For Workers */}
-        <section id="workers" className="py-16 md:py-20 bg-white">
+        {/* For Workers - Simplified */}
+        <section id="workers" className="py-16 md:py-20">
           <div className="max-w-[1120px] mx-auto px-5">
             <div className="grid md:grid-cols-2 gap-10 items-center">
               <div>
-                <div className="inline-block px-4 py-1.5 bg-[#f4f6fb] rounded-full text-sm font-semibold text-[#2f6fed] mb-4">
+                <div className="inline-block px-4 py-1.5 bg-[#1dbf73]/10 rounded-full text-sm font-bold text-[#1dbf73] mb-4">
                   For workers
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-[#183b56] mb-4">
-                  For workers who want a real chance, not empty promises
+                <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-5">
+                  Real opportunities, not empty promises
                 </h2>
-                <p className="text-[#6c7a89] mb-6">
-                  Many people hear big promises and nice stories, and then the reality is completely different. Our goal is to help you understand what you are signing and what you can really expect when you arrive.
+                <p className="text-[#6c7a89] mb-6 text-lg leading-relaxed">
+                  We help you understand what you are signing and what you can really expect when you arrive.
                 </p>
-                <ul className="space-y-3 text-[#1b2430]">
+                <ul className="space-y-4 text-[#1b2430]">
                   <li className="flex items-start gap-3">
-                    <span className="text-[#1dbf73] font-bold">✓</span>
-                    <span>We explain your contract and conditions in simple language – salary, working hours, days off, accommodation.</span>
+                    <span className="text-[#1dbf73] font-bold text-lg">✓</span>
+                    <span>We explain your contract in simple language – salary, working hours, accommodation.</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <span className="text-[#1dbf73] font-bold">✓</span>
-                    <span>We tell you honestly if an offer looks unrealistic or dangerous, even if that means we do not continue the process.</span>
+                    <span className="text-[#1dbf73] font-bold text-lg">✓</span>
+                    <span>We tell you honestly if an offer looks unrealistic or dangerous.</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <span className="text-[#1dbf73] font-bold">✓</span>
-                    <span>We support you with documents for work visa and give clear instructions step by step.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-[#1dbf73] font-bold">✓</span>
-                    <span>You can always ask questions before and after arrival – by call, message or email.</span>
+                    <span className="text-[#1dbf73] font-bold text-lg">✓</span>
+                    <span>We support you with documents for work visa step by step.</span>
                   </li>
                 </ul>
               </div>
-              <div className="bg-[#f4f6fb] rounded-2xl p-8 border border-[#dde3ec]/80">
-                <h3 className="font-bold text-[#183b56] mb-3">What workers usually ask us</h3>
-                <p className="text-sm text-[#6c7a89] mb-4">We most often help workers who:</p>
-                <ul className="space-y-2 text-sm text-[#1b2430] mb-6">
+              <div className="bg-gradient-to-br from-[#e8fff2] to-[#f9fffb] rounded-2xl p-8 border border-[#1dbf73]/20">
+                <h3 className="font-bold text-[#183b56] mb-4 text-lg">What workers usually ask us</h3>
+                <ul className="space-y-3 text-[#1b2430]">
                   <li className="flex items-start gap-2">
-                    <span className="text-[#6c7a89]">•</span>
-                    <span>already have an offer but are not sure if it is safe or fair;</span>
+                    <span className="text-[#1dbf73]">•</span>
+                    <span>Already have an offer but not sure if it's safe or fair</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#6c7a89]">•</span>
-                    <span>need help to understand what is written in the contract and visa documents;</span>
+                    <span className="text-[#1dbf73]">•</span>
+                    <span>Need help understanding the contract and visa documents</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#6c7a89]">•</span>
-                    <span>want someone neutral to check both the employer and the agent before they decide.</span>
+                    <span className="text-[#1dbf73]">•</span>
+                    <span>Want someone to check the employer before deciding</span>
                   </li>
                 </ul>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-[#6c7a89] border border-[#dde3ec]">Simple explanations</span>
-                  <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-[#6c7a89] border border-[#dde3ec]">Real expectations</span>
-                  <span className="px-3 py-1 bg-white rounded-full text-xs font-medium text-[#6c7a89] border border-[#dde3ec]">Support before &amp; after</span>
-                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* For Employers */}
-        <section id="employers" className="py-16 md:py-20">
+        {/* For Employers - Simplified */}
+        <section id="employers" className="py-16 md:py-20 bg-white">
           <div className="max-w-[1120px] mx-auto px-5">
             <div className="grid md:grid-cols-2 gap-10 items-center">
-              <div className="bg-white rounded-2xl p-8 shadow-md border border-[#dde3ec]/80 order-2 md:order-1">
-                <h3 className="font-bold text-[#183b56] mb-3">What serious employers get from us</h3>
-                <p className="text-sm text-[#6c7a89] mb-4">
-                  We help employers who are ready to respect the law and treat workers fairly – but do not have time or experience to manage the full process alone.
-                </p>
-                <ul className="space-y-2 text-sm text-[#1b2430] mb-6">
+              <div className="bg-gradient-to-br from-[#e4ebff] to-[#f9fbff] rounded-2xl p-8 border border-[#2f6fed]/20 order-2 md:order-1">
+                <h3 className="font-bold text-[#183b56] mb-4 text-lg">What serious employers get</h3>
+                <ul className="space-y-3 text-[#1b2430]">
                   <li className="flex items-start gap-2">
-                    <span className="text-[#1dbf73] font-bold">✓</span>
-                    <span>We speak honestly with workers so they clearly understand pay, duties and life conditions before travelling.</span>
+                    <span className="text-[#2f6fed] font-bold">✓</span>
+                    <span>Workers who understand the job before travelling</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#1dbf73] font-bold">✓</span>
-                    <span>We help prepare correct invitations, contracts and other documents for work visa applications.</span>
+                    <span className="text-[#2f6fed] font-bold">✓</span>
+                    <span>Correct documents for work visa applications</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#1dbf73] font-bold">✓</span>
-                    <span>We reduce misunderstandings and early resignations by aligning expectations on both sides.</span>
+                    <span className="text-[#2f6fed] font-bold">✓</span>
+                    <span>Less misunderstandings and early resignations</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#1dbf73] font-bold">✓</span>
-                    <span>We stay available after arrival to help solve small issues before they become big problems.</span>
+                    <span className="text-[#2f6fed] font-bold">✓</span>
+                    <span>Support after arrival to solve issues early</span>
                   </li>
                 </ul>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-[#f4f6fb] rounded-full text-xs font-medium text-[#6c7a89] border border-[#dde3ec]">Less risk</span>
-                  <span className="px-3 py-1 bg-[#f4f6fb] rounded-full text-xs font-medium text-[#6c7a89] border border-[#dde3ec]">Clear communication</span>
-                  <span className="px-3 py-1 bg-[#f4f6fb] rounded-full text-xs font-medium text-[#6c7a89] border border-[#dde3ec]">Stable cooperation</span>
-                </div>
               </div>
               <div className="order-1 md:order-2">
-                <div className="inline-block px-4 py-1.5 bg-[#f4f6fb] rounded-full text-sm font-semibold text-[#2f6fed] mb-4">
+                <div className="inline-block px-4 py-1.5 bg-[#2f6fed]/10 rounded-full text-sm font-bold text-[#2f6fed] mb-4">
                   For employers
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-[#183b56] mb-4">
-                  For employers who want stability, not only &quot;cheap labour&quot;
+                <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-5">
+                  Stability, not just "cheap labour"
                 </h2>
-                <p className="text-[#6c7a89] mb-6">
-                  Workers United is not a mass online portal. We focus on realistic offers, transparent communication and long-term cooperation, so you do not have to constantly replace staff.
+                <p className="text-[#6c7a89] mb-6 text-lg leading-relaxed">
+                  We focus on realistic offers and transparent communication, so you don't have to constantly replace staff.
                 </p>
-                <ul className="space-y-3 text-[#1b2430]">
+                <ul className="space-y-4 text-[#1b2430]">
                   <li className="flex items-start gap-3">
                     <span className="text-[#6c7a89]">•</span>
-                    <span>We speak both &quot;workers language&quot; and &quot;legal language&quot; and help connect them.</span>
+                    <span>We help connect legal requirements with worker expectations.</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#6c7a89]">•</span>
-                    <span>We are available in flexible hours, including evenings and weekends when workers can really talk.</span>
+                    <span>Available in flexible hours when workers can really talk.</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#6c7a89]">•</span>
-                    <span>We build cooperation step by step – starting from a few positions and growing together.</span>
+                    <span>We build cooperation step by step – starting small and growing.</span>
                   </li>
                 </ul>
               </div>
@@ -280,64 +255,34 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Why Choose Us */}
-        <section className="py-16 md:py-20 bg-white">
-          <div className="max-w-[1120px] mx-auto px-5">
-            <div className="text-center mb-12">
-              <div className="text-sm font-semibold text-[#2f6fed] uppercase tracking-wider mb-2">Why choose us</div>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#183b56] mb-3">What makes Workers United different</h2>
-              <p className="text-[#6c7a89] max-w-xl mx-auto">
-                We do not promise &quot;magic solutions&quot;. We focus on honest information, realistic expectations and stable cooperation.
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-3 gap-6">
-              {[
-                { title: "Real humans, not just online forms", text: "Workers and employers can speak directly with a person who understands both sides – not with a chatbot or anonymous email address." },
-                { title: "Safety before speed", text: "It is better to say \"no\" to a bad offer than to send people into problems. We prefer safe and legal processes, even if they are slower." },
-                { title: "Clear communication", text: "We explain every important detail: salary, overtime, accommodation, travel costs, paperwork – so everyone knows what to expect." }
-              ].map((item, i) => (
-                <div key={i} className="bg-[#f4f6fb] rounded-2xl p-6 border border-[#dde3ec]/80">
-                  <h3 className="font-bold text-[#183b56] mb-3">{item.title}</h3>
-                  <p className="text-sm text-[#6c7a89]">{item.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section id="faq" className="py-16 md:py-20">
-          <div className="max-w-[1120px] mx-auto px-5">
-            <div className="text-center mb-12">
-              <div className="text-sm font-semibold text-[#2f6fed] uppercase tracking-wider mb-2">Questions &amp; answers</div>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#183b56] mb-3">Frequently asked questions</h2>
-              <p className="text-[#6c7a89] max-w-xl mx-auto">
-                If you are not sure, send us a message – it is better to ask now than to regret later.
-              </p>
-            </div>
-            <div className="max-w-3xl mx-auto space-y-4">
-              {[
-                { q: "Do you charge workers hidden fees?", a: "We are against hidden fees and \"surprise payments\". Before we start any process, we explain clearly if there are any costs and who pays what – worker, employer or both." },
-                { q: "Which countries do you work with?", a: "Our focus is on employers in Europe and workers from different regions who want legal work and long-term cooperation. If your country is not sure, write to us and we will tell you honestly if we can help or not." },
-                { q: "Do I need to speak English?", a: "Basic communication is always helpful, but we understand that not everyone speaks perfect English. You may send messages in your local language, and we will do our best to understand and respond clearly." },
-                { q: "Are you a classic agency or more like an advisor?", a: "We help connect workers and employers, but also act as advisors – especially around documents, contracts and expectations. In practice, our role is to protect both sides from misunderstandings and unsafe situations." }
-              ].map((faq, i) => (
-                <details key={i} className="bg-white rounded-2xl border border-[#dde3ec]/80 overflow-hidden group">
-                  <summary className="px-6 py-4 cursor-pointer font-semibold text-[#183b56] flex items-center justify-between hover:bg-[#f4f6fb]/50 transition-colors">
-                    {faq.q}
-                    <span className="text-[#2f6fed] text-xl group-open:rotate-45 transition-transform">+</span>
-                  </summary>
-                  <div className="px-6 pb-4 text-sm text-[#6c7a89]">
-                    {faq.a}
-                  </div>
-                </details>
-              ))}
+        {/* CTA Section - New, impactful */}
+        <section className="py-16 md:py-20">
+          <div className="max-w-[800px] mx-auto px-5 text-center">
+            <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-5">
+              Ready to get started?
+            </h2>
+            <p className="text-[#6c7a89] text-lg mb-8">
+              Create a free account and let us help you with legal work opportunities.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/signup"
+                className="px-10 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg shadow-lg shadow-blue-500/40 hover:translate-y-[-2px] hover:shadow-xl transition-all"
+              >
+                Create Free Account
+              </Link>
+              <a
+                href="mailto:contact@workersunited.eu"
+                className="px-10 py-4 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg hover:bg-[#183b56] hover:text-white transition-all"
+              >
+                Contact Us
+              </a>
             </div>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
+      {/* Footer - Cleaner */}
       <footer className="bg-[#183b56] text-white py-10">
         <div className="max-w-[1120px] mx-auto px-5">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -356,9 +301,6 @@ export default async function Home() {
                 contact@workersunited.eu
               </a>
             </div>
-          </div>
-          <div className="mt-8 pt-6 border-t border-white/10 text-center text-sm text-gray-400">
-            Safe • Legal • Transparent
           </div>
         </div>
 
