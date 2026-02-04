@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isGodModeUser } from "@/lib/godmode";
 
 export default async function AdminJobsPage() {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
+
+    const isOwner = isGodModeUser(user.email);
 
     // Check admin access
     const { data: profile } = await supabase
@@ -15,7 +18,7 @@ export default async function AdminJobsPage() {
         .eq("id", user.id)
         .single();
 
-    if (profile?.user_type !== "admin") {
+    if (profile?.user_type !== "admin" && !isOwner) {
         redirect("/dashboard");
     }
 

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { markRefunded } from "@/app/actions/admin";
+import { isGodModeUser } from "@/lib/godmode";
 
 export default async function CandidatesPage() {
     const supabase = await createClient();
@@ -9,13 +10,15 @@ export default async function CandidatesPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
+    const isOwner = isGodModeUser(user.email);
+
     const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
 
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && !isOwner) {
         redirect("/dashboard");
     }
 
