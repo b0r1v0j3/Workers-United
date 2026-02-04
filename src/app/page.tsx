@@ -24,7 +24,7 @@ export default async function Home() {
             <Image src="/logo.png" alt="Workers United logo" width={64} height={64} className="rounded" />
             <span className="font-bold text-xl text-[#183b56]">Workers United</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm text-[#6c7a89]">
+          <nav className="hidden md:flex items-center gap-6 text-sm text-[#183b56] font-medium">
             <Link href="#how-it-works" className="hover:text-[#183b56] transition-colors">How it works</Link>
             <Link href="#workers" className="hover:text-[#183b56] transition-colors">For workers</Link>
             <Link href="#employers" className="hover:text-[#183b56] transition-colors">For employers</Link>
@@ -82,7 +82,7 @@ export default async function Home() {
               </Link>
               <Link
                 href="/login"
-                className="px-10 py-5 rounded-full bg-gradient-to-r from-[#1c4dd6] to-[#183b56] text-white font-bold text-lg shadow-sm text-center hover:opacity-90 transition-all"
+                className="px-10 py-5 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-[#183b56] hover:text-white transition-all"
               >
                 Log In
               </Link>
