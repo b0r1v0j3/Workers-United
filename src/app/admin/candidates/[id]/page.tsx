@@ -374,11 +374,6 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                     <button
                                                         type="submit"
                                                         className="bg-red-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-red-600 transition-colors"
-                                                        onClick={(e) => {
-                                                            if (!confirm("Are you sure you want to delete this document?")) {
-                                                                e.preventDefault();
-                                                            }
-                                                        }}
                                                     >
                                                         🗑️ Delete Document
                                                     </button>
