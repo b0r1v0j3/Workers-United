@@ -21,7 +21,7 @@ export default async function Home() {
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#f4f6fb]/90 border-b border-[#dde3ec]/70">
         <div className="max-w-[1120px] mx-auto px-5 py-3.5 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Workers United logo" width={56} height={56} className="rounded" />
+            <Image src="/logo.png" alt="Workers United logo" width={64} height={64} className="rounded" />
             <span className="font-bold text-xl text-[#183b56]">Workers United</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm text-[#6c7a89]">

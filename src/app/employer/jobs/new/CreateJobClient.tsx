@@ -141,7 +141,7 @@ export default function CreateJobClient() {
                             <span className="font-medium">Back to Dashboard</span>
                         </Link>
                         <div className="flex items-center gap-2">
-                            <img src="/logo.png" alt="Workers United" width={56} height={56} style={{ borderRadius: '4px' }} />
+                            <img src="/logo.png" alt="Workers United" width={64} height={64} style={{ borderRadius: '4px' }} />
                             <span className="font-bold text-[#183b56]">Workers United</span>
                         </div>
                     </div>
