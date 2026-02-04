@@ -1,32 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
-    try {
-        // Clear all Supabase cookies manually
-        const response = NextResponse.redirect(new URL("/", request.url));
+export const dynamic = "force-dynamic";
 
-        // Delete auth cookies
-        response.cookies.delete("sb-access-token");
-        response.cookies.delete("sb-refresh-token");
-        response.cookies.delete("admin_role");
+export async function GET() {
+    const response = NextResponse.redirect("https://www.workersunited.eu/");
 
-        // Also try the project-specific cookie names
-        const cookies = request.cookies.getAll();
-        cookies.forEach(cookie => {
-            if (cookie.name.includes("supabase") || cookie.name.includes("sb-")) {
-                response.cookies.delete(cookie.name);
-            }
-        });
+    // Clear common auth cookies
+    response.cookies.set("sb-access-token", "", { path: "/", maxAge: 0 });
+    response.cookies.set("sb-refresh-token", "", { path: "/", maxAge: 0 });
+    response.cookies.set("admin_role", "", { path: "/", maxAge: 0 });
 
-        return response;
-    } catch (error: any) {
-        return NextResponse.json({
-            error: error.message,
-            stack: error.stack
-        }, { status: 500 });
-    }
+    return response;
 }
 
-export async function POST(request: NextRequest) {
-    return GET(request);
+export async function POST() {
+    return GET();
 }
