@@ -345,31 +345,20 @@ export default async function DashboardPage() {
                 {/* Payment Card (if ready but not in queue) */}
                 {isReady && !inQueue && (
                     <div className="mb-8">
-                        <div className="bg-white rounded-xl p-8 shadow-sm border-2 border-green-300 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 bg-green-500 text-white px-4 py-1 text-[11px] font-bold uppercase tracking-widest rounded-bl-lg">
-                                ✓ Ready
+                        <div className="bg-white rounded-xl p-8 shadow-sm border-2 border-amber-300 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 bg-amber-500 text-white px-4 py-1 text-[11px] font-bold uppercase tracking-widest rounded-bl-lg">
+                                🚧 Coming Soon
                             </div>
 
                             <h2 className="text-xl font-bold text-[#183b56] mb-2">Activate Job Search</h2>
-                            <p className="text-gray-600 text-[14px] leading-relaxed mb-6">
-                                Your documents are verified! Pay the one-time fee to enter our job matching queue.
+                            <p className="text-gray-600 text-[14px] leading-relaxed mb-4">
+                                Your documents are verified! This feature will be available soon.
                                 <br />
-                                <span className="font-semibold text-[#183b56]">90-day money-back guarantee if no job is found.</span>
+                                <span className="font-semibold text-[#183b56]">We&apos;ll notify you when job matching is ready.</span>
                             </p>
 
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="text-[#183b56]">
-                                    <span className="text-3xl font-bold">$9</span>
-                                    <span className="text-sm text-gray-500 font-medium ml-1">one-time</span>
-                                </div>
-
-                                {process.env.PAYMENTS_ENABLED === "true" && process.env.STRIPE_SECRET_KEY && process.env.STRIPE_ENTRY_FEE_PRICE_ID && (
-                                    <form action={createCheckoutSession}>
-                                        <button className="bg-gradient-to-r from-[#2f6fed] to-[#10b981] text-white px-8 py-3 rounded-full font-bold text-sm hover:opacity-90 transition-all transform hover:-translate-y-0.5 shadow-lg">
-                                            Start Job Search →
-                                        </button>
-                                    </form>
-                                )}
+                            <div className="text-[#64748b] text-sm">
+                                ⏳ Stay tuned - we&apos;re working on connecting you with employers!
                             </div>
                         </div>
                     </div>
