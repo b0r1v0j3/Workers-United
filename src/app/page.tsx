@@ -100,7 +100,7 @@ export default async function Home() {
                 <ul className="space-y-4 text-[#1b2430]">
                   <li className="flex items-start gap-3">
                     <span className="text-[#1dbf73] font-bold text-lg mt-0.5">✓</span>
-                    <span>We carefully explain contracts so you know what you are really signing.</span>
+                    <span>We connect you only with verified, serious employers – no scams.</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#1dbf73] font-bold text-lg mt-0.5">✓</span>
