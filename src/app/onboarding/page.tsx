@@ -367,11 +367,16 @@ export default function OnboardingPage() {
 
             // Sync phone to Supabase Auth for WhatsApp integration
             const fullPhone = getFullPhone();
-            if (fullPhone) {
-                await supabase.auth.updateUser({
-                    phone: fullPhone
-                });
-            }
+            const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+
+            await supabase.auth.updateUser({
+                phone: fullPhone || undefined,
+                data: {
+                    full_name: fullName,
+                    first_name: formData.firstName,
+                    last_name: formData.lastName
+                }
+            });
 
             return true;
         } catch (err: any) {
