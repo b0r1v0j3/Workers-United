@@ -86,7 +86,7 @@ export default async function CandidatesPage() {
             <nav className="bg-[#183b56] px-5 py-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
                 <div className="flex items-center gap-4">
                     <Link href="/admin" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <img src="/logo.png" alt="Workers United" width={48} height={48} className="brightness-0 invert rounded" />
+                        <img src="/logo.png" alt="Workers United" width={56} height={56} className="brightness-0 invert rounded" />
                         <span className="font-bold text-white text-lg">Admin Portal</span>
                     </Link>
                     <span className="text-gray-400">/</span>
