@@ -20,9 +20,9 @@ export default async function Home() {
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#f4f6fb]/90 border-b border-[#dde3ec]/70">
         <div className="max-w-[1120px] mx-auto px-5 py-3.5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="Workers United logo" width={36} height={36} className="rounded" />
-            <span className="font-bold text-lg text-[#183b56]">Workers United</span>
+          <Link href="/" className="flex items-center gap-3">
+            <Image src="/logo.png" alt="Workers United logo" width={48} height={48} className="rounded" />
+            <span className="font-bold text-xl text-[#183b56]">Workers United</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm text-[#6c7a89]">
             <Link href="#how-it-works" className="hover:text-[#183b56] transition-colors">How it works</Link>
@@ -68,7 +68,7 @@ export default async function Home() {
                   International hiring made simple&nbsp;&amp; legal.
                 </h1>
                 <p className="text-[#6c7a89] text-lg mb-8 max-w-lg leading-relaxed">
-                  Workers United connects serious employers with reliable workers worldwide and guides both sides through
+                  Workers United connects serious employers with reliable workers and guides both sides through
                   the full work visa process – without fake promises or hidden conditions.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -284,15 +284,16 @@ export default async function Home() {
 
       {/* Footer - Cleaner */}
       <footer className="bg-[#183b56] text-white py-10">
-        <div className="max-w-[1120px] mx-auto px-5">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="text-center md:text-left">
+        <div className="max-w-[1120px] mx-auto px-5 pb-16">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+            <div className="text-left">
               <div className="text-sm text-gray-300 mb-2">© {new Date().getFullYear()} Workers United. All rights reserved.</div>
               <div className="text-sm text-gray-400">
-                <strong>Workers United LLC</strong> · 75 E 3rd St., Sheridan, Wyoming 82801, USA
+                <strong>Workers United LLC</strong><br />
+                75 E 3rd St., Sheridan, Wyoming 82801, USA
               </div>
             </div>
-            <div className="flex flex-col items-center md:items-end gap-3">
+            <div className="flex flex-col items-start md:items-end gap-3">
               <div className="flex gap-4 text-sm">
                 <Link href="/privacy-policy" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</Link>
                 <Link href="/terms" className="text-gray-300 hover:text-white transition-colors">Terms and Conditions</Link>
