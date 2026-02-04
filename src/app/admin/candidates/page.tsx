@@ -25,11 +25,15 @@ export default async function CandidatesPage() {
 
     // Use admin client (service role) that bypasses RLS for data queries
     let adminClient;
+    let usingServiceRole = false;
+    let clientError = "";
     try {
         adminClient = createAdminClient();
-    } catch {
+        usingServiceRole = true;
+    } catch (err: any) {
         // Fallback to regular client if service role key not configured
-        console.warn("Service role key not configured, using regular client");
+        clientError = err?.message || "Unknown error";
+        console.warn("Service role key not configured, using regular client:", err);
         adminClient = supabase;
     }
 
@@ -100,6 +104,16 @@ export default async function CandidatesPage() {
                     </form>
                 </div>
             </nav>
+
+            {/* Debug Banner - Remove after debugging */}
+            <div className="bg-yellow-100 border-b border-yellow-300 px-5 py-3 text-sm">
+                <strong>DEBUG:</strong>{" "}
+                Service Role: <span className={usingServiceRole ? "text-green-700" : "text-red-700"}>{usingServiceRole ? "YES ✓" : "NO ✗"}</span>{" "}
+                | Candidates found: <strong>{candidates?.length ?? 0}</strong>{" "}
+                | Profiles found: <strong>{profiles?.length ?? 0}</strong>{" "}
+                {candidatesError && <span className="text-red-600">| Error: {candidatesError.message}</span>}
+                {clientError && <span className="text-red-600">| Client Error: {clientError}</span>}
+            </div>
 
             <div className="max-w-[1400px] mx-auto px-5 py-10">
                 <div className="mb-8 flex justify-between items-end">
