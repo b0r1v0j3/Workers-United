@@ -24,7 +24,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             >
                 <div className="max-w-md text-center text-white">
                     <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold mb-8">
-                        <img src="/logo.png" alt="Workers United" width={40} height={40} style={{ borderRadius: '4px' }} />
+                        <img src="/logo.png" alt="Workers United" width={48} height={48} className="rounded" />
                         Workers United
                     </Link>
 
@@ -81,7 +81,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     {/* Mobile logo */}
                     <div className="lg:hidden text-center mb-8">
                         <Link href="/" className="inline-flex items-center gap-2 text-xl font-bold text-gray-900">
-                            <img src="/logo.png" alt="Workers United" width={32} height={32} style={{ borderRadius: '4px' }} />
+                            <img src="/logo.png" alt="Workers United" width={48} height={48} className="rounded" />
                             Workers United
                         </Link>
                     </div>
