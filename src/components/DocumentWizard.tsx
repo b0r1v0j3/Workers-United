@@ -307,8 +307,8 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         <div className="flex items-center gap-3">
                             <div className="text-2xl">🎓</div>
                             <div>
-                                <div className="font-semibold text-[#183b56]">Diploma / Certificate</div>
-                                <div className="text-xs text-[#64748b]">Optional - education or training</div>
+                                <div className="font-semibold text-[#183b56]">Diploma / Certificate *</div>
+                                <div className="text-xs text-[#64748b]">Education or training certificate</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
