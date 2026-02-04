@@ -55,8 +55,10 @@ export default async function DashboardPage() {
         return doc?.status || "missing";
     };
 
-    const isReady = readiness?.is_ready || false;
-    const verifiedCount = readiness?.verified_docs_count || 0;
+    // Calculate verified count from actual documents
+    const verifiedDocs = documents?.filter(d => d.status === 'verified') || [];
+    const verifiedCount = verifiedDocs.length;
+    const isReady = verifiedCount >= 3; // passport, photo, diploma
     const inQueue = candidate?.status === "IN_QUEUE";
     const hasPendingOffer = pendingOffers && pendingOffers.length > 0;
     const isOwner = isGodModeUser(user.email);
