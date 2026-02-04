@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { markRefunded } from "@/app/actions/admin";
 import { isGodModeUser } from "@/lib/godmode";
 
@@ -22,8 +23,18 @@ export default async function CandidatesPage() {
         redirect("/dashboard");
     }
 
-    // Fetch all candidates
-    const { data: candidates, error: candidatesError } = await supabase
+    // Use admin client (service role) that bypasses RLS for data queries
+    let adminClient;
+    try {
+        adminClient = createAdminClient();
+    } catch {
+        // Fallback to regular client if service role key not configured
+        console.warn("Service role key not configured, using regular client");
+        adminClient = supabase;
+    }
+
+    // Fetch all candidates using admin client
+    const { data: candidates, error: candidatesError } = await adminClient
         .from("candidates")
         .select(`
             id,
@@ -40,10 +51,10 @@ export default async function CandidatesPage() {
         `)
         .order("created_at", { ascending: false });
 
-    console.log("Candidates query result:", { candidates, candidatesError });
+    console.log("Candidates query result:", { candidatesCount: candidates?.length, candidatesError });
 
     // Fetch all profiles for candidate lookup
-    const { data: profiles } = await supabase
+    const { data: profiles } = await adminClient
         .from("profiles")
         .select("id, email, full_name");
 
@@ -51,13 +62,13 @@ export default async function CandidatesPage() {
     const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
     // Fetch payments to check paid status
-    const { data: payments } = await supabase
+    const { data: payments } = await adminClient
         .from("payments")
         .select("user_id, status, created_at")
         .eq("status", "completed");
 
     // Fetch all document statuses to show per-doc details
-    const { data: allDocs } = await supabase
+    const { data: allDocs } = await adminClient
         .from("candidate_documents")
         .select("user_id, document_type, status");
 
