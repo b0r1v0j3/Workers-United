@@ -82,7 +82,7 @@ export default async function Home() {
               </Link>
               <Link
                 href="/login"
-                className="px-10 py-5 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-[#183b56] hover:text-white transition-all"
+                className="px-10 py-5 rounded-full bg-gradient-to-r from-[#1c4dd6] to-[#183b56] text-white font-bold text-lg shadow-sm text-center hover:opacity-90 transition-all"
               >
                 Log In
               </Link>
