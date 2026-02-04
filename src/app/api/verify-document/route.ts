@@ -162,15 +162,33 @@ export async function POST(request: Request) {
         }
 
         // 5. Update database with results (only for verified/manual_review)
+        const updateData: Record<string, unknown> = {
+            status: status,
+            ocr_json: ocrJson,
+            reject_reason: rejectReason,
+            verified_at: status === 'verified' ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+        };
+
+        // Save structured extracted data for passport
+        if (docType === 'passport' && ocrJson && status === 'verified') {
+            updateData.extracted_data = {
+                full_name: ocrJson.full_name || '',
+                surname: ocrJson.surname || '',
+                given_names: ocrJson.given_names || '',
+                nationality: ocrJson.nationality || '',
+                date_of_birth: ocrJson.date_of_birth || '',
+                passport_number: ocrJson.passport_number || '',
+                expiry_date: ocrJson.expiry_date || '',
+                gender: ocrJson.gender || '',
+                place_of_birth: ocrJson.place_of_birth || '',
+                extracted_at: new Date().toISOString()
+            };
+        }
+
         const { error: updateError } = await supabase
             .from("candidate_documents")
-            .update({
-                status: status,
-                ocr_json: ocrJson,
-                reject_reason: rejectReason,
-                verified_at: status === 'verified' ? new Date().toISOString() : null,
-                updated_at: new Date().toISOString()
-            })
+            .update(updateData)
             .eq("user_id", candidateId)
             .eq("document_type", docType);
 
