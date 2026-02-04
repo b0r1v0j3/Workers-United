@@ -61,8 +61,10 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
 
                 setUploads(updates);
 
-                // Check if required docs are verified
-                if (updates.passport?.status === 'verified' && updates.biometric_photo?.status === 'verified') {
+                // Check if ALL required docs are verified (passport, biometric_photo, AND diploma)
+                if (updates.passport?.status === 'verified' &&
+                    updates.biometric_photo?.status === 'verified' &&
+                    updates.diploma?.status === 'verified') {
                     setIsComplete(true);
                 }
             }
@@ -134,8 +136,10 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         }
                     };
 
-                    // Check if complete
-                    if (newUploads.passport?.status === 'verified' && newUploads.biometric_photo?.status === 'verified') {
+                    // Check if ALL required docs are verified
+                    if (newUploads.passport?.status === 'verified' &&
+                        newUploads.biometric_photo?.status === 'verified' &&
+                        newUploads.diploma?.status === 'verified') {
                         setIsComplete(true);
                     }
 
