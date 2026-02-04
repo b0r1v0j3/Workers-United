@@ -153,15 +153,23 @@ export default async function CandidatesPage() {
                                                 </Link>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <div className="flex gap-2 mb-2">
-                                                    {['passport', 'photo', 'diploma'].map(type => (
-                                                        <span key={type} className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${getDocStatus(candidate.profile_id, type) === 'verified' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                            getDocStatus(candidate.profile_id, type) === 'verifying' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                                                                'bg-gray-100 text-gray-500 border border-gray-200'
-                                                            }`}>
-                                                            {type.charAt(0)}: {getDocStatus(candidate.profile_id, type)}
-                                                        </span>
-                                                    ))}
+                                                <div className="flex gap-2 mb-2 flex-wrap">
+                                                    {[
+                                                        { type: 'passport', label: '🛂 Pas' },
+                                                        { type: 'biometric_photo', label: '📷 Foto' },
+                                                        { type: 'diploma', label: '🎓 Dip' }
+                                                    ].map(({ type, label }) => {
+                                                        const status = getDocStatus(candidate.profile_id, type);
+                                                        return (
+                                                            <span key={type} className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${status === 'verified' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                                                    status === 'verifying' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                                                                        status === 'manual_review' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                                                            'bg-gray-100 text-gray-500 border border-gray-200'
+                                                                }`}>
+                                                                {label}: {status === 'verified' ? '✓' : status === 'missing' ? '✗' : status.substring(0, 3)}
+                                                            </span>
+                                                        );
+                                                    })}
                                                 </div>
                                                 <div className="text-[12px] font-medium text-[#64748b]">
                                                     {verifiedDocsCount}/3 Verified
