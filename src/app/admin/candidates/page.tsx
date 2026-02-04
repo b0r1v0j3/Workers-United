@@ -96,7 +96,7 @@ export default async function CandidatesPage() {
                     <div className="bg-[#2f6fed] text-white px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">
                         God Mode
                     </div>
-                    <a href="/auth/signout" className="text-gray-300 text-sm font-semibold hover:text-white transition-colors">
+                    <a href="/auth/signout" className="text-sm font-semibold hover:opacity-80 transition-colors" style={{ color: 'white' }}>
                         Logout
                     </a>
                 </div>
