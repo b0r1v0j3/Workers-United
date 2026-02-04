@@ -250,7 +250,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                             {doc.storage_path && (
                                                 <div className="mb-4 bg-[#f8fafc] rounded-lg p-4 border border-[#dde3ec]">
                                                     <a
-                                                        href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${doc.storage_path}`}
+                                                        href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="text-[#2f6fed] font-semibold hover:underline"
