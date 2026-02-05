@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 
 export default async function AdminDashboard() {
@@ -21,34 +22,56 @@ export default async function AdminDashboard() {
         redirect("/profile");
     }
 
-    // Fetch stats
-    const { count: candidatesCount } = await supabase
+    // Use admin client for stats (bypasses RLS)
+    let adminClient;
+    try {
+        adminClient = createAdminClient();
+    } catch {
+        adminClient = supabase;
+    }
+
+    // Fetch stats using admin client
+    const { count: candidatesCount } = await adminClient
         .from("candidates")
         .select("*", { count: "exact", head: true });
 
-    const { count: employersCount } = await supabase
+    const { count: employersCount } = await adminClient
         .from("employers")
         .select("*", { count: "exact", head: true });
 
-    const { count: pendingDocsCount } = await supabase
+    const { count: pendingDocsCount } = await adminClient
         .from("candidate_documents")
         .select("*", { count: "exact", head: true })
         .eq("status", "verifying");
 
-    const { count: verifiedDocsCount } = await supabase
+    const { count: verifiedDocsCount } = await adminClient
         .from("candidate_documents")
         .select("*", { count: "exact", head: true })
         .eq("status", "verified");
 
-    // Fetch recent candidates
-    const { data: recentCandidates } = await supabase
-        .from("admin_candidate_full_overview")
-        .select("user_id, full_name, email, created_at, paid_at")
+    // Fetch recent candidates - use candidates table directly
+    const { data: candidates } = await adminClient
+        .from("candidates")
+        .select("profile_id, status, created_at")
         .order("created_at", { ascending: false })
         .limit(5);
 
+    // Get profiles for candidates
+    const { data: profiles } = await adminClient
+        .from("profiles")
+        .select("id, full_name, email");
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+    const recentCandidates = candidates?.map(c => ({
+        user_id: c.profile_id,
+        full_name: profileMap.get(c.profile_id)?.full_name,
+        email: profileMap.get(c.profile_id)?.email,
+        status: c.status,
+        created_at: c.created_at
+    })) || [];
+
     // Fetch recent employers
-    const { data: recentEmployers } = await supabase
+    const { data: recentEmployers } = await adminClient
         .from("employers")
         .select("id, company_name, workers_needed, created_at")
         .order("created_at", { ascending: false })
@@ -113,9 +136,9 @@ export default async function AdminDashboard() {
                                             <p className="font-medium text-gray-900 text-[15px]">{c.full_name || "Unknown"}</p>
                                             <p className="text-[13px] text-gray-500">{c.email}</p>
                                         </div>
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.paid_at ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === "verified" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
                                             }`}>
-                                            {c.paid_at ? "Paid" : "Unpaid"}
+                                            {c.status || "pending"}
                                         </span>
                                     </div>
                                 ))}
