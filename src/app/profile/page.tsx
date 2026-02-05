@@ -29,9 +29,9 @@ export default async function ProfilePage() {
             .eq("profile_id", user.id)
             .single();
 
-        // Get documents
+        // Get documents from candidate_documents table
         const { data: documents } = await supabase
-            .from("documents")
+            .from("candidate_documents")
             .select("*")
             .eq("user_id", user.id);
 
