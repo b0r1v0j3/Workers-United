@@ -86,15 +86,14 @@ export async function POST(request: NextRequest) {
                     await supabase.from("employers").insert({
                         profile_id: user.id,
                         company_name: "Test Company",
-                        pib: "123456789",
-                        registration_number: "987654321",
-                        company_address: "Test Address 123",
-                        accommodation_address: "Worker Housing 456",
-                        contact_phone: "+381612345678",
-                        contact_person: "Test Owner",
-                        status: "ACTIVE"
+                        status: "pending"
                     });
                 }
+
+                // Update user_metadata in auth
+                await supabase.auth.updateUser({
+                    data: { user_type: "employer" }
+                });
 
                 // Update profile to employer
                 await supabase
@@ -117,6 +116,11 @@ export async function POST(request: NextRequest) {
                         status: "NEW"
                     });
                 }
+
+                // Update user_metadata in auth
+                await supabase.auth.updateUser({
+                    data: { user_type: "candidate" }
+                });
 
                 // Update profile to candidate
                 await supabase
