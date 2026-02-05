@@ -22,8 +22,8 @@ export async function GET(request: Request) {
             if (user) {
                 const userType = user.user_metadata?.user_type;
 
-                // Create employer record if needed
                 if (userType === 'employer') {
+                    // Create employer record if needed
                     const { data: employer } = await supabase
                         .from('employers')
                         .select('id')
@@ -37,13 +37,16 @@ export async function GET(request: Request) {
                             status: 'pending'
                         });
                     }
-                }
 
-                // Everyone goes to /profile
-                return NextResponse.redirect(`${origin}/profile`);
+                    // Employers go to /profile
+                    return NextResponse.redirect(`${origin}/profile`);
+                } else {
+                    // Workers go to /dashboard (old working page)
+                    return NextResponse.redirect(`${origin}/dashboard`);
+                }
             }
 
-            return NextResponse.redirect(`${origin}/profile`);
+            return NextResponse.redirect(`${origin}/dashboard`);
         }
     }
 
