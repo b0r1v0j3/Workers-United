@@ -1,7 +1,5 @@
-import EmployerProfileClient from "./EmployerProfileClient";
-
-export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
 
 export default function EmployerProfilePage() {
-    return <EmployerProfileClient />;
+    redirect("/profile");
 }
