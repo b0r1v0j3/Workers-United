@@ -34,8 +34,12 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
             });
 
             if (response.ok) {
-                // Redirect to profile after switching
-                window.location.href = "/profile";
+                // Redirect based on role
+                if (action === "switch_to_employer") {
+                    window.location.href = "/profile";
+                } else {
+                    window.location.href = "/dashboard";
+                }
             }
         } finally {
             setLoading(false);
@@ -88,8 +92,8 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                                         key={role.key}
                                         href={role.href}
                                         className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentRole === role.key
-                                                ? "bg-purple-100 text-purple-700"
-                                                : "hover:bg-gray-100 text-gray-700"
+                                            ? "bg-purple-100 text-purple-700"
+                                            : "hover:bg-gray-100 text-gray-700"
                                             }`}
                                     >
                                         {role.label}
@@ -101,8 +105,8 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                                         onClick={() => handleRoleSwitch(role.action!)}
                                         disabled={loading || currentRole === role.key}
                                         className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentRole === role.key
-                                                ? "bg-purple-100 text-purple-700"
-                                                : "hover:bg-gray-100 text-gray-700"
+                                            ? "bg-purple-100 text-purple-700"
+                                            : "hover:bg-gray-100 text-gray-700"
                                             } disabled:opacity-50`}
                                     >
                                         {role.label}
