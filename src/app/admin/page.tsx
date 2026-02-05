@@ -30,10 +30,12 @@ export default async function AdminDashboard() {
         adminClient = supabase;
     }
 
-    // Fetch stats using admin client
-    const { count: candidatesCount } = await adminClient
-        .from("candidates")
-        .select("*", { count: "exact", head: true });
+    // Fetch ALL auth users for accurate count
+    const { data: authData } = await adminClient.auth.admin.listUsers();
+    const allAuthUsers = authData?.users || [];
+    const candidatesCount = allAuthUsers.filter((u: any) =>
+        u.user_metadata?.user_type !== 'employer'
+    ).length;
 
     const { count: employersCount } = await adminClient
         .from("employers")
@@ -49,26 +51,24 @@ export default async function AdminDashboard() {
         .select("*", { count: "exact", head: true })
         .eq("status", "verified");
 
-    // Fetch recent candidates - use candidates table directly
-    const { data: candidates } = await adminClient
-        .from("candidates")
-        .select("profile_id, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-    // Get profiles for candidates
+    // Get profiles for recent display
     const { data: profiles } = await adminClient
         .from("profiles")
         .select("id, full_name, email");
 
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-    const recentCandidates = candidates?.map(c => ({
-        user_id: c.profile_id,
-        full_name: profileMap.get(c.profile_id)?.full_name,
-        email: profileMap.get(c.profile_id)?.email,
-        status: c.status,
-        created_at: c.created_at
-    })) || [];
+    const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
+
+    // Recent candidates from auth users (excluding employers)
+    const recentCandidates = allAuthUsers
+        .filter((u: any) => u.user_metadata?.user_type !== 'employer')
+        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5)
+        .map((u: any) => ({
+            user_id: u.id,
+            full_name: profileMap.get(u.id)?.full_name || u.user_metadata?.full_name || "Unknown",
+            email: u.email,
+            created_at: u.created_at
+        }));
 
     // Fetch recent employers
     const { data: recentEmployers } = await adminClient
