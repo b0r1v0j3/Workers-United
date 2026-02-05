@@ -98,9 +98,10 @@ export default function ProfileClient({
     const getDocStatus = (type: string) => {
         const doc = documents.find(d => d.document_type === type);
         if (!doc) return { status: "missing", label: "Not uploaded", color: "gray" };
-        if (doc.verification_status === "verified") return { status: "verified", label: "Verified", color: "green" };
-        if (doc.verification_status === "rejected") return { status: "rejected", label: "Rejected", color: "red" };
-        return { status: "pending", label: "Pending review", color: "amber" };
+        if (doc.status === "verified") return { status: "verified", label: "Verified", color: "green" };
+        if (doc.status === "rejected") return { status: "rejected", label: "Rejected", color: "red" };
+        if (doc.status === "verifying") return { status: "verifying", label: "Verifying...", color: "amber" };
+        return { status: "uploaded", label: "Uploaded", color: "blue" };
     };
 
     return (
@@ -284,8 +285,8 @@ export default function ProfileClient({
                                                 <p className="text-sm text-gray-500">{offer.position || "Worker position"}</p>
                                             </div>
                                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${offer.status === "accepted" ? "bg-green-100 text-green-700" :
-                                                    offer.status === "rejected" ? "bg-red-100 text-red-700" :
-                                                        "bg-amber-100 text-amber-700"
+                                                offer.status === "rejected" ? "bg-red-100 text-red-700" :
+                                                    "bg-amber-100 text-amber-700"
                                                 }`}>
                                                 {offer.status}
                                             </span>
@@ -309,8 +310,8 @@ function Card({ title, badge, children }: { title: string; badge?: string; child
                 <h2 className="font-semibold text-gray-900 text-[15px]">{title}</h2>
                 {badge && (
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge === "verified" || badge === "active" ? "bg-green-100 text-green-700" :
-                            badge === "rejected" ? "bg-red-100 text-red-700" :
-                                "bg-amber-100 text-amber-700"
+                        badge === "rejected" ? "bg-red-100 text-red-700" :
+                            "bg-amber-100 text-amber-700"
                         }`}>
                         {badge.toUpperCase()}
                     </span>
@@ -365,6 +366,7 @@ function DocRow({ label, status }: { label: string; status: { label: string; col
         green: "bg-green-100 text-green-700",
         red: "bg-red-100 text-red-700",
         amber: "bg-amber-100 text-amber-700",
+        blue: "bg-blue-100 text-blue-700",
         gray: "bg-gray-100 text-gray-600"
     };
     return (
