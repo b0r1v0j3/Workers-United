@@ -193,18 +193,14 @@ export default async function CandidatesPage() {
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="flex gap-2">
-                                                    {hasCandidate && (
-                                                        <Link
-                                                            href={`/admin/candidates/${authUser.id}`}
-                                                            className="bg-[#2f6fed] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#1e5cd6] transition-colors"
-                                                            style={{ color: 'white' }}
-                                                        >
-                                                            View
-                                                        </Link>
-                                                    )}
-                                                    {!isCurrentUser && (
-                                                        <DeleteUserButton userId={authUser.id} userName={profile?.full_name || authUser.email} />
-                                                    )}
+                                                    <Link
+                                                        href={`/admin/candidates/${authUser.id}`}
+                                                        className="bg-[#2f6fed] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#1e5cd6] transition-colors"
+                                                        style={{ color: 'white' }}
+                                                    >
+                                                        View
+                                                    </Link>
+                                                    <DeleteUserButton userId={authUser.id} userName={profile?.full_name || authUser.email} />
                                                 </div>
                                             </td>
                                         </tr>
