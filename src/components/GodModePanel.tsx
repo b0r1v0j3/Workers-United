@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 interface GodModePanelProps {
@@ -10,10 +9,11 @@ interface GodModePanelProps {
 
 export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const roles = [
-        { key: "candidate", label: "👤 Worker Dashboard", href: "/dashboard" },
-        { key: "employer", label: "🏢 Employer Dashboard", href: "/employer/dashboard" },
+        { key: "candidate", label: "👤 Worker Dashboard", action: "switch_to_candidate" },
+        { key: "employer", label: "🏢 Employer Dashboard", action: "switch_to_employer" },
         { key: "admin", label: "⚡ Admin Panel", href: "/admin" },
     ];
 
@@ -24,15 +24,38 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
         { label: "Reset Profile", action: "reset" },
     ];
 
-    const handleQuickAction = async (action: string) => {
-        const response = await fetch("/api/godmode", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action }),
-        });
+    const handleRoleSwitch = async (action: string) => {
+        setLoading(true);
+        try {
+            const response = await fetch("/api/godmode", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action }),
+            });
 
-        if (response.ok) {
-            window.location.reload();
+            if (response.ok) {
+                // Redirect to profile after switching
+                window.location.href = "/profile";
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleQuickAction = async (action: string) => {
+        setLoading(true);
+        try {
+            const response = await fetch("/api/godmode", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action }),
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -60,17 +83,32 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                         <div className="text-xs text-gray-500 uppercase font-bold mb-2">Switch Role</div>
                         <div className="space-y-2">
                             {roles.map((role) => (
-                                <Link
-                                    key={role.key}
-                                    href={role.href}
-                                    className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentRole === role.key
-                                            ? "bg-purple-100 text-purple-700"
-                                            : "hover:bg-gray-100 text-gray-700"
-                                        }`}
-                                >
-                                    {role.label}
-                                    {currentRole === role.key && " ✓"}
-                                </Link>
+                                role.href ? (
+                                    <a
+                                        key={role.key}
+                                        href={role.href}
+                                        className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentRole === role.key
+                                                ? "bg-purple-100 text-purple-700"
+                                                : "hover:bg-gray-100 text-gray-700"
+                                            }`}
+                                    >
+                                        {role.label}
+                                        {currentRole === role.key && " ✓"}
+                                    </a>
+                                ) : (
+                                    <button
+                                        key={role.key}
+                                        onClick={() => handleRoleSwitch(role.action!)}
+                                        disabled={loading || currentRole === role.key}
+                                        className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentRole === role.key
+                                                ? "bg-purple-100 text-purple-700"
+                                                : "hover:bg-gray-100 text-gray-700"
+                                            } disabled:opacity-50`}
+                                    >
+                                        {role.label}
+                                        {currentRole === role.key && " ✓"}
+                                    </button>
+                                )
                             ))}
                         </div>
                     </div>
@@ -83,7 +121,8 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                                 <button
                                     key={qa.action}
                                     onClick={() => handleQuickAction(qa.action)}
-                                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
+                                    disabled={loading}
+                                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors disabled:opacity-50"
                                 >
                                     {qa.label}
                                 </button>
