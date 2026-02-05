@@ -9,7 +9,6 @@ export default async function AdminDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
-    // Check if god mode user (owner) - bypasses admin role requirement
     const isOwner = isGodModeUser(user.email);
 
     const { data: profile } = await supabase
@@ -18,9 +17,8 @@ export default async function AdminDashboard() {
         .eq("id", user.id)
         .single();
 
-    // Only allow admin role or owner
     if (profile?.role !== 'admin' && !isOwner) {
-        redirect("/dashboard");
+        redirect("/profile");
     }
 
     // Fetch stats
@@ -42,7 +40,7 @@ export default async function AdminDashboard() {
         .select("*", { count: "exact", head: true })
         .eq("status", "verified");
 
-    // Fetch recent candidates for activity feed
+    // Fetch recent candidates
     const { data: recentCandidates } = await supabase
         .from("admin_candidate_full_overview")
         .select("user_id, full_name, email, created_at, paid_at")
@@ -56,165 +54,141 @@ export default async function AdminDashboard() {
         .order("created_at", { ascending: false })
         .limit(5);
 
-    const stats = [
-        {
-            label: "Total Candidates",
-            value: candidatesCount || 0,
-            icon: "👤",
-            color: "bg-blue-500",
-            href: "/admin/candidates"
-        },
-        {
-            label: "Total Employers",
-            value: employersCount || 0,
-            icon: "🏢",
-            color: "bg-purple-500",
-            href: "/admin/employers"
-        },
-        {
-            label: "Pending Verifications",
-            value: pendingDocsCount || 0,
-            icon: "⏳",
-            color: "bg-yellow-500",
-            href: "/admin/candidates"
-        },
-        {
-            label: "Verified Documents",
-            value: verifiedDocsCount || 0,
-            icon: "✅",
-            color: "bg-green-500",
-            href: "/admin/candidates"
-        }
-    ];
-
     return (
-        <div className="min-h-screen bg-[#f1f5f9] font-montserrat">
-            {/* Header */}
-            <nav className="bg-[#183b56] px-5 py-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
-                <div className="flex items-center gap-2">
-                    <img src="/logo.png" alt="Workers United" width={64} height={64} className="brightness-0 invert rounded" />
-                    <span className="font-bold text-white text-lg">Admin Dashboard</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="bg-[#2f6fed] text-white px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">
-                        God Mode
+        <div className="min-h-screen bg-[#f0f2f5]">
+            {/* Facebook-style Navigation */}
+            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
+                <div className="max-w-[1100px] mx-auto px-4">
+                    <div className="flex justify-between h-14 items-center">
+                        <div className="flex items-center gap-3">
+                            <Link href="/" className="flex items-center gap-2">
+                                <img src="/logo.png" alt="Workers United" width={36} height={36} className="rounded" />
+                                <span className="font-bold text-teal-600 text-lg hidden sm:inline">Workers United</span>
+                            </Link>
+                            <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-semibold">
+                                Admin
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-gray-600 hidden sm:inline">{user.email}</span>
+                            <a href="/auth/signout" className="text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100">
+                                Logout
+                            </a>
+                        </div>
                     </div>
-                    <a href="/auth/signout" className="text-gray-300 text-sm font-semibold hover:text-white transition-colors">
-                        Logout
-                    </a>
                 </div>
             </nav>
 
-            <div className="max-w-[1200px] mx-auto px-5 py-10">
-                {/* Welcome Section */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-[#1e293b]">Welcome, Admin</h1>
-                    <p className="text-[#64748b] mt-1 font-medium">Here&apos;s an overview of your platform.</p>
+            <div className="max-w-[1100px] mx-auto px-4 py-6">
+                {/* Header */}
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                    <p className="text-gray-500 mt-1">Overview of your platform</p>
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                    {stats.map((stat) => (
-                        <Link
-                            key={stat.label}
-                            href={stat.href}
-                            className="bg-white rounded-[16px] p-6 shadow-sm border border-[#dde3ec] hover:shadow-md hover:border-[#2f6fed] transition-all group"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <span className={`${stat.color} text-white text-2xl w-12 h-12 rounded-xl flex items-center justify-center`}>
-                                    {stat.icon}
-                                </span>
-                                <span className="text-[#94a3b8] group-hover:text-[#2f6fed] transition-colors">→</span>
-                            </div>
-                            <div className="text-4xl font-bold text-[#1e293b] mb-1">{stat.value}</div>
-                            <div className="text-[#64748b] font-medium text-sm">{stat.label}</div>
-                        </Link>
-                    ))}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <StatCard href="/admin/candidates" icon="👤" label="Total Candidates" value={candidatesCount || 0} color="blue" />
+                    <StatCard href="/admin/employers" icon="🏢" label="Total Employers" value={employersCount || 0} color="purple" />
+                    <StatCard href="/admin/candidates" icon="⏳" label="Pending Docs" value={pendingDocsCount || 0} color="amber" />
+                    <StatCard href="/admin/candidates" icon="✅" label="Verified Docs" value={verifiedDocsCount || 0} color="green" />
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    <Link
-                        href="/admin/candidates"
-                        className="bg-gradient-to-br from-[#2f6fed] to-[#1e5cd6] text-white rounded-[16px] p-6 shadow-lg hover:shadow-xl transition-shadow"
-                    >
-                        <h3 className="font-bold text-xl mb-2">Manage Candidates</h3>
-                        <p className="text-blue-100 text-sm">View all candidates, verify documents, process refunds</p>
-                    </Link>
-                    <Link
-                        href="/admin/employers"
-                        className="bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] text-white rounded-[16px] p-6 shadow-lg hover:shadow-xl transition-shadow"
-                    >
-                        <h3 className="font-bold text-xl mb-2">Manage Employers</h3>
-                        <p className="text-purple-100 text-sm">View employer accounts, job requirements, match workers</p>
-                    </Link>
-                    <Link
-                        href="/admin/jobs"
-                        className="bg-gradient-to-br from-[#10b981] to-[#059669] text-white rounded-[16px] p-6 shadow-lg hover:shadow-xl transition-shadow"
-                    >
-                        <h3 className="font-bold text-xl mb-2">Job Queue</h3>
-                        <p className="text-green-100 text-sm">View background jobs & email queues</p>
-                    </Link>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <ActionCard href="/admin/candidates" title="Manage Candidates" desc="View all candidates, verify documents" gradient="from-teal-500 to-emerald-500" />
+                    <ActionCard href="/admin/employers" title="Manage Employers" desc="View employers, job requirements" gradient="from-blue-500 to-indigo-500" />
+                    <ActionCard href="/admin/jobs" title="Job Queue" desc="Background jobs & email queues" gradient="from-purple-500 to-pink-500" />
                 </div>
 
                 {/* Recent Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Recent Candidates */}
-                    <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] overflow-hidden">
-                        <div className="px-6 py-4 border-b border-[#dde3ec] flex justify-between items-center">
-                            <h2 className="font-bold text-[#1e293b]">Recent Candidates</h2>
-                            <Link href="/admin/candidates" className="text-[#2f6fed] text-sm font-semibold hover:underline">View All →</Link>
-                        </div>
-                        <div className="divide-y divide-[#f1f5f9]">
-                            {recentCandidates?.map((c: any) => (
-                                <div key={c.user_id} className="px-6 py-4 flex justify-between items-center hover:bg-[#fbfcfe]">
-                                    <div>
-                                        <div className="font-semibold text-[#1e293b]">{c.full_name || "Unknown"}</div>
-                                        <div className="text-[13px] text-[#64748b]">{c.email}</div>
+                    <Card title="Recent Candidates" linkHref="/admin/candidates" linkText="View All">
+                        {recentCandidates && recentCandidates.length > 0 ? (
+                            <div className="divide-y divide-gray-100">
+                                {recentCandidates.map((c: any) => (
+                                    <div key={c.user_id} className="py-3 flex justify-between items-center">
+                                        <div>
+                                            <p className="font-medium text-gray-900 text-[15px]">{c.full_name || "Unknown"}</p>
+                                            <p className="text-[13px] text-gray-500">{c.email}</p>
+                                        </div>
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.paid_at ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                                            }`}>
+                                            {c.paid_at ? "Paid" : "Unpaid"}
+                                        </span>
                                     </div>
-                                    <div className="text-right">
-                                        {c.paid_at ? (
-                                            <span className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Paid</span>
-                                        ) : (
-                                            <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold">Unpaid</span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {(!recentCandidates || recentCandidates.length === 0) && (
-                                <div className="px-6 py-8 text-center text-[#94a3b8]">No recent candidates</div>
-                            )}
-                        </div>
-                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-gray-400 text-center py-6">No recent candidates</p>
+                        )}
+                    </Card>
 
                     {/* Recent Employers */}
-                    <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] overflow-hidden">
-                        <div className="px-6 py-4 border-b border-[#dde3ec] flex justify-between items-center">
-                            <h2 className="font-bold text-[#1e293b]">Recent Employers</h2>
-                            <Link href="/admin/employers" className="text-[#2f6fed] text-sm font-semibold hover:underline">View All →</Link>
-                        </div>
-                        <div className="divide-y divide-[#f1f5f9]">
-                            {recentEmployers?.map((e: any) => (
-                                <div key={e.id} className="px-6 py-4 flex justify-between items-center hover:bg-[#fbfcfe]">
-                                    <div>
-                                        <div className="font-semibold text-[#1e293b]">{e.company_name || "Unknown Company"}</div>
-                                        <div className="text-[13px] text-[#64748b]">
-                                            {new Date(e.created_at).toLocaleDateString()}
+                    <Card title="Recent Employers" linkHref="/admin/employers" linkText="View All">
+                        {recentEmployers && recentEmployers.length > 0 ? (
+                            <div className="divide-y divide-gray-100">
+                                {recentEmployers.map((e: any) => (
+                                    <div key={e.id} className="py-3 flex justify-between items-center">
+                                        <div>
+                                            <p className="font-medium text-gray-900 text-[15px]">{e.company_name || "Unknown"}</p>
+                                            <p className="text-[13px] text-gray-500">
+                                                {new Date(e.created_at).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-teal-600 font-bold">{e.workers_needed || 0}</span>
+                                            <span className="text-gray-500 text-sm ml-1">needed</span>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <span className="text-[#2f6fed] font-bold">{e.workers_needed || 0}</span>
-                                        <span className="text-[#64748b] text-sm ml-1">workers needed</span>
-                                    </div>
-                                </div>
-                            ))}
-                            {(!recentEmployers || recentEmployers.length === 0) && (
-                                <div className="px-6 py-8 text-center text-[#94a3b8]">No recent employers</div>
-                            )}
-                        </div>
-                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-gray-400 text-center py-6">No recent employers</p>
+                        )}
+                    </Card>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function StatCard({ href, icon, label, value, color }: { href: string; icon: string; label: string; value: number; color: string }) {
+    const colors: Record<string, string> = {
+        blue: "bg-blue-50 text-blue-600",
+        purple: "bg-purple-50 text-purple-600",
+        amber: "bg-amber-50 text-amber-600",
+        green: "bg-green-50 text-green-600"
+    };
+    return (
+        <Link href={href} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+                <span className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${colors[color]}`}>{icon}</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            <p className="text-[13px] text-gray-500">{label}</p>
+        </Link>
+    );
+}
+
+function ActionCard({ href, title, desc, gradient }: { href: string; title: string; desc: string; gradient: string }) {
+    return (
+        <Link href={href} className={`bg-gradient-to-br ${gradient} text-white rounded-lg p-4 hover:opacity-90 transition-opacity`}>
+            <h3 className="font-bold text-lg mb-1">{title}</h3>
+            <p className="text-white/80 text-sm">{desc}</p>
+        </Link>
+    );
+}
+
+function Card({ title, linkHref, linkText, children }: { title: string; linkHref: string; linkText: string; children: React.ReactNode }) {
+    return (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="font-semibold text-gray-900 text-[15px]">{title}</h2>
+                <Link href={linkHref} className="text-teal-600 text-sm font-medium hover:underline">{linkText} →</Link>
+            </div>
+            <div className="p-4">{children}</div>
         </div>
     );
 }
