@@ -185,7 +185,7 @@ export default function EmployerProfilePage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
-                <div className="animate-spin w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full"></div>
+                <div className="animate-spin w-10 h-10 border-4 border-[#1877f2] border-t-transparent rounded-full"></div>
             </div>
         );
     }
@@ -197,8 +197,8 @@ export default function EmployerProfilePage() {
                 <div className="max-w-[900px] mx-auto px-4">
                     <div className="flex justify-between h-14 items-center">
                         <Link href="/" className="flex items-center gap-2">
-                            <img src="/logo.png" alt="Workers United" width={36} height={36} className="" />
-                            <span className="font-bold text-teal-600 text-lg">Workers United</span>
+                            <img src="/logo.png" alt="Workers United" className="h-10 w-auto object-contain" />
+                            <span className="font-bold text-[#1877f2] text-xl tracking-tight">Workers United</span>
                         </Link>
                         <div className="flex items-center gap-2">
                             <Link
@@ -266,7 +266,7 @@ export default function EmployerProfilePage() {
                                             required
                                             value={formData.company_name}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                             placeholder="e.g., ABC Construction d.o.o."
                                         />
                                     </div>
@@ -279,7 +279,7 @@ export default function EmployerProfilePage() {
                                             name="pib"
                                             value={formData.pib}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                             placeholder="12345678"
                                             maxLength={8}
                                         />
@@ -297,7 +297,7 @@ export default function EmployerProfilePage() {
                                             name="industry"
                                             value={formData.industry}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         >
                                             <option value="">Select industry...</option>
                                             {INDUSTRIES.map(ind => (
@@ -313,7 +313,7 @@ export default function EmployerProfilePage() {
                                             name="company_size"
                                             value={formData.company_size}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         >
                                             <option value="">Select size...</option>
                                             {COMPANY_SIZES.map(size => (
@@ -334,7 +334,7 @@ export default function EmployerProfilePage() {
                                             name="contact_phone"
                                             value={formData.contact_phone}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                             placeholder="+381 11 123 4567"
                                         />
                                     </div>
@@ -347,7 +347,7 @@ export default function EmployerProfilePage() {
                                             name="website"
                                             value={formData.website}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                             placeholder="https://yourcompany.com"
                                         />
                                     </div>
@@ -360,7 +360,7 @@ export default function EmployerProfilePage() {
                                             name="founded_year"
                                             value={formData.founded_year}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                             placeholder="2010"
                                             maxLength={4}
                                         />
@@ -377,7 +377,7 @@ export default function EmployerProfilePage() {
                                         value={formData.description}
                                         onChange={handleChange}
                                         rows={3}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
                                         placeholder="Brief description of your company..."
                                     />
                                 </div>
@@ -399,7 +399,7 @@ export default function EmployerProfilePage() {
                                         value={formData.company_address}
                                         onChange={handleChange}
                                         rows={2}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
                                         placeholder="Full registered business address..."
                                     />
                                 </div>
@@ -412,7 +412,7 @@ export default function EmployerProfilePage() {
                                         value={formData.accommodation_address}
                                         onChange={handleChange}
                                         rows={2}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
                                         placeholder="Address where international workers will be accommodated..."
                                     />
                                     <p className="text-[11px] text-gray-500 mt-1">⚠️ Required for visa processing</p>
@@ -426,7 +426,7 @@ export default function EmployerProfilePage() {
                                         name="work_location"
                                         value={formData.work_location}
                                         onChange={handleChange}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         placeholder="City or region, e.g., Belgrade, Serbia"
                                     />
                                 </div>
@@ -451,7 +451,7 @@ export default function EmployerProfilePage() {
                                             onChange={(e) => setFormData(prev => ({ ...prev, workers_needed: parseInt(e.target.value) || 1 }))}
                                             min={1}
                                             max={100}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         />
                                     </div>
                                     <div>
@@ -463,7 +463,7 @@ export default function EmployerProfilePage() {
                                             name="salary_range"
                                             value={formData.salary_range}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                             placeholder="e.g., 1200-1500"
                                         />
                                     </div>
@@ -477,7 +477,7 @@ export default function EmployerProfilePage() {
                                         value={formData.job_description}
                                         onChange={handleChange}
                                         rows={4}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
                                         placeholder="Describe typical job duties, required skills, working conditions..."
                                     />
                                 </div>
@@ -495,7 +495,7 @@ export default function EmployerProfilePage() {
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="px-5 py-2.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 font-medium text-[15px] disabled:opacity-50 flex items-center gap-2"
+                                className="px-5 py-2.5 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium text-[15px] disabled:opacity-50 flex items-center gap-2"
                             >
                                 {saving ? (
                                     <>

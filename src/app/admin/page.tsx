@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <ActionCard href="/admin/candidates" title="Manage Candidates" desc="View all candidates, verify documents" gradient="from-teal-500 to-emerald-500" icon={<Users className="text-white/80" />} />
+                    <ActionCard href="/admin/candidates" title="Manage Candidates" desc="View all candidates, verify documents" gradient="from-blue-500 to-cyan-500" icon={<Users className="text-white/80" />} />
                     <ActionCard href="/admin/employers" title="Manage Employers" desc="View employers, job requirements" gradient="from-blue-500 to-indigo-500" icon={<Building2 className="text-white/80" />} />
                     <ActionCard href="/admin/jobs" title="Job Queue" desc="Background jobs & email queues" gradient="from-purple-500 to-pink-500" icon={<Briefcase className="text-white/80" />} />
                 </div>

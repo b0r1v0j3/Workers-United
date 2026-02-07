@@ -191,7 +191,7 @@ export function SignupForm({ userType }: SignupFormProps) {
             <button
                 type="submit"
                 disabled={loading || (password !== confirmPassword)}
-                className={`btn w-full ${userType === "employer" ? "btn-teal" : "btn-primary"}`}
+                className={`btn w-full btn-primary`}
                 style={{ marginTop: "1.5rem" }}
             >
                 {loading ? (
