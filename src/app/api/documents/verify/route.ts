@@ -5,7 +5,7 @@ import {
     compareNames,
     verifyDiploma,
     verifyBiometricPhoto
-} from "@/lib/openai";
+} from "@/lib/gemini";
 
 export async function POST(request: NextRequest) {
     try {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { extractPassportData, compareNames } from "@/lib/openai";
+import { extractPassportData, compareNames } from "@/lib/gemini";
 
 export async function POST(request: NextRequest) {
     try {
