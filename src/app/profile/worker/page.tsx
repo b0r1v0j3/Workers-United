@@ -52,15 +52,15 @@ export default async function WorkerProfilePage() {
     const isReady = verifiedCount >= 3;
     const inQueue = candidate?.status === "IN_QUEUE";
 
-    // Calculate profile completion
+    // Calculate profile completion (only count fields the user can fill)
     const profileFields = [
+        profile?.full_name,
         candidate?.phone,
         candidate?.nationality,
         candidate?.current_country,
         candidate?.preferred_job,
         documents?.some(d => d.document_type === "passport"),
         documents?.some(d => d.document_type === "biometric_photo"),
-        candidate?.signature_url
     ];
     const completedFields = profileFields.filter(Boolean).length;
     const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
