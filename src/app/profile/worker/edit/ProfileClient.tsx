@@ -22,8 +22,6 @@ interface Candidate {
     desired_countries: string[];
     desired_industries: string[];
     years_experience: number;
-    languages: string[];
-    education_level: string;
 }
 
 // Generate days, months, years for DOB
@@ -112,11 +110,11 @@ export default function ProfilePage() {
                     dobMonth,
                     dobYear,
                     phone: candidateData.phone || "",
-                    address: candidateData.address || "",
+                    address: "",
                     current_country: candidateData.current_country || "",
                     preferred_job: candidateData.preferred_job || "",
-                    years_experience: candidateData.years_experience || 0,
-                    education_level: candidateData.education_level || "",
+                    years_experience: candidateData.experience_years || 0,
+                    education_level: "",
                 }));
             }
         } catch (err) {
@@ -136,10 +134,11 @@ export default function ProfilePage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
-            await supabase
+            const { error: profileErr } = await supabase
                 .from("profiles")
                 .update({ full_name: formData.full_name })
                 .eq("id", user.id);
+            if (profileErr) throw new Error(profileErr.message);
 
             // Combine DOB
             let dateOfBirth: string | null = null;
@@ -153,11 +152,9 @@ export default function ProfilePage() {
                 nationality: formData.nationality || null,
                 date_of_birth: dateOfBirth,
                 phone: formData.phone || null,
-                address: formData.address || null,
                 current_country: formData.current_country || null,
                 preferred_job: formData.preferred_job || null,
-                years_experience: formData.years_experience || 0,
-                education_level: formData.education_level || null,
+                experience_years: formData.years_experience || 0,
             };
 
             if (candidate) {
