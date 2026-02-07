@@ -51,7 +51,7 @@ export default function LoginPage() {
                 <div className="relative z-10">
                     <Link href="/" className="flex items-center gap-3 mb-24">
                         <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center p-2 backdrop-blur-md">
-                            <Image src="/logo.png" alt="Workers United logo" width={64} height={64} className="brightness-0 invert" />
+                            <Image src="/logo.png" alt="Workers United logo" width={64} height={64} className="" />
                         </div>
                         <span className="text-2xl font-bold tracking-tight">Workers United</span>
                     </Link>
@@ -175,7 +175,7 @@ export default function LoginPage() {
             <div className="lg:hidden absolute top-8 left-8">
                 <Link href="/" className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-[#183b56] rounded-lg p-1.5 shadow-md">
-                        <Image src="/logo.png" alt="Logo" width={20} height={20} className="brightness-0 invert" />
+                        <Image src="/logo.png" alt="Logo" width={20} height={20} className="" />
                     </div>
                 </Link>
             </div>

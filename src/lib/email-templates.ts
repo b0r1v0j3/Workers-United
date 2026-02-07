@@ -53,7 +53,7 @@ const wrapTemplate = (content: string): string => `
     <div style="max-width:600px; margin:0 auto; padding:40px 20px;">
         <!-- Header -->
         <div style="text-align:center; margin-bottom:30px;">
-            <img src="https://workersunited.eu/logo.png" alt="Workers United" width="48" height="48" style="border-radius:8px;">
+            <img src="https://workersunited.eu/logo.png" alt="Workers United" width="48" height="48">
             <h1 style="margin:10px 0 0; font-size:24px; color:#183b56;">Workers United</h1>
         </div>
         

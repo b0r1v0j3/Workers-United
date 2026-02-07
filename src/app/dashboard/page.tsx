@@ -96,7 +96,7 @@ export default async function DashboardPage() {
             {/* Header */}
             <nav className="bg-white px-5 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
                 <Link href="/" className="flex items-center gap-2">
-                    <img src="/logo.png" alt="Workers United" width={64} height={64} className="rounded" />
+                    <img src="/logo.png" alt="Workers United" width={64} height={64} className="" />
                     <span className="font-bold text-[#183b56] text-lg">Workers United</span>
                 </Link>
                 <a href="/auth/signout" className="text-[#64748b] text-sm font-semibold hover:text-[#183b56]">
