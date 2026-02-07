@@ -11,6 +11,14 @@ Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (ra
 
 ---
 
+## 🗣️ Diskusije i Zahtevi (Active Memory)
+> **Ovde beležimo sve što se dogovorimo u chatu da ne zaboravimo.**
+
+### 🆕 Novi Zahtevi (iz chata)
+- [ ] **Protokol:** Ažurirati ovaj fajl (`PROJECT_PLAN.md`) na početku svakog chata sa novim zahtevima i statusom.
+- [ ] **Sinhronizacija:** Uvek uraditi `git pull` pre početka rada.
+
+
 ## ✅ Završeno
 
 ### Facebook-Style Layout Refaktor (Feb 2026)
@@ -33,7 +41,7 @@ Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (ra
 
 ## 🔲 Planirano / TODO
 
-- [ ] Dodati funkcionalne tabove na `/dashboard` (About, Photos, Documents treba da rade)
+- [x] Dodati funkcionalne tabove na `/dashboard` (About, Photos, Documents sada rade - koriste `DashboardClient`)
 - [ ] Konekcija "Post a Job" dugmeta sa `/employer/jobs/new`
 - [ ] Admin sub-stranice (`/admin/employers`, `/admin/jobs`, `/admin/queue`, `/admin/refunds`) — refaktorisati u `AppShell`
 - [ ] Mobilna responsivnost — testirati i popraviti na malim ekranima
