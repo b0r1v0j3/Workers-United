@@ -58,9 +58,26 @@ const MONTHS = [
 ];
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => currentYear - 18 - i);
+// Family DOB years (0â€“100 years ago)
+const ALL_YEARS = Array.from({ length: 100 }, (_, i) => currentYear - i);
+// Passport issue date: last 10 years
+const PASSPORT_ISSUE_YEARS = Array.from({ length: 10 }, (_, i) => currentYear - i);
+// Passport expiry date: current year + 10 years ahead
+const PASSPORT_EXPIRY_YEARS = Array.from({ length: 11 }, (_, i) => currentYear + i);
 
 // Empty child template
-const EMPTY_CHILD = { last_name: "", first_name: "", dob: "" };
+const EMPTY_CHILD = { last_name: "", first_name: "", dobDay: "", dobMonth: "", dobYear: "" };
+
+// Helper to parse YYYY-MM-DD into { prefixDay, prefixMonth, prefixYear }
+function parseDateToComponents(dateStr: string | null | undefined, prefix: string) {
+    if (!dateStr) return { [`${prefix}Day`]: "", [`${prefix}Month`]: "", [`${prefix}Year`]: "" };
+    const d = new Date(dateStr);
+    return {
+        [`${prefix}Day`]: d.getDate().toString(),
+        [`${prefix}Month`]: (d.getMonth() + 1).toString(),
+        [`${prefix}Year`]: d.getFullYear().toString(),
+    };
+}
 
 export default function ProfilePage() {
     const supabase = createClient();
@@ -96,8 +113,12 @@ export default function ProfilePage() {
         // Passport & travel
         passport_number: "",
         passport_issued_by: "",
-        passport_issue_date: "",
-        passport_expiry_date: "",
+        passport_issue_day: "",
+        passport_issue_month: "",
+        passport_issue_year: "",
+        passport_expiry_day: "",
+        passport_expiry_month: "",
+        passport_expiry_year: "",
         lives_abroad: "",
         previous_visas: "",
     });
@@ -107,12 +128,14 @@ export default function ProfilePage() {
     const [spouseData, setSpouseData] = useState({
         first_name: "",
         last_name: "",
-        dob: "",
+        dobDay: "",
+        dobMonth: "",
+        dobYear: "",
         birth_country: "",
         birth_city: "",
     });
     const [hasChildren, setHasChildren] = useState(false);
-    const [children, setChildren] = useState<Array<{ last_name: string; first_name: string; dob: string }>>([]);
+    const [children, setChildren] = useState<Array<{ last_name: string; first_name: string; dobDay: string; dobMonth: string; dobYear: string }>>([]);
 
     useEffect(() => {
         fetchProfile();
@@ -178,8 +201,8 @@ export default function ProfilePage() {
                     gender: candidateData.gender || "",
                     passport_number: candidateData.passport_number || "",
                     passport_issued_by: candidateData.passport_issued_by || "",
-                    passport_issue_date: candidateData.passport_issue_date || "",
-                    passport_expiry_date: candidateData.passport_expiry_date || "",
+                    ...parseDateToComponents(candidateData.passport_issue_date, "passport_issue"),
+                    ...parseDateToComponents(candidateData.passport_expiry_date, "passport_expiry"),
                     lives_abroad: candidateData.lives_abroad || "",
                     previous_visas: candidateData.previous_visas || "",
                 }));
@@ -189,11 +212,31 @@ export default function ProfilePage() {
                     const fd = candidateData.family_data;
                     if (fd.spouse) {
                         setHasSpouse(true);
-                        setSpouseData(fd.spouse);
+                        // Parse spouse dob into components
+                        const sp = fd.spouse;
+                        const spParsed = sp.dob ? parseDateToComponents(sp.dob, "dob") : { dobDay: "", dobMonth: "", dobYear: "" };
+                        setSpouseData({
+                            first_name: sp.first_name || "",
+                            last_name: sp.last_name || "",
+                            dobDay: spParsed.dobDay || "",
+                            dobMonth: spParsed.dobMonth || "",
+                            dobYear: spParsed.dobYear || "",
+                            birth_country: sp.birth_country || "",
+                            birth_city: sp.birth_city || "",
+                        });
                     }
                     if (fd.children && fd.children.length > 0) {
                         setHasChildren(true);
-                        setChildren(fd.children);
+                        setChildren(fd.children.map((c: any) => {
+                            const cp = c.dob ? parseDateToComponents(c.dob, "dob") : { dobDay: "", dobMonth: "", dobYear: "" };
+                            return {
+                                first_name: c.first_name || "",
+                                last_name: c.last_name || "",
+                                dobDay: cp.dobDay || "",
+                                dobMonth: cp.dobMonth || "",
+                                dobYear: cp.dobYear || "",
+                            };
+                        }));
                     }
                 }
             }
@@ -231,10 +274,36 @@ export default function ProfilePage() {
             // Build family_data JSON
             const familyData: any = {};
             if (hasSpouse) {
-                familyData.spouse = spouseData;
+                let spouseDob: string | null = null;
+                if (spouseData.dobDay && spouseData.dobMonth && spouseData.dobYear) {
+                    spouseDob = `${spouseData.dobYear}-${spouseData.dobMonth.padStart(2, '0')}-${spouseData.dobDay.padStart(2, '0')}`;
+                }
+                familyData.spouse = {
+                    first_name: spouseData.first_name,
+                    last_name: spouseData.last_name,
+                    dob: spouseDob,
+                    birth_country: spouseData.birth_country,
+                    birth_city: spouseData.birth_city,
+                };
             }
             if (hasChildren && children.length > 0) {
-                familyData.children = children;
+                familyData.children = children.map(c => {
+                    let childDob: string | null = null;
+                    if (c.dobDay && c.dobMonth && c.dobYear) {
+                        childDob = `${c.dobYear}-${c.dobMonth.padStart(2, '0')}-${c.dobDay.padStart(2, '0')}`;
+                    }
+                    return { first_name: c.first_name, last_name: c.last_name, dob: childDob };
+                });
+            }
+
+            // Build passport dates
+            let passportIssueDate: string | null = null;
+            if (formData.passport_issue_day && formData.passport_issue_month && formData.passport_issue_year) {
+                passportIssueDate = `${formData.passport_issue_year}-${formData.passport_issue_month.padStart(2, '0')}-${formData.passport_issue_day.padStart(2, '0')}`;
+            }
+            let passportExpiryDate: string | null = null;
+            if (formData.passport_expiry_day && formData.passport_expiry_month && formData.passport_expiry_year) {
+                passportExpiryDate = `${formData.passport_expiry_year}-${formData.passport_expiry_month.padStart(2, '0')}-${formData.passport_expiry_day.padStart(2, '0')}`;
             }
 
             const candidateUpdates = {
@@ -259,8 +328,8 @@ export default function ProfilePage() {
                 family_data: (Object.keys(familyData).length > 0) ? familyData : null,
                 passport_number: formData.passport_number || null,
                 passport_issued_by: formData.passport_issued_by || null,
-                passport_issue_date: formData.passport_issue_date || null,
-                passport_expiry_date: formData.passport_expiry_date || null,
+                passport_issue_date: passportIssueDate,
+                passport_expiry_date: passportExpiryDate,
                 lives_abroad: formData.lives_abroad || null,
                 previous_visas: formData.previous_visas || null,
             };
@@ -332,7 +401,7 @@ export default function ProfilePage() {
             <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
                 <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
                     <Link href="/profile/worker" className="flex items-center gap-2 text-[#65676b] hover:text-[#050505] text-sm font-semibold">
-                        ← Back to Profile
+                        â† Back to Profile
                     </Link>
                     <Link href="/" className="flex items-center gap-2">
                         <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
@@ -366,7 +435,7 @@ export default function ProfilePage() {
 
                 <form onSubmit={handleSubmit}>
                     <div className="space-y-4">
-                        {/* ═══════════════ Account Information Card ═══════════════ */}
+                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Account Information Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Account Information</h2>
@@ -399,7 +468,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* ═══════════════ Personal Information Card ═══════════════ */}
+                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Personal Information Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Personal Information</h2>
@@ -556,7 +625,7 @@ export default function ProfilePage() {
                                             className={inputClass}
                                             placeholder="Only if different from current surname"
                                         />
-                                        <p className="text-[11px] text-gray-500 mt-1">Optional — if your surname changed after marriage</p>
+                                        <p className="text-[11px] text-gray-500 mt-1">Optional â€” if your surname changed after marriage</p>
                                     </div>
                                 </div>
 
@@ -633,7 +702,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* ═══════════════ Family Information Card ═══════════════ */}
+                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Family Information Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Family Information</h2>
@@ -682,12 +751,20 @@ export default function ProfilePage() {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <label className={labelClass}>Date of Birth <span className="text-red-500">*</span></label>
-                                                <input
-                                                    type="date"
-                                                    value={spouseData.dob}
-                                                    onChange={(e) => setSpouseData(prev => ({ ...prev, dob: e.target.value }))}
-                                                    className={inputClass}
-                                                />
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <select value={spouseData.dobDay} onChange={(e) => setSpouseData(prev => ({ ...prev, dobDay: e.target.value }))} className={inputClass}>
+                                                        <option value="">Day</option>
+                                                        {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
+                                                    </select>
+                                                    <select value={spouseData.dobMonth} onChange={(e) => setSpouseData(prev => ({ ...prev, dobMonth: e.target.value }))} className={inputClass}>
+                                                        <option value="">Month</option>
+                                                        {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
+                                                    </select>
+                                                    <select value={spouseData.dobYear} onChange={(e) => setSpouseData(prev => ({ ...prev, dobYear: e.target.value }))} className={inputClass}>
+                                                        <option value="">Year</option>
+                                                        {ALL_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
+                                                    </select>
+                                                </div>
                                             </div>
                                             <div>
                                                 <label className={labelClass}>Country of Birth</label>
@@ -773,12 +850,20 @@ export default function ProfilePage() {
                                                     </div>
                                                     <div>
                                                         <label className={labelClass}>Date of Birth</label>
-                                                        <input
-                                                            type="date"
-                                                            value={child.dob}
-                                                            onChange={(e) => updateChild(index, "dob", e.target.value)}
-                                                            className={inputClass}
-                                                        />
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            <select value={child.dobDay} onChange={(e) => updateChild(index, "dobDay", e.target.value)} className={inputClass}>
+                                                                <option value="">Day</option>
+                                                                {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
+                                                            </select>
+                                                            <select value={child.dobMonth} onChange={(e) => updateChild(index, "dobMonth", e.target.value)} className={inputClass}>
+                                                                <option value="">Month</option>
+                                                                {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
+                                                            </select>
+                                                            <select value={child.dobYear} onChange={(e) => updateChild(index, "dobYear", e.target.value)} className={inputClass}>
+                                                                <option value="">Year</option>
+                                                                {ALL_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
+                                                            </select>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -800,7 +885,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* ═══════════════ Passport & Travel Card ═══════════════ */}
+                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Passport & Travel Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Passport & Travel</h2>
@@ -842,26 +927,40 @@ export default function ProfilePage() {
                                         <label className={labelClass}>
                                             Issue Date <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="date"
-                                            name="passport_issue_date"
-                                            value={formData.passport_issue_date}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                        />
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <select name="passport_issue_day" value={formData.passport_issue_day} onChange={handleChange} className={inputClass}>
+                                                <option value="">Day</option>
+                                                {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
+                                            </select>
+                                            <select name="passport_issue_month" value={formData.passport_issue_month} onChange={handleChange} className={inputClass}>
+                                                <option value="">Month</option>
+                                                {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
+                                            </select>
+                                            <select name="passport_issue_year" value={formData.passport_issue_year} onChange={handleChange} className={inputClass}>
+                                                <option value="">Year</option>
+                                                {PASSPORT_ISSUE_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
+                                            </select>
+                                        </div>
                                         <p className="text-[11px] text-gray-500 mt-1">Must be within the last 10 years</p>
                                     </div>
                                     <div>
                                         <label className={labelClass}>
                                             Expiry Date <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="date"
-                                            name="passport_expiry_date"
-                                            value={formData.passport_expiry_date}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                        />
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <select name="passport_expiry_day" value={formData.passport_expiry_day} onChange={handleChange} className={inputClass}>
+                                                <option value="">Day</option>
+                                                {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
+                                            </select>
+                                            <select name="passport_expiry_month" value={formData.passport_expiry_month} onChange={handleChange} className={inputClass}>
+                                                <option value="">Month</option>
+                                                {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
+                                            </select>
+                                            <select name="passport_expiry_year" value={formData.passport_expiry_year} onChange={handleChange} className={inputClass}>
+                                                <option value="">Year</option>
+                                                {PASSPORT_EXPIRY_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
+                                            </select>
+                                        </div>
                                         <p className="text-[11px] text-gray-500 mt-1">Must be valid for at least 3 months after departure</p>
                                     </div>
                                 </div>
@@ -892,7 +991,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* ═══════════════ Job Preferences Card ═══════════════ */}
+                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Job Preferences Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Job Preferences</h2>

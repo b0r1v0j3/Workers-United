@@ -25,6 +25,8 @@ interface EmployerProfile {
     founded_year: string | null;
     description: string | null;
     country: string | null;
+    city: string | null;
+    work_city: string | null;
 }
 
 export default function EmployerProfilePage() {
@@ -110,11 +112,11 @@ export default function EmployerProfilePage() {
 
         try {
             if (formData.pib && !/^\d{9}$/.test(formData.pib)) {
-                throw new Error("Tax ID (PIB) must be exactly 9 digits");
+                throw new Error("Tax ID must be exactly 9 digits");
             }
 
             if (formData.company_registration_number && !/^\d{8}$/.test(formData.company_registration_number)) {
-                throw new Error("Registration Number (MB) must be exactly 8 digits");
+                throw new Error("Company Registration Number must be exactly 8 digits");
             }
 
             if (!formData.company_name.trim()) {
@@ -133,6 +135,8 @@ export default function EmployerProfilePage() {
                 salary_range: formData.salary_range || null,
                 work_location: formData.work_location || null,
                 country: formData.country || null,
+                city: formData.city || null,
+                work_city: formData.work_city || null,
                 website: formData.website || null,
                 industry: formData.industry || null,
                 company_size: formData.company_size || null,
@@ -254,7 +258,7 @@ export default function EmployerProfilePage() {
                                     </div>
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Tax ID (PIB) <span className="text-red-500">*</span>
+                                            Tax ID <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
@@ -273,7 +277,7 @@ export default function EmployerProfilePage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Registration Number (MB) <span className="text-red-500">*</span>
+                                            Company Registration Number <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
@@ -288,23 +292,36 @@ export default function EmployerProfilePage() {
                                     </div>
                                 </div>
 
-                                {/* Row 2 */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Row 2: Country + City + Company Size */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Industry
+                                            Country <span className="text-red-500">*</span>
                                         </label>
                                         <select
-                                            name="industry"
-                                            value={formData.industry}
+                                            name="country"
+                                            value={formData.country}
                                             onChange={handleChange}
                                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         >
-                                            <option value="">Select industry...</option>
-                                            {INDUSTRIES.map(ind => (
-                                                <option key={ind} value={ind}>{ind}</option>
+                                            <option value="">Select country...</option>
+                                            {EUROPEAN_COUNTRIES.map(c => (
+                                                <option key={c} value={c}>{c}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            City
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="city"
+                                            value={formData.city}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="e.g., Belgrade"
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
@@ -418,37 +435,7 @@ export default function EmployerProfilePage() {
                                     />
                                     <p className="text-[11px] text-gray-500 mt-1">⚠️ Required for visa processing</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Country <span className="text-red-500">*</span>
-                                        </label>
-                                        <select
-                                            name="country"
-                                            value={formData.country}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        >
-                                            <option value="">Select country...</option>
-                                            {EUROPEAN_COUNTRIES.map(c => (
-                                                <option key={c} value={c}>{c}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            City / Region
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="work_location"
-                                            value={formData.work_location}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="e.g., Belgrade, Munich..."
-                                        />
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
 
@@ -458,6 +445,39 @@ export default function EmployerProfilePage() {
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Hiring Preferences</h2>
                             </div>
                             <div className="p-4 space-y-4">
+                                {/* Industry + Work City */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Industry
+                                        </label>
+                                        <select
+                                            name="industry"
+                                            value={formData.industry}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        >
+                                            <option value="">Select industry...</option>
+                                            {INDUSTRIES.map(ind => (
+                                                <option key={ind} value={ind}>{ind}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Work City <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="work_city"
+                                            value={formData.work_city}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="City where workers will work"
+                                        />
+                                        <p className="text-[11px] text-gray-500 mt-1">May differ from company location</p>
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">

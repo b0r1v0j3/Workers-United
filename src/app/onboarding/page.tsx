@@ -84,9 +84,15 @@ const MONTHS = [
 ];
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => currentYear - 18 - i);
+// Family DOB years (0–100 years ago)
+const ALL_YEARS = Array.from({ length: 100 }, (_, i) => currentYear - i);
+// Passport issue date: last 10 years
+const PASSPORT_ISSUE_YEARS = Array.from({ length: 10 }, (_, i) => currentYear - i);
+// Passport expiry date: current year + 10 years ahead
+const PASSPORT_EXPIRY_YEARS = Array.from({ length: 11 }, (_, i) => currentYear + i);
 
 // Empty child template
-const EMPTY_CHILD = { last_name: "", first_name: "", dob: "" };
+const EMPTY_CHILD = { last_name: "", first_name: "", dobDay: "", dobMonth: "", dobYear: "" };
 
 export default function OnboardingPage() {
     const [saving, setSaving] = useState(false);
@@ -124,8 +130,12 @@ export default function OnboardingPage() {
         // Passport & travel
         passportNumber: "",
         passportIssuedBy: "",
-        passportIssueDate: "",
-        passportExpiryDate: "",
+        passportIssueDay: "",
+        passportIssueMonth: "",
+        passportIssueYear: "",
+        passportExpiryDay: "",
+        passportExpiryMonth: "",
+        passportExpiryYear: "",
         livesAbroad: "",
         previousVisas: "",
     });
@@ -135,12 +145,14 @@ export default function OnboardingPage() {
     const [spouseData, setSpouseData] = useState({
         first_name: "",
         last_name: "",
-        dob: "",
+        dobDay: "",
+        dobMonth: "",
+        dobYear: "",
         birth_country: "",
         birth_city: "",
     });
     const [hasChildren, setHasChildren] = useState(false);
-    const [children, setChildren] = useState<Array<{ last_name: string; first_name: string; dob: string }>>([]);
+    const [children, setChildren] = useState<Array<{ last_name: string; first_name: string; dobDay: string; dobMonth: string; dobYear: string }>>([]);
 
     useEffect(() => {
         async function loadUser() {
@@ -244,11 +256,42 @@ export default function OnboardingPage() {
                     const fd = candidate.family_data;
                     if (fd.spouse) {
                         setHasSpouse(true);
-                        setSpouseData(fd.spouse);
+                        const sp = fd.spouse;
+                        let spDobDay = "", spDobMonth = "", spDobYear = "";
+                        if (sp.dob) {
+                            const d = new Date(sp.dob);
+                            spDobDay = d.getDate().toString();
+                            spDobMonth = (d.getMonth() + 1).toString();
+                            spDobYear = d.getFullYear().toString();
+                        }
+                        setSpouseData({
+                            first_name: sp.first_name || "",
+                            last_name: sp.last_name || "",
+                            dobDay: spDobDay,
+                            dobMonth: spDobMonth,
+                            dobYear: spDobYear,
+                            birth_country: sp.birth_country || "",
+                            birth_city: sp.birth_city || "",
+                        });
                     }
                     if (fd.children && fd.children.length > 0) {
                         setHasChildren(true);
-                        setChildren(fd.children);
+                        setChildren(fd.children.map((c: any) => {
+                            let cDay = "", cMonth = "", cYear = "";
+                            if (c.dob) {
+                                const d = new Date(c.dob);
+                                cDay = d.getDate().toString();
+                                cMonth = (d.getMonth() + 1).toString();
+                                cYear = d.getFullYear().toString();
+                            }
+                            return {
+                                first_name: c.first_name || "",
+                                last_name: c.last_name || "",
+                                dobDay: cDay,
+                                dobMonth: cMonth,
+                                dobYear: cYear,
+                            };
+                        }));
                     }
                 }
             }
@@ -347,10 +390,24 @@ export default function OnboardingPage() {
             // Build family_data JSON
             const familyData: any = {};
             if (hasSpouse) {
-                familyData.spouse = spouseData;
+                const spouseDob = (spouseData.dobDay && spouseData.dobMonth && spouseData.dobYear)
+                    ? `${spouseData.dobYear}-${spouseData.dobMonth.padStart(2,'0')}-${spouseData.dobDay.padStart(2,'0')}`
+                    : null;
+                familyData.spouse = {
+                    first_name: spouseData.first_name,
+                    last_name: spouseData.last_name,
+                    dob: spouseDob,
+                    birth_country: spouseData.birth_country,
+                    birth_city: spouseData.birth_city,
+                };
             }
             if (hasChildren && children.length > 0) {
-                familyData.children = children;
+                familyData.children = children.map(c => {
+                    const childDob = (c.dobDay && c.dobMonth && c.dobYear)
+                        ? `${c.dobYear}-${c.dobMonth.padStart(2,'0')}-${c.dobDay.padStart(2,'0')}`
+                        : null;
+                    return { first_name: c.first_name, last_name: c.last_name, dob: childDob };
+                });
             }
 
             // Candidate UPSERT
@@ -386,8 +443,8 @@ export default function OnboardingPage() {
                 family_data: (Object.keys(familyData).length > 0) ? familyData : null,
                 passport_number: formData.passportNumber || null,
                 passport_issued_by: formData.passportIssuedBy || null,
-                passport_issue_date: formData.passportIssueDate || null,
-                passport_expiry_date: formData.passportExpiryDate || null,
+                passport_issue_date: (formData.passportIssueDay && formData.passportIssueMonth && formData.passportIssueYear) ? `${formData.passportIssueYear}-${formData.passportIssueMonth.padStart(2,'0')}-${formData.passportIssueDay.padStart(2,'0')}` : null,
+                passport_expiry_date: (formData.passportExpiryDay && formData.passportExpiryMonth && formData.passportExpiryYear) ? `${formData.passportExpiryYear}-${formData.passportExpiryMonth.padStart(2,'0')}-${formData.passportExpiryDay.padStart(2,'0')}` : null,
                 lives_abroad: formData.livesAbroad || null,
                 previous_visas: formData.previousVisas || null,
             };
@@ -779,12 +836,20 @@ export default function OnboardingPage() {
                                 <div className="grid grid-cols-3 gap-3">
                                     <div>
                                         <label className={labelClass}>Date of Birth *</label>
-                                        <input
-                                            type="date"
-                                            value={spouseData.dob}
-                                            onChange={(e) => setSpouseData(prev => ({ ...prev, dob: e.target.value }))}
-                                            className={inputClass}
-                                        />
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <select value={spouseData.dobDay} onChange={(e) => setSpouseData(prev => ({ ...prev, dobDay: e.target.value }))} className={inputClass}>
+                                                <option value="">Day</option>
+                                                {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
+                                            </select>
+                                            <select value={spouseData.dobMonth} onChange={(e) => setSpouseData(prev => ({ ...prev, dobMonth: e.target.value }))} className={inputClass}>
+                                                <option value="">Month</option>
+                                                {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
+                                            </select>
+                                            <select value={spouseData.dobYear} onChange={(e) => setSpouseData(prev => ({ ...prev, dobYear: e.target.value }))} className={inputClass}>
+                                                <option value="">Year</option>
+                                                {ALL_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
+                                            </select>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className={labelClass}>Country of Birth</label>
@@ -870,12 +935,20 @@ export default function OnboardingPage() {
                                             </div>
                                             <div>
                                                 <label className={labelClass}>Date of Birth</label>
-                                                <input
-                                                    type="date"
-                                                    value={child.dob}
-                                                    onChange={(e) => updateChild(index, "dob", e.target.value)}
-                                                    className={inputClass}
-                                                />
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <select value={child.dobDay} onChange={(e) => updateChild(index, "dobDay", e.target.value)} className={inputClass}>
+                                                        <option value="">Day</option>
+                                                        {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
+                                                    </select>
+                                                    <select value={child.dobMonth} onChange={(e) => updateChild(index, "dobMonth", e.target.value)} className={inputClass}>
+                                                        <option value="">Month</option>
+                                                        {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
+                                                    </select>
+                                                    <select value={child.dobYear} onChange={(e) => updateChild(index, "dobYear", e.target.value)} className={inputClass}>
+                                                        <option value="">Year</option>
+                                                        {ALL_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
+                                                    </select>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -926,22 +999,38 @@ export default function OnboardingPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Issue Date *</label>
-                                <input
-                                    type="date"
-                                    value={formData.passportIssueDate}
-                                    onChange={(e) => updateField("passportIssueDate", e.target.value)}
-                                    className={inputClass}
-                                />
+                                <div className="grid grid-cols-3 gap-2">
+                                    <select value={formData.passportIssueDay} onChange={(e) => updateField("passportIssueDay", e.target.value)} className={inputClass}>
+                                        <option value="">Day</option>
+                                        {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
+                                    </select>
+                                    <select value={formData.passportIssueMonth} onChange={(e) => updateField("passportIssueMonth", e.target.value)} className={inputClass}>
+                                        <option value="">Month</option>
+                                        {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
+                                    </select>
+                                    <select value={formData.passportIssueYear} onChange={(e) => updateField("passportIssueYear", e.target.value)} className={inputClass}>
+                                        <option value="">Year</option>
+                                        {PASSPORT_ISSUE_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
+                                    </select>
+                                </div>
                                 <p className="text-[10px] text-gray-400 mt-1">Must be within the last 10 years</p>
                             </div>
                             <div>
                                 <label className={labelClass}>Expiry Date *</label>
-                                <input
-                                    type="date"
-                                    value={formData.passportExpiryDate}
-                                    onChange={(e) => updateField("passportExpiryDate", e.target.value)}
-                                    className={inputClass}
-                                />
+                                <div className="grid grid-cols-3 gap-2">
+                                    <select value={formData.passportExpiryDay} onChange={(e) => updateField("passportExpiryDay", e.target.value)} className={inputClass}>
+                                        <option value="">Day</option>
+                                        {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
+                                    </select>
+                                    <select value={formData.passportExpiryMonth} onChange={(e) => updateField("passportExpiryMonth", e.target.value)} className={inputClass}>
+                                        <option value="">Month</option>
+                                        {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
+                                    </select>
+                                    <select value={formData.passportExpiryYear} onChange={(e) => updateField("passportExpiryYear", e.target.value)} className={inputClass}>
+                                        <option value="">Year</option>
+                                        {PASSPORT_EXPIRY_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
+                                    </select>
+                                </div>
                                 <p className="text-[10px] text-gray-400 mt-1">Must be 3+ months after departure</p>
                             </div>
                         </div>
