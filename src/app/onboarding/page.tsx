@@ -351,7 +351,7 @@ export default function OnboardingPage() {
                         ← Back to Profile
                     </Link>
                     <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Workers United" className="h-12 w-auto object-contain" />
+                        <img src="/logo.png" alt="Workers United" className="h-20 w-auto object-contain" />
                         <span className="font-bold text-[#1877f2] text-xl hidden sm:inline">Workers United</span>
                     </Link>
                     <div className="w-[120px]" /> {/* Spacer */}
