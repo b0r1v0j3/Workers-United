@@ -222,8 +222,6 @@ export default function DashboardClient({
                                 <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
                                 <DocumentRow label="Biometric Photo" type="biometric_photo" status={getDocStatus("biometric_photo")} />
                                 <DocumentRow label="Diploma / Certificate" type="diploma" status={getDocStatus("diploma")} />
-                                <DocumentRow label="Police Record" type="police_record" status={getDocStatus("police_record")} />
-                                <DocumentRow label="Medical Certificate" type="medical" status={getDocStatus("medical")} />
                             </div>
                         </div>
                     </div>
@@ -241,8 +239,8 @@ export default function DashboardClient({
                                         {/* Dot + Line */}
                                         <div className="flex flex-col items-center">
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shrink-0 transition-colors ${stage.done
-                                                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                    : 'bg-white border-[#dddfe2] text-[#65676b]'
+                                                ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                : 'bg-white border-[#dddfe2] text-[#65676b]'
                                                 }`}>
                                                 {stage.done ? <CheckCircle2 size={16} /> : <span className="text-xs font-bold">{index + 1}</span>}
                                             </div>
@@ -263,10 +261,10 @@ export default function DashboardClient({
 
                         {/* Current Status Card */}
                         <div className={`rounded-xl shadow-sm border p-5 ${inQueue
-                                ? 'bg-emerald-50 border-emerald-200'
-                                : isReady
-                                    ? 'bg-blue-50 border-blue-200'
-                                    : 'bg-amber-50 border-amber-200'
+                            ? 'bg-emerald-50 border-emerald-200'
+                            : isReady
+                                ? 'bg-blue-50 border-blue-200'
+                                : 'bg-amber-50 border-amber-200'
                             }`}>
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${inQueue ? 'bg-emerald-500' : isReady ? 'bg-[#1877f2]' : 'bg-amber-500'
@@ -324,8 +322,8 @@ function TabButton({ active, onClick, label }: { active: boolean, onClick: () =>
         <button
             onClick={onClick}
             className={`px-5 py-3.5 font-semibold text-[15px] whitespace-nowrap transition-colors relative ${active
-                    ? 'text-[#1877f2]'
-                    : 'text-[#65676b] hover:bg-[#f0f2f5] rounded-t-lg'
+                ? 'text-[#1877f2]'
+                : 'text-[#65676b] hover:bg-[#f0f2f5] rounded-t-lg'
                 }`}
         >
             {label}
