@@ -22,7 +22,9 @@ export async function GET(request: Request) {
             if (user) {
                 const userType = user.user_metadata?.user_type;
 
-                if (userType === 'employer') {
+                if (userType === 'admin') {
+                    return NextResponse.redirect(`${origin}/admin`);
+                } else if (userType === 'employer') {
                     // Create employer record if needed
                     const { data: employer } = await supabase
                         .from('employers')
@@ -38,11 +40,10 @@ export async function GET(request: Request) {
                         });
                     }
 
-                    // Employers go to /employer/profile
-                    return NextResponse.redirect(`${origin}/employer/profile`);
+                    return NextResponse.redirect(`${origin}/profile/employer`);
                 } else {
-                    // Workers go to /profile
-                    return NextResponse.redirect(`${origin}/profile`);
+                    // Workers go to /profile/worker
+                    return NextResponse.redirect(`${origin}/profile/worker`);
                 }
             }
 

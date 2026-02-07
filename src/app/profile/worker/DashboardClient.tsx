@@ -119,7 +119,7 @@ export default function DashboardClient({
                                 </p>
                             </div>
                             <Link
-                                href="/onboarding"
+                                href="/profile/worker/edit"
                                 className="bg-[#1877f2] text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 shadow-sm"
                             >
                                 <Pencil size={16} /> Edit Profile
@@ -163,7 +163,7 @@ export default function DashboardClient({
                         <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
-                                <Link href="/onboarding" className="text-[#1877f2] text-sm font-semibold hover:underline">
+                                <Link href="/profile/worker/edit" className="text-[#1877f2] text-sm font-semibold hover:underline">
                                     Edit
                                 </Link>
                             </div>
@@ -186,7 +186,7 @@ export default function DashboardClient({
                                 {pendingOffers.map((offer: any) => (
                                     <Link
                                         key={offer.id}
-                                        href={`/profile/offers/${offer.id}`}
+                                        href={`/profile/worker/offers/${offer.id}`}
                                         className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-200 hover:border-emerald-400 transition-colors group"
                                     >
                                         <div>
@@ -296,7 +296,7 @@ export default function DashboardClient({
                                 {pendingOffers.map((offer: any) => (
                                     <Link
                                         key={offer.id}
-                                        href={`/profile/offers/${offer.id}`}
+                                        href={`/profile/worker/offers/${offer.id}`}
                                         className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-100 hover:border-emerald-300 transition-colors group"
                                     >
                                         <div>

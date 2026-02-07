@@ -58,7 +58,7 @@ export default function LoginPage() {
 
                     <h1 className="text-5xl font-bold mb-6 leading-tight">Welcome back</h1>
                     <p className="text-blue-100/80 text-lg max-w-md leading-relaxed mb-12">
-                        Log in to access your dashboard, track your applications, and manage your profile.
+                        Log in to access your profile, track your applications, and manage documents.
                     </p>
 
                     <div className="space-y-8">
@@ -110,7 +110,7 @@ export default function LoginPage() {
                         <div className="space-y-2">
                             <div className="flex justify-between items-center ml-1">
                                 <label className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider">Password</label>
-                                <Link href="#" className="text-[12px] font-bold text-[#2f6fed] hover:underline">Forgot password?</Link>
+                                {/* Forgot password - TODO: implement reset flow */}
                             </div>
                             <input
                                 type="password"

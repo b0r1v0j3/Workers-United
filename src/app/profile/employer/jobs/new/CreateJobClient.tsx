@@ -141,8 +141,8 @@ export default function CreateJobClient() {
                             <span className="font-medium">Back to Profile</span>
                         </Link>
                         <div className="flex items-center gap-2">
-                            <img src="/logo.png" alt="Workers United" width={64} height={64} />
-                            <span className="font-bold text-[#183b56]">Workers United</span>
+                            <img src="/logo.png" alt="Workers United" className="h-10 w-auto object-contain" />
+                            <span className="font-bold text-[#1877f2]">Workers United</span>
                         </div>
                     </div>
                 </div>
@@ -150,7 +150,7 @@ export default function CreateJobClient() {
 
             <main className="max-w-[700px] mx-auto px-5 py-8">
                 {/* Hero Header */}
-                <div className="bg-gradient-to-r from-[#14B8A6] to-[#10B981] rounded-2xl p-6 mb-8 text-white shadow-lg">
+                <div className="bg-gradient-to-r from-[#2f6fed] to-[#1e5cd6] rounded-2xl p-6 mb-8 text-white shadow-lg">
                     <h1 className="text-2xl font-bold mb-2">Create Job Request</h1>
                     <p className="text-white/90 text-sm">
                         Find pre-verified international workers for your business
