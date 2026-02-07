@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import AppShell from "@/components/AppShell";
+import { Briefcase, MapPin, Users, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
 export default async function EmployerJobsPage() {
     const supabase = await createClient();
@@ -28,36 +30,35 @@ export default async function EmployerJobsPage() {
         .order("created_at", { ascending: false });
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <nav className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <Link href="/employer/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M19 12H5M12 19l-7-7 7-7" />
-                            </svg>
-                            Back to Dashboard
-                        </Link>
-                        <Link href="/employer/jobs/new" className="btn btn-primary">
-                            + New Job Request
-                        </Link>
+        <AppShell user={user} variant="dashboard">
+            <div className="space-y-6">
+                {/* Header Card */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">Job Requests</h1>
+                        <p className="text-slate-500">Manage your hiring pipeline and view applications.</p>
                     </div>
+                    <Link
+                        href="/employer/jobs/new"
+                        className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100 active:scale-95 flex items-center gap-2"
+                    >
+                        <Briefcase size={18} />
+                        New Job Request
+                    </Link>
                 </div>
-            </nav>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">Your Job Requests</h1>
-
+                {/* Content Area */}
                 {!jobs || jobs.length === 0 ? (
-                    <div className="card text-center py-12">
-                        <div className="text-4xl mb-4">📋</div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-2">No Job Requests Yet</h2>
-                        <p className="text-gray-600 mb-4">
-                            Create your first job request to start matching with candidates.
+                    <div className="bg-white p-12 rounded-xl shadow-sm border border-slate-200 text-center">
+                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                            <Briefcase size={32} />
+                        </div>
+                        <h2 className="text-xl font-bold text-slate-900 mb-2">No Job Requests Yet</h2>
+                        <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                            Create your first job request to start matching with candidates from our verified pool.
                         </p>
-                        <Link href="/employer/jobs/new" className="btn btn-primary">
-                            Create Job Request
+                        <Link href="/employer/jobs/new" className="text-blue-600 font-semibold hover:underline">
+                            Create Job Request →
                         </Link>
                     </div>
                 ) : (
@@ -67,8 +68,8 @@ export default async function EmployerJobsPage() {
                         ))}
                     </div>
                 )}
-            </main>
-        </div>
+            </div>
+        </AppShell>
     );
 }
 
@@ -96,50 +97,48 @@ function JobCard({ job }: JobCardProps) {
     const acceptedOffers = job.offers?.filter(o => o.status === "accepted").length || 0;
 
     return (
-        <div className="card">
-            <div className="flex justify-between items-start">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-blue-200 transition-colors group">
+            <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                    <p className="text-gray-500 text-sm">
-                        {job.industry} • {job.destination_country}
-                    </p>
+                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        <Link href={`/employer/jobs/${job.id}`}>{job.title}</Link>
+                    </h3>
+                    <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                        <span className="flex items-center gap-1"><Briefcase size={14} /> {job.industry}</span>
+                        <span className="flex items-center gap-1"><MapPin size={14} /> {job.destination_country}</span>
+                        <span className="flex items-center gap-1"><Clock size={14} /> {new Date(job.created_at).toLocaleDateString()}</span>
+                    </div>
                 </div>
                 <StatusBadge status={job.status} />
             </div>
 
-            <div className="grid grid-cols-4 gap-4 mt-4">
-                <div>
-                    <p className="text-2xl font-bold text-gray-900">
-                        {job.positions_filled} / {job.positions_count}
-                    </p>
-                    <p className="text-xs text-gray-500">Positions Filled</p>
-                </div>
-                <div>
-                    <p className="text-2xl font-bold text-amber-600">{pendingOffers}</p>
-                    <p className="text-xs text-gray-500">Pending Offers</p>
-                </div>
-                <div>
-                    <p className="text-2xl font-bold text-green-600">{acceptedOffers}</p>
-                    <p className="text-xs text-gray-500">Accepted</p>
-                </div>
-                <div>
-                    <p className="text-lg font-semibold text-gray-900">
-                        {job.salary_rsd ? `${job.salary_rsd.toLocaleString()} RSD` : "-"}
-                    </p>
-                    <p className="text-xs text-gray-500">Monthly Salary</p>
-                </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <StatBox label="Positions Filled" value={`${job.positions_filled} / ${job.positions_count}`} icon={<Users size={16} />} />
+                <StatBox label="Pending Offers" value={pendingOffers} icon={<AlertCircle size={16} />} color="text-amber-600" />
+                <StatBox label="Accepted" value={acceptedOffers} icon={<CheckCircle2 size={16} />} color="text-green-600" />
+                <StatBox label="Salary" value={job.salary_rsd ? `${job.salary_rsd.toLocaleString()} RSD` : "-"} icon={<span className="font-bold text-xs">RSD</span>} />
             </div>
 
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-500">
-                    Created {new Date(job.created_at).toLocaleDateString()}
-                </p>
+            <div className="mt-4 flex justify-end">
                 <Link
                     href={`/employer/jobs/${job.id}`}
-                    className="text-sm text-blue-600 hover:underline"
+                    className="text-sm font-semibold text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
                 >
-                    View Details →
+                    View Details <span className="text-lg">→</span>
                 </Link>
+            </div>
+        </div>
+    );
+}
+
+function StatBox({ label, value, icon, color = "text-slate-900" }: any) {
+    return (
+        <div>
+            <div className={`text-xl font-bold ${color} flex items-center gap-2`}>
+                {value}
+            </div>
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1 mt-1">
+                {icon} {label}
             </div>
         </div>
     );
@@ -147,23 +146,23 @@ function JobCard({ job }: JobCardProps) {
 
 function StatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
-        open: "bg-green-100 text-green-800",
-        matching: "bg-blue-100 text-blue-800",
-        filled: "bg-teal-100 text-teal-800",
-        closed: "bg-gray-100 text-gray-800",
-        cancelled: "bg-red-100 text-red-800",
+        open: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        matching: "bg-blue-100 text-blue-700 border-blue-200",
+        filled: "bg-indigo-100 text-indigo-700 border-indigo-200",
+        closed: "bg-slate-100 text-slate-700 border-slate-200",
+        cancelled: "bg-red-100 text-red-700 border-red-200",
     };
 
     const labels: Record<string, string> = {
-        open: "✓ Open",
-        matching: "⚡ Matching",
-        filled: "✅ Filled",
+        open: "Open",
+        matching: "Matching",
+        filled: "Filled",
         closed: "Closed",
         cancelled: "Cancelled",
     };
 
     return (
-        <span className={`px-3 py-1 text-sm font-medium rounded-full ${styles[status] || styles.closed}`}>
+        <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wide rounded-full border ${styles[status] || styles.closed}`}>
             {labels[status] || status}
         </span>
     );

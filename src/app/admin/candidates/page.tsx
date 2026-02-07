@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
+import AppShell from "@/components/AppShell";
+import { Search, Filter, MoreHorizontal, Phone, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 export default async function CandidatesPage() {
     const supabase = await createClient();
@@ -41,12 +43,12 @@ export default async function CandidatesPage() {
     // Fetch all candidates
     const { data: candidates } = await adminClient
         .from("candidates")
-        .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed");
+        .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed, current_country");
 
     // Fetch all profiles
     const { data: profiles } = await adminClient
         .from("profiles")
-        .select("id, email, full_name, first_name, last_name");
+        .select("id, email, full_name, first_name, last_name, avatar_url");
 
     // Fetch all documents
     const { data: allDocs } = await adminClient
@@ -58,147 +60,132 @@ export default async function CandidatesPage() {
     const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
     // Calculate user progress
-    const getUserProgress = (userId: string) => {
-        const hasProfile = profileMap.has(userId);
+    const getUserStats = (userId: string) => {
         const candidate = candidateMap.get(userId);
-        const hasCandidate = !!candidate;
         const userDocs = allDocs?.filter(d => d.user_id === userId) || [];
         const verifiedDocs = userDocs.filter(d => d.status === 'verified').length;
-        const hasSignature = !!candidate?.signature_url;
-        const onboardingComplete = !!candidate?.onboarding_completed;
-
-        let progress = 'Registered';
-        let progressColor = 'bg-gray-100 text-gray-600';
-        let progressPercent = 20;
-
-        if (hasProfile && hasCandidate) {
-            progress = 'Profile Created';
-            progressColor = 'bg-blue-100 text-blue-700';
-            progressPercent = 40;
-        }
-        if (userDocs.length > 0) {
-            progress = `${userDocs.length} Doc(s) Uploaded`;
-            progressColor = 'bg-yellow-100 text-yellow-700';
-            progressPercent = 60;
-        }
-        if (verifiedDocs >= 3) {
-            progress = 'Docs Verified ✓';
-            progressColor = 'bg-green-100 text-green-700';
-            progressPercent = 80;
-        }
-        if (verifiedDocs >= 3 && hasSignature) {
-            progress = 'Ready ✓✓';
-            progressColor = 'bg-emerald-100 text-emerald-700';
-            progressPercent = 100;
-        }
-
-        return { progress, progressColor, progressPercent, verifiedDocs, hasCandidate, hasProfile };
+        return { candidate, userDocs, verifiedDocs };
     };
 
     return (
-        <>
-
-            {/* Debug Banner */}
-            <div className="bg-yellow-100 border-b border-yellow-300 px-5 py-3 text-sm">
-                <strong>DEBUG:</strong>{" "}
-                Service Role: <span className={usingServiceRole ? "text-green-700" : "text-red-700"}>{usingServiceRole ? "YES ✓" : "NO ✗"}</span>{" "}
-                | Auth Users: <strong>{allAuthUsers.length}</strong>{" "}
-                | Candidates: <strong>{candidates?.length ?? 0}</strong>{" "}
-                | Profiles: <strong>{profiles?.length ?? 0}</strong>{" "}
-                {authError && <span className="text-red-600">| Auth Error: {authError.message}</span>}
-            </div>
-
-            <div className="max-w-[1400px] mx-auto px-5 py-10">
-                <div className="mb-8 flex justify-between items-end">
-                    <div>
-                        <h1 className="text-3xl font-bold text-[#1e293b]">All Users</h1>
-                        <p className="text-[#64748b] mt-1 font-medium">View all registered users and their progress</p>
+        <AppShell user={user} variant="admin">
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-900">Candidates</h1>
+                            <p className="text-slate-500">Manage registered users ({allAuthUsers.length})</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Search users..."
+                                    className="pl-10 pr-4 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm w-[200px]"
+                                />
+                            </div>
+                            <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+                                <Filter size={18} />
+                            </button>
+                        </div>
                     </div>
-                    <Link href="/admin" className="text-[#2f6fed] font-semibold hover:underline">
-                        ← Back to Dashboard
-                    </Link>
+
+                    {!usingServiceRole && (
+                        <div className="bg-amber-50 text-amber-800 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                            <AlertCircle size={16} />
+                            <span>Running in limited mode (RLS enabled). Configure Service Role Key for full access.</span>
+                        </div>
+                    )}
                 </div>
 
-                {/* User Table */}
-                <div className="bg-white rounded-[16px] overflow-hidden shadow-sm border border-[#dde3ec]">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-[#f8fafc] border-b border-[#dde3ec]">
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">#</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">User</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Progress</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Documents</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Phone</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#f1f5f9]">
-                                {allAuthUsers.map((authUser: any, index: number) => {
-                                    const profile = profileMap.get(authUser.id);
-                                    const candidate = candidateMap.get(authUser.id);
-                                    const { progress, progressColor, verifiedDocs, hasCandidate } = getUserProgress(authUser.id);
-                                    const isCurrentUser = authUser.id === user.id;
+                {/* Users Grid */}
+                <div className="grid grid-cols-1 gap-4">
+                    {allAuthUsers.map((authUser: any) => {
+                        const profile = profileMap.get(authUser.id);
+                        const { candidate, userDocs, verifiedDocs } = getUserStats(authUser.id);
+                        const isCurrentUser = authUser.id === user.id;
 
-                                    return (
-                                        <tr key={authUser.id} className="hover:bg-[#fbfcfe] transition-colors">
-                                            <td className="px-6 py-5 text-[#64748b] font-medium">{index + 1}</td>
-                                            <td className="px-6 py-5">
-                                                <div className="font-bold text-[#1e293b]">
+                        // Progression badges
+                        const hasProfile = !!profile;
+                        const hasCandidate = !!candidate;
+                        const hasDocs = userDocs.length > 0;
+                        const isVerified = verifiedDocs >= 3;
+
+                        return (
+                            <div key={authUser.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-200 transition-all group">
+                                <div className="flex items-start gap-4">
+                                    {/* Avatar */}
+                                    <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden flex-shrink-0 border border-slate-200">
+                                        <img
+                                            src={profile?.avatar_url || authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${(profile?.full_name || "User").replace(' ', '+')}&background=random`}
+                                            alt="Avatar"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+
+                                    {/* Main Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-bold text-slate-900 truncate">
                                                     {profile?.full_name || authUser.user_metadata?.full_name || "No Name"}
-                                                    {isCurrentUser && <span className="ml-2 text-xs text-blue-500">(You)</span>}
+                                                    {isCurrentUser && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">You</span>}
+                                                </h3>
+                                                <div className="text-sm text-slate-500 truncate">{authUser.email}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={`/admin/candidates/${authUser.id}`}
+                                                    className="text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
+                                                >
+                                                    View
+                                                </Link>
+                                                <div className="text-slate-400 hover:bg-slate-100 p-1.5 rounded-lg cursor-pointer">
+                                                    <MoreHorizontal size={18} />
                                                 </div>
-                                                <div className="text-[13px] text-[#64748b]">{authUser.email}</div>
-                                                <div className="text-[11px] text-[#94a3b8] font-mono">{authUser.id.substring(0, 8)}...</div>
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <span className={`text-[11px] px-3 py-1 rounded-full font-bold ${progressColor}`}>
-                                                    {progress}
+                                            </div>
+                                        </div>
+
+                                        {/* Status Row */}
+                                        <div className="flex flex-wrap items-center gap-2 mt-3 text-xs md:text-sm">
+                                            {hasCandidate && candidate.nationality && (
+                                                <span className="flex items-center gap-1 text-slate-600 bg-slate-50 px-2 py-1 rounded">
+                                                    🌍 {candidate.nationality}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                {hasCandidate ? (
-                                                    <div className="text-[13px] font-medium">
-                                                        <span className={verifiedDocs >= 3 ? "text-green-600" : "text-gray-500"}>
-                                                            {verifiedDocs}/3 Verified
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[#94a3b8] text-[13px] italic">-</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <span className="text-[13px] text-[#64748b]">
-                                                    {candidate?.phone || "-"}
+                                            )}
+                                            {hasCandidate && candidate.phone && (
+                                                <span className="flex items-center gap-1 text-slate-600 bg-slate-50 px-2 py-1 rounded">
+                                                    <Phone size={12} /> {candidate.phone}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex gap-2">
-                                                    <Link
-                                                        href={`/admin/candidates/${authUser.id}`}
-                                                        className="bg-[#2f6fed] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#1e5cd6] transition-colors"
-                                                        style={{ color: 'white' }}
-                                                    >
-                                                        View
-                                                    </Link>
-                                                    <DeleteUserButton userId={authUser.id} userName={profile?.full_name || authUser.email} />
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                                {allAuthUsers.length === 0 && (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-10 text-center text-[#64748b] italic">
-                                            No users found.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                            )}
+
+                                            {/* Doc Status Badge */}
+                                            {hasDocs ? (
+                                                <span className={`flex items-center gap-1 px-2 py-1 rounded font-medium ${isVerified ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                    {isVerified ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                                                    {verifiedDocs}/3 Docs
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-slate-400 bg-slate-50 px-2 py-1 rounded">
+                                                    <FileText size={12} /> No Docs
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {allAuthUsers.length === 0 && (
+                        <div className="text-center py-12 text-slate-500">
+                            No users found.
+                        </div>
+                    )}
                 </div>
             </div>
-        </>
+        </AppShell>
     );
 }
