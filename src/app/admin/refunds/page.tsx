@@ -76,7 +76,7 @@ export default async function AdminRefundsPage() {
                                             {candidate.profiles?.email}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                            {joinedAt.toLocaleDateString()}
+                                            {joinedAt.toLocaleDateString('en-GB')}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                                             {daysWaited} days

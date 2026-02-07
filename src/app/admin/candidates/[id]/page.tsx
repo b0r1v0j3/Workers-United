@@ -253,7 +253,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                 <div>
                                                     <div className="font-bold text-[#1e293b]">${payment.amount / 100}</div>
                                                     <div className="text-[12px] text-[#64748b]">
-                                                        {new Date(payment.created_at).toLocaleDateString()}
+                                                        {new Date(payment.created_at).toLocaleDateString('en-GB')}
                                                     </div>
                                                 </div>
                                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${payment.status === 'completed' ? 'bg-green-100 text-green-700' :
@@ -286,7 +286,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                     </div>
                                     <div className="text-[12px] text-[#64748b] space-y-1">
                                         <div><strong>Document:</strong> {signatures[0].document_type}</div>
-                                        <div><strong>Signed:</strong> {new Date(signatures[0].created_at).toLocaleString()}</div>
+                                        <div><strong>Signed:</strong> {new Date(signatures[0].created_at).toLocaleString('en-GB')}</div>
                                         <div><strong>IP:</strong> {signatures[0].ip_address || 'N/A'}</div>
                                     </div>
                                 </div>
@@ -312,7 +312,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                 <div>
                                                     <h3 className="font-bold text-[#1e293b] capitalize text-lg">{doc.document_type}</h3>
                                                     <div className="text-[12px] text-[#64748b]">
-                                                        Uploaded: {new Date(doc.created_at).toLocaleString()}
+                                                        Uploaded: {new Date(doc.created_at).toLocaleString('en-GB')}
                                                     </div>
                                                 </div>
                                                 <span className={`text-[11px] px-3 py-1 rounded-full font-bold uppercase border ${getStatusColor(doc.status)}`}>

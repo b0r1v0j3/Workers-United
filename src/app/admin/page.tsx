@@ -98,7 +98,7 @@ export default async function AdminDashboard() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xs text-slate-400">{new Date(c.created_at).toLocaleDateString()}</p>
+                                            <p className="text-xs text-slate-400">{new Date(c.created_at).toLocaleDateString('en-GB')}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -120,7 +120,7 @@ export default async function AdminDashboard() {
                                             </div>
                                             <div>
                                                 <p className="font-semibold text-slate-900 text-sm">{e.company_name}</p>
-                                                <p className="text-xs text-slate-500">{new Date(e.created_at).toLocaleDateString()}</p>
+                                                <p className="text-xs text-slate-500">{new Date(e.created_at).toLocaleDateString('en-GB')}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">

@@ -64,7 +64,6 @@ export default function ProfilePage() {
         current_country: "",
         preferred_job: "",
         years_experience: 0,
-        education_level: "",
     });
 
     useEffect(() => {
@@ -114,7 +113,6 @@ export default function ProfilePage() {
                     current_country: candidateData.current_country || "",
                     preferred_job: candidateData.preferred_job || "",
                     years_experience: candidateData.experience_years || 0,
-                    education_level: candidateData.education_level || "",
                 }));
             }
         } catch (err) {
@@ -156,7 +154,6 @@ export default function ProfilePage() {
                 current_country: formData.current_country || null,
                 preferred_job: formData.preferred_job || null,
                 experience_years: formData.years_experience || 0,
-                education_level: formData.education_level || null,
             };
 
             if (candidate) {
@@ -379,14 +376,27 @@ export default function ProfilePage() {
                                     <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
                                         Preferred Job / Industry <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="text"
+                                    <select
                                         name="preferred_job"
                                         value={formData.preferred_job}
                                         onChange={handleChange}
                                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        placeholder="e.g., Construction, Hospitality, Driver..."
-                                    />
+                                    >
+                                        <option value="">Select industry...</option>
+                                        <option value="Construction">Construction</option>
+                                        <option value="Manufacturing">Manufacturing</option>
+                                        <option value="Agriculture">Agriculture</option>
+                                        <option value="Hospitality">Hospitality</option>
+                                        <option value="Healthcare">Healthcare</option>
+                                        <option value="Transportation">Transportation</option>
+                                        <option value="Retail">Retail</option>
+                                        <option value="IT & Technology">IT & Technology</option>
+                                        <option value="Food Processing">Food Processing</option>
+                                        <option value="Warehousing & Logistics">Warehousing & Logistics</option>
+                                        <option value="Cleaning Services">Cleaning Services</option>
+                                        <option value="Driving">Driving</option>
+                                        <option value="Other">Other</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -414,24 +424,6 @@ export default function ProfilePage() {
                                             <option value="3">3-5 years</option>
                                             <option value="5">5-10 years</option>
                                             <option value="10">10+ years</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Highest Education
-                                        </label>
-                                        <select
-                                            name="education_level"
-                                            value={formData.education_level}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        >
-                                            <option value="">Select...</option>
-                                            <option value="none">No formal education</option>
-                                            <option value="primary">Primary School</option>
-                                            <option value="secondary">Secondary School</option>
-                                            <option value="trade">Trade / Technical School</option>
-                                            <option value="university">University</option>
                                         </select>
                                     </div>
                                 </div>

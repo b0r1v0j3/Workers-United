@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-07 (save fix, forgot password, coming soon CTA)
+> **Poslednje ažuriranje:** 2026-02-07 (education removed, dropdown sync, employer country)
 
 ---
 
@@ -14,6 +14,9 @@ Ovaj fajl je **jedini izvor istine** za ceo projekat. Svaki novi chat MORA da pr
 3. Ne krpi — svaku promenu radi kompletno i ispravno
 4. **UVEK predlaži unapređenja** — ti si partner u razvoju, ne samo izvršilac. Kad vidiš priliku za poboljšanje (UX, performanse, sigurnost, arhitektura), predloži i objasni zašto. Dodaj predloge u Sekciju 7 (Predlozi).
 5. Kad završiš task, razmisli da li nešto može bolje i predloži
+6. **PROAKTIVNO USKLAĐIVANJE** — kad menjaš jednu formu, UVEK proveri da li se ista polja koriste na drugom mestu (onboarding, edit, profil prikaz, employer, admin). Ako vidiš neusklađenost (npr. text input vs dropdown, lowercase vs uppercase vrednosti, polje postoji na jednom mestu a ne na drugom) — ODMAH to popravi ili predloži. **NE ČEKAJ da korisnik primeti.**
+7. **POSTAVLJAJ PITANJA** — ako vidiš nešto sumnjivo ili neusklađeno, pitaj korisnika pre nego što nastaviš. Bolje pitati 1 pitanje i uštedeti 30 minuta popravljanja.
+8. **PREDLAŽI UNAPREĐENJA** — na kraju svakog task-a, pogledaj šta se može poboljšati i predloži. Ti si partner u razvoju.
 
 ### Pravila za ažuriranje ovog fajla:
 1. **NIKAD ne briši Sekcije 1-4** — one su trajne i menjaju se samo kad vlasnik projekta to eksplicitno traži
@@ -114,6 +117,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Jednostavno i čisto** — profil → dokumenta → verifikacija → čekanje
 - **Sajt je 100% na engleskom jeziku**
 - **Mobile-first** — većina korisnika će koristiti mobilne telefone
+- **Format datuma: DD/MM/YYYY** — uvek koristiti `toLocaleDateString('en-GB')` ili `toLocaleString('en-GB')`. NIKAD američki format MM/DD/YYYY.
 
 ### Logo:
 - **Fajl:** `public/logo.png` — plavi heksagon sa belim rukovanjem na BELOJ pozadini (NE plava pozadina). Veličina fajla ~26KB.
@@ -158,6 +162,14 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**Education polje uklonjeno + Dropdown sync + Employer Country (07.02.2026)**
+- Uklonjeno `education_level` polje sa worker profila i edit forme — kandidati već šalju diplomu, polje je bilo redundantno
+- Worker preferred_job promenjen iz TEXT INPUT → DROPDOWN sa istim opcijama kao employer industry (13 industrija)
+- Onboarding dropdown bio lowercase (`construction`) dok je employer koristio uppercase (`Construction`) — usklađeno na uppercase svuda
+- Dodat **Country dropdown** na employer profil — 46 evropskih država (samo Evropa)
+- Work Location preimenovan u "City / Region" pored country dropdown-a
+- ⚠️ NAPOMENA: Potrebno dodati `country` kolonu u `employers` tabelu u Supabase!
 
 **Kritični bug fix + Forgot Password + Coming Soon (07.02.2026)**
 - Popravljen KRITIČNI bug: save na worker edit stranici nije radio jer je kod slao `years_experience` umesto `experience_years` (ime kolone u bazi). Takođe slao `address` i `education_level` koje NE POSTOJE u candidates tabeli — Supabase tiho odbijao ceo update
@@ -211,6 +223,10 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - [ ] Automatsko matchovanje radnika sa poslodavcima
 - [ ] Email notifikacije za sve korake procesa
 - [ ] Prebaciti Coming Soon → Stripe checkout ($9 entry fee) kad bude spremno
+- [x] ~~Education polje uklonjeno (redundantno — diploma se upload-uje)~~
+- [x] ~~Worker preferred_job: text → dropdown (sync sa employer)~~
+- [x] ~~Onboarding dropdown sync (lowercase → uppercase vrednosti)~~
+- [x] ~~Employer country dropdown (46 evropskih država)~~
 
 ### ⏸️ ČEKA SE (blokirano)
 - [ ] **WhatsApp integracija** — čeka se tax ID → bankovni račun → broj telefona na firmu
