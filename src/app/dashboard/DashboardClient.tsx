@@ -2,22 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import AppShell from "@/components/AppShell";
 import DocumentWizard from "@/components/DocumentWizard";
 import {
-    User,
-    Briefcase,
     FileText,
-    Building2,
+    Briefcase,
     MapPin,
     Globe,
-    Camera,
-    Pencil,
-    MoreHorizontal,
     Clock,
+    Pencil,
+    CheckCircle2,
+    AlertCircle,
+    Loader2,
+    Upload,
     ChevronRight,
-    Phone
+    Phone,
+    User,
+    Calendar,
+    Shield
 } from "lucide-react";
 
 interface DashboardClientProps {
@@ -31,350 +32,358 @@ interface DashboardClientProps {
     inQueue: boolean;
 }
 
-const INDUSTRIES = [
-    "Construction", "Manufacturing", "Agriculture", "Hospitality",
-    "Healthcare", "Transportation", "Retail", "IT & Technology",
-    "Food Processing", "Warehousing & Logistics", "Other"
-];
-
-type TabType = "timeline" | "about" | "photos" | "documents";
+type TabType = "profile" | "documents" | "status";
 
 export default function DashboardClient({
     user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue
 }: DashboardClientProps) {
-    const router = useRouter();
-    const [activeTab, setActiveTab] = useState<TabType>("timeline");
-    const [isEditing, setIsEditing] = useState(false);
+    const [activeTab, setActiveTab] = useState<TabType>("profile");
 
     const getDocStatus = (type: string) => {
         const doc = documents.find(d => d.document_type === type);
-        if (!doc) return { status: "missing", label: "Not uploaded", color: "slate" };
-        if (doc.status === "verified") return { status: "verified", label: "Verified", color: "emerald" };
-        if (doc.status === "rejected") return { status: "rejected", label: "Rejected", color: "red" };
-        if (doc.status === "verifying") return { status: "verifying", label: "Verifying...", color: "amber" };
-        return { status: "uploaded", label: "Uploaded", color: "blue" };
+        if (!doc) return { status: "missing", label: "Not uploaded", color: "slate", icon: Upload };
+        if (doc.status === "verified") return { status: "verified", label: "Verified", color: "emerald", icon: CheckCircle2 };
+        if (doc.status === "rejected") return { status: "rejected", label: "Rejected", color: "red", icon: AlertCircle };
+        if (doc.status === "verifying") return { status: "verifying", label: "Verifying...", color: "amber", icon: Loader2 };
+        return { status: "uploaded", label: "Uploaded", color: "blue", icon: Clock };
     };
 
     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
-    const displaySubtitle = candidate?.nationality ? `${candidate.preferred_job || "Worker"} • ${candidate.nationality}` : "International Worker";
+
+    // Application stages
+    const stages = [
+        { label: "Profile Created", done: true },
+        { label: "Documents Uploaded", done: isReady },
+        { label: "Verified", done: inQueue },
+        { label: "In Queue", done: inQueue },
+        { label: "Matched", done: false },
+    ];
+
+    const hasPendingOffer = pendingOffers && pendingOffers.length > 0;
 
     return (
-        <AppShell user={user} variant="dashboard">
-            {/* PROFILE HEADER */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-4">
-                <div className="p-6 pb-0">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                        <div>
-                            <h1 className="text-3xl font-bold text-slate-900 leading-tight">
-                                {displayName}
-                            </h1>
-                            <p className="text-slate-500 font-semibold text-lg flex items-center gap-2">
-                                {displaySubtitle}
-                            </p>
-                        </div>
-                        <div className="flex gap-2">
-                            <Link href="/onboarding" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2">
-                                <Pencil size={18} /> Edit Profile
-                            </Link>
-                            <button className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-semibold hover:bg-slate-200 transition-colors flex items-center gap-2">
-                                <FileText size={18} /> Download CV
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Profile Tabs */}
-                    <div className="flex gap-1 border-t border-slate-100 pt-2">
-                        <TabButton label="Timeline" onClick={() => setActiveTab('timeline')} active={activeTab === 'timeline'} />
-                        <TabButton label="About" onClick={() => setActiveTab('about')} active={activeTab === 'about'} />
-                        <TabButton label="Photos" onClick={() => setActiveTab('photos')} active={activeTab === 'photos'} />
-                        <TabButton label="Documents" onClick={() => setActiveTab('documents')} active={activeTab === 'documents'} />
+        <div className="min-h-screen bg-[#f0f2f5]">
+            {/* NAVBAR */}
+            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
+                <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+                        <img src="/logo.png" alt="Workers United" className="h-10 w-auto object-contain" />
+                        <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
+                            Workers United
+                        </span>
+                    </Link>
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-[#050505] hidden sm:block">
+                            {user.email?.split('@')[0]}
+                        </span>
+                        <a
+                            href="/auth/signout"
+                            className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
+                            title="Logout"
+                        >
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M16 13v-2H7V8l-5 4 5 4v-3z" />
+                                <path d="M20 3h-9c-1.103 0-2 .897-2 2v4h2V5h9v14h-9v-4H9v4c0 1.103.897 2 2 2h9c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2z" />
+                            </svg>
+                        </a>
                     </div>
                 </div>
-            </div>
+            </nav>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-4">
+            {/* MAIN CONTENT */}
+            <div className="max-w-[900px] mx-auto px-4 py-6">
 
-                {/* TIMELINE TAB */}
-                {activeTab === 'timeline' && (
-                    <>
-                        {/* LEFT COLUMN: INTRO & PHOTOS */}
-                        <div className="space-y-4">
-                            {/* Intro Card */}
-                            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-                                <h2 className="text-[20px] font-bold text-slate-900 mb-3">Intro</h2>
+                {/* PROFILE CARD */}
+                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-hidden mb-4">
+                    {/* Header gradient strip */}
+                    <div className="h-[120px] bg-gradient-to-r from-[#1877f2] via-[#42a5f5] to-[#1565c0] relative">
+                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white/20 to-transparent" />
+                    </div>
 
-                                <div className="space-y-3 text-[15px] text-slate-900">
-                                    {/* Status Badge */}
-                                    <div className={`flex items-center gap-2 text-center justify-center p-2 rounded-lg ${inQueue ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-600"}`}>
-                                        <span className="font-semibold">
-                                            {inQueue ? "Verified & In Queue" : isReady ? "Profile Ready" : "Building Profile"}
-                                        </span>
-                                    </div>
-
-                                    <IntroItem icon={<MapPin size={20} />} text={`Lives in ${candidate?.current_country || "Unknown"}`} />
-                                    <IntroItem icon={<Globe size={20} />} text={`From ${candidate?.nationality || "Unknown"}`} />
-                                    <IntroItem icon={<Briefcase size={20} />} text={`Looking for ${candidate?.preferred_job || "Any job"}`} />
-                                    <IntroItem icon={<Clock size={20} />} text={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : "Born date unknown"} />
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                                            <span>Profile Completion</span>
-                                            <span>{profileCompletion}%</span>
-                                        </div>
-                                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-600" style={{ width: `${profileCompletion}%` }} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Link href="/onboarding" className="block text-center w-full bg-slate-100 hover:bg-slate-200 py-1.5 rounded-md font-semibold mt-4 text-sm transition-colors text-slate-700">
-                                    Edit Bio
-                                </Link>
-                            </div>
-
-                            {/* Photos Preview */}
-                            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h2 className="text-[20px] font-bold text-slate-900">Photos</h2>
-                                    <button onClick={() => setActiveTab('photos')} className="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded text-[15px]">See all photos</button>
-                                </div>
-                                <div className="grid grid-cols-3 gap-1 rounded-lg overflow-hidden">
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                                        <div key={i} className="aspect-square bg-slate-100 border border-slate-200 flex items-center justify-center text-xs text-slate-400">
-                                            <Camera size={16} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* RIGHT COLUMN: FEED */}
-                        <div className="space-y-4">
-                            {/* Create Post (Fake input) */}
-                            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
-                                <div className="flex gap-2 mb-3">
-                                    <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0">
-                                        <img src={user.user_metadata?.avatar_url || "/avatar-placeholder.png"} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="flex-1 bg-slate-100 rounded-full px-3 flex items-center text-slate-500 hover:bg-slate-200 cursor-pointer transition-colors text-[15px]">
-                                        What is on your mind, {profile?.full_name?.split(' ')[0]}?
-                                    </div>
-                                </div>
-                                <hr className="border-slate-100" />
-                                <div className="flex pt-2">
-                                    <div className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50 py-2 rounded-lg cursor-pointer">
-                                        <span className="text-xl">🎥</span> <span className="text-slate-500 font-semibold text-sm">Live video</span>
-                                    </div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50 py-2 rounded-lg cursor-pointer">
-                                        <span className="text-xl">🖼️</span> <span className="text-slate-500 font-semibold text-sm">Photo/video</span>
-                                    </div>
-                                    <div className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50 py-2 rounded-lg cursor-pointer">
-                                        <span className="text-xl">😊</span> <span className="text-slate-500 font-semibold text-sm">Feeling/activity</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Application Progress "Pinned Post" */}
-                            {!isReady && (
-                                <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <h3 className="font-bold text-slate-900">📌 Action Required</h3>
-                                    </div>
-                                    <p className="text-sm text-slate-600 mb-4">You need to complete your document upload to start the matching process.</p>
-                                    <DocumentWizard candidateId={user.id} email={user.email || ""} />
-                                </div>
-                            )}
-
-                            {/* Feed Items */}
-                            <FeedPost
-                                author="Workers United"
-                                time="Just now"
-                                avatar="/logo.png"
-                                text={`Welcome to your profile, **${profile?.full_name || "Worker"}**! This is your personal space to track your application, specific job offers, and document verification status. Complete your profile to get started!`}
+                    <div className="px-6 pb-4 -mt-8 relative">
+                        {/* Avatar */}
+                        <div className="w-[80px] h-[80px] rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center overflow-hidden mb-3">
+                            <img
+                                src={user.user_metadata?.avatar_url || "/logo.png"}
+                                alt={displayName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { e.currentTarget.src = "/logo.png"; }}
                             />
-
-                            {pendingOffers?.map((offer: any) => (
-                                <FeedPost
-                                    key={offer.id}
-                                    author="System Notification"
-                                    time="1 hour ago"
-                                    avatar="/logo.png"
-                                    text="🎉 **You have a new Job Offer!**\nA company is interested in your profile. Check the details immediately as this offer expires in 24 hours."
-                                >
-                                    <Link href={`/dashboard/offers/${offer.id}`} className="mt-3 block bg-blue-50 p-3 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">
-                                        <div className="font-bold text-blue-700">{offer.job_request?.employer?.company_name}</div>
-                                        <div className="text-sm text-slate-600">{offer.job_request?.destination_country}</div>
-                                    </Link>
-                                </FeedPost>
-                            ))}
                         </div>
-                    </>
-                )}
 
-                {/* ABOUT TAB */}
-                {activeTab === 'about' && (
-                    <div className="col-span-1 lg:col-span-2 space-y-4">
-                        <div className="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
-                            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                                <h2 className="text-xl font-bold text-slate-900">About</h2>
-                                <Link href="/onboarding" className="text-blue-600 font-semibold hover:bg-blue-50 px-3 py-1 rounded-lg">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
+                            <div>
+                                <h1 className="text-2xl font-bold text-[#050505] leading-tight">{displayName}</h1>
+                                <p className="text-[#65676b] text-sm mt-0.5">
+                                    {candidate?.preferred_job || "Worker"} • {candidate?.nationality || "International"}
+                                </p>
+                            </div>
+                            <Link
+                                href="/onboarding"
+                                className="bg-[#1877f2] text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 shadow-sm"
+                            >
+                                <Pencil size={16} /> Edit Profile
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex border-t border-[#dddfe2] px-2">
+                        <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+                        <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
+                        <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
+                    </div>
+                </div>
+
+                {/* ====================== PROFILE INFO TAB ====================== */}
+                {activeTab === 'profile' && (
+                    <div className="space-y-4">
+                        {/* Profile Completion */}
+                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="font-bold text-[#050505]">Profile Completion</h3>
+                                <span className={`text-sm font-bold ${profileCompletion === 100 ? 'text-emerald-600' : 'text-[#1877f2]'}`}>
+                                    {profileCompletion}%
+                                </span>
+                            </div>
+                            <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-500 ${profileCompletion === 100 ? 'bg-emerald-500' : 'bg-[#1877f2]'}`}
+                                    style={{ width: `${profileCompletion}%` }}
+                                />
+                            </div>
+                            {profileCompletion < 100 && (
+                                <p className="text-xs text-[#65676b] mt-2">
+                                    Complete your profile to get matched with employers faster.
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Personal Information */}
+                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
+                                <Link href="/onboarding" className="text-[#1877f2] text-sm font-semibold hover:underline">
                                     Edit
                                 </Link>
                             </div>
-                            <div className="p-6 space-y-4 text-slate-700">
-                                <DetailRow label="Full Name" value={candidate?.profiles?.full_name} />
-                                <DetailRow label="Nationality" value={candidate?.nationality} />
-                                <DetailRow label="Current Location" value={candidate?.current_country} />
-                                <DetailRow label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : null} />
-                                <DetailRow label="Phone" value={candidate?.phone} />
-                                <DetailRow label="Preferred Job" value={candidate?.preferred_job} />
-                                <DetailRow label="Experience" value={candidate?.experience_years ? `${candidate.experience_years} years` : null} />
-                                <DetailRow label="Languages" value={candidate?.languages?.join(", ")} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
+                                <InfoRow icon={<Globe size={18} />} label="Nationality" value={candidate?.nationality} />
+                                <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
+                                <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : null} />
+                                <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
+                                <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
+                            </div>
+                        </div>
+
+                        {/* Pending Offers */}
+                        {hasPendingOffer && (
+                            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5">
+                                <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
+                                    🎉 You have a job offer!
+                                </h3>
+                                {pendingOffers.map((offer: any) => (
+                                    <Link
+                                        key={offer.id}
+                                        href={`/dashboard/offers/${offer.id}`}
+                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-200 hover:border-emerald-400 transition-colors group"
+                                    >
+                                        <div>
+                                            <div className="font-bold text-[#050505]">{offer.job_request?.employer?.company_name || "Company"}</div>
+                                            <div className="text-sm text-[#65676b]">{offer.job_request?.destination_country}</div>
+                                        </div>
+                                        <ChevronRight size={20} className="text-[#65676b] group-hover:text-emerald-600 transition-colors" />
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ====================== DOCUMENTS TAB ====================== */}
+                {activeTab === 'documents' && (
+                    <div className="space-y-4">
+                        {/* Document Upload Wizard (if not ready) */}
+                        {!isReady && (
+                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                                <h3 className="font-bold text-[#050505] text-lg mb-2">Upload Documents</h3>
+                                <p className="text-sm text-[#65676b] mb-4">
+                                    Upload your documents below to begin the verification process.
+                                </p>
+                                <DocumentWizard candidateId={user.id} email={user.email || ""} />
+                            </div>
+                        )}
+
+                        {/* Document Status List */}
+                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                            <h3 className="font-bold text-[#050505] text-lg mb-4">Document Status</h3>
+                            <div className="space-y-3">
+                                <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
+                                <DocumentRow label="Biometric Photo" type="biometric_photo" status={getDocStatus("biometric_photo")} />
+                                <DocumentRow label="Diploma / Certificate" type="diploma" status={getDocStatus("diploma")} />
+                                <DocumentRow label="Police Record" type="police_record" status={getDocStatus("police_record")} />
+                                <DocumentRow label="Medical Certificate" type="medical" status={getDocStatus("medical")} />
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* PHOTOS TAB */}
-                {activeTab === 'photos' && (
-                    <div className="col-span-1 lg:col-span-2">
-                        <div className="bg-white rounded-xl shadow border border-slate-200 p-4">
-                            <h2 className="text-xl font-bold text-slate-900 mb-4">Photos</h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                                    <div key={i} className="aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
-                                        <Camera size={32} />
+                {/* ====================== STATUS TAB ====================== */}
+                {activeTab === 'status' && (
+                    <div className="space-y-4">
+                        {/* Progress Tracker */}
+                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6">
+                            <h3 className="font-bold text-[#050505] text-lg mb-6">Application Progress</h3>
+                            <div className="relative">
+                                {stages.map((stage, index) => (
+                                    <div key={stage.label} className="flex items-start gap-4 mb-6 last:mb-0">
+                                        {/* Dot + Line */}
+                                        <div className="flex flex-col items-center">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shrink-0 transition-colors ${stage.done
+                                                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                    : 'bg-white border-[#dddfe2] text-[#65676b]'
+                                                }`}>
+                                                {stage.done ? <CheckCircle2 size={16} /> : <span className="text-xs font-bold">{index + 1}</span>}
+                                            </div>
+                                            {index < stages.length - 1 && (
+                                                <div className={`w-0.5 h-8 mt-1 ${stage.done ? 'bg-emerald-300' : 'bg-[#dddfe2]'}`} />
+                                            )}
+                                        </div>
+                                        {/* Label */}
+                                        <div className="pt-1">
+                                            <span className={`font-semibold text-sm ${stage.done ? 'text-emerald-700' : 'text-[#65676b]'}`}>
+                                                {stage.label}
+                                            </span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                    </div>
-                )}
 
-                {/* DOCUMENTS TAB */}
-                {activeTab === 'documents' && (
-                    <div className="col-span-1 lg:col-span-2">
-                        <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
-                            <h2 className="text-xl font-bold text-slate-900 mb-6">My Documents</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <DocumentCard label="Passport" status={getDocStatus("passport")} />
-                                <DocumentCard label="Photo" status={getDocStatus("biometric_photo")} />
-                                <DocumentCard label="Diploma" status={getDocStatus("diploma")} />
-                                <DocumentCard label="Certificate" status={getDocStatus("certificate")} />
-                                <DocumentCard label="Police Record" status={getDocStatus("police_record")} />
+                        {/* Current Status Card */}
+                        <div className={`rounded-xl shadow-sm border p-5 ${inQueue
+                                ? 'bg-emerald-50 border-emerald-200'
+                                : isReady
+                                    ? 'bg-blue-50 border-blue-200'
+                                    : 'bg-amber-50 border-amber-200'
+                            }`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${inQueue ? 'bg-emerald-500' : isReady ? 'bg-[#1877f2]' : 'bg-amber-500'
+                                    } text-white`}>
+                                    {inQueue ? <CheckCircle2 size={20} /> : isReady ? <Clock size={20} /> : <AlertCircle size={20} />}
+                                </div>
+                                <div>
+                                    <h4 className={`font-bold ${inQueue ? 'text-emerald-800' : isReady ? 'text-blue-800' : 'text-amber-800'
+                                        }`}>
+                                        {inQueue ? "You're in the queue!" : isReady ? "Profile complete — ready for queue" : "Complete your profile"}
+                                    </h4>
+                                    <p className={`text-sm ${inQueue ? 'text-emerald-600' : isReady ? 'text-blue-600' : 'text-amber-600'
+                                        }`}>
+                                        {inQueue
+                                            ? "We're actively matching you with employers. You'll be notified when there's a match."
+                                            : isReady
+                                                ? "Your documents are verified. Contact admin to join the queue."
+                                                : "Upload and verify your documents to continue."
+                                        }
+                                    </p>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Pending Offers in Status */}
+                        {hasPendingOffer && (
+                            <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-5">
+                                <h3 className="font-bold text-[#050505] text-lg mb-3">Active Offers</h3>
+                                {pendingOffers.map((offer: any) => (
+                                    <Link
+                                        key={offer.id}
+                                        href={`/dashboard/offers/${offer.id}`}
+                                        className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-100 hover:border-emerald-300 transition-colors group"
+                                    >
+                                        <div>
+                                            <div className="font-bold text-[#050505]">{offer.job_request?.employer?.company_name || "Company"}</div>
+                                            <div className="text-sm text-[#65676b]">{offer.job_request?.title} • {offer.job_request?.destination_country}</div>
+                                        </div>
+                                        <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-md uppercase">Pending</span>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
-
             </div>
-        </AppShell>
+        </div>
     );
 }
 
-// ----------------------------------------------------------------------
-// COMPONENTS
-// ----------------------------------------------------------------------
+// ─── COMPONENTS ──────────────────────────────────────────────
 
 function TabButton({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) {
     return (
         <button
             onClick={onClick}
-            className={`px-4 py-3 font-semibold text-[15px] whitespace-nowrap transition-colors relative ${active ? 'text-blue-600' : 'text-slate-600 hover:bg-slate-100 rounded-lg'}`}
+            className={`px-5 py-3.5 font-semibold text-[15px] whitespace-nowrap transition-colors relative ${active
+                    ? 'text-[#1877f2]'
+                    : 'text-[#65676b] hover:bg-[#f0f2f5] rounded-t-lg'
+                }`}
         >
             {label}
             {active && (
-                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-blue-600 rounded-t-full" />
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1877f2] rounded-t-full" />
             )}
         </button>
     );
 }
 
-function IntroItem({ icon, text }: { icon: React.ReactNode, text: React.ReactNode }) {
+function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: any }) {
     return (
-        <div className="flex items-center gap-3 text-slate-700">
-            <div className="text-slate-400">
-                {icon}
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-[#f7f8fa] border border-[#f0f2f5]">
+            <div className="text-[#65676b] mt-0.5 shrink-0">{icon}</div>
+            <div className="min-w-0">
+                <div className="text-xs font-semibold text-[#65676b] uppercase tracking-wide">{label}</div>
+                <div className="text-[#050505] font-medium text-[15px] truncate">
+                    {value || <span className="text-[#bcc0c4] italic">Not provided</span>}
+                </div>
             </div>
-            <span className="text-[15px] font-medium leading-tight">{text}</span>
         </div>
     );
 }
 
-function FeedPost({ author, time, avatar, text, children }: { author: string, time: string, avatar: string, text: string, children?: React.ReactNode }) {
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-            <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100">
-                    <img src={avatar} className="w-full h-full object-cover" />
-                </div>
-                <div>
-                    <div className="font-bold text-slate-900 text-[15px]">{author}</div>
-                    <div className="text-xs text-slate-500 flex items-center gap-1">
-                        {time} • <span>🌍</span>
-                    </div>
-                </div>
-                <div className="ml-auto text-slate-400 hover:bg-slate-100 p-2 rounded-full cursor-pointer">
-                    <MoreHorizontal size={20} />
-                </div>
-            </div>
-
-            <div className="text-[15px] text-slate-900 leading-normal whitespace-pre-wrap mb-2">
-                {text}
-            </div>
-
-            {children}
-
-            <hr className="my-3 border-slate-100" />
-
-            <div className="flex gap-1">
-                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50 py-1.5 rounded text-slate-500 font-semibold text-[14px] cursor-pointer">
-                    <span className="text-lg">👍</span> Like
-                </div>
-                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50 py-1.5 rounded text-slate-500 font-semibold text-[14px] cursor-pointer">
-                    <span className="text-lg">💬</span> Comment
-                </div>
-                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50 py-1.5 rounded text-slate-500 font-semibold text-[14px] cursor-pointer">
-                    <span className="text-lg">↗️</span> Share
-                </div>
-            </div>
-        </div>
-    )
-}
-
-function DetailRow({ label, value }: { label: string, value: any }) {
-    if (!value) return null;
-    return (
-        <div className="w-full py-2 border-b border-slate-50 last:border-0">
-            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">{label}</span>
-            <span className="text-slate-900 font-medium text-base">{value}</span>
-        </div>
-    );
-}
-
-function DocumentCard({ label, status }: { label: string, status: any }) {
-    const bgColors: any = {
+function DocumentRow({ label, type, status }: { label: string, type: string, status: any }) {
+    const IconComponent = status.icon;
+    const colorMap: Record<string, string> = {
+        emerald: "text-emerald-600 bg-emerald-50 border-emerald-200",
+        red: "text-red-600 bg-red-50 border-red-200",
+        amber: "text-amber-600 bg-amber-50 border-amber-200",
+        blue: "text-blue-600 bg-blue-50 border-blue-200",
+        slate: "text-slate-400 bg-slate-50 border-slate-200",
+    };
+    const badgeMap: Record<string, string> = {
         emerald: "bg-emerald-100 text-emerald-700",
         red: "bg-red-100 text-red-700",
         amber: "bg-amber-100 text-amber-700",
         blue: "bg-blue-100 text-blue-700",
-        slate: "bg-slate-100 text-slate-600"
+        slate: "bg-slate-100 text-slate-500",
     };
 
     return (
-        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors group cursor-pointer">
+        <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${colorMap[status.color]}`}>
             <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${status.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-slate-400'} border border-slate-200`}>
+                <div className="w-10 h-10 rounded-lg bg-white border border-current/10 flex items-center justify-center">
                     <FileText size={20} />
                 </div>
                 <div>
-                    <h4 className="font-semibold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{label}</h4>
-                    <p className="text-xs text-slate-500">Document</p>
+                    <h4 className="font-semibold text-[#050505] text-sm">{label}</h4>
+                    <p className="text-xs text-[#65676b]">{type.replace(/_/g, ' ')}</p>
                 </div>
             </div>
-            <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ${bgColors[status.color]}`}>
-                {status.label}
-            </span>
+            <div className="flex items-center gap-2">
+                <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-md ${badgeMap[status.color]}`}>
+                    {status.label}
+                </span>
+                <IconComponent size={18} className={status.color === 'amber' ? 'animate-spin' : ''} />
+            </div>
         </div>
     );
 }
