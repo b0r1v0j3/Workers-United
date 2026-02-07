@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 import AppShell from "@/components/AppShell";
-import { Search, Filter, MoreHorizontal, Phone, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Phone, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 export default async function CandidatesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const params = await searchParams;
@@ -98,19 +98,6 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                 {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `Manage registered users (${allAuthUsers.length})`}
                             </p>
                         </div>
-                        <div className="flex gap-2">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Search users..."
-                                    className="pl-10 pr-4 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm w-[200px]"
-                                />
-                            </div>
-                            <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
-                                <Filter size={18} />
-                            </button>
-                        </div>
                     </div>
 
                     {!usingServiceRole && (
@@ -170,9 +157,6 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                                 >
                                                     View
                                                 </Link>
-                                                <div className="text-slate-400 hover:bg-slate-100 p-1.5 rounded-lg cursor-pointer">
-                                                    <MoreHorizontal size={18} />
-                                                </div>
                                             </div>
                                         </div>
 
