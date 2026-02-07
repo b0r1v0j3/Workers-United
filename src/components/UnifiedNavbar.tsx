@@ -7,9 +7,10 @@ import { usePathname } from "next/navigation";
 interface UnifiedNavbarProps {
     variant: "public" | "dashboard" | "admin";
     user?: any; // Supabase user object
+    profileName?: string; // Full name from profiles table (takes priority)
 }
 
-export default function UnifiedNavbar({ variant, user }: UnifiedNavbarProps) {
+export default function UnifiedNavbar({ variant, user, profileName }: UnifiedNavbarProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
 
@@ -62,7 +63,7 @@ export default function UnifiedNavbar({ variant, user }: UnifiedNavbarProps) {
                             <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
                                 {/* Profile/Logout */}
                                 <span className="text-sm font-semibold text-[#050505] hidden sm:block">
-                                    {user.email?.split('@')[0]}
+                                    {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}
                                 </span>
                                 <a
                                     href="/auth/signout"
