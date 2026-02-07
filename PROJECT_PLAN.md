@@ -12,7 +12,8 @@ Ovaj fajl je **jedini izvor istine** za ceo projekat. Svaki novi chat MORA da pr
 1. Pročitaj **ceo** ovaj fajl pre nego što napišeš jednu liniju koda
 2. Ako korisnik traži nešto što se kosi sa ovim planom — **pitaj ga** pre nego što uradiš bilo šta
 3. Ne krpi — svaku promenu radi kompletno i ispravno
-4. Predlaži unapređenja kad vidiš priliku
+4. **UVEK predlaži unapređenja** — ti si partner u razvoju, ne samo izvršilac. Kad vidiš priliku za poboljšanje (UX, performanse, sigurnost, arhitektura), predloži i objasni zašto. Dodaj predloge u Sekciju 7 (Predlozi).
+5. Kad završiš task, razmisli da li nešto može bolje i predloži
 
 ### Pravila za ažuriranje ovog fajla:
 1. **NIKAD ne briši Sekcije 1-4** — one su trajne i menjaju se samo kad vlasnik projekta to eksplicitno traži
@@ -181,7 +182,27 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 
 ---
 
-## 6. 🏛️ ARHITEKTURA
+## 7. 💡 PREDLOZI ZA UNAPREĐENJE
+> AI treba da dopunjuje ovu listu kad vidi priliku. Korisnik odlučuje šta se implementira.
+
+### Prioritet: Visok
+- [ ] **GDPR Usklađenost** — čuvamo pasoše i lične podatke za EU poslodavce, treba: consent pri registraciji, pravo na brisanje podataka, privacy policy sadržaj
+- [ ] **Istekli dokumenti** — dodati `expires_at` polje za pasoš, automatski alert kad ističe za <6 meseci
+- [ ] **Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza. Procentualno po koraku.
+
+### Prioritet: Srednji
+- [ ] **WhatsApp notifikacije** — webhook postoji, treba ga iskoristiti za: queue update, nova ponuda, podsetnik za profil
+- [ ] **Per-Country Landing Pages** — `/work-in-serbia`, `/work-in-germany` sa specifičnim info o platama i uslovima (SEO)
+- [ ] **Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a
+
+### Prioritet: Nizak (kad bude živih korisnika)
+- [ ] **Success Stories** — pravi case studies kad prvi radnici dobiju vize
+- [ ] **Referral sistem** — radnik koji je uspešno plasiran preporučuje druge
+- [ ] **Multi-language support** — ključne instrukcije na jezicima radnika
+
+---
+
+## 8. 🏛️ ARHITEKTURA
 
 | Komponenta | Putanja | Opis |
 |---|---|---|
