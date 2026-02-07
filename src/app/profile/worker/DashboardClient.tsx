@@ -18,7 +18,9 @@ import {
     Phone,
     User,
     Calendar,
-    Shield
+    Shield,
+    Heart,
+    Users
 } from "lucide-react";
 
 interface DashboardClientProps {
@@ -175,14 +177,71 @@ export default function DashboardClient({
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
+                                <InfoRow icon={<User size={18} />} label="Gender" value={candidate?.gender} />
                                 <InfoRow icon={<Globe size={18} />} label="Nationality" value={candidate?.nationality} />
-                                <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
+                                <InfoRow icon={<Heart size={18} />} label="Marital Status" value={candidate?.marital_status} />
                                 <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString('en-GB') : null} />
+                                <InfoRow icon={<MapPin size={18} />} label="Birth Place" value={candidate?.birth_city && candidate?.birth_country ? `${candidate.birth_city}, ${candidate.birth_country}` : (candidate?.birth_country || null)} />
+                                <InfoRow icon={<Globe size={18} />} label="Citizenship" value={candidate?.citizenship} />
+                                <InfoRow icon={<Globe size={18} />} label="Original Citizenship" value={candidate?.original_citizenship && candidate.original_citizenship !== candidate.citizenship ? candidate.original_citizenship : null} />
+                                <InfoRow icon={<User size={18} />} label="Maiden Name" value={candidate?.maiden_name} />
+                                <InfoRow icon={<User size={18} />} label="Father's Name" value={candidate?.father_name} />
+                                <InfoRow icon={<User size={18} />} label="Mother's Name" value={candidate?.mother_name} />
+                                <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
                                 <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
                                 <InfoRow icon={<MapPin size={18} />} label="Address" value={candidate?.address} />
                                 <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
                             </div>
                         </div>
+
+                        {/* Family Information */}
+                        {candidate?.family_data && (candidate.family_data.spouse || (candidate.family_data.children && candidate.family_data.children.length > 0)) && (
+                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                                <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
+                                    <Users size={20} /> Family Information
+                                </h3>
+                                {candidate.family_data.spouse && (
+                                    <div className="mb-4">
+                                        <h4 className="text-sm font-semibold text-gray-600 mb-2">Spouse</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <InfoRow icon={<User size={18} />} label="Name" value={`${candidate.family_data.spouse.first_name} ${candidate.family_data.spouse.last_name}`} />
+                                            <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate.family_data.spouse.dob ? new Date(candidate.family_data.spouse.dob).toLocaleDateString('en-GB') : null} />
+                                            <InfoRow icon={<MapPin size={18} />} label="Birth Place" value={candidate.family_data.spouse.birth_city && candidate.family_data.spouse.birth_country ? `${candidate.family_data.spouse.birth_city}, ${candidate.family_data.spouse.birth_country}` : null} />
+                                        </div>
+                                    </div>
+                                )}
+                                {candidate.family_data.children && candidate.family_data.children.length > 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-gray-600 mb-2">Children ({candidate.family_data.children.length})</h4>
+                                        <div className="space-y-2">
+                                            {candidate.family_data.children.map((child: any, i: number) => (
+                                                <div key={i} className="flex items-center gap-4 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
+                                                    <span className="font-medium">{child.first_name} {child.last_name}</span>
+                                                    {child.dob && <span className="text-gray-500">Born: {new Date(child.dob).toLocaleDateString('en-GB')}</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Passport Information */}
+                        {candidate?.passport_number && (
+                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                                <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
+                                    <Shield size={20} /> Passport & Travel
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <InfoRow icon={<FileText size={18} />} label="Passport Number" value={candidate.passport_number ? `***${candidate.passport_number.slice(-4)}` : null} />
+                                    <InfoRow icon={<Globe size={18} />} label="Issued By" value={candidate.passport_issued_by} />
+                                    <InfoRow icon={<Calendar size={18} />} label="Issue Date" value={candidate.passport_issue_date ? new Date(candidate.passport_issue_date).toLocaleDateString('en-GB') : null} />
+                                    <InfoRow icon={<Calendar size={18} />} label="Expiry Date" value={candidate.passport_expiry_date ? new Date(candidate.passport_expiry_date).toLocaleDateString('en-GB') : null} />
+                                    <InfoRow icon={<Globe size={18} />} label="Lives Abroad" value={candidate.lives_abroad} />
+                                    <InfoRow icon={<FileText size={18} />} label="Previous Visas (3 years)" value={candidate.previous_visas} />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Pending Offers */}
                         {hasPendingOffer && (
