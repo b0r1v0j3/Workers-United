@@ -427,11 +427,11 @@ export default function ProfilePage() {
                                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         >
                                             <option value="">Select...</option>
-                                            <option value="high_school">High School</option>
-                                            <option value="vocational">Vocational Training</option>
-                                            <option value="bachelors">Bachelor&apos;s Degree</option>
-                                            <option value="masters">Master&apos;s Degree</option>
-                                            <option value="phd">PhD</option>
+                                            <option value="none">No formal education</option>
+                                            <option value="primary">Primary School</option>
+                                            <option value="secondary">Secondary School</option>
+                                            <option value="trade">Trade / Technical School</option>
+                                            <option value="university">University</option>
                                         </select>
                                     </div>
                                 </div>
