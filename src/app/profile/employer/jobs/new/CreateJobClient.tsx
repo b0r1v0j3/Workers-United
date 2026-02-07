@@ -81,7 +81,7 @@ export default function CreateJobClient() {
             if (insertError) throw insertError;
 
             setSuccess(true);
-            setTimeout(() => router.push("/employer/jobs"), 2000);
+            setTimeout(() => router.push("/profile/employer/jobs"), 2000);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to create job");
         } finally {
@@ -134,7 +134,7 @@ export default function CreateJobClient() {
             <nav className="bg-white/80 backdrop-blur-sm border-b border-[#dde3ec] sticky top-0 z-10">
                 <div className="max-w-[700px] mx-auto px-5">
                     <div className="flex justify-between h-16 items-center">
-                        <Link href="/employer/dashboard" className="flex items-center gap-2 text-[#64748b] hover:text-[#183b56] transition-colors">
+                        <Link href="/profile/employer" className="flex items-center gap-2 text-[#64748b] hover:text-[#183b56] transition-colors">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M19 12H5M12 19l-7-7 7-7" />
                             </svg>

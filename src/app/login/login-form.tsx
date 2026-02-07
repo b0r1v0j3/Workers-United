@@ -28,7 +28,7 @@ export function LoginForm() {
                 return;
             }
 
-            router.push("/dashboard");
+            router.push("/profile");
             router.refresh();
         } catch {
             setError("An unexpected error occurred. Please try again.");

@@ -26,11 +26,11 @@ export function getCheckoutSuccessUrl(type: PaymentType): string {
 
     switch (type) {
         case "entry_fee":
-            return `${baseUrl}/dashboard/queue?payment=success`;
+            return `${baseUrl}/profile/queue?payment=success`;
         case "confirmation_fee":
-            return `${baseUrl}/dashboard/offers?payment=success`;
+            return `${baseUrl}/profile/offers?payment=success`;
         default:
-            return `${baseUrl}/dashboard`;
+            return `${baseUrl}/profile`;
     }
 }
 
@@ -39,10 +39,10 @@ export function getCheckoutCancelUrl(type: PaymentType): string {
 
     switch (type) {
         case "entry_fee":
-            return `${baseUrl}/dashboard?payment=cancelled`;
+            return `${baseUrl}/profile?payment=cancelled`;
         case "confirmation_fee":
-            return `${baseUrl}/dashboard/offers?payment=cancelled`;
+            return `${baseUrl}/profile/offers?payment=cancelled`;
         default:
-            return `${baseUrl}/dashboard`;
+            return `${baseUrl}/profile`;
     }
 }

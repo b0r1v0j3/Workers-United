@@ -32,9 +32,9 @@ export default function SelectRolePage() {
         document.cookie = `${ADMIN_ROLE_COOKIE}=${role}; path=/; max-age=${7 * 24 * 60 * 60}`;
 
         if (role === "employer") {
-            router.push("/employer/dashboard");
+            router.push("/employer/profile");
         } else {
-            router.push("/dashboard");
+            router.push("/profile");
         }
     }
 

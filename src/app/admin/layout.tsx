@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const isOwner = isGodModeUser(user.email);
 
     if (profile?.role !== 'admin' && !isOwner) {
-        redirect("/dashboard");
+        redirect("/profile");
     }
 
     return (

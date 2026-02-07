@@ -87,7 +87,7 @@ export default function ApplicationPage() {
             <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
                 <div className="max-w-5xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
                     <Link
-                        href="/dashboard"
+                        href="/profile/worker"
                         className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors font-medium"
                     >
                         <ChevronLeft size={20} />
@@ -113,15 +113,15 @@ export default function ApplicationPage() {
                 {/* Validation Status Banner */}
                 {validationResult && (
                     <div className={`mb-10 rounded-2xl border-2 overflow-hidden transition-all ${validationResult.status === 'validated'
-                            ? 'bg-green-50 border-green-100'
-                            : validationResult.status === 'mismatch'
-                                ? 'bg-red-50 border-red-100'
-                                : 'bg-amber-50 border-amber-100'
+                        ? 'bg-green-50 border-green-100'
+                        : validationResult.status === 'mismatch'
+                            ? 'bg-red-50 border-red-100'
+                            : 'bg-amber-50 border-amber-100'
                         }`}>
                         <div className="p-6 md:p-8">
                             <div className="flex items-start gap-6">
                                 <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${validationResult.status === 'validated' ? 'bg-green-100 text-green-600' :
-                                        validationResult.status === 'mismatch' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                                    validationResult.status === 'mismatch' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
                                     }`}>
                                     {validationResult.status === 'validated' ? <ShieldCheck size={28} /> :
                                         validationResult.status === 'mismatch' ? <ShieldAlert size={28} /> : <ShieldQuestion size={28} />}
@@ -130,7 +130,7 @@ export default function ApplicationPage() {
                                 <div className="flex-1">
                                     <div className="flex items-center justify-between gap-4 mb-2">
                                         <h3 className={`text-xl font-bold ${validationResult.status === 'validated' ? 'text-green-900' :
-                                                validationResult.status === 'mismatch' ? 'text-red-900' : 'text-amber-900'
+                                            validationResult.status === 'mismatch' ? 'text-red-900' : 'text-amber-900'
                                             }`}>
                                             {validationResult.status === 'validated' ? 'Podaci su verifikovani' :
                                                 validationResult.status === 'mismatch' ? 'Pronađene nepodudarnosti' : 'Potrebna provera'}
@@ -152,7 +152,7 @@ export default function ApplicationPage() {
                                     </div>
 
                                     <p className={`text-base leading-relaxed ${validationResult.status === 'validated' ? 'text-green-700' :
-                                            validationResult.status === 'mismatch' ? 'text-red-700' : 'text-amber-700'
+                                        validationResult.status === 'mismatch' ? 'text-red-700' : 'text-amber-700'
                                         }`}>
                                         {validationResult.message}
                                     </p>
