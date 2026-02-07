@@ -110,11 +110,11 @@ export default function ProfilePage() {
                     dobMonth,
                     dobYear,
                     phone: candidateData.phone || "",
-                    address: "",
+                    address: candidateData.address || "",
                     current_country: candidateData.current_country || "",
                     preferred_job: candidateData.preferred_job || "",
                     years_experience: candidateData.experience_years || 0,
-                    education_level: "",
+                    education_level: candidateData.education_level || "",
                 }));
             }
         } catch (err) {
@@ -152,9 +152,11 @@ export default function ProfilePage() {
                 nationality: formData.nationality || null,
                 date_of_birth: dateOfBirth,
                 phone: formData.phone || null,
+                address: formData.address || null,
                 current_country: formData.current_country || null,
                 preferred_job: formData.preferred_job || null,
                 experience_years: formData.years_experience || 0,
+                education_level: formData.education_level || null,
             };
 
             if (candidate) {
