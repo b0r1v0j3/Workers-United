@@ -349,7 +349,7 @@ export default function OnboardingPage() {
             <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
                 <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
                     <Link href="/profile" className="text-[#65676b] hover:text-[#050505] text-sm font-semibold flex items-center gap-2">
-                        ← Back to Dashboard
+                        ← Back to Profile
                     </Link>
                     <Link href="/" className="flex items-center gap-2">
                         <img src="/logo.png" alt="Workers United" className="h-10 w-auto object-contain" />

@@ -175,7 +175,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
                                 Your visa application process has started. We will contact you with next steps.
                             </p>
                             <Link href="/profile/worker" className="btn btn-primary">
-                                Go to Dashboard
+                                Go to Profile
                             </Link>
                         </div>
                     )}
