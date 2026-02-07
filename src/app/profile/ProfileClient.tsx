@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AppShell from "@/components/AppShell";
 import {
     User,
     Briefcase,
@@ -14,11 +15,13 @@ import {
     MapPin,
     Phone,
     Globe,
-    LogOut,
-    Menu,
+    Camera,
+    Pencil,
+    MoreHorizontal,
+    Plus,
     X,
     ChevronRight,
-    UploadCloud,
+    Search,
     Clock,
     Shield
 } from "lucide-react";
@@ -43,15 +46,18 @@ const COMPANY_SIZES = [
     "201-500 employees", "500+ employees"
 ];
 
+type TabType = "timeline" | "about" | "jobs" | "documents" | "photos";
+
 export default function ProfileClient({
     userType, user, candidate, employer, documents = [], offers = []
 }: ProfileClientProps) {
     const router = useRouter();
     const supabase = createClient();
+    const [activeTab, setActiveTab] = useState<TabType>("timeline");
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState("");
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     // Employer form state
     const [employerForm, setEmployerForm] = useState({
@@ -106,6 +112,7 @@ export default function ProfileClient({
 
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
+            setIsEditing(false); // Exit edit mode on save
             router.refresh();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save");
@@ -123,347 +130,369 @@ export default function ProfileClient({
         return { status: "uploaded", label: "Uploaded", color: "blue" };
     };
 
+    const displayName = userType === 'employer'
+        ? (employer?.company_name || "New Company")
+        : (candidate?.profiles?.full_name || user.email?.split('@')[0] || "User");
+
+    const displaySubtitle = userType === 'employer'
+        ? (employer?.industry || "Industry not set")
+        : (candidate?.nationality || "Candidate");
+
+    const coverImage = userType === 'employer'
+        ? "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop" // Corporate/Building
+        : "https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=2070&auto=format&fit=crop"; // Coding/Work;
+
     return (
-        <div className="min-h-screen bg-slate-50 font-sans">
-            {/* Top Navigation */}
-            <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <Link href="/" className="flex items-center gap-2 group">
-                            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg group-hover:bg-blue-700 transition-colors">
-                                W
-                            </div>
-                            <span className="font-bold text-slate-800 text-lg hidden sm:inline group-hover:text-blue-600 transition-colors">
-                                Workers United
-                            </span>
-                        </Link>
-
-                        <div className="hidden md:flex items-center gap-6">
-                            <div className="flex flex-col items-end">
-                                <span className="text-sm font-medium text-slate-900">{user.email}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 ${userType === "employer" ? "bg-indigo-50 text-indigo-700" : "bg-blue-50 text-blue-700"
-                                    }`}>
-                                    {userType === "employer" ? <Building2 size={10} /> : <User size={10} />}
-                                    {userType === "employer" ? "Employer Account" : "Worker Account"}
-                                </span>
-                            </div>
-                            <div className="h-8 w-px bg-slate-200" />
-                            <a
-                                href="/auth/signout"
-                                className="text-sm font-medium text-slate-500 hover:text-red-600 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
-                            >
-                                <LogOut size={16} />
-                                Sign Out
-                            </a>
+        <AppShell user={user} variant="dashboard">
+            <div className="bg-white shadow rounded-xl overflow-hidden mb-5">
+                <div className="p-6 pb-0">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                        <div>
+                            <h1 className="text-3xl font-bold text-slate-900">{displayName}</h1>
+                            <p className="text-slate-500 font-medium text-lg flex items-center gap-2">
+                                {displaySubtitle}
+                            </p>
                         </div>
 
-                        {/* Mobile menu button */}
-                        <div className="flex md:hidden items-center">
-                            <button
-                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                className="p-2 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 transition-colors"
-                            >
-                                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                            </button>
+                        <div className="flex gap-3">
+                            {userType === 'employer' ? (
+                                <button
+                                    onClick={() => {
+                                        setIsEditing(!isEditing);
+                                        setActiveTab('about');
+                                    }}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                >
+                                    <Pencil size={18} /> Edit Company
+                                </button>
+                            ) : (
+                                <>
+                                    <Link href="/onboarding" className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-semibold hover:bg-slate-200 transition-colors flex items-center gap-2">
+                                        <Pencil size={18} /> Edit Profile
+                                    </Link>
+                                    <button className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-semibold hover:bg-slate-200 transition-colors flex items-center gap-2">
+                                        <FileText size={18} /> CV
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Profile Tabs */}
+                    <div className="flex gap-1 border-t border-slate-100 pt-2">
+                        <TabButton label="Timeline" onClick={() => setActiveTab('timeline')} active={activeTab === 'timeline'} />
+                        <TabButton label="About" onClick={() => setActiveTab('about')} active={activeTab === 'about'} />
+                        {userType === 'employer' ? (
+                            <TabButton label="Jobs" onClick={() => setActiveTab('jobs')} active={activeTab === 'jobs'} />
+                        ) : (
+                            <TabButton label="Applications" onClick={() => setActiveTab('jobs')} active={activeTab === 'jobs'} />
+                        )}
+                        <TabButton label="Photos" onClick={() => setActiveTab('photos')} active={activeTab === 'photos'} />
+                        {userType === 'candidate' && (
+                            <TabButton label="Documents" onClick={() => setActiveTab('documents')} active={activeTab === 'documents'} />
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* Left Column - Intro/Details */}
+                <div className="lg:col-span-1 space-y-5">
+                    {/* Intro Card */}
+                    <div className="bg-white rounded-xl shadow p-4 border border-slate-200">
+                        <h2 className="text-xl font-bold text-slate-900 mb-4">Intro</h2>
+                        <div className="space-y-4">
+                            {userType === 'employer' ? (
+                                <>
+                                    {employer?.description && <p className="text-sm text-slate-600 text-center mb-4">{employer.description}</p>}
+                                    <IntroItem icon={<Briefcase size={20} />} text={employer?.industry || "Industry not added"} />
+                                    <IntroItem icon={<Building2 size={20} />} text={employer?.company_size || "Size not added"} />
+                                    <IntroItem icon={<MapPin size={20} />} text={employer?.company_address || "Address not added"} />
+                                    <IntroItem icon={<Globe size={20} />} text={<a href={employer?.website} target="_blank" className="text-blue-600 hover:underline">{employer?.website || "Website not added"}</a>} />
+                                </>
+                            ) : (
+                                <>
+                                    <IntroItem icon={<User size={20} />} text={candidate?.profiles?.full_name || "Name not set"} />
+                                    <IntroItem icon={<Briefcase size={20} />} text="Looking for work" />
+                                    <IntroItem icon={<Globe size={20} />} text={candidate?.nationality || "Nationality not set"} />
+                                    <IntroItem icon={<Clock size={20} />} text={`Joined ${new Date(user.created_at).toLocaleDateString()}`} />
+                                </>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => { setActiveTab('about'); setIsEditing(true); }}
+                            className="w-full mt-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-lg transition-colors"
+                        >
+                            Edit Details
+                        </button>
+                    </div>
+
+                    {/* Photos/Docs Preview Card */}
+                    <div className="bg-white rounded-xl shadow p-4 border border-slate-200">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-slate-900">Photos</h2>
+                            <button onClick={() => setActiveTab('photos')} className="text-blue-600 text-sm hover:underline">See All</button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 rounded-lg overflow-hidden">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                                <div key={i} className="aspect-square bg-slate-100 hover:opacity-90 cursor-pointer">
+                                    <img
+                                        src={`https://source.unsplash.com/random/200x200?sig=${i}`}
+                                        alt={`Photo ${i}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => e.currentTarget.style.display = 'none'}
+                                    />
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
 
-                {/* Mobile menu */}
-                {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-slate-200 bg-white">
-                        <div className="px-4 py-3 space-y-3">
-                            <div className="pb-3 border-b border-slate-100">
-                                <p className="text-sm font-medium text-slate-900">{user.email}</p>
-                                <p className="text-xs text-slate-500 mt-1 capitalize">{userType}</p>
+                {/* Right Column - Feed/Content */}
+                <div className="lg:col-span-2 space-y-5">
+                    {activeTab === 'timeline' && (
+                        <div className="space-y-5">
+                            {/* Create Post Input */}
+                            <div className="bg-white rounded-xl shadow p-4 border border-slate-200">
+                                <div className="flex gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0">
+                                        <img src={user?.user_metadata?.avatar_url || "/avatar-placeholder.png"} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 cursor-pointer hover:bg-slate-200 transition-colors text-slate-500">
+                                        What's on your mind?
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-center pt-2 border-t border-slate-100 px-2">
+                                    <div className="flex gap-2">
+                                        <ActionButton icon={<Camera size={20} className="text-red-500" />} label="Live Video" />
+                                        <ActionButton icon={<FileText size={20} className="text-green-500" />} label="Photo/Video" />
+                                        <ActionButton icon={<Briefcase size={20} className="text-blue-500" />} label="Job Event" />
+                                    </div>
+                                </div>
                             </div>
-                            <a href="/auth/signout" className="block text-base font-medium text-slate-600 hover:text-slate-900 py-2">
-                                Sign Out
-                            </a>
+
+                            {/* Feed Items */}
+                            {userType === 'employer' ? (
+                                <FeedItem
+                                    user={user}
+                                    time="2 hours ago"
+                                    text={`We are hiring! Looking for ${employer?.workers_needed || 5} skilled workers for our ${employer?.work_location || "Belgrade"} location.`}
+                                    image="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2070&auto=format&fit=crop"
+                                />
+                            ) : (
+                                <FeedItem
+                                    user={user}
+                                    time="Just now"
+                                    text="Just updated my profile and uploaded new certificates! Ready for new opportunities."
+                                />
+                            )}
+
+                            <FeedItem
+                                name="Workers United"
+                                avatar="/logo.png"
+                                time="1 day ago"
+                                text="Welcome to the new Workers United platform! Connect with employers and find your dream job."
+                                image="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2084&auto=format&fit=crop"
+                            />
                         </div>
-                    </div>
-                )}
-            </nav>
+                    )}
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Page Header */}
-                <div className="mb-8 md:flex md:items-end md:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                            {userType === "employer" ? "Company Dashboard" : "My Dashboard"}
-                        </h1>
-                        <p className="text-slate-500 mt-2 text-lg">
-                            {userType === "employer"
-                                ? "Manage your company profile and hiring needs."
-                                : "Track your application status and manage documents."}
-                        </p>
-                    </div>
-                    <div className="mt-4 md:mt-0">
-                        {/* Action buttons could go here */}
-                    </div>
-                </div>
-
-                {/* Feedback Alerts */}
-                {success && (
-                    <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
-                        <CheckCircle2 size={20} className="text-emerald-600" />
-                        <span className="font-medium">Changes saved successfully!</span>
-                    </div>
-                )}
-                {error && (
-                    <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
-                        <AlertCircle size={20} className="text-red-600" />
-                        <span className="font-medium">{error}</span>
-                    </div>
-                )}
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* LEFT COLUMN (Main Content) */}
-                    <div className="lg:col-span-2 space-y-8">
-
-                        {/* EMPLOYER FORM */}
-                        {userType === "employer" && (
-                            <>
-                                <Section title="Company Details" icon={<Building2 />}>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <Input label="Company Name *" name="company_name" value={employerForm.company_name}
-                                            onChange={handleEmployerChange} placeholder="ABC DOO" />
-                                        <Input label="PIB (Tax ID) *" name="pib" value={employerForm.pib}
-                                            onChange={handleEmployerChange} placeholder="12345678" maxLength={8}
-                                            helper="Must be exactly 8 digits" />
-                                        <Select label="Industry" name="industry" value={employerForm.industry}
-                                            onChange={handleEmployerChange} options={INDUSTRIES} />
-                                        <Select label="Company Size" name="company_size" value={employerForm.company_size}
-                                            onChange={handleEmployerChange} options={COMPANY_SIZES} />
-                                        <Input label="Website" name="website" value={employerForm.website}
-                                            onChange={handleEmployerChange} placeholder="https://company.com" icon={<Globe size={16} />} />
-                                        <Input label="Contact Phone" name="contact_phone" value={employerForm.contact_phone}
-                                            onChange={handleEmployerChange} placeholder="+381..." icon={<Phone size={16} />} />
+                    {activeTab === 'about' && (
+                        <div className="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                <h2 className="text-xl font-bold text-slate-900">About</h2>
+                                {!isEditing && (
+                                    <button onClick={() => setIsEditing(true)} className="text-blue-600 font-semibold hover:bg-blue-50 px-3 py-1 rounded-lg">
+                                        Edit
+                                    </button>
+                                )}
+                            </div>
+                            <div className="p-6">
+                                {userType === 'employer' ? (
+                                    isEditing ? (
+                                        <div className="space-y-6">
+                                            {/* Employer Edit Form */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <Input label="Company Name *" name="company_name" value={employerForm.company_name} onChange={handleEmployerChange} />
+                                                <Input label="PIB (Tax ID) *" name="pib" value={employerForm.pib} onChange={handleEmployerChange} maxLength={8} />
+                                                <Select label="Industry" name="industry" value={employerForm.industry} onChange={handleEmployerChange} options={INDUSTRIES} />
+                                                <Select label="Company Size" name="company_size" value={employerForm.company_size} onChange={handleEmployerChange} options={COMPANY_SIZES} />
+                                                <Input label="Website" name="website" value={employerForm.website} onChange={handleEmployerChange} icon={<Globe size={16} />} />
+                                                <Input label="Contact Phone" name="contact_phone" value={employerForm.contact_phone} onChange={handleEmployerChange} icon={<Phone size={16} />} />
+                                            </div>
+                                            <TextArea label="Description" name="description" value={employerForm.description} onChange={handleEmployerChange} />
+                                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                                                <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-100 rounded-lg">Cancel</button>
+                                                <button onClick={saveEmployer} disabled={saving} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                                                    {saving ? "Saving..." : "Save Changes"}
+                                                </button>
+                                            </div>
+                                            {success && <p className="text-emerald-600 font-medium text-center">Saved successfully!</p>}
+                                            {error && <p className="text-red-600 font-medium text-center">{error}</p>}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4 text-slate-700">
+                                            <DetailRow label="Company Name" value={employer?.company_name} />
+                                            <DetailRow label="Industry" value={employer?.industry} />
+                                            <DetailRow label="Size" value={employer?.company_size} />
+                                            <DetailRow label="Location" value={employer?.work_location} />
+                                            <DetailRow label="Description" value={employer?.description} fullWidth />
+                                        </div>
+                                    )
+                                ) : (
+                                    <div className="text-center py-10 text-slate-500">
+                                        <p>Candidate details editing coming soon.</p>
                                     </div>
-                                    <div className="mt-6">
-                                        <TextArea label="About Company" name="description" value={employerForm.description}
-                                            onChange={handleEmployerChange} placeholder="Brief description..." />
-                                    </div>
-                                </Section>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
-                                <Section title="Locations" icon={<MapPin />}>
-                                    <div className="space-y-6">
-                                        <TextArea label="Registered Address" name="company_address" value={employerForm.company_address}
-                                            onChange={handleEmployerChange} placeholder="Full address..." rows={2} />
-                                        <TextArea label="Worker Accommodation Address *" name="accommodation_address" value={employerForm.accommodation_address}
-                                            onChange={handleEmployerChange} placeholder="Where workers will stay..." rows={2}
-                                            helper="Required for visa processing" />
-                                        <Input label="Work City" name="work_location" value={employerForm.work_location}
-                                            onChange={handleEmployerChange} placeholder="Belgrade, Serbia" />
+                    {activeTab === 'jobs' && (
+                        <div className="space-y-4">
+                            {userType === 'employer' ? (
+                                <div className="bg-white p-8 rounded-xl shadow border border-slate-200 text-center">
+                                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                                        <Briefcase size={32} />
                                     </div>
-                                </Section>
-
-                                <Section title="Hiring Requirements" icon={<Briefcase />}>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <Input type="number" label="Workers Needed" name="workers_needed"
-                                            value={employerForm.workers_needed}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmployerForm(p => ({ ...p, workers_needed: parseInt(e.target.value) || 1 }))} />
-                                        <Input label="Salary Range (EUR)" name="salary_range" value={employerForm.salary_range}
-                                            onChange={handleEmployerChange} placeholder="e.g. 800 - 1200" />
-                                    </div>
-                                    <div className="mt-6">
-                                        <TextArea label="Job Description & Requirements" name="job_description" value={employerForm.job_description}
-                                            onChange={handleEmployerChange} placeholder="Describe the role..." rows={4} />
-                                    </div>
-                                </Section>
-
-                                <div className="flex justify-end pt-4">
-                                    <button
-                                        onClick={saveEmployer}
-                                        disabled={saving}
-                                        className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-100 disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
-                                    >
-                                        {saving ? "Saving..." : "Save Changes"}
+                                    <h3 className="text-xl font-bold text-slate-900 mb-2">No Active Jobs</h3>
+                                    <p className="text-slate-500 mb-6">Create a job posting to start finding candidates.</p>
+                                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700">
+                                        Post a Job
                                     </button>
                                 </div>
-                            </>
-                        )}
-
-                        {/* CANDIDATE VIEW - MAIN COLUMN */}
-                        {userType === "candidate" && (
-                            <>
-                                {/* Application Status Cards */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <StatusCard
-                                        label="Profile Status"
-                                        status={candidate?.status || "pending"}
-                                        icon={<User className="text-blue-500" />}
-                                    />
-                                    <StatusCard
-                                        label="Documents"
-                                        status={documents.length >= 3 ? "completed" : "pending"}
-                                        icon={<FileText className="text-amber-500" />}
-                                        subtext={`${documents.length}/3 Uploaded`}
-                                    />
-                                    <StatusCard
-                                        label="Job Match"
-                                        status={offers.length > 0 ? "active" : "waiting"}
-                                        icon={<Briefcase className="text-purple-500" />}
-                                        subtext={offers.length > 0 ? `${offers.length} Offers` : "In Queue"}
-                                    />
-                                </div>
-
-                                {/* Application Data Summary */}
-                                <Section title="Application Data" icon={<User />}>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
-                                        <InfoRow label="Full Name" value={candidate?.profiles?.full_name || "Not set"} />
-                                        <InfoRow label="Email" value={user.email} />
-                                        <InfoRow label="Phone" value={candidate?.phone || "—"} />
-                                        <InfoRow label="Nationality" value={candidate?.nationality || "—"} />
-                                        <InfoRow label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : "—"} />
-                                        <InfoRow label="Passport" value={candidate?.passport_number || "—"} />
-                                    </div>
-
-                                    {!candidate?.onboarding_completed && (
-                                        <div className="mt-6 bg-amber-50 rounded-xl p-4 border border-amber-100 flex items-start gap-4">
-                                            <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
-                                                <AlertCircle size={20} />
+                            ) : (
+                                <div className="space-y-4">
+                                    {offers && offers.length > 0 ? offers.map((offer: any) => (
+                                        <div key={offer.id} className="bg-white p-4 rounded-xl shadow border border-slate-200">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <h3 className="font-bold text-lg text-slate-900">{offer.employers?.company_name}</h3>
+                                                    <p className="text-slate-600">{offer.position || "Position"}</p>
+                                                </div>
+                                                <Badge status={offer.status} />
                                             </div>
-                                            <div>
-                                                <h4 className="font-semibold text-amber-900">Complete your profile</h4>
-                                                <p className="text-amber-700 text-sm mt-1 mb-3">
-                                                    You need to complete the onboarding process to be verified.
-                                                </p>
-                                                <Link
-                                                    href="/onboarding"
-                                                    className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded-lg transition-colors"
-                                                >
-                                                    Continue Onboarding <ChevronRight size={16} />
-                                                </Link>
-                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div className="bg-white p-8 rounded-xl shadow border border-slate-200 text-center">
+                                            <p className="text-slate-500">No active applications yet.</p>
                                         </div>
                                     )}
-
-                                    {/* Link to Edit Application Data */}
-                                    <div className="mt-6 pt-6 border-t border-slate-100">
-                                        <Link
-                                            href="/dashboard/application"
-                                            className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors"
-                                        >
-                                            Edit Personal Data <ChevronRight size={16} />
-                                        </Link>
-                                    </div>
-                                </Section>
-
-                                {/* Job Offers */}
-                                {offers.length > 0 && (
-                                    <Section title="Job Offers" icon={<Briefcase />} badge={offers.length.toString()}>
-                                        <div className="space-y-4">
-                                            {offers.map((offer: any) => (
-                                                <div key={offer.id} className="group relative p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-blue-200 transition-all">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div>
-                                                            <h4 className="font-bold text-slate-900">{offer.employers?.company_name}</h4>
-                                                            <p className="text-sm text-slate-500 font-medium">{offer.position || "Worker position"}</p>
-                                                        </div>
-                                                        <Badge status={offer.status} />
-                                                    </div>
-                                                    <div className="flex items-center gap-4 text-xs text-slate-500 mt-2">
-                                                        <span className="flex items-center gap-1"><MapPin size={12} /> {offer.employers?.work_location || "Serbia"}</span>
-                                                        <span className="flex items-center gap-1"><Clock size={12} /> {new Date(offer.created_at).toLocaleDateString()}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </Section>
-                                )}
-                            </>
-                        )}
-                    </div>
-
-                    {/* RIGHT COLUMN (Sidebar) */}
-                    <div className="lg:col-span-1 space-y-8">
-                        {/* Documents Sidebar */}
-                        {userType === "candidate" && (
-                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden sticky top-24">
-                                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <FileText size={18} className="text-slate-400" /> Documents
-                                    </h3>
                                 </div>
-                                <div className="p-4 space-y-3">
-                                    <DocumentItem label="Passport" status={getDocStatus("passport")} />
-                                    <DocumentItem label="Photo" status={getDocStatus("photo")} />
-                                    <DocumentItem label="Diploma" status={getDocStatus("diploma")} />
-                                    <DocumentItem label="Certificate" status={getDocStatus("certificate")} />
-                                </div>
-                                <div className="px-4 pb-4">
-                                    <Link
-                                        href="/onboarding"
-                                        className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-xl transition-colors text-sm"
-                                    >
-                                        <UploadCloud size={16} /> Manage Documents
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Help / Support Card */}
-                        <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
-                            <h3 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
-                                <Shield size={18} /> Support Center
-                            </h3>
-                            <p className="text-sm text-indigo-700 mb-4">
-                                Need help with your application or profile? Contact our support team.
-                            </p>
-                            <a href="mailto:support@workersunited.com" className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">
-                                Contact Support →
-                            </a>
+                            )}
                         </div>
-                    </div>
+                    )}
+
+                    {activeTab === 'documents' && userType === 'candidate' && (
+                        <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+                            <h2 className="text-xl font-bold text-slate-900 mb-6">My Documents</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <DocumentCard label="Passport" status={getDocStatus("passport")} />
+                                <DocumentCard label="Photo" status={getDocStatus("photo")} />
+                                <DocumentCard label="Diploma" status={getDocStatus("diploma")} />
+                                <DocumentCard label="Certificate" status={getDocStatus("certificate")} />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'photos' && (
+                        <div className="bg-white rounded-xl shadow border border-slate-200 p-4">
+                            <h2 className="text-xl font-bold text-slate-900 mb-4">Photos</h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {/* Placeholders */}
+                                {[1, 2, 3, 4, 5, 6].map(i => (
+                                    <div key={i} className="aspect-square bg-slate-100 rounded-lg"></div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
-        </div>
+        </AppShell>
     );
 }
 
 // ----------------------------------------------------------------------
-// SUB-COMPONENTS
+// COMPONENTS
 // ----------------------------------------------------------------------
 
-function Section({ title, icon, children, badge }: any) {
+function TabButton({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) {
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-100 text-slate-500 rounded-lg">
-                        {icon}
-                    </div>
-                    <h2 className="text-lg font-bold text-slate-800">{title}</h2>
+        <button
+            onClick={onClick}
+            className={`px-4 py-3 font-semibold text-[15px] whitespace-nowrap transition-colors relative ${active ? 'text-blue-600' : 'text-slate-600 hover:bg-slate-100 rounded-lg'}`}
+        >
+            {label}
+            {active && (
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-blue-600 rounded-t-full" />
+            )}
+        </button>
+    );
+}
+
+function IntroItem({ icon, text }: { icon: React.ReactNode, text: React.ReactNode }) {
+    return (
+        <div className="flex items-center gap-3 text-slate-700">
+            <div className="text-slate-400">
+                {icon}
+            </div>
+            <span className="text-[15px] font-medium leading-tight">{text}</span>
+        </div>
+    );
+}
+
+function ActionButton({ icon, label }: { icon: React.ReactNode, label: string }) {
+    return (
+        <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600 font-medium text-sm">
+            {icon}
+            <span className="hidden sm:inline">{label}</span>
+        </button>
+    );
+}
+
+function FeedItem({ user, name, avatar, time, text, image }: any) {
+    const displayName = name || (user?.user_metadata?.full_name || "User");
+    const displayAvatar = avatar || (user?.user_metadata?.avatar_url || "/avatar-placeholder.png");
+
+    return (
+        <div className="bg-white rounded-xl shadow p-4 border border-slate-200">
+            <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100">
+                    <img src={displayAvatar} alt={displayName} className="w-full h-full object-cover" />
                 </div>
-                {badge && (
-                    <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-md text-xs font-bold">
-                        {badge}
+                <div>
+                    <h4 className="font-bold text-slate-900 text-[15px]">{displayName}</h4>
+                    <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                        {time} · <Globe size={10} />
                     </span>
-                )}
+                </div>
+                <button className="ml-auto text-slate-400 hover:bg-slate-100 p-2 rounded-full">
+                    <MoreHorizontal size={20} />
+                </button>
             </div>
-            <div className="p-6 md:p-8">
-                {children}
+            <p className="text-slate-800 text-[15px] leading-relaxed mb-3">
+                {text}
+            </p>
+            {image && (
+                <div className="rounded-lg overflow-hidden border border-slate-100 mb-3">
+                    <img src={image} alt="Post content" className="w-full h-auto object-cover" />
+                </div>
+            )}
+            <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-2">
+                <ActionButton icon={<span className="text-xl">👍</span>} label="Like" />
+                <ActionButton icon={<span className="text-xl">💬</span>} label="Comment" />
+                <ActionButton icon={<span className="text-xl">↗️</span>} label="Share" />
             </div>
         </div>
     );
 }
 
-function StatusCard({ label, status, icon, subtext }: any) {
-    const isGood = status === "verified" || status === "completed" || status === "active" || status === "accepted";
-    const isBad = status === "rejected";
-
+function DetailRow({ label, value, fullWidth }: any) {
+    if (!value) return null;
     return (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-full">
-            <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-slate-50 rounded-lg">{icon}</div>
-                <div className={`w-2.5 h-2.5 rounded-full ${isGood ? 'bg-emerald-500' : isBad ? 'bg-red-500' : 'bg-amber-400'}`} />
-            </div>
-            <div>
-                <p className="text-slate-500 text-sm font-medium mb-1">{label}</p>
-                <p className="text-slate-900 font-bold text-lg capitalize">{status}</p>
-                {subtext && <p className="text-slate-400 text-xs mt-1">{subtext}</p>}
-            </div>
+        <div className={`${fullWidth ? 'w-full' : 'w-full'} py-2`}>
+            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">{label}</span>
+            <span className="text-slate-900 font-medium text-base">{value}</span>
         </div>
     );
 }
@@ -532,16 +561,7 @@ function Select({ label, name, value, onChange, options }: any) {
     );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="py-2 border-b border-slate-50 last:border-0">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{label}</p>
-            <p className="text-slate-900 font-medium">{value}</p>
-        </div>
-    );
-}
-
-function DocumentItem({ label, status }: { label: string; status: any }) {
+function DocumentCard({ label, status }: { label: string, status: any }) {
     const bgColors: any = {
         emerald: "bg-emerald-100 text-emerald-700",
         red: "bg-red-100 text-red-700",
@@ -551,9 +571,17 @@ function DocumentItem({ label, status }: { label: string; status: any }) {
     };
 
     return (
-        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
-            <span className="text-sm font-semibold text-slate-700">{label}</span>
-            <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ${bgColors[status.color] || bgColors.slate}`}>
+        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors group cursor-pointer">
+            <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${status.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-slate-400'} border border-slate-200`}>
+                    <FileText size={20} />
+                </div>
+                <div>
+                    <h4 className="font-semibold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{label}</h4>
+                    <p className="text-xs text-slate-500">Document</p>
+                </div>
+            </div>
+            <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ${bgColors[status.color]}`}>
                 {status.label}
             </span>
         </div>
@@ -561,14 +589,13 @@ function DocumentItem({ label, status }: { label: string; status: any }) {
 }
 
 function Badge({ status }: { status: string }) {
-    const styles = {
+    const styles: any = {
         accepted: "bg-emerald-100 text-emerald-700 border-emerald-200",
         rejected: "bg-red-100 text-red-700 border-red-200",
         pending: "bg-amber-100 text-amber-700 border-amber-200",
         waiting: "bg-slate-100 text-slate-600 border-slate-200"
     };
 
-    // @ts-ignore
     const defaultStyle = styles[status] || styles.pending;
 
     return (
@@ -577,4 +604,3 @@ function Badge({ status }: { status: string }) {
         </span>
     );
 }
-

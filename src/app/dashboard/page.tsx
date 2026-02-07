@@ -1,9 +1,10 @@
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DocumentWizard from "@/components/DocumentWizard";
-import { createCheckoutSession } from "@/app/actions/stripe";
 import { isGodModeUser } from "@/lib/godmode";
+import AppShell from "@/components/AppShell";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +35,6 @@ export default async function DashboardPage() {
         .from("candidates")
         .select("*")
         .eq("profile_id", user.id)
-        .single();
-
-    // Fetch readiness
-    const { data: readiness } = await supabase
-        .from("candidate_readiness")
-        .select("*")
-        .eq("user_id", user.id)
         .single();
 
     // Fetch documents
@@ -82,287 +76,212 @@ export default async function DashboardPage() {
     const completedFields = profileFields.filter(Boolean).length;
     const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
 
-    // Calculate days remaining (90-day guarantee)
-    let daysRemaining = 0;
-    let refundEligible = candidate?.refund_eligible ?? true;
-    if (candidate?.refund_deadline) {
-        const deadline = new Date(candidate.refund_deadline);
-        const now = new Date();
-        daysRemaining = Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-    }
-
     return (
-        <>
-            <div className="max-w-[700px] mx-auto px-5 py-8">
-                {/* Greeting */}
-                <div className="mb-8">
-                    <h1 className="text-2xl font-bold text-[#1e293b]">
-                        Hello, {profile?.full_name?.split(' ')[0] || user.user_metadata?.full_name?.split(' ')[0] || "there"} 👋
-                    </h1>
-                    <p className="text-[#64748b] text-sm font-medium">Here is the live status of your application.</p>
-                </div>
+        <AppShell user={user} variant="dashboard">
+            {/* PROFILE HEADER */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4">
+                <div className="p-6 pb-0">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                        <div>
+                            <h1 className="text-3xl font-bold text-[#050505] leading-tight">
+                                {profile?.full_name || user.user_metadata?.full_name || "Worker"}
+                            </h1>
+                            <p className="text-[#65676b] font-semibold text-lg flex items-center gap-2">
+                                {candidate?.preferred_job ? `${candidate.preferred_job} • ` : ""}
+                                {candidate?.nationality || "International Worker"}
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Link href="/onboarding" className="bg-[#1877f2] text-white px-4 py-2 rounded-md font-semibold hover:bg-[#166fe5] transition-colors flex items-center gap-2">
+                                ✏️ Edit Profile
+                            </Link>
+                            <button className="bg-[#e4e6eb] text-[#050505] px-4 py-2 rounded-md font-semibold hover:bg-[#d8dadf] transition-colors">
+                                ⬇️ Download CV
+                            </button>
+                        </div>
+                    </div>
 
-                {/* Owner Quick Navigation - Only for God Mode user */}
-                {isOwner && (
-                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl">
-                        <div className="flex items-center justify-between flex-wrap gap-3">
-                            <div>
-                                <div className="text-xs font-medium text-white/70 mb-1">🔮 Owner Mode</div>
-                                <div className="text-sm font-semibold text-white">Quick Dashboard Switch</div>
-                            </div>
-                            <div className="flex gap-2">
-                                <span
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-medium"
-                                >
-                                    👷 Worker
+                    {/* Profile Tabs */}
+                    <div className="flex gap-1 border-t border-gray-200 pt-2">
+                        <ProfileTab label="Posts" active />
+                        <ProfileTab label="About" />
+                        <ProfileTab label="Photos" />
+                        <ProfileTab label="Documents" />
+                    </div>
+                </div>
+            </div>
+
+            {/* MAIN CONTENT GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-4">
+
+                {/* LEFT COLUMN: INTRO & PHOTOS */}
+                <div className="space-y-4">
+                    {/* Intro Card */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h2 className="text-[20px] font-bold text-[#050505] mb-3">Intro</h2>
+
+                        <div className="space-y-3 text-[15px] text-[#050505]">
+                            {/* Status Badge */}
+                            <div className="flex items-center gap-2 text-center justify-center p-2 bg-[#f0f2f5] rounded-lg">
+                                <span className={`font-semibold ${inQueue ? "text-green-600" : "text-gray-600"}`}>
+                                    {inQueue ? "Verified & In Queue" : isReady ? "Profile Ready" : "Building Profile"}
                                 </span>
-                                <a
-                                    href="/employer/dashboard"
-                                    style={{ backgroundColor: '#fff', color: '#7c3aed' }}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold no-underline"
-                                >
-                                    🏢 Employer
-                                </a>
-                                <a
-                                    href="/admin"
-                                    style={{ backgroundColor: '#fff', color: '#4f46e5' }}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold no-underline"
-                                >
-                                    ⚙️ Admin
-                                </a>
+                            </div>
+
+                            <IntroItem icon="📍" text={`Lives in ${candidate?.current_country || "Unknown"}`} />
+                            <IntroItem icon="🌍" text={`From ${candidate?.nationality || "Unknown"}`} />
+                            <IntroItem icon="💼" text={`Looking for ${candidate?.preferred_job || "Any job"}`} />
+                            <IntroItem icon="🎂" text={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : "Born date unknown"} />
+
+                            <div className="pt-2">
+                                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                    <span>Profile Completion</span>
+                                    <span>{profileCompletion}%</span>
+                                </div>
+                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full bg-[#1877f2]" style={{ width: `${profileCompletion}%` }} />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-                {/* Status Cards Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    {/* Profile Completion */}
-                    <div className="bg-white rounded-xl p-5 shadow-sm border border-[#dde3ec]">
-                        <div className="text-[#64748b] text-xs font-medium mb-2">Profile Completion</div>
-                        <div className="text-2xl font-bold text-[#183b56]">{profileCompletion}%</div>
-                        <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-[#2f6fed] to-[#10b981] rounded-full transition-all"
-                                style={{ width: `${profileCompletion}%` }}
-                            />
-                        </div>
-                    </div>
 
-                    {/* Queue Status */}
-                    <div className="bg-white rounded-xl p-5 shadow-sm border border-[#dde3ec]">
-                        <div className="text-[#64748b] text-xs font-medium mb-2">Status</div>
-                        <div className={`text-lg font-bold ${hasPendingOffer ? "text-orange-500" :
-                            inQueue ? "text-green-600" :
-                                isReady ? "text-blue-600" : "text-gray-500"
-                            }`}>
-                            {hasPendingOffer ? "🔔 Job Offer!" :
-                                inQueue ? "🔍 Searching..." :
-                                    isReady ? "✓ Verified" : "📝 Incomplete"}
-                        </div>
-                        <div className="text-xs text-[#64748b] mt-1">
-                            {hasPendingOffer ? "Action required" :
-                                inQueue ? `Position #${candidate?.queue_position || "-"}` :
-                                    isReady ? "Ready for activation" : "Complete your profile"}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Profile Info Card */}
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-[#dde3ec] mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-bold text-[#183b56]">👤 Your Profile</h2>
-                        <Link
-                            href="/onboarding"
-                            className="text-sm text-[#2f6fed] hover:text-[#1e5cd6] font-medium flex items-center gap-1"
-                        >
-                            ✏️ Edit
+                        <Link href="/onboarding" className="block text-center w-full bg-[#e4e6eb] hover:bg-[#d8dadf] py-1.5 rounded-md font-semibold mt-4 text-sm transition-colors">
+                            Edit Bio
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span className="text-[#64748b]">Full Name:</span>
-                            <div className="font-medium text-[#183b56]">{profile?.full_name || "—"}</div>
+                    {/* Photos / Documents Preview */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div className="flex justify-between items-center mb-3">
+                            <h2 className="text-[20px] font-bold text-[#050505]">Photos</h2>
+                            <Link href="/documents" className="text-[#1877f2] hover:bg-blue-50 px-2 py-1 rounded text-[15px]">See all photos</Link>
                         </div>
-                        <div>
-                            <span className="text-[#64748b]">Email:</span>
-                            <div className="font-medium text-[#183b56]">{user.email || "—"}</div>
+                        <div className="grid grid-cols-3 gap-1 rounded-lg overflow-hidden">
+                            {/* Placeholder Photos / Documents */}
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                                <div key={i} className="aspect-square bg-gray-100 border border-gray-200 flex items-center justify-center text-xs text-gray-400">
+                                    Docs
+                                </div>
+                            ))}
                         </div>
-                        <div>
-                            <span className="text-[#64748b]">Phone:</span>
-                            <div className="font-medium text-[#183b56]">{candidate?.phone || "—"}</div>
-                        </div>
-                        <div>
-                            <span className="text-[#64748b]">Nationality:</span>
-                            <div className="font-medium text-[#183b56]">{candidate?.nationality || "—"}</div>
-                        </div>
-                        <div>
-                            <span className="text-[#64748b]">Date of Birth:</span>
-                            <div className="font-medium text-[#183b56]">
-                                {candidate?.date_of_birth ?
-                                    new Date(candidate.date_of_birth).toLocaleDateString('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                                    : "—"}
+                    </div>
+                </div>
+
+                {/* RIGHT COLUMN: FEED */}
+                <div className="space-y-4">
+                    {/* Create Post (Fake input) */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+                        <div className="flex gap-2 mb-3">
+                            <img src={user.user_metadata?.avatar_url || "/logo.png"} className="w-10 h-10 rounded-full bg-gray-200 object-cover" />
+                            <div className="flex-1 bg-[#f0f2f5] rounded-full px-3 flex items-center text-gray-500 hover:bg-[#e4e6eb] cursor-pointer transition-colors text-[15px]">
+                                What is on your mind, {profile?.full_name?.split(' ')[0]}?
                             </div>
                         </div>
-                        <div>
-                            <span className="text-[#64748b]">Preferred Job:</span>
-                            <div className="font-medium text-[#183b56]">{candidate?.preferred_job || "—"}</div>
+                        <hr className="border-gray-200" />
+                        <div className="flex pt-2">
+                            <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-2 rounded-lg cursor-pointer">
+                                <span>🎥</span> <span className="text-gray-500 font-semibold text-sm">Live video</span>
+                            </div>
+                            <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-2 rounded-lg cursor-pointer">
+                                <span>🖼️</span> <span className="text-gray-500 font-semibold text-sm">Photo/video</span>
+                            </div>
+                            <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-2 rounded-lg cursor-pointer">
+                                <span>😊</span> <span className="text-gray-500 font-semibold text-sm">Feeling/activity</span>
+                            </div>
                         </div>
                     </div>
 
-                    {(!candidate?.phone || !candidate?.nationality || !candidate?.preferred_job) && (
-                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p className="text-amber-800 text-xs font-medium">
-                                ⚠️ Some profile info is missing. <Link href="/onboarding" className="underline">Complete your profile</Link> to proceed.
-                            </p>
+                    {/* Application Progress "Pinned Post" */}
+                    {!isReady && (
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <h3 className="font-bold text-[#050505]">📌 Action Required</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-4">You need to complete your document upload to start the matching process.</p>
+                            <DocumentWizard candidateId={user.id} email={user.email || ""} />
                         </div>
                     )}
-                </div>
 
-                {/* 90-Day Countdown (if in queue) */}
-                {inQueue && (
-                    <div className="bg-gradient-to-r from-[#183b56] to-[#2f6fed] rounded-xl p-6 mb-8 text-white">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <div className="text-white/70 text-sm font-medium mb-1">90-Day Money-Back Guarantee</div>
-                                <div className="text-3xl font-bold">{daysRemaining} days left</div>
-                                <div className="text-white/80 text-sm mt-1">
-                                    {refundEligible
-                                        ? "Full refund if no job found"
-                                        : "Refund eligibility lost due to offer rejection"}
-                                </div>
-                            </div>
-                            <div className="text-6xl opacity-20">⏳</div>
-                        </div>
-                    </div>
-                )}
+                    {/* STATUS UPDATES (FEED) */}
 
-                {/* Pending Offer Alert */}
-                {hasPendingOffer && pendingOffers && (
-                    <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-6 mb-8">
-                        <div className="flex items-start gap-4">
-                            <div className="text-3xl">🎉</div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-orange-800 text-lg mb-1">You have a job offer!</h3>
-                                <p className="text-orange-700 text-sm mb-3">
-                                    <strong>{pendingOffers[0].job_request?.employer?.company_name}</strong> in {" "}
-                                    <strong>{pendingOffers[0].job_request?.destination_country}</strong>
-                                </p>
-                                <p className="text-orange-600 text-xs mb-4">
-                                    ⚠️ This offer expires in 24 hours. Declining may affect your refund eligibility.
-                                </p>
-                                <div className="flex gap-3">
-                                    <Link
-                                        href={`/dashboard/offers/${pendingOffers[0].id}`}
-                                        className="bg-orange-500 text-white px-5 py-2 rounded-lg font-bold text-sm hover:bg-orange-600 transition-colors"
-                                    >
-                                        View Offer
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Document Upload (if not ready) - ABOVE PROGRESS */}
-                {!isReady && (
-                    <DocumentWizard
-                        candidateId={user.id}
-                        email={user.email || ""}
+                    {/* Welcome Post */}
+                    <FeedPost
+                        author="Workers United"
+                        time="Just now"
+                        avatar="/logo.png"
+                        text={`Welcome to your profile, **${profile?.full_name || "Worker"}**! This is your personal space to track your application, specific job offers, and document verification status. Complete your profile to get started!`}
                     />
-                )}
 
-                {/* Verification Progress */}
-                <div className="bg-white rounded-xl p-6 shadow-sm mb-6 border border-[#dde3ec]">
-                    <h2 className="font-bold text-[#183b56] mb-4">Application Progress</h2>
-                    <div className="space-y-4">
-                        {/* Step 1: Application */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">✓</div>
-                            <div>
-                                <div className="font-medium text-[#183b56]">Application Received</div>
-                                <div className="text-xs text-[#64748b]">Your account is created</div>
-                            </div>
-                        </div>
-
-                        {/* Step 2: Documents */}
-                        <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isReady ? "bg-green-500 text-white" : "bg-blue-100 text-blue-600 border-2 border-blue-300"
-                                }`}>
-                                {isReady ? "✓" : "2"}
-                            </div>
-                            <div className="flex-1">
-                                <div className="font-medium text-[#183b56]">Documents Verified</div>
-                                <div className="text-xs text-[#64748b]">{verifiedCount}/3 documents verified</div>
-                            </div>
-                            {!isReady && (
-                                <div className="flex gap-1">
-                                    {['passport', 'biometric_photo', 'diploma'].map(type => (
-                                        <span key={type} className={`w-2 h-2 rounded-full ${docStatus(type) === 'verified' ? 'bg-green-500' :
-                                            docStatus(type) === 'verifying' ? 'bg-blue-500' : 'bg-gray-300'
-                                            }`} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Step 3: Payment */}
-                        <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${inQueue ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400 border-2 border-gray-200"
-                                }`}>
-                                {inQueue ? "✓" : "3"}
-                            </div>
-                            <div>
-                                <div className="font-medium text-[#183b56]">Profile Activated</div>
-                                <div className="text-xs text-[#64748b]">{inQueue ? "Searching for jobs" : "Activate to start job search"}</div>
-                            </div>
-                        </div>
-
-                        {/* Step 4: Job Found */}
-                        <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${candidate?.status === "OFFER_ACCEPTED" ? "bg-green-500 text-white" :
-                                hasPendingOffer ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-400 border-2 border-gray-200"
-                                }`}>
-                                {candidate?.status === "OFFER_ACCEPTED" ? "✓" : hasPendingOffer ? "!" : "4"}
-                            </div>
-                            <div>
-                                <div className="font-medium text-[#183b56]">Job Found</div>
-                                <div className="text-xs text-[#64748b]">
-                                    {candidate?.status === "OFFER_ACCEPTED" ? "Congratulations!" :
-                                        hasPendingOffer ? "Review your offer" : "We'll notify you when matched"}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Payment Card (if ready but not in queue) */}
-                {isReady && !inQueue && (
-                    <div className="mb-8">
-                        <div className="bg-white rounded-xl p-8 shadow-sm border-2 border-amber-300 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 bg-amber-500 text-white px-4 py-1 text-[11px] font-bold uppercase tracking-widest rounded-bl-lg">
-                                🚧 Coming Soon
-                            </div>
-
-                            <h2 className="text-xl font-bold text-[#183b56] mb-2">Activate Job Search</h2>
-                            <p className="text-gray-600 text-[14px] leading-relaxed mb-4">
-                                Your documents are verified! This feature will be available soon.
-                                <br />
-                                <span className="font-semibold text-[#183b56]">We&apos;ll notify you when job matching is ready.</span>
-                            </p>
-
-                            <div className="text-[#64748b] text-sm">
-                                ⏳ Stay tuned - we&apos;re working on connecting you with employers!
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <div className="text-center mt-12 pb-10">
-                    <p className="text-[12px] text-[#94a3b8] font-medium">Worker ID: {user.email}</p>
+                    {/* Offer Post */}
+                    {hasPendingOffer && (
+                        <FeedPost
+                            author="System Notification"
+                            time="1 hour ago"
+                            avatar="/logo.png"
+                            text="🎉 **You have a new Job Offer!**\nA company is interested in your profile. Check the details immediately as this offer expires in 24 hours."
+                        >
+                            <Link href={`/dashboard/offers/${pendingOffers![0].id}`} className="mt-3 block bg-[#e7f3ff] p-3 rounded-lg border border-blue-100 hover:bg-[#dbe7f2]">
+                                <div className="font-bold text-[#1877f2]">{pendingOffers![0].job_request?.employer?.company_name}</div>
+                                <div className="text-sm text-gray-600">{pendingOffers![0].job_request?.destination_country}</div>
+                            </Link>
+                        </FeedPost>
+                    )}
                 </div>
             </div>
-        </>
+        </AppShell>
     );
+}
+
+function ProfileTab({ label, active }: { label: string, active?: boolean }) {
+    return (
+        <div className={`px-4 py-3 font-semibold text-[15px] cursor-pointer relative ${active ? "text-[#1877f2]" : "text-[#65676b] hover:bg-gray-100 rounded-lg"}`}>
+            {label}
+            {active && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1877f2]" />}
+        </div>
+    )
+}
+
+function IntroItem({ icon, text }: { icon: string, text: string }) {
+    return (
+        <div className="flex items-center gap-3 text-[#050505]">
+            <div className="text-xl text-gray-400">{icon}</div>
+            <span>{text}</span>
+        </div>
+    )
+}
+
+function FeedPost({ author, time, avatar, text, children }: { author: string, time: string, avatar: string, text: string, children?: React.ReactNode }) {
+    return (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center gap-3 mb-3">
+                <img src={avatar} className="w-10 h-10 rounded-full object-cover" />
+                <div>
+                    <div className="font-bold text-[#050505] text-[15px]">{author}</div>
+                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                        {time} • <span>🌍</span>
+                    </div>
+                </div>
+                <div className="ml-auto text-gray-400 hover:bg-gray-100 p-2 rounded-full cursor-pointer">...</div>
+            </div>
+
+            <div className="text-[15px] text-[#050505] leading-normal whitespace-pre-wrap mb-2">
+                {text}
+            </div>
+
+            {children}
+
+            <hr className="my-3 border-gray-200" />
+
+            <div className="flex gap-1">
+                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-1.5 rounded text-gray-500 font-semibold text-[14px]">
+                    👍 Like
+                </div>
+                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-1.5 rounded text-gray-500 font-semibold text-[14px]">
+                    💬 Comment
+                </div>
+                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-1.5 rounded text-gray-500 font-semibold text-[14px]">
+                    ↗️ Share
+                </div>
+            </div>
+        </div>
+    )
 }
