@@ -32,14 +32,25 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
 
 function SidebarContent({ user, variant }: { user: any, variant: string }) {
     const userType = user?.user_metadata?.user_type;
+
+    // Determine Home link based on context
+    const homeHref = variant === 'admin' ? '/admin'
+        : userType === 'employer' ? '/profile/employer'
+            : '/profile/worker';
+
     return (
         <div className="space-y-2">
-            <SidebarLink href={userType === 'employer' ? "/profile/employer" : "/profile/worker"} icon="🏠" label="Home" />
-            <SidebarLink
-                href={userType === 'employer' ? '/profile/employer' : '/profile/worker'}
-                icon={<img src={user?.user_metadata?.avatar_url || "/logo.png"} className="w-7 h-7 rounded-full object-cover" />}
-                label={user?.user_metadata?.full_name || "My Profile"}
-            />
+            <SidebarLink href={homeHref} icon="🏠" label="Home" />
+
+            {/* Only show profile link outside admin mode */}
+            {variant !== 'admin' && (
+                <SidebarLink
+                    href={userType === 'employer' ? '/profile/employer' : '/profile/worker'}
+                    icon={<img src={user?.user_metadata?.avatar_url || "/logo.png"} className="w-7 h-7 rounded-full object-cover" />}
+                    label={user?.user_metadata?.full_name || "My Profile"}
+                />
+            )}
+
             <hr className="border-gray-300 my-2 mx-2" />
 
             <div className="px-2 text-lg font-semibold text-gray-500 mb-2 mt-4">Shortcuts</div>
@@ -54,10 +65,11 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
                     <SidebarLink href="/admin/settings" icon="⚙️" label="Settings" />
                 </>
             )}
-            {userType === 'employer' && (
+
+            {/* Employer shortcuts only outside admin mode */}
+            {variant !== 'admin' && userType === 'employer' && (
                 <>
                     <SidebarLink href="/profile/employer/jobs" icon="💼" label="Job Postings" />
-                    <SidebarLink href="/profile/employer/jobs" icon="👥" label="Candidates" />
                 </>
             )}
         </div>
