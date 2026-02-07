@@ -114,35 +114,32 @@ export default function ProfilePage() {
                 .update({ full_name: formData.full_name })
                 .eq("id", user.id);
 
-            // Update or create candidate
+            // Only update fields this form manages — preserve all other fields
+            const candidateUpdates = {
+                nationality: formData.nationality || null,
+                date_of_birth: formData.date_of_birth || null,
+                phone: formData.phone || null,
+                address: formData.address || null,
+                current_country: formData.current_country || null,
+                preferred_job: formData.preferred_job || null,
+                years_experience: formData.years_experience || 0,
+                education_level: formData.education_level || null,
+            };
+
             if (candidate) {
-                await supabase
+                const { error: updateErr } = await supabase
                     .from("candidates")
-                    .update({
-                        nationality: formData.nationality,
-                        date_of_birth: formData.date_of_birth,
-                        phone: formData.phone,
-                        address: formData.address,
-                        current_country: formData.current_country,
-                        preferred_job: formData.preferred_job,
-                        years_experience: formData.years_experience,
-                        education_level: formData.education_level,
-                    })
+                    .update(candidateUpdates)
                     .eq("id", candidate.id);
+                if (updateErr) throw new Error(updateErr.message);
             } else {
-                await supabase
+                const { error: insertErr } = await supabase
                     .from("candidates")
                     .insert({
                         profile_id: user.id,
-                        nationality: formData.nationality,
-                        date_of_birth: formData.date_of_birth,
-                        phone: formData.phone,
-                        address: formData.address,
-                        current_country: formData.current_country,
-                        preferred_job: formData.preferred_job,
-                        years_experience: formData.years_experience,
-                        education_level: formData.education_level,
+                        ...candidateUpdates,
                     });
+                if (insertErr) throw new Error(insertErr.message);
             }
 
             setSuccess("Profile updated successfully!");
