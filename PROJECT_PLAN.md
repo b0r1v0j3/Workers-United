@@ -8,20 +8,29 @@
 
 Ovaj fajl je **jedini izvor istine** za ceo projekat. Svaki novi chat MORA da pročita ovaj fajl na početku rada.
 
-### Pravila za ažuriranje:
-1. **NIKAD ne briši sekcije 1-4** — one su trajne i menjaju se samo kad vlasnik projekta to eksplicitno traži
-2. **Sekcija 5 (Stanje Projekta)** se ažurira posle svakog završenog posla — dodaj šta si uradio, ne briši staro
-3. **Sekcija 6 (Arhitektura)** se ažurira SAMO kad se menja struktura fajlova ili ruta
-4. **Ako nisi siguran — pitaj korisnika pre nego što menjaš ovaj fajl**
-5. Kad dodaješ u "Završeno", piši **kratko** — jedno do dva reda po stavci, sa datumom
-6. **Uvek uradi `git pull` pre početka rada**
-7. Ovaj fajl je na srpskom jeziku. Sajt je na engleskom.
+### Pravila za čitanje:
+1. Pročitaj **ceo** ovaj fajl pre nego što napišeš jednu liniju koda
+2. Ako korisnik traži nešto što se kosi sa ovim planom — **pitaj ga** pre nego što uradiš bilo šta
+3. Ne krpi — svaku promenu radi kompletno i ispravno
+4. Predlaži unapređenja kad vidiš priliku
 
-### Tvoj način rada:
-- Pročitaj ceo ovaj fajl pre nego što napišeš jednu liniju koda
-- Ako korisnik traži nešto što se kosi sa ovim planom — **pitaj ga**
-- Ne krpi — svaku promenu radi kompletno i ispravno
-- Predlaži unapređenja kad vidiš priliku
+### Pravila za ažuriranje ovog fajla:
+1. **NIKAD ne briši Sekcije 1-4** — one su trajne i menjaju se samo kad vlasnik projekta to eksplicitno traži
+2. **Sekcija 5 (Stanje Projekta)** — ažuriraj posle svakog završenog posla:
+   - Dodaj novi unos u "✅ Završeno" sa datumom i kratkim opisom (1-2 reda max)
+   - Ažuriraj TODO listu ako si nešto završio ili dodao
+   - **Nikad ne briši stare unose iz "Završeno"**
+3. **Sekcija 6 (Arhitektura)** — ažuriraj SAMO kad se menja struktura fajlova ili ruta
+4. **Ako nisi siguran da li treba nešto da menjaš — pitaj korisnika**
+5. **Uvek uradi `git pull` pre početka rada**
+6. Ovaj fajl je na srpskom jeziku. Sajt je na engleskom.
+7. Kad ažuriraš ovaj fajl, promeni datum "Poslednje ažuriranje" na vrhu
+
+### Primer ažuriranja Sekcije 5:
+```markdown
+**Naziv promene (DD.MM.YYYY)**
+- Kratak opis šta je urađeno
+```
 
 ---
 
@@ -34,6 +43,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **NIKAD ne pominjemo odakle radnici dolaze** — nema "Afrika", "Azija", ništa. Samo "international workers" ili "candidates".
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
+- **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
 
 ---
 
@@ -92,13 +102,14 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 
 ### Filozofija razvoja:
 - **NE KRPIMO — PRAVIMO SAVRŠENSTVO** — svaka promena se radi kompletno
+- **NIŠTA LAŽNO** — nema placeholder reklama, lažnih kontakata, mock podataka na produkciji
 - Bolje potrošiti više vremena sada nego večno krpiti
 - Ako treba preimenovati nešto — menja se SVUDA, ne samo na jednom mestu
 - Svaka odluka se dokumentuje u ovom fajlu
 
 ### Dizajn:
 - **Facebook stil** — koristimo FB estetiku (kartice, boje, tipografiju) ali prilagođeno našim potrebama
-- **NEMA socijalnih feature-ova** — nema prijatelja, feed-a, Like/Comment/Share
+- **NEMA socijalnih feature-ova** — nema prijatelja, feed-a, Like/Comment/Share, sponzorisanog sadržaja
 - **Jednostavno i čisto** — profil → dokumenta → verifikacija → čekanje
 - **Sajt je 100% na engleskom jeziku**
 - **Mobile-first** — većina korisnika će koristiti mobilne telefone
@@ -139,6 +150,13 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**Čišćenje lažnih elemenata (07.02.2026)**
+- Uklonjeni "Sponsored", "Ad", "Contacts" iz AppShell desnog sidebara — ništa lažno
+
+**Uklanjanje svih "Dashboard" tekstova (07.02.2026)**
+- Svi vidljivi "Dashboard" nazivi zamenjeni sa "Profile"/"Admin"/"Overview"
+- Popravljen dupli header na admin stranici
 
 **URL Restrukturisanje (07.02.2026)**
 - `/dashboard` → `/profile/worker`, `/employer` → `/profile/employer`, 39 fajlova, 50+ referenci
