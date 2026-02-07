@@ -36,6 +36,7 @@ Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (ra
 - [x] Unified boje i tipografija kroz ceo sajt
 - [x] Facebook-stil tabovi, Intro kartice, Feed items
 - [x] Employer forma za editovanje kompanije (About tab)
+- [x] Fix: Uklonjen dupli navbar (layout.tsx + AppShell), smanjen logo sa h-28 na h-10, sidebar 360→280px
 
 ---
 
