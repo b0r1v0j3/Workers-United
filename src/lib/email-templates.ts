@@ -237,7 +237,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
     }
 }
 
-// Helper function to queue an email
+// Helper function to queue an email and send it immediately via SMTP
 export async function queueEmail(
     supabase: any,
     userId: string,
@@ -249,7 +249,7 @@ export async function queueEmail(
 ): Promise<void> {
     const template = getEmailTemplate(emailType, { name: recipientName, ...templateData });
 
-    await supabase.from("email_queue").insert({
+    const { data } = await supabase.from("email_queue").insert({
         user_id: userId,
         email_type: emailType,
         recipient_email: recipientEmail,
@@ -257,5 +257,22 @@ export async function queueEmail(
         subject: template.subject,
         template_data: { ...templateData, html: template.html },
         scheduled_for: scheduledFor?.toISOString() || new Date().toISOString()
-    });
+    }).select().single();
+
+    // Send immediately via SMTP (no need to wait for n8n)
+    if (!scheduledFor) {
+        try {
+            const { sendEmail } = await import("@/lib/mailer");
+            const result = await sendEmail(recipientEmail, template.subject, template.html);
+            if (data?.id) {
+                await supabase.from("email_queue").update({
+                    status: result.success ? "sent" : "failed",
+                    sent_at: result.success ? new Date().toISOString() : null,
+                    ...(result.error ? { error_message: result.error } : {})
+                }).eq("id", data.id);
+            }
+        } catch (err) {
+            console.error("Direct SMTP send failed, n8n will retry:", err);
+        }
+    }
 }

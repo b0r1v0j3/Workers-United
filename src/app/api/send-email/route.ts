@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/mailer";
 
 export async function POST(request: Request) {
     try {
@@ -32,36 +33,32 @@ export async function POST(request: Request) {
 
         if (dbError) {
             console.error("Database error:", dbError);
-            // Don't fail - we still want to try sending the email
         }
 
-        // Send email using Web3Forms (free tier, no API key needed for basic usage)
-        // Or you can integrate with Resend, SendGrid, etc.
-        const emailResponse = await fetch("https://api.web3forms.com/submit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                access_key: process.env.WEB3FORMS_ACCESS_KEY || "YOUR_ACCESS_KEY",
-                subject: `New ${role} inquiry from ${name}`,
-                from_name: "Workers United Website",
-                to: "contact@workersunited.eu",
-                name,
-                email,
-                phone,
-                country,
-                role,
-                job_preference,
-                message
-            })
-        });
+        // Send notification email via Google Workspace SMTP
+        const html = `
+            <h2>New ${role} inquiry</h2>
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Phone:</strong> ${phone}</p>
+            ${country ? `<p><strong>Country:</strong> ${country}</p>` : ""}
+            ${job_preference ? `<p><strong>Job Preference:</strong> ${job_preference}</p>` : ""}
+            <p><strong>Message:</strong></p>
+            <p>${message}</p>
+        `;
 
-        const emailResult = await emailResponse.json();
+        const result = await sendEmail(
+            process.env.SMTP_USER || "contact@workersunited.eu",
+            `New ${role} inquiry from ${name}`,
+            html,
+            email // reply-to the person who submitted
+        );
 
-        if (emailResult.success) {
+        if (result.success) {
             return NextResponse.json({ success: true });
         } else {
-            // Even if email fails, we stored in DB, so partial success
-            console.error("Email send error:", emailResult);
+            // Even if email fails, we stored in DB
+            console.error("Email send error:", result.error);
             return NextResponse.json({
                 success: true,
                 message: "Your message was received. We will contact you soon."
