@@ -524,17 +524,20 @@ export default function OnboardingPage() {
                                 onChange={(e) => updateField("preferredJob", e.target.value)}
                                 className="w-full px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none bg-white"
                             >
-                                <option value="">Select job type</option>
-                                <option value="construction">Construction</option>
-                                <option value="agriculture">Agriculture</option>
-                                <option value="hospitality">Hospitality / Hotel</option>
-                                <option value="manufacturing">Manufacturing</option>
-                                <option value="healthcare">Healthcare</option>
-                                <option value="logistics">Logistics / Warehouse</option>
-                                <option value="cleaning">Cleaning Services</option>
-                                <option value="it">IT / Technology</option>
-                                <option value="driving">Driving / Transportation</option>
-                                <option value="other">Other</option>
+                                <option value="">Select industry...</option>
+                                <option value="Construction">Construction</option>
+                                <option value="Manufacturing">Manufacturing</option>
+                                <option value="Agriculture">Agriculture</option>
+                                <option value="Hospitality">Hospitality</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Transportation">Transportation</option>
+                                <option value="Retail">Retail</option>
+                                <option value="IT & Technology">IT & Technology</option>
+                                <option value="Food Processing">Food Processing</option>
+                                <option value="Warehousing & Logistics">Warehousing & Logistics</option>
+                                <option value="Cleaning Services">Cleaning Services</option>
+                                <option value="Driving">Driving</option>
+                                <option value="Other">Other</option>
                             </select>
                         </div>
 

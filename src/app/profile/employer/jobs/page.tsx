@@ -106,7 +106,7 @@ function JobCard({ job }: JobCardProps) {
                     <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                         <span className="flex items-center gap-1"><Briefcase size={14} /> {job.industry}</span>
                         <span className="flex items-center gap-1"><MapPin size={14} /> {job.destination_country}</span>
-                        <span className="flex items-center gap-1"><Clock size={14} /> {new Date(job.created_at).toLocaleDateString()}</span>
+                        <span className="flex items-center gap-1"><Clock size={14} /> {new Date(job.created_at).toLocaleDateString('en-GB')}</span>
                     </div>
                 </div>
                 <StatusBadge status={job.status} />

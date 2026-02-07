@@ -22,6 +22,7 @@ interface EmployerProfile {
     company_size: string | null;
     founded_year: string | null;
     description: string | null;
+    country: string | null;
 }
 
 const INDUSTRIES = [
@@ -46,6 +47,19 @@ const COMPANY_SIZES = [
     "500+ employees"
 ];
 
+const EUROPEAN_COUNTRIES = [
+    "Albania", "Andorra", "Austria", "Belarus", "Belgium",
+    "Bosnia and Herzegovina", "Bulgaria", "Croatia", "Cyprus",
+    "Czech Republic", "Denmark", "Estonia", "Finland", "France",
+    "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy",
+    "Kosovo", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg",
+    "Malta", "Moldova", "Monaco", "Montenegro", "Netherlands",
+    "North Macedonia", "Norway", "Poland", "Portugal", "Romania",
+    "Russia", "San Marino", "Serbia", "Slovakia", "Slovenia",
+    "Spain", "Sweden", "Switzerland", "Turkey", "Ukraine",
+    "United Kingdom"
+];
+
 export default function EmployerProfilePage() {
     const router = useRouter();
     const supabase = createClient();
@@ -67,6 +81,7 @@ export default function EmployerProfilePage() {
         job_description: "",
         salary_range: "",
         work_location: "",
+        country: "",
         website: "",
         industry: "",
         company_size: "",
@@ -102,6 +117,7 @@ export default function EmployerProfilePage() {
                         job_description: emp.job_description || "",
                         salary_range: emp.salary_range || "",
                         work_location: emp.work_location || "",
+                        country: emp.country || "",
                         website: emp.website || "",
                         industry: emp.industry || "",
                         company_size: emp.company_size || "",
@@ -142,6 +158,7 @@ export default function EmployerProfilePage() {
                 job_description: formData.job_description || null,
                 salary_range: formData.salary_range || null,
                 work_location: formData.work_location || null,
+                country: formData.country || null,
                 website: formData.website || null,
                 industry: formData.industry || null,
                 company_size: formData.company_size || null,
@@ -408,18 +425,36 @@ export default function EmployerProfilePage() {
                                     />
                                     <p className="text-[11px] text-gray-500 mt-1">⚠️ Required for visa processing</p>
                                 </div>
-                                <div>
-                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                        Work Location
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="work_location"
-                                        value={formData.work_location}
-                                        onChange={handleChange}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        placeholder="City or region, e.g., Belgrade, Serbia"
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Country <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            name="country"
+                                            value={formData.country}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        >
+                                            <option value="">Select country...</option>
+                                            {EUROPEAN_COUNTRIES.map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            City / Region
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="work_location"
+                                            value={formData.work_location}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="e.g., Belgrade, Munich..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
