@@ -85,7 +85,7 @@ export default async function AdminDashboard() {
                     <div className="flex justify-between h-14 items-center">
                         <div className="flex items-center gap-3">
                             <Link href="/" className="flex items-center gap-2">
-                                <img src="/logo.png" alt="Workers United" width={36} height={36} className="rounded" />
+                                <img src="/logo.png" alt="Workers United" width={36} height={36} className="" />
                                 <span className="font-bold text-teal-600 text-lg hidden sm:inline">Workers United</span>
                             </Link>
                             <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-semibold">

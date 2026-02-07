@@ -197,7 +197,7 @@ export default function EmployerProfilePage() {
                 <div className="max-w-[900px] mx-auto px-4">
                     <div className="flex justify-between h-14 items-center">
                         <Link href="/" className="flex items-center gap-2">
-                            <img src="/logo.png" alt="Workers United" width={36} height={36} className="rounded" />
+                            <img src="/logo.png" alt="Workers United" width={36} height={36} className="" />
                             <span className="font-bold text-teal-600 text-lg">Workers United</span>
                         </Link>
                         <div className="flex items-center gap-2">
@@ -247,8 +247,8 @@ export default function EmployerProfilePage() {
                             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Basic Information</h2>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${employer?.status === 'active' ? 'bg-green-100 text-green-700' :
-                                        employer?.status === 'verified' ? 'bg-blue-100 text-blue-700' :
-                                            'bg-amber-100 text-amber-700'
+                                    employer?.status === 'verified' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-amber-100 text-amber-700'
                                     }`}>
                                     {employer?.status?.toUpperCase() || 'NEW'}
                                 </span>
