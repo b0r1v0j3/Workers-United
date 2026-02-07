@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import UnifiedNavbar from "@/components/UnifiedNavbar";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient();
@@ -15,10 +14,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         redirect("/employer/dashboard");
     }
 
-    return (
-        <div className="min-h-screen bg-[var(--bg)] font-montserrat">
-            <UnifiedNavbar variant="dashboard" user={user} />
-            {children}
-        </div>
-    );
+    // AppShell inside DashboardClient handles the navbar + sidebars
+    return <>{children}</>;
 }

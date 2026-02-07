@@ -14,15 +14,15 @@ export default function UnifiedNavbar({ variant, user }: UnifiedNavbarProps) {
     const pathname = usePathname();
 
     return (
-        <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-auto py-4">
-            <div className="max-w-[1200px] mx-auto px-4 h-full flex items-center justify-between">
+        <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
+            <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
                         <img
                             src="/logo.png"
                             alt="Workers United"
-                            className="h-28 w-auto object-contain"
+                            className="h-10 w-auto object-contain"
                         />
                         <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
                             Workers United

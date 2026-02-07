@@ -23,17 +23,17 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
 
             <div className="flex-1 flex max-w-[1920px] mx-auto w-full pt-4">
                 {/* LEFT SIDEBAR (Desktop) */}
-                <aside className="hidden lg:block w-[360px] fixed top-[80px] left-0 bottom-0 overflow-y-auto px-4 pb-4 hover:overflow-y-auto">
+                <aside className="hidden lg:block w-[280px] fixed top-[56px] left-0 bottom-0 overflow-y-auto px-3 pb-4 pt-2">
                     <SidebarContent user={user} variant={variant} />
                 </aside>
 
                 {/* MAIN CONTENT (Feed/Profile) */}
-                <main className="flex-1 lg:ml-[360px] lg:mr-[360px] px-0 sm:px-4 max-w-[740px] mx-auto w-full">
+                <main className="flex-1 lg:ml-[280px] xl:mr-[280px] px-2 sm:px-4 max-w-[800px] mx-auto w-full">
                     {children}
                 </main>
 
                 {/* RIGHT SIDEBAR (Desktop) */}
-                <aside className="hidden xl:block w-[360px] fixed top-[80px] right-0 bottom-0 overflow-y-auto px-4 pb-4">
+                <aside className="hidden xl:block w-[280px] fixed top-[56px] right-0 bottom-0 overflow-y-auto px-3 pb-4 pt-2">
                     <RightbarContent user={user} variant={variant} />
                 </aside>
             </div>
