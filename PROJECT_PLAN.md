@@ -155,6 +155,12 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 **Čišćenje lažnih elemenata (07.02.2026)**
 - Uklonjeni "Sponsored", "Ad", "Contacts" iz AppShell desnog sidebara — ništa lažno
 
+**Admin Panel Upgrade (07.02.2026)**
+- Sve admin stranice upakovane u AppShell (konzistentan stil)
+- Dodat Queue i Refunds u sidebar
+- Kreirana nova Settings stranica (platforma info, integracije, cene)
+- Svi admin linkovi verifikovani — 0 mrtvih linkova
+
 **Uklanjanje svih "Dashboard" tekstova (07.02.2026)**
 - Svi vidljivi "Dashboard" nazivi zamenjeni sa "Profile"/"Admin"/"Overview"
 - Popravljen dupli header na admin stranici
@@ -174,7 +180,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 
 ### 🔲 TODO
 - [ ] **GDPR Usklađenost** — consent pri registraciji, pravo na brisanje, privacy policy sadržaj
-- [ ] Admin unapređenje — kompletna funkcionalnost (sve da može da radi)
+- [x] ~~Admin unapređenje — kompletna funkcionalnost (sve da može da radi)~~
 - [ ] Mobilna responsivnost (mobile-first)
 - [ ] Multi-country pricing za placement fee
 - [ ] Employer profil verifikacija (100% pravilo)
