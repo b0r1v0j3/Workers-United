@@ -14,9 +14,16 @@ Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (ra
 ## 🗣️ Diskusije i Zahtevi (Active Memory)
 > **Ovde beležimo sve što se dogovorimo u chatu da ne zaboravimo.**
 
-### 🆕 Novi Zahtevi (iz chata)
-- [ ] **Protokol:** Ažurirati ovaj fajl (`PROJECT_PLAN.md`) na početku svakog chata sa novim zahtevima i statusom.
-- [ ] **Sinhronizacija:** Uvek uraditi `git pull` pre početka rada.
+### 📐 Dizajn Filozofija (dogovoreno 07.02.2026)
+- **Facebook DIZAJN, ne klon** — koristimo FB stil (kartice, boje, tipografiju) ali prilagođeno našim potrebama
+- **NEMA socijalnih feature-ova** — nema prijatelja, pisanja na zidu, Like/Comment/Share
+- **NEMA Home feed-a** — samo profil gde se unose podaci i dokumenta
+- **Jednostavno** — profil → dokumenta → verifikacija → čekanje
+- **Dashboard ima 3 taba**: Profile Info, Documents, Status
+
+### 🆕 Protokol
+- [x] Ažurirati `PROJECT_PLAN.md` na početku svakog chata sa novim zahtevima i statusom
+- [x] Uvek uraditi `git pull` pre početka rada
 
 
 ## ✅ Završeno
@@ -37,6 +44,7 @@ Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (ra
 - [x] Facebook-stil tabovi, Intro kartice, Feed items
 - [x] Employer forma za editovanje kompanije (About tab)
 - [x] Fix: Uklonjen dupli navbar (layout.tsx + AppShell), smanjen logo sa h-28 na h-10, sidebar 360→280px
+- [x] Redesign: Dashboard kompletno prepisan — skinuti svi socijalni feature-ovi, dodat clean 3-tab profil (Profile Info, Documents, Status)
 
 ---
 
