@@ -87,9 +87,9 @@ export default function SelectRolePage() {
                     {/* Employer Card */}
                     <button
                         onClick={() => selectRole("employer")}
-                        className="group p-6 bg-white rounded-2xl border-2 border-gray-200 hover:border-teal-500 hover:shadow-lg transition-all text-left"
+                        className="group p-6 bg-white rounded-2xl border-2 border-gray-200 hover:border-[#1877f2] hover:shadow-lg transition-all text-left"
                     >
-                        <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
                             🏢
                         </div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -98,7 +98,7 @@ export default function SelectRolePage() {
                         <p className="text-sm text-gray-600">
                             View verified candidates, post job requests, and manage hiring.
                         </p>
-                        <div className="mt-4 inline-flex items-center text-teal-600 font-medium text-sm">
+                        <div className="mt-4 inline-flex items-center text-[#1877f2] font-medium text-sm">
                             Go to Employer Portal →
                         </div>
                     </button>

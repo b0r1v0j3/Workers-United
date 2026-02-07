@@ -74,9 +74,9 @@ export default function VisaReadiness() {
     // Active Job Search Status
     if (isSearchActive) {
         return (
-            <div className="card border-2 border-teal-500 bg-gradient-to-r from-teal-50 to-white">
+            <div className="card border-2 border-[#1877f2] bg-gradient-to-r from-blue-50 to-white">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
                         <div className="relative">
                             <span className="text-2xl">🔍</span>
                             <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
@@ -84,7 +84,7 @@ export default function VisaReadiness() {
                     </div>
                     <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">European Work Eligibility</h3>
-                        <p className="text-teal-700 font-medium">
+                        <p className="text-[#1877f2] font-medium">
                             Active Search – Matching with Employers
                         </p>
                     </div>
@@ -145,7 +145,7 @@ export default function VisaReadiness() {
                     </div>
                     <div className="bg-gray-200 rounded-full h-2">
                         <div
-                            className="bg-teal-500 h-2 rounded-full transition-all duration-500"
+                            className="bg-[#1877f2] h-2 rounded-full transition-all duration-500"
                             style={{ width: `${(verifiedDocs.length / REQUIRED_DOCS.length) * 100}%` }}
                         />
                     </div>
