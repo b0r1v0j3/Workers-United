@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
-import { Users, Building2, FileText, CheckCircle2, AlertCircle, Briefcase, Plus } from "lucide-react";
+import { Users, Building2, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default async function AdminDashboard() {
     const supabase = await createClient();
@@ -76,15 +76,8 @@ export default async function AdminDashboard() {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard href="/admin/candidates" icon={<Users size={24} />} label="Total Candidates" value={candidatesCount || 0} color="blue" />
                     <StatCard href="/admin/employers" icon={<Building2 size={24} />} label="Total Employers" value={employersCount || 0} color="purple" />
-                    <StatCard href="/admin/candidates" icon={<AlertCircle size={24} />} label="Pending Docs" value={pendingDocsCount || 0} color="amber" />
-                    <StatCard href="/admin/candidates" icon={<CheckCircle2 size={24} />} label="Verified Docs" value={verifiedDocsCount || 0} color="green" />
-                </div>
-
-                {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <ActionCard href="/admin/candidates" title="Manage Candidates" desc="View all candidates, verify documents" gradient="from-blue-500 to-cyan-500" icon={<Users className="text-white/80" />} />
-                    <ActionCard href="/admin/employers" title="Manage Employers" desc="View employers, job requirements" gradient="from-blue-500 to-indigo-500" icon={<Building2 className="text-white/80" />} />
-                    <ActionCard href="/admin/jobs" title="Job Queue" desc="Background jobs & email queues" gradient="from-purple-500 to-pink-500" icon={<Briefcase className="text-white/80" />} />
+                    <StatCard href="/admin/candidates?filter=pending" icon={<AlertCircle size={24} />} label="Pending Docs" value={pendingDocsCount || 0} color="amber" />
+                    <StatCard href="/admin/candidates?filter=verified" icon={<CheckCircle2 size={24} />} label="Verified Docs" value={verifiedDocsCount || 0} color="green" />
                 </div>
 
                 {/* Activity Feed / Recent Lists */}
@@ -168,23 +161,6 @@ function StatCard({ href, icon, label, value, color }: { href: string; icon: Rea
             </div>
             <p className="text-3xl font-bold text-slate-900 tracking-tight">{value}</p>
             <p className="text-sm font-medium text-slate-500">{label}</p>
-        </Link>
-    );
-}
-
-function ActionCard({ href, title, desc, gradient, icon }: { href: string; title: string; desc: string; gradient: string; icon: React.ReactNode }) {
-    return (
-        <Link href={href} className={`bg-gradient-to-br ${gradient} text-white rounded-xl p-6 hover:shadow-lg transition-all hover:scale-[1.02] group relative overflow-hidden`}>
-            <div className="absolute top-0 right-0 p-4 opacity-10 transform scale-150 group-hover:scale-125 transition-transform">
-                {icon}
-            </div>
-            <div className="relative z-10">
-                <div className="bg-white/20 w-fit p-2 rounded-lg mb-4 backdrop-blur-sm">
-                    {icon}
-                </div>
-                <h3 className="font-bold text-xl mb-1">{title}</h3>
-                <p className="text-white/90 text-sm font-medium">{desc}</p>
-            </div>
         </Link>
     );
 }
