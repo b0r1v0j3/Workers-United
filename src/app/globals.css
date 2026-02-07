@@ -15,18 +15,18 @@
 }
 
 :root {
-  --bg: #f4f6fb;
+  --bg: #f0f2f5;
   --bg-alt: #ffffff;
-  --primary: #183b56;
-  --primary-soft: #2f6fed;
-  --accent: #1dbf73;
-  --text: #1b2430;
-  --muted: #6c7a89;
-  --border: #dde3ec;
-  --shadow-soft: 0 18px 45px rgba(9, 30, 66, 0.16);
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --max-width: 1120px;
+  --primary: #1877f2;
+  --primary-soft: #e7f3ff;
+  --accent: #42b72a;
+  --text: #050505;
+  --muted: #65676b;
+  --border: #dddfe2;
+  --shadow-soft: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --max-width: 1200px;
 }
 
 /* Reset & Base Styles */

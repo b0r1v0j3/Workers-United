@@ -176,28 +176,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
     };
 
     return (
-        <div className="min-h-screen bg-[#f1f5f9] font-montserrat">
-            {/* Header */}
-            <nav className="bg-[#183b56] px-5 py-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
-                <div className="flex items-center gap-4">
-                    <Link href="/admin" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <img src="/logo.png" alt="Workers United" width={64} height={64} className="" />
-                        <span className="font-bold text-white text-lg">Admin Portal</span>
-                    </Link>
-                    <span className="text-gray-400">/</span>
-                    <Link href="/admin/candidates" className="text-gray-300 hover:text-white transition-colors">Candidates</Link>
-                    <span className="text-gray-400">/</span>
-                    <span className="text-white font-medium">{candidateProfile.full_name || "Unknown"}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="bg-[#2f6fed] text-white px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">
-                        God Mode
-                    </div>
-                    <a href="/auth/signout" className="text-gray-300 text-sm font-semibold hover:text-white transition-colors">
-                        Logout
-                    </a>
-                </div>
-            </nav>
+        <>
 
             <div className="max-w-[1200px] mx-auto px-5 py-10">
                 {/* Back Link */}
@@ -462,6 +441,6 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }

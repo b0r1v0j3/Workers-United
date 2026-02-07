@@ -5,30 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 
 export default async function AdminDashboard() {
-    const supabase = await createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect("/login");
-
-    const isOwner = isGodModeUser(user.email);
-
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-    if (profile?.role !== 'admin' && !isOwner) {
-        redirect("/profile");
-    }
-
     // Use admin client for stats (bypasses RLS)
-    let adminClient;
-    try {
-        adminClient = createAdminClient();
-    } catch {
-        adminClient = supabase;
-    }
+    const adminClient = createAdminClient();
 
     // Fetch ALL auth users for accurate count
     const { data: authData } = await adminClient.auth.admin.listUsers();
@@ -78,100 +56,75 @@ export default async function AdminDashboard() {
         .limit(5);
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5]">
-            {/* Facebook-style Navigation */}
-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
-                <div className="max-w-[1100px] mx-auto px-4">
-                    <div className="flex justify-between h-14 items-center">
-                        <div className="flex items-center gap-3">
-                            <Link href="/" className="flex items-center gap-2">
-                                <img src="/logo.png" alt="Workers United" width={36} height={36} className="" />
-                                <span className="font-bold text-teal-600 text-lg hidden sm:inline">Workers United</span>
-                            </Link>
-                            <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-semibold">
-                                Admin
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm text-gray-600 hidden sm:inline">{user.email}</span>
-                            <a href="/auth/signout" className="text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100">
-                                Logout
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+        <div className="max-w-[1100px] mx-auto px-4 py-6">
+            {/* Header */}
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                <p className="text-gray-500 mt-1">Overview of your platform</p>
+            </div>
 
-            <div className="max-w-[1100px] mx-auto px-4 py-6">
-                {/* Header */}
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                    <p className="text-gray-500 mt-1">Overview of your platform</p>
-                </div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <StatCard href="/admin/candidates" icon="👤" label="Total Candidates" value={candidatesCount || 0} color="blue" />
+                <StatCard href="/admin/employers" icon="🏢" label="Total Employers" value={employersCount || 0} color="purple" />
+                <StatCard href="/admin/candidates" icon="⏳" label="Pending Docs" value={pendingDocsCount || 0} color="amber" />
+                <StatCard href="/admin/candidates" icon="✅" label="Verified Docs" value={verifiedDocsCount || 0} color="green" />
+            </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <StatCard href="/admin/candidates" icon="👤" label="Total Candidates" value={candidatesCount || 0} color="blue" />
-                    <StatCard href="/admin/employers" icon="🏢" label="Total Employers" value={employersCount || 0} color="purple" />
-                    <StatCard href="/admin/candidates" icon="⏳" label="Pending Docs" value={pendingDocsCount || 0} color="amber" />
-                    <StatCard href="/admin/candidates" icon="✅" label="Verified Docs" value={verifiedDocsCount || 0} color="green" />
-                </div>
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <ActionCard href="/admin/candidates" title="Manage Candidates" desc="View all candidates, verify documents" gradient="from-teal-500 to-emerald-500" />
+                <ActionCard href="/admin/employers" title="Manage Employers" desc="View employers, job requirements" gradient="from-blue-500 to-indigo-500" />
+                <ActionCard href="/admin/jobs" title="Job Queue" desc="Background jobs & email queues" gradient="from-purple-500 to-pink-500" />
+            </div>
 
-                {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <ActionCard href="/admin/candidates" title="Manage Candidates" desc="View all candidates, verify documents" gradient="from-teal-500 to-emerald-500" />
-                    <ActionCard href="/admin/employers" title="Manage Employers" desc="View employers, job requirements" gradient="from-blue-500 to-indigo-500" />
-                    <ActionCard href="/admin/jobs" title="Job Queue" desc="Background jobs & email queues" gradient="from-purple-500 to-pink-500" />
-                </div>
-
-                {/* Recent Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Recent Candidates */}
-                    <Card title="Recent Candidates" linkHref="/admin/candidates" linkText="View All">
-                        {recentCandidates && recentCandidates.length > 0 ? (
-                            <div className="divide-y divide-gray-100">
-                                {recentCandidates.map((c: any) => (
-                                    <div key={c.user_id} className="py-3 flex justify-between items-center">
-                                        <div>
-                                            <p className="font-medium text-gray-900 text-[15px]">{c.full_name || "Unknown"}</p>
-                                            <p className="text-[13px] text-gray-500">{c.email}</p>
-                                        </div>
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === "verified" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
-                                            }`}>
-                                            {c.status || "pending"}
-                                        </span>
+            {/* Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Recent Candidates */}
+                <Card title="Recent Candidates" linkHref="/admin/candidates" linkText="View All">
+                    {recentCandidates && recentCandidates.length > 0 ? (
+                        <div className="divide-y divide-gray-100">
+                            {recentCandidates.map((c: any) => (
+                                <div key={c.user_id} className="py-3 flex justify-between items-center">
+                                    <div>
+                                        <p className="font-medium text-gray-900 text-[15px]">{c.full_name || "Unknown"}</p>
+                                        <p className="text-[13px] text-gray-500">{c.email}</p>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-gray-400 text-center py-6">No recent candidates</p>
-                        )}
-                    </Card>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === "verified" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                                        }`}>
+                                        {c.status || "pending"}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-400 text-center py-6">No recent candidates</p>
+                    )}
+                </Card>
 
-                    {/* Recent Employers */}
-                    <Card title="Recent Employers" linkHref="/admin/employers" linkText="View All">
-                        {recentEmployers && recentEmployers.length > 0 ? (
-                            <div className="divide-y divide-gray-100">
-                                {recentEmployers.map((e: any) => (
-                                    <div key={e.id} className="py-3 flex justify-between items-center">
-                                        <div>
-                                            <p className="font-medium text-gray-900 text-[15px]">{e.company_name || "Unknown"}</p>
-                                            <p className="text-[13px] text-gray-500">
-                                                {new Date(e.created_at).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-teal-600 font-bold">{e.workers_needed || 0}</span>
-                                            <span className="text-gray-500 text-sm ml-1">needed</span>
-                                        </div>
+                {/* Recent Employers */}
+                <Card title="Recent Employers" linkHref="/admin/employers" linkText="View All">
+                    {recentEmployers && recentEmployers.length > 0 ? (
+                        <div className="divide-y divide-gray-100">
+                            {recentEmployers.map((e: any) => (
+                                <div key={e.id} className="py-3 flex justify-between items-center">
+                                    <div>
+                                        <p className="font-medium text-gray-900 text-[15px]">{e.company_name || "Unknown"}</p>
+                                        <p className="text-[13px] text-gray-500">
+                                            {new Date(e.created_at).toLocaleDateString()}
+                                        </p>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-gray-400 text-center py-6">No recent employers</p>
-                        )}
-                    </Card>
-                </div>
+                                    <div className="text-right">
+                                        <span className="text-teal-600 font-bold">{e.workers_needed || 0}</span>
+                                        <span className="text-gray-500 text-sm ml-1">needed</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-400 text-center py-6">No recent employers</p>
+                    )}
+                </Card>
             </div>
         </div>
     );

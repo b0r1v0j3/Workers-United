@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import UnifiedNavbar from "@/components/UnifiedNavbar";
 
 export const dynamic = "force-dynamic";
 
@@ -16,44 +17,8 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] font-montserrat">
-      {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#f4f6fb]/90 border-b border-[#dde3ec]/70">
-        <div className="max-w-[1120px] mx-auto px-5 py-3.5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Workers United logo" width={64} height={64} className="" />
-            <span className="font-bold text-xl text-[#183b56]">Workers United</span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm text-[#6c7a89]">
-            <Link href="#how-it-works" className="hover:text-[#183b56] transition-colors">How it works</Link>
-            <Link href="#workers" className="hover:text-[#183b56] transition-colors">For workers</Link>
-            <Link href="#employers" className="hover:text-[#183b56] transition-colors">For employers</Link>
-            {user ? (
-              <Link
-                href="/dashboard"
-                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#1dbf73] to-[#17a864] font-bold shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:scale-105 transition-all"
-                style={{ color: '#ffffff' }}
-              >
-                ✓ Dashboard
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] font-semibold shadow-lg shadow-blue-500/40"
-                style={{ color: '#ffffff' }}
-              >
-                Log In
-              </Link>
-            )}
-          </nav>
-          {/* Mobile menu button */}
-          <button className="md:hidden p-2" aria-label="Menu">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[var(--bg)] font-montserrat">
+      <UnifiedNavbar variant="public" user={user} />
 
       <main>
         {/* Hero Section - Clean, centered, impactful */}
