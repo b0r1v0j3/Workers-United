@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 
 interface EmployerProfile {
     id: string;
     company_name: string;
     pib: string | null;
+    company_registration_number: string | null;
     accommodation_address: string | null;
     company_address: string | null;
     contact_phone: string | null;
@@ -25,41 +27,6 @@ interface EmployerProfile {
     country: string | null;
 }
 
-const INDUSTRIES = [
-    "Construction",
-    "Manufacturing",
-    "Agriculture",
-    "Hospitality",
-    "Healthcare",
-    "Transportation",
-    "Retail",
-    "IT & Technology",
-    "Food Processing",
-    "Warehousing & Logistics",
-    "Other"
-];
-
-const COMPANY_SIZES = [
-    "1-10 employees",
-    "11-50 employees",
-    "51-200 employees",
-    "201-500 employees",
-    "500+ employees"
-];
-
-const EUROPEAN_COUNTRIES = [
-    "Albania", "Andorra", "Austria", "Belarus", "Belgium",
-    "Bosnia and Herzegovina", "Bulgaria", "Croatia", "Cyprus",
-    "Czech Republic", "Denmark", "Estonia", "Finland", "France",
-    "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy",
-    "Kosovo", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg",
-    "Malta", "Moldova", "Monaco", "Montenegro", "Netherlands",
-    "North Macedonia", "Norway", "Poland", "Portugal", "Romania",
-    "Russia", "San Marino", "Serbia", "Slovakia", "Slovenia",
-    "Spain", "Sweden", "Switzerland", "Turkey", "Ukraine",
-    "United Kingdom"
-];
-
 export default function EmployerProfilePage() {
     const router = useRouter();
     const supabase = createClient();
@@ -74,6 +41,7 @@ export default function EmployerProfilePage() {
     const [formData, setFormData] = useState({
         company_name: "",
         pib: "",
+        company_registration_number: "",
         company_address: "",
         accommodation_address: "",
         contact_phone: "",
@@ -110,6 +78,7 @@ export default function EmployerProfilePage() {
                     setFormData({
                         company_name: emp.company_name || "",
                         pib: emp.pib || "",
+                        company_registration_number: emp.company_registration_number || "",
                         company_address: emp.company_address || "",
                         accommodation_address: emp.accommodation_address || "",
                         contact_phone: emp.contact_phone || "",
@@ -140,8 +109,12 @@ export default function EmployerProfilePage() {
         setSaving(true);
 
         try {
-            if (formData.pib && !/^\d{8}$/.test(formData.pib)) {
-                throw new Error("PIB must be exactly 8 digits");
+            if (formData.pib && !/^\d{9}$/.test(formData.pib)) {
+                throw new Error("Tax ID (PIB) must be exactly 9 digits");
+            }
+
+            if (formData.company_registration_number && !/^\d{8}$/.test(formData.company_registration_number)) {
+                throw new Error("Registration Number (MB) must be exactly 8 digits");
             }
 
             if (!formData.company_name.trim()) {
@@ -151,6 +124,7 @@ export default function EmployerProfilePage() {
             const updateData = {
                 company_name: formData.company_name,
                 pib: formData.pib || null,
+                company_registration_number: formData.company_registration_number || null,
                 company_address: formData.company_address || null,
                 accommodation_address: formData.accommodation_address || null,
                 contact_phone: formData.contact_phone || null,
@@ -280,7 +254,7 @@ export default function EmployerProfilePage() {
                                     </div>
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Tax ID <span className="text-red-500">*</span>
+                                            Tax ID (PIB) <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
@@ -288,10 +262,29 @@ export default function EmployerProfilePage() {
                                             value={formData.pib}
                                             onChange={handleChange}
                                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="123456789"
+                                            maxLength={9}
+                                        />
+                                        <p className="text-[11px] text-gray-500 mt-1">9 digits — Tax Identification Number</p>
+                                    </div>
+                                </div>
+
+                                {/* Row 1b - Registration Number */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Registration Number (MB) <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="company_registration_number"
+                                            value={formData.company_registration_number}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                             placeholder="12345678"
                                             maxLength={8}
                                         />
-                                        <p className="text-[11px] text-gray-500 mt-1">8 digits, required for visa processing</p>
+                                        <p className="text-[11px] text-gray-500 mt-1">8 digits — Company Registration Number, required for e-Uprava visa</p>
                                     </div>
                                 </div>
 

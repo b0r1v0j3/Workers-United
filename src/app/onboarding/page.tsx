@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { WORLD_COUNTRIES, INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS } from "@/lib/constants";
 
 // Country codes for phone input
 const COUNTRY_CODES = [
@@ -11,22 +12,18 @@ const COUNTRY_CODES = [
     { code: "+381", country: "Serbia", flag: "🇷🇸" },
     { code: "+385", country: "Croatia", flag: "🇭🇷" },
     { code: "+387", country: "Bosnia", flag: "🇧🇦" },
-    { code: "+382", country: "Montenegro", flag: "🇲🇪" },
     { code: "+389", country: "N. Macedonia", flag: "🇲🇰" },
-    { code: "+386", country: "Slovenia", flag: "🇸🇮" },
     { code: "+383", country: "Kosovo", flag: "🇽🇰" },
+    { code: "+382", country: "Montenegro", flag: "🇲🇪" },
+    { code: "+386", country: "Slovenia", flag: "🇸🇮" },
     { code: "+355", country: "Albania", flag: "🇦🇱" },
-    // Europe
+    { code: "+40", country: "Romania", flag: "🇷🇴" },
+    { code: "+359", country: "Bulgaria", flag: "🇧🇬" },
+    { code: "+36", country: "Hungary", flag: "🇭🇺" },
+    // Western Europe
     { code: "+49", country: "Germany", flag: "🇩🇪" },
     { code: "+43", country: "Austria", flag: "🇦🇹" },
     { code: "+41", country: "Switzerland", flag: "🇨🇭" },
-    { code: "+48", country: "Poland", flag: "🇵🇱" },
-    { code: "+420", country: "Czech Rep.", flag: "🇨🇿" },
-    { code: "+421", country: "Slovakia", flag: "🇸🇰" },
-    { code: "+36", country: "Hungary", flag: "🇭🇺" },
-    { code: "+40", country: "Romania", flag: "🇷🇴" },
-    { code: "+359", country: "Bulgaria", flag: "🇧🇬" },
-    { code: "+30", country: "Greece", flag: "🇬🇷" },
     { code: "+39", country: "Italy", flag: "🇮🇹" },
     { code: "+34", country: "Spain", flag: "🇪🇸" },
     { code: "+351", country: "Portugal", flag: "🇵🇹" },
@@ -39,19 +36,10 @@ const COUNTRY_CODES = [
     { code: "+46", country: "Sweden", flag: "🇸🇪" },
     { code: "+47", country: "Norway", flag: "🇳🇴" },
     { code: "+358", country: "Finland", flag: "🇫🇮" },
-    { code: "+370", country: "Lithuania", flag: "🇱🇹" },
-    { code: "+371", country: "Latvia", flag: "🇱🇻" },
-    { code: "+372", country: "Estonia", flag: "🇪🇪" },
-    { code: "+380", country: "Ukraine", flag: "🇺🇦" },
-    { code: "+375", country: "Belarus", flag: "🇧🇾" },
-    { code: "+373", country: "Moldova", flag: "🇲🇩" },
-    { code: "+7", country: "Russia", flag: "🇷🇺" },
-    // Americas
-    { code: "+1", country: "USA", flag: "🇺🇸" },
-    { code: "+1", country: "Canada", flag: "🇨🇦" },
-    { code: "+52", country: "Mexico", flag: "🇲🇽" },
-    { code: "+55", country: "Brazil", flag: "🇧🇷" },
-    { code: "+54", country: "Argentina", flag: "🇦🇷" },
+    { code: "+48", country: "Poland", flag: "🇵🇱" },
+    { code: "+420", country: "Czech Republic", flag: "🇨🇿" },
+    { code: "+421", country: "Slovakia", flag: "🇸🇰" },
+    { code: "+30", country: "Greece", flag: "🇬🇷" },
     // Middle East
     { code: "+90", country: "Turkey", flag: "🇹🇷" },
     { code: "+971", country: "UAE", flag: "🇦🇪" },
@@ -64,10 +52,10 @@ const COUNTRY_CODES = [
     { code: "+63", country: "Philippines", flag: "🇵🇭" },
     { code: "+84", country: "Vietnam", flag: "🇻🇳" },
     { code: "+62", country: "Indonesia", flag: "🇮🇩" },
-    // East Asia
-    { code: "+86", country: "China", flag: "🇨🇳" },
-    { code: "+81", country: "Japan", flag: "🇯🇵" },
-    { code: "+82", country: "South Korea", flag: "🇰🇷" },
+    // Eastern Europe & Central Asia
+    { code: "+380", country: "Ukraine", flag: "🇺🇦" },
+    { code: "+7", country: "Russia", flag: "🇷🇺" },
+    { code: "+375", country: "Belarus", flag: "🇧🇾" },
     // Africa
     { code: "+234", country: "Nigeria", flag: "🇳🇬" },
     { code: "+254", country: "Kenya", flag: "🇰🇪" },
@@ -97,6 +85,9 @@ const MONTHS = [
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => currentYear - 18 - i);
 
+// Empty child template
+const EMPTY_CHILD = { last_name: "", first_name: "", dob: "" };
+
 export default function OnboardingPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -119,7 +110,37 @@ export default function OnboardingPage() {
         preferredJob: "",
         languages: "",
         signatureData: "",
+        // New visa fields
+        gender: "",
+        maritalStatus: "",
+        birthCountry: "",
+        birthCity: "",
+        citizenship: "",
+        originalCitizenshipSame: true,
+        originalCitizenship: "",
+        maidenName: "",
+        fatherName: "",
+        motherName: "",
+        // Passport & travel
+        passportNumber: "",
+        passportIssuedBy: "",
+        passportIssueDate: "",
+        passportExpiryDate: "",
+        livesAbroad: "",
+        previousVisas: "",
     });
+
+    // Family data
+    const [hasSpouse, setHasSpouse] = useState(false);
+    const [spouseData, setSpouseData] = useState({
+        first_name: "",
+        last_name: "",
+        dob: "",
+        birth_country: "",
+        birth_city: "",
+    });
+    const [hasChildren, setHasChildren] = useState(false);
+    const [children, setChildren] = useState<Array<{ last_name: string; first_name: string; dob: string }>>([]);
 
     useEffect(() => {
         async function loadUser() {
@@ -183,6 +204,10 @@ export default function OnboardingPage() {
                     dobYear = dob.getFullYear().toString();
                 }
 
+                // Determine if original_citizenship is same
+                const origSame = !candidate.original_citizenship ||
+                    candidate.original_citizenship === candidate.citizenship;
+
                 setFormData(prev => ({
                     ...prev,
                     countryCode,
@@ -195,7 +220,37 @@ export default function OnboardingPage() {
                     languages: candidate.languages?.join(", ") || "",
                     // FIX: Load existing signature so it doesn't get overwritten
                     signatureData: candidate.signature_url || "",
+                    // New fields
+                    gender: candidate.gender || "",
+                    maritalStatus: candidate.marital_status || "",
+                    birthCountry: candidate.birth_country || "",
+                    birthCity: candidate.birth_city || "",
+                    citizenship: candidate.citizenship || "",
+                    originalCitizenshipSame: origSame,
+                    originalCitizenship: candidate.original_citizenship || "",
+                    maidenName: candidate.maiden_name || "",
+                    fatherName: candidate.father_name || "",
+                    motherName: candidate.mother_name || "",
+                    passportNumber: candidate.passport_number || "",
+                    passportIssuedBy: candidate.passport_issued_by || "",
+                    passportIssueDate: candidate.passport_issue_date || "",
+                    passportExpiryDate: candidate.passport_expiry_date || "",
+                    livesAbroad: candidate.lives_abroad || "",
+                    previousVisas: candidate.previous_visas || "",
                 }));
+
+                // Load family data
+                if (candidate.family_data) {
+                    const fd = candidate.family_data;
+                    if (fd.spouse) {
+                        setHasSpouse(true);
+                        setSpouseData(fd.spouse);
+                    }
+                    if (fd.children && fd.children.length > 0) {
+                        setHasChildren(true);
+                        setChildren(fd.children);
+                    }
+                }
             }
         }
 
@@ -212,29 +267,37 @@ export default function OnboardingPage() {
 
     const getFullDOB = () => {
         if (formData.dobDay && formData.dobMonth && formData.dobYear) {
-            const month = formData.dobMonth.padStart(2, '0');
-            const day = formData.dobDay.padStart(2, '0');
+            const month = formData.dobMonth.toString().padStart(2, '0');
+            const day = formData.dobDay.toString().padStart(2, '0');
             return `${formData.dobYear}-${month}-${day}`;
         }
         return null;
     };
 
-    const handleSignatureSave = async (signatureData: string) => {
-        updateField("signatureData", signatureData);
+    const handleSignatureSave = (signatureData: string) => {
+        setFormData(prev => ({
+            ...prev,
+            signatureData
+        }));
+    };
 
-        try {
-            await fetch("/api/signatures", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    signatureData,
-                    documentType: "onboarding",
-                    agreedText: "I agree to the terms of service and consent to digital signature usage."
-                }),
-            });
-        } catch (err) {
-            console.error("Signature save failed:", err);
+    // Helper: add a child
+    const addChild = () => {
+        if (children.length < 5) {
+            setChildren(prev => [...prev, { ...EMPTY_CHILD }]);
         }
+    };
+
+    // Helper: remove a child
+    const removeChild = (index: number) => {
+        setChildren(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Helper: update a child field
+    const updateChild = (index: number, field: string, value: string) => {
+        setChildren(prev => prev.map((child, i) =>
+            i === index ? { ...child, [field]: value } : child
+        ));
     };
 
     const handleSave = async () => {
@@ -281,6 +344,15 @@ export default function OnboardingPage() {
                 return;
             }
 
+            // Build family_data JSON
+            const familyData: any = {};
+            if (hasSpouse) {
+                familyData.spouse = spouseData;
+            }
+            if (hasChildren && children.length > 0) {
+                familyData.children = children;
+            }
+
             // Candidate UPSERT
             const { data: existingCandidate } = await supabase
                 .from("candidates")
@@ -299,6 +371,25 @@ export default function OnboardingPage() {
                 preferred_country: "serbia",
                 signature_url: formData.signatureData || null,
                 updated_at: new Date().toISOString(),
+                // New fields
+                gender: formData.gender || null,
+                marital_status: formData.maritalStatus || null,
+                birth_country: formData.birthCountry || null,
+                birth_city: formData.birthCity || null,
+                citizenship: formData.citizenship || null,
+                original_citizenship: formData.originalCitizenshipSame
+                    ? (formData.citizenship || null)
+                    : (formData.originalCitizenship || null),
+                maiden_name: formData.maidenName || null,
+                father_name: formData.fatherName || null,
+                mother_name: formData.motherName || null,
+                family_data: (Object.keys(familyData).length > 0) ? familyData : null,
+                passport_number: formData.passportNumber || null,
+                passport_issued_by: formData.passportIssuedBy || null,
+                passport_issue_date: formData.passportIssueDate || null,
+                passport_expiry_date: formData.passportExpiryDate || null,
+                lives_abroad: formData.livesAbroad || null,
+                previous_visas: formData.previousVisas || null,
             };
 
             let updateError;
@@ -330,6 +421,9 @@ export default function OnboardingPage() {
     };
 
     const selectedCountry = COUNTRY_CODES.find(c => c.code === formData.countryCode) || COUNTRY_CODES[0];
+
+    const inputClass = "w-full px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none transition-colors";
+    const labelClass = "block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5";
 
     if (!user) {
         return (
@@ -372,37 +466,63 @@ export default function OnboardingPage() {
                     </div>
                 )}
 
-                {/* Section 1: Personal Info */}
+                {/* ═══════════════ Section 1: Personal Info ═══════════════ */}
                 <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4">
                     <h2 className="text-lg font-bold text-[#050505] mb-4">👤 Personal Information</h2>
                     <div className="grid gap-4">
                         {/* Name */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">First Name *</label>
+                                <label className={labelClass}>First Name *</label>
                                 <input
                                     type="text"
                                     value={formData.firstName}
                                     onChange={(e) => updateField("firstName", e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none transition-colors"
+                                    className={inputClass}
                                     placeholder="First name"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">Last Name *</label>
+                                <label className={labelClass}>Last Name *</label>
                                 <input
                                     type="text"
                                     value={formData.lastName}
                                     onChange={(e) => updateField("lastName", e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none transition-colors"
+                                    className={inputClass}
                                     placeholder="Last name"
                                 />
                             </div>
                         </div>
 
+                        {/* Gender + Marital Status */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>Gender *</label>
+                                <select
+                                    value={formData.gender}
+                                    onChange={(e) => updateField("gender", e.target.value)}
+                                    className={`${inputClass} bg-white`}
+                                >
+                                    <option value="">Select gender...</option>
+                                    {GENDER_OPTIONS.map(g => (<option key={g} value={g}>{g}</option>))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Marital Status *</label>
+                                <select
+                                    value={formData.maritalStatus}
+                                    onChange={(e) => updateField("maritalStatus", e.target.value)}
+                                    className={`${inputClass} bg-white`}
+                                >
+                                    <option value="">Select status...</option>
+                                    {MARITAL_STATUSES.map(s => (<option key={s} value={s}>{s}</option>))}
+                                </select>
+                            </div>
+                        </div>
+
                         {/* Phone */}
                         <div>
-                            <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">Phone (WhatsApp) *</label>
+                            <label className={labelClass}>Phone (WhatsApp) *</label>
                             <div className="flex gap-2">
                                 <div className="relative">
                                     <button
@@ -459,7 +579,7 @@ export default function OnboardingPage() {
                                     type="tel"
                                     value={formData.phoneNumber}
                                     onChange={(e) => updateField("phoneNumber", e.target.value.replace(/[^0-9]/g, ''))}
-                                    className="flex-1 px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none transition-colors"
+                                    className={`flex-1 ${inputClass}`}
                                     placeholder="60 123 4567"
                                 />
                             </div>
@@ -467,24 +587,24 @@ export default function OnboardingPage() {
 
                         {/* Nationality */}
                         <div>
-                            <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">Nationality *</label>
+                            <label className={labelClass}>Nationality *</label>
                             <input
                                 type="text"
                                 value={formData.nationality}
                                 onChange={(e) => updateField("nationality", e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none transition-colors"
+                                className={inputClass}
                                 placeholder="e.g., Serbian, Nigerian, Indian"
                             />
                         </div>
 
                         {/* Date of Birth */}
                         <div>
-                            <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">Date of Birth *</label>
+                            <label className={labelClass}>Date of Birth *</label>
                             <div className="grid grid-cols-3 gap-3">
                                 <select
                                     value={formData.dobDay}
                                     onChange={(e) => updateField("dobDay", e.target.value)}
-                                    className="px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none bg-white"
+                                    className={`${inputClass} bg-white`}
                                 >
                                     <option value="">Day</option>
                                     {DAYS.map(day => (<option key={day} value={day}>{day}</option>))}
@@ -492,7 +612,7 @@ export default function OnboardingPage() {
                                 <select
                                     value={formData.dobMonth}
                                     onChange={(e) => updateField("dobMonth", e.target.value)}
-                                    className="px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none bg-white"
+                                    className={`${inputClass} bg-white`}
                                 >
                                     <option value="">Month</option>
                                     {MONTHS.map(month => (<option key={month.value} value={month.value}>{month.label}</option>))}
@@ -500,52 +620,385 @@ export default function OnboardingPage() {
                                 <select
                                     value={formData.dobYear}
                                     onChange={(e) => updateField("dobYear", e.target.value)}
-                                    className="px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none bg-white"
+                                    className={`${inputClass} bg-white`}
                                 >
                                     <option value="">Year</option>
                                     {YEARS.map(year => (<option key={year} value={year}>{year}</option>))}
                                 </select>
                             </div>
                         </div>
+
+                        {/* Birth Country + Birth City */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>Country of Birth *</label>
+                                <select
+                                    value={formData.birthCountry}
+                                    onChange={(e) => updateField("birthCountry", e.target.value)}
+                                    className={`${inputClass} bg-white`}
+                                >
+                                    <option value="">Select country...</option>
+                                    {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>City of Birth *</label>
+                                <input
+                                    type="text"
+                                    value={formData.birthCity}
+                                    onChange={(e) => updateField("birthCity", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="e.g., Mumbai"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Citizenship */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>Citizenship *</label>
+                                <select
+                                    value={formData.citizenship}
+                                    onChange={(e) => updateField("citizenship", e.target.value)}
+                                    className={`${inputClass} bg-white`}
+                                >
+                                    <option value="">Select country...</option>
+                                    {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Original Citizenship</label>
+                                <div className="flex items-center gap-2 mb-2 mt-1">
+                                    <input
+                                        type="checkbox"
+                                        id="origCitizenshipSameOnboard"
+                                        checked={formData.originalCitizenshipSame}
+                                        onChange={(e) => updateField("originalCitizenshipSame", e.target.checked)}
+                                        className="w-4 h-4 text-[#1877f2] rounded focus:ring-[#1877f2]"
+                                    />
+                                    <label htmlFor="origCitizenshipSameOnboard" className="text-[12px] text-gray-600">
+                                        Same as current
+                                    </label>
+                                </div>
+                                {!formData.originalCitizenshipSame && (
+                                    <select
+                                        value={formData.originalCitizenship}
+                                        onChange={(e) => updateField("originalCitizenship", e.target.value)}
+                                        className={`${inputClass} bg-white`}
+                                    >
+                                        <option value="">Select country...</option>
+                                        {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                    </select>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Maiden Name */}
+                        <div>
+                            <label className={labelClass}>Maiden Name (Birth Surname)</label>
+                            <input
+                                type="text"
+                                value={formData.maidenName}
+                                onChange={(e) => updateField("maidenName", e.target.value)}
+                                className={inputClass}
+                                placeholder="Only if different from current surname"
+                            />
+                            <p className="text-[10px] text-gray-400 mt-1">Optional — if your surname changed after marriage</p>
+                        </div>
+
+                        {/* Father + Mother name */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>Father&apos;s First Name</label>
+                                <input
+                                    type="text"
+                                    value={formData.fatherName}
+                                    onChange={(e) => updateField("fatherName", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="Optional"
+                                />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Mother&apos;s First Name</label>
+                                <input
+                                    type="text"
+                                    value={formData.motherName}
+                                    onChange={(e) => updateField("motherName", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="Optional"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Section 2: Work Preferences */}
+                {/* ═══════════════ Section 2: Family Information ═══════════════ */}
+                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4">
+                    <h2 className="text-lg font-bold text-[#050505] mb-4">👨‍👩‍👧‍👦 Family Information</h2>
+                    <div className="grid gap-4">
+                        {/* Spouse Toggle */}
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="hasSpouseOnboard"
+                                checked={hasSpouse}
+                                onChange={(e) => setHasSpouse(e.target.checked)}
+                                className="w-4 h-4 text-[#1877f2] rounded focus:ring-[#1877f2]"
+                            />
+                            <label htmlFor="hasSpouseOnboard" className="text-[14px] font-medium text-gray-700">
+                                I have a spouse / partner
+                            </label>
+                        </div>
+
+                        {/* Spouse Fields */}
+                        {hasSpouse && (
+                            <div className="border border-[#dddfe2] rounded-xl p-4 bg-[#f9fafb] space-y-3">
+                                <h3 className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide">Spouse Details</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className={labelClass}>First Name *</label>
+                                        <input
+                                            type="text"
+                                            value={spouseData.first_name}
+                                            onChange={(e) => setSpouseData(prev => ({ ...prev, first_name: e.target.value }))}
+                                            className={inputClass}
+                                            placeholder="Spouse's first name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Last Name *</label>
+                                        <input
+                                            type="text"
+                                            value={spouseData.last_name}
+                                            onChange={(e) => setSpouseData(prev => ({ ...prev, last_name: e.target.value }))}
+                                            className={inputClass}
+                                            placeholder="Spouse's last name"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label className={labelClass}>Date of Birth *</label>
+                                        <input
+                                            type="date"
+                                            value={spouseData.dob}
+                                            onChange={(e) => setSpouseData(prev => ({ ...prev, dob: e.target.value }))}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Country of Birth</label>
+                                        <select
+                                            value={spouseData.birth_country}
+                                            onChange={(e) => setSpouseData(prev => ({ ...prev, birth_country: e.target.value }))}
+                                            className={`${inputClass} bg-white`}
+                                        >
+                                            <option value="">Select...</option>
+                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>City of Birth</label>
+                                        <input
+                                            type="text"
+                                            value={spouseData.birth_city}
+                                            onChange={(e) => setSpouseData(prev => ({ ...prev, birth_city: e.target.value }))}
+                                            className={inputClass}
+                                            placeholder="City"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Children Toggle */}
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="hasChildrenOnboard"
+                                checked={hasChildren}
+                                onChange={(e) => {
+                                    setHasChildren(e.target.checked);
+                                    if (e.target.checked && children.length === 0) {
+                                        setChildren([{ ...EMPTY_CHILD }]);
+                                    }
+                                }}
+                                className="w-4 h-4 text-[#1877f2] rounded focus:ring-[#1877f2]"
+                            />
+                            <label htmlFor="hasChildrenOnboard" className="text-[14px] font-medium text-gray-700">
+                                I have children
+                            </label>
+                        </div>
+
+                        {/* Children Fields */}
+                        {hasChildren && (
+                            <div className="space-y-3">
+                                {children.map((child, index) => (
+                                    <div key={index} className="border border-[#dddfe2] rounded-xl p-4 bg-[#f9fafb]">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide">
+                                                Child {index + 1}
+                                            </h3>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeChild(index)}
+                                                className="text-red-500 text-[12px] hover:text-red-700 font-medium"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div>
+                                                <label className={labelClass}>Last Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={child.last_name}
+                                                    onChange={(e) => updateChild(index, "last_name", e.target.value)}
+                                                    className={inputClass}
+                                                    placeholder="Last name"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className={labelClass}>First Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={child.first_name}
+                                                    onChange={(e) => updateChild(index, "first_name", e.target.value)}
+                                                    className={inputClass}
+                                                    placeholder="First name"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className={labelClass}>Date of Birth</label>
+                                                <input
+                                                    type="date"
+                                                    value={child.dob}
+                                                    onChange={(e) => updateChild(index, "dob", e.target.value)}
+                                                    className={inputClass}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {children.length < 5 && (
+                                    <button
+                                        type="button"
+                                        onClick={addChild}
+                                        className="text-[#1877f2] text-[13px] font-semibold hover:underline"
+                                    >
+                                        + Add another child
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ═══════════════ Section 3: Passport & Travel ═══════════════ */}
+                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4">
+                    <h2 className="text-lg font-bold text-[#050505] mb-4">🛂 Passport & Travel</h2>
+                    <div className="grid gap-4">
+                        {/* Passport Number + Issued By */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>Passport Number *</label>
+                                <input
+                                    type="text"
+                                    value={formData.passportNumber}
+                                    onChange={(e) => updateField("passportNumber", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="e.g., AB1234567"
+                                />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Issued By *</label>
+                                <input
+                                    type="text"
+                                    value={formData.passportIssuedBy}
+                                    onChange={(e) => updateField("passportIssuedBy", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="Issuing authority"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Issue Date + Expiry Date */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>Issue Date *</label>
+                                <input
+                                    type="date"
+                                    value={formData.passportIssueDate}
+                                    onChange={(e) => updateField("passportIssueDate", e.target.value)}
+                                    className={inputClass}
+                                />
+                                <p className="text-[10px] text-gray-400 mt-1">Must be within the last 10 years</p>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Expiry Date *</label>
+                                <input
+                                    type="date"
+                                    value={formData.passportExpiryDate}
+                                    onChange={(e) => updateField("passportExpiryDate", e.target.value)}
+                                    className={inputClass}
+                                />
+                                <p className="text-[10px] text-gray-400 mt-1">Must be 3+ months after departure</p>
+                            </div>
+                        </div>
+
+                        {/* Lives Abroad + Previous Visas */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>Do you live outside your home country? *</label>
+                                <select
+                                    value={formData.livesAbroad}
+                                    onChange={(e) => updateField("livesAbroad", e.target.value)}
+                                    className={`${inputClass} bg-white`}
+                                >
+                                    <option value="">Select...</option>
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Have you had any visas in the last 3 years? *</label>
+                                <select
+                                    value={formData.previousVisas}
+                                    onChange={(e) => updateField("previousVisas", e.target.value)}
+                                    className={`${inputClass} bg-white`}
+                                >
+                                    <option value="">Select...</option>
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ═══════════════ Section 4: Work Preferences ═══════════════ */}
                 <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4">
                     <h2 className="text-lg font-bold text-[#050505] mb-4">💼 Work Preferences</h2>
                     <div className="grid gap-4">
                         <div>
-                            <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">Preferred Job / Industry *</label>
+                            <label className={labelClass}>Preferred Job / Industry *</label>
                             <select
                                 value={formData.preferredJob}
                                 onChange={(e) => updateField("preferredJob", e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none bg-white"
+                                className={`${inputClass} bg-white`}
                             >
                                 <option value="">Select industry...</option>
-                                <option value="Construction">Construction</option>
-                                <option value="Manufacturing">Manufacturing</option>
-                                <option value="Agriculture">Agriculture</option>
-                                <option value="Hospitality">Hospitality</option>
-                                <option value="Healthcare">Healthcare</option>
-                                <option value="Transportation">Transportation</option>
-                                <option value="Retail">Retail</option>
-                                <option value="IT & Technology">IT & Technology</option>
-                                <option value="Food Processing">Food Processing</option>
-                                <option value="Warehousing & Logistics">Warehousing & Logistics</option>
-                                <option value="Cleaning Services">Cleaning Services</option>
-                                <option value="Driving">Driving</option>
-                                <option value="Other">Other</option>
+                                {INDUSTRIES.map(ind => (<option key={ind} value={ind}>{ind}</option>))}
                             </select>
                         </div>
 
-
                         <div>
-                            <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">Languages You Speak</label>
+                            <label className={labelClass}>Languages You Speak</label>
                             <input
                                 type="text"
                                 value={formData.languages}
                                 onChange={(e) => updateField("languages", e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none transition-colors"
+                                className={inputClass}
                                 placeholder="e.g., English, Serbian, French"
                             />
                         </div>
