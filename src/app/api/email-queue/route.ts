@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/mailer";
 
 // This endpoint is called by n8n to get pending emails
 export async function GET(request: NextRequest) {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// n8n calls this to add emails to queue
+// Queue an email and send it immediately via SMTP
 export async function POST(request: NextRequest) {
     try {
         const apiKey = request.headers.get("x-api-key");
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
             scheduledFor
         } = body;
 
+        // Insert into queue
         const { data, error } = await supabase
             .from("email_queue")
             .insert({
@@ -69,6 +71,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Failed to queue email" }, { status: 500 });
         }
 
+        // If not scheduled for later, send immediately via SMTP
+        if (!scheduledFor && templateData?.html) {
+            const result = await sendEmail(recipientEmail, subject, templateData.html);
+
+            await supabase
+                .from("email_queue")
+                .update({
+                    status: result.success ? "sent" : "failed",
+                    sent_at: result.success ? new Date().toISOString() : null,
+                    ...(result.error ? { error_message: result.error } : {})
+                })
+                .eq("id", data.id);
+        }
+
         return NextResponse.json({ success: true, emailId: data.id });
 
     } catch (error) {
@@ -77,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// n8n calls this to mark emails as sent
+// n8n calls this to mark emails as sent (still used for WhatsApp flow)
 export async function PATCH(request: NextRequest) {
     try {
         const apiKey = request.headers.get("x-api-key");
