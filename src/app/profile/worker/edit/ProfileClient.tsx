@@ -26,6 +26,25 @@ interface Candidate {
     education_level: string;
 }
 
+// Generate days, months, years for DOB
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+const MONTHS = [
+    { value: 1, label: "January" },
+    { value: 2, label: "February" },
+    { value: 3, label: "March" },
+    { value: 4, label: "April" },
+    { value: 5, label: "May" },
+    { value: 6, label: "June" },
+    { value: 7, label: "July" },
+    { value: 8, label: "August" },
+    { value: 9, label: "September" },
+    { value: 10, label: "October" },
+    { value: 11, label: "November" },
+    { value: 12, label: "December" },
+];
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 80 }, (_, i) => currentYear - 18 - i);
+
 export default function ProfilePage() {
     const supabase = createClient();
     const [profile, setProfile] = useState<Profile | null>(null);
@@ -39,7 +58,9 @@ export default function ProfilePage() {
     const [formData, setFormData] = useState({
         full_name: "",
         nationality: "",
-        date_of_birth: "",
+        dobDay: "",
+        dobMonth: "",
+        dobYear: "",
         phone: "",
         address: "",
         current_country: "",
@@ -76,10 +97,20 @@ export default function ProfilePage() {
 
             if (candidateData) {
                 setCandidate(candidateData);
+                // Parse DOB
+                let dobDay = "", dobMonth = "", dobYear = "";
+                if (candidateData.date_of_birth) {
+                    const dob = new Date(candidateData.date_of_birth);
+                    dobDay = dob.getDate().toString();
+                    dobMonth = (dob.getMonth() + 1).toString();
+                    dobYear = dob.getFullYear().toString();
+                }
                 setFormData(prev => ({
                     ...prev,
                     nationality: candidateData.nationality || "",
-                    date_of_birth: candidateData.date_of_birth || "",
+                    dobDay,
+                    dobMonth,
+                    dobYear,
                     phone: candidateData.phone || "",
                     address: candidateData.address || "",
                     current_country: candidateData.current_country || "",
@@ -110,9 +141,17 @@ export default function ProfilePage() {
                 .update({ full_name: formData.full_name })
                 .eq("id", user.id);
 
+            // Combine DOB
+            let dateOfBirth: string | null = null;
+            if (formData.dobDay && formData.dobMonth && formData.dobYear) {
+                const month = formData.dobMonth.padStart(2, '0');
+                const day = formData.dobDay.padStart(2, '0');
+                dateOfBirth = `${formData.dobYear}-${month}-${day}`;
+            }
+
             const candidateUpdates = {
                 nationality: formData.nationality || null,
-                date_of_birth: formData.date_of_birth || null,
+                date_of_birth: dateOfBirth,
                 phone: formData.phone || null,
                 address: formData.address || null,
                 current_country: formData.current_country || null,
@@ -259,13 +298,32 @@ export default function ProfilePage() {
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
                                             Date of Birth <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="date"
-                                            name="date_of_birth"
-                                            value={formData.date_of_birth}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        />
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <select
+                                                value={formData.dobDay}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, dobDay: e.target.value }))}
+                                                className="border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            >
+                                                <option value="">Day</option>
+                                                {DAYS.map(day => (<option key={day} value={day}>{day}</option>))}
+                                            </select>
+                                            <select
+                                                value={formData.dobMonth}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, dobMonth: e.target.value }))}
+                                                className="border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            >
+                                                <option value="">Month</option>
+                                                {MONTHS.map(month => (<option key={month.value} value={month.value}>{month.label}</option>))}
+                                            </select>
+                                            <select
+                                                value={formData.dobYear}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, dobYear: e.target.value }))}
+                                                className="border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            >
+                                                <option value="">Year</option>
+                                                {YEARS.map(year => (<option key={year} value={year}>{year}</option>))}
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -345,15 +403,19 @@ export default function ProfilePage() {
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
                                             Years of Experience
                                         </label>
-                                        <input
-                                            type="number"
+                                        <select
                                             name="years_experience"
-                                            min="0"
-                                            max="50"
                                             value={formData.years_experience}
                                             onChange={(e) => setFormData(prev => ({ ...prev, years_experience: parseInt(e.target.value) || 0 }))}
                                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        />
+                                        >
+                                            <option value="0">No experience</option>
+                                            <option value="1">1 year</option>
+                                            <option value="2">2 years</option>
+                                            <option value="3">3-5 years</option>
+                                            <option value="5">5-10 years</option>
+                                            <option value="10">10+ years</option>
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
