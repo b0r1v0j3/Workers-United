@@ -26,36 +26,89 @@ export async function POST(req: NextRequest) {
 
     if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.userId;
+        const userId = session.metadata?.user_id;
+        const paymentType = session.metadata?.payment_type || "entry_fee";
+        const paymentId = session.metadata?.payment_id;
+        const offerId = session.metadata?.offer_id;
 
         if (!userId) {
-            console.error("No userId found in session metadata");
-            return NextResponse.json({ error: "No userId in metadata" }, { status: 400 });
+            console.error("No user_id found in session metadata");
+            return NextResponse.json({ error: "No user_id in metadata" }, { status: 400 });
         }
 
         try {
-            // Insert payment record
-            const { error } = await supabase.from("payments").insert({
-                user_id: userId,
-                amount: 9, // Activation fee is $9
-                currency: session.currency?.toUpperCase() || "USD",
-                status: "completed",
-                stripe_payment_intent_id: session.payment_intent as string,
-                stripe_checkout_session_id: session.id,
-                payment_type: "find_job_activation",
-                paid_at: new Date().toISOString(),
-            });
+            // Determine amount from payment type
+            const amount = paymentType === "confirmation_fee" ? 190 : 9;
 
-            if (error) {
-                // Handle unique constraint violation (idempotency)
-                if (error.code === "23505") {
-                    console.log(`Payment already processed for session ${session.id}`);
-                    return NextResponse.json({ received: true, message: "Duplicate event ignored" });
+            if (paymentId) {
+                // Update existing payment record (created during checkout)
+                const { error } = await supabase
+                    .from("payments")
+                    .update({
+                        status: "completed",
+                        stripe_payment_intent_id: session.payment_intent as string,
+                        paid_at: new Date().toISOString(),
+                    })
+                    .eq("id", paymentId);
+
+                if (error) {
+                    console.error("Failed to update payment record:", error);
+                    throw error;
                 }
-                throw error;
+            } else {
+                // Fallback: insert payment record if it doesn't exist
+                const { error } = await supabase.from("payments").insert({
+                    user_id: userId,
+                    amount,
+                    currency: session.currency?.toUpperCase() || "USD",
+                    status: "completed",
+                    stripe_payment_intent_id: session.payment_intent as string,
+                    stripe_checkout_session_id: session.id,
+                    payment_type: paymentType,
+                    paid_at: new Date().toISOString(),
+                });
+
+                if (error) {
+                    // Handle unique constraint violation (idempotency)
+                    if (error.code === "23505") {
+                        console.log(`Payment already processed for session ${session.id}`);
+                        return NextResponse.json({ received: true, message: "Duplicate event ignored" });
+                    }
+                    throw error;
+                }
             }
 
-            console.log(`Successfully processed payment for user ${userId}`);
+            // Handle post-payment actions based on type
+            if (paymentType === "entry_fee") {
+                // Mark candidate as having paid entry fee and activate queue
+                await supabase
+                    .from("candidates")
+                    .update({
+                        entry_fee_paid: true,
+                        status: "IN_QUEUE",
+                        job_search_active: true,
+                        job_search_activated_at: new Date().toISOString(),
+                    })
+                    .eq("profile_id", userId);
+
+                console.log(`Entry fee processed — user ${userId} is now IN_QUEUE`);
+            } else if (paymentType === "confirmation_fee" && offerId) {
+                // Accept the offer
+                await supabase
+                    .from("offers")
+                    .update({ status: "accepted", accepted_at: new Date().toISOString() })
+                    .eq("id", offerId);
+
+                // Update candidate status
+                await supabase
+                    .from("candidates")
+                    .update({ status: "OFFER_ACCEPTED" })
+                    .eq("profile_id", userId);
+
+                console.log(`Confirmation fee processed — offer ${offerId} accepted for user ${userId}`);
+            }
+
+            console.log(`Successfully processed ${paymentType} payment for user ${userId}`);
         } catch (err: any) {
             console.error(`Database error: ${err.message}`);
             return NextResponse.json({ error: "Database error" }, { status: 500 });
