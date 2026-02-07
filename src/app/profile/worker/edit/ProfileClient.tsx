@@ -21,7 +21,6 @@ interface Candidate {
     preferred_job: string;
     desired_countries: string[];
     desired_industries: string[];
-    years_experience: number;
 }
 
 // Generate days, months, years for DOB
@@ -63,7 +62,6 @@ export default function ProfilePage() {
         address: "",
         current_country: "",
         preferred_job: "",
-        years_experience: 0,
     });
 
     useEffect(() => {
@@ -112,7 +110,6 @@ export default function ProfilePage() {
                     address: candidateData.address || "",
                     current_country: candidateData.current_country || "",
                     preferred_job: candidateData.preferred_job || "",
-                    years_experience: candidateData.experience_years || 0,
                 }));
             }
         } catch (err) {
@@ -153,7 +150,6 @@ export default function ProfilePage() {
                 address: formData.address || null,
                 current_country: formData.current_country || null,
                 preferred_job: formData.preferred_job || null,
-                experience_years: formData.years_experience || 0,
             };
 
             if (candidate) {
@@ -401,34 +397,6 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* Professional Background Card */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Professional Background</h2>
-                            </div>
-                            <div className="p-4 space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Years of Experience
-                                        </label>
-                                        <select
-                                            name="years_experience"
-                                            value={formData.years_experience}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, years_experience: parseInt(e.target.value) || 0 }))}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        >
-                                            <option value="0">No experience</option>
-                                            <option value="1">1 year</option>
-                                            <option value="2">2 years</option>
-                                            <option value="3">3-5 years</option>
-                                            <option value="5">5-10 years</option>
-                                            <option value="10">10+ years</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         {/* Save / Cancel Buttons */}
                         <div className="flex justify-end gap-3 pt-2">

@@ -117,7 +117,6 @@ export default function OnboardingPage() {
         dobMonth: "",
         dobYear: "",
         preferredJob: "",
-        experience: "",
         languages: "",
         signatureData: "",
     });
@@ -193,7 +192,6 @@ export default function OnboardingPage() {
                     dobMonth,
                     dobYear,
                     preferredJob: candidate.preferred_job || "",
-                    experience: candidate.experience_years?.toString() || "",
                     languages: candidate.languages?.join(", ") || "",
                     // FIX: Load existing signature so it doesn't get overwritten
                     signatureData: candidate.signature_url || "",
@@ -297,7 +295,6 @@ export default function OnboardingPage() {
                 current_country: "Serbia",
                 date_of_birth: getFullDOB(),
                 preferred_job: formData.preferredJob || null,
-                experience_years: formData.experience ? parseInt(formData.experience) : null,
                 languages: formData.languages ? formData.languages.split(",").map(l => l.trim()) : [],
                 preferred_country: "serbia",
                 signature_url: formData.signatureData || null,
@@ -541,21 +538,6 @@ export default function OnboardingPage() {
                             </select>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">Years of Experience</label>
-                            <select
-                                value={formData.experience}
-                                onChange={(e) => updateField("experience", e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-[#dddfe2] focus:border-[#1877f2] focus:outline-none bg-white"
-                            >
-                                <option value="">Select experience</option>
-                                <option value="0">No experience</option>
-                                <option value="1">1 year</option>
-                                <option value="2">2 years</option>
-                                <option value="3">3-5 years</option>
-                                <option value="5">5+ years</option>
-                            </select>
-                        </div>
 
                         <div>
                             <label className="block text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1.5">Languages You Speak</label>
