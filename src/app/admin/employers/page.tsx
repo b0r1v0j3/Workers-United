@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import AppShell from "@/components/AppShell";
 
 export default async function EmployersPage() {
-    const supabase = createAdminClient();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) redirect("/login");
+
+    const adminClient = createAdminClient();
 
     // Fetch employers with their profile info
-    const { data: employers } = await supabase
+    const { data: employers } = await adminClient
         .from("employers")
         .select(`
             id,
@@ -27,56 +33,50 @@ export default async function EmployersPage() {
         .order("created_at", { ascending: false });
 
     return (
-        <>
-
-            <div className="max-w-[1400px] mx-auto px-5 py-10">
-                <div className="mb-8 flex justify-between items-end">
-                    <div>
-                        <h1 className="text-3xl font-bold text-[#1e293b]">All Employers</h1>
-                        <p className="text-[#64748b] mt-1 font-medium">View and manage employer accounts.</p>
-                    </div>
-                    <Link href="/admin" className="text-[#2f6fed] font-semibold hover:underline">
-                        ← Back to Admin
-                    </Link>
+        <AppShell user={user} variant="admin">
+            <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h1 className="text-2xl font-bold text-slate-900">All Employers</h1>
+                    <p className="text-slate-500">View and manage employer accounts.</p>
                 </div>
 
                 {/* Employers Table */}
-                <div className="bg-white rounded-[16px] overflow-hidden shadow-sm border border-[#dde3ec]">
+                <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-[#f8fafc] border-b border-[#dde3ec]">
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">#</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Company</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Contact</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Workers Needed</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Location</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#183b56] uppercase tracking-wider">Status</th>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">#</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Company</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Contact</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Workers Needed</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Location</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Status</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#f1f5f9]">
+                            <tbody className="divide-y divide-slate-100">
                                 {employers?.map((employer: any, index: number) => (
-                                    <tr key={employer.id} className="hover:bg-[#fbfcfe] transition-colors">
-                                        <td className="px-6 py-5 text-[#64748b] font-medium">{index + 1}</td>
+                                    <tr key={employer.id} className="hover:bg-slate-50 transition-colors">
+                                        <td className="px-6 py-5 text-slate-500 font-medium">{index + 1}</td>
                                         <td className="px-6 py-5">
-                                            <div className="font-bold text-[#1e293b]">{employer.company_name || "N/A"}</div>
-                                            <div className="text-[13px] text-[#64748b]">PIB: {employer.pib || "N/A"}</div>
+                                            <div className="font-bold text-slate-900">{employer.company_name || "N/A"}</div>
+                                            <div className="text-xs text-slate-500">PIB: {employer.pib || "N/A"}</div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <div className="font-medium text-[#1e293b]">{employer.profiles?.full_name || "N/A"}</div>
-                                            <div className="text-[13px] text-[#64748b]">{employer.profiles?.email}</div>
-                                            <div className="text-[12px] text-[#94a3b8]">{employer.contact_phone}</div>
+                                            <div className="font-medium text-slate-900">{employer.profiles?.full_name || "N/A"}</div>
+                                            <div className="text-xs text-slate-500">{employer.profiles?.email}</div>
+                                            <div className="text-xs text-slate-400">{employer.contact_phone}</div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <div className="text-[#2f6fed] font-bold text-lg">{employer.workers_needed || 0}</div>
-                                            <div className="text-[12px] text-[#64748b] max-w-[200px] truncate">{employer.job_description || "-"}</div>
+                                            <div className="text-blue-600 font-bold text-lg">{employer.workers_needed || 0}</div>
+                                            <div className="text-xs text-slate-500 max-w-[200px] truncate">{employer.job_description || "-"}</div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <div className="text-[#1e293b] font-medium">{employer.work_location || "N/A"}</div>
-                                            <div className="text-[12px] text-[#64748b]">{employer.salary_range || "-"}</div>
+                                            <div className="text-slate-900 font-medium">{employer.work_location || "N/A"}</div>
+                                            <div className="text-xs text-slate-500">{employer.salary_range || "-"}</div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold uppercase ${employer.status === 'active' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${employer.status === 'active' ? 'bg-green-100 text-green-700 border border-green-200' :
                                                 employer.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
                                                     'bg-gray-100 text-gray-600 border border-gray-200'
                                                 }`}>
@@ -87,7 +87,7 @@ export default async function EmployersPage() {
                                 ))}
                                 {(!employers || employers.length === 0) && (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-10 text-center text-[#64748b] italic">
+                                        <td colSpan={6} className="px-6 py-10 text-center text-slate-400 italic">
                                             No employers found.
                                         </td>
                                     </tr>
@@ -97,6 +97,6 @@ export default async function EmployersPage() {
                     </div>
                 </div>
             </div>
-        </>
+        </AppShell>
     );
 }
