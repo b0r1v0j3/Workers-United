@@ -118,9 +118,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
 }
 
-// Next.js config to ensure raw body is available
-export const config = {
-    api: {
-        bodyParser: false,
-    },
-};
