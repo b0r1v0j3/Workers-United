@@ -17,6 +17,9 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
     const [signing, setSigning] = useState(false);
     const [confirming, setConfirming] = useState(false);
 
+    const isPaid = offer.status === "accepted";
+    const needsSignature = isPaid && !hasSigned;
+
     const expiresDate = new Date(expiresAt);
     const now = new Date();
     const hoursRemaining = Math.max(0, Math.floor((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60)));
@@ -94,10 +97,16 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
 
             <main className="max-w-[700px] mx-auto px-4 py-6">
                 {/* Status Banner */}
-                {offer.status === "accepted" ? (
+                {isPaid && hasSigned ? (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 text-center">
                         <span className="text-emerald-800 font-bold flex items-center justify-center gap-2">
                             ✅ Offer Accepted — Visa Process Started
+                        </span>
+                    </div>
+                ) : isPaid && !hasSigned ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-center">
+                        <span className="text-blue-800 font-bold flex items-center justify-center gap-2">
+                            💳 Payment received — Please sign below to finalize
                         </span>
                     </div>
                 ) : offer.status === "expired" || isExpired ? (
@@ -137,7 +146,7 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="grid grid-cols-2 gap-4">
                         {jobRequest?.salary_rsd && (
                             <div className="bg-[#f0f2f5] p-4 rounded-xl">
                                 <div className="text-xs font-semibold text-[#65676b] uppercase tracking-wide">Salary</div>
@@ -155,102 +164,100 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
                     </div>
                 </div>
 
-                {/* Confirmation Flow — only shown for pending offers */}
+                {/* ═══════════ STEP 1: PAY (for pending offers) ═══════════ */}
                 {offer.status === "pending" && !isExpired && (
                     <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4">
-                        <h3 className="text-lg font-bold text-[#050505] mb-4">Confirm Your Position</h3>
-
-                        {/* Step 1: Must sign first */}
-                        <div className="mb-6">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${hasSigned
-                                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                                    : 'bg-white border-[#1877f2] text-[#1877f2]'
-                                    }`}>
-                                    {hasSigned ? '✓' : '1'}
-                                </div>
-                                <h4 className="font-bold text-[#050505]">Digital Signature</h4>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 bg-white border-[#1877f2] text-[#1877f2]">
+                                1
                             </div>
+                            <h3 className="text-lg font-bold text-[#050505]">Confirm & Pay</h3>
+                        </div>
 
-                            {hasSigned ? (
-                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-center gap-2 ml-11">
-                                    ✓ You have signed. You can proceed to payment.
-                                </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                            <p className="text-blue-800 text-sm font-medium mb-2">By paying the confirmation fee, you agree to:</p>
+                            <ul className="text-blue-800 text-sm space-y-1">
+                                <li>• Begin the visa application process</li>
+                                <li>• Provide all required documentation</li>
+                                <li>• Accept the position if visa is approved</li>
+                            </ul>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-[#f0f2f5] p-4 rounded-xl mb-4">
+                            <span className="text-[#65676b] font-medium">Confirmation Fee</span>
+                            <span className="text-2xl font-bold text-[#050505]">$190</span>
+                        </div>
+
+                        <button
+                            onClick={handleConfirmAndPay}
+                            disabled={confirming}
+                            className="w-full py-4 rounded-xl font-bold text-lg transition-all bg-[#1877f2] text-white hover:bg-[#166fe5] shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                        >
+                            {confirming ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                    Redirecting to payment...
+                                </span>
                             ) : (
-                                <div className="ml-11">
-                                    <p className="text-sm text-[#65676b] mb-4">
-                                        Sign below to confirm you accept this offer and agree to begin the visa application process.
-                                    </p>
-                                    <SignaturePad
-                                        onSave={handleSignatureSave}
-                                        agreementText={`I accept the offer for "${jobRequest?.title || "this position"}" at ${employer?.company_name || "the employer"} and agree to begin the visa process. I confirm all my information is accurate.`}
-                                    />
-                                    {signing && (
-                                        <div className="mt-2 text-sm text-[#65676b] flex items-center gap-2">
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#1877f2]"></div>
-                                            Saving signature...
-                                        </div>
-                                    )}
+                                "Confirm & Pay $190"
+                            )}
+                        </button>
+
+                        <p className="text-xs text-[#65676b] text-center mt-3">
+                            Payment is processed securely via Stripe. After payment you'll sign to finalize.
+                        </p>
+                    </div>
+                )}
+
+                {/* ═══════════ STEP 2: SIGN (after payment) ═══════════ */}
+                {needsSignature && (
+                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 bg-emerald-500 border-emerald-500 text-white">
+                                ✓
+                            </div>
+                            <h3 className="text-lg font-bold text-[#050505]">Payment Received</h3>
+                        </div>
+                        <p className="text-sm text-emerald-600 mb-6 ml-11">Your payment has been confirmed. One last step — sign below to finalize your acceptance.</p>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 bg-white border-[#1877f2] text-[#1877f2]">
+                                2
+                            </div>
+                            <h3 className="text-lg font-bold text-[#050505]">Digital Signature</h3>
+                        </div>
+
+                        <div className="ml-11">
+                            <p className="text-sm text-[#65676b] mb-4">
+                                Sign below to confirm your acceptance. This is the final step before we begin the visa process.
+                            </p>
+                            <SignaturePad
+                                onSave={handleSignatureSave}
+                                agreementText={`I accept the offer for "${jobRequest?.title || "this position"}" at ${employer?.company_name || "the employer"} and agree to begin the visa process. I confirm all my information is accurate.`}
+                            />
+                            {signing && (
+                                <div className="mt-2 text-sm text-[#65676b] flex items-center gap-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#1877f2]"></div>
+                                    Saving signature...
                                 </div>
                             )}
                         </div>
+                    </div>
+                )}
 
-                        {/* Step 2: Pay confirmation fee */}
-                        <div className="mb-6">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${offer.status === 'accepted'
-                                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                                    : hasSigned
-                                        ? 'bg-white border-[#1877f2] text-[#1877f2]'
-                                        : 'bg-white border-[#dddfe2] text-[#bcc0c4]'
-                                    }`}>
-                                    2
-                                </div>
-                                <h4 className={`font-bold ${hasSigned ? 'text-[#050505]' : 'text-[#bcc0c4]'}`}>
-                                    Confirmation Payment
-                                </h4>
-                            </div>
-
-                            <div className="ml-11">
-                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                                    <p className="text-blue-800 text-sm font-medium mb-2">By paying the confirmation fee, you agree to:</p>
-                                    <ul className="text-blue-800 text-sm space-y-1">
-                                        <li>• Begin the visa application process</li>
-                                        <li>• Provide all required documentation</li>
-                                        <li>• Accept the position if visa is approved</li>
-                                    </ul>
-                                </div>
-
-                                <div className="flex items-center justify-between bg-[#f0f2f5] p-4 rounded-xl mb-4">
-                                    <span className="text-[#65676b] font-medium">Confirmation Fee</span>
-                                    <span className="text-2xl font-bold text-[#050505]">$190</span>
-                                </div>
-
-                                <button
-                                    onClick={handleConfirmAndPay}
-                                    disabled={!hasSigned || confirming}
-                                    className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${hasSigned && !confirming
-                                        ? 'bg-[#1877f2] text-white hover:bg-[#166fe5] shadow-lg shadow-blue-500/20 cursor-pointer'
-                                        : 'bg-[#e4e6eb] text-[#bcc0c4] cursor-not-allowed'
-                                        }`}
-                                >
-                                    {confirming ? (
-                                        <span className="flex items-center justify-center gap-2">
-                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                            Processing...
-                                        </span>
-                                    ) : hasSigned ? (
-                                        "Confirm & Pay $190"
-                                    ) : (
-                                        "Sign first to unlock payment"
-                                    )}
-                                </button>
-
-                                <p className="text-xs text-[#65676b] text-center mt-3">
-                                    Payment is processed securely via Stripe
-                                </p>
-                            </div>
+                {/* ═══════════ ALL DONE (paid + signed) ═══════════ */}
+                {isPaid && hasSigned && (
+                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4 text-center">
+                        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-3xl">🎉</span>
                         </div>
+                        <h3 className="text-xl font-bold text-[#050505] mb-2">You're all set!</h3>
+                        <p className="text-[#65676b] mb-6">
+                            Your visa application process has started. We will contact you with next steps.
+                        </p>
+                        <Link href="/profile/worker" className="bg-[#1877f2] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors inline-block">
+                            Go to Profile
+                        </Link>
                     </div>
                 )}
 
@@ -262,18 +269,6 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
                         </p>
                         <Link href="/profile/worker" className="bg-[#1877f2] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors inline-block">
                             Back to Profile
-                        </Link>
-                    </div>
-                )}
-
-                {/* Accepted state */}
-                {offer.status === "accepted" && (
-                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4 text-center">
-                        <p className="text-[#65676b] mb-4">
-                            Your visa application process has started. We will contact you with next steps.
-                        </p>
-                        <Link href="/profile/worker" className="bg-[#1877f2] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors inline-block">
-                            Go to Profile
                         </Link>
                     </div>
                 )}
