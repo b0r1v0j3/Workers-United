@@ -77,7 +77,7 @@ export default function EmployerProfilePage() {
         company_address: "",
         accommodation_address: "",
         contact_phone: "",
-        workers_needed: 1,
+        workers_needed: "1",
         job_description: "",
         salary_range: "",
         work_location: "",
@@ -113,7 +113,7 @@ export default function EmployerProfilePage() {
                         company_address: emp.company_address || "",
                         accommodation_address: emp.accommodation_address || "",
                         contact_phone: emp.contact_phone || "",
-                        workers_needed: emp.workers_needed || 1,
+                        workers_needed: emp.workers_needed?.toString() || "1",
                         job_description: emp.job_description || "",
                         salary_range: emp.salary_range || "",
                         work_location: emp.work_location || "",
@@ -154,7 +154,7 @@ export default function EmployerProfilePage() {
                 company_address: formData.company_address || null,
                 accommodation_address: formData.accommodation_address || null,
                 contact_phone: formData.contact_phone || null,
-                workers_needed: formData.workers_needed,
+                workers_needed: parseInt(formData.workers_needed) || 1,
                 job_description: formData.job_description || null,
                 salary_range: formData.salary_range || null,
                 work_location: formData.work_location || null,
@@ -280,7 +280,7 @@ export default function EmployerProfilePage() {
                                     </div>
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            PIB (Tax ID) <span className="text-red-500">*</span>
+                                            Tax ID <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
@@ -474,7 +474,7 @@ export default function EmployerProfilePage() {
                                             type="number"
                                             name="workers_needed"
                                             value={formData.workers_needed}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, workers_needed: parseInt(e.target.value) || 1 }))}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, workers_needed: e.target.value }))}
                                             min={1}
                                             max={100}
                                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
