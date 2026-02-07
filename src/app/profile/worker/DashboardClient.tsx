@@ -179,7 +179,9 @@ export default function DashboardClient({
                                 <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
                                 <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : null} />
                                 <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
+                                <InfoRow icon={<MapPin size={18} />} label="Address" value={candidate?.address} />
                                 <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
+                                <InfoRow icon={<Briefcase size={18} />} label="Education" value={candidate?.education_level} />
                             </div>
                         </div>
 
