@@ -23,7 +23,7 @@ export default function UnifiedNavbar({ variant, user, profileName }: UnifiedNav
                         <img
                             src="/logo.png"
                             alt="Workers United"
-                            className="h-20 w-auto object-contain"
+                            className="h-[60px] w-auto object-contain"
                         />
                         <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
                             Workers United
