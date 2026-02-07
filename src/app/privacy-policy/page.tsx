@@ -1,152 +1,160 @@
 import Link from "next/link";
-import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
+import UnifiedNavbar from "@/components/UnifiedNavbar";
 
 export const metadata = {
     title: "Privacy Policy - Workers United",
     description: "Privacy Policy for Workers United – How we collect, use, and protect your personal information.",
 };
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let profileName = "";
+    if (user) {
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .single();
+        profileName = profile?.full_name || "";
+    }
+
     return (
-        <div className="min-h-screen bg-[#f8fbff] font-montserrat">
-            {/* Header */}
-            <header className="fixed top-0 w-full z-50 bg-[#f8fbff]/80 backdrop-blur-md px-6 py-4 lg:px-12 flex justify-between items-center">
-                <Link href="/" className="flex items-center gap-3 group">
-                    <Image src="/logo.png" alt="Workers United logo" width={64} height={64} className="transition-transform group-hover:scale-105" />
-                    <span className="font-bold text-[#183b56] text-xl tracking-tight">Workers United</span>
-                </Link>
-                <Link
-                    href="/login"
-                    className="bg-white text-[#1e293b] border border-[#e2e8f0] px-6 py-2 rounded-full font-bold text-sm shadow-sm hover:bg-gray-50 transition-all"
-                >
-                    Sign In
-                </Link>
-            </header>
+        <div className="min-h-screen bg-[#f0f2f5]">
+            <UnifiedNavbar variant="public" user={user} profileName={profileName} />
+
+            {/* Hero Banner */}
+            <div className="bg-gradient-to-br from-[#1877f2] to-[#1e5cd6] py-16">
+                <div className="max-w-4xl mx-auto px-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-white">Privacy Policy</h1>
+                            <p className="text-white/70 text-sm mt-1">Last updated: February 2026</p>
+                        </div>
+                    </div>
+                    <p className="text-white/80 max-w-2xl">
+                        Your privacy matters to us. This policy explains how Workers United collects, uses, and protects your personal information.
+                    </p>
+                </div>
+            </div>
 
             {/* Content */}
-            <main className="pt-28 pb-20 px-6 lg:px-12">
-                <div className="max-w-4xl mx-auto">
-                    <h1 className="text-4xl font-bold text-[#1e293b] mb-8">Privacy Policy</h1>
+            <main className="max-w-4xl mx-auto px-6 py-10">
+                <div className="space-y-6">
+                    <PolicySection
+                        icon="👤"
+                        title="What personal information do we collect?"
+                        content="When contacting us on our site, you may be asked to enter your name, email address, phone number or other details to help you with your experience."
+                    />
 
-                    <div className="prose prose-lg max-w-none text-[#475569]">
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">What personal information do we collect from the people that visit our blog, website or app?</h2>
-                            <p>When contacting us on our site, you may be asked to enter your name, email address, phone number or other details to help you with your experience.</p>
-                        </section>
+                    <PolicySection
+                        icon="📋"
+                        title="When do we collect information?"
+                        content="We collect information from you when you fill out a form or enter information on our site."
+                    />
 
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">When do we collect information?</h2>
-                            <p>We collect information from you when you fill out a form or enter information on our site.</p>
-                        </section>
+                    <PolicySection icon="🔧" title="How do we use your information?">
+                        <p className="text-[#65676b] mb-3">We may use the information we collect from you in the following ways:</p>
+                        <ul className="space-y-2">
+                            {[
+                                "To personalize your experience and deliver content you're interested in",
+                                "To improve our website in order to better serve you",
+                                "To better service your customer requests",
+                                "To administer contests, promotions, or surveys",
+                                "To send periodic emails regarding your services"
+                            ].map((item, i) => (
+                                <li key={i} className="flex items-start gap-3 text-[#65676b]">
+                                    <span className="text-[#1877f2] mt-1">✓</span>
+                                    <span>{item}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </PolicySection>
 
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">How do we use your information?</h2>
-                            <p>We may use the information we collect from you when you register, make a purchase, sign up for our newsletter, respond to a survey or marketing communication, surf the website, or use certain other site features in the following ways:</p>
-                            <ul className="list-disc pl-6 mt-4 space-y-2">
-                                <li>To personalize user&apos;s experience and to allow us to deliver the type of content and product offerings in which you are most interested.</li>
-                                <li>To improve our website in order to better serve you.</li>
-                                <li>To allow us to better service you in responding to your customer service requests.</li>
-                                <li>To administer a contest, promotion, survey or other site feature.</li>
-                                <li>To send periodic emails regarding your order or other products and services.</li>
-                            </ul>
-                        </section>
+                    <PolicySection icon="🛡️" title="How do we protect visitor information?">
+                        <ul className="space-y-2 text-[#65676b]">
+                            <li className="flex items-start gap-3"><span className="text-[#1877f2]">•</span>We use SSL encryption for all data transfers</li>
+                            <li className="flex items-start gap-3"><span className="text-[#1877f2]">•</span>Your data is stored securely and never shared without consent</li>
+                            <li className="flex items-start gap-3"><span className="text-[#1877f2]">•</span>We only collect information necessary for our services</li>
+                        </ul>
+                    </PolicySection>
 
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">How do we protect visitor information?</h2>
-                            <ul className="list-disc pl-6 space-y-2">
-                                <li>We do not use vulnerability scanning and/or scanning to PCI standards.</li>
-                                <li>We do not use Malware Scanning.</li>
-                                <li>We do not use an SSL certificate.</li>
-                                <li>We only provide articles and information on our website. Other than your contact information for the specific purposes of responding to your inquiry, we never ask for personal or private information.</li>
-                            </ul>
-                        </section>
+                    <PolicySection icon="🍪" title="Do we use cookies?">
+                        <p className="text-[#65676b] mb-3">
+                            Yes. Cookies are small files that a site transfers to your computer&apos;s hard drive through your web browser that enables us to recognize your browser and remember certain information.
+                        </p>
+                        <p className="text-[#65676b] font-medium mb-2">We use cookies to:</p>
+                        <ul className="space-y-2 text-[#65676b]">
+                            <li className="flex items-start gap-3"><span className="text-[#1877f2]">✓</span>Save your preferences for future visits</li>
+                            <li className="flex items-start gap-3"><span className="text-[#1877f2]">✓</span>Keep track of analytics</li>
+                            <li className="flex items-start gap-3"><span className="text-[#1877f2]">✓</span>Offer better site experiences and tools</li>
+                        </ul>
+                    </PolicySection>
 
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">Do we use cookies?</h2>
-                            <p>Yes. Cookies are small files that a site or its service provider transfers to your computer&apos;s hard drive through your Web browser (if you allow) that enables the site&apos;s or service provider&apos;s systems to recognize your browser and capture and remember certain information.</p>
-                            <p className="mt-4">We use cookies to:</p>
-                            <ul className="list-disc pl-6 mt-2 space-y-2">
-                                <li>Understand and save user&apos;s preferences for future visits.</li>
-                                <li>Keep track of advertisements.</li>
-                                <li>Compile aggregate data about site traffic and site interactions in order to offer better site experiences and tools in the future.</li>
-                            </ul>
-                        </section>
+                    <PolicySection
+                        icon="🚫"
+                        title="Third Party Disclosure"
+                        content="We do not sell, trade, or otherwise transfer to outside parties your personally identifiable information unless we provide you with advance notice. This does not include website hosting partners and other parties who assist us in operating our website, conducting our business, or servicing you, so long as those parties agree to keep this information confidential."
+                    />
 
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">If users disable cookies in their browser:</h2>
-                            <p>If you disable cookies off, some features will be disabled. It will turn off some of the features that make your site experience more efficient and some of our services will not function properly.</p>
-                        </section>
+                    <PolicySection
+                        icon="🔗"
+                        title="Third Party Links"
+                        content="Occasionally, at our discretion, we may include or offer third party products or services on our website. These third party sites have separate and independent privacy policies. We therefore have no responsibility or liability for the content and activities of these linked sites."
+                    />
 
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">Third Party Disclosure</h2>
-                            <p>We do not sell, trade, or otherwise transfer to outside parties your personally identifiable information unless we provide you with advance notice. This does not include website hosting partners and other parties who assist us in operating our website, conducting our business, or servicing you, so long as those parties agree to keep this information confidential.</p>
-                        </section>
+                    <PolicySection
+                        icon="👶"
+                        title="Children's Privacy (COPPA)"
+                        content="When it comes to the collection of personal information from children under 13, the Children's Online Privacy Protection Act (COPPA) puts parents in control. We do not specifically market to children under 13."
+                    />
 
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">Third party links</h2>
-                            <p>Occasionally, at our discretion, we may include or offer third party products or services on our website. These third party sites have separate and independent privacy policies. We therefore have no responsibility or liability for the content and activities of these linked sites.</p>
-                        </section>
-
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">Google</h2>
-                            <p>We use Google Analytics on our website.</p>
-                        </section>
-
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">California Online Privacy Protection Act</h2>
-                            <p>CalOPPA is the first state law in the nation to require commercial websites and online services to post a privacy policy.</p>
-                            <h3 className="text-xl font-bold text-[#1e293b] mt-4 mb-2">According to CalOPPA we agree to the following:</h3>
-                            <ul className="list-disc pl-6 space-y-2">
-                                <li>Users can visit our site anonymously.</li>
-                                <li>Once this privacy policy is created, we will add a link to it on our home page.</li>
-                                <li>Our Privacy Policy link includes the word &quot;Privacy&quot;, and can be easily be found on the page specified above.</li>
-                            </ul>
-                        </section>
-
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">COPPA (Children Online Privacy Protection Act)</h2>
-                            <p>When it comes to the collection of personal information from children under 13, the Children&apos;s Online Privacy Protection Act (COPPA) puts parents in control. We do not specifically market to children under 13.</p>
-                        </section>
-
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">CAN SPAM Act</h2>
-                            <p>The CAN-SPAM Act is a law that sets the rules for commercial email, establishes requirements for commercial messages, gives recipients the right to have emails stopped from being sent to them.</p>
-                            <h3 className="text-xl font-bold text-[#1e293b] mt-4 mb-2">To be in accordance with CANSPAM we agree to the following:</h3>
-                            <ul className="list-disc pl-6 space-y-2">
-                                <li>NOT use false, or misleading subjects or email addresses</li>
-                                <li>Identify the message as an advertisement in some reasonable way</li>
-                                <li>Include the physical address of our business or site headquarters</li>
-                                <li>Monitor third party email marketing services for compliance, if one is used</li>
-                                <li>Honor opt-out/unsubscribe requests quickly</li>
-                                <li>Allow users to unsubscribe by using the link at the bottom of each email</li>
-                            </ul>
-                        </section>
-
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-[#1e293b] mb-4">Contacting Us</h2>
-                            <p>If there are any questions regarding this privacy policy you may contact us using the information below.</p>
-                            <div className="mt-4 p-6 bg-white rounded-xl border border-[#e2e8f0]">
-                                <p className="font-bold text-[#1e293b]">Workers United LLC</p>
-                                <p>75 E 3rd St., Sheridan, Wyoming 82801, USA</p>
-                                <p className="mt-2">
-                                    <a href="mailto:contact@workersunited.eu" className="text-[#2f6fed] hover:underline">contact@workersunited.eu</a>
-                                </p>
-                            </div>
-                        </section>
+                    {/* Contact Card */}
+                    <div className="bg-gradient-to-br from-[#1877f2] to-[#1e5cd6] rounded-2xl p-8 text-white">
+                        <h3 className="text-xl font-bold mb-2">📬 Questions about our privacy policy?</h3>
+                        <p className="text-white/80 mb-4">If there are any questions regarding this privacy policy, you may contact us:</p>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5">
+                            <p className="font-bold text-lg">Workers United LLC</p>
+                            <p className="text-white/80">75 E 3rd St., Sheridan, Wyoming 82801, USA</p>
+                            <a href="mailto:contact@workersunited.eu" className="text-white font-semibold hover:underline mt-2 inline-block">
+                                contact@workersunited.eu →
+                            </a>
+                        </div>
                     </div>
                 </div>
             </main>
 
             {/* Footer */}
-            <footer className="bg-[#1e293b] text-white py-8 px-6 lg:px-12">
+            <footer className="bg-[#1e293b] text-white py-8 px-6">
                 <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-sm text-gray-400">© 2024 Workers United LLC. All rights reserved.</p>
+                    <p className="text-sm text-gray-400">© 2026 Workers United LLC. All rights reserved.</p>
                     <div className="flex gap-6 text-sm">
-                        <Link href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link>
+                        <Link href="/privacy-policy" className="text-white font-semibold">Privacy Policy</Link>
                         <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms & Conditions</Link>
                     </div>
                 </div>
             </footer>
+        </div>
+    );
+}
+
+function PolicySection({ icon, title, content, children }: { icon: string; title: string; content?: string; children?: React.ReactNode }) {
+    return (
+        <div className="bg-white rounded-2xl border border-[#dddfe2] p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-start gap-4">
+                <span className="text-2xl mt-0.5">{icon}</span>
+                <div className="flex-1">
+                    <h2 className="text-lg font-bold text-[#050505] mb-3">{title}</h2>
+                    {content ? <p className="text-[#65676b] leading-relaxed">{content}</p> : children}
+                </div>
+            </div>
         </div>
     );
 }

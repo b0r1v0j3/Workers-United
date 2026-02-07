@@ -7,18 +7,28 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   let user = null;
+  let profileName = "";
 
   try {
     const supabase = await createClient();
     const { data } = await supabase.auth.getUser();
     user = data.user;
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      profileName = profile?.full_name || "";
+    }
   } catch (err) {
     console.error("Supabase client failed to initialize:", err);
   }
 
   return (
     <div className="min-h-screen bg-[var(--bg)] font-montserrat">
-      <UnifiedNavbar variant="public" user={user} />
+      <UnifiedNavbar variant="public" user={user} profileName={profileName} />
 
       <main>
         {/* Hero Section - Clean, centered, impactful */}
