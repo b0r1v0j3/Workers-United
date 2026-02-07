@@ -11,12 +11,13 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const quickActions = [
-        { label: "Skip to Verified", action: "verify" },
-        { label: "Skip to Queue", action: "queue" },
-        { label: "Skip to Offer", action: "offer" },
-        { label: "Reset Profile", action: "reset" },
-    ];
+    const roleLabels: Record<string, { label: string; icon: string; color: string }> = {
+        admin: { label: "Admin", icon: "⚡", color: "bg-red-100 text-red-700 border-red-200" },
+        employer: { label: "Employer", icon: "🏢", color: "bg-blue-100 text-blue-700 border-blue-200" },
+        candidate: { label: "Worker", icon: "👤", color: "bg-green-100 text-green-700 border-green-200" },
+    };
+
+    const current = roleLabels[currentRole] || roleLabels.candidate;
 
     const handleRoleSwitch = async (action: string) => {
         setLoading(true);
@@ -41,115 +42,106 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
         }
     };
 
-    const handleQuickAction = async (action: string) => {
-        setLoading(true);
-        try {
-            const response = await fetch("/api/godmode", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action }),
-            });
-
-            if (response.ok) {
-                window.location.reload();
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
     return (
         <>
-            {/* Floating God Mode Button */}
+            {/* Floating God Mode Button — shows current role */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-all font-bold text-sm flex items-center gap-2"
             >
                 ⚡ God Mode
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold ${current.color}`}>
+                    {current.label.toUpperCase()}
+                </span>
             </button>
 
             {/* God Mode Panel */}
             {isOpen && (
-                <div className="fixed bottom-16 right-4 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 w-80 overflow-hidden">
-                    {/* Header */}
+                <div className="fixed bottom-16 right-4 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 w-72 overflow-hidden">
+                    {/* Header with current role */}
                     <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3">
-                        <div className="text-white font-bold">⚡ God Mode Active</div>
-                        <div className="text-purple-200 text-sm">{userName}</div>
-                    </div>
-
-                    {/* Switch Role via API */}
-                    <div className="p-4 border-b">
-                        <div className="text-xs text-gray-500 uppercase font-bold mb-2">Switch User Type</div>
-                        <div className="space-y-2">
-                            <button
-                                onClick={() => handleRoleSwitch("switch_to_candidate")}
-                                disabled={loading}
-                                className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 text-gray-700 disabled:opacity-50"
-                            >
-                                👤 Switch to Worker
-                            </button>
-                            <button
-                                onClick={() => handleRoleSwitch("switch_to_employer")}
-                                disabled={loading}
-                                className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 text-gray-700 disabled:opacity-50"
-                            >
-                                🏢 Switch to Employer
-                            </button>
-                            <button
-                                onClick={() => handleRoleSwitch("switch_to_admin")}
-                                disabled={loading}
-                                className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 text-gray-700 disabled:opacity-50"
-                            >
-                                ⚡ Switch to Admin
-                            </button>
+                        <div className="text-white font-bold flex items-center gap-2">
+                            ⚡ God Mode
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-purple-200 text-sm">{userName}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${current.color}`}>
+                                {current.icon} {current.label}
+                            </span>
                         </div>
                     </div>
 
-                    {/* Direct Navigation (Dev Access) */}
-                    <div className="p-4 border-b bg-gray-50">
-                        <div className="text-xs text-gray-500 uppercase font-bold mb-2">🔧 Dev Navigation</div>
-                        <div className="space-y-2">
-                            <a href="/profile/worker" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
-                                📊 Worker Profile
-                            </a>
-                            <a href="/profile/employer" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
-                                🏢 Employer Profile
-                            </a>
-                            <a href="/admin" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
-                                ⚡ Admin Panel
-                            </a>
-                            <a href="/onboarding" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
-                                📋 Onboarding
-                            </a>
-                        </div>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="p-4">
-                        <div className="text-xs text-gray-500 uppercase font-bold mb-2">Quick Actions</div>
-                        <div className="grid grid-cols-2 gap-2">
-                            {quickActions.map((qa) => (
-                                <button
-                                    key={qa.action}
-                                    onClick={() => handleQuickAction(qa.action)}
+                    {/* Switch Role */}
+                    <div className="p-3">
+                        <div className="text-[10px] text-gray-400 uppercase font-bold mb-2 tracking-wider">Switch Role</div>
+                        <div className="space-y-1">
+                            {currentRole !== "admin" && (
+                                <RoleButton
+                                    label="⚡ Admin"
+                                    onClick={() => handleRoleSwitch("switch_to_admin")}
                                     disabled={loading}
-                                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors disabled:opacity-50"
-                                >
-                                    {qa.label}
-                                </button>
-                            ))}
+                                />
+                            )}
+                            {currentRole !== "candidate" && (
+                                <RoleButton
+                                    label="👤 Worker"
+                                    onClick={() => handleRoleSwitch("switch_to_candidate")}
+                                    disabled={loading}
+                                />
+                            )}
+                            {currentRole !== "employer" && (
+                                <RoleButton
+                                    label="🏢 Employer"
+                                    onClick={() => handleRoleSwitch("switch_to_employer")}
+                                    disabled={loading}
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Quick Nav */}
+                    <div className="px-3 pb-3 border-t border-gray-100 pt-2">
+                        <div className="text-[10px] text-gray-400 uppercase font-bold mb-2 tracking-wider">Quick Nav</div>
+                        <div className="grid grid-cols-3 gap-1">
+                            <NavButton href="/admin" label="Admin" icon="⚡" />
+                            <NavButton href="/profile/worker" label="Worker" icon="👤" />
+                            <NavButton href="/profile/employer" label="Employer" icon="🏢" />
                         </div>
                     </div>
 
                     {/* Close */}
                     <button
                         onClick={() => setIsOpen(false)}
-                        className="w-full py-2 text-center text-gray-400 hover:text-gray-600 text-sm border-t"
+                        className="w-full py-2 text-center text-gray-400 hover:text-gray-600 text-xs border-t"
                     >
                         Close
                     </button>
                 </div>
             )}
         </>
+    );
+}
+
+function RoleButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled: boolean }) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 text-gray-700 disabled:opacity-50 transition-colors"
+        >
+            {label}
+        </button>
+    );
+}
+
+function NavButton({ href, label, icon }: { href: string; label: string; icon: string }) {
+    return (
+        <a
+            href={href}
+            className="flex flex-col items-center gap-1 px-2 py-2 rounded-lg text-xs font-medium hover:bg-gray-100 text-gray-600 transition-colors"
+        >
+            <span className="text-lg">{icon}</span>
+            <span>{label}</span>
+        </a>
     );
 }
