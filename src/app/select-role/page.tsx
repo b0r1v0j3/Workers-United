@@ -32,7 +32,7 @@ export default function SelectRolePage() {
         document.cookie = `${ADMIN_ROLE_COOKIE}=${role}; path=/; max-age=${7 * 24 * 60 * 60}`;
 
         if (role === "employer") {
-            router.push("/employer/profile");
+            router.push("/profile/employer");
         } else {
             router.push("/profile");
         }
@@ -77,7 +77,7 @@ export default function SelectRolePage() {
                             Enter as Candidate
                         </h3>
                         <p className="text-sm text-gray-600">
-                            View the worker dashboard, upload documents, and track verification status.
+                            View the worker profile, upload documents, and track verification status.
                         </p>
                         <div className="mt-4 inline-flex items-center text-blue-600 font-medium text-sm">
                             Go to Profile →

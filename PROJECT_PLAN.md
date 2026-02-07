@@ -173,12 +173,17 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - AppShell, UnifiedNavbar, kartice, tabovi — ceo sajt u FB stilu
 
 ### 🔲 TODO
-- [ ] Admin sub-stranice u AppShell stilu
+- [ ] **GDPR Usklađenost** — consent pri registraciji, pravo na brisanje, privacy policy sadržaj
+- [ ] Admin unapređenje — kompletna funkcionalnost (sve da može da radi)
 - [ ] Mobilna responsivnost (mobile-first)
 - [ ] Multi-country pricing za placement fee
 - [ ] Employer profil verifikacija (100% pravilo)
 - [ ] Automatsko matchovanje radnika sa poslodavcima
 - [ ] Email notifikacije za sve korake procesa
+
+### ⏸️ ČEKA SE (blokirano)
+- [ ] **WhatsApp integracija** — čeka se tax ID → bankovni račun → broj telefona na firmu
+- [ ] **Stripe plaćanja** — čeka se tax ID → bankovni račun → povezivanje sa sajtom
 
 ---
 
@@ -186,17 +191,15 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 > AI treba da dopunjuje ovu listu kad vidi priliku. Korisnik odlučuje šta se implementira.
 
 ### Prioritet: Visok
-- [ ] **GDPR Usklađenost** — čuvamo pasoše i lične podatke za EU poslodavce, treba: consent pri registraciji, pravo na brisanje podataka, privacy policy sadržaj
 - [ ] **Istekli dokumenti** — dodati `expires_at` polje za pasoš, automatski alert kad ističe za <6 meseci
-- [ ] **Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza. Procentualno po koraku.
+- [ ] **Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza
 
 ### Prioritet: Srednji
-- [ ] **WhatsApp notifikacije** — webhook postoji, treba ga iskoristiti za: queue update, nova ponuda, podsetnik za profil
-- [ ] **Per-Country Landing Pages** — `/work-in-serbia`, `/work-in-germany` sa specifičnim info o platama i uslovima (SEO)
+- [ ] **Per-Country Landing Pages ZA POSLODAVCE** — `/hire-workers-serbia`, `/hire-workers-germany` sa info za poslodavce kako da nađu radnike preko nas (SEO). Radnici traže posao, ne landing page.
 - [ ] **Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a
 
 ### Prioritet: Nizak (kad bude živih korisnika)
-- [ ] **Success Stories** — pravi case studies kad prvi radnici dobiju vize
+- [ ] **Success Stories** — pravi case studies sa video snimcima (oprema nabavljena: iPhone 17 Pro)
 - [ ] **Referral sistem** — radnik koji je uspešno plasiran preporučuje druge
 - [ ] **Multi-language support** — ključne instrukcije na jezicima radnika
 
