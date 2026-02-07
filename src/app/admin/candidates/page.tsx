@@ -7,7 +7,9 @@ import { DeleteUserButton } from "@/components/DeleteUserButton";
 import AppShell from "@/components/AppShell";
 import { Search, Filter, MoreHorizontal, Phone, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
-export default async function CandidatesPage() {
+export default async function CandidatesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+    const params = await searchParams;
+    const filter = params?.filter || 'all';
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -67,6 +69,23 @@ export default async function CandidatesPage() {
         return { candidate, userDocs, verifiedDocs };
     };
 
+    // Apply filter
+    let filteredUsers = allAuthUsers;
+    if (filter === 'pending') {
+        filteredUsers = allAuthUsers.filter((u: any) => {
+            const userDocs = allDocs?.filter(d => d.user_id === u.id) || [];
+            return userDocs.some(d => d.status === 'verifying');
+        });
+    } else if (filter === 'verified') {
+        filteredUsers = allAuthUsers.filter((u: any) => {
+            const userDocs = allDocs?.filter(d => d.user_id === u.id) || [];
+            const verifiedCount = userDocs.filter(d => d.status === 'verified').length;
+            return verifiedCount >= 3;
+        });
+    }
+
+    const filterLabel = filter === 'pending' ? 'Pending Docs' : filter === 'verified' ? 'Verified Docs' : 'All';
+
     return (
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
@@ -75,7 +94,9 @@ export default async function CandidatesPage() {
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900">Candidates</h1>
-                            <p className="text-slate-500">Manage registered users ({allAuthUsers.length})</p>
+                            <p className="text-slate-500">
+                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `Manage registered users (${allAuthUsers.length})`}
+                            </p>
                         </div>
                         <div className="flex gap-2">
                             <div className="relative">
@@ -98,11 +119,18 @@ export default async function CandidatesPage() {
                             <span>Running in limited mode (RLS enabled). Configure Service Role Key for full access.</span>
                         </div>
                     )}
+
+                    {/* Filter Tabs */}
+                    <div className="flex gap-2 mt-4">
+                        <Link href="/admin/candidates" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>All</Link>
+                        <Link href="/admin/candidates?filter=pending" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'pending' ? 'bg-amber-100 text-amber-700' : 'text-slate-600 hover:bg-slate-100'}`}>Pending Docs</Link>
+                        <Link href="/admin/candidates?filter=verified" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'}`}>Verified</Link>
+                    </div>
                 </div>
 
                 {/* Users Grid */}
                 <div className="grid grid-cols-1 gap-4">
-                    {allAuthUsers.map((authUser: any) => {
+                    {filteredUsers.map((authUser: any) => {
                         const profile = profileMap.get(authUser.id);
                         const { candidate, userDocs, verifiedDocs } = getUserStats(authUser.id);
                         const isCurrentUser = authUser.id === user.id;
