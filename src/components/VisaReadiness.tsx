@@ -89,7 +89,7 @@ export default function VisaReadiness() {
                         </p>
                     </div>
                     <Link
-                        href="/dashboard/matches"
+                        href="/profile/matches"
                         className="btn btn-secondary text-sm"
                     >
                         View Matches
@@ -129,7 +129,7 @@ export default function VisaReadiness() {
 
                 {/* Action */}
                 <Link
-                    href="/dashboard/documents"
+                    href="/profile/documents"
                     className={`btn text-sm ${isEligible ? 'btn-primary' : 'btn-secondary'}`}
                 >
                     {isEligible ? 'Start Job Search' : 'Complete Profile'}

@@ -52,7 +52,7 @@ export default function UnifiedNavbar({ variant, user }: UnifiedNavbarProps) {
                         <>
                             {variant === "public" && (
                                 <Link
-                                    href="/dashboard"
+                                    href="/profile"
                                     className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-[#e7f3ff] text-[#1877f2] rounded-md font-semibold text-sm hover:bg-[#dbe7f2] transition-colors"
                                 >
                                     Dashboard

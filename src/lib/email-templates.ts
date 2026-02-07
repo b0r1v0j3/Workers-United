@@ -124,7 +124,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                     
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="https://workersunited.eu/dashboard" style="${buttonStyle}">
+                        <a href="https://workersunited.eu/profile" style="${buttonStyle}">
                             Activate Now
                         </a>
                     </div>
@@ -158,7 +158,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                     
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="https://workersunited.eu/dashboard" style="${buttonStyle}">
+                        <a href="https://workersunited.eu/profile" style="${buttonStyle}">
                             View Your Dashboard
                         </a>
                     </div>
@@ -183,7 +183,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                     
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="${data.offerLink || "https://workersunited.eu/dashboard"}" style="${buttonStyle}">
+                        <a href="${data.offerLink || "https://workersunited.eu/profile"}" style="${buttonStyle}">
                             View & Accept Offer
                         </a>
                     </div>
@@ -203,7 +203,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                     
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="${data.offerLink || "https://workersunited.eu/dashboard"}" style="${buttonStyle}">
+                        <a href="${data.offerLink || "https://workersunited.eu/profile"}" style="${buttonStyle}">
                             Respond Now
                         </a>
                     </div>

@@ -25,7 +25,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         .single();
 
     if (profile?.role !== 'admin' && !isOwner) {
-        redirect("/dashboard");
+        redirect("/profile");
     }
 
     // Use admin client (service role) to bypass RLS for reading other users' data

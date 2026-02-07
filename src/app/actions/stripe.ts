@@ -34,8 +34,8 @@ export async function createCheckoutSession() {
                 },
             ],
             mode: "payment",
-            success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
+            success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/profile/worker?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/profile/worker`,
             customer_email: user.email,
             metadata: {
                 userId: user.id,

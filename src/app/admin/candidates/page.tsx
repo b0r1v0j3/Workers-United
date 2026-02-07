@@ -22,7 +22,7 @@ export default async function CandidatesPage() {
         .single();
 
     if (profile?.role !== 'admin' && !isOwner) {
-        redirect("/dashboard");
+        redirect("/profile");
     }
 
     // Use admin client (service role)

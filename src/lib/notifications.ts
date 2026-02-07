@@ -2,40 +2,40 @@
 // WhatsApp can be added later with Twilio/Meta Business API
 
 interface OfferNotificationData {
-    candidateEmail: string;
-    candidateName: string;
-    jobTitle: string;
-    companyName: string;
-    country: string;
-    expiresAt: string;
-    offerId: string;
+  candidateEmail: string;
+  candidateName: string;
+  jobTitle: string;
+  companyName: string;
+  country: string;
+  expiresAt: string;
+  offerId: string;
 }
 
 interface OfferExpiredData {
-    candidateEmail: string;
-    candidateName: string;
-    jobTitle: string;
-    queuePosition: number;
+  candidateEmail: string;
+  candidateName: string;
+  jobTitle: string;
+  queuePosition: number;
 }
 
 export async function sendOfferNotification(data: OfferNotificationData): Promise<void> {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const paymentUrl = `${baseUrl}/dashboard/offers/${data.offerId}`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const paymentUrl = `${baseUrl}/profile/offers/${data.offerId}`;
 
-    const expiryDate = new Date(data.expiresAt);
-    const formattedExpiry = expiryDate.toLocaleString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZoneName: "short",
-    });
+  const expiryDate = new Date(data.expiresAt);
+  const formattedExpiry = expiryDate.toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
 
-    // Email content
-    const emailSubject = `🎉 Job Offer: ${data.jobTitle} - Action Required in 24 Hours`;
-    const emailBody = `
+  // Email content
+  const emailSubject = `🎉 Job Offer: ${data.jobTitle} - Action Required in 24 Hours`;
+  const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%); padding: 30px; text-align: center;">
         <h1 style="color: white; margin: 0;">🎉 Congratulations!</h1>
@@ -92,26 +92,26 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
     </div>
   `;
 
-    // TODO: Integrate with email service (Resend, SendGrid, etc.)
-    console.log("=== OFFER NOTIFICATION ===");
-    console.log("To:", data.candidateEmail);
-    console.log("Subject:", emailSubject);
-    console.log("Offer ID:", data.offerId);
-    console.log("Expires:", formattedExpiry);
-    console.log("==========================");
+  // TODO: Integrate with email service (Resend, SendGrid, etc.)
+  console.log("=== OFFER NOTIFICATION ===");
+  console.log("To:", data.candidateEmail);
+  console.log("Subject:", emailSubject);
+  console.log("Offer ID:", data.offerId);
+  console.log("Expires:", formattedExpiry);
+  console.log("==========================");
 
-    // For now, just log. Replace with actual email sending:
-    // await resend.emails.send({
-    //   from: 'Workers United <offers@workersunited.eu>',
-    //   to: data.candidateEmail,
-    //   subject: emailSubject,
-    //   html: emailBody,
-    // });
+  // For now, just log. Replace with actual email sending:
+  // await resend.emails.send({
+  //   from: 'Workers United <offers@workersunited.eu>',
+  //   to: data.candidateEmail,
+  //   subject: emailSubject,
+  //   html: emailBody,
+  // });
 }
 
 export async function sendOfferExpiredNotification(data: OfferExpiredData): Promise<void> {
-    const emailSubject = `⚠️ Your job offer has expired - ${data.jobTitle}`;
-    const emailBody = `
+  const emailSubject = `⚠️ Your job offer has expired - ${data.jobTitle}`;
+  const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: #FEF3C7; padding: 30px; text-align: center;">
         <h1 style="color: #92400E; margin: 0;">⚠️ Offer Expired</h1>
@@ -140,20 +140,20 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
     </div>
   `;
 
-    console.log("=== OFFER EXPIRED NOTIFICATION ===");
-    console.log("To:", data.candidateEmail);
-    console.log("Subject:", emailSubject);
-    console.log("Queue Position:", data.queuePosition);
-    console.log("==================================");
+  console.log("=== OFFER EXPIRED NOTIFICATION ===");
+  console.log("To:", data.candidateEmail);
+  console.log("Subject:", emailSubject);
+  console.log("Queue Position:", data.queuePosition);
+  console.log("==================================");
 }
 
 export async function sendQueueJoinedNotification(data: {
-    candidateEmail: string;
-    candidateName: string;
-    queuePosition: number;
+  candidateEmail: string;
+  candidateName: string;
+  queuePosition: number;
 }): Promise<void> {
-    console.log("=== QUEUE JOINED NOTIFICATION ===");
-    console.log("To:", data.candidateEmail);
-    console.log("Queue Position:", data.queuePosition);
-    console.log("=================================");
+  console.log("=== QUEUE JOINED NOTIFICATION ===");
+  console.log("To:", data.candidateEmail);
+  console.log("Queue Position:", data.queuePosition);
+  console.log("=================================");
 }

@@ -7,7 +7,7 @@
 
 ## 📌 Trenutni Fokus
 
-Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (radnik, poslodavac, admin) ima jedinstven profil sa istim layoutom.
+Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (radnik, poslodavac, admin) ima jedinstven profil sa jasnom, čistom strukturom.
 
 ---
 
@@ -21,40 +21,62 @@ Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (ra
 - **Jednostavno** — profil → dokumenta → verifikacija → čekanje
 - **Dashboard ima 3 taba**: Profile Info, Documents, Status
 
+### ⚠️ Princip Razvoja (dogovoreno 07.02.2026)
+- **NE KRPIMO — PRAVIMO SAVRŠENSTVO**
+- Nikad ne radimo "quick fix" ili "workaround" — svaka promena se radi kompletno i ispravno
+- Ako nešto treba preimenovati — menjamo SVUDA, ne samo na jednom mestu
+- Bolje je potrošiti više vremena sada nego večno krpiti posle
+- Svaka odluka se dokumentuje DETALJNO u ovom fajlu
+
+### 🗺️ URL Struktura (dogovoreno 07.02.2026)
+- **`/profile`** — auto-redirect na `/profile/worker` ili `/profile/employer` na osnovu tipa korisnika
+- **`/profile/worker`** — radnički profil i dashboard (3 taba: Profile Info, Documents, Status)
+- **`/profile/worker/edit`** — editovanje profila (single-page form)
+- **`/profile/worker/queue`** — status u redu čekanja
+- **`/profile/worker/offers/[id]`** — detalji ponude
+- **`/profile/worker/documents`** — dokumenta (redirect na profil)
+- **`/profile/employer`** — profil poslodavca (EmployerProfileClient)
+- **`/profile/employer/jobs`** — lista job request-ova
+- **`/profile/employer/jobs/new`** — kreiranje novog job request-a
+- **`/onboarding`** — editovanje profila / prvi put
+
 ### 🆕 Protokol
 - [x] Ažurirati `PROJECT_PLAN.md` na početku svakog chata sa novim zahtevima i statusom
 - [x] Uvek uraditi `git pull` pre početka rada
 
+---
 
 ## ✅ Završeno
+
+### URL Restrukturisanje /dashboard → /profile (07.02.2026)
+- [x] Premešteno `src/app/dashboard/` → `src/app/profile/worker/`
+- [x] Premešteno `src/app/employer/profile/` i `src/app/employer/dashboard/` → `src/app/profile/employer/`
+- [x] Kreiran `/profile/page.tsx` kao auto-redirector
+- [x] Ažurirano 50+ referenci: middleware, auth, Stripe, email templates, GodMode, AppShell, i svi sub-routovi
+- [x] Obrisani stari stub fajlovi
+
+### Fix Profile Completion i Single-Page Edit (07.02.2026)
+- [x] Popravljen bug: profil completion padao sa 100% na 86% jer se `signature_url` nije učitavao nazad u formu
+- [x] Onboarding konvertovan iz multi-step wizard u single-page formu
+- [x] Uklonjeni Police Record i Medical Certificate iz dokumenata
 
 ### Facebook-Style Layout Refaktor (Feb 2026)
 - [x] Kreiran `AppShell` komponenta — wrapper sa Sidebar, Navbar, Content Area
 - [x] Kreiran `UnifiedNavbar` — zajednički navbar za sve korisnike
-- [x] `/dashboard` (Worker) — koristi `AppShell`, text-only header, Tabs (Posts, About, Photos, Documents)
-- [x] `/profile` (ProfileClient) — koristi `AppShell`, tabovi (Timeline, About, Jobs/Applications, Photos, Documents)
-- [x] `/admin` — koristi `AppShell`, card-based stats, recent activity feed
-- [x] `/employer/jobs` — koristi `AppShell`, card-based job listings
-- [x] `/admin/candidates` — koristi `AppShell`, korisnik cards umesto tabele
-- [x] Uklonjen Cover Photo i Profile Picture — čist text-only header na svim profilima
-- [x] `/employer/dashboard` i `/employer/profile` — redirect na `/profile`
+- [x] Redesign: Dashboard kompletno prepisan — skinuti svi socijalni feature-ovi, dodat clean 3-tab profil
+- [x] Fix: Uklonjen dupli navbar, smanjen logo, sidebar prilagođen
 
 ### Design System (Feb 2026)
 - [x] Unified boje i tipografija kroz ceo sajt
-- [x] Facebook-stil tabovi, Intro kartice, Feed items
-- [x] Employer forma za editovanje kompanije (About tab)
-- [x] Fix: Uklonjen dupli navbar (layout.tsx + AppShell), smanjen logo sa h-28 na h-10, sidebar 360→280px
-- [x] Redesign: Dashboard kompletno prepisan — skinuti svi socijalni feature-ovi, dodat clean 3-tab profil (Profile Info, Documents, Status)
+- [x] Facebook-stil tabovi, Intro kartice
+- [x] Employer forma za editovanje kompanije
 
 ---
 
 ## 🔲 Planirano / TODO
 
-- [x] Dodati funkcionalne tabove na `/dashboard` (About, Photos, Documents sada rade - koriste `DashboardClient`)
-- [ ] Konekcija "Post a Job" dugmeta sa `/employer/jobs/new`
-- [ ] Admin sub-stranice (`/admin/employers`, `/admin/jobs`, `/admin/queue`, `/admin/refunds`) — refaktorisati u `AppShell`
+- [ ] Admin sub-stranice — refaktorisati u `AppShell` stil
 - [ ] Mobilna responsivnost — testirati i popraviti na malim ekranima
-- [ ] Pravi post/feed sistem (ako se odlučimo za to)
 - [ ] Deployment i testiranje na produkciji
 
 ---
@@ -65,17 +87,20 @@ Refaktorisanje celog sajta u **Facebook-stil** profil sistem. Svaki korisnik (ra
 |---|---|---|
 | `AppShell` | `src/components/AppShell.tsx` | Glavni layout wrapper (Sidebar + Navbar + Content) |
 | `UnifiedNavbar` | `src/components/UnifiedNavbar.tsx` | Top navigacija za sve korisnike |
-| Worker Dashboard | `src/app/dashboard/page.tsx` | Profil radnika sa FB stilom |
-| Profile (oba tipa) | `src/app/profile/ProfileClient.tsx` | Klijentska komponenta za Worker/Employer profil |
+| Worker Profile | `src/app/profile/worker/page.tsx` | Profil radnika (3 taba) |
+| Worker Edit | `src/app/profile/worker/edit/` | Editovanje profila (single-page) |
+| Employer Profile | `src/app/profile/employer/page.tsx` | Profil poslodavca |
+| Employer Jobs | `src/app/profile/employer/jobs/page.tsx` | Lista job request-ova |
+| Profile Redirector | `src/app/profile/page.tsx` | Auto-redirect worker/employer |
 | Admin | `src/app/admin/page.tsx` | Admin dashboard sa statistikama |
-| Employer Jobs | `src/app/employer/jobs/page.tsx` | Lista job request-ova |
 | Admin Candidates | `src/app/admin/candidates/page.tsx` | Lista svih korisnika |
 
 ---
 
 ## 📝 Napomene
 
+- **NE KRPIMO** — svaka promena se radi kompletno, nema brzih zakrpa
 - **Podaci su sačuvani** — sve refaktorisanje je samo vizuelno, baza i logika su isti
 - **Supabase** je backend (auth + database + storage)
 - **God Mode** — admin pristup preko `isGodModeUser()` funkcije
-- **Cover/Profile foto** — namerno uklonjeni po zahtevu korisnika, fokus je na čistom FB stilu bez slika
+- **Cover/Profile foto** — namerno uklonjeni, fokus na čistom stilu

@@ -17,7 +17,7 @@ export default async function EmployerJobsPage() {
         .eq("profile_id", user.id)
         .single();
 
-    if (!employer) redirect("/dashboard");
+    if (!employer) redirect("/profile/employer");
 
     // Get all jobs for this employer
     const { data: jobs } = await supabase
@@ -39,7 +39,7 @@ export default async function EmployerJobsPage() {
                         <p className="text-slate-500">Manage your hiring pipeline and view applications.</p>
                     </div>
                     <Link
-                        href="/employer/jobs/new"
+                        href="/profile/employer/jobs/new"
                         className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100 active:scale-95 flex items-center gap-2"
                     >
                         <Briefcase size={18} />
@@ -57,7 +57,7 @@ export default async function EmployerJobsPage() {
                         <p className="text-slate-500 mb-6 max-w-md mx-auto">
                             Create your first job request to start matching with candidates from our verified pool.
                         </p>
-                        <Link href="/employer/jobs/new" className="text-blue-600 font-semibold hover:underline">
+                        <Link href="/profile/employer/jobs/new" className="text-blue-600 font-semibold hover:underline">
                             Create Job Request →
                         </Link>
                     </div>
@@ -101,7 +101,7 @@ function JobCard({ job }: JobCardProps) {
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        <Link href={`/employer/jobs/${job.id}`}>{job.title}</Link>
+                        <Link href={`/profile/employer/jobs/${job.id}`}>{job.title}</Link>
                     </h3>
                     <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                         <span className="flex items-center gap-1"><Briefcase size={14} /> {job.industry}</span>
@@ -121,7 +121,7 @@ function JobCard({ job }: JobCardProps) {
 
             <div className="mt-4 flex justify-end">
                 <Link
-                    href={`/employer/jobs/${job.id}`}
+                    href={`/profile/employer/jobs/${job.id}`}
                     className="text-sm font-semibold text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
                 >
                     View Details <span className="text-lg">→</span>

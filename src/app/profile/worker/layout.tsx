@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function WorkerProfileLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -9,11 +9,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         redirect("/login");
     }
 
-    // Redirect employers to employer dashboard
+    // Redirect employers to employer profile
     if (user.user_metadata?.user_type === 'employer') {
-        redirect("/employer/dashboard");
+        redirect("/profile/employer");
     }
 
-    // AppShell inside DashboardClient handles the navbar + sidebars
     return <>{children}</>;
 }

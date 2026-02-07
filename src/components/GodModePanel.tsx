@@ -31,7 +31,7 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                 if (action === "switch_to_employer") {
                     window.location.href = "/profile";
                 } else {
-                    window.location.href = "/dashboard";
+                    window.location.href = "/profile";
                 }
             }
         } finally {
@@ -100,11 +100,11 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                     <div className="p-4 border-b bg-gray-50">
                         <div className="text-xs text-gray-500 uppercase font-bold mb-2">🔧 Dev Navigation</div>
                         <div className="space-y-2">
-                            <a href="/dashboard" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
-                                📊 Worker Dashboard
+                            <a href="/profile/worker" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
+                                📊 Worker Profile
                             </a>
-                            <a href="/profile" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
-                                📝 Profile (New UI)
+                            <a href="/profile/employer" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
+                                🏢 Employer Profile
                             </a>
                             <a href="/admin" className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-white text-gray-700">
                                 ⚡ Admin Panel

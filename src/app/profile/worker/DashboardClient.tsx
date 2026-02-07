@@ -186,7 +186,7 @@ export default function DashboardClient({
                                 {pendingOffers.map((offer: any) => (
                                     <Link
                                         key={offer.id}
-                                        href={`/dashboard/offers/${offer.id}`}
+                                        href={`/profile/offers/${offer.id}`}
                                         className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-200 hover:border-emerald-400 transition-colors group"
                                     >
                                         <div>
@@ -296,7 +296,7 @@ export default function DashboardClient({
                                 {pendingOffers.map((offer: any) => (
                                     <Link
                                         key={offer.id}
-                                        href={`/dashboard/offers/${offer.id}`}
+                                        href={`/profile/offers/${offer.id}`}
                                         className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-100 hover:border-emerald-300 transition-colors group"
                                     >
                                         <div>

@@ -38,15 +38,15 @@ export async function GET(request: Request) {
                         });
                     }
 
-                    // Employers go to /profile
-                    return NextResponse.redirect(`${origin}/profile`);
+                    // Employers go to /employer/profile
+                    return NextResponse.redirect(`${origin}/employer/profile`);
                 } else {
-                    // Workers go to /dashboard (old working page)
-                    return NextResponse.redirect(`${origin}/dashboard`);
+                    // Workers go to /profile
+                    return NextResponse.redirect(`${origin}/profile`);
                 }
             }
 
-            return NextResponse.redirect(`${origin}/dashboard`);
+            return NextResponse.redirect(`${origin}/profile`);
         }
     }
 

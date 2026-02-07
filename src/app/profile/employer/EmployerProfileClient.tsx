@@ -202,7 +202,7 @@ export default function EmployerProfilePage() {
                         </Link>
                         <div className="flex items-center gap-2">
                             <Link
-                                href="/employer/dashboard"
+                                href="/profile/employer"
                                 className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100"
                             >
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -487,7 +487,7 @@ export default function EmployerProfilePage() {
                         {/* Save Button */}
                         <div className="flex justify-end gap-3 pt-2">
                             <Link
-                                href="/employer/dashboard"
+                                href="/profile/employer"
                                 className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[15px]"
                             >
                                 Cancel

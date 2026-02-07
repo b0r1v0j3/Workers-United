@@ -134,7 +134,7 @@ export default function OnboardingPage() {
             }
 
             if (user.user_metadata?.user_type === 'employer') {
-                router.push("/employer/dashboard");
+                router.push("/profile/employer");
                 return;
             }
 
@@ -348,7 +348,7 @@ export default function OnboardingPage() {
             {/* Navbar */}
             <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
                 <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
-                    <Link href="/dashboard" className="text-[#65676b] hover:text-[#050505] text-sm font-semibold flex items-center gap-2">
+                    <Link href="/profile" className="text-[#65676b] hover:text-[#050505] text-sm font-semibold flex items-center gap-2">
                         ← Back to Dashboard
                     </Link>
                     <Link href="/" className="flex items-center gap-2">
@@ -603,7 +603,7 @@ export default function OnboardingPage() {
                         {saving ? "Saving..." : "Save Profile"}
                     </button>
                     <Link
-                        href="/dashboard"
+                        href="/profile"
                         className="px-6 py-3.5 rounded-xl font-semibold text-[#65676b] hover:bg-white hover:text-[#050505] transition-colors border border-[#dddfe2]"
                     >
                         Cancel

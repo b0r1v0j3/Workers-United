@@ -4,7 +4,7 @@ import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function WorkerProfilePage() {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -13,10 +13,10 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
-    // Redirect employers to employer dashboard
+    // Redirect employers to employer profile
     const userType = user.user_metadata?.user_type;
     if (userType === 'employer') {
-        redirect("/employer/dashboard");
+        redirect("/profile/employer");
     }
 
     // Fetch profile

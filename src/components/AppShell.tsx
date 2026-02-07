@@ -47,9 +47,9 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
 
     return (
         <div className="space-y-2">
-            <SidebarLink href={userType === 'employer' ? "/employer/dashboard" : "/dashboard"} icon="🏠" label="Home" />
+            <SidebarLink href={userType === 'employer' ? "/profile/employer" : "/profile/worker"} icon="🏠" label="Home" />
             <SidebarLink
-                href={userType === 'employer' ? `/profile` : `/profile`} // Employer profile might need specifi route
+                href={userType === 'employer' ? '/profile/employer' : '/profile/worker'}
                 icon={<img src={user?.user_metadata?.avatar_url || "/logo.png"} className="w-7 h-7 rounded-full object-cover" />}
                 label={user?.user_metadata?.full_name || "My Profile"}
             />
@@ -58,13 +58,13 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
             <div className="px-2 text-lg font-semibold text-gray-500 mb-2 mt-4">Shortcuts</div>
             {userType === 'worker' && (
                 <>
-                    <SidebarLink href="/dashboard" icon="📄" label="My Applications" />
+                    <SidebarLink href="/profile" icon="📄" label="My Applications" />
                     <SidebarLink href="/documents" icon="📁" label="Documents" />
                 </>
             )}
             {userType === 'employer' && (
                 <>
-                    <SidebarLink href="/employer/jobs" icon="💼" label="Job Postings" />
+                    <SidebarLink href="/profile/employer/jobs" icon="💼" label="Job Postings" />
                     <SidebarLink href="/employer/candidates" icon="👥" label="Candidates" />
                 </>
             )}

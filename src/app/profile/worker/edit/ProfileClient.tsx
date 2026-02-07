@@ -168,7 +168,7 @@ export default function ProfilePage() {
             <nav className="bg-white border-b border-gray-200">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
-                        <Link href="/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+                        <Link href="/profile/worker" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M19 12H5M12 19l-7-7 7-7" />
                             </svg>
