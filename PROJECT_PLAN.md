@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-07 (logo fix)
+> **Poslednje ažuriranje:** 2026-02-07 (save fix, forgot password, coming soon CTA)
 
 ---
 
@@ -159,6 +159,21 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 
 ### ✅ Završeno
 
+**Kritični bug fix + Forgot Password + Coming Soon (07.02.2026)**
+- Popravljen KRITIČNI bug: save na worker edit stranici nije radio jer je kod slao `years_experience` umesto `experience_years` (ime kolone u bazi). Takođe slao `address` i `education_level` koje NE POSTOJE u candidates tabeli — Supabase tiho odbijao ceo update
+- Dodat error handling za profile update (pre se greške gutale)
+- Implementiran **Forgot Password** flow na login stranici (Supabase `resetPasswordForEmail`)
+- Dodat **Coming Soon** placeholder na worker dashboard (plavi gradient banner) — kad plaćanje bude spremno, samo se promeni u Stripe checkout
+
+**UI Čišćenje (07.02.2026)**
+- Uklonjen redundantni "Overview" dugme sa employer profila (linkao na istu stranicu)
+- Cancel dugme na employer edit sad vodi na home stranicu umesto iste stranice
+- Uklonjen nefunkcionalni search input i filter dugme sa admin candidates stranice
+- Uklonjen beskorisni three-dots (MoreHorizontal) meni sa candidate kartica
+- Date picker na worker edit zamenjen sa 3 dropdown-a (Dan/Mesec/Godina)
+- Years of experience promenjen iz number input u dropdown select
+- Dodati filter tabovi na admin candidates (All / Pending / Verified)
+
 **Čišćenje lažnih elemenata (07.02.2026)**
 - Uklonjeni "Sponsored", "Ad", "Contacts" iz AppShell desnog sidebara — ništa lažno
 
@@ -188,11 +203,14 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 ### 🔲 TODO
 - [ ] **GDPR Usklađenost** — consent pri registraciji, pravo na brisanje, privacy policy sadržaj
 - [x] ~~Admin unapređenje — kompletna funkcionalnost (sve da može da radi)~~
+- [x] ~~Forgot Password flow~~
+- [x] ~~Coming Soon placeholder za plaćanje~~
 - [ ] Mobilna responsivnost (mobile-first)
 - [ ] Multi-country pricing za placement fee
 - [ ] Employer profil verifikacija (100% pravilo)
 - [ ] Automatsko matchovanje radnika sa poslodavcima
 - [ ] Email notifikacije za sve korake procesa
+- [ ] Prebaciti Coming Soon → Stripe checkout ($9 entry fee) kad bude spremno
 
 ### ⏸️ ČEKA SE (blokirano)
 - [ ] **WhatsApp integracija** — čeka se tax ID → bankovni račun → broj telefona na firmu
