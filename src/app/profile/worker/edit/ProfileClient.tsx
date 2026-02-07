@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -34,7 +33,7 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+    const [success, setSuccess] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -58,7 +57,6 @@ export default function ProfilePage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Get profile
             const { data: profileData } = await supabase
                 .from("profiles")
                 .select("*")
@@ -70,7 +68,6 @@ export default function ProfilePage() {
                 setFormData(prev => ({ ...prev, full_name: profileData.full_name || "" }));
             }
 
-            // Get candidate details
             const { data: candidateData } = await supabase
                 .from("candidates")
                 .select("*")
@@ -102,19 +99,17 @@ export default function ProfilePage() {
         e.preventDefault();
         setSaving(true);
         setError("");
-        setSuccess("");
+        setSuccess(false);
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
-            // Update profile
             await supabase
                 .from("profiles")
                 .update({ full_name: formData.full_name })
                 .eq("id", user.id);
 
-            // Only update fields this form manages — preserve all other fields
             const candidateUpdates = {
                 nationality: formData.nationality || null,
                 date_of_birth: formData.date_of_birth || null,
@@ -142,8 +137,9 @@ export default function ProfilePage() {
                 if (insertErr) throw new Error(insertErr.message);
             }
 
-            setSuccess("Profile updated successfully!");
+            setSuccess(true);
             await fetchProfile();
+            setTimeout(() => setSuccess(false), 3000);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save");
         } finally {
@@ -151,200 +147,265 @@ export default function ProfilePage() {
         }
     }
 
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-gray-600">Loading...</div>
+            <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+                <div className="animate-spin w-10 h-10 border-4 border-[#1877f2] border-t-transparent rounded-full"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <nav className="bg-white border-b border-gray-200">
-                <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <Link href="/profile/worker" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M19 12H5M12 19l-7-7 7-7" />
-                            </svg>
-                            Back to Profile
-                        </Link>
-                    </div>
+        <div className="min-h-screen bg-[#f0f2f5]">
+            {/* Navbar */}
+            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
+                <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
+                    <Link href="/profile/worker" className="flex items-center gap-2 text-[#65676b] hover:text-[#050505] text-sm font-semibold">
+                        ← Back to Profile
+                    </Link>
+                    <Link href="/" className="flex items-center gap-2">
+                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
+                        <span className="font-bold text-[#1877f2] text-xl hidden sm:inline">Workers United</span>
+                    </Link>
+                    <div className="w-[120px]" /> {/* Spacer */}
                 </div>
             </nav>
 
-            <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Your Profile</h1>
-                <p className="text-gray-600 mb-6">
-                    Complete your profile to get verified and matched with employers.
-                </p>
+            <div className="max-w-[900px] mx-auto px-4 py-6">
+                {/* Page Header */}
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-gray-900">Edit Profile</h1>
+                    <p className="text-gray-500 mt-1">Complete your profile to get verified and matched with employers.</p>
+                </div>
 
+                {/* Alerts */}
+                {success && (
+                    <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Profile saved successfully!
+                    </div>
+                )}
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                    <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                         {error}
                     </div>
                 )}
 
-                {success && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
-                        {success}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="card">
-                    <div className="space-y-6">
-                        {/* Account Info */}
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h2>
-                            <div className="grid gap-4">
-                                <div>
-                                    <label className="label">Email</label>
-                                    <input
-                                        type="email"
-                                        value={profile?.email || ""}
-                                        disabled
-                                        className="input bg-gray-100 cursor-not-allowed"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label">Full Name</label>
-                                    <input
-                                        type="text"
-                                        value={formData.full_name}
-                                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                                        className="input"
-                                        placeholder="Your full name"
-                                    />
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                        {/* Account Information Card */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                            <div className="px-4 py-3 border-b border-gray-200">
+                                <h2 className="font-semibold text-gray-900 text-[15px]">Account Information</h2>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Email
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={profile?.email || ""}
+                                            disabled
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] bg-gray-100 cursor-not-allowed text-gray-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Full Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="full_name"
+                                            value={formData.full_name}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="Your full name"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <hr className="border-gray-200" />
-
-                        {/* Personal Info */}
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Personal Information Card */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                            <div className="px-4 py-3 border-b border-gray-200">
+                                <h2 className="font-semibold text-gray-900 text-[15px]">Personal Information</h2>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Nationality <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="nationality"
+                                            value={formData.nationality}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="e.g., Serbian"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Date of Birth <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="date_of_birth"
+                                            value={formData.date_of_birth}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Phone Number <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="+381 ..."
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Current Country <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="current_country"
+                                            value={formData.current_country}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                            placeholder="Where you live now"
+                                        />
+                                    </div>
+                                </div>
                                 <div>
-                                    <label className="label">Nationality</label>
+                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                        Address
+                                    </label>
                                     <input
                                         type="text"
-                                        value={formData.nationality}
-                                        onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                                        className="input"
-                                        placeholder="e.g., Serbian"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label">Date of Birth</label>
-                                    <input
-                                        type="date"
-                                        value={formData.date_of_birth}
-                                        onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                                        className="input"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        className="input"
-                                        placeholder="+381 ..."
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label">Current Country</label>
-                                    <input
-                                        type="text"
-                                        value={formData.current_country}
-                                        onChange={(e) => setFormData({ ...formData, current_country: e.target.value })}
-                                        className="input"
-                                        placeholder="Where you live now"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="label">Address</label>
-                                    <input
-                                        type="text"
+                                        name="address"
                                         value={formData.address}
-                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                        className="input"
+                                        onChange={handleChange}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         placeholder="Your full address"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <hr className="border-gray-200" />
-
-                        {/* Job Preferences */}
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Job Preferences</h2>
-                            <div className="grid gap-4">
+                        {/* Job Preferences Card */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                            <div className="px-4 py-3 border-b border-gray-200">
+                                <h2 className="font-semibold text-gray-900 text-[15px]">Job Preferences</h2>
+                            </div>
+                            <div className="p-4 space-y-4">
                                 <div>
-                                    <label className="label">Preferred Job / Industry</label>
+                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                        Preferred Job / Industry <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
+                                        name="preferred_job"
                                         value={formData.preferred_job}
-                                        onChange={(e) => setFormData({ ...formData, preferred_job: e.target.value })}
-                                        className="input"
+                                        onChange={handleChange}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         placeholder="e.g., Construction, Hospitality, Driver..."
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <hr className="border-gray-200" />
-
-                        {/* Professional Info */}
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Professional Background</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="label">Years of Experience</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="50"
-                                        value={formData.years_experience}
-                                        onChange={(e) => setFormData({ ...formData, years_experience: parseInt(e.target.value) || 0 })}
-                                        className="input"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label">Highest Education</label>
-                                    <select
-                                        value={formData.education_level}
-                                        onChange={(e) => setFormData({ ...formData, education_level: e.target.value })}
-                                        className="input"
-                                    >
-                                        <option value="">Select...</option>
-                                        <option value="high_school">High School</option>
-                                        <option value="vocational">Vocational Training</option>
-                                        <option value="bachelors">Bachelor's Degree</option>
-                                        <option value="masters">Master's Degree</option>
-                                        <option value="phd">PhD</option>
-                                    </select>
+                        {/* Professional Background Card */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                            <div className="px-4 py-3 border-b border-gray-200">
+                                <h2 className="font-semibold text-gray-900 text-[15px]">Professional Background</h2>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Years of Experience
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="years_experience"
+                                            min="0"
+                                            max="50"
+                                            value={formData.years_experience}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, years_experience: parseInt(e.target.value) || 0 }))}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                            Highest Education
+                                        </label>
+                                        <select
+                                            name="education_level"
+                                            value={formData.education_level}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
+                                        >
+                                            <option value="">Select...</option>
+                                            <option value="high_school">High School</option>
+                                            <option value="vocational">Vocational Training</option>
+                                            <option value="bachelors">Bachelor&apos;s Degree</option>
+                                            <option value="masters">Master&apos;s Degree</option>
+                                            <option value="phd">PhD</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex justify-end pt-4">
+                        {/* Save / Cancel Buttons */}
+                        <div className="flex justify-end gap-3 pt-2">
+                            <Link
+                                href="/profile/worker"
+                                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[15px]"
+                            >
+                                Cancel
+                            </Link>
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="btn btn-primary"
+                                className="px-5 py-2.5 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium text-[15px] disabled:opacity-50 flex items-center gap-2"
                             >
-                                {saving ? "Saving..." : "Save Profile"}
+                                {saving ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        Saving...
+                                    </>
+                                ) : (
+                                    "Save Changes"
+                                )}
                             </button>
                         </div>
                     </div>
                 </form>
-            </main>
+            </div>
         </div>
     );
 }
