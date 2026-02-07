@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
 
@@ -27,8 +28,17 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         redirect("/dashboard");
     }
 
+    // Use admin client (service role) to bypass RLS for reading other users' data
+    let adminClient;
+    try {
+        adminClient = createAdminClient();
+    } catch (err: any) {
+        console.warn("Service role key not configured, falling back to user client:", err);
+        adminClient = supabase;
+    }
+
     // Fetch candidate info
-    const { data: candidateProfile } = await supabase
+    const { data: candidateProfile } = await adminClient
         .from("profiles")
         .select("*")
         .eq("id", id)
@@ -38,28 +48,28 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         notFound();
     }
 
-    const { data: candidateData } = await supabase
+    const { data: candidateData } = await adminClient
         .from("candidates")
         .select("*")
         .eq("profile_id", id)
         .single();
 
     // Fetch documents
-    const { data: documents } = await supabase
+    const { data: documents } = await adminClient
         .from("candidate_documents")
         .select("*")
         .eq("user_id", id)
         .order("created_at", { ascending: false });
 
     // Fetch payments
-    const { data: payments } = await supabase
+    const { data: payments } = await adminClient
         .from("payments")
         .select("*")
         .eq("user_id", id)
         .order("created_at", { ascending: false });
 
     // Fetch signatures
-    const { data: signatures } = await supabase
+    const { data: signatures } = await adminClient
         .from("signatures")
         .select("*")
         .eq("user_id", id)
