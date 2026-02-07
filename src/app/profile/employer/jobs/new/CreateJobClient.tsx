@@ -138,7 +138,7 @@ export default function CreateJobClient() {
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M19 12H5M12 19l-7-7 7-7" />
                             </svg>
-                            <span className="font-medium">Back to Dashboard</span>
+                            <span className="font-medium">Back to Profile</span>
                         </Link>
                         <div className="flex items-center gap-2">
                             <img src="/logo.png" alt="Workers United" width={64} height={64} />

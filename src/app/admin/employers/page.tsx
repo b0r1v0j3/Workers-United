@@ -36,7 +36,7 @@ export default async function EmployersPage() {
                         <p className="text-[#64748b] mt-1 font-medium">View and manage employer accounts.</p>
                     </div>
                     <Link href="/admin" className="text-[#2f6fed] font-semibold hover:underline">
-                        ← Back to Dashboard
+                        ← Back to Admin
                     </Link>
                 </div>
 

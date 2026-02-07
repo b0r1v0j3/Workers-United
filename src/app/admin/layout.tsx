@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
-import UnifiedNavbar from "@/components/UnifiedNavbar";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient();
@@ -23,10 +22,5 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         redirect("/profile");
     }
 
-    return (
-        <div className="min-h-screen bg-[var(--bg)] font-montserrat">
-            <UnifiedNavbar variant="admin" user={user} />
-            {children}
-        </div>
-    );
+    return <>{children}</>;
 }

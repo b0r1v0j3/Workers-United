@@ -80,7 +80,7 @@ export default function SelectRolePage() {
                             View the worker dashboard, upload documents, and track verification status.
                         </p>
                         <div className="mt-4 inline-flex items-center text-blue-600 font-medium text-sm">
-                            Go to Dashboard →
+                            Go to Profile →
                         </div>
                     </button>
 
