@@ -92,18 +92,7 @@ export default async function DashboardPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f1f5f9] font-montserrat">
-            {/* Header */}
-            <nav className="bg-white px-5 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
-                <Link href="/" className="flex items-center gap-2">
-                    <img src="/logo.png" alt="Workers United" width={64} height={64} className="" />
-                    <span className="font-bold text-[#183b56] text-lg">Workers United</span>
-                </Link>
-                <a href="/auth/signout" className="text-[#64748b] text-sm font-semibold hover:text-[#183b56]">
-                    Logout
-                </a>
-            </nav>
-
+        <>
             <div className="max-w-[700px] mx-auto px-5 py-8">
                 {/* Greeting */}
                 <div className="mb-8">
@@ -374,6 +363,6 @@ export default async function DashboardPage() {
                     <p className="text-[12px] text-[#94a3b8] font-medium">Worker ID: {user.email}</p>
                 </div>
             </div>
-        </div>
+        </>
     );
 }

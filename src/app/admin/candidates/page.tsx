@@ -96,26 +96,7 @@ export default async function CandidatesPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f1f5f9] font-montserrat">
-            {/* Header */}
-            <nav className="bg-[#183b56] px-5 py-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
-                <div className="flex items-center gap-4">
-                    <Link href="/admin" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <img src="/logo.png" alt="Workers United" width={64} height={64} className="" />
-                        <span className="font-bold text-white text-lg">Admin Portal</span>
-                    </Link>
-                    <span className="text-gray-400">/</span>
-                    <span className="text-white font-medium">All Users</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="bg-[#2f6fed] text-white px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">
-                        God Mode
-                    </div>
-                    <a href="/auth/signout" className="text-sm font-semibold hover:opacity-80 transition-colors" style={{ color: 'white' }}>
-                        Logout
-                    </a>
-                </div>
-            </nav>
+        <>
 
             {/* Debug Banner */}
             <div className="bg-yellow-100 border-b border-yellow-300 px-5 py-3 text-sm">
@@ -218,6 +199,6 @@ export default async function CandidatesPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
