@@ -13,7 +13,9 @@ export default async function ProfileRedirector() {
 
     const userType = user.user_metadata?.user_type;
 
-    if (userType === "employer") {
+    if (userType === "admin") {
+        redirect("/admin");
+    } else if (userType === "employer") {
         redirect("/profile/employer");
     } else {
         redirect("/profile/worker");

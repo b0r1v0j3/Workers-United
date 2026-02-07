@@ -58,7 +58,7 @@ export function SignupForm({ userType }: SignupFormProps) {
                 return;
             }
 
-            // If auto-confirmed, redirect to appropriate dashboard
+            // If auto-confirmed, redirect to appropriate profile page
             router.push(userType === "employer" ? "/profile/employer" : "/profile/worker");
             router.refresh();
         } catch (err: unknown) {
