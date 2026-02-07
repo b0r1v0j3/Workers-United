@@ -26,10 +26,6 @@
     {
       "path": "/api/cron/check-expiry",
       "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron-email",
-      "schedule": "*/5 * * * *"
     }
   ]
 }
