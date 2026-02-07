@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { SignaturePad } from "@/components/SignaturePad";
 
 // Country codes for phone input
 const COUNTRY_CODES = [
@@ -568,30 +567,6 @@ export default function OnboardingPage() {
                     </div>
                 </div>
 
-                {/* Section 3: Signature */}
-                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4">
-                    <h2 className="text-lg font-bold text-[#050505] mb-2">✍️ Digital Signature</h2>
-                    <p className="text-sm text-[#65676b] mb-4">Sign to confirm your application is accurate.</p>
-
-                    {formData.signatureData ? (
-                        <div className="space-y-3">
-                            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-center gap-2">
-                                ✓ Signature already saved
-                            </div>
-                            <button
-                                onClick={() => updateField("signatureData", "")}
-                                className="text-sm text-[#1877f2] font-semibold hover:underline"
-                            >
-                                Re-sign
-                            </button>
-                        </div>
-                    ) : (
-                        <SignaturePad
-                            onSave={handleSignatureSave}
-                            agreementText="I confirm that all information provided is accurate and I agree to the Terms of Service and Privacy Policy."
-                        />
-                    )}
-                </div>
 
                 {/* SAVE BUTTON */}
                 <div className="flex items-center gap-4">
