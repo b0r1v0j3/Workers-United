@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-07
+> **Poslednje ažuriranje:** 2026-02-07 (logo fix)
 
 ---
 
@@ -114,6 +114,13 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Jednostavno i čisto** — profil → dokumenta → verifikacija → čekanje
 - **Sajt je 100% na engleskom jeziku**
 - **Mobile-first** — većina korisnika će koristiti mobilne telefone
+
+### Logo:
+- **Fajl:** `public/logo.png` — plavi heksagon sa belim rukovanjem na BELOJ pozadini (NE plava pozadina). Veličina fajla ~26KB.
+- **NIKAD NE MENJAJ logo.png** — ne generiši novi, ne kopiraj screenshot, ne zamenjuj drugim fajlom. Ako korisnik traži promenu loga, koristi samo fajl koji korisnik eksplicitno pruži.
+- **Veličina u navbar-u:** `h-20` — NE MENJAJ OVU VREDNOST. Korisnik je eksplicitno tražio h-20.
+- **Layout u navbar-u:** ikona levo + tekst "Workers United" desno (`flex items-center gap-2`)
+- **`logo-full.jpg`** — full logo sa plavom pozadinom, koristi se za OG/meta slike, NE za navbar
 
 ### URL Struktura:
 - `/profile` — auto-redirect na worker ili employer
