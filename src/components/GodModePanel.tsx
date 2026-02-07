@@ -29,9 +29,11 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
 
             if (response.ok) {
                 if (action === "switch_to_employer") {
-                    window.location.href = "/profile";
+                    window.location.href = "/profile/employer";
+                } else if (action === "switch_to_admin") {
+                    window.location.href = "/admin";
                 } else {
-                    window.location.href = "/profile";
+                    window.location.href = "/profile/worker";
                 }
             }
         } finally {
@@ -92,6 +94,13 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                                 className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 text-gray-700 disabled:opacity-50"
                             >
                                 🏢 Switch to Employer
+                            </button>
+                            <button
+                                onClick={() => handleRoleSwitch("switch_to_admin")}
+                                disabled={loading}
+                                className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 text-gray-700 disabled:opacity-50"
+                            >
+                                ⚡ Switch to Admin
                             </button>
                         </div>
                     </div>
