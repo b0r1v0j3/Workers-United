@@ -55,7 +55,7 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
             {userType === 'employer' && (
                 <>
                     <SidebarLink href="/profile/employer/jobs" icon="💼" label="Job Postings" />
-                    <SidebarLink href="/employer/candidates" icon="👥" label="Candidates" />
+                    <SidebarLink href="/profile/employer/jobs" icon="👥" label="Candidates" />
                 </>
             )}
         </div>

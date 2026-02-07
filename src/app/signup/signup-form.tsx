@@ -59,7 +59,7 @@ export function SignupForm({ userType }: SignupFormProps) {
             }
 
             // If auto-confirmed, redirect to appropriate dashboard
-            router.push(userType === "employer" ? "/employer/profile" : "/profile/profile");
+            router.push(userType === "employer" ? "/profile/employer" : "/profile/worker");
             router.refresh();
         } catch (err: unknown) {
             // Show more specific error message
