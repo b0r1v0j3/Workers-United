@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isGodModeUser } from "@/lib/godmode";
 import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +49,7 @@ export default async function DashboardPage() {
     // Calculate verified count from actual documents
     const verifiedDocs = documents?.filter(d => d.status === 'verified') || [];
     const verifiedCount = verifiedDocs.length;
-    const isReady = verifiedCount >= 3; // passport, photo, diploma
+    const isReady = verifiedCount >= 3;
     const inQueue = candidate?.status === "IN_QUEUE";
 
     // Calculate profile completion
@@ -79,59 +77,4 @@ export default async function DashboardPage() {
             inQueue={inQueue}
         />
     );
-}
-
-function ProfileTab({ label, active }: { label: string, active?: boolean }) {
-    return (
-        <div className={`px-4 py-3 font-semibold text-[15px] cursor-pointer relative ${active ? "text-[#1877f2]" : "text-[#65676b] hover:bg-gray-100 rounded-lg"}`}>
-            {label}
-            {active && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1877f2]" />}
-        </div>
-    )
-}
-
-function IntroItem({ icon, text }: { icon: string, text: string }) {
-    return (
-        <div className="flex items-center gap-3 text-[#050505]">
-            <div className="text-xl text-gray-400">{icon}</div>
-            <span>{text}</span>
-        </div>
-    )
-}
-
-function FeedPost({ author, time, avatar, text, children }: { author: string, time: string, avatar: string, text: string, children?: React.ReactNode }) {
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3 mb-3">
-                <img src={avatar} className="w-10 h-10 rounded-full object-cover" />
-                <div>
-                    <div className="font-bold text-[#050505] text-[15px]">{author}</div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1">
-                        {time} • <span>🌍</span>
-                    </div>
-                </div>
-                <div className="ml-auto text-gray-400 hover:bg-gray-100 p-2 rounded-full cursor-pointer">...</div>
-            </div>
-
-            <div className="text-[15px] text-[#050505] leading-normal whitespace-pre-wrap mb-2">
-                {text}
-            </div>
-
-            {children}
-
-            <hr className="my-3 border-gray-200" />
-
-            <div className="flex gap-1">
-                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-1.5 rounded text-gray-500 font-semibold text-[14px]">
-                    👍 Like
-                </div>
-                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-1.5 rounded text-gray-500 font-semibold text-[14px]">
-                    💬 Comment
-                </div>
-                <div className="flex-1 flex items-center justify-center gap-2 hover:bg-gray-100 py-1.5 rounded text-gray-500 font-semibold text-[14px]">
-                    ↗️ Share
-                </div>
-            </div>
-        </div>
-    )
 }
