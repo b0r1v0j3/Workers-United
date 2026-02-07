@@ -36,7 +36,6 @@ export default async function PrivacyPolicyPage() {
                         </div>
                         <div>
                             <h1 className="text-3xl font-bold text-white">Privacy Policy</h1>
-                            <p className="text-white/70 text-sm mt-1">Last updated: February 2026</p>
                         </div>
                     </div>
                     <p className="text-white/80 max-w-2xl">
