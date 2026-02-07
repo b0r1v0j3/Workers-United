@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -20,12 +19,10 @@ export default function UnifiedNavbar({ variant, user }: UnifiedNavbarProps) {
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-                        <Image
+                        <img
                             src="/logo.png"
                             alt="Workers United"
-                            width={36}
-                            height={36}
-                            className="w-9 h-9 object-contain"
+                            className="h-10 w-auto object-contain"
                         />
                         <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
                             Workers United
