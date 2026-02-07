@@ -130,6 +130,11 @@ export async function POST(request: NextRequest) {
                 break;
 
             case "switch_to_admin":
+                // Update auth metadata
+                await supabase.auth.updateUser({
+                    data: { user_type: "admin" }
+                });
+                // Update profiles table
                 await supabase
                     .from("profiles")
                     .update({ user_type: "admin" })
