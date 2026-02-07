@@ -193,11 +193,11 @@ export default function EmployerProfilePage() {
     return (
         <div className="min-h-screen bg-[#f0f2f5]">
             {/* Facebook-style Top Nav */}
-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
-                <div className="max-w-[900px] mx-auto px-4">
-                    <div className="flex justify-between h-14 items-center">
+            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
+                <div className="max-w-[900px] mx-auto px-4 h-full">
+                    <div className="flex justify-between h-full items-center">
                         <Link href="/" className="flex items-center gap-2">
-                            <img src="/logo.png" alt="Workers United" className="h-20 w-auto object-contain" />
+                            <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
                             <span className="font-bold text-[#1877f2] text-xl tracking-tight">Workers United</span>
                         </Link>
                         <div className="flex items-center gap-2">

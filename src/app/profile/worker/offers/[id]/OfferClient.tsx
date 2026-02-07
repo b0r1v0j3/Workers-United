@@ -82,13 +82,13 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
     return (
         <div className="min-h-screen bg-[#f0f2f5]">
             {/* Header */}
-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
+            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
                 <div className="max-w-[700px] mx-auto px-4 h-full flex items-center justify-between">
                     <Link href="/profile/worker" className="flex items-center gap-2 text-[#65676b] hover:text-[#050505] text-sm font-semibold">
                         ← Back to Profile
                     </Link>
                     <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Workers United" className="h-20 w-auto object-contain" />
+                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
                         <span className="font-bold text-[#1877f2] text-xl hidden sm:inline">Workers United</span>
                     </Link>
                     <div className="w-[120px]" />

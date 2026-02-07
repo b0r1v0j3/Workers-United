@@ -15,7 +15,7 @@ export default function UnifiedNavbar({ variant, user, profileName }: UnifiedNav
     const pathname = usePathname();
 
     return (
-        <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
+        <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
             <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
