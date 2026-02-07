@@ -11,6 +11,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://workersunited.eu"),
   title: "Workers United – Legal International Hiring & Visa Support",
   description:
     "Workers United connects serious employers with reliable workers worldwide and guides both sides through the full work visa process – without fake promises or hidden conditions.",

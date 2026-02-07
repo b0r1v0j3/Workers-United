@@ -1,5 +1,5 @@
 // Notification utilities for email and dashboard alerts
-// WhatsApp can be added later with Twilio/Meta Business API
+import { sendEmail } from "@/lib/mailer";
 
 interface OfferNotificationData {
   candidateEmail: string;
@@ -33,7 +33,6 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
     timeZoneName: "short",
   });
 
-  // Email content
   const emailSubject = `🎉 Job Offer: ${data.jobTitle} - Action Required in 24 Hours`;
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -92,21 +91,16 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
     </div>
   `;
 
-  // TODO: Integrate with email service (Resend, SendGrid, etc.)
-  console.log("=== OFFER NOTIFICATION ===");
-  console.log("To:", data.candidateEmail);
-  console.log("Subject:", emailSubject);
-  console.log("Offer ID:", data.offerId);
-  console.log("Expires:", formattedExpiry);
-  console.log("==========================");
-
-  // For now, just log. Replace with actual email sending:
-  // await resend.emails.send({
-  //   from: 'Workers United <offers@workersunited.eu>',
-  //   to: data.candidateEmail,
-  //   subject: emailSubject,
-  //   html: emailBody,
-  // });
+  try {
+    const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
+    if (result.success) {
+      console.log(`✅ Offer notification sent to ${data.candidateEmail}`);
+    } else {
+      console.error(`❌ Failed to send offer notification: ${result.error}`);
+    }
+  } catch (err) {
+    console.error("Offer notification error:", err);
+  }
 }
 
 export async function sendOfferExpiredNotification(data: OfferExpiredData): Promise<void> {
@@ -140,11 +134,16 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
     </div>
   `;
 
-  console.log("=== OFFER EXPIRED NOTIFICATION ===");
-  console.log("To:", data.candidateEmail);
-  console.log("Subject:", emailSubject);
-  console.log("Queue Position:", data.queuePosition);
-  console.log("==================================");
+  try {
+    const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
+    if (result.success) {
+      console.log(`✅ Offer expired notification sent to ${data.candidateEmail}`);
+    } else {
+      console.error(`❌ Failed to send expired notification: ${result.error}`);
+    }
+  } catch (err) {
+    console.error("Offer expired notification error:", err);
+  }
 }
 
 export async function sendQueueJoinedNotification(data: {
@@ -152,8 +151,55 @@ export async function sendQueueJoinedNotification(data: {
   candidateName: string;
   queuePosition: number;
 }): Promise<void> {
-  console.log("=== QUEUE JOINED NOTIFICATION ===");
-  console.log("To:", data.candidateEmail);
-  console.log("Queue Position:", data.queuePosition);
-  console.log("=================================");
+  const emailSubject = "🎯 You're in the queue! Job search started";
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%); padding: 30px; text-align: center;">
+        <h1 style="color: white; margin: 0;">🎯 You're In!</h1>
+        <p style="color: rgba(255,255,255,0.9); margin-top: 10px;">Your job search has started</p>
+      </div>
+      
+      <div style="padding: 30px; background: #f9fafb;">
+        <p>Dear ${data.candidateName},</p>
+        
+        <p>Your payment has been confirmed and you're now active in our job matching queue!</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10B981; text-align: center;">
+          <p style="margin: 0; font-size: 14px; color: #6B7280;">Your queue position</p>
+          <p style="margin: 10px 0 0; font-size: 36px; font-weight: bold; color: #1E3A5F;">#${data.queuePosition}</p>
+        </div>
+        
+        <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0; color: #166534;"><strong>What happens next:</strong></p>
+          <ul style="margin: 10px 0 0; padding-left: 20px; color: #166534;">
+            <li>We match your profile with employer requests</li>
+            <li>You'll receive a notification when matched</li>
+            <li>Accept within 24 hours to secure the position</li>
+          </ul>
+        </div>
+        
+        <p style="color: #6B7280; font-size: 14px;">
+          <strong>90-Day Guarantee:</strong> If we don't find you a job within 90 days, you'll get a full refund.
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
+        
+        <p style="color: #6B7280; font-size: 12px; text-align: center;">
+          Workers United - Legal International Hiring<br>
+          Questions? Reply to this email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
+    if (result.success) {
+      console.log(`✅ Queue joined notification sent to ${data.candidateEmail}`);
+    } else {
+      console.error(`❌ Failed to send queue notification: ${result.error}`);
+    }
+  } catch (err) {
+    console.error("Queue joined notification error:", err);
+  }
 }
