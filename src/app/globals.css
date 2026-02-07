@@ -193,8 +193,15 @@ section {
 
 .btn-primary {
   background: linear-gradient(135deg, #2f6fed, #1c4dd6);
-  color: #fff;
+  color: #fff !important;
   box-shadow: 0 12px 30px rgba(47, 111, 237, 0.5);
+}
+
+/* Force white text on all blue background buttons/links */
+[class*="bg-[#1877f2]"],
+[class*="bg-[#166fe5]"],
+[class*="bg-[#2f6fed]"] {
+  color: #ffffff !important;
 }
 
 .btn-ghost {
