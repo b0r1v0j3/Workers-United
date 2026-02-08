@@ -47,7 +47,7 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
             {/* Floating God Mode Button — shows current role */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-all font-bold text-sm flex items-center gap-2"
+                className="fixed top-[72px] right-3 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-full shadow-lg hover:shadow-xl transition-all font-bold text-xs flex items-center gap-1.5"
             >
                 ⚡ God Mode
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold ${current.color}`}>
@@ -57,7 +57,7 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
 
             {/* God Mode Panel */}
             {isOpen && (
-                <div className="fixed bottom-16 right-4 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 w-72 overflow-hidden">
+                <div className="fixed top-[110px] right-3 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 w-72 overflow-hidden">
                     {/* Header with current role */}
                     <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3">
                         <div className="text-white font-bold flex items-center gap-2">
