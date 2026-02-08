@@ -142,7 +142,7 @@ export default function CreateJobClient() {
                         </Link>
                         <div className="flex items-center gap-2">
                             <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                            <span className="font-bold text-[#1877f2]">Workers United</span>
+                            <span className="font-bold text-[#1E3A5F]">Workers United</span>
                         </div>
                     </div>
                 </div>

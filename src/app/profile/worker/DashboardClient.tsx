@@ -70,7 +70,7 @@ export default function DashboardClient({
                 <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
                         <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                        <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
+                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline tracking-tight">
                             Workers United
                         </span>
                     </Link>
