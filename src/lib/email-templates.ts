@@ -98,7 +98,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                     
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="https://workersunited.eu/onboarding" style="${buttonStyle}">
+                        <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle}">
                             Complete Your Profile
                         </a>
                     </div>
