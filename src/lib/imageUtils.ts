@@ -1,13 +1,37 @@
 /**
- * Client-side image processing for biometric photo uploads.
- * Handles EXIF rotation and center-cropping to passport photo ratio.
+ * Client-side image processing for document uploads.
+ * Handles EXIF rotation for all images and center-cropping for biometric photos.
  */
 
 const BIOMETRIC_WIDTH = 600;
 const BIOMETRIC_HEIGHT = 770; // ~35x45mm ratio (7:9)
 
 /**
- * Fix EXIF orientation and auto-crop to biometric photo ratio.
+ * Fix EXIF orientation for any image.
+ * Returns a new File with correct rotation applied.
+ */
+export async function fixImageOrientation(file: File): Promise<File> {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+
+    const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.92)
+    );
+
+    return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+    });
+}
+
+/**
+ * Fix EXIF orientation and auto-crop to biometric photo ratio (7:9).
  * Returns a new File ready for upload.
  */
 export async function processBiometricPhoto(file: File): Promise<File> {
