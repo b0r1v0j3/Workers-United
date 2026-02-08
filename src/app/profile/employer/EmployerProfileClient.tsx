@@ -1,23 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 
+// ─── Types ──────────────────────────────────────────────────────
 interface EmployerProfile {
     id: string;
     company_name: string;
     pib: string | null;
     company_registration_number: string | null;
-    accommodation_address: string | null;
     company_address: string | null;
     contact_phone: string | null;
-    workers_needed: number | null;
-    job_description: string | null;
-    salary_range: string | null;
-    work_location: string | null;
     status: string;
     website: string | null;
     industry: string | null;
@@ -26,169 +22,325 @@ interface EmployerProfile {
     description: string | null;
     country: string | null;
     city: string | null;
-    work_city: string | null;
 }
 
+interface JobRequest {
+    id: string;
+    title: string;
+    description: string | null;
+    industry: string;
+    positions_count: number;
+    positions_filled: number;
+    salary_rsd: number | null;
+    accommodation_address: string | null;
+    work_schedule: string | null;
+    contract_duration_months: number | null;
+    experience_required_years: number | null;
+    destination_country: string;
+    status: string;
+    created_at: string;
+}
+
+// ─── Shared styles ──────────────────────────────────────────────
+const inputClass = "w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
+const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
+const cardClass = "bg-white rounded-lg shadow-sm border border-gray-200";
+const cardHeaderClass = "px-4 py-3 border-b border-gray-200 flex items-center justify-between";
+
+// ─── Main Component ─────────────────────────────────────────────
 export default function EmployerProfilePage() {
     const router = useRouter();
     const supabase = createClient();
 
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [employer, setEmployer] = useState<EmployerProfile | null>(null);
+    const [jobs, setJobs] = useState<JobRequest[]>([]);
 
-    const [formData, setFormData] = useState({
-        company_name: "",
-        pib: "",
-        company_registration_number: "",
-        company_address: "",
-        accommodation_address: "",
-        contact_phone: "",
-        workers_needed: "1",
-        job_description: "",
-        salary_range: "",
-        work_location: "",
-        country: "",
-        city: "",
-        work_city: "",
-        website: "",
-        industry: "",
-        company_size: "",
-        founded_year: "",
-        description: "",
+    // ─ Company info state
+    const [editing, setEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [companyAlert, setCompanyAlert] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+    const [companyForm, setCompanyForm] = useState({
+        company_name: "", pib: "", company_registration_number: "",
+        company_address: "", contact_phone: "", country: "", city: "",
+        website: "", industry: "", company_size: "", founded_year: "", description: "",
     });
 
-    useEffect(() => {
-        async function fetchProfile() {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) {
-                    router.push("/login");
-                    return;
-                }
-                setUser(user);
+    // ─ Job posting state
+    const [postingJob, setPostingJob] = useState(false);
+    const [jobAlert, setJobAlert] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+    const emptyJob = {
+        title: "", description: "", industry: "",
+        positions_count: "1", salary_rsd: "60000",
+        accommodation_address: "", work_schedule: "Full-time (40 hours/week)",
+        contract_duration_months: "12", experience_required_years: "0",
+    };
+    const [jobForm, setJobForm] = useState({ ...emptyJob });
 
-                const { data: emp } = await supabase
-                    .from("employers")
-                    .select("*")
-                    .eq("profile_id", user.id)
-                    .single();
+    // ─ Editing existing job state
+    const [editingJobId, setEditingJobId] = useState<string | null>(null);
+    const [editJobForm, setEditJobForm] = useState({ ...emptyJob });
+    const [savingJob, setSavingJob] = useState(false);
 
-                if (emp) {
-                    setEmployer(emp);
-                    setFormData({
-                        company_name: emp.company_name || "",
-                        pib: emp.pib || "",
-                        company_registration_number: emp.company_registration_number || "",
-                        company_address: emp.company_address || "",
-                        accommodation_address: emp.accommodation_address || "",
-                        contact_phone: emp.contact_phone || "",
-                        workers_needed: emp.workers_needed?.toString() || "1",
-                        job_description: emp.job_description || "",
-                        salary_range: emp.salary_range || "",
-                        work_location: emp.work_location || "",
-                        country: emp.country || "",
-                        city: emp.city || "",
-                        work_city: emp.work_city || "",
-                        website: emp.website || "",
-                        industry: emp.industry || "",
-                        company_size: emp.company_size || "",
-                        founded_year: emp.founded_year || "",
-                        description: emp.description || "",
-                    });
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
+    // ─── Data fetching ──────────────────────────────────────────
+    const fetchData = useCallback(async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { router.push("/login"); return; }
+            setUser(user);
+
+            const { data: emp } = await supabase
+                .from("employers").select("*")
+                .eq("profile_id", user.id).single();
+
+            if (emp) {
+                setEmployer(emp);
+                setCompanyForm({
+                    company_name: emp.company_name || "",
+                    pib: emp.pib || "",
+                    company_registration_number: emp.company_registration_number || "",
+                    company_address: emp.company_address || "",
+                    contact_phone: emp.contact_phone || "",
+                    country: emp.country || "",
+                    city: emp.city || "",
+                    website: emp.website || "",
+                    industry: emp.industry || "",
+                    company_size: emp.company_size || "",
+                    founded_year: emp.founded_year || "",
+                    description: emp.description || "",
+                });
+
+                const { data: jobData } = await supabase
+                    .from("job_requests").select("*")
+                    .eq("employer_id", emp.id)
+                    .order("created_at", { ascending: false });
+                setJobs(jobData || []);
+            } else {
+                setEditing(true); // New employer, start in edit mode
             }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
-        fetchProfile();
     }, [supabase, router]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError("");
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    // ─── Company info handlers ──────────────────────────────────
+    const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setCompanyForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const saveCompany = async () => {
         setSaving(true);
-
+        setCompanyAlert(null);
         try {
-            if (formData.pib && !/^\d{9}$/.test(formData.pib)) {
-                throw new Error("Tax ID must be exactly 9 digits");
+            if (!companyForm.company_name.trim()) throw new Error("Company name is required");
+            if (companyForm.pib && !/^\d{9}$/.test(companyForm.pib)) throw new Error("Tax ID must be exactly 9 digits");
+            if (companyForm.company_registration_number && !/^\d{8}$/.test(companyForm.company_registration_number))
+                throw new Error("Registration Number must be exactly 8 digits");
+            if (companyForm.contact_phone) {
+                const clean = companyForm.contact_phone.replace(/[\s\-()]/g, '');
+                if (!/^\+\d{7,15}$/.test(clean)) throw new Error("Phone must start with + and country code");
             }
 
-            if (formData.company_registration_number && !/^\d{8}$/.test(formData.company_registration_number)) {
-                throw new Error("Company Registration Number must be exactly 8 digits");
-            }
-
-            if (!formData.company_name.trim()) {
-                throw new Error("Company name is required");
-            }
-
-            // Validate phone format for WhatsApp compatibility
-            if (formData.contact_phone) {
-                const cleanPhone = formData.contact_phone.replace(/[\s\-()]/g, '');
-                if (!/^\+\d{7,15}$/.test(cleanPhone)) {
-                    throw new Error("Phone number must start with + and country code (e.g., +381111234567)");
-                }
-            }
-
-            const updateData = {
-                company_name: formData.company_name,
-                pib: formData.pib || null,
-                company_registration_number: formData.company_registration_number || null,
-                company_address: formData.company_address || null,
-                accommodation_address: formData.accommodation_address || null,
-                contact_phone: formData.contact_phone ? formData.contact_phone.replace(/[\s\-()]/g, '') : null,
-                workers_needed: parseInt(formData.workers_needed) || 1,
-                job_description: formData.job_description || null,
-                salary_range: formData.salary_range || null,
-                work_location: formData.work_location || null,
-                country: formData.country || null,
-                city: formData.city || null,
-                work_city: formData.work_city || null,
-                website: formData.website || null,
-                industry: formData.industry || null,
-                company_size: formData.company_size || null,
-                founded_year: formData.founded_year || null,
-                description: formData.description || null,
+            const data = {
+                company_name: companyForm.company_name,
+                pib: companyForm.pib || null,
+                company_registration_number: companyForm.company_registration_number || null,
+                company_address: companyForm.company_address || null,
+                contact_phone: companyForm.contact_phone ? companyForm.contact_phone.replace(/[\s\-()]/g, '') : null,
+                country: companyForm.country || null,
+                city: companyForm.city || null,
+                website: companyForm.website || null,
+                industry: companyForm.industry || null,
+                company_size: companyForm.company_size || null,
+                founded_year: companyForm.founded_year || null,
+                description: companyForm.description || null,
             };
 
             if (employer) {
-                const { error: updateError } = await supabase
-                    .from("employers")
-                    .update(updateData)
-                    .eq("id", employer.id);
-                if (updateError) throw updateError;
+                const { error } = await supabase.from("employers").update(data).eq("id", employer.id);
+                if (error) throw error;
             } else {
-                const { error: insertError } = await supabase
-                    .from("employers")
-                    .insert({ ...updateData, profile_id: user.id, status: "pending" });
-                if (insertError) throw insertError;
+                const { error } = await supabase.from("employers")
+                    .insert({ ...data, profile_id: user.id, status: "pending" });
+                if (error) throw error;
             }
 
-            setSuccess(true);
-            const { data: emp } = await supabase
-                .from("employers")
-                .select("*")
-                .eq("profile_id", user.id)
-                .single();
+            // Refresh employer data
+            const { data: emp } = await supabase.from("employers").select("*")
+                .eq("profile_id", user.id).single();
             if (emp) setEmployer(emp);
-            setTimeout(() => setSuccess(false), 3000);
+
+            setCompanyAlert({ type: "success", msg: "Company info saved!" });
+            setEditing(false);
+            setTimeout(() => setCompanyAlert(null), 3000);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to save");
+            setCompanyAlert({ type: "error", msg: err instanceof Error ? err.message : "Failed to save" });
         } finally {
             setSaving(false);
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const cancelEdit = () => {
+        if (employer) {
+            setCompanyForm({
+                company_name: employer.company_name || "",
+                pib: employer.pib || "",
+                company_registration_number: employer.company_registration_number || "",
+                company_address: employer.company_address || "",
+                contact_phone: employer.contact_phone || "",
+                country: employer.country || "",
+                city: employer.city || "",
+                website: employer.website || "",
+                industry: employer.industry || "",
+                company_size: employer.company_size || "",
+                founded_year: employer.founded_year || "",
+                description: employer.description || "",
+            });
+        }
+        setEditing(false);
+        setCompanyAlert(null);
     };
 
+    // ─── Job posting handlers ───────────────────────────────────
+    const handleJobChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setJobForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const submitJob = async () => {
+        setPostingJob(true);
+        setJobAlert(null);
+        try {
+            if (!employer) throw new Error("Please save your company info first");
+            if (!employer.pib) throw new Error("Please add your Tax ID (PIB) to company info first");
+            if (!jobForm.title.trim()) throw new Error("Job title is required");
+            if (!jobForm.industry) throw new Error("Industry is required");
+            if (Number(jobForm.salary_rsd) < 60000) throw new Error("Minimum salary is 60,000 RSD");
+            if (!jobForm.accommodation_address.trim()) throw new Error("Accommodation address is required for visa");
+
+            const { error } = await supabase.from("job_requests").insert({
+                employer_id: employer.id,
+                title: jobForm.title,
+                description: jobForm.description || null,
+                industry: jobForm.industry,
+                positions_count: parseInt(jobForm.positions_count) || 1,
+                salary_rsd: parseInt(jobForm.salary_rsd) || 60000,
+                accommodation_address: jobForm.accommodation_address,
+                work_schedule: jobForm.work_schedule,
+                contract_duration_months: parseInt(jobForm.contract_duration_months) || 12,
+                experience_required_years: parseInt(jobForm.experience_required_years) || 0,
+                destination_country: "Serbia",
+                status: "open",
+            });
+            if (error) throw error;
+
+            // Refresh jobs list
+            const { data: jobData } = await supabase.from("job_requests")
+                .select("*").eq("employer_id", employer.id)
+                .order("created_at", { ascending: false });
+            setJobs(jobData || []);
+
+            setJobForm({ ...emptyJob });
+            setJobAlert({ type: "success", msg: "Job posted successfully!" });
+            setTimeout(() => setJobAlert(null), 3000);
+        } catch (err) {
+            setJobAlert({ type: "error", msg: err instanceof Error ? err.message : "Failed to post job" });
+        } finally {
+            setPostingJob(false);
+        }
+    };
+
+    // ─── Edit existing job handlers ─────────────────────────────
+    const startEditJob = (job: JobRequest) => {
+        setEditingJobId(job.id);
+        setEditJobForm({
+            title: job.title,
+            description: job.description || "",
+            industry: job.industry,
+            positions_count: job.positions_count.toString(),
+            salary_rsd: job.salary_rsd?.toString() || "60000",
+            accommodation_address: job.accommodation_address || "",
+            work_schedule: job.work_schedule || "Full-time (40 hours/week)",
+            contract_duration_months: job.contract_duration_months?.toString() || "12",
+            experience_required_years: job.experience_required_years?.toString() || "0",
+        });
+    };
+
+    const saveEditJob = async () => {
+        if (!editingJobId) return;
+        setSavingJob(true);
+        try {
+            const { error } = await supabase.from("job_requests").update({
+                title: editJobForm.title,
+                description: editJobForm.description || null,
+                industry: editJobForm.industry,
+                positions_count: parseInt(editJobForm.positions_count) || 1,
+                salary_rsd: parseInt(editJobForm.salary_rsd) || 60000,
+                accommodation_address: editJobForm.accommodation_address || null,
+                work_schedule: editJobForm.work_schedule,
+                contract_duration_months: parseInt(editJobForm.contract_duration_months) || 12,
+                experience_required_years: parseInt(editJobForm.experience_required_years) || 0,
+            }).eq("id", editingJobId);
+            if (error) throw error;
+
+            const { data: jobData } = await supabase.from("job_requests")
+                .select("*").eq("employer_id", employer!.id)
+                .order("created_at", { ascending: false });
+            setJobs(jobData || []);
+            setEditingJobId(null);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Failed to update job");
+        } finally {
+            setSavingJob(false);
+        }
+    };
+
+    const deleteJob = async (jobId: string) => {
+        if (!confirm("Are you sure you want to delete this job posting?")) return;
+        try {
+            const { error } = await supabase.from("job_requests").delete().eq("id", jobId);
+            if (error) throw error;
+            setJobs(prev => prev.filter(j => j.id !== jobId));
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Failed to delete job");
+        }
+    };
+
+    // ─── Industry select helper ─────────────────────────────────
+    const IndustrySelect = ({ value, onChange, name = "industry", cls = inputClass }: {
+        value: string; onChange: (val: string) => void; name?: string; cls?: string;
+    }) => (
+        <>
+            <select
+                name={name}
+                value={value.startsWith("Other:") ? "Other" : value}
+                onChange={(e) => onChange(e.target.value)}
+                className={cls}
+            >
+                <option value="">Select industry...</option>
+                {EMPLOYER_INDUSTRIES.map(ind => (
+                    <option key={ind} value={ind}>{ind}</option>
+                ))}
+            </select>
+            {(value === "Other" || value.startsWith("Other:")) && (
+                <input
+                    type="text"
+                    placeholder="Specify your industry..."
+                    value={value.startsWith("Other:") ? value.replace("Other: ", "") : ""}
+                    onChange={(e) => onChange(e.target.value ? `Other: ${e.target.value}` : "Other")}
+                    className={`${cls} mt-2`}
+                />
+            )}
+        </>
+    );
+
+    // ─── Loading ────────────────────────────────────────────────
     if (loading) {
         return (
             <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
@@ -197,9 +349,10 @@ export default function EmployerProfilePage() {
         );
     }
 
+    // ─── Render ─────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-[#f0f2f5]">
-            {/* Facebook-style Top Nav */}
+            {/* Top Nav */}
             <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
                 <div className="max-w-[900px] mx-auto px-4 h-full">
                     <div className="flex justify-between h-full items-center">
@@ -225,351 +378,392 @@ export default function EmployerProfilePage() {
                 </div>
             </nav>
 
-            <div className="max-w-[900px] mx-auto px-4 py-6">
+            <div className="max-w-[900px] mx-auto px-4 py-6 space-y-6">
+
                 {/* Page Header */}
-                <div className="mb-6">
+                <div>
                     <h1 className="text-2xl font-bold text-gray-900">Company Profile</h1>
-                    <p className="text-gray-500 mt-1">Manage your company information and hiring preferences</p>
+                    <p className="text-gray-500 mt-1">Manage your company and job postings</p>
                 </div>
 
-                {/* Alerts */}
-                {success && (
-                    <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Profile saved successfully!
-                    </div>
-                )}
-                {error && (
-                    <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit}>
-                    <div className="space-y-4">
-                        {/* Basic Info Card */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Company Information</h2>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${employer?.status === 'active' ? 'bg-green-100 text-green-700' :
-                                    employer?.status === 'verified' ? 'bg-blue-100 text-blue-700' :
-                                        'bg-amber-100 text-amber-700'
+                {/* ═══════════════ CARD 1: Company Info ═══════════════ */}
+                <div className={cardClass}>
+                    <div className={cardHeaderClass}>
+                        <h2 className="font-semibold text-gray-900 text-[15px]">Company Information</h2>
+                        <div className="flex items-center gap-2">
+                            {employer && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${employer.status === 'active' ? 'bg-green-100 text-green-700' :
+                                        employer.status === 'verified' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-amber-100 text-amber-700'
                                     }`}>
-                                    {employer?.status?.toUpperCase() || 'NEW'}
+                                    {employer.status?.toUpperCase() || 'NEW'}
                                 </span>
-                            </div>
-                            <div className="p-4 space-y-4">
-                                {/* Row 1 */}
+                            )}
+                            {!editing && employer && (
+                                <button
+                                    onClick={() => setEditing(true)}
+                                    className="text-[13px] font-semibold text-[#1877f2] hover:underline"
+                                >
+                                    Edit
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Alert */}
+                    {companyAlert && (
+                        <div className={`mx-4 mt-3 px-4 py-2.5 rounded-lg text-sm font-medium ${companyAlert.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                            }`}>
+                            {companyAlert.msg}
+                        </div>
+                    )}
+
+                    <div className="p-4">
+                        {editing ? (
+                            /* ── Edit Mode ── */
+                            <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Company Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="company_name"
-                                            required
-                                            value={formData.company_name}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="e.g., ABC Construction d.o.o."
-                                        />
+                                        <label className={labelClass}>Company Name <span className="text-red-500">*</span></label>
+                                        <input type="text" name="company_name" required value={companyForm.company_name} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., ABC Construction d.o.o." />
                                     </div>
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Tax ID <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="pib"
-                                            value={formData.pib}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="123456789"
-                                            maxLength={9}
-                                        />
+                                        <label className={labelClass}>Tax ID (PIB) <span className="text-red-500">*</span></label>
+                                        <input type="text" name="pib" value={companyForm.pib} onChange={handleCompanyChange} className={inputClass} placeholder="123456789" maxLength={9} />
                                         <p className="text-[11px] text-gray-500 mt-1">9 digits — Tax Identification Number</p>
                                     </div>
                                 </div>
 
-                                {/* Row 1b - Registration Number */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Company Registration Number <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="company_registration_number"
-                                            value={formData.company_registration_number}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="12345678"
-                                            maxLength={8}
-                                        />
-                                        <p className="text-[11px] text-gray-500 mt-1">8 digits — Company Registration Number, required for e-Uprava visa</p>
+                                        <label className={labelClass}>Registration Number <span className="text-red-500">*</span></label>
+                                        <input type="text" name="company_registration_number" value={companyForm.company_registration_number} onChange={handleCompanyChange} className={inputClass} placeholder="12345678" maxLength={8} />
+                                        <p className="text-[11px] text-gray-500 mt-1">8 digits — required for e-Uprava visa</p>
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Industry</label>
+                                        <IndustrySelect value={companyForm.industry} onChange={(v) => setCompanyForm(prev => ({ ...prev, industry: v }))} />
                                     </div>
                                 </div>
 
-                                {/* Row 2: Country + City + Company Size */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Country <span className="text-red-500">*</span>
-                                        </label>
-                                        <select
-                                            name="country"
-                                            value={formData.country}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        >
+                                        <label className={labelClass}>Country <span className="text-red-500">*</span></label>
+                                        <select name="country" value={companyForm.country} onChange={handleCompanyChange} className={inputClass}>
                                             <option value="">Select country...</option>
-                                            {EUROPEAN_COUNTRIES.map(c => (
-                                                <option key={c} value={c}>{c}</option>
-                                            ))}
+                                            {EUROPEAN_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            City
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="city"
-                                            value={formData.city}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="e.g., Belgrade"
-                                        />
+                                        <label className={labelClass}>City</label>
+                                        <input type="text" name="city" value={companyForm.city} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., Belgrade" />
                                     </div>
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Company Size
-                                        </label>
-                                        <select
-                                            name="company_size"
-                                            value={formData.company_size}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        >
+                                        <label className={labelClass}>Company Size</label>
+                                        <select name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass}>
                                             <option value="">Select size...</option>
-                                            {COMPANY_SIZES.map(size => (
-                                                <option key={size} value={size}>{size}</option>
-                                            ))}
+                                            {COMPANY_SIZES.map(s => (<option key={s} value={s}>{s}</option>))}
                                         </select>
                                     </div>
                                 </div>
 
-                                {/* Row 3 */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Contact Phone
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            name="contact_phone"
-                                            value={formData.contact_phone}
+                                        <label className={labelClass}>Contact Phone</label>
+                                        <input type="tel" name="contact_phone" value={companyForm.contact_phone}
                                             onChange={(e) => {
                                                 let val = e.target.value;
                                                 if (val.length === 1 && val !== '+') val = '+' + val;
-                                                setFormData(prev => ({ ...prev, contact_phone: val }));
+                                                setCompanyForm(prev => ({ ...prev, contact_phone: val }));
                                             }}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="+381111234567"
-                                        />
-                                        <p className="text-[11px] text-gray-500 mt-1">Must include country code, e.g. +381 for Serbia</p>
+                                            className={inputClass} placeholder="+381111234567" />
+                                        <p className="text-[11px] text-gray-500 mt-1">Must include country code</p>
                                     </div>
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Website
-                                        </label>
-                                        <input
-                                            type="url"
-                                            name="website"
-                                            value={formData.website}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="https://yourcompany.com"
-                                        />
+                                        <label className={labelClass}>Website</label>
+                                        <input type="url" name="website" value={companyForm.website} onChange={handleCompanyChange} className={inputClass} placeholder="https://yourcompany.com" />
                                     </div>
                                     <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Founded Year
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="founded_year"
-                                            value={formData.founded_year}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="2010"
-                                            maxLength={4}
-                                        />
+                                        <label className={labelClass}>Founded Year</label>
+                                        <input type="text" name="founded_year" value={companyForm.founded_year} onChange={handleCompanyChange} className={inputClass} placeholder="2010" maxLength={4} />
                                     </div>
                                 </div>
 
-                                {/* Company Address */}
                                 <div>
-                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                        Company Address
-                                    </label>
-                                    <textarea
-                                        name="company_address"
-                                        value={formData.company_address}
-                                        onChange={handleChange}
-                                        rows={2}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
-                                        placeholder="Full registered business address..."
-                                    />
+                                    <label className={labelClass}>Company Address</label>
+                                    <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Full registered business address..." />
+                                </div>
+
+                                <div>
+                                    <label className={labelClass}>Company Description</label>
+                                    <textarea name="description" value={companyForm.description} onChange={handleCompanyChange} rows={3} className={`${inputClass} resize-none`} placeholder="Tell workers about your company..." />
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-2">
+                                    {employer && (
+                                        <button type="button" onClick={cancelEdit} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[14px]">
+                                            Cancel
+                                        </button>
+                                    )}
+                                    <button type="button" onClick={saveCompany} disabled={saving}
+                                        className="px-5 py-2 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium text-[14px] disabled:opacity-50 flex items-center gap-2">
+                                        {saving ? (
+                                            <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> Saving...</>
+                                        ) : "Save Changes"}
+                                    </button>
                                 </div>
                             </div>
+                        ) : (
+                            /* ── View Mode ── */
+                            <div className="space-y-3">
+                                <InfoRow label="Company Name" value={companyForm.company_name} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <InfoRow label="Tax ID (PIB)" value={companyForm.pib} />
+                                    <InfoRow label="Registration No." value={companyForm.company_registration_number} />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <InfoRow label="Country" value={companyForm.country} />
+                                    <InfoRow label="City" value={companyForm.city} />
+                                    <InfoRow label="Company Size" value={companyForm.company_size} />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <InfoRow label="Industry" value={companyForm.industry} />
+                                    <InfoRow label="Phone" value={companyForm.contact_phone} />
+                                    <InfoRow label="Website" value={companyForm.website} />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <InfoRow label="Founded" value={companyForm.founded_year} />
+                                    <InfoRow label="Address" value={companyForm.company_address} />
+                                </div>
+                                {companyForm.description && <InfoRow label="Description" value={companyForm.description} />}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ═══════════════ CARD 2: Post a Job ═══════════════ */}
+                {employer && (
+                    <div className={cardClass}>
+                        <div className={cardHeaderClass}>
+                            <h2 className="font-semibold text-gray-900 text-[15px]">📋 Post a Job</h2>
                         </div>
 
-
-                        {/* Hiring Preferences Card */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Hiring Preferences</h2>
+                        {jobAlert && (
+                            <div className={`mx-4 mt-3 px-4 py-2.5 rounded-lg text-sm font-medium ${jobAlert.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                                }`}>
+                                {jobAlert.msg}
                             </div>
-                            <div className="p-4 space-y-4">
-                                {/* Industry + Work City */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Industry
-                                        </label>
-                                        <select
-                                            name="industry"
-                                            value={formData.industry.startsWith("Other:") ? "Other" : formData.industry}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setFormData(prev => ({ ...prev, industry: val }));
-                                            }}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        >
-                                            <option value="">Select industry...</option>
-                                            {EMPLOYER_INDUSTRIES.map(ind => (
-                                                <option key={ind} value={ind}>{ind}</option>
-                                            ))}
-                                        </select>
-                                        {(formData.industry === "Other" || formData.industry.startsWith("Other:")) && (
-                                            <input
-                                                type="text"
-                                                placeholder="Specify your industry..."
-                                                value={formData.industry.startsWith("Other:") ? formData.industry.replace("Other: ", "") : ""}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value ? `Other: ${e.target.value}` : "Other" }))}
-                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] mt-2 focus:ring-2 focus:ring-[#1877f2] focus:border-transparent"
-                                            />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Work City <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="work_city"
-                                            value={formData.work_city}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="City where workers will work"
-                                        />
-                                        <p className="text-[11px] text-gray-500 mt-1">May differ from company location</p>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Workers Needed
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="workers_needed"
-                                            value={formData.workers_needed}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, workers_needed: e.target.value }))}
-                                            min={1}
-                                            max={100}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                            Salary Range (EUR/month)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="salary_range"
-                                            value={formData.salary_range}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="e.g., 1200-1500"
-                                        />
-                                    </div>
+                        )}
+
+                        <div className="p-4 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Job Title <span className="text-red-500">*</span></label>
+                                    <input type="text" name="title" value={jobForm.title} onChange={handleJobChange} className={inputClass} placeholder="e.g., Construction Worker, Welder" />
                                 </div>
                                 <div>
-                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                        Job Description
-                                    </label>
-                                    <textarea
-                                        name="job_description"
-                                        value={formData.job_description}
-                                        onChange={handleChange}
-                                        rows={4}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
-                                        placeholder="Describe typical job duties, required skills, working conditions..."
-                                    />
-                                </div>
-
-                                {/* Worker Accommodation Address */}
-                                <div>
-                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                        Worker Accommodation Address <span className="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                        name="accommodation_address"
-                                        value={formData.accommodation_address}
-                                        onChange={handleChange}
-                                        rows={2}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
-                                        placeholder="Address where international workers will be accommodated..."
-                                    />
-                                    <p className="text-[11px] text-gray-500 mt-1">⚠️ Required for visa processing</p>
+                                    <label className={labelClass}>Industry <span className="text-red-500">*</span></label>
+                                    <IndustrySelect value={jobForm.industry} onChange={(v) => setJobForm(prev => ({ ...prev, industry: v }))} />
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Save Button */}
-                        <div className="flex justify-end gap-3 pt-2">
-                            <Link
-                                href="/"
-                                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[15px]"
-                            >
-                                Cancel
-                            </Link>
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="px-5 py-2.5 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium text-[15px] disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {saving ? (
-                                    <>
-                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                        </svg>
-                                        Saving...
-                                    </>
-                                ) : (
-                                    "Save Changes"
-                                )}
-                            </button>
+                            <div>
+                                <label className={labelClass}>Job Description</label>
+                                <textarea name="description" value={jobForm.description} onChange={handleJobChange} rows={3} className={`${inputClass} resize-none`} placeholder="Describe responsibilities, requirements..." />
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label className={labelClass}>Positions <span className="text-red-500">*</span></label>
+                                    <input type="number" name="positions_count" min={1} max={50} value={jobForm.positions_count} onChange={handleJobChange} className={inputClass} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Salary (RSD) <span className="text-red-500">*</span></label>
+                                    <input type="number" name="salary_rsd" min={60000} step={1000} value={jobForm.salary_rsd} onChange={handleJobChange} className={inputClass} />
+                                    <p className="text-[11px] text-gray-500 mt-1">Min: 60,000 RSD</p>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Schedule</label>
+                                    <select name="work_schedule" value={jobForm.work_schedule} onChange={handleJobChange} className={inputClass}>
+                                        <option value="Full-time (40 hours/week)">Full-time (40h)</option>
+                                        <option value="Shift work">Shift work</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Contract</label>
+                                    <select name="contract_duration_months" value={jobForm.contract_duration_months} onChange={handleJobChange} className={inputClass}>
+                                        <option value="6">6 months</option>
+                                        <option value="12">12 months</option>
+                                        <option value="24">24 months</option>
+                                        <option value="36">36+ months</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Experience Required (years)</label>
+                                    <input type="number" name="experience_required_years" min={0} max={20} value={jobForm.experience_required_years} onChange={handleJobChange} className={inputClass} />
+                                    <p className="text-[11px] text-gray-500 mt-1">Set to 0 for no experience required</p>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Accommodation Address <span className="text-red-500">*</span></label>
+                                    <input type="text" name="accommodation_address" value={jobForm.accommodation_address} onChange={handleJobChange} className={inputClass} placeholder="Address for worker accommodation" />
+                                    <p className="text-[11px] text-gray-500 mt-1">⚠️ Required by law for visa processing</p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                                <button type="button" onClick={submitJob} disabled={postingJob}
+                                    className="px-6 py-2.5 bg-gradient-to-r from-[#10b981] to-[#059669] text-white rounded-md hover:from-[#059669] hover:to-[#047857] font-semibold text-[14px] disabled:opacity-50 flex items-center gap-2 shadow-sm">
+                                    {postingJob ? (
+                                        <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> Posting...</>
+                                    ) : "Post Job ✓"}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </form>
+                )}
+
+                {/* ═══════════════ CARD 3: Posted Jobs ═══════════════ */}
+                {employer && (
+                    <div className={cardClass}>
+                        <div className={cardHeaderClass}>
+                            <h2 className="font-semibold text-gray-900 text-[15px]">📌 Posted Jobs</h2>
+                            <span className="text-xs text-gray-500">{jobs.length} job{jobs.length !== 1 ? "s" : ""}</span>
+                        </div>
+
+                        <div className="p-4">
+                            {jobs.length === 0 ? (
+                                <div className="text-center py-8 text-gray-400">
+                                    <p className="text-lg mb-1">No jobs posted yet</p>
+                                    <p className="text-sm">Use the form above to post your first job</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {jobs.map(job => (
+                                        <div key={job.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                                            {/* Job summary row */}
+                                            <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h3 className="font-semibold text-gray-900 text-[15px]">{job.title}</h3>
+                                                        <JobStatusBadge status={job.status} />
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1 flex-wrap">
+                                                        <span>🏢 {job.industry}</span>
+                                                        <span>👥 {job.positions_filled}/{job.positions_count} positions</span>
+                                                        {job.salary_rsd && <span>💰 {job.salary_rsd.toLocaleString()} RSD</span>}
+                                                        <span>📅 {new Date(job.created_at).toLocaleDateString('en-GB')}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {editingJobId === job.id ? (
+                                                        <>
+                                                            <button onClick={() => setEditingJobId(null)} className="text-xs px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 font-medium">Cancel</button>
+                                                            <button onClick={saveEditJob} disabled={savingJob}
+                                                                className="text-xs px-3 py-1.5 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium disabled:opacity-50">
+                                                                {savingJob ? "Saving..." : "Save"}
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <button onClick={() => startEditJob(job)} className="text-xs px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 font-medium text-[#1877f2]">Edit</button>
+                                                            <button onClick={() => deleteJob(job.id)} className="text-xs px-3 py-1.5 border border-red-200 rounded-md hover:bg-red-50 font-medium text-red-600">Delete</button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Inline edit form */}
+                                            {editingJobId === job.id && (
+                                                <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className={labelClass}>Job Title</label>
+                                                            <input type="text" value={editJobForm.title} onChange={(e) => setEditJobForm(p => ({ ...p, title: e.target.value }))} className={inputClass} />
+                                                        </div>
+                                                        <div>
+                                                            <label className={labelClass}>Industry</label>
+                                                            <IndustrySelect value={editJobForm.industry} onChange={(v) => setEditJobForm(p => ({ ...p, industry: v }))} />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className={labelClass}>Description</label>
+                                                        <textarea value={editJobForm.description} onChange={(e) => setEditJobForm(p => ({ ...p, description: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
+                                                    </div>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                        <div>
+                                                            <label className={labelClass}>Positions</label>
+                                                            <input type="number" min={1} max={50} value={editJobForm.positions_count} onChange={(e) => setEditJobForm(p => ({ ...p, positions_count: e.target.value }))} className={inputClass} />
+                                                        </div>
+                                                        <div>
+                                                            <label className={labelClass}>Salary (RSD)</label>
+                                                            <input type="number" min={60000} step={1000} value={editJobForm.salary_rsd} onChange={(e) => setEditJobForm(p => ({ ...p, salary_rsd: e.target.value }))} className={inputClass} />
+                                                        </div>
+                                                        <div>
+                                                            <label className={labelClass}>Schedule</label>
+                                                            <select value={editJobForm.work_schedule} onChange={(e) => setEditJobForm(p => ({ ...p, work_schedule: e.target.value }))} className={inputClass}>
+                                                                <option value="Full-time (40 hours/week)">Full-time</option>
+                                                                <option value="Shift work">Shift work</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className={labelClass}>Contract</label>
+                                                            <select value={editJobForm.contract_duration_months} onChange={(e) => setEditJobForm(p => ({ ...p, contract_duration_months: e.target.value }))} className={inputClass}>
+                                                                <option value="6">6 months</option>
+                                                                <option value="12">12 months</option>
+                                                                <option value="24">24 months</option>
+                                                                <option value="36">36+ months</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className={labelClass}>Experience (years)</label>
+                                                            <input type="number" min={0} max={20} value={editJobForm.experience_required_years} onChange={(e) => setEditJobForm(p => ({ ...p, experience_required_years: e.target.value }))} className={inputClass} />
+                                                        </div>
+                                                        <div>
+                                                            <label className={labelClass}>Accommodation Address</label>
+                                                            <input type="text" value={editJobForm.accommodation_address} onChange={(e) => setEditJobForm(p => ({ ...p, accommodation_address: e.target.value }))} className={inputClass} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
             </div>
         </div>
+    );
+}
+
+// ─── Helper Components ──────────────────────────────────────────
+function InfoRow({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <span className="text-[12px] font-medium text-gray-500 uppercase tracking-wide">{label}</span>
+            <p className="text-[15px] text-gray-900 mt-0.5">{value || <span className="text-gray-400 italic">Not set</span>}</p>
+        </div>
+    );
+}
+
+function JobStatusBadge({ status }: { status: string }) {
+    const styles: Record<string, string> = {
+        open: "bg-emerald-100 text-emerald-700",
+        matching: "bg-blue-100 text-blue-700",
+        filled: "bg-indigo-100 text-indigo-700",
+        closed: "bg-slate-100 text-slate-700",
+        cancelled: "bg-red-100 text-red-700",
+    };
+    return (
+        <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${styles[status] || styles.closed}`}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+        </span>
     );
 }
