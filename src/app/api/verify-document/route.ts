@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { extractPassportData, verifyBiometricPhoto, verifyDiploma } from "@/lib/gemini";
+import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumentBounds, fetchImageAsBase64 } from "@/lib/gemini";
+import sharp from "sharp";
 
 export async function POST(request: Request) {
     try {
@@ -34,8 +35,64 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Could not get document URL" }, { status: 500 });
         }
 
-        const imageUrl = urlData.publicUrl;
+        let imageUrl = urlData.publicUrl;
         console.log(`[Verify] Document URL: ${imageUrl}`);
+
+        // 2.5. Smart auto-crop: detect document boundaries and crop if needed
+        if (docType === 'passport' || docType === 'diploma') {
+            try {
+                console.log(`[Verify] Detecting document boundaries for ${docType}...`);
+                const bounds = await detectDocumentBounds(imageUrl, docType);
+
+                if (bounds.found && bounds.crop) {
+                    console.log(`[Verify] Document needs cropping:`, bounds.crop);
+
+                    // Download original image
+                    const imageData = await fetchImageAsBase64(imageUrl);
+                    const imageBuffer = Buffer.from(imageData.data, 'base64');
+
+                    // Get image dimensions
+                    const metadata = await sharp(imageBuffer).metadata();
+                    const imgW = metadata.width || 1;
+                    const imgH = metadata.height || 1;
+
+                    // Convert percentage crop to pixel values
+                    const cropX = Math.round((bounds.crop.x / 100) * imgW);
+                    const cropY = Math.round((bounds.crop.y / 100) * imgH);
+                    const cropW = Math.min(Math.round((bounds.crop.width / 100) * imgW), imgW - cropX);
+                    const cropH = Math.min(Math.round((bounds.crop.height / 100) * imgH), imgH - cropY);
+
+                    if (cropW > 50 && cropH > 50) {
+                        // Crop and auto-rotate with sharp
+                        const croppedBuffer = await sharp(imageBuffer)
+                            .rotate() // auto-rotate based on EXIF
+                            .extract({ left: cropX, top: cropY, width: cropW, height: cropH })
+                            .jpeg({ quality: 92 })
+                            .toBuffer();
+
+                        // Replace the original file in storage
+                        await supabase.storage
+                            .from("candidate-docs")
+                            .update(document.storage_path, croppedBuffer, {
+                                contentType: 'image/jpeg',
+                                upsert: true
+                            });
+
+                        // Refresh URL after replacement
+                        const { data: newUrlData } = supabase.storage
+                            .from("candidate-docs")
+                            .getPublicUrl(document.storage_path);
+                        imageUrl = newUrlData?.publicUrl || imageUrl;
+
+                        console.log(`[Verify] Document auto-cropped and re-uploaded`);
+                    }
+                } else {
+                    console.log(`[Verify] No cropping needed — document fills the frame`);
+                }
+            } catch (cropErr) {
+                console.warn("[Verify] Auto-crop failed, continuing with original:", cropErr);
+            }
+        }
 
         // 3. Perform AI verification based on document type
         let status: 'verified' | 'rejected' | 'manual_review' = 'verified';
@@ -46,7 +103,7 @@ export async function POST(request: Request) {
         try {
             switch (docType) {
                 case 'passport': {
-                    console.log("[Verify] Running passport extraction with GPT-4o Vision...");
+                    console.log("[Verify] Running passport extraction...");
                     const result = await extractPassportData(imageUrl);
 
                     if (result.success && result.data) {
@@ -79,7 +136,7 @@ export async function POST(request: Request) {
                 }
 
                 case 'biometric_photo': {
-                    console.log("[Verify] Running biometric photo analysis with GPT-4o Vision...");
+                    console.log("[Verify] Running biometric photo analysis...");
                     const result = await verifyBiometricPhoto(imageUrl);
 
                     if (result.success) {
@@ -99,7 +156,7 @@ export async function POST(request: Request) {
                 }
 
                 case 'diploma': {
-                    console.log("[Verify] Running diploma verification with GPT-4o Vision...");
+                    console.log("[Verify] Running diploma verification...");
                     const result = await verifyDiploma(imageUrl);
 
                     if (result.success) {

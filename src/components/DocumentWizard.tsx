@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { processBiometricPhoto } from "@/lib/imageUtils";
+import { processBiometricPhoto, fixImageOrientation } from "@/lib/imageUtils";
 
 interface FileUpload {
     file: File | null;
@@ -83,18 +83,25 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
 
         setUploads(prev => ({
             ...prev,
-            [type]: { file, status: "uploaded", message: type === 'biometric_photo' ? "Processing photo..." : "Uploading..." }
+            [type]: { file, status: "uploaded", message: "Processing..." }
         }));
 
         try {
-            // Auto-rotate and crop biometric photos
+            // Client-side image processing
             let uploadFile = file;
-            if (type === 'biometric_photo' && file.type.startsWith('image/')) {
+            if (file.type.startsWith('image/')) {
                 try {
-                    uploadFile = await processBiometricPhoto(file);
-                    console.log('[Upload] Biometric photo processed: rotated & cropped');
+                    if (type === 'biometric_photo') {
+                        // Biometric: EXIF rotate + center-crop to 7:9
+                        uploadFile = await processBiometricPhoto(file);
+                        console.log('[Upload] Biometric photo: rotated & cropped');
+                    } else {
+                        // Passport/diploma: just fix EXIF rotation
+                        uploadFile = await fixImageOrientation(file);
+                        console.log(`[Upload] ${type}: EXIF rotation fixed`);
+                    }
                 } catch (processErr) {
-                    console.warn('[Upload] Photo processing failed, uploading original:', processErr);
+                    console.warn('[Upload] Image processing failed, uploading original:', processErr);
                 }
             }
 

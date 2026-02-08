@@ -33,7 +33,7 @@ export interface DocumentQualityResult {
 }
 
 // Helper: fetch image as base64 for Gemini
-async function fetchImageAsBase64(imageUrl: string): Promise<{ data: string; mimeType: string }> {
+export async function fetchImageAsBase64(imageUrl: string): Promise<{ data: string; mimeType: string }> {
     const response = await fetch(imageUrl);
     const buffer = await response.arrayBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
@@ -227,5 +227,60 @@ Return ONLY the JSON object, no other text.`;
             qualityIssues: ["Auto-accepted for manual review"],
             confidence: 0.5,
         };
+    }
+}
+
+/**
+ * Detect document boundaries within an image.
+ * Returns crop coordinates as percentages (0-100) so the caller can crop.
+ * Used when a user photographs a document on a table — we crop to just the document.
+ */
+export async function detectDocumentBounds(imageUrl: string, docType: string): Promise<{
+    found: boolean;
+    crop?: { x: number; y: number; width: number; height: number };
+}> {
+    try {
+        const docLabel = docType === 'passport' ? 'passport data page' :
+            docType === 'diploma' ? 'diploma, certificate, or educational document' :
+                'document';
+
+        const prompt = `You are a document detector. Find the ${docLabel} in this image.
+The document may be photographed on a table, desk, or other surface with background visible.
+
+Return JSON:
+{
+  "document_found": true/false,
+  "crop_x_percent": 0-100,
+  "crop_y_percent": 0-100,
+  "crop_width_percent": 0-100,
+  "crop_height_percent": 0-100,
+  "needs_cropping": true/false
+}
+
+Rules:
+- If the document fills most of the image (>80% area), set needs_cropping to false
+- crop_x_percent and crop_y_percent are the top-left corner of the document
+- Add 2% padding around the document edges for safety
+- Return ONLY the JSON object, no other text.`;
+
+        const content = await callGeminiVision(imageUrl, prompt);
+        const parsed = JSON.parse(content);
+
+        if (!parsed.document_found || !parsed.needs_cropping) {
+            return { found: parsed.document_found ?? false };
+        }
+
+        return {
+            found: true,
+            crop: {
+                x: Math.max(0, parsed.crop_x_percent || 0),
+                y: Math.max(0, parsed.crop_y_percent || 0),
+                width: Math.min(100, parsed.crop_width_percent || 100),
+                height: Math.min(100, parsed.crop_height_percent || 100),
+            }
+        };
+    } catch (error) {
+        console.error("Document bounds detection error:", error);
+        return { found: false };
     }
 }
