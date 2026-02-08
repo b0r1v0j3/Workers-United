@@ -103,7 +103,7 @@ export default function LoginPage() {
 
             {/* Right Side: Sign In Form */}
             <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center items-center p-8 lg:p-24 relative">
-                <div className="w-full max-w-[420px]">
+                <div className="w-full max-w-[420px] pt-20 lg:pt-0">
                     <div className="mb-10 text-center lg:text-left">
                         <h2 className="text-3xl font-bold text-[#1e293b] mb-3 tracking-tight">
                             {resetMode ? "Reset password" : "Sign in"}
