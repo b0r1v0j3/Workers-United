@@ -243,8 +243,11 @@ export default function CreateJobClient() {
                                         <select
                                             name="industry"
                                             required
-                                            value={formData.industry}
-                                            onChange={handleChange}
+                                            value={formData.industry === "other" || formData.industry.startsWith("other:") ? "other" : formData.industry}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setFormData(prev => ({ ...prev, industry: val }));
+                                            }}
                                             className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 focus:outline-none transition-all bg-white"
                                         >
                                             <option value="">Select industry</option>
@@ -252,6 +255,15 @@ export default function CreateJobClient() {
                                                 <option key={ind} value={ind.toLowerCase()}>{ind}</option>
                                             ))}
                                         </select>
+                                        {(formData.industry === "other" || formData.industry.startsWith("other:")) && (
+                                            <input
+                                                type="text"
+                                                placeholder="Specify your industry..."
+                                                value={formData.industry.startsWith("other:") ? formData.industry.replace("other: ", "") : ""}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value ? `other: ${e.target.value}` : "other" }))}
+                                                className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 focus:outline-none transition-all mt-2"
+                                            />
+                                        )}
                                     </div>
 
                                     <div>
