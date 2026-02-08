@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         const { data: workerProfiles, error: profileError } = await supabase
             .from("profiles")
             .select("id, full_name, email, created_at")
-            .eq("user_type", "worker")
+            .eq("user_type", "candidate")
             .lt("created_at", oneDayAgo);
 
         if (profileError) {
