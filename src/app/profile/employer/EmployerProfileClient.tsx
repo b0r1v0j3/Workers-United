@@ -197,7 +197,7 @@ export default function EmployerProfilePage() {
                     <div className="flex justify-between h-full items-center">
                         <Link href="/" className="flex items-center gap-2">
                             <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                            <span className="font-bold text-[#1877f2] text-xl tracking-tight hidden sm:inline">Workers United</span>
+                            <span className="font-bold text-[#1E3A5F] text-xl tracking-tight hidden sm:inline">Workers United</span>
                         </Link>
                         <div className="flex items-center gap-2">
                             <Link

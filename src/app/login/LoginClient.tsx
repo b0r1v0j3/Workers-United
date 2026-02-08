@@ -247,7 +247,7 @@ export default function LoginPage() {
             <div className="lg:hidden absolute top-6 left-0 right-0 flex justify-center">
                 <Link href="/" className="flex items-center gap-2">
                     <Image src="/logo.png" alt="Workers United" width={48} height={48} />
-                    <span className="font-bold text-[#1877f2] text-lg tracking-tight">Workers United</span>
+                    <span className="font-bold text-[#1E3A5F] text-lg tracking-tight">Workers United</span>
                 </Link>
             </div>
         </div>
