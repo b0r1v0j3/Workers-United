@@ -7,7 +7,7 @@ export function GodModeWrapper() {
     const [godModeData, setGodModeData] = useState<{
         godMode: boolean;
         email: string;
-        role: "candidate" | "employer" | "admin";
+        role: "worker" | "employer" | "admin";
     } | null>(null);
 
     useEffect(() => {
@@ -24,7 +24,7 @@ export function GodModeWrapper() {
                     setGodModeData({
                         godMode: true,
                         email: data.email,
-                        role: profileData.profile?.user_type || "candidate"
+                        role: profileData.profile?.user_type || "worker"
                     });
                 }
             } catch (error) {

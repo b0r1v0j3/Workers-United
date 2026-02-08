@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 interface GodModePanelProps {
-    currentRole: "candidate" | "employer" | "admin";
+    currentRole: "worker" | "employer" | "admin";
     userName: string;
 }
 
@@ -82,7 +82,7 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                                     disabled={loading}
                                 />
                             )}
-                            {currentRole !== "candidate" && (
+                            {currentRole !== "worker" && (
                                 <RoleButton
                                     label="👤 Worker"
                                     onClick={() => handleRoleSwitch("switch_to_candidate")}

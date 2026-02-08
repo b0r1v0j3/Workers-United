@@ -119,13 +119,13 @@ export async function POST(request: NextRequest) {
 
                 // Update user_metadata in auth
                 await supabase.auth.updateUser({
-                    data: { user_type: "candidate" }
+                    data: { user_type: "worker" }
                 });
 
                 // Update profile to candidate
                 await supabase
                     .from("profiles")
-                    .update({ user_type: "candidate" })
+                    .update({ user_type: "worker" })
                     .eq("id", user.id);
                 break;
 

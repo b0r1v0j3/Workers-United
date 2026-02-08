@@ -8,6 +8,6 @@ export function isAdmin(email: string | undefined | null): boolean {
     return email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
 
-export type AdminRole = "candidate" | "employer";
+export type AdminRole = "worker" | "employer";
 
 export const ADMIN_ROLE_COOKIE = "admin_role";
