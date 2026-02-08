@@ -443,8 +443,11 @@ export default function EmployerProfilePage() {
                                         </label>
                                         <select
                                             name="industry"
-                                            value={formData.industry}
-                                            onChange={handleChange}
+                                            value={formData.industry.startsWith("Other:") ? "Other" : formData.industry}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setFormData(prev => ({ ...prev, industry: val }));
+                                            }}
                                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         >
                                             <option value="">Select industry...</option>
@@ -452,6 +455,15 @@ export default function EmployerProfilePage() {
                                                 <option key={ind} value={ind}>{ind}</option>
                                             ))}
                                         </select>
+                                        {(formData.industry === "Other" || formData.industry.startsWith("Other:")) && (
+                                            <input
+                                                type="text"
+                                                placeholder="Specify your industry..."
+                                                value={formData.industry.startsWith("Other:") ? formData.industry.replace("Other: ", "") : ""}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value ? `Other: ${e.target.value}` : "Other" }))}
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] mt-2 focus:ring-2 focus:ring-[#1877f2] focus:border-transparent"
+                                            />
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
