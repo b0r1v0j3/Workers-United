@@ -42,7 +42,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                     {variant === 'admin' ? (
                         <>
                             <BottomNavLink href="/admin" icon="🏠" label="Home" />
-                            <BottomNavLink href="/admin/candidates" icon="👤" label="Workers" />
+                            <BottomNavLink href="/admin/workers" icon="👤" label="Workers" />
                             <BottomNavLink href="/admin/queue" icon="📋" label="Queue" />
                             <BottomNavLink href="/admin/settings" icon="⚙️" label="Settings" />
                         </>
@@ -89,7 +89,7 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
 
             {variant === 'admin' && (
                 <>
-                    <SidebarLink href="/admin/candidates" icon="👤" label="Workers" />
+                    <SidebarLink href="/admin/workers" icon="👤" label="Workers" />
                     <SidebarLink href="/admin/employers" icon="🏢" label="Employers" />
                     <SidebarLink href="/admin/jobs" icon="💼" label="Jobs" />
                     <SidebarLink href="/admin/queue" icon="📋" label="Queue" />

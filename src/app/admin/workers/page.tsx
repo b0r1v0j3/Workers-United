@@ -109,9 +109,9 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
 
                     {/* Filter Tabs */}
                     <div className="flex gap-2 mt-4">
-                        <Link href="/admin/candidates" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>All</Link>
-                        <Link href="/admin/candidates?filter=pending" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'pending' ? 'bg-amber-100 text-amber-700' : 'text-slate-600 hover:bg-slate-100'}`}>Pending Docs</Link>
-                        <Link href="/admin/candidates?filter=verified" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'}`}>Verified</Link>
+                        <Link href="/admin/workers" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>All</Link>
+                        <Link href="/admin/workers?filter=pending" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'pending' ? 'bg-amber-100 text-amber-700' : 'text-slate-600 hover:bg-slate-100'}`}>Pending Docs</Link>
+                        <Link href="/admin/workers?filter=verified" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'}`}>Verified</Link>
                     </div>
                 </div>
 
@@ -152,7 +152,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Link
-                                                    href={`/admin/candidates/${authUser.id}`}
+                                                    href={`/admin/workers/${authUser.id}`}
                                                     className="text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
                                                 >
                                                     View

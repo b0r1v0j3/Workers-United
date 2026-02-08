@@ -93,7 +93,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
             })
             .eq("id", docId);
 
-        revalidatePath(`/admin/candidates/${id}`);
+        revalidatePath(`/admin/workers/${id}`);
     }
 
     async function deleteDocument(formData: FormData) {
@@ -116,7 +116,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
             .delete()
             .eq("id", docId);
 
-        revalidatePath(`/admin/candidates/${id}`);
+        revalidatePath(`/admin/workers/${id}`);
     }
 
     async function requestNewDocument(formData: FormData) {
@@ -146,7 +146,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         // For now, just log the request
         console.log(`[Admin] Requested new ${docType} from ${userEmail}. Reason: ${reason}`);
 
-        revalidatePath(`/admin/candidates/${id}`);
+        revalidatePath(`/admin/workers/${id}`);
     }
 
     async function updateCandidateStatus(formData: FormData) {
@@ -163,7 +163,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
             })
             .eq("profile_id", id);
 
-        revalidatePath(`/admin/candidates/${id}`);
+        revalidatePath(`/admin/workers/${id}`);
     }
 
     const getStatusColor = (status: string) => {
@@ -180,7 +180,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
             <div className="max-w-[1200px] mx-auto px-5 py-10">
                 {/* Back Link */}
-                <Link href="/admin/candidates" className="text-[#2f6fed] font-semibold hover:underline mb-6 inline-block">
+                <Link href="/admin/workers" className="text-[#2f6fed] font-semibold hover:underline mb-6 inline-block">
                     ← Back to Workers
                 </Link>
 
