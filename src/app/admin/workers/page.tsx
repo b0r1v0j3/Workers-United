@@ -64,9 +64,10 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         return { candidate, userDocs, verifiedDocs };
     };
 
-    // Only show users who have a profile (filter out stale auth-only users)
-    const profileUserIds = new Set(profiles?.map(p => p.id) || []);
-    const activeAuthUsers = allAuthUsers.filter((u: any) => profileUserIds.has(u.id));
+    // Show all non-employer auth users (same logic as admin dashboard)
+    const activeAuthUsers = allAuthUsers.filter((u: any) =>
+        u.user_metadata?.user_type !== 'employer'
+    );
 
     // Apply filter
     let filteredUsers = activeAuthUsers;
