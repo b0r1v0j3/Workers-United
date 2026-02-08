@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { GodModeWrapper } from "@/components/GodModeWrapper";
+import CookieConsent from "@/components/CookieConsent";
 
 
 const montserrat = Montserrat({
@@ -57,6 +58,7 @@ export default function RootLayout({
       <body className={`${montserrat.className} antialiased`}>
         {children}
         <GodModeWrapper />
+        <CookieConsent />
       </body>
     </html>
   );

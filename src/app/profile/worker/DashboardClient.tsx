@@ -117,7 +117,7 @@ export default function DashboardClient({
                 <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-                    <div className="relative z-10 flex items-center justify-between">
+                    <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="text-2xl">🚀</span>
@@ -127,7 +127,7 @@ export default function DashboardClient({
                                 We're building a fast-track job matching system to connect you with verified employers across Europe. Stay tuned!
                             </p>
                         </div>
-                        <div className="shrink-0 ml-4">
+                        <div className="shrink-0">
                             <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/30">
                                 Coming Soon
                             </span>
@@ -136,7 +136,7 @@ export default function DashboardClient({
                 </div>
                 {/* TABS */}
                 <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
-                    <div className="flex px-2">
+                    <div className="flex px-2 overflow-x-auto scrollbar-hide">
                         <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
                         <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
                         <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
