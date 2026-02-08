@@ -22,11 +22,19 @@ export function ContactForm() {
         setStatus("sending");
         setErrorMessage("");
 
+        // Validate phone format for WhatsApp compatibility
+        const cleanPhone = formData.phone.replace(/[\s\-()]/g, '');
+        if (!/^\+\d{7,15}$/.test(cleanPhone)) {
+            setStatus("error");
+            setErrorMessage("Phone number must start with + and country code (e.g., +381641234567)");
+            return;
+        }
+
         try {
             const response = await fetch("/api/send-email", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, phone: cleanPhone })
             });
 
             const data = await response.json();
@@ -107,11 +115,16 @@ export function ContactForm() {
                         id="phone"
                         name="phone"
                         required
-                        placeholder="+1 234 567 8900"
+                        placeholder="+381641234567"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => {
+                            let val = e.target.value;
+                            if (val.length === 1 && val !== '+') val = '+' + val;
+                            setFormData({ ...formData, phone: val });
+                        }}
                         className="w-full px-4 py-2.5 rounded-lg border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 outline-none transition-all"
                     />
+                    <p className="text-[11px] text-[#6c7a89] mt-1">Must include country code, e.g. +381 for Serbia, +91 for India</p>
                 </div>
                 <div>
                     <label htmlFor="country" className="block text-sm font-medium text-[#183b56] mb-1">
