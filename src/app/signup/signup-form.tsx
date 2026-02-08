@@ -74,7 +74,7 @@ export function SignupForm({ userType }: SignupFormProps) {
             // Show more specific error message
             if (err instanceof Error) {
                 if (err.message.includes("already registered") || err.message.includes("already exists")) {
-                    setError("This email is already registered. Please log in instead.");
+                    setError("This email is already registered. Please sign in instead.");
                 } else {
                     setError(err.message);
                 }
@@ -185,8 +185,8 @@ export function SignupForm({ userType }: SignupFormProps) {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all ${password && confirmPassword && password !== confirmPassword
-                            ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
-                            : 'border-[#e2e8f0]'
+                        ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
+                        : 'border-[#e2e8f0]'
                         }`}
                     placeholder="••••••••"
                     minLength={6}
