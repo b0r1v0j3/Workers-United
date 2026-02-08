@@ -80,3 +80,43 @@ export async function processBiometricPhoto(file: File): Promise<File> {
         lastModified: Date.now(),
     });
 }
+
+/**
+ * Stitch 2 images vertically into one (e.g., front + back of passport).
+ * Both images are EXIF-corrected and scaled to the same width.
+ */
+export async function stitchImages(file1: File, file2: File): Promise<File> {
+    const [bmp1, bmp2] = await Promise.all([
+        createImageBitmap(file1, { imageOrientation: "from-image" }),
+        createImageBitmap(file2, { imageOrientation: "from-image" }),
+    ]);
+
+    // Use the wider image's width, scale the other to match
+    const targetWidth = Math.max(bmp1.width, bmp2.width);
+    const scale1 = targetWidth / bmp1.width;
+    const scale2 = targetWidth / bmp2.width;
+    const h1 = Math.round(bmp1.height * scale1);
+    const h2 = Math.round(bmp2.height * scale2);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = h1 + h2;
+    const ctx = canvas.getContext("2d")!;
+
+    // Draw first image at top
+    ctx.drawImage(bmp1, 0, 0, targetWidth, h1);
+    // Draw second image below
+    ctx.drawImage(bmp2, 0, h1, targetWidth, h2);
+
+    bmp1.close();
+    bmp2.close();
+
+    const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.92)
+    );
+
+    return new File([blob], "combined_document.jpg", {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+    });
+}
