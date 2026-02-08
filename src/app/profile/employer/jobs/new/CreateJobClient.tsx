@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { EMPLOYER_INDUSTRIES } from "@/lib/constants";
 
 export default function CreateJobClient() {
     const router = useRouter();
@@ -247,13 +248,9 @@ export default function CreateJobClient() {
                                             className="w-full px-4 py-3 rounded-xl border border-[#dde3ec] focus:border-[#2f6fed] focus:ring-2 focus:ring-[#2f6fed]/20 focus:outline-none transition-all bg-white"
                                         >
                                             <option value="">Select industry</option>
-                                            <option value="construction">🏗️ Construction</option>
-                                            <option value="manufacturing">🏭 Manufacturing</option>
-                                            <option value="logistics">📦 Logistics</option>
-                                            <option value="hospitality">🏨 Hospitality</option>
-                                            <option value="agriculture">🌾 Agriculture</option>
-                                            <option value="healthcare">🏥 Healthcare</option>
-                                            <option value="other">📌 Other</option>
+                                            {EMPLOYER_INDUSTRIES.map(ind => (
+                                                <option key={ind} value={ind.toLowerCase()}>{ind}</option>
+                                            ))}
                                         </select>
                                     </div>
 

@@ -49,22 +49,38 @@ export const EUROPEAN_COUNTRIES = [
 ];
 
 // ─── INDUSTRIES ──────────────────────────────────────────────
-// Used for both worker preferred job and employer industry
-export const INDUSTRIES = [
+// Worker list includes "Any" (open to all jobs)
+export const WORKER_INDUSTRIES = [
     "Construction",
     "Manufacturing",
     "Agriculture",
     "Hospitality",
-    "Healthcare",
     "Transportation",
     "Retail",
-    "IT & Technology",
+    "Food Processing",
+    "Warehousing & Logistics",
+    "Cleaning Services",
+    "Driving",
+    "Any"
+];
+
+// Employer list — no "Any" (they must specify what they need)
+export const EMPLOYER_INDUSTRIES = [
+    "Construction",
+    "Manufacturing",
+    "Agriculture",
+    "Hospitality",
+    "Transportation",
+    "Retail",
     "Food Processing",
     "Warehousing & Logistics",
     "Cleaning Services",
     "Driving",
     "Other"
 ];
+
+// Backwards-compatible alias
+export const INDUSTRIES = EMPLOYER_INDUSTRIES;
 
 // ─── MARITAL STATUS ──────────────────────────────────────────
 export const MARITAL_STATUSES = [
