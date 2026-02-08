@@ -66,14 +66,14 @@ export default async function AdminDashboard() {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                    <StatCard href="/admin/candidates" icon={<Users size={24} />} label="Total Candidates" value={candidatesCount || 0} color="blue" />
+                    <StatCard href="/admin/candidates" icon={<Users size={24} />} label="Total Workers" value={candidatesCount || 0} color="blue" />
                     <StatCard href="/admin/employers" icon={<Building2 size={24} />} label="Total Employers" value={employersCount || 0} color="purple" />
                 </div>
 
                 {/* Activity Feed / Recent Lists */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Recent Candidates */}
-                    <Card title="New Candidates" linkHref="/admin/candidates" linkText="View All">
+                    <Card title="New Workers" linkHref="/admin/candidates" linkText="View All">
                         {recentCandidates && recentCandidates.length > 0 ? (
                             <div className="divide-y divide-slate-100">
                                 {recentCandidates.map((c: any) => (

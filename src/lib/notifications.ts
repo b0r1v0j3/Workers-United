@@ -78,7 +78,7 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
         
         <p style="color: #6B7280; font-size: 14px;">
           If you do not confirm within 24 hours, this offer will be automatically 
-          transferred to the next candidate in the queue.
+          transferred to the next worker in the queue.
         </p>
         
         <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
@@ -117,7 +117,7 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
         <p>Unfortunately, your offer for <strong>${data.jobTitle}</strong> has expired 
         because the confirmation fee was not paid within 24 hours.</p>
         
-        <p>The position has been offered to the next candidate in the queue.</p>
+        <p>The position has been offered to the next worker in the queue.</p>
         
         <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563EB;">
           <p style="margin: 0;"><strong>Don't worry!</strong></p>

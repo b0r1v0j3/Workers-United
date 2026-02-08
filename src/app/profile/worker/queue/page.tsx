@@ -74,7 +74,7 @@ export default async function QueuePage() {
                             </div>
                             <h2 className="text-xl font-semibold text-gray-900 mb-2">Join the Active Queue</h2>
                             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                                Pay the $9 entry fee to join the active candidate queue and become eligible for job matches.
+                                Pay the $9 entry fee to join the active worker queue and become eligible for job matches.
                             </p>
                             <PayToJoinButton />
                         </div>
@@ -209,7 +209,7 @@ function OfferCard({ offer }: {
 
             <div className={`p-3 rounded-lg mb-4 ${isUrgent ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
                 <strong>⏰ Action Required:</strong> Confirm this offer within {hoursRemaining} hours
-                or it will be offered to the next candidate.
+                or it will be offered to the next worker in the queue.
             </div>
 
             <Link
