@@ -49,7 +49,7 @@ export default async function TermsPage() {
 
                     <TermsCard icon="📌" title="1. Agreement to Terms">
                         <p className="mb-3">By accessing or using <a href="https://workersunited.eu" className="text-[#1877f2] font-semibold hover:underline">https://workersunited.eu</a> (&quot;the Platform&quot;), you agree to be bound by these Terms and Conditions. If you do not agree, you must not use the Platform.</p>
-                        <p>These Terms apply to all users of the Platform, including workers (candidates), employers, and visitors.</p>
+                        <p>These Terms apply to all users of the Platform, including workers, employers, and visitors.</p>
                     </TermsCard>
 
                     <TermsCard icon="🏢" title="2. About Workers United">
