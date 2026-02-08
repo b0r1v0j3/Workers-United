@@ -82,23 +82,24 @@ export default function ApplicationPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-20">
+        <div className="min-h-screen bg-[#f0f2f5] font-sans pb-20">
             {/* Header / Nav */}
-            <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
-                <div className="max-w-5xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
+                <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
                     <Link
                         href="/profile/worker"
-                        className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors font-medium"
+                        className="flex items-center gap-2 text-[#65676b] hover:text-[#050505] text-sm font-semibold"
                     >
                         <ChevronLeft size={20} />
                         Back to Profile
                     </Link>
-                    <div className="flex items-center gap-4">
-                        <div className="h-4 w-px bg-slate-200" />
-                        <span className="text-sm font-semibold text-slate-400">e-Uprava Aplikacija</span>
-                    </div>
+                    <Link href="/" className="flex items-center gap-2">
+                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
+                        <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">Workers United</span>
+                    </Link>
+                    <div className="w-[120px]" />
                 </div>
-            </div>
+            </nav>
 
             <div className="max-w-5xl mx-auto px-4 md:px-8 py-10">
                 <div className="mb-10 text-center">
