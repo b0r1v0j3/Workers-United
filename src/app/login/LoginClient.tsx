@@ -68,8 +68,10 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex font-montserrat flex-col lg:flex-row">
             {/* Left Side: Brand/Info Panel */}
-            <div className="hidden lg:flex w-1/2 bg-[#183b56] text-white p-12 flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-[#1e3a8a]/20 to-transparent pointer-events-none" />
+            <div className="hidden lg:flex w-1/2 text-white p-12 flex-col justify-between relative overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #2563EB 100%)' }}
+            >
+                <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
 
                 <div className="relative z-10">
                     <Link href="/" className="flex items-center gap-3 mb-24">

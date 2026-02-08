@@ -242,7 +242,7 @@ export default async function Home() {
           {/* CTA Section - New, impactful */}
           <section className="py-16 md:py-20">
             <div className="max-w-[800px] mx-auto px-5 text-center">
-              <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-5">
+              <h2 className="text-2xl md:text-4xl font-bold text-[#0F172A] mb-5">
                 Ready to get started?
               </h2>
               <p className="text-[#6c7a89] text-lg mb-8">
@@ -258,7 +258,7 @@ export default async function Home() {
                 </Link>
                 <a
                   href="mailto:contact@workersunited.eu"
-                  className="px-10 py-4 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg hover:bg-[#183b56] hover:text-white transition-all"
+                  className="px-10 py-4 rounded-full bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] font-bold text-lg hover:bg-[#1E3A5F] hover:text-white transition-all"
                 >
                   Contact Us
                 </a>
@@ -268,7 +268,7 @@ export default async function Home() {
         </main>
 
         {/* Footer - Cleaner */}
-        <footer className="bg-[#183b56] text-white py-10">
+        <footer className="text-white py-10" style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)' }}>
           <div className="max-w-[1120px] mx-auto px-5 pb-4 md:pb-16">
             <div className="flex flex-col md:flex-row justify-between items-start gap-6">
               <div className="text-left">
