@@ -18,40 +18,46 @@ export async function GET(request: Request) {
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-        // Get worker profiles created more than 24h ago
-        const { data: workerProfiles, error: profileError } = await supabase
-            .from("profiles")
-            .select("id, full_name, email, created_at")
-            .eq("user_type", "candidate")
-            .lt("created_at", oneDayAgo);
+        // Get all auth users who are candidates (not employers/admins)
+        const { data: authData } = await supabase.auth.admin.listUsers();
+        const allUsers = authData?.users || [];
 
-        if (profileError) {
-            console.error("[Reminders] Profile query error:", profileError);
-            return NextResponse.json({ error: "Database error", details: profileError.message }, { status: 500 });
-        }
+        const candidateUsers = allUsers.filter((u: any) => {
+            const ut = u.user_metadata?.user_type;
+            return ut !== "employer" && ut !== "admin";
+        });
 
-        if (!workerProfiles?.length) {
+        // Only check users who signed up more than 24h ago
+        const eligibleUsers = candidateUsers.filter((u: any) =>
+            new Date(u.created_at) < new Date(Date.now() - 24 * 60 * 60 * 1000)
+        );
+
+        if (eligibleUsers.length === 0) {
             return NextResponse.json({ sent: 0, message: "No workers to check" });
         }
 
         let sent = 0;
         let skipped = 0;
 
-        for (const profile of workerProfiles) {
-            if (!profile.email) continue;
+        for (const user of eligibleUsers) {
+            const userId = user.id;
+            const email = user.email;
+            const fullName = user.user_metadata?.full_name || "";
+
+            if (!email) continue;
 
             // Get their candidate record
             const { data: candidate } = await supabase
                 .from("candidates")
                 .select("id, status, entry_fee_paid")
-                .eq("profile_id", profile.id)
+                .eq("profile_id", userId)
                 .single();
 
             // Get their documents
             const { data: docs } = await supabase
                 .from("candidate_documents")
                 .select("document_type, status")
-                .eq("user_id", profile.id);
+                .eq("user_id", userId);
 
             // Skip users who are already in queue or have accepted offers
             if (candidate?.status === "IN_QUEUE" || candidate?.status === "OFFER_ACCEPTED") {
@@ -69,11 +75,6 @@ export async function GET(request: Request) {
                 if (!docTypes.includes("passport")) missingItems.push("Upload your passport");
                 if (!docTypes.includes("biometric_photo")) missingItems.push("Upload a biometric photo");
                 if (!docTypes.includes("diploma")) missingItems.push("Upload your diploma or certificate");
-
-                const verifiedDocs = (docs || []).filter((d: any) => d.status === "verified");
-                if (verifiedDocs.length === (docs || []).length && (docs || []).length >= 2 && !candidate.entry_fee_paid) {
-                    missingItems.push("Pay the activation fee to join the queue");
-                }
             }
 
             if (missingItems.length === 0) continue;
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
             const { data: recentEmail } = await supabase
                 .from("email_queue")
                 .select("id")
-                .eq("recipient_email", profile.email)
+                .eq("recipient_email", email)
                 .eq("email_type", "profile_reminder")
                 .gt("created_at", oneWeekAgo)
                 .limit(1);
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
             }
 
             // Build the reminder email
-            const firstName = profile.full_name?.split(" ")[0] || "there";
+            const firstName = fullName?.split(" ")[0] || "there";
             const todoList = missingItems.map(item => `<li style="padding: 6px 0;">${item}</li>`).join("");
 
             const html = `
@@ -127,7 +128,7 @@ export async function GET(request: Request) {
 
             // Send the reminder email
             const result = await sendEmail(
-                profile.email,
+                email,
                 "Your Workers United profile is almost ready!",
                 html
             );
@@ -135,10 +136,10 @@ export async function GET(request: Request) {
             if (result.success) {
                 // Track that we sent this reminder
                 await supabase.from("email_queue").insert({
-                    user_id: profile.id,
+                    user_id: userId,
                     email_type: "profile_reminder",
-                    recipient_email: profile.email,
-                    recipient_name: profile.full_name || "Worker",
+                    recipient_email: email,
+                    recipient_name: fullName || "Worker",
                     subject: "Your Workers United profile is almost ready!",
                     template_data: { html },
                     status: "sent",
@@ -147,12 +148,12 @@ export async function GET(request: Request) {
                 });
                 sent++;
             } else {
-                console.error(`[Reminders] Failed to send to ${profile.email}:`, result.error);
+                console.error(`[Reminders] Failed to send to ${email}:`, result.error);
             }
         }
 
         console.log(`[Reminders] Sent ${sent} reminders, skipped ${skipped} (recent)`);
-        return NextResponse.json({ sent, skipped, total_checked: workerProfiles.length });
+        return NextResponse.json({ sent, skipped, total_checked: eligibleUsers.length });
     } catch (err: any) {
         console.error("[Reminders] Error:", err);
         return NextResponse.json({ error: "Internal error", details: err.message }, { status: 500 });
