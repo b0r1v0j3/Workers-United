@@ -277,6 +277,9 @@ export default async function Home() {
           <a href="https://www.tiktok.com/@www.workersunited.eu" target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="TikTok">
             <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M14 2h2.2c.2 1.8 1.2 3.2 3.8 3.6V8c-1.7 0-3.2-.6-4.1-1.4V14c0 4-2.7 6-6 6-2.5 0-4.9-1.7-4.9-4.9 0-3.1 2.4-5 5.4-5 .5 0 1 .1 1.5.2V13c-.4-.2-.9-.3-1.5-.3-1.3 0-2.6.8-2.6 2.4 0 1.5 1.1 2.4 2.5 2.4 1.7 0 2.6-1.1 2.6-3V2z" /></svg>
           </a>
+          <a href="https://www.reddit.com/r/WorkersUnitedEU/" target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="Reddit">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.498 1.199-.498a1.7 1.7 0 0 1 1.698 1.698c0 .648-.37 1.2-.91 1.48.024.19.039.38.039.57 0 2.899-3.376 5.253-7.544 5.253-4.168 0-7.544-2.354-7.544-5.253 0-.19.014-.38.04-.57a1.7 1.7 0 0 1-.91-1.48 1.7 1.7 0 0 1 1.698-1.698c.47 0 .891.19 1.198.498 1.195-.856 2.85-1.417 4.674-1.488l.8-3.747 2.597.547a1.25 1.25 0 0 1 1.136-.739zM8.5 12.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-6.74 4.26c-.19.19-.19.51 0 .7 1.07 1.07 3.41 1.16 3.24 1.16s2.17-.09 3.24-1.16a.49.49 0 0 0 0-.7.49.49 0 0 0-.7 0c-.67.68-2.06.93-2.54.93s-1.87-.25-2.54-.93a.49.49 0 0 0-.7 0z" /></svg>
+          </a>
         </div>
       </footer>
     </div>
