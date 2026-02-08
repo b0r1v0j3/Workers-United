@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
-import { Users, Building2, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { Users, Building2 } from "lucide-react";
 
 export default async function AdminDashboard() {
     const supabase = await createClient();
@@ -25,15 +25,7 @@ export default async function AdminDashboard() {
         .from("employers")
         .select("*", { count: "exact", head: true });
 
-    const { count: pendingDocsCount } = await adminClient
-        .from("candidate_documents")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "verifying");
 
-    const { count: verifiedDocsCount } = await adminClient
-        .from("candidate_documents")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "verified");
 
     // Get profiles for recent display
     const { data: profiles } = await adminClient
@@ -73,11 +65,9 @@ export default async function AdminDashboard() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                     <StatCard href="/admin/candidates" icon={<Users size={24} />} label="Total Candidates" value={candidatesCount || 0} color="blue" />
                     <StatCard href="/admin/employers" icon={<Building2 size={24} />} label="Total Employers" value={employersCount || 0} color="purple" />
-                    <StatCard href="/admin/candidates?filter=pending" icon={<AlertCircle size={24} />} label="Pending Docs" value={pendingDocsCount || 0} color="amber" />
-                    <StatCard href="/admin/candidates?filter=verified" icon={<CheckCircle2 size={24} />} label="Verified Docs" value={verifiedDocsCount || 0} color="green" />
                 </div>
 
                 {/* Activity Feed / Recent Lists */}
