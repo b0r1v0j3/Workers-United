@@ -25,7 +25,7 @@ export default function UnifiedNavbar({ variant, user, profileName }: UnifiedNav
                             alt="Workers United"
                             className="h-[60px] w-auto object-contain"
                         />
-                        <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
+                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline tracking-tight">
                             Workers United
                         </span>
                     </Link>
