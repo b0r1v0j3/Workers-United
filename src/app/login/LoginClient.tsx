@@ -73,7 +73,7 @@ export default function LoginPage() {
 
                 <div className="relative z-10">
                     <Link href="/" className="flex items-center gap-3 mb-24">
-                        <Image src="/logo.png" alt="Workers United logo" width={48} height={48} className="drop-shadow-lg" />
+                        <Image src="/logo.png" alt="Workers United logo" width={48} height={48} className="drop-shadow-lg brightness-0 invert" />
                         <span className="text-2xl font-bold tracking-tight">Workers United</span>
                     </Link>
 
