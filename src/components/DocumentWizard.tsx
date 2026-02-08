@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { processBiometricPhoto } from "@/lib/imageUtils";
 
 interface FileUpload {
     file: File | null;
@@ -82,17 +83,28 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
 
         setUploads(prev => ({
             ...prev,
-            [type]: { file, status: "uploaded", message: "Uploading..." }
+            [type]: { file, status: "uploaded", message: type === 'biometric_photo' ? "Processing photo..." : "Uploading..." }
         }));
 
         try {
-            const fileName = `${Date.now()}_${file.name}`;
+            // Auto-rotate and crop biometric photos
+            let uploadFile = file;
+            if (type === 'biometric_photo' && file.type.startsWith('image/')) {
+                try {
+                    uploadFile = await processBiometricPhoto(file);
+                    console.log('[Upload] Biometric photo processed: rotated & cropped');
+                } catch (processErr) {
+                    console.warn('[Upload] Photo processing failed, uploading original:', processErr);
+                }
+            }
+
+            const fileName = `${Date.now()}_${uploadFile.name}`;
             const storagePath = `${candidateId}/${type}/${fileName}`;
 
             // Upload to candidate-docs bucket
             const { error: uploadError } = await supabase.storage
                 .from("candidate-docs")
-                .upload(storagePath, file);
+                .upload(storagePath, uploadFile);
 
             if (uploadError) throw uploadError;
 
