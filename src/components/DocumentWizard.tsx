@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { processBiometricPhoto, fixImageOrientation } from "@/lib/imageUtils";
+import { processBiometricPhoto, fixImageOrientation, stitchImages } from "@/lib/imageUtils";
 
 interface FileUpload {
     file: File | null;
@@ -73,11 +73,43 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
         loadExistingDocs();
     }, [candidateId]);
 
+    // Handle multi-file select for passport/diploma (stitch 2 photos into 1)
+    async function handleMultiFileSelect(type: string, files: FileList | null) {
+        if (!files || files.length === 0) return;
+
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].size > 5 * 1024 * 1024) {
+                alert("File is too large. Maximum size is 5MB per photo.");
+                return;
+            }
+        }
+
+        let file: File;
+        if (files.length >= 2) {
+            // Stitch 2 photos into 1
+            setUploads(prev => ({
+                ...prev,
+                [type]: { file: null, status: "uploaded", message: "Combining photos..." }
+            }));
+            try {
+                file = await stitchImages(files[0], files[1]);
+                console.log(`[Upload] Stitched 2 ${type} photos into 1`);
+            } catch (err) {
+                console.error('[Upload] Stitch failed:', err);
+                file = files[0]; // fallback to first photo
+            }
+        } else {
+            file = files[0];
+        }
+
+        handleFileSelect(type, file);
+    }
+
     async function handleFileSelect(type: string, file: File | null) {
         if (!file) return;
 
-        if (file.size > 5 * 1024 * 1024) {
-            alert("File is too large. Maximum size is 5MB.");
+        if (file.size > 10 * 1024 * 1024) {
+            alert("File is too large. Maximum size is 10MB.");
             return;
         }
 
@@ -237,15 +269,16 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         type="file"
                         ref={passportInputRef}
                         accept="image/*,.pdf"
+                        multiple
                         style={{ display: 'none' }}
-                        onChange={(e) => handleFileSelect('passport', e.target.files?.[0] || null)}
+                        onChange={(e) => handleMultiFileSelect('passport', e.target.files)}
                     />
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="text-2xl">🛂</div>
                             <div>
                                 <div className="font-semibold text-[#183b56]">Passport Photo Page *</div>
-                                <div className="text-xs text-[#64748b]">Clear photo of data page</div>
+                                <div className="text-xs text-[#64748b]">Select 1-2 photos (front & back)</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -323,15 +356,16 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         type="file"
                         ref={diplomaInputRef}
                         accept="image/*,.pdf"
+                        multiple
                         style={{ display: 'none' }}
-                        onChange={(e) => handleFileSelect('diploma', e.target.files?.[0] || null)}
+                        onChange={(e) => handleMultiFileSelect('diploma', e.target.files)}
                     />
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="text-2xl">🎓</div>
                             <div>
                                 <div className="font-semibold text-[#183b56]">Diploma / Certificate *</div>
-                                <div className="text-xs text-[#64748b]">Education or training certificate</div>
+                                <div className="text-xs text-[#64748b]">Select 1-2 photos (front & back)</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
