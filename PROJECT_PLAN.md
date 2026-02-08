@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-07 (education removed, dropdown sync, employer country)
+> **Poslednje ažuriranje:** 2026-02-08 (Gemini swap, AI auto-reply, profile reminders, email infrastructure, Stripe fix)
 
 ---
 
@@ -48,6 +48,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
 - **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
+- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. n8n + AI obrađuje svu komunikaciju (email, WhatsApp). Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI.
 
 ---
 
@@ -139,10 +140,11 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - `/admin` — admin panel
 
 ### Tehnički stack:
-- **Frontend:** Next.js (App Router), React, TypeScript
+- **Frontend:** Next.js 16 (App Router), React, TypeScript
 - **Backend:** Supabase (Auth + Database + Storage)
 - **Plaćanja:** Stripe
-- **AI Verifikacija:** GPT-4o za proveru dokumenata
+- **AI:** Gemini 2.0 Flash (verifikacija dokumenata, auto-reply na kontakt formu)
+- **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
 - **Hosting:** Vercel
 
 ### Dokumenta koja radnik mora da upload-uje:
@@ -162,6 +164,23 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**Email infrastruktura + AI upgrade + Codebase audit (07-08.02.2026)**
+- Zamenjeno Web3Forms → **Nodemailer + Google Workspace SMTP** za direktan slanje emailova
+- Kreiran `src/lib/mailer.ts` sa `sendEmail()` utility funkcijom
+- Zamenjeno OpenAI → **Gemini 2.0 Flash** za verifikaciju dokumenata (10x jeftinije, brže)
+- Kreiran `src/lib/gemini.ts` sa svim AI funkcijama (passport, diploma, foto, text)
+- Dodat **AI auto-reply na kontakt formu** — Gemini čita poruku i automatski šalje profesionalan odgovor
+- Dodat **cron za podsetnik profila** (`/api/cron/profile-reminders`) — daily 9am UTC, max 1 nedeljno po korisniku
+- Popravljen **kritični bug u Stripe webhook** — `userId` → `user_id` metadata key mismatch
+- Stripe webhook sada obrađuje i entry_fee ($9) i confirmation_fee ($190) sa post-payment akcijama
+- `notifications.ts` popravljen — slao samo console.log, sada šalje prave emailove
+- `metadataBase` dodat u `layout.tsx` za SEO
+- Migriran `middleware.ts` → `proxy.ts` (Next.js 16 deprecation)
+- Uklonjen `eslint` iz `next.config.ts` (deprecated)
+- Uklonjen ghost cron `/api/cron-email` (ruta nije postojala → 404 svakih 5 min)
+- Uklonjen invalid `config` export iz Stripe webhook (Pages Router leftover)
+- Očišćeni Vercel env vars: uklonjeni `OPENAI_API_KEY`, `BREVO_API_KEY`; dodati `SMTP_USER`, `SMTP_PASS`, `GEMINI_API_KEY`
 
 **Education polje uklonjeno + Dropdown sync + Employer Country (07.02.2026)**
 - Uklonjeno `education_level` polje sa worker profila i edit forme — kandidati već šalju diplomu, polje je bilo redundantno
@@ -221,7 +240,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - [ ] Multi-country pricing za placement fee
 - [ ] Employer profil verifikacija (100% pravilo)
 - [ ] Automatsko matchovanje radnika sa poslodavcima
-- [ ] Email notifikacije za sve korake procesa
+- [x] ~~Email notifikacije za sve korake procesa~~
 - [ ] Prebaciti Coming Soon → Stripe checkout ($9 entry fee) kad bude spremno
 - [x] ~~Education polje uklonjeno (redundantno — diploma se upload-uje)~~
 - [x] ~~Worker preferred_job: text → dropdown (sync sa employer)~~
@@ -243,7 +262,9 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 
 ### Prioritet: Srednji
 - [ ] **Per-Country Landing Pages ZA POSLODAVCE** — `/hire-workers-serbia`, `/hire-workers-germany` sa info za poslodavce kako da nađu radnike preko nas (SEO). Radnici traže posao, ne landing page.
-- [ ] **Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a
+- [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
+- [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
+- [ ] **n8n WhatsApp bot** — automatski status update-ovi, FAQ odgovori
 
 ### Prioritet: Nizak (kad bude živih korisnika)
 - [ ] **Success Stories** — pravi case studies sa video snimcima (oprema nabavljena: iPhone 17 Pro)
