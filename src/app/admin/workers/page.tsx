@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 import AppShell from "@/components/AppShell";
-import { Phone, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Phone, FileText, CheckCircle2, Clock } from "lucide-react";
 
 export default async function CandidatesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const params = await searchParams;
@@ -27,19 +27,14 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         redirect("/profile");
     }
 
-    // Use admin client (service role)
-    let adminClient;
-    let usingServiceRole = false;
-    try {
-        adminClient = createAdminClient();
-        usingServiceRole = true;
-    } catch (err: any) {
-        console.warn("Service role key not configured:", err);
-        adminClient = supabase;
-    }
+    // Use admin client (service role) — same pattern as admin dashboard
+    const adminClient = createAdminClient();
 
     // Fetch ALL auth users
     const { data: authData, error: authError } = await adminClient.auth.admin.listUsers();
+    if (authError) {
+        console.error("Failed to fetch auth users:", authError);
+    }
     const allAuthUsers = authData?.users || [];
 
     // Fetch all candidates
@@ -103,13 +98,6 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                             </p>
                         </div>
                     </div>
-
-                    {!usingServiceRole && (
-                        <div className="bg-amber-50 text-amber-800 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-                            <AlertCircle size={16} />
-                            <span>Running in limited mode (RLS enabled). Configure Service Role Key for full access.</span>
-                        </div>
-                    )}
 
                     {/* Filter Tabs */}
                     <div className="flex gap-2 mt-4">
