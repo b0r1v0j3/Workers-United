@@ -254,6 +254,11 @@ export default function ProfilePage() {
         setSuccess(false);
 
         try {
+            // Validate phone format for WhatsApp compatibility
+            if (formData.phone && !/^\+\d{7,15}$/.test(formData.phone.replace(/[\s\-()]/g, ''))) {
+                throw new Error("Phone number must start with + and country code (e.g., +381641234567)");
+            }
+
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
@@ -309,7 +314,7 @@ export default function ProfilePage() {
             const candidateUpdates = {
                 nationality: formData.nationality || null,
                 date_of_birth: dateOfBirth,
-                phone: formData.phone || null,
+                phone: formData.phone ? formData.phone.replace(/[\s\-()]/g, '') : null,
                 address: formData.address || null,
                 current_country: formData.current_country || null,
                 preferred_job: formData.preferred_job || null,
@@ -661,16 +666,21 @@ export default function ProfilePage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className={labelClass}>
-                                            Phone Number <span className="text-red-500">*</span>
+                                            Phone Number (WhatsApp) <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="tel"
                                             name="phone"
                                             value={formData.phone}
-                                            onChange={handleChange}
+                                            onChange={(e) => {
+                                                let val = e.target.value;
+                                                if (val.length === 1 && val !== '+') val = '+' + val;
+                                                setFormData(prev => ({ ...prev, phone: val }));
+                                            }}
                                             className={inputClass}
-                                            placeholder="+381 ..."
+                                            placeholder="+381641234567"
                                         />
+                                        <p className="text-[11px] text-gray-500 mt-1">Must include country code, e.g. +381 for Serbia, +91 for India</p>
                                     </div>
                                     <div>
                                         <label className={labelClass}>

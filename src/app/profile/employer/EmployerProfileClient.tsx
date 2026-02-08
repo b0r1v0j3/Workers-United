@@ -127,13 +127,21 @@ export default function EmployerProfilePage() {
                 throw new Error("Company name is required");
             }
 
+            // Validate phone format for WhatsApp compatibility
+            if (formData.contact_phone) {
+                const cleanPhone = formData.contact_phone.replace(/[\s\-()]/g, '');
+                if (!/^\+\d{7,15}$/.test(cleanPhone)) {
+                    throw new Error("Phone number must start with + and country code (e.g., +381111234567)");
+                }
+            }
+
             const updateData = {
                 company_name: formData.company_name,
                 pib: formData.pib || null,
                 company_registration_number: formData.company_registration_number || null,
                 company_address: formData.company_address || null,
                 accommodation_address: formData.accommodation_address || null,
-                contact_phone: formData.contact_phone || null,
+                contact_phone: formData.contact_phone ? formData.contact_phone.replace(/[\s\-()]/g, '') : null,
                 workers_needed: parseInt(formData.workers_needed) || 1,
                 job_description: formData.job_description || null,
                 salary_range: formData.salary_range || null,
@@ -364,10 +372,15 @@ export default function EmployerProfilePage() {
                                             type="tel"
                                             name="contact_phone"
                                             value={formData.contact_phone}
-                                            onChange={handleChange}
+                                            onChange={(e) => {
+                                                let val = e.target.value;
+                                                if (val.length === 1 && val !== '+') val = '+' + val;
+                                                setFormData(prev => ({ ...prev, contact_phone: val }));
+                                            }}
                                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
-                                            placeholder="+381 11 123 4567"
+                                            placeholder="+381111234567"
                                         />
+                                        <p className="text-[11px] text-gray-500 mt-1">Must include country code, e.g. +381 for Serbia</p>
                                     </div>
                                     <div>
                                         <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
