@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 interface SignupFormProps {
-    userType: "candidate" | "employer";
+    userType: "worker" | "employer";
 }
 
 export function SignupForm({ userType }: SignupFormProps) {
@@ -243,7 +243,7 @@ export function SignupForm({ userType }: SignupFormProps) {
                     </>
                 ) : (
                     <>
-                        Create {userType === "employer" ? "employer" : "candidate"} account
+                        Create {userType === "employer" ? "employer" : "worker"} account
                     </>
                 )}
             </button>

@@ -9,7 +9,7 @@ interface SignupPageProps {
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
     const params = await searchParams;
-    const userType = params.type === "employer" ? "employer" : "candidate";
+    const userType = params.type === "employer" ? "employer" : "worker";
 
     return (
         <div className="min-h-screen flex">
@@ -89,19 +89,19 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     <div className="card">
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Create your account</h2>
                         <p className="text-gray-600 mb-6">
-                            Join as {userType === "employer" ? "an employer" : "a candidate"} to get started.
+                            Join as {userType === "employer" ? "an employer" : "a worker"} to get started.
                         </p>
 
                         {/* User type toggle */}
                         <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
                             <Link
-                                href="/signup?type=candidate"
-                                className={`flex-1 text-center py-2 px-4 rounded-md text-sm font-medium transition-all ${userType === "candidate"
+                                href="/signup?type=worker"
+                                className={`flex-1 text-center py-2 px-4 rounded-md text-sm font-medium transition-all ${userType === "worker"
                                     ? "bg-white shadow text-gray-900"
                                     : "text-gray-600 hover:text-gray-900"
                                     }`}
                             >
-                                I&apos;m a Candidate
+                                I&apos;m a Worker
                             </Link>
                             <Link
                                 href="/signup?type=employer"
