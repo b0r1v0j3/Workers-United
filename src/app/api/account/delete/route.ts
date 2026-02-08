@@ -15,7 +15,18 @@ export async function DELETE() {
         const userId = user.id;
         const adminClient = createAdminClient();
 
-        // 1. Delete from storage (documents bucket)
+        // 1. Sign out user first
+        await supabase.auth.signOut();
+
+        // 2. Delete auth user FIRST (before DB rows that may have FK constraints)
+        const { error: authError } = await adminClient.auth.admin.deleteUser(userId);
+
+        if (authError) {
+            console.error("Auth delete error:", authError);
+            return NextResponse.json({ error: `Failed to delete account: ${authError.message}` }, { status: 500 });
+        }
+
+        // 3. Delete from storage (documents bucket)
         const { data: files } = await adminClient.storage
             .from("documents")
             .list(userId);
@@ -25,46 +36,35 @@ export async function DELETE() {
             await adminClient.storage.from("documents").remove(filePaths);
         }
 
-        // 2. Delete candidate_documents
+        // 4. Delete candidate_documents
         await adminClient
             .from("candidate_documents")
             .delete()
             .eq("user_id", userId);
 
-        // 3. Delete signatures
+        // 5. Delete signatures
         await adminClient
             .from("signatures")
             .delete()
             .eq("user_id", userId);
 
-        // 4. Delete candidates
+        // 6. Delete candidates
         await adminClient
             .from("candidates")
             .delete()
             .eq("profile_id", userId);
 
-        // 5. Delete employers (if employer)
+        // 7. Delete employers (if employer)
         await adminClient
             .from("employers")
             .delete()
             .eq("profile_id", userId);
 
-        // 6. Delete profiles
+        // 8. Delete profiles
         await adminClient
             .from("profiles")
             .delete()
             .eq("id", userId);
-
-        // 7. Sign out user first
-        await supabase.auth.signOut();
-
-        // 8. Delete auth user
-        const { error: authError } = await adminClient.auth.admin.deleteUser(userId);
-
-        if (authError) {
-            console.error("Auth delete error:", authError);
-            return NextResponse.json({ error: "Failed to delete account" }, { status: 500 });
-        }
 
         return NextResponse.json({ success: true, message: "Account deleted successfully" });
 

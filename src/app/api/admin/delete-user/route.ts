@@ -35,7 +35,15 @@ export async function DELETE(request: NextRequest) {
 
         const adminClient = createAdminClient();
 
-        // 1. Delete from storage (documents bucket)
+        // 1. Delete auth user FIRST (before DB rows that may have FK constraints)
+        const { error: authError } = await adminClient.auth.admin.deleteUser(userId);
+
+        if (authError) {
+            console.error("Auth delete error:", authError);
+            return NextResponse.json({ error: `Failed to delete auth user: ${authError.message}` }, { status: 500 });
+        }
+
+        // 2. Delete from storage (documents bucket)
         const { data: files } = await adminClient.storage
             .from("documents")
             .list(userId);
@@ -45,37 +53,29 @@ export async function DELETE(request: NextRequest) {
             await adminClient.storage.from("documents").remove(filePaths);
         }
 
-        // 2. Delete candidate_documents
+        // 3. Delete candidate_documents
         await adminClient
             .from("candidate_documents")
             .delete()
             .eq("user_id", userId);
 
-        // 3. Delete signatures
+        // 4. Delete signatures
         await adminClient
             .from("signatures")
             .delete()
             .eq("user_id", userId);
 
-        // 4. Delete candidates
+        // 5. Delete candidates
         await adminClient
             .from("candidates")
             .delete()
             .eq("profile_id", userId);
 
-        // 5. Delete profiles
+        // 6. Delete profiles
         await adminClient
             .from("profiles")
             .delete()
             .eq("id", userId);
-
-        // 6. Delete auth user (this also cascades some relations)
-        const { error: authError } = await adminClient.auth.admin.deleteUser(userId);
-
-        if (authError) {
-            console.error("Auth delete error:", authError);
-            return NextResponse.json({ error: "Failed to delete auth user" }, { status: 500 });
-        }
 
         return NextResponse.json({ success: true, message: "User deleted completely" });
 
