@@ -69,15 +69,19 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         return { candidate, userDocs, verifiedDocs };
     };
 
+    // Only show users who have a profile (filter out stale auth-only users)
+    const profileUserIds = new Set(profiles?.map(p => p.id) || []);
+    const activeAuthUsers = allAuthUsers.filter((u: any) => profileUserIds.has(u.id));
+
     // Apply filter
-    let filteredUsers = allAuthUsers;
+    let filteredUsers = activeAuthUsers;
     if (filter === 'pending') {
-        filteredUsers = allAuthUsers.filter((u: any) => {
+        filteredUsers = activeAuthUsers.filter((u: any) => {
             const userDocs = allDocs?.filter(d => d.user_id === u.id) || [];
             return userDocs.some(d => d.status === 'verifying');
         });
     } else if (filter === 'verified') {
-        filteredUsers = allAuthUsers.filter((u: any) => {
+        filteredUsers = activeAuthUsers.filter((u: any) => {
             const userDocs = allDocs?.filter(d => d.user_id === u.id) || [];
             const verifiedCount = userDocs.filter(d => d.status === 'verified').length;
             return verifiedCount >= 3;
@@ -95,7 +99,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900">Workers</h1>
                             <p className="text-slate-500">
-                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `Manage registered users (${allAuthUsers.length})`}
+                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `Manage registered workers (${activeAuthUsers.length})`}
                             </p>
                         </div>
                     </div>
@@ -157,6 +161,9 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                                 >
                                                     View
                                                 </Link>
+                                                {!isCurrentUser && (
+                                                    <DeleteUserButton userId={authUser.id} userName={profile?.full_name || authUser.email} />
+                                                )}
                                             </div>
                                         </div>
 
@@ -191,7 +198,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                         );
                     })}
 
-                    {allAuthUsers.length === 0 && (
+                    {activeAuthUsers.length === 0 && (
                         <div className="text-center py-12 text-slate-500">
                             No users found.
                         </div>
