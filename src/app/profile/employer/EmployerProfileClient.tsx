@@ -52,6 +52,8 @@ export default function EmployerProfilePage() {
         salary_range: "",
         work_location: "",
         country: "",
+        city: "",
+        work_city: "",
         website: "",
         industry: "",
         company_size: "",
@@ -89,6 +91,8 @@ export default function EmployerProfilePage() {
                         salary_range: emp.salary_range || "",
                         work_location: emp.work_location || "",
                         country: emp.country || "",
+                        city: emp.city || "",
+                        work_city: emp.work_city || "",
                         website: emp.website || "",
                         industry: emp.industry || "",
                         company_size: emp.company_size || "",
@@ -193,7 +197,7 @@ export default function EmployerProfilePage() {
                     <div className="flex justify-between h-full items-center">
                         <Link href="/" className="flex items-center gap-2">
                             <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                            <span className="font-bold text-[#1877f2] text-xl tracking-tight">Workers United</span>
+                            <span className="font-bold text-[#1877f2] text-xl tracking-tight hidden sm:inline">Workers United</span>
                         </Link>
                         <div className="flex items-center gap-2">
                             <a href="/auth/signout" className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100">

@@ -39,6 +39,7 @@ export default async function TermsPage() {
                     <p className="text-white/80 max-w-2xl">
                         Please read these terms carefully. By using Workers United, you agree to be bound by the following terms and conditions.
                     </p>
+                    <p className="text-white/60 text-sm mt-3">Last updated: 8 February 2026</p>
                 </div>
             </div>
 
@@ -46,71 +47,145 @@ export default async function TermsPage() {
             <main className="max-w-4xl mx-auto px-6 py-10">
                 <div className="space-y-6">
 
-                    <TermsCard icon="🍪" title="Cookies">
-                        <p className="mb-3">We employ the use of cookies. By accessing <a href="https://workersunited.eu" className="text-[#1877f2] font-semibold hover:underline">https://workersunited.eu</a> you agreed to use cookies in agreement with the Workers United LLC&apos;s Privacy Policy.</p>
-                        <p>Most interactive websites use cookies to let us retrieve the user&apos;s details for each visit. Cookies are used by our website to enable the functionality of certain areas to make it easier for people visiting our website. Some of our affiliate/advertising partners may also use cookies.</p>
+                    <TermsCard icon="📌" title="1. Agreement to Terms">
+                        <p className="mb-3">By accessing or using <a href="https://workersunited.eu" className="text-[#1877f2] font-semibold hover:underline">https://workersunited.eu</a> (&quot;the Platform&quot;), you agree to be bound by these Terms and Conditions. If you do not agree, you must not use the Platform.</p>
+                        <p>These Terms apply to all users of the Platform, including workers (candidates), employers, and visitors.</p>
                     </TermsCard>
 
-                    <TermsCard icon="📜" title="License">
-                        <p className="mb-3">Unless otherwise stated, Workers United LLC and/or its licensors own the intellectual property rights for all material on <a href="https://workersunited.eu" className="text-[#1877f2] font-semibold hover:underline">https://workersunited.eu</a>. All intellectual property rights are reserved. You may access this from https://workersunited.eu for your own personal use subjected to restrictions set in these terms and conditions.</p>
+                    <TermsCard icon="🏢" title="2. About Workers United">
+                        <p className="mb-3">Workers United LLC (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) provides a visa facilitation service that connects international workers with European employers. We handle the complete process including documentation, visa application, and placement.</p>
+                        <p className="font-semibold mb-2">Key points:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li>We are <strong>not</strong> a job board — we provide a full-service visa and placement solution</li>
+                            <li>Workers and employers do not interact directly until the visa is approved</li>
+                            <li>Our services for employers are free of charge</li>
+                            <li>We do not guarantee employment outcomes, but we do offer a 90-day refund on the entry fee if no match is found</li>
+                        </ul>
+                    </TermsCard>
+
+                    <TermsCard icon="👤" title="3. User Accounts">
+                        <p className="font-semibold mb-2">By creating an account, you agree that:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li>You are at least 18 years of age</li>
+                            <li>All information you provide is accurate, truthful, and complete</li>
+                            <li>You will keep your account credentials secure and not share them</li>
+                            <li>You are responsible for all activity under your account</li>
+                            <li>You have consented to the processing of your personal data as described in our <Link href="/privacy-policy" className="text-[#1877f2] font-semibold hover:underline">Privacy Policy</Link></li>
+                        </ul>
+                        <p className="mt-3">We reserve the right to suspend or terminate accounts that violate these Terms or provide false information.</p>
+                    </TermsCard>
+
+                    <TermsCard icon="💰" title="4. Fees and Payments">
+                        <p className="font-semibold mb-2">The following fees apply:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li><strong>Entry fee:</strong> $9 USD — paid by the worker to enter the matching queue</li>
+                            <li><strong>Placement fee:</strong> Varies by country — paid by the worker only when a position is matched. The exact amount will be displayed before payment.</li>
+                            <li><strong>Employer fees:</strong> None — our services are free for employers</li>
+                        </ul>
+                        <p className="mt-3"><strong>Refund policy:</strong> If a worker is not matched with an employer within 90 days of paying the entry fee, the $9 entry fee will be refunded in full. Placement fees are non-refundable once the visa process has begun.</p>
+                        <p className="mt-2">All payments are processed securely by Stripe. We do not store your payment card details.</p>
+                    </TermsCard>
+
+                    <TermsCard icon="📄" title="5. Documents and Verification">
+                        <p className="mb-3">Workers are required to upload certain documents (passport, biometric photo, diploma) for identity verification and visa processing.</p>
+                        <p className="font-semibold mb-2">By uploading documents, you confirm that:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li>The documents are genuine and belong to you</li>
+                            <li>You authorise us to use AI-powered verification to check document authenticity</li>
+                            <li>You consent to sharing these documents with relevant authorities as part of the visa application process</li>
+                            <li>Providing fraudulent documents will result in immediate account termination</li>
+                        </ul>
+                    </TermsCard>
+
+                    <TermsCard icon="🔒" title="6. Data Protection and GDPR">
+                        <p className="mb-3">We are committed to protecting your personal data in accordance with the General Data Protection Regulation (GDPR) and other applicable data protection laws.</p>
+                        <p className="font-semibold mb-2">Your rights include:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li><strong>Right of access:</strong> Request a copy of your personal data</li>
+                            <li><strong>Right to rectification:</strong> Correct inaccurate data via your profile settings</li>
+                            <li><strong>Right to erasure:</strong> Delete your account and all associated data through your account settings</li>
+                            <li><strong>Right to data portability:</strong> Download your data in a machine-readable format</li>
+                            <li><strong>Right to withdraw consent:</strong> Withdraw consent at any time without affecting prior processing</li>
+                        </ul>
+                        <p className="mt-3">For full details on how we process your data, please read our <Link href="/privacy-policy" className="text-[#1877f2] font-semibold hover:underline">Privacy Policy</Link>.</p>
+                    </TermsCard>
+
+                    <TermsCard icon="🍪" title="7. Cookies">
+                        <p>We use only essential cookies required for authentication and site functionality. We do not use tracking or advertising cookies. For more information, see our <Link href="/privacy-policy" className="text-[#1877f2] font-semibold hover:underline">Privacy Policy</Link>.</p>
+                    </TermsCard>
+
+                    <TermsCard icon="📜" title="8. Intellectual Property">
+                        <p className="mb-3">All content on the Platform, including text, graphics, logos, and software, is the property of Workers United LLC and is protected by intellectual property laws.</p>
                         <p className="font-semibold mb-2">You must not:</p>
-                        <ul className="list-disc pl-6 space-y-2 mb-4">
-                            <li>Republish material from https://workersunited.eu</li>
-                            <li>Sell, rent or sub-license material from https://workersunited.eu</li>
-                            <li>Reproduce, duplicate or copy material from https://workersunited.eu</li>
-                            <li>Redistribute content from https://workersunited.eu</li>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li>Reproduce, duplicate, or copy material from the Platform</li>
+                            <li>Sell, rent, or sub-license material from the Platform</li>
+                            <li>Redistribute content from the Platform without prior written permission</li>
                         </ul>
-                        <p className="mb-3">This Agreement shall begin on the date hereof.</p>
-                        <p className="mb-3">Parts of this website offer an opportunity for users to post and exchange opinions and information in certain areas of the website. Workers United LLC does not filter, edit, publish or review Comments prior to their presence on the website. Comments do not reflect the views and opinions of Workers United LLC, its agents and/or affiliates.</p>
-                        <p className="font-semibold mb-2">You warrant and represent that:</p>
-                        <ul className="list-disc pl-6 space-y-2 mb-4">
-                            <li>You are entitled to post the Comments on our website and have all necessary licenses and consents to do so;</li>
-                            <li>The Comments do not invade any intellectual property right, including without limitation copyright, patent or trademark of any third party;</li>
-                            <li>The Comments do not contain any defamatory, libelous, offensive, indecent or otherwise unlawful material which is an invasion of privacy;</li>
-                            <li>The Comments will not be used to solicit or promote business or custom or present commercial activities or unlawful activity.</li>
+                    </TermsCard>
+
+                    <TermsCard icon="🚫" title="9. Prohibited Activities">
+                        <p className="font-semibold mb-2">You agree not to:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li>Provide false, misleading, or fraudulent information</li>
+                            <li>Upload forged or tampered documents</li>
+                            <li>Use the Platform for any illegal purpose</li>
+                            <li>Attempt to access other users&apos; accounts or data</li>
+                            <li>Interfere with the security or functionality of the Platform</li>
+                            <li>Create multiple accounts for the same person</li>
                         </ul>
-                        <p>You hereby grant Workers United LLC a non-exclusive license to use, reproduce, edit and authorize others to use, reproduce and edit any of your Comments in any and all forms, formats or media.</p>
                     </TermsCard>
 
-                    <TermsCard icon="🔗" title="Hyperlinking to our Content">
-                        <p className="font-semibold mb-2">The following organizations may link to our Website without prior written approval:</p>
-                        <ul className="list-disc pl-6 space-y-2 mb-4">
-                            <li>Government agencies;</li>
-                            <li>Search engines;</li>
-                            <li>News organizations;</li>
-                            <li>Online directory distributors may link to our Website in the same manner as they hyperlink to the Websites of other listed businesses; and</li>
-                            <li>System wide Accredited Businesses except soliciting non-profit organizations, charity shopping malls, and charity fundraising groups which may not hyperlink to our Web site.</li>
+                    <TermsCard icon="📢" title="10. Disclaimers and Warranties">
+                        <p className="mb-3 uppercase font-bold text-[#050505] text-xs leading-relaxed tracking-wide">
+                            THE PLATFORM AND ALL MATERIALS, INFORMATION, PRODUCTS AND SERVICES AVAILABLE THROUGH THE PLATFORM ARE PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMISSIBLE PURSUANT TO APPLICABLE LAW, WORKERS UNITED LLC DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+                        </p>
+                        <p className="mb-3 uppercase font-bold text-[#050505] text-xs leading-relaxed tracking-wide">
+                            WE DO NOT WARRANT THAT THE PLATFORM OR ANY OF ITS FUNCTIONS WILL BE UNINTERRUPTED OR ERROR-FREE, THAT DEFECTS WILL BE CORRECTED, OR THAT THE PLATFORM OR THE SERVERS THAT MAKE IT AVAILABLE ARE FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS.
+                        </p>
+                        <p className="uppercase font-bold text-[#050505] text-xs leading-relaxed tracking-wide">
+                            WE DO NOT WARRANT OR MAKE ANY REPRESENTATIONS REGARDING THE USE OR THE RESULTS OF THE USE OF THE PLATFORM IN TERMS OF CORRECTNESS, ACCURACY, TIMELINESS, RELIABILITY OR OTHERWISE. WE DO NOT GUARANTEE THAT A WORKER WILL BE MATCHED WITH AN EMPLOYER OR THAT A VISA APPLICATION WILL BE APPROVED. VISA DECISIONS ARE MADE SOLELY BY IMMIGRATION AUTHORITIES AND ARE OUTSIDE OUR CONTROL.
+                        </p>
+                    </TermsCard>
+
+                    <TermsCard icon="🛡️" title="11. Indemnification">
+                        <p>You agree to defend, indemnify and hold harmless Workers United LLC, its affiliates, officers, directors, employees, agents, successors and assigns from and against any and all claims, damages, liabilities, costs and expenses (including reasonable legal fees) arising out of or related to: (a) your use of the Platform; (b) your breach of these Terms; (c) any information or documents you have provided to us; or (d) your violation of any law or the rights of any third party.</p>
+                    </TermsCard>
+
+                    <TermsCard icon="🔗" title="12. Third-Party Links">
+                        <p>The Platform may contain links to third-party websites or services that are not owned or controlled by Workers United. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services. You acknowledge and agree that Workers United shall not be responsible or liable, directly or indirectly, for any damage or loss caused or alleged to be caused by or in connection with the use of any such content, goods, or services available on or through any such websites or services.</p>
+                    </TermsCard>
+
+                    <TermsCard icon="💸" title="13. Refund Policy">
+                        <p className="mb-3">Our refund policy is as follows:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li><strong>Entry fee ($9 USD):</strong> Fully refundable if a worker is not matched with an employer within 90 days of payment.</li>
+                            <li><strong>Placement fee:</strong> Non-refundable once the visa application process has been initiated, as costs are incurred for document preparation and government fees.</li>
                         </ul>
-                        <p>These organizations may link to our home page, to publications or to other Website information so long as the link: (a) is not in any way deceptive; (b) does not falsely imply sponsorship, endorsement or approval of the linking party and its products and/or services; and (c) fits within the context of the linking party&apos;s site.</p>
+                        <p className="mt-3">Refund requests should be directed to <a href="mailto:contact@workersunited.eu" className="text-[#1877f2] font-semibold hover:underline">contact@workersunited.eu</a>. Approved refunds will be processed within 10 business days to the original payment method.</p>
                     </TermsCard>
 
-                    <TermsCard icon="🖼️" title="iFrames">
-                        <p>Without prior approval and written permission, you may not create frames around our Webpages that alter in any way the visual presentation or appearance of our Website.</p>
+                    <TermsCard icon="⚠️" title="14. Limitation of Liability">
+                        <p className="mb-3 uppercase font-bold text-[#050505] text-xs leading-relaxed tracking-wide">
+                            UNDER NO CIRCUMSTANCES, INCLUDING BUT NOT LIMITED TO NEGLIGENCE, SHALL WORKERS UNITED LLC, ITS AFFILIATES, OR ITS OFFICERS, DIRECTORS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR EXEMPLARY DAMAGES THAT RESULT FROM THE USE OF, OR THE INABILITY TO USE, THE PLATFORM OR OUR SERVICES, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+                        </p>
+                        <p className="mb-3">Our total liability shall not exceed the amount paid by you for our services.</p>
+                        <p>Nothing in these Terms excludes or limits our liability for death or personal injury caused by negligence, fraud, or any liability that cannot be excluded or limited by applicable law. For users in the European Union, nothing in these Terms affects your statutory rights as a consumer.</p>
                     </TermsCard>
 
-                    <TermsCard icon="📝" title="Content Liability">
-                        <p>We shall not be hold responsible for any content that appears on your Website. You agree to protect and defend us against all claims that is rising on your Website. No link(s) should appear on any Website that may be interpreted as libelous, obscene or criminal, or which infringes, otherwise violates, or advocates the infringement or other violation of, any third party rights.</p>
+                    <TermsCard icon="🚪" title="15. Termination">
+                        <p className="mb-3">We may suspend or terminate your access to the Platform at any time, without prior notice, for conduct that we believe violates these Terms, is harmful to other users, or is otherwise objectionable.</p>
+                        <p>Upon termination, your right to use the Platform will immediately cease. The disclaimers, limitations of liability, indemnification, and other provisions of these Terms that by their nature should survive shall survive termination.</p>
                     </TermsCard>
 
-                    <TermsCard icon="⚖️" title="Reservation of Rights">
-                        <p>We reserve the right to request that you remove all links or any particular link to our Website. You approve to immediately remove all links to our Website upon request. We also reserve the right to amend these terms and conditions and it&apos;s linking policy at any time. By continuously linking to our Website, you agree to be bound to and follow these linking terms and conditions.</p>
+                    <TermsCard icon="⚖️" title="16. Governing Law and Disputes">
+                        <p className="mb-3">These Terms are governed by and construed in accordance with the laws of the State of Wyoming, USA, without regard to its conflict of law provisions. Any dispute arising from these Terms shall be subject to the exclusive jurisdiction of the courts of the State of Wyoming.</p>
+                        <p className="mb-3">For users within the European Union, nothing in these Terms affects your rights under mandatory consumer protection laws of your country of residence.</p>
+                        <p>If any provision of these Terms is found to be unlawful, void, or unenforceable, that provision shall be deemed severable and shall not affect the validity and enforceability of the remaining provisions.</p>
                     </TermsCard>
 
-                    <TermsCard icon="🗑️" title="Removal of links from our website">
-                        <p className="mb-3">If you find any link on our Website that is offensive for any reason, you are free to contact and inform us any moment. We will consider requests to remove links but we are not obligated to or so or to respond to you directly.</p>
-                        <p>We do not ensure that the information on this website is correct, we do not warrant its completeness or accuracy; nor do we promise to ensure that the website remains available or that the material on the website is kept up to date.</p>
-                    </TermsCard>
-
-                    <TermsCard icon="⚠️" title="Disclaimer">
-                        <p className="mb-3">To the maximum extent permitted by applicable law, we exclude all representations, warranties and conditions relating to our website and the use of this website. Nothing in this disclaimer will:</p>
-                        <ul className="list-disc pl-6 space-y-2 mb-4">
-                            <li>limit or exclude our or your liability for death or personal injury;</li>
-                            <li>limit or exclude our or your liability for fraud or fraudulent misrepresentation;</li>
-                            <li>limit any of our or your liabilities in any way that is not permitted under applicable law; or</li>
-                            <li>exclude any of our or your liabilities that may not be excluded under applicable law.</li>
-                        </ul>
-                        <p className="mb-3">The limitations and prohibitions of liability set in this Section and elsewhere in this disclaimer: (a) are subject to the preceding paragraph; and (b) govern all liabilities arising under the disclaimer, including liabilities arising in contract, in tort and for breach of statutory duty.</p>
-                        <p>As long as the website and the information and services on the website are provided free of charge, we will not be liable for any loss or damage of any nature.</p>
+                    <TermsCard icon="📝" title="17. Changes to These Terms">
+                        <p>We reserve the right to modify these Terms at any time. Material changes will be communicated via email or a notice on the Platform. Your continued use of the Platform after such changes constitutes acceptance of the updated Terms.</p>
                     </TermsCard>
 
                     {/* Contact Card */}
@@ -131,10 +206,10 @@ export default async function TermsPage() {
             {/* Footer */}
             <footer className="bg-[#1e293b] text-white py-8 px-6">
                 <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-sm text-gray-400">© 2024 Workers United LLC. All rights reserved.</p>
+                    <p className="text-sm text-gray-400">© 2026 Workers United LLC. All rights reserved.</p>
                     <div className="flex gap-6 text-sm">
                         <Link href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link>
-                        <Link href="/terms" className="text-white font-semibold">Terms & Conditions</Link>
+                        <Link href="/terms" className="text-white font-semibold">Terms &amp; Conditions</Link>
                     </div>
                 </div>
             </footer>

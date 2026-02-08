@@ -236,7 +236,7 @@ export default async function Home() {
 
       {/* Footer - Cleaner */}
       <footer className="bg-[#183b56] text-white py-10">
-        <div className="max-w-[1120px] mx-auto px-5 pb-16">
+        <div className="max-w-[1120px] mx-auto px-5 pb-4 md:pb-16">
           <div className="flex flex-col md:flex-row justify-between items-start gap-6">
             <div className="text-left">
               <div className="text-sm text-gray-300 mb-2">© {new Date().getFullYear()} Workers United. All rights reserved.</div>
@@ -257,8 +257,8 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Social Links */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-3 bg-[#183b56] px-4 py-2 rounded-full shadow-lg border border-white/10">
+        {/* Social Links — inline on mobile, fixed pill on desktop */}
+        <div className="flex justify-center gap-3 py-4 md:py-0 md:fixed md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:bg-[#183b56] md:px-4 md:py-2 md:rounded-full md:shadow-lg md:border md:border-white/10">
           <a href="https://www.facebook.com/profile.php?id=61585104076725" target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition-colors" aria-label="Facebook">
             <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.6 1.6-1.6H16.7V4.9c-.3 0-1.4-.1-2.7-.1-2.7 0-4.5 1.6-4.5 4.6V11H7v3h2.8v8h3.7z" /></svg>
           </a>

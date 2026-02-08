@@ -391,7 +391,7 @@ export default function OnboardingPage() {
             const familyData: any = {};
             if (hasSpouse) {
                 const spouseDob = (spouseData.dobDay && spouseData.dobMonth && spouseData.dobYear)
-                    ? `${spouseData.dobYear}-${spouseData.dobMonth.padStart(2,'0')}-${spouseData.dobDay.padStart(2,'0')}`
+                    ? `${spouseData.dobYear}-${spouseData.dobMonth.padStart(2, '0')}-${spouseData.dobDay.padStart(2, '0')}`
                     : null;
                 familyData.spouse = {
                     first_name: spouseData.first_name,
@@ -404,7 +404,7 @@ export default function OnboardingPage() {
             if (hasChildren && children.length > 0) {
                 familyData.children = children.map(c => {
                     const childDob = (c.dobDay && c.dobMonth && c.dobYear)
-                        ? `${c.dobYear}-${c.dobMonth.padStart(2,'0')}-${c.dobDay.padStart(2,'0')}`
+                        ? `${c.dobYear}-${c.dobMonth.padStart(2, '0')}-${c.dobDay.padStart(2, '0')}`
                         : null;
                     return { first_name: c.first_name, last_name: c.last_name, dob: childDob };
                 });
@@ -443,8 +443,8 @@ export default function OnboardingPage() {
                 family_data: (Object.keys(familyData).length > 0) ? familyData : null,
                 passport_number: formData.passportNumber || null,
                 passport_issued_by: formData.passportIssuedBy || null,
-                passport_issue_date: (formData.passportIssueDay && formData.passportIssueMonth && formData.passportIssueYear) ? `${formData.passportIssueYear}-${formData.passportIssueMonth.padStart(2,'0')}-${formData.passportIssueDay.padStart(2,'0')}` : null,
-                passport_expiry_date: (formData.passportExpiryDay && formData.passportExpiryMonth && formData.passportExpiryYear) ? `${formData.passportExpiryYear}-${formData.passportExpiryMonth.padStart(2,'0')}-${formData.passportExpiryDay.padStart(2,'0')}` : null,
+                passport_issue_date: (formData.passportIssueDay && formData.passportIssueMonth && formData.passportIssueYear) ? `${formData.passportIssueYear}-${formData.passportIssueMonth.padStart(2, '0')}-${formData.passportIssueDay.padStart(2, '0')}` : null,
+                passport_expiry_date: (formData.passportExpiryDay && formData.passportExpiryMonth && formData.passportExpiryYear) ? `${formData.passportExpiryYear}-${formData.passportExpiryMonth.padStart(2, '0')}-${formData.passportExpiryDay.padStart(2, '0')}` : null,
                 lives_abroad: formData.livesAbroad || null,
                 previous_visas: formData.previousVisas || null,
             };
@@ -528,7 +528,7 @@ export default function OnboardingPage() {
                     <h2 className="text-lg font-bold text-[#050505] mb-4">👤 Personal Information</h2>
                     <div className="grid gap-4">
                         {/* Name */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>First Name *</label>
                                 <input
@@ -552,7 +552,7 @@ export default function OnboardingPage() {
                         </div>
 
                         {/* Gender + Marital Status */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Gender *</label>
                                 <select
@@ -686,7 +686,7 @@ export default function OnboardingPage() {
                         </div>
 
                         {/* Birth Country + Birth City */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Country of Birth *</label>
                                 <select
@@ -711,7 +711,7 @@ export default function OnboardingPage() {
                         </div>
 
                         {/* Citizenship */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Citizenship *</label>
                                 <select
@@ -764,7 +764,7 @@ export default function OnboardingPage() {
                         </div>
 
                         {/* Father + Mother name */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Father&apos;s First Name</label>
                                 <input
@@ -972,7 +972,7 @@ export default function OnboardingPage() {
                     <h2 className="text-lg font-bold text-[#050505] mb-4">🛂 Passport & Travel</h2>
                     <div className="grid gap-4">
                         {/* Passport Number + Issued By */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Passport Number *</label>
                                 <input
@@ -996,7 +996,7 @@ export default function OnboardingPage() {
                         </div>
 
                         {/* Issue Date + Expiry Date */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Issue Date *</label>
                                 <div className="grid grid-cols-3 gap-2">
@@ -1036,7 +1036,7 @@ export default function OnboardingPage() {
                         </div>
 
                         {/* Lives Abroad + Previous Visas */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Do you live outside your home country? *</label>
                                 <select

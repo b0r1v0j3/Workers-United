@@ -4,7 +4,7 @@ import UnifiedNavbar from "@/components/UnifiedNavbar";
 
 export const metadata = {
     title: "Privacy Policy - Workers United",
-    description: "Privacy Policy for Workers United – How we collect, use, and protect your personal information.",
+    description: "Privacy Policy for Workers United – How we collect, use, and protect your personal data in compliance with GDPR.",
 };
 
 export default async function PrivacyPolicyPage() {
@@ -37,8 +37,9 @@ export default async function PrivacyPolicyPage() {
                         <h1 className="text-3xl font-bold text-white">Privacy Policy</h1>
                     </div>
                     <p className="text-white/80 max-w-2xl">
-                        Your privacy matters to us. This policy explains how Workers United collects, uses, and protects your personal information.
+                        Your privacy is important to us. This policy explains how Workers United collects, uses, stores, and protects your personal data in accordance with the General Data Protection Regulation (GDPR).
                     </p>
+                    <p className="text-white/60 text-sm mt-3">Last updated: 8 February 2026</p>
                 </div>
             </div>
 
@@ -46,91 +47,174 @@ export default async function PrivacyPolicyPage() {
             <main className="max-w-4xl mx-auto px-6 py-10">
                 <div className="space-y-6">
 
-                    <PolicyCard icon="👤" title="What personal information do we collect from the people that visit our blog, website or app?">
-                        <p>When contacting us on our site, you may be asked to enter your name, email address, phone number or other details to help you with your experience.</p>
+                    <PolicyCard icon="🏢" title="1. Data Controller">
+                        <p className="mb-3">The data controller responsible for your personal data is:</p>
+                        <div className="bg-[#f0f2f5] rounded-xl p-4">
+                            <p className="font-bold text-[#050505]">Workers United LLC</p>
+                            <p>75 E 3rd St., Sheridan, Wyoming 82801, USA</p>
+                            <p>Email: <a href="mailto:contact@workersunited.eu" className="text-[#1877f2] font-semibold hover:underline">contact@workersunited.eu</a></p>
+                        </div>
+                        <p className="mt-3">For any privacy-related inquiries or to exercise your rights, please contact us at the email address above.</p>
                     </PolicyCard>
 
-                    <PolicyCard icon="📋" title="When do we collect information?">
-                        <p>We collect information from you when you fill out a form or enter information on our site.</p>
-                    </PolicyCard>
+                    <PolicyCard icon="📋" title="2. What Personal Data We Collect">
+                        <p className="mb-3">We collect the following categories of personal data:</p>
 
-                    <PolicyCard icon="🔧" title="How do we use your information?">
-                        <p className="mb-3">We may use the information we collect from you when you register, make a purchase, sign up for our newsletter, respond to a survey or marketing communication, surf the website, or use certain other site features in the following ways:</p>
-                        <ul className="list-disc pl-6 space-y-2">
-                            <li>To personalize user&apos;s experience and to allow us to deliver the type of content and product offerings in which you are most interested.</li>
-                            <li>To improve our website in order to better serve you.</li>
-                            <li>To allow us to better service you in responding to your customer service requests.</li>
-                            <li>To administer a contest, promotion, survey or other site feature.</li>
-                            <li>To send periodic emails regarding your order or other products and services.</li>
+                        <h3 className="font-bold text-[#050505] mt-4 mb-2">Account Information</h3>
+                        <ul className="list-disc pl-6 space-y-1">
+                            <li>Full name, email address, password (encrypted)</li>
+                            <li>Phone number (WhatsApp)</li>
+                            <li>Account type (worker or employer)</li>
+                        </ul>
+
+                        <h3 className="font-bold text-[#050505] mt-4 mb-2">Worker Profile Data</h3>
+                        <ul className="list-disc pl-6 space-y-1">
+                            <li>Date of birth, gender, marital status, nationality, citizenship</li>
+                            <li>Country and city of birth</li>
+                            <li>Family information (spouse, children — names and dates of birth)</li>
+                            <li>Father&apos;s and mother&apos;s names, maiden name</li>
+                            <li>Preferred job type, languages spoken, work experience</li>
+                            <li>Passport details (number, issue/expiry dates, issuing authority)</li>
+                            <li>Previous visa history</li>
+                            <li>Digital signature</li>
+                        </ul>
+
+                        <h3 className="font-bold text-[#050505] mt-4 mb-2">Identity Documents</h3>
+                        <ul className="list-disc pl-6 space-y-1">
+                            <li>Passport scan/photo</li>
+                            <li>Biometric photograph</li>
+                            <li>Diploma or educational certificate</li>
+                        </ul>
+
+                        <h3 className="font-bold text-[#050505] mt-4 mb-2">Employer Profile Data</h3>
+                        <ul className="list-disc pl-6 space-y-1">
+                            <li>Company name, registration/tax number</li>
+                            <li>Company address, country, industry</li>
+                            <li>Contact person name</li>
+                            <li>Job posting details (positions, salaries, requirements)</li>
+                        </ul>
+
+                        <h3 className="font-bold text-[#050505] mt-4 mb-2">Payment Data</h3>
+                        <ul className="list-disc pl-6 space-y-1">
+                            <li>Payment transaction records (processed by Stripe — we do not store your card details)</li>
+                        </ul>
+
+                        <h3 className="font-bold text-[#050505] mt-4 mb-2">Contact Form Data</h3>
+                        <ul className="list-disc pl-6 space-y-1">
+                            <li>Name, email, phone number, country, message content</li>
                         </ul>
                     </PolicyCard>
 
-                    <PolicyCard icon="🛡️" title="How do we protect visitor information?">
+                    <PolicyCard icon="⚖️" title="3. Legal Basis for Processing">
+                        <p className="mb-3">We process your personal data based on the following legal grounds under the GDPR:</p>
                         <ul className="list-disc pl-6 space-y-2">
-                            <li>We do not use vulnerability scanning and/or scanning to PCI standards.</li>
-                            <li>We do not use Malware Scanning.</li>
-                            <li>We do not use an SSL certificate.</li>
-                            <li>We only provide articles and information on our website. Other than your contact information for the specific purposes of responding to your inquiry, we never ask for personal or private information.</li>
+                            <li><strong>Consent (Article 6(1)(a)):</strong> When you create an account and explicitly consent to the processing of your personal data. You may withdraw consent at any time.</li>
+                            <li><strong>Contract Performance (Article 6(1)(b)):</strong> Processing necessary to provide our visa facilitation services, including matching workers with employers and processing applications.</li>
+                            <li><strong>Legal Obligation (Article 6(1)(c)):</strong> Retaining payment and transaction records as required by tax and financial regulations.</li>
+                            <li><strong>Legitimate Interest (Article 6(1)(f)):</strong> Improving our platform, preventing fraud, and ensuring security of our services.</li>
                         </ul>
                     </PolicyCard>
 
-                    <PolicyCard icon="🍪" title="Do we use cookies?">
-                        <p className="mb-3">Yes. Cookies are small files that a site or its service provider transfers to your computer&apos;s hard drive through your Web browser (if you allow) that enables the site&apos;s or service provider&apos;s systems to recognize your browser and capture and remember certain information.</p>
-                        <p className="font-medium mb-2">We use cookies to:</p>
+                    <PolicyCard icon="🔧" title="4. How We Use Your Data">
+                        <p className="mb-3">We use your personal data for the following purposes:</p>
                         <ul className="list-disc pl-6 space-y-2">
-                            <li>Understand and save user&apos;s preferences for future visits.</li>
-                            <li>Keep track of advertisements.</li>
-                            <li>Compile aggregate data about site traffic and site interactions in order to offer better site experiences and tools in the future.</li>
+                            <li><strong>Account management:</strong> Creating and managing your account, authenticating your identity</li>
+                            <li><strong>Visa application processing:</strong> Preparing and submitting work visa applications on your behalf</li>
+                            <li><strong>Document verification:</strong> Using AI (Google Gemini) to verify the authenticity and quality of uploaded documents</li>
+                            <li><strong>Worker-employer matching:</strong> Matching verified worker profiles with employer job requirements</li>
+                            <li><strong>Payment processing:</strong> Processing entry fees and placement fees through Stripe</li>
+                            <li><strong>Communication:</strong> Sending service-related notifications, profile reminders, and responding to inquiries</li>
+                            <li><strong>Platform improvement:</strong> Analysing usage patterns to improve our services</li>
                         </ul>
                     </PolicyCard>
 
-                    <PolicyCard icon="⚙️" title="If users disable cookies in their browser:">
-                        <p>If you disable cookies off, some features will be disabled. It will turn off some of the features that make your site experience more efficient and some of our services will not function properly.</p>
-                    </PolicyCard>
-
-                    <PolicyCard icon="🚫" title="Third Party Disclosure">
-                        <p>We do not sell, trade, or otherwise transfer to outside parties your personally identifiable information unless we provide you with advance notice. This does not include website hosting partners and other parties who assist us in operating our website, conducting our business, or servicing you, so long as those parties agree to keep this information confidential.</p>
-                    </PolicyCard>
-
-                    <PolicyCard icon="🔗" title="Third party links">
-                        <p>Occasionally, at our discretion, we may include or offer third party products or services on our website. These third party sites have separate and independent privacy policies. We therefore have no responsibility or liability for the content and activities of these linked sites.</p>
-                    </PolicyCard>
-
-                    <PolicyCard icon="📊" title="Google">
-                        <p>We use Google Analytics on our website.</p>
-                    </PolicyCard>
-
-                    <PolicyCard icon="🏛️" title="California Online Privacy Protection Act">
-                        <p className="mb-3">CalOPPA is the first state law in the nation to require commercial websites and online services to post a privacy policy.</p>
-                        <p className="font-bold mb-2">According to CalOPPA we agree to the following:</p>
+                    <PolicyCard icon="🤝" title="5. Data Sharing and Third Parties">
+                        <p className="mb-3">We share your personal data with the following categories of recipients:</p>
                         <ul className="list-disc pl-6 space-y-2">
-                            <li>Users can visit our site anonymously.</li>
-                            <li>Once this privacy policy is created, we will add a link to it on our home page.</li>
-                            <li>Our Privacy Policy link includes the word &quot;Privacy&quot;, and can be easily be found on the page specified above.</li>
+                            <li><strong>Supabase (database &amp; storage):</strong> Stores your account data, profile information, and uploaded documents. Servers located in the EU.</li>
+                            <li><strong>Stripe (payment processing):</strong> Processes your payments securely. Stripe is certified under the EU-US Data Privacy Framework.</li>
+                            <li><strong>Google / Gemini AI (document verification):</strong> Your uploaded documents are processed by Google&apos;s AI to verify authenticity. Google is certified under the EU-US Data Privacy Framework.</li>
+                            <li><strong>Google Workspace (email):</strong> Used to send and receive emails. Google is certified under the EU-US Data Privacy Framework.</li>
+                            <li><strong>Vercel (hosting):</strong> Hosts our website. Vercel complies with GDPR requirements.</li>
+                            <li><strong>European employers:</strong> Your profile data is shared with matched employers <strong>only after you have been matched and the visa process has been initiated</strong>. We will never share your data with employers without your knowledge.</li>
+                        </ul>
+                        <p className="mt-3 font-semibold text-[#050505]">We do not sell, rent, or trade your personal data to any third party.</p>
+                    </PolicyCard>
+
+                    <PolicyCard icon="🌍" title="6. International Data Transfers">
+                        <p>Some of our service providers (Stripe, Google, Vercel) are based in the United States. These transfers are protected by appropriate safeguards including the EU-US Data Privacy Framework and Standard Contractual Clauses (SCCs) as required by GDPR. Your data is treated with the same level of protection regardless of where it is processed.</p>
+                    </PolicyCard>
+
+                    <PolicyCard icon="🗄️" title="7. Data Retention">
+                        <p className="mb-3">We retain your personal data for the following periods:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li><strong>Active accounts:</strong> Data is retained for as long as your account is active and you maintain a relationship with us.</li>
+                            <li><strong>Deleted accounts:</strong> When you delete your account, all personal data including uploaded documents is permanently deleted within 30 days.</li>
+                            <li><strong>Payment records:</strong> Transaction records are retained for 7 years to comply with tax and financial reporting obligations.</li>
+                            <li><strong>Contact form messages:</strong> Retained for 12 months after the inquiry is resolved, then deleted.</li>
                         </ul>
                     </PolicyCard>
 
-                    <PolicyCard icon="👶" title="COPPA (Children Online Privacy Protection Act)">
-                        <p>When it comes to the collection of personal information from children under 13, the Children&apos;s Online Privacy Protection Act (COPPA) puts parents in control. We do not specifically market to children under 13.</p>
+                    <PolicyCard icon="🛡️" title="8. Your Rights Under GDPR">
+                        <p className="mb-3">Under the GDPR, you have the following rights regarding your personal data:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li><strong>Right of Access (Article 15):</strong> You can request a copy of all personal data we hold about you.</li>
+                            <li><strong>Right to Rectification (Article 16):</strong> You can correct inaccurate or incomplete personal data through your profile settings.</li>
+                            <li><strong>Right to Erasure (Article 17):</strong> You can delete your account and all associated data at any time through your account settings.</li>
+                            <li><strong>Right to Data Portability (Article 20):</strong> You can download all your personal data in a machine-readable format (JSON) from your account settings.</li>
+                            <li><strong>Right to Restrict Processing (Article 18):</strong> You can request that we limit how we process your data in certain circumstances.</li>
+                            <li><strong>Right to Object (Article 21):</strong> You can object to the processing of your data based on legitimate interest.</li>
+                            <li><strong>Right to Withdraw Consent:</strong> You can withdraw your consent at any time by deleting your account. This does not affect the lawfulness of processing before withdrawal.</li>
+                        </ul>
+                        <p className="mt-3">To exercise any of these rights, please contact us at <a href="mailto:contact@workersunited.eu" className="text-[#1877f2] font-semibold hover:underline">contact@workersunited.eu</a> or use the self-service options in your account settings.</p>
                     </PolicyCard>
 
-                    <PolicyCard icon="📧" title="CAN SPAM Act">
-                        <p className="mb-3">The CAN-SPAM Act is a law that sets the rules for commercial email, establishes requirements for commercial messages, gives recipients the right to have emails stopped from being sent to them.</p>
-                        <p className="font-bold mb-2">To be in accordance with CANSPAM we agree to the following:</p>
+                    <PolicyCard icon="🔒" title="9. Data Security">
+                        <p className="mb-3">We take the security of your personal data seriously and implement appropriate technical and organisational measures, including:</p>
                         <ul className="list-disc pl-6 space-y-2">
-                            <li>NOT use false, or misleading subjects or email addresses</li>
-                            <li>Identify the message as an advertisement in some reasonable way</li>
-                            <li>Include the physical address of our business or site headquarters</li>
-                            <li>Monitor third party email marketing services for compliance, if one is used</li>
-                            <li>Honor opt-out/unsubscribe requests quickly</li>
-                            <li>Allow users to unsubscribe by using the link at the bottom of each email</li>
+                            <li>All data transmitted between your browser and our servers is encrypted using TLS/SSL (HTTPS)</li>
+                            <li>Passwords are securely hashed and never stored in plain text</li>
+                            <li>Documents are stored in encrypted cloud storage with access controls</li>
+                            <li>Administrative access is restricted and monitored</li>
+                            <li>Regular security reviews of our infrastructure and code</li>
                         </ul>
+                    </PolicyCard>
+
+                    <PolicyCard icon="🍪" title="10. Cookies">
+                        <p className="mb-3">We use only <strong>essential cookies</strong> that are strictly necessary for the functioning of our website:</p>
+                        <ul className="list-disc pl-6 space-y-2">
+                            <li><strong>Authentication cookies:</strong> Used to keep you logged in and maintain your session (set by Supabase Auth)</li>
+                            <li><strong>Cookie consent:</strong> Remembers whether you have acknowledged this cookie notice</li>
+                        </ul>
+                        <p className="mt-3">We do <strong>not</strong> use tracking cookies, advertising cookies, or any third-party analytics cookies. Since we only use essential cookies, consent is not required under GDPR, but we inform you of their use for transparency.</p>
+                    </PolicyCard>
+
+                    <PolicyCard icon="👶" title="11. Children&apos;s Privacy">
+                        <p>Our services are not intended for individuals under the age of 18. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, please contact us immediately and we will take steps to delete it.</p>
+                    </PolicyCard>
+
+                    <PolicyCard icon="📊" title="12. Non-Personal Information">
+                        <p className="mb-3">When you visit our website, we may automatically collect certain non-personal information from your browser, such as your browser type, operating system, and referring website. This information cannot identify you personally.</p>
+                        <p>Non-personal information may be used to analyse trends, administer the site, and gather broad demographic information for aggregate use. This data is never linked to any personal information.</p>
+                    </PolicyCard>
+
+                    <PolicyCard icon="🔗" title="13. Links to Other Sites">
+                        <p>Our website may contain links to third-party websites. We are not responsible for the privacy practices or content of these external sites. We encourage you to read the privacy policy of any website you visit. This Privacy Policy applies only to information collected by Workers United through our Platform.</p>
+                    </PolicyCard>
+
+                    <PolicyCard icon="📝" title="14. Changes to This Policy">
+                        <p>We may update this Privacy Policy from time to time. We will notify you of any material changes by email or through a notice on our website. The &quot;Last updated&quot; date at the top of this policy indicates when it was last revised. We encourage you to review this policy periodically.</p>
+                    </PolicyCard>
+
+                    <PolicyCard icon="🏛️" title="15. Right to Lodge a Complaint">
+                        <p className="mb-3">If you believe we have not handled your personal data properly, you have the right to lodge a complaint with a data protection supervisory authority. You may contact the supervisory authority in the EU member state where you reside, work, or where the alleged infringement occurred.</p>
+                        <p>You can also contact us directly at <a href="mailto:contact@workersunited.eu" className="text-[#1877f2] font-semibold hover:underline">contact@workersunited.eu</a> and we will do our best to resolve your concern.</p>
                     </PolicyCard>
 
                     {/* Contact Card */}
                     <div className="bg-gradient-to-br from-[#1877f2] to-[#1e5cd6] rounded-2xl p-8 text-white">
-                        <h3 className="text-xl font-bold mb-2">📬 Contacting Us</h3>
-                        <p className="text-white/80 mb-4">If there are any questions regarding this privacy policy you may contact us using the information below.</p>
+                        <h3 className="text-xl font-bold mb-2">📬 Contact Us</h3>
+                        <p className="text-white/80 mb-4">If you have any questions about this Privacy Policy or wish to exercise your data protection rights, please contact us:</p>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5">
                             <p className="font-bold text-lg">Workers United LLC</p>
                             <p className="text-white/80">75 E 3rd St., Sheridan, Wyoming 82801, USA</p>
@@ -145,10 +229,10 @@ export default async function PrivacyPolicyPage() {
             {/* Footer */}
             <footer className="bg-[#1e293b] text-white py-8 px-6">
                 <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-sm text-gray-400">© 2024 Workers United LLC. All rights reserved.</p>
+                    <p className="text-sm text-gray-400">© 2026 Workers United LLC. All rights reserved.</p>
                     <div className="flex gap-6 text-sm">
                         <Link href="/privacy-policy" className="text-white font-semibold">Privacy Policy</Link>
-                        <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms & Conditions</Link>
+                        <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms &amp; Conditions</Link>
                     </div>
                 </div>
             </footer>

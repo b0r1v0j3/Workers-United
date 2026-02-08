@@ -15,6 +15,7 @@ export function ContactForm() {
 
     const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
     const [errorMessage, setErrorMessage] = useState("");
+    const [consent, setConsent] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -191,17 +192,30 @@ export function ContactForm() {
                 </p>
             </div>
 
+            {/* GDPR Consent */}
+            <div className="flex items-start gap-3">
+                <input
+                    id="contactConsent"
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-[#2f6fed] rounded border-gray-300 focus:ring-[#2f6fed] cursor-pointer"
+                />
+                <label htmlFor="contactConsent" className="text-xs text-[#6c7a89] cursor-pointer leading-relaxed">
+                    I agree that Workers United may use my information to respond to my inquiry.
+                    See our{" "}
+                    <a href="/privacy-policy" target="_blank" className="text-[#2f6fed] font-semibold hover:underline">Privacy Policy</a>. <span className="text-red-500">*</span>
+                </label>
+            </div>
+
             <div className="flex flex-col sm:flex-row items-center gap-4">
                 <button
                     type="submit"
-                    disabled={status === "sending"}
+                    disabled={status === "sending" || !consent}
                     className="w-full sm:w-auto px-8 py-3 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-semibold shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
                 >
                     {status === "sending" ? "Sending..." : "Send message"}
                 </button>
-                <p className="text-xs text-[#6c7a89]">
-                    By sending this form you agree that we may contact you back regarding your request.
-                </p>
             </div>
         </form>
     );

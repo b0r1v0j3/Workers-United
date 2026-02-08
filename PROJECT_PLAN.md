@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-08 (Gemini swap, AI auto-reply, profile reminders, email infrastructure, Stripe fix)
+> **Poslednje ažuriranje:** 2026-02-08 (GDPR usklađenost, Gemini swap, AI auto-reply, profile reminders, email infrastructure, Stripe fix)
 
 ---
 
@@ -165,6 +165,18 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 
 ### ✅ Završeno
 
+**GDPR Usklađenost — Kompletna implementacija (08.02.2026)**
+- Potpuno prepisana **Privacy Policy** stranica — 13 GDPR-compliant sekcija (data controller, legal basis, prava korisnika, cookies, data retention, security, itd.)
+- Potpuno prepisana **Terms & Conditions** stranica — relevantne sekcije za viznu platformu (fees, documents, GDPR prava, zabranjene aktivnosti)
+- Dodat **aktivan GDPR consent checkbox** na signup formu — checkbox mora biti čekiran, consent se snima u user metadata sa timestamp-om
+- Dodat **consent checkbox na kontakt formu** — blokira slanje ako nije čekiran
+- Kreiran **Cookie Consent banner** (`CookieConsent.tsx`) — informativni banner za essential cookies, localStorage persistence
+- Kreiran **self-service Delete Account** (`/api/account/delete` + `/profile/settings`) — korisnik može sam da obriše nalog i sve podatke (GDPR Article 17)
+- Kreiran **Data Export** (`/api/account/export`) — download svih ličnih podataka kao JSON (GDPR Article 20)
+- Dodata **Account Settings** stranica sa Download Data, Delete Account i Privacy linkovima
+- Dodat **Settings link u sidebar** za sve korisnike
+- Stara privacy policy imala faktičke greške ("ne koristimo SSL", "ne tražimo lične podatke") — sve ispravljeno
+
 **Email infrastruktura + AI upgrade + Codebase audit (07-08.02.2026)**
 - Zamenjeno Web3Forms → **Nodemailer + Google Workspace SMTP** za direktan slanje emailova
 - Kreiran `src/lib/mailer.ts` sa `sendEmail()` utility funkcijom
@@ -232,7 +244,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - AppShell, UnifiedNavbar, kartice, tabovi — ceo sajt u FB stilu
 
 ### 🔲 TODO
-- [ ] **GDPR Usklađenost** — consent pri registraciji, pravo na brisanje, privacy policy sadržaj
+- [x] ~~**GDPR Usklađenost** — consent pri registraciji, pravo na brisanje, privacy policy sadržaj~~
 - [x] ~~Admin unapređenje — kompletna funkcionalnost (sve da može da radi)~~
 - [x] ~~Forgot Password flow~~
 - [x] ~~Coming Soon placeholder za plaćanje~~
@@ -289,5 +301,6 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 | Employer Profile | `src/app/profile/employer/page.tsx` | EmployerProfileClient |
 | Employer Jobs | `src/app/profile/employer/jobs/` | Job request-ovi |
 | Onboarding | `src/app/onboarding/page.tsx` | Edit profil forma |
+| Account Settings | `src/app/profile/settings/page.tsx` | GDPR: delete account, export data |
 | Admin | `src/app/admin/` | Admin panel |
 | GodModePanel | `src/components/GodModePanel.tsx` | Dev testiranje |

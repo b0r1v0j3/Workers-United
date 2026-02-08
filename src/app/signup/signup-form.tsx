@@ -14,6 +14,7 @@ export function SignupForm({ userType }: SignupFormProps) {
     const [companyName, setCompanyName] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [gdprConsent, setGdprConsent] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -22,6 +23,12 @@ export function SignupForm({ userType }: SignupFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        // Check GDPR consent
+        if (!gdprConsent) {
+            setError("You must agree to the Terms of Service and Privacy Policy to create an account.");
+            return;
+        }
 
         // Check password match
         if (password !== confirmPassword) {
@@ -43,6 +50,8 @@ export function SignupForm({ userType }: SignupFormProps) {
                         full_name: fullName,
                         company_name: userType === "employer" ? companyName : null,
                         user_type: userType,
+                        gdpr_consent: true,
+                        gdpr_consent_at: new Date().toISOString(),
                     },
                 },
             });
@@ -188,9 +197,27 @@ export function SignupForm({ userType }: SignupFormProps) {
                 )}
             </div>
 
+            {/* GDPR Consent Checkbox */}
+            <div className="flex items-start gap-3 mt-4">
+                <input
+                    id="gdprConsent"
+                    type="checkbox"
+                    checked={gdprConsent}
+                    onChange={(e) => setGdprConsent(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-[#1877f2] rounded border-gray-300 focus:ring-[#1877f2] cursor-pointer"
+                />
+                <label htmlFor="gdprConsent" className="text-xs text-gray-600 cursor-pointer leading-relaxed">
+                    I have read and agree to the{" "}
+                    <a href="/terms" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Terms of Service</a>
+                    {" "}and{" "}
+                    <a href="/privacy-policy" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Privacy Policy</a>.
+                    I consent to the processing of my personal data as described in the Privacy Policy. <span className="text-red-500">*</span>
+                </label>
+            </div>
+
             <button
                 type="submit"
-                disabled={loading || (password !== confirmPassword)}
+                disabled={loading || (password !== confirmPassword) || !gdprConsent}
                 className={`btn w-full btn-primary`}
                 style={{ marginTop: "1.5rem" }}
             >
@@ -220,13 +247,6 @@ export function SignupForm({ userType }: SignupFormProps) {
                     </>
                 )}
             </button>
-
-            <p className="text-xs text-gray-500 text-center mt-4">
-                By creating an account, you agree to our{" "}
-                <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>
-                {" "}and{" "}
-                <a href="/privacy-policy" className="text-blue-600 hover:underline">Privacy Policy</a>.
-            </p>
         </form>
     );
 }
