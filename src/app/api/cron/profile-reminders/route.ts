@@ -16,7 +16,6 @@ export async function GET(request: Request) {
         const supabase = createAdminClient();
 
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
         // Get all auth users who are candidates (not employers/admins)
         const { data: authData } = await supabase.auth.admin.listUsers();
@@ -85,7 +84,7 @@ export async function GET(request: Request) {
                 .select("id")
                 .eq("recipient_email", email)
                 .eq("email_type", "profile_reminder")
-                .gt("created_at", oneWeekAgo)
+                .gt("created_at", oneDayAgo)
                 .limit(1);
 
             if (recentEmail && recentEmail.length > 0) {
