@@ -93,7 +93,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900">Candidates</h1>
+                            <h1 className="text-2xl font-bold text-slate-900">Workers</h1>
                             <p className="text-slate-500">
                                 {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `Manage registered users (${allAuthUsers.length})`}
                             </p>

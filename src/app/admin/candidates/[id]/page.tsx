@@ -181,7 +181,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
             <div className="max-w-[1200px] mx-auto px-5 py-10">
                 {/* Back Link */}
                 <Link href="/admin/candidates" className="text-[#2f6fed] font-semibold hover:underline mb-6 inline-block">
-                    ← Back to Candidates
+                    ← Back to Workers
                 </Link>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

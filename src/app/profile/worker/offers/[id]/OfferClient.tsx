@@ -265,7 +265,7 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
                 {(offer.status === "expired" || isExpired) && offer.status !== "accepted" && (
                     <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-4 text-center">
                         <p className="text-[#65676b] mb-4">
-                            This offer has expired and was transferred to the next candidate.
+                            This offer has expired and was transferred to the next worker.
                         </p>
                         <Link href="/profile/worker" className="bg-[#1877f2] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors inline-block">
                             Back to Profile

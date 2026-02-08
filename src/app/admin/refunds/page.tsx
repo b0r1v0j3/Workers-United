@@ -42,7 +42,7 @@ export default async function AdminRefundsPage() {
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                     <p className="text-amber-800 text-sm">
-                        <strong>90-Day Policy:</strong> Candidates who have been in the queue for 90 days
+                        <strong>90-Day Policy:</strong> Workers who have been in the queue for 90 days
                         without receiving a match are automatically flagged for a $9 refund.
                     </p>
                 </div>
