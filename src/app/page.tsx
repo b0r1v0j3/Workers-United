@@ -77,7 +77,7 @@ export default async function Home() {
         <section id="how-it-works" className="py-16 md:py-20 bg-white">
           <div className="max-w-[1120px] mx-auto px-5">
             <div className="text-center mb-12">
-              <div className="inline-block px-4 py-1.5 bg-[#2f6fed]/10 rounded-full text-sm font-bold text-[#2f6fed] uppercase tracking-wider mb-3">Step by step</div>
+              <div className="inline-block px-4 py-1.5 bg-[#2f6fed] rounded-full text-sm font-bold text-white uppercase tracking-wider mb-3 shadow-sm">Step by step</div>
               <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-3">How it works</h2>
               <p className="text-[#6c7a89] max-w-xl mx-auto text-lg">
                 Clear steps for both sides – from first contact until the worker arrives.
@@ -178,7 +178,7 @@ export default async function Home() {
                 </ul>
               </div>
               <div className="order-1 md:order-2">
-                <div className="inline-block px-4 py-1.5 bg-[#2f6fed]/10 rounded-full text-sm font-bold text-[#2f6fed] mb-4">
+                <div className="inline-block px-4 py-1.5 bg-[#2f6fed] rounded-full text-sm font-bold text-white mb-4 shadow-sm">
                   For employers
                 </div>
                 <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-5">
