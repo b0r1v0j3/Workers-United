@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-08 (GDPR usklađenost, Gemini swap, AI auto-reply, profile reminders, email infrastructure, Stripe fix)
+> **Poslednje ažuriranje:** 2026-02-08 (Mobilna responsivnost, dizajn konzistencija, GDPR, admin route rename, dead code cleanup)
 
 ---
 
@@ -44,7 +44,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 
 ### Ključni principi:
 - **Zatvoreni sistem** — radnici i poslodavci se NE kontaktiraju međusobno. Tek kad viza bude odobrena, mi sprovedemo radnika do poslodavca.
-- **NIKAD ne pominjemo odakle radnici dolaze** — nema "Afrika", "Azija", ništa. Samo "international workers" ili "candidates".
+- **NIKAD ne pominjemo odakle radnici dolaze** — nema "Afrika", "Azija", ništa. Samo "international workers" ili "workers".
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
 - **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
@@ -136,8 +136,12 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - `/profile/employer` — profil poslodavca
 - `/profile/employer/jobs` — lista job request-ova
 - `/profile/employer/jobs/new` — kreiranje novog job request-a
-- `/onboarding` — editovanje profila (ista forma kao edit)
 - `/admin` — admin panel
+- `/admin/workers` — lista radnika (ranije /admin/candidates)
+- `/admin/workers/[id]` — detalji radnika
+- `/admin/employers` — lista poslodavaca
+- `/admin/queue` — queue management
+- `/admin/settings` — admin podešavanja
 
 ### Tehnički stack:
 - **Frontend:** Next.js 16 (App Router), React, TypeScript
@@ -164,6 +168,20 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**Mobilna responsivnost + Dizajn konzistencija + Cleanup (08.02.2026)**
+- Kompletna **mobilna responsivnost** — login, signup, homepage, worker profil, employer profil, admin stranice
+- Dodat **bottom navigation** za mobilne uređaje (AppShell) — worker i admin varijante
+- **Facebook-style dizajn konzistencija** — sve stranice koriste iste boje, navbar, kartice
+- Queue stranica potpuno redizajnirana (branded navbar, bg-[#f0f2f5], inline button styles)
+- Employer profil — popravljene minor boje (border, text)
+- Login/signup logo — bio sakriven u tamnom kontejneru, sada vidljiv sa drop-shadow
+- **Naming standardizacija** — svi user-facing "candidate" → "worker", svi "Log In" → "Sign In"
+- **Admin ruta preimenovana** — `/admin/candidates` → `/admin/workers` (URL, linkovi, tekst)
+- **Bug fix**: Queue page linkovao sa `candidate.id` umesto `candidate.profile_id` → 404 na detail stranici
+- **Dead code obrisan** — application page, ApplicationDataForm, application types, 2 API rute (931 linija)
+- Obrisan nekorišćeni onboarding page
+- Terms page — uklonjeno "(candidates)" iz teksta
 
 **GDPR Usklađenost — Kompletna implementacija (08.02.2026)**
 - Potpuno prepisana **Privacy Policy** stranica — 13 GDPR-compliant sekcija (data controller, legal basis, prava korisnika, cookies, data retention, security, itd.)
@@ -248,7 +266,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - [x] ~~Admin unapređenje — kompletna funkcionalnost (sve da može da radi)~~
 - [x] ~~Forgot Password flow~~
 - [x] ~~Coming Soon placeholder za plaćanje~~
-- [ ] Mobilna responsivnost (mobile-first)
+- [x] ~~Mobilna responsivnost (mobile-first)~~
 - [ ] Multi-country pricing za placement fee
 - [ ] Employer profil verifikacija (100% pravilo)
 - [ ] Automatsko matchovanje radnika sa poslodavcima
@@ -300,7 +318,8 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 | Worker Documents | `src/app/profile/worker/documents/` | Upload dokumenata |
 | Employer Profile | `src/app/profile/employer/page.tsx` | EmployerProfileClient |
 | Employer Jobs | `src/app/profile/employer/jobs/` | Job request-ovi |
-| Onboarding | `src/app/onboarding/page.tsx` | Edit profil forma |
 | Account Settings | `src/app/profile/settings/page.tsx` | GDPR: delete account, export data |
 | Admin | `src/app/admin/` | Admin panel |
+| Admin Workers | `src/app/admin/workers/` | Lista radnika |
+| Admin Worker Detail | `src/app/admin/workers/[id]/` | Detalji radnika |
 | GodModePanel | `src/components/GodModePanel.tsx` | Dev testiranje |
