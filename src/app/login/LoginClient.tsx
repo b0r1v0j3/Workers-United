@@ -244,11 +244,10 @@ export default function LoginPage() {
             </div>
 
             {/* Mobile Logo (Absolute Top) */}
-            <div className="lg:hidden absolute top-8 left-8">
+            <div className="lg:hidden absolute top-6 left-0 right-0 flex justify-center">
                 <Link href="/" className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-[#183b56] rounded-lg p-1.5 shadow-md">
-                        <Image src="/logo.png" alt="Logo" width={20} height={20} className="" />
-                    </div>
+                    <Image src="/logo.png" alt="Workers United" width={48} height={48} />
+                    <span className="font-bold text-[#1877f2] text-lg tracking-tight">Workers United</span>
                 </Link>
             </div>
         </div>
