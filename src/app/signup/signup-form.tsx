@@ -89,14 +89,14 @@ export function SignupForm({ userType }: SignupFormProps) {
     if (success) {
         return (
             <div className="text-center py-8">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 ring-4 ring-emerald-100">
+                    <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Check your email</h3>
-                <p className="text-gray-600 text-sm">
-                    We&apos;ve sent a confirmation link to <strong>{email}</strong>.
+                <h3 className="text-xl font-bold text-[#1e293b] mb-2">Check your email</h3>
+                <p className="text-[#64748b] text-sm leading-relaxed">
+                    We&apos;ve sent a confirmation link to <strong className="text-[#1e293b]">{email}</strong>.
                     Please click the link to activate your account.
                 </p>
             </div>
@@ -104,125 +104,127 @@ export function SignupForm({ userType }: SignupFormProps) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium">
                     {error}
                 </div>
             )}
 
-            <div>
-                <label htmlFor="fullName" className="label">
-                    {userType === "employer" ? "Contact Person Name" : "Full Name"} <span className="text-red-500">*</span>
+            <div className="space-y-2">
+                <label htmlFor="fullName" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                    {userType === "employer" ? "Contact Person Name" : "Full Name"}
                 </label>
                 <input
                     id="fullName"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="input"
+                    className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
                     placeholder={userType === "employer" ? "John Smith" : "John Doe"}
                     required
                 />
             </div>
 
             {userType === "employer" && (
-                <div>
-                    <label htmlFor="companyName" className="label">
-                        Company Name <span className="text-red-500">*</span>
+                <div className="space-y-2">
+                    <label htmlFor="companyName" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                        Company Name
                     </label>
                     <input
                         id="companyName"
                         type="text"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
-                        className="input"
+                        className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
                         placeholder="Your Company Ltd."
                         required
                     />
                 </div>
             )}
 
-            <div>
-                <label htmlFor="email" className="label">
-                    Email address <span className="text-red-500">*</span>
+            <div className="space-y-2">
+                <label htmlFor="email" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                    Email address
                 </label>
                 <input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="input"
+                    className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
                     placeholder={userType === "employer" ? "hr@company.com" : "you@example.com"}
                     required
                 />
             </div>
 
-            <div>
-                <label htmlFor="password" className="label">
-                    Password <span className="text-red-500">*</span>
+            <div className="space-y-2">
+                <label htmlFor="password" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                    Password
                 </label>
                 <input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="input"
+                    className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
                     placeholder="••••••••"
                     minLength={6}
                     required
                 />
-                <p className="mt-1 text-xs text-gray-500">Must be at least 6 characters</p>
+                <p className="text-[11px] text-[#94a3b8] ml-1 font-medium">Must be at least 6 characters</p>
             </div>
 
-            <div>
-                <label htmlFor="confirmPassword" className="label">
-                    Confirm Password <span className="text-red-500">*</span>
+            <div className="space-y-2">
+                <label htmlFor="confirmPassword" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                    Confirm Password
                 </label>
                 <input
                     id="confirmPassword"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`input ${password && confirmPassword && password !== confirmPassword ? 'border-red-500' : ''}`}
+                    className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all ${password && confirmPassword && password !== confirmPassword
+                            ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
+                            : 'border-[#e2e8f0]'
+                        }`}
                     placeholder="••••••••"
                     minLength={6}
                     required
                 />
                 {password && confirmPassword && password !== confirmPassword && (
-                    <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                    <p className="text-xs text-red-500 ml-1 font-medium">Passwords do not match</p>
                 )}
                 {password && confirmPassword && password === confirmPassword && (
-                    <p className="mt-1 text-xs text-green-600">✓ Passwords match</p>
+                    <p className="text-xs text-emerald-600 ml-1 font-medium">✓ Passwords match</p>
                 )}
             </div>
 
-            {/* GDPR Consent Checkbox */}
-            <div className="flex items-start gap-3 mt-4">
+            {/* GDPR Consent */}
+            <div className="flex items-start gap-3 bg-[#f8fbff] p-4 rounded-xl border border-[#e2e8f0]">
                 <input
                     id="gdprConsent"
                     type="checkbox"
                     checked={gdprConsent}
                     onChange={(e) => setGdprConsent(e.target.checked)}
-                    className="mt-1 w-4 h-4 text-[#1877f2] rounded border-gray-300 focus:ring-[#1877f2] cursor-pointer"
+                    className="mt-0.5 w-4 h-4 text-[#1877f2] rounded border-gray-300 focus:ring-[#1877f2] cursor-pointer"
                 />
-                <label htmlFor="gdprConsent" className="text-xs text-gray-600 cursor-pointer leading-relaxed">
+                <label htmlFor="gdprConsent" className="text-xs text-[#64748b] cursor-pointer leading-relaxed">
                     I have read and agree to the{" "}
                     <a href="/terms" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Terms of Service</a>
                     {" "}and{" "}
                     <a href="/privacy-policy" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Privacy Policy</a>.
-                    I consent to the processing of my personal data as described in the Privacy Policy. <span className="text-red-500">*</span>
+                    I consent to the processing of my personal data as described in the Privacy Policy.
                 </label>
             </div>
 
             <button
                 type="submit"
                 disabled={loading || (password !== confirmPassword) || !gdprConsent}
-                className={`btn w-full btn-primary`}
-                style={{ marginTop: "1.5rem" }}
+                className="w-full bg-[#1877f2] text-white font-bold py-4 rounded-full shadow-lg shadow-blue-200/50 hover:bg-[#1665d8] transition-all transform hover:translate-y-[-1px] active:scale-[0.98] disabled:opacity-50 disabled:hover:translate-y-0 mt-2"
             >
                 {loading ? (
-                    <>
+                    <span className="flex items-center justify-center gap-2">
                         <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                             <circle
                                 className="opacity-25"
@@ -240,11 +242,9 @@ export function SignupForm({ userType }: SignupFormProps) {
                             />
                         </svg>
                         Creating account...
-                    </>
+                    </span>
                 ) : (
-                    <>
-                        Create {userType === "employer" ? "employer" : "worker"} account
-                    </>
+                    <>Create {userType === "employer" ? "employer" : "worker"} account</>
                 )}
             </button>
         </form>
