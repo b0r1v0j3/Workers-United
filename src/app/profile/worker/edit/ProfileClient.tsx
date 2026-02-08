@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { WORLD_COUNTRIES, INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS } from "@/lib/constants";
+import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS } from "@/lib/constants";
 
 interface Profile {
     id: string;
@@ -1018,7 +1018,7 @@ export default function ProfilePage() {
                                         className={inputClass}
                                     >
                                         <option value="">Select industry...</option>
-                                        {INDUSTRIES.map(ind => (<option key={ind} value={ind}>{ind}</option>))}
+                                        {WORKER_INDUSTRIES.map(ind => (<option key={ind} value={ind}>{ind}</option>))}
                                     </select>
                                 </div>
                             </div>

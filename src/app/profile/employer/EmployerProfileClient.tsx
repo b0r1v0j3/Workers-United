@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
+import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 
 interface EmployerProfile {
     id: string;
@@ -448,7 +448,7 @@ export default function EmployerProfilePage() {
                                             className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors"
                                         >
                                             <option value="">Select industry...</option>
-                                            {INDUSTRIES.map(ind => (
+                                            {EMPLOYER_INDUSTRIES.map(ind => (
                                                 <option key={ind} value={ind}>{ind}</option>
                                             ))}
                                         </select>
