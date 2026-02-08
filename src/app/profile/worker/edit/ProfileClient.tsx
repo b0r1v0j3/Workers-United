@@ -58,7 +58,7 @@ const MONTHS = [
 ];
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => currentYear - 18 - i);
-// Family DOB years (0â€“100 years ago)
+// Family DOB years (0–100 years ago)
 const ALL_YEARS = Array.from({ length: 100 }, (_, i) => currentYear - i);
 // Passport issue date: last 10 years
 const PASSPORT_ISSUE_YEARS = Array.from({ length: 10 }, (_, i) => currentYear - i);
@@ -401,7 +401,7 @@ export default function ProfilePage() {
             <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
                 <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
                     <Link href="/profile/worker" className="flex items-center gap-2 text-[#65676b] hover:text-[#050505] text-sm font-semibold">
-                        â† Back to Profile
+                        ← Back to Profile
                     </Link>
                     <Link href="/" className="flex items-center gap-2">
                         <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
@@ -435,7 +435,7 @@ export default function ProfilePage() {
 
                 <form onSubmit={handleSubmit}>
                     <div className="space-y-4">
-                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Account Information Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+                        {/* ••••••••••••••• Account Information Card ••••••••••••••• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Account Information</h2>
@@ -468,7 +468,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Personal Information Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+                        {/* ••••••••••••••• Personal Information Card ••••••••••••••• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Personal Information</h2>
@@ -625,7 +625,7 @@ export default function ProfilePage() {
                                             className={inputClass}
                                             placeholder="Only if different from current surname"
                                         />
-                                        <p className="text-[11px] text-gray-500 mt-1">Optional â€” if your surname changed after marriage</p>
+                                        <p className="text-[11px] text-gray-500 mt-1">Optional — if your surname changed after marriage</p>
                                     </div>
                                 </div>
 
@@ -702,7 +702,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Family Information Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+                        {/* ••••••••••••••• Family Information Card ••••••••••••••• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Family Information</h2>
@@ -885,7 +885,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Passport & Travel Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+                        {/* ••••••••••••••• Passport & Travel Card ••••••••••••••• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Passport & Travel</h2>
@@ -991,7 +991,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Job Preferences Card â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+                        {/* ••••••••••••••• Job Preferences Card ••••••••••••••• */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Job Preferences</h2>
