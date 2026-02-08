@@ -45,7 +45,7 @@ export default async function AdminQueuePage() {
             <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <h1 className="text-2xl font-bold text-slate-900">Queue Management</h1>
-                    <p className="text-slate-500">Monitor candidates in queue and manage offers.</p>
+                    <p className="text-slate-500">Monitor workers in queue and manage offers.</p>
                 </div>
 
                 {/* Stats */}
@@ -61,7 +61,7 @@ export default async function AdminQueuePage() {
                         <thead className="bg-slate-50">
                             <tr>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">#</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Candidate</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Worker</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Status</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Joined</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Days in Queue</th>
@@ -100,7 +100,7 @@ export default async function AdminQueuePage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             <Link
-                                                href={`/admin/candidates/${candidate.id}`}
+                                                href={`/admin/workers/${candidate.profile_id}`}
                                                 className="text-blue-600 hover:underline font-medium"
                                             >
                                                 View
@@ -113,7 +113,7 @@ export default async function AdminQueuePage() {
                             {(!queuedCandidates || queuedCandidates.length === 0) && (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-10 text-center text-slate-400">
-                                        No candidates in queue
+                                        No workers in queue
                                     </td>
                                 </tr>
                             )}

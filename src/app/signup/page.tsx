@@ -26,9 +26,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
 
                 <div className="relative z-10">
                     <Link href="/" className="flex items-center gap-3 mb-20">
-                        <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center p-2 backdrop-blur-md">
-                            <Image src="/logo.png" alt="Workers United logo" width={64} height={64} />
-                        </div>
+                        <Image src="/logo.png" alt="Workers United logo" width={48} height={48} className="drop-shadow-lg" />
                         <span className="text-2xl font-bold tracking-tight">Workers United</span>
                     </Link>
 
