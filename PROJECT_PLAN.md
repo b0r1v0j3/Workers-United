@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-08 (Mobilna responsivnost, dizajn konzistencija, GDPR, admin route rename, dead code cleanup)
+> **Poslednje ažuriranje:** 2026-02-08 (Brand boje, admin delete, gradient fix, mobilna responsivnost, dizajn konzistencija, dead code cleanup)
 
 ---
 
@@ -182,6 +182,12 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Dead code obrisan** — application page, ApplicationDataForm, application types, 2 API rute (931 linija)
 - Obrisan nekorišćeni onboarding page
 - Terms page — uklonjeno "(candidates)" iz teksta
+- **Admin workers lista** — filtrira samo korisnike sa profilom (uklanjeni stale auth-only useri)
+- **Admin Delete dugme** — dodato na svaku worker karticu, briše kompletno (storage, dokumenta, potpise, kandidata, profil, auth)
+- **Login/signup gradient** — zamenjen `#183b56` (zelenkasto-plav) sa čistim plavim gradijentom koji odgovara signup stranici
+- **Homepage footer** — isti gradient fix (`#0F172A → #1E3A5F`)
+- **Brand text boja** — "Workers United" tekst standardizovan na `#1E3A5F` (tamno plava koja odgovara logu) na svih 10 stranica
+- **Logo na login/signup** — beli filter samo na desktop-u (`lg:brightness-0 lg:invert`), normalan na mobilnom
 
 **GDPR Usklađenost — Kompletna implementacija (08.02.2026)**
 - Potpuno prepisana **Privacy Policy** stranica — 13 GDPR-compliant sekcija (data controller, legal basis, prava korisnika, cookies, data retention, security, itd.)
