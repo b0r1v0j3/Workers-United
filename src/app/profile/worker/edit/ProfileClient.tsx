@@ -672,6 +672,9 @@ export default function ProfilePage() {
                                             type="tel"
                                             name="phone"
                                             value={formData.phone}
+                                            onFocus={(e) => {
+                                                if (!formData.phone) setFormData(prev => ({ ...prev, phone: '+381' }));
+                                            }}
                                             onChange={(e) => {
                                                 let val = e.target.value;
                                                 if (val.length === 1 && val !== '+') val = '+' + val;
