@@ -64,10 +64,8 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         return { candidate, userDocs, verifiedDocs };
     };
 
-    // Show all non-employer auth users (same logic as admin dashboard)
-    const activeAuthUsers = allAuthUsers.filter((u: any) =>
-        u.user_metadata?.user_type !== 'employer'
-    );
+    // Show ALL auth users so admin can manage/delete any account
+    const activeAuthUsers = allAuthUsers;
 
     // Apply filter
     let filteredUsers = activeAuthUsers;
