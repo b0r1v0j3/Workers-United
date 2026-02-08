@@ -235,7 +235,7 @@ export default function EmployerProfilePage() {
                         {/* Basic Info Card */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Basic Information</h2>
+                                <h2 className="font-semibold text-gray-900 text-[15px]">Company Information</h2>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${employer?.status === 'active' ? 'bg-green-100 text-green-700' :
                                     employer?.status === 'verified' ? 'bg-blue-100 text-blue-700' :
                                         'bg-amber-100 text-amber-700'
@@ -389,29 +389,7 @@ export default function EmployerProfilePage() {
                                     </div>
                                 </div>
 
-                                {/* Description */}
-                                <div>
-                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                        About Company
-                                    </label>
-                                    <textarea
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleChange}
-                                        rows={3}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
-                                        placeholder="Brief description of your company..."
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Address Card */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Addresses</h2>
-                            </div>
-                            <div className="p-4 space-y-4">
+                                {/* Company Address */}
                                 <div>
                                     <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
                                         Company Address
@@ -425,23 +403,9 @@ export default function EmployerProfilePage() {
                                         placeholder="Full registered business address..."
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                                        Worker Accommodation Address <span className="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                        name="accommodation_address"
-                                        value={formData.accommodation_address}
-                                        onChange={handleChange}
-                                        rows={2}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
-                                        placeholder="Address where international workers will be accommodated..."
-                                    />
-                                    <p className="text-[11px] text-gray-500 mt-1">⚠️ Required for visa processing</p>
-                                </div>
-
                             </div>
                         </div>
+
 
                         {/* Hiring Preferences Card */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -523,6 +487,22 @@ export default function EmployerProfilePage() {
                                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
                                         placeholder="Describe typical job duties, required skills, working conditions..."
                                     />
+                                </div>
+
+                                {/* Worker Accommodation Address */}
+                                <div>
+                                    <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                                        Worker Accommodation Address <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        name="accommodation_address"
+                                        value={formData.accommodation_address}
+                                        onChange={handleChange}
+                                        rows={2}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors resize-none"
+                                        placeholder="Address where international workers will be accommodated..."
+                                    />
+                                    <p className="text-[11px] text-gray-500 mt-1">⚠️ Required for visa processing</p>
                                 </div>
                             </div>
                         </div>
