@@ -117,6 +117,9 @@ export function ContactForm() {
                         required
                         placeholder="+381641234567"
                         value={formData.phone}
+                        onFocus={() => {
+                            if (!formData.phone) setFormData({ ...formData, phone: '+381' });
+                        }}
                         onChange={(e) => {
                             let val = e.target.value;
                             if (val.length === 1 && val !== '+') val = '+' + val;
