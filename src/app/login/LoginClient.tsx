@@ -81,7 +81,7 @@ export default function LoginPage() {
 
                     <h1 className="text-5xl font-bold mb-6 leading-tight">Welcome back</h1>
                     <p className="text-blue-100/80 text-lg max-w-md leading-relaxed mb-12">
-                        Log in to access your profile, track your applications, and manage documents.
+                        Sign in to access your profile, track your applications, and manage documents.
                     </p>
 
                     <div className="space-y-8">

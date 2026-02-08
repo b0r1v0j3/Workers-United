@@ -84,7 +84,7 @@ export default function UnifiedNavbar({ variant, user, profileName }: UnifiedNav
                                 href="/login"
                                 className="px-5 py-1.5 text-[#1877f2] font-semibold text-sm hover:bg-[#f0f2f5] rounded-md transition-colors"
                             >
-                                Log In
+                                Sign In
                             </Link>
                             <Link
                                 href="/signup"
