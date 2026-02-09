@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Emails Preview</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background-color: #e2e8f0;
+            font-family: sans-serif;
+        }
+
+        .preview-container {
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .preview-label {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #475569;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 1. WELCOME EMAIL -->
+    <div class="preview-container">
+        <div class="preview-label">1. Welcome Email</div>
+        <!-- Paste of Welcome HTML -->
+        <div
+            style="max-width:600px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.1); overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #183b56; line-height: 1.6;">
+            <!-- Header Bar -->
+            <div
+                style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
+                <img src="../public/logo-white.png" alt="Workers United" width="48" height="48"
+                    style="vertical-align: middle;">
+                <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">Workers United</div>
+                <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">Welcome to the team!</div>
+            </div>
+
+            <!-- Body Content -->
+            <div style="padding: 40px;">
+                <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Welcome, Borivoje!</h2>
+                <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
+                    Thank you for joining Workers United! We're excited to help you find the right job opportunities in
+                    Europe.
+                </p>
+
+                <div style="background:#f0f7ff; border-radius:12px; padding:30px; margin:25px 0;">
+                    <h3 style="margin:0 0 20px; font-size:18px; color: #183b56;">Your Next Steps:</h3>
+                    <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                        <div
+                            style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; flex-shrink: 0;">
+                            ✓</div>
+                        <div style="font-size: 16px; color: #2d3748; padding-top: 2px;">1. Complete your profile
+                            information</div>
+                    </div>
+                    <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                        <div
+                            style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; flex-shrink: 0;">
+                            ✓</div>
+                        <div style="font-size: 16px; color: #2d3748; padding-top: 2px;">2. Upload documents</div>
+                    </div>
+                    <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                        <div
+                            style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; flex-shrink: 0;">
+                            ✓</div>
+                        <div style="font-size: 16px; color: #2d3748; padding-top: 2px;">3. Wait for verification</div>
+                    </div>
+                    <div style="display: flex; align-items: flex-start;">
+                        <div
+                            style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; flex-shrink: 0;">
+                            ✓</div>
+                        <div style="font-size: 16px; color: #2d3748; padding-top: 2px;">4. Get matched with employers!
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align:center; margin-top:35px; margin-bottom: 20px;">
+                    <a href="#"
+                        style="display: inline-block; background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); color: white !important; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px; width: 100%; box-sizing: border-box; text-align: center;">
+                        Complete Your Profile
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom Bar -->
+            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); height: 8px;"></div>
+        </div>
+        <!-- Footer reused for subsequent emails (simplified in preview) -->
+    </div>
+
+    <!-- 2. PROFILE COMPLETE -->
+    <div class="preview-container">
+        <div class="preview-label">2. Profile Complete</div>
+        <div
+            style="max-width:600px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.1); overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #183b56; line-height: 1.6;">
+            <!-- Header Bar -->
+            <div
+                style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
+                <img src="../public/logo-white.png" alt="Workers United" width="48" height="48"
+                    style="vertical-align: middle;">
+                <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">Profile Verified</div>
+                <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">You're ready for the next
+                    step!</div>
+            </div>
+
+            <div style="padding: 40px;">
+                <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Great job, Borivoje!
+                </h2>
+                <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
+                    Your profile and documents are now verified. You're just one step away from starting your job
+                    search.
+                </p>
+
+                <div
+                    style="background:linear-gradient(135deg, #183b56 0%, #2f6fed 100%); border-radius:12px; padding:30px; margin:25px 0; color:white; text-align:center;">
+                    <h3 style="margin:0 0 10px; font-size:20px;">Activate Your Profile</h3>
+                    <p style="margin:0 0 20px; opacity:0.9; font-size: 16px;">Pay just $9 to enter our job matching
+                        queue</p>
+                    <div style="font-size:42px; font-weight:bold; margin-bottom: 10px;">$9</div>
+                    <div
+                        style="background: rgba(255,255,255,0.1); display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 13px;">
+                        90-day money-back guarantee
+                    </div>
+                </div>
+
+                <div style="text-align:center; margin-top:35px;">
+                    <a href="#"
+                        style="display: inline-block; background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); color: white !important; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px; width: 100%; box-sizing: border-box; text-align: center;">
+                        Activate Now
+                    </a>
+                </div>
+            </div>
+            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); height: 8px;"></div>
+        </div>
+    </div>
+
+    <!-- 3. PAYMENT SUCCESS -->
+    <div class="preview-container">
+        <div class="preview-label">3. Payment Success</div>
+        <div
+            style="max-width:600px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.1); overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #183b56; line-height: 1.6;">
+            <!-- Header Bar -->
+            <div
+                style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
+                <img src="../public/logo-white.png" alt="Workers United" width="48" height="48"
+                    style="vertical-align: middle;">
+                <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">Payment Confirmed</div>
+                <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">Your future starts here!
+                </div>
+            </div>
+
+            <div style="padding: 40px;">
+                <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">You're all set,
+                    Borivoje!</h2>
+                <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
+                    Your payment of <strong>$9</strong> has been confirmed. Your profile is now active in our job
+                    matching queue.
+                </p>
+
+                <div
+                    style="background:#f0fff4; border: 1px solid #bbf7d0; border-radius:12px; padding:30px; margin:25px 0; text-align:center;">
+                    <div
+                        style="background: #10b981; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 20px;">
+                        ✓</div>
+                    <h3 style="margin:0; font-size:20px; color: #065f46;">Your job search has started!</h3>
+                </div>
+
+                <div style="background:#f4f6fb; border-radius:12px; padding:30px; margin:25px 0;">
+                    <h3 style="margin:0 0 15px; font-size:18px; color: #183b56;">What happens next:</h3>
+                    <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                        <div style="color: #2f6fed; margin-right: 10px; font-weight: bold;">•</div>
+                        <div>We match your profile with employer requests</div>
+                    </div>
+                    <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                        <div style="color: #2f6fed; margin-right: 10px; font-weight: bold;">•</div>
+                        <div>You'll receive job offers via email</div>
+                    </div>
+                    <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                        <div style="color: #2f6fed; margin-right: 10px; font-weight: bold;">•</div>
+                        <div>Accept offers within 24 hours</div>
+                    </div>
+                    <div style="display: flex; align-items: flex-start;">
+                        <div style="color: #2f6fed; margin-right: 10px; font-weight: bold;">•</div>
+                        <div>We handle visa and documentation</div>
+                    </div>
+                </div>
+
+                <div style="text-align:center; margin-top:35px;">
+                    <a href="#"
+                        style="display: inline-block; background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); color: white !important; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px; width: 100%; box-sizing: border-box; text-align: center;">
+                        View Your Dashboard
+                    </a>
+                </div>
+            </div>
+            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); height: 8px;"></div>
+        </div>
+    </div>
+
+    <!-- 4. JOB OFFER -->
+    <div class="preview-container">
+        <div class="preview-label">4. Job Offer</div>
+        <div
+            style="max-width:600px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.1); overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #183b56; line-height: 1.6;">
+            <!-- Header Bar -->
+            <div
+                style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
+                <img src="../public/logo-white.png" alt="Workers United" width="48" height="48"
+                    style="vertical-align: middle;">
+                <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">New Job Offer</div>
+                <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">A company wants to hire
+                    you!</div>
+            </div>
+
+            <div style="padding: 40px;">
+                <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Great news, Borivoje!
+                </h2>
+                <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
+                    You have received a job offer. Please review and respond within <strong>24 hours</strong>.
+                </p>
+
+                <div
+                    style="background:white; border: 1px solid #e2e8f0; border-radius:12px; padding:0; margin:25px 0; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <div
+                        style="background: #f8fafc; padding: 15px 25px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #475569;">
+                        JOB DETAILS
+                    </div>
+                    <div style="padding: 25px;">
+                        <h3 style="margin:0 0 5px; font-size:22px; color:#183b56;">Construction Specialist</h3>
+                        <p style="margin:0 0 20px; color: #64748b; font-size: 16px;">Deutsche Bau GmbH</p>
+
+                        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                            <div style="width: 24px; text-align: center; margin-right: 10px;">📍</div>
+                            <div style="font-weight: 500;">Hamburg, Germany</div>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 24px; text-align: center; margin-right: 10px;">💰</div>
+                            <div style="font-weight: 500;">€2,400 / month</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    style="background:#fff7ed; border: 1px solid #ffedd5; border-radius:12px; padding:15px; margin:25px 0; color: #9a3412;">
+                    <strong>⚠️ Important:</strong> You have 24 hours to respond. Declining may affect your refund
+                    eligibility.
+                </div>
+
+                <div style="text-align:center; margin-top:35px;">
+                    <a href="#"
+                        style="display: inline-block; background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); color: white !important; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px; width: 100%; box-sizing: border-box; text-align: center;">
+                        View & Accept Offer
+                    </a>
+                </div>
+            </div>
+            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); height: 8px;"></div>
+        </div>
+    </div>
+
+    <!-- 5. OFFER REMINDER -->
+    <div class="preview-container">
+        <div class="preview-label">5. Offer Reminder</div>
+        <div
+            style="max-width:600px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.1); overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #183b56; line-height: 1.6;">
+            <!-- Header Bar -->
+            <div
+                style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
+                <img src="../public/logo-white.png" alt="Workers United" width="48" height="48"
+                    style="vertical-align: middle;">
+                <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">Offer Expiring</div>
+                <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">Please respond immediately
+                </div>
+            </div>
+
+            <div style="padding: 40px;">
+                <h2 style="margin:0 0 20px; color:#dc3545; font-size: 28px; text-align: center;">Action Required</h2>
+                <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
+                    Hi Borivoje, you have a pending job offer that will expire in a few hours.
+                </p>
+
+                <div
+                    style="background:#fee2e2; border-radius:12px; padding:30px; margin:25px 0; text-align:center; color: #991b1b;">
+                    <div style="font-size:48px; margin-bottom:15px;">⏰</div>
+                    <h3 style="margin:0; font-size:20px; font-weight:bold;">Don't miss this opportunity!</h3>
+                    <p style="margin:10px 0 0;">This offer is waiting for your response.</p>
+                </div>
+
+                <div style="text-align:center; margin-top:35px;">
+                    <a href="#"
+                        style="display: inline-block; background: linear-gradient(135deg, #dc3545 0%, #b91c1c 100%); color: white !important; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px; width: 100%; box-sizing: border-box; text-align: center;">
+                        Respond Now
+                    </a>
+                </div>
+            </div>
+            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); height: 8px;"></div>
+        </div>
+    </div>
+
+    <!-- 6. REFUND APPROVED -->
+    <div class="preview-container">
+        <div class="preview-label">6. Refund Approved</div>
+        <div
+            style="max-width:600px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.1); overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #183b56; line-height: 1.6;">
+            <!-- Header Bar -->
+            <div
+                style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
+                <img src="../public/logo-white.png" alt="Workers United" width="48" height="48"
+                    style="vertical-align: middle;">
+                <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">Refund Approved</div>
+                <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">Money is on the way</div>
+            </div>
+
+            <div style="padding: 40px;">
+                <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Refund Processed</h2>
+                <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
+                    Hi Borivoje, as promised under our 90-day guarantee, your refund of <strong>$9</strong> has been
+                    processed.
+                </p>
+
+                <div style="background:#f4f6fb; border-radius:12px; padding:25px; margin:25px 0; text-align: center;">
+                    <div style="font-size:48px; margin-bottom:15px;">💸</div>
+                    <p style="margin:0; font-size: 16px; color: #183b56; font-weight: 500;">Funds sent to your original
+                        payment method</p>
+                    <p style="margin:10px 0 0; font-size: 14px; color: #64748b;">Expect it within 5-10 business days.
+                    </p>
+                </div>
+
+                <p style="text-align: center; font-size: 15px; color: #4a5568; margin-top: 30px;">
+                    We're sorry we couldn't find you a job this time. You're always welcome to try again in the future.
+                    <br><br>
+                    Thank you for giving Workers United a try.
+                </p>
+            </div>
+            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); height: 8px;"></div>
+        </div>
+    </div>
+
+</body>
+
+</html>

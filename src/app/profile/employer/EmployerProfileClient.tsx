@@ -47,6 +47,88 @@ const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
 const cardClass = "bg-white rounded-lg shadow-sm border border-gray-200";
 const cardHeaderClass = "px-4 py-3 border-b border-gray-200 flex items-center justify-between";
 
+// ─── Helper: Calculate Completion ───────────────────────────────
+function calculateCompletion(form: any) {
+    // Required fields: Name, Reg No, Address, Phone, Country, City, Industry, Description
+    // Website is optional.
+    const required = [
+        "company_name", "company_registration_number", "company_address",
+        "contact_phone", "country", "city", "industry", "description"
+    ];
+
+    const filled = required.filter(key => {
+        const val = form[key];
+        return val && typeof val === 'string' && val.trim().length > 0;
+    }).length;
+
+    return Math.round((filled / required.length) * 100);
+}
+
+// ─── Component: Verification Status Card ────────────────────────
+function EmployerVerificationCard({ employer, form }: { employer: EmployerProfile | null, form: any }) {
+    const completion = calculateCompletion(form);
+    const isVerified = employer?.status === 'verified';
+    const isPending = employer?.status === 'pending';
+
+    // If verified, maybe show nothing or a small badge. Let's show nothing to keep UI clean,
+    // or a small "Verified" indicator which is already in the header.
+    if (isVerified) return null;
+
+    if (completion === 100) {
+        return (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
+                <div className="flex items-start gap-4">
+                    <div className="bg-blue-100 p-2 rounded-full shrink-0">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-blue-900 text-lg">Profile Under Review</h3>
+                        <p className="text-blue-700 mt-1">
+                            Great job! Your profile is 100% complete. Admin will review your details and contact you for authorization.
+                        </p>
+                        <p className="text-sm text-blue-600 mt-2">
+                            Status: <span className="font-bold uppercase tracking-wide">Pending Approval</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white border border-amber-200 rounded-lg p-5 mb-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                        Complete Your Profile
+                        <span className="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                            {completion}%
+                        </span>
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-1">
+                        You must complete your profile (100%) to be verified and view worker candidates.
+                    </p>
+                </div>
+                <div className="w-full md:w-56 shrink-0">
+                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
+                            style={{ width: `${completion}%` }}
+                        ></div>
+                    </div>
+                    <p className="text-right text-xs text-gray-400 mt-1">
+                        {completion === 0 ? "Start by adding company name" :
+                            completion < 100 ? "Keep going..." : "Done!"}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main Component ─────────────────────────────────────────────
 export default function EmployerProfilePage() {
     const router = useRouter();
@@ -395,6 +477,9 @@ export default function EmployerProfilePage() {
                         </button>
                     )}
                 </div>
+
+                {/* Verification Status Card */}
+                <EmployerVerificationCard employer={employer} form={companyForm} />
 
                 {/* ═══════════════ CARD 1: Company Info ═══════════════ */}
                 <div className={cardClass}>

@@ -292,10 +292,10 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] Automatsko matchovanje radnika sa poslodavcima
 - [x] ~~Email notifikacije za sve korake procesa~~
 - [ ] Prebaciti Coming Soon → Stripe checkout ($9 entry fee) kad bude spremno
-- [x] ~~Education polje uklonjeno (redundantno — diploma se upload-uje)~~
 - [x] ~~Worker preferred_job: text → dropdown (sync sa employer)~~
 - [x] ~~Onboarding dropdown sync (lowercase → uppercase vrednosti)~~
 - [x] ~~Employer country dropdown (46 evropskih država)~~
+- [x] ~~Employer profil verifikacija (100% pravilo — UI Completion Tracker & Pending Approval)~~
 
 ### ⏸️ ČEKA SE (blokirano)
 - [ ] **WhatsApp integracija** — čeka se tax ID → bankovni račun → broj telefona na firmu

@@ -30,6 +30,14 @@
     {
       "path": "/api/cron/profile-reminders",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/check-expiring-docs",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/match-jobs",
+      "schedule": "0 * * * *"
     }
   ]
 }
