@@ -42,10 +42,10 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         .from("candidates")
         .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed, current_country, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas");
 
-    // Fetch all profiles
+    // Fetch all profiles (include user_type to filter)
     const { data: profiles } = await adminClient
         .from("profiles")
-        .select("id, email, full_name, first_name, last_name, avatar_url");
+        .select("id, email, full_name, first_name, last_name, avatar_url, user_type");
 
     // Fetch all documents
     const { data: allDocs } = await adminClient
@@ -55,6 +55,13 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     // Create lookup maps
     const candidateMap = new Map(candidates?.map(c => [c.profile_id, c]) || []);
     const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+    // Build set of employer profile IDs to exclude
+    const employerProfileIds = new Set(
+        (profiles || [])
+            .filter(p => p.user_type === "employer" || p.user_type === "admin")
+            .map(p => p.id)
+    );
 
     // Calculate user progress
     const getUserStats = (userId: string) => {
@@ -87,8 +94,8 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         return { candidate, userDocs, verifiedDocs, profileCompletion };
     };
 
-    // Show ALL auth users so admin can manage/delete any account
-    const activeAuthUsers = allAuthUsers;
+    // Filter: only show workers (exclude employers and admins)
+    const activeAuthUsers = allAuthUsers.filter((u: any) => !employerProfileIds.has(u.id));
 
     // Apply filter
     let filteredUsers = activeAuthUsers;
@@ -208,15 +215,15 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                             <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden max-w-[200px]">
                                                 <div
                                                     className={`h-full rounded-full transition-all ${profileCompletion === 100 ? 'bg-emerald-500' :
-                                                            profileCompletion >= 50 ? 'bg-blue-500' :
-                                                                profileCompletion > 0 ? 'bg-amber-500' : 'bg-slate-300'
+                                                        profileCompletion >= 50 ? 'bg-blue-500' :
+                                                            profileCompletion > 0 ? 'bg-amber-500' : 'bg-slate-300'
                                                         }`}
                                                     style={{ width: `${profileCompletion}%` }}
                                                 />
                                             </div>
                                             <span className={`text-xs font-semibold ${profileCompletion === 100 ? 'text-emerald-600' :
-                                                    profileCompletion >= 50 ? 'text-blue-600' :
-                                                        profileCompletion > 0 ? 'text-amber-600' : 'text-slate-400'
+                                                profileCompletion >= 50 ? 'text-blue-600' :
+                                                    profileCompletion > 0 ? 'text-amber-600' : 'text-slate-400'
                                                 }`}>
                                                 {profileCompletion}%
                                             </span>
