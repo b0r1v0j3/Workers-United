@@ -45,10 +45,17 @@ export async function GET(request: Request) {
 
             if (!email) continue;
 
+            // Get their profile record
+            const { data: profileData } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", userId)
+                .single();
+
             // Get their candidate record
             const { data: candidate } = await supabase
                 .from("candidates")
-                .select("id, status, entry_fee_paid")
+                .select("id, status, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas")
                 .eq("profile_id", userId)
                 .single();
 
@@ -63,17 +70,32 @@ export async function GET(request: Request) {
                 continue;
             }
 
-            // Determine what's missing
+            // Check ALL profile fields — must match worker profile page completion logic
             const missingItems: string[] = [];
 
             if (!candidate) {
                 missingItems.push("Complete your worker profile");
             } else {
-                const docTypes = (docs || []).map((d: any) => d.document_type);
+                // Profile info fields
+                if (!profileData?.full_name) missingItems.push("Add your full name");
+                if (!candidate.phone) missingItems.push("Add your phone number");
+                if (!candidate.nationality) missingItems.push("Add your nationality");
+                if (!candidate.current_country) missingItems.push("Add your current country");
+                if (!candidate.preferred_job) missingItems.push("Select your preferred job type");
+                if (!candidate.gender) missingItems.push("Select your gender");
+                if (!candidate.date_of_birth) missingItems.push("Add your date of birth");
+                if (!candidate.birth_country) missingItems.push("Add your birth country");
+                if (!candidate.birth_city) missingItems.push("Add your birth city");
+                if (!candidate.citizenship) missingItems.push("Add your citizenship");
+                if (!candidate.marital_status) missingItems.push("Select your marital status");
+                if (!candidate.passport_number) missingItems.push("Add your passport number");
+                if (candidate.lives_abroad === null || candidate.lives_abroad === undefined) missingItems.push("Indicate if you live abroad");
+                if (candidate.previous_visas === null || candidate.previous_visas === undefined) missingItems.push("Indicate previous visa history");
 
+                // Document uploads
+                const docTypes = (docs || []).map((d: any) => d.document_type);
                 if (!docTypes.includes("passport")) missingItems.push("Upload your passport");
                 if (!docTypes.includes("biometric_photo")) missingItems.push("Upload a biometric photo");
-                if (!docTypes.includes("diploma")) missingItems.push("Upload your diploma or certificate");
             }
 
             if (missingItems.length === 0) continue;
@@ -83,7 +105,7 @@ export async function GET(request: Request) {
                 .from("email_queue")
                 .select("id")
                 .eq("recipient_email", email)
-                .eq("email_type", "profile_reminder")
+                .eq("email_type", "document_reminder")
                 .gt("created_at", oneDayAgo)
                 .limit(1);
 
@@ -136,7 +158,7 @@ export async function GET(request: Request) {
                 // Track that we sent this reminder
                 await supabase.from("email_queue").insert({
                     user_id: userId,
-                    email_type: "profile_reminder",
+                    email_type: "document_reminder",
                     recipient_email: email,
                     recipient_name: fullName || "Worker",
                     subject: "Your Workers United profile is almost ready!",
