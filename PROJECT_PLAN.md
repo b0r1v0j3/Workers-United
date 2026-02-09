@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 09.02.2026 (Bulk Email + Admin Updates + Incomplete Profile Reminders)
+> **Poslednje ažuriranje:** 09.02.2026 (Email Template Fixes + Social Links + Profile Reminders)
 
 ---
 
@@ -178,6 +178,11 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 ### ✅ Završeno
 
+**Email Template Fixes + Social Links (09.02.2026)**
+- **Logo fix** — popravljen broken `logo-white.png` → koristi `logo.png` sa CSS filterom za beli prikaz na plavom headeru
+- **Social Media Links** — dodati pravi linkovi (Facebook, Instagram, LinkedIn, X, TikTok, Threads, Reddit) sa Icons8 ikonicama umesto lažnih placeholder-a
+- **Missing Field Descriptions** — cron job za nepotpune profile sada šalje objašnjenja zašto je svako polje potrebno (npr. "Passport Number — Crucial for all travel documents")
+
 **Bulk Email & Admin Notifications + Incomplete Profile Reminders (09.02.2026)**
 - **Admin Announcements** — nova stranica (`/admin/announcements`) za masovno slanje obaveštenja (Workers / Employers / Everyone)
 - **Admin Update Emails** — automatsko slanje emaila kandidatima pri promeni statusa (Verified/Rejected) ili dokumenta (Approve/Reject/Request New)
@@ -295,14 +300,13 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~Coming Soon placeholder za plaćanje~~
 - [x] ~~Mobilna responsivnost (mobile-first)~~
 - [ ] Multi-country pricing za placement fee
-- [ ] Employer profil verifikacija (100% pravilo)
-- [ ] Automatsko matchovanje radnika sa poslodavcima
+- [x] ~~Employer profil verifikacija (100% pravilo — UI Completion Tracker & Pending Approval)~~
+- [x] ~~Automatsko matchovanje radnika sa poslodavcima~~
 - [x] ~~Email notifikacije za sve korake procesa~~
 - [ ] Prebaciti Coming Soon → Stripe checkout ($9 entry fee) kad bude spremno
 - [x] ~~Worker preferred_job: text → dropdown (sync sa employer)~~
 - [x] ~~Onboarding dropdown sync (lowercase → uppercase vrednosti)~~
 - [x] ~~Employer country dropdown (46 evropskih država)~~
-- [x] ~~Employer profil verifikacija (100% pravilo — UI Completion Tracker & Pending Approval)~~
 
 ### ⏸️ ČEKA SE (blokirano)
 - [ ] **WhatsApp integracija** — čeka se tax ID → bankovni račun → broj telefona na firmu
@@ -314,8 +318,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 > AI treba da dopunjuje ovu listu kad vidi priliku. Korisnik odlučuje šta se implementira.
 
 ### Prioritet: Visok
-- [ ] **Istekli dokumenti** — dodati `expires_at` polje za pasoš, automatski alert kad ističe za <6 meseci
-- [ ] **Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza
+- [x] ~~**Istekli dokumenti** — dodati `expires_at` polje za pasoš, automatski alert kad ističe za <6 meseci~~
+- [x] ~~**Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza~~
 
 ### Prioritet: Srednji
 - [ ] **Per-Country Landing Pages ZA POSLODAVCE** — `/hire-workers-serbia`, `/hire-workers-germany` sa info za poslodavce kako da nađu radnike preko nas (SEO). Radnici traže posao, ne landing page.
