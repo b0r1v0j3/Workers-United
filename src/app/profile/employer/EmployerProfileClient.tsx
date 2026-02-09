@@ -618,34 +618,21 @@ export default function EmployerProfilePage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label className={labelClass}>Experience Required (years)</label>
                                         <input type="number" name="experience_required_years" min={0} max={20} value={jobForm.experience_required_years} onChange={handleJobChange} className={inputClass} />
                                         <p className="text-[11px] text-gray-500 mt-1">Set to 0 for no experience required</p>
                                     </div>
                                     <div>
-                                        <label className={labelClass}>Work City <span className="text-red-500">*</span></label>
-                                        <input type="text" name="work_city" value={jobForm.work_city} onChange={handleJobChange} className={inputClass} placeholder="City where workers will work" />
+                                        <label className={labelClass}>Accommodation City <span className="text-red-500">*</span></label>
+                                        <input type="text" name="work_city" value={jobForm.work_city} onChange={handleJobChange} className={inputClass} placeholder="City where workers will be accommodated" />
                                     </div>
-                                </div>
-
-                                {/* Accommodation section */}
-                                <div className="space-y-3">
                                     <div>
                                         <label className={labelClass}>Accommodation Address <span className="text-red-500">*</span></label>
-                                        <input type="text" name="accommodation_address" value={jobForm.accommodation_address} onChange={handleJobChange} className={inputClass} placeholder="Full address where workers will be accommodated" />
+                                        <input type="text" name="accommodation_address" value={jobForm.accommodation_address} onChange={handleJobChange} className={inputClass} placeholder="Full address for accommodation" />
                                         <p className="text-[11px] text-gray-500 mt-1">⚠️ Required by law for visa processing</p>
                                     </div>
-                                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                                        <input
-                                            type="checkbox"
-                                            checked={jobForm.different_accommodation}
-                                            onChange={(e) => setJobForm(prev => ({ ...prev, different_accommodation: e.target.checked }))}
-                                            className="w-4 h-4 rounded border-gray-300 text-[#1877f2] focus:ring-[#1877f2]"
-                                        />
-                                        <span className="text-sm text-[#65676b]">Work location and accommodation are in different cities</span>
-                                    </label>
                                 </div>
 
                                 <div className="flex justify-end pt-2">
@@ -767,7 +754,7 @@ export default function EmployerProfilePage() {
                                                     <input type="number" min={0} max={20} value={editJobForm.experience_required_years} onChange={(e) => setEditJobForm(p => ({ ...p, experience_required_years: e.target.value }))} className={inputClass} />
                                                 </div>
                                                 <div>
-                                                    <label className={labelClass}>Work City</label>
+                                                    <label className={labelClass}>Accommodation City</label>
                                                     <input type="text" value={editJobForm.work_city} onChange={(e) => setEditJobForm(p => ({ ...p, work_city: e.target.value }))} className={inputClass} />
                                                 </div>
                                                 <div>
