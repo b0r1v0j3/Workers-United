@@ -76,7 +76,13 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <!-- Footer -->
         <div style="text-align:center; margin-top:30px; color:#6c7a89; font-size:12px;">
             <div style="margin-bottom:20px;">
-               <!-- Social links removed as requested -->
+                <a href="https://www.facebook.com/profile.php?id=61585104076725" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/facebook-new.png" width="24" height="24" alt="Facebook" style="vertical-align:middle;"></a>
+                <a href="https://www.instagram.com/workersunited.eu/" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/instagram-new.png" width="24" height="24" alt="Instagram" style="vertical-align:middle;"></a>
+                <a href="https://www.linkedin.com/company/workersunited-eu/" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/linkedin.png" width="24" height="24" alt="LinkedIn" style="vertical-align:middle;"></a>
+                <a href="https://x.com/WorkersUnitedEU" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/ios-filled/50/000000/x.png" width="22" height="22" alt="X" style="vertical-align:middle; opacity:0.8;"></a>
+                <a href="https://www.tiktok.com/@www.workersunited.eu" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/tiktok.png" width="24" height="24" alt="TikTok" style="vertical-align:middle;"></a>
+                <a href="https://www.threads.com/@workersunited.eu" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/ios-filled/50/000000/threads.png" width="22" height="22" alt="Threads" style="vertical-align:middle; opacity:0.8;"></a>
+                <a href="https://www.reddit.com/r/WorkersUnitedEU/" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/reddit.png" width="24" height="24" alt="Reddit" style="vertical-align:middle;"></a>
             </div>
             <p style="margin:0 0 10px;">Workers United LLC</p>
             <p style="margin:0 0 10px;">75 E 3rd St., Sheridan, Wyoming 82801</p>
