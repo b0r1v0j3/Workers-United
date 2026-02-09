@@ -49,7 +49,6 @@ export default async function WorkerProfilePage() {
     // Calculate verified count from actual documents
     const verifiedDocs = documents?.filter(d => d.status === 'verified') || [];
     const verifiedCount = verifiedDocs.length;
-    const isReady = verifiedCount >= 3;
     const inQueue = candidate?.status === "IN_QUEUE";
 
     // Calculate profile completion (only count fields the user can fill)
@@ -73,6 +72,7 @@ export default async function WorkerProfilePage() {
     ];
     const completedFields = profileFields.filter(Boolean).length;
     const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
+    const isReady = profileCompletion === 100 && verifiedCount >= 2;
 
     return (
         <DashboardClient
