@@ -141,12 +141,52 @@ function buildDeletionEmail(firstName: string, isEmployer: boolean): string {
     `;
 }
 
+// ─── Type Definitions ──────────────────────────────────────────
+
+interface ProfileData {
+    full_name: string | null;
+}
+
+interface Candidate {
+    id: string;
+    status: string;
+    entry_fee_paid: boolean;
+    phone: string | null;
+    nationality: string | null;
+    current_country: string | null;
+    preferred_job: string | null;
+    gender: string | null;
+    date_of_birth: string | null;
+    birth_country: string | null;
+    birth_city: string | null;
+    citizenship: string | null;
+    marital_status: string | null;
+    passport_number: string | null;
+    lives_abroad: boolean | null;
+    previous_visas: boolean | null;
+}
+
+interface Employer {
+    company_name: string | null;
+    company_registration_number: string | null;
+    country: string | null;
+    contact_phone: string | null;
+    industry: string | null;
+    company_address: string | null;
+}
+
+interface CandidateDocument {
+    document_type: string;
+    status: string;
+}
+
+
 // ─── Profile completeness checks ────────────────────────────────
 
 function getWorkerMissingItems(
-    profileData: any,
-    candidate: any,
-    docs: any[]
+    profileData: ProfileData | null,
+    candidate: Candidate | null,
+    docs: CandidateDocument[]
 ): string[] {
     const missing: string[] = [];
 
@@ -170,14 +210,14 @@ function getWorkerMissingItems(
     if (candidate.lives_abroad === null || candidate.lives_abroad === undefined) missing.push("Indicate if you live abroad");
     if (candidate.previous_visas === null || candidate.previous_visas === undefined) missing.push("Indicate previous visa history");
 
-    const docTypes = (docs || []).map((d: any) => d.document_type);
+    const docTypes = (docs || []).map((d) => d.document_type);
     if (!docTypes.includes("passport")) missing.push("Upload your passport");
     if (!docTypes.includes("biometric_photo")) missing.push("Upload a biometric photo");
 
     return missing;
 }
 
-function getEmployerMissingItems(employer: any): string[] {
+function getEmployerMissingItems(employer: Employer | null): string[] {
     const missing: string[] = [];
 
     if (!employer) {

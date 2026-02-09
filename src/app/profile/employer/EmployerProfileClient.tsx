@@ -41,6 +41,21 @@ interface JobRequest {
     created_at: string;
 }
 
+// ─── Company form type ──────────────────────────────────────────
+interface CompanyForm {
+    company_name: string;
+    company_registration_number: string;
+    company_address: string;
+    contact_phone: string;
+    country: string;
+    city: string;
+    website: string;
+    industry: string;
+    company_size: string;
+    founded_year: string;
+    description: string;
+}
+
 // ─── Shared styles ──────────────────────────────────────────────
 const inputClass = "w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
 const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
@@ -48,24 +63,22 @@ const cardClass = "bg-white rounded-lg shadow-sm border border-gray-200";
 const cardHeaderClass = "px-4 py-3 border-b border-gray-200 flex items-center justify-between";
 
 // ─── Helper: Calculate Completion ───────────────────────────────
-function calculateCompletion(form: any) {
-    // Required fields: Name, Reg No, Address, Phone, Country, City, Industry, Description
-    // Website is optional.
-    const required = [
+function calculateCompletion(form: CompanyForm) {
+    const required: (keyof CompanyForm)[] = [
         "company_name", "company_registration_number", "company_address",
-        "contact_phone", "country", "city", "industry", "description"
+        "contact_phone", "country", "city"
     ];
 
     const filled = required.filter(key => {
         const val = form[key];
-        return val && typeof val === 'string' && val.trim().length > 0;
+        return val && val.trim().length > 0;
     }).length;
 
     return Math.round((filled / required.length) * 100);
 }
 
 // ─── Component: Verification Status Card ────────────────────────
-function EmployerVerificationCard({ employer, form }: { employer: EmployerProfile | null, form: any }) {
+function EmployerVerificationCard({ employer, form }: { employer: EmployerProfile | null, form: CompanyForm }) {
     const completion = calculateCompletion(form);
     const isVerified = employer?.status === 'verified';
     const isPending = employer?.status === 'pending';
@@ -135,7 +148,7 @@ export default function EmployerProfilePage() {
     const supabase = createClient();
 
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<{ id: string } | null>(null);
     const [employer, setEmployer] = useState<EmployerProfile | null>(null);
     const [jobs, setJobs] = useState<JobRequest[]>([]);
 
@@ -164,6 +177,8 @@ export default function EmployerProfilePage() {
     const [editingJobId, setEditingJobId] = useState<string | null>(null);
     const [editJobForm, setEditJobForm] = useState({ ...emptyJob });
     const [savingJob, setSavingJob] = useState(false);
+    const [editJobError, setEditJobError] = useState<string | null>(null);
+    const [confirmDeleteJobId, setConfirmDeleteJobId] = useState<string | null>(null);
 
     // ─── Data fetching ──────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -356,6 +371,7 @@ export default function EmployerProfilePage() {
     const saveEditJob = async () => {
         if (!editingJobId) return;
         setSavingJob(true);
+        setEditJobError(null);
         try {
             const { error } = await supabase.from("job_requests").update({
                 title: editJobForm.title,
@@ -376,20 +392,21 @@ export default function EmployerProfilePage() {
             setJobs(jobData || []);
             setEditingJobId(null);
         } catch (err) {
-            alert(err instanceof Error ? err.message : "Failed to update job");
+            setEditJobError(err instanceof Error ? err.message : "Failed to update job");
         } finally {
             setSavingJob(false);
         }
     };
 
     const deleteJob = async (jobId: string) => {
-        if (!confirm("Are you sure you want to delete this job posting?")) return;
         try {
             const { error } = await supabase.from("job_requests").delete().eq("id", jobId);
             if (error) throw error;
             setJobs(prev => prev.filter(j => j.id !== jobId));
+            setConfirmDeleteJobId(null);
         } catch (err) {
-            alert(err instanceof Error ? err.message : "Failed to delete job");
+            setEditJobError(err instanceof Error ? err.message : "Failed to delete job");
+            setConfirmDeleteJobId(null);
         }
     };
 
@@ -527,13 +544,8 @@ export default function EmployerProfilePage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className={labelClass}>Registration Number <span className="text-red-500">*</span></label>
+                                        <label className={labelClass}>Company Registration Number <span className="text-red-500">*</span></label>
                                         <input type="text" name="company_registration_number" value={companyForm.company_registration_number} onChange={handleCompanyChange} className={inputClass} placeholder="12345678" maxLength={8} />
-                                        <p className="text-[11px] text-gray-500 mt-1">8 digits — required for e-Uprava visa</p>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Industry</label>
-                                        <IndustrySelect value={companyForm.industry} onChange={(v) => setCompanyForm(prev => ({ ...prev, industry: v }))} />
                                     </div>
                                 </div>
 
@@ -585,11 +597,6 @@ export default function EmployerProfilePage() {
                                     <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Full registered business address..." />
                                 </div>
 
-                                <div>
-                                    <label className={labelClass}>Company Description</label>
-                                    <textarea name="description" value={companyForm.description} onChange={handleCompanyChange} rows={3} className={`${inputClass} resize-none`} placeholder="Tell workers about your company..." />
-                                </div>
-
                                 <div className="flex justify-end gap-2 pt-2">
                                     {employer && (
                                         <button type="button" onClick={cancelEdit} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[14px]">
@@ -610,15 +617,14 @@ export default function EmployerProfilePage() {
                                 <InfoRow label="Company Name" value={companyForm.company_name} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-                                    <InfoRow label="Registration No." value={companyForm.company_registration_number} />
+                                    <InfoRow label="Company Reg. No." value={companyForm.company_registration_number} />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <InfoRow label="Country" value={companyForm.country} />
                                     <InfoRow label="City" value={companyForm.city} />
                                     <InfoRow label="Company Size" value={companyForm.company_size} />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <InfoRow label="Industry" value={companyForm.industry} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <InfoRow label="Phone" value={companyForm.contact_phone} />
                                     <InfoRow label="Website" value={companyForm.website} />
                                 </div>
@@ -626,7 +632,6 @@ export default function EmployerProfilePage() {
                                     <InfoRow label="Founded" value={companyForm.founded_year} />
                                     <InfoRow label="Address" value={companyForm.company_address} />
                                 </div>
-                                {companyForm.description && <InfoRow label="Description" value={companyForm.description} />}
                             </div>
                         )}
                     </div>
@@ -725,6 +730,11 @@ export default function EmployerProfilePage() {
                         </div>
 
                         <div className="p-4">
+                            {editJobError && (
+                                <div className="mb-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-200">
+                                    {editJobError}
+                                </div>
+                            )}
                             {jobs.length === 0 ? (
                                 <div className="text-center py-8 text-gray-400">
                                     <p className="text-lg mb-1">No jobs posted yet</p>
@@ -760,7 +770,14 @@ export default function EmployerProfilePage() {
                                                     ) : (
                                                         <>
                                                             <button onClick={() => startEditJob(job)} className="text-xs px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 font-medium text-[#1877f2]">Edit</button>
-                                                            <button onClick={() => deleteJob(job.id)} className="text-xs px-3 py-1.5 border border-red-200 rounded-md hover:bg-red-50 font-medium text-red-600">Delete</button>
+                                                            {confirmDeleteJobId === job.id ? (
+                                                                <div className="flex gap-1">
+                                                                    <button onClick={() => deleteJob(job.id)} className="text-xs px-2 py-1 bg-red-600 text-white rounded font-bold hover:bg-red-700">Yes</button>
+                                                                    <button onClick={() => setConfirmDeleteJobId(null)} className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300">No</button>
+                                                                </div>
+                                                            ) : (
+                                                                <button onClick={() => setConfirmDeleteJobId(job.id)} className="text-xs px-3 py-1.5 border border-red-200 rounded-md hover:bg-red-50 font-medium text-red-600">Delete</button>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
@@ -830,7 +847,7 @@ export default function EmployerProfilePage() {
                 )}
 
             </div>
-        </div>
+        </div >
     );
 }
 

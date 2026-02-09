@@ -326,6 +326,10 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
 - [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
 - [ ] **n8n WhatsApp bot** — automatski status update-ovi, FAQ odgovori
+- [ ] **Trust Building Features** — bez success stories
+    - **Visa Eligibility Quiz** (Homepage) — "Check My Eligibility" (5 pitanja → High/Medium/Low score)
+    - **Live Visa Process Tracker** — "Currently processing: 124 applications", "Documents verified today: 15"
+    - **"Work in [Country]" Pages** — SEO deep-dive pages (npr. /work-in-germany) sa tačnim pravnim koracima
 
 ### Prioritet: Nizak (kad bude živih korisnika)
 - [ ] **Success Stories** — pravi case studies sa video snimcima (oprema nabavljena: iPhone 17 Pro)

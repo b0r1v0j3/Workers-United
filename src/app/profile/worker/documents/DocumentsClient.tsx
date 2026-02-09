@@ -68,7 +68,6 @@ export default function DocumentsPage() {
                 email={userEmail}
                 onComplete={() => {
                     // Could redirect back to dashboard or show success
-                    console.log("Documents submitted!");
                 }}
             />
         </div>

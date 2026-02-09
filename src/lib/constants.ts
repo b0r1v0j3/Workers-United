@@ -106,3 +106,10 @@ export const COMPANY_SIZES = [
     "201-500 employees",
     "500+ employees"
 ];
+
+// ─── FILE UPLOAD LIMITS ──────────────────────────────────────
+export const MAX_FILE_SIZE_MB = 10;
+export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+export const COMPRESSED_IMAGE_QUALITY = 0.8;
+export const COMPRESSED_MAX_WIDTH = 1920;
+export const COMPRESSED_MAX_HEIGHT = 1920;
