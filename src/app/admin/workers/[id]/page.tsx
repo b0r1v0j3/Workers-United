@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
+import { queueEmail } from "@/lib/email-templates";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -95,6 +96,28 @@ export default async function CandidateDetailPage({ params }: PageProps) {
             })
             .eq("id", docId);
 
+        // Send email notification
+        if (newStatus !== "pending" && newStatus !== "verifying") {
+            const userEmail = formData.get("user_email") as string;
+            const docType = formData.get("doc_type") as string;
+
+            if (userEmail) {
+                const title = newStatus === 'verified' ? 'Document Verified' : 'Document Rejected';
+                const message = newStatus === 'verified'
+                    ? `Your ${docType} has been successfully verified.`
+                    : `Your ${docType} has been rejected. ${adminNotes ? `Reason: ${adminNotes}` : 'Please upload a valid document.'}`;
+
+                await queueEmail(
+                    supabase,
+                    id,
+                    "admin_update",
+                    userEmail,
+                    "User", // We could fetch name, but generic "User" or just "Hello" works with the template logic
+                    { title, message, subject: `Document Update: ${docType} ${newStatus}` }
+                );
+            }
+        }
+
         revalidatePath(`/admin/workers/${id}`);
     }
 
@@ -144,8 +167,22 @@ export default async function CandidateDetailPage({ params }: PageProps) {
             .delete()
             .eq("id", docId);
 
-        // TODO: Send email notification to user
-        // For now, just log the request
+        // Send email notification to user
+        if (userEmail) {
+            await queueEmail(
+                supabase,
+                id,
+                "admin_update",
+                userEmail,
+                "User",
+                {
+                    title: "Action Required: New Document Needed",
+                    message: `We need you to upload a new ${docType}. Reason: ${reason}`,
+                    subject: "Action Required: New Document Needed"
+                }
+            );
+        }
+
         console.log(`[Admin] Requested new ${docType} from ${userEmail}. Reason: ${reason}`);
 
         revalidatePath(`/admin/workers/${id}`);
@@ -154,6 +191,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
     async function updateCandidateStatus(formData: FormData) {
         "use server";
         const newStatus = formData.get("status") as string;
+        const userEmail = formData.get("user_email") as string;
 
         const supabase = await createClient();
 
@@ -164,6 +202,22 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                 updated_at: new Date().toISOString()
             })
             .eq("profile_id", id);
+
+        // Send email notification
+        if (userEmail) {
+            await queueEmail(
+                supabase,
+                id,
+                "admin_update",
+                userEmail,
+                "User",
+                {
+                    title: "Status Update",
+                    message: `Your application status has been updated to: ${newStatus.toUpperCase()}.`,
+                    subject: `Application Status Updated: ${newStatus}`
+                }
+            );
+        }
 
         revalidatePath(`/admin/workers/${id}`);
     }
@@ -231,6 +285,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                         <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
                             <h2 className="font-bold text-[#1e293b] text-xl mb-4">Candidate Status</h2>
                             <form action={updateCandidateStatus}>
+                                <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
                                 <div className="mb-4">
                                     <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Current Status</label>
                                     <span className={`text-[12px] px-3 py-1.5 rounded-full font-bold uppercase border ${getStatusColor(candidateData?.status || 'pending')}`}>
@@ -366,6 +421,8 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                             {/* Verification Form */}
                                             <form action={updateDocumentStatus} className="bg-[#f8fafc] rounded-lg p-4 border border-[#dde3ec] mb-3">
                                                 <input type="hidden" name="doc_id" value={doc.id} />
+                                                <input type="hidden" name="doc_type" value={doc.document_type} />
+                                                <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                                     <div>
                                                         <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Set Status</label>

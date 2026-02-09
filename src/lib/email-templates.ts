@@ -8,7 +8,8 @@ export type EmailType =
     | "offer_reminder"
     | "refund_approved"
     | "document_expiring"
-    | "job_match";
+    | "job_match"
+    | "admin_update";
 
 interface EmailTemplate {
     subject: string;
@@ -384,6 +385,33 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </p>
                     </div>
                 `, "New Job Match", "Opportunity for you")
+            };
+
+        case "admin_update":
+            return {
+                subject: data.subject || "Update from Workers United",
+                html: wrapModernTemplate(`
+                    <div style="padding: 40px;">
+                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Profile Update</h2>
+                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
+                            Hello ${name},<br><br>
+                            An administrator has updated your profile status or documents.
+                        </p>
+                        
+                        <div style="background:#f0f9ff; border-left: 4px solid #0ea5e9; border-radius:4px; padding:20px; margin:25px 0;">
+                            <h3 style="margin:0 0 10px; color:#0369a1; font-size:18px;">${data.title || "Update Details"}</h3>
+                            <p style="margin:0; color:#334155; font-size:16px; line-height: 1.6;">
+                                ${data.message || "Your profile has been updated."}
+                            </p>
+                        </div>
+                        
+                        <div style="text-align:center; margin-top:35px;">
+                            <a href="https://workersunited.eu/profile" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
+                                View Your Profile
+                            </a>
+                        </div>
+                    </div>
+                `, "Account Update", "Important Notification")
             };
 
         default:
