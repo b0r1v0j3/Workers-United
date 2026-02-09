@@ -40,7 +40,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     // Fetch all candidates
     const { data: candidates } = await adminClient
         .from("candidates")
-        .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed, current_country");
+        .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed, current_country, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas");
 
     // Fetch all profiles
     const { data: profiles } = await adminClient
@@ -59,9 +59,32 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     // Calculate user progress
     const getUserStats = (userId: string) => {
         const candidate = candidateMap.get(userId);
+        const p = profileMap.get(userId);
         const userDocs = allDocs?.filter(d => d.user_id === userId) || [];
         const verifiedDocs = userDocs.filter(d => d.status === 'verified').length;
-        return { candidate, userDocs, verifiedDocs };
+
+        // Same 16-field completion formula as worker/page.tsx
+        const fields = [
+            p?.full_name,
+            candidate?.phone,
+            candidate?.nationality,
+            candidate?.current_country,
+            candidate?.preferred_job,
+            candidate?.gender,
+            candidate?.date_of_birth,
+            candidate?.birth_country,
+            candidate?.birth_city,
+            candidate?.citizenship,
+            candidate?.marital_status,
+            candidate?.passport_number,
+            candidate?.lives_abroad,
+            candidate?.previous_visas,
+            userDocs.some(d => d.document_type === 'passport'),
+            userDocs.some(d => d.document_type === 'biometric_photo'),
+        ];
+        const profileCompletion = Math.round((fields.filter(Boolean).length / fields.length) * 100);
+
+        return { candidate, userDocs, verifiedDocs, profileCompletion };
     };
 
     // Show ALL auth users so admin can manage/delete any account
@@ -110,7 +133,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                 <div className="grid grid-cols-1 gap-4">
                     {filteredUsers.map((authUser: any) => {
                         const profile = profileMap.get(authUser.id);
-                        const { candidate, userDocs, verifiedDocs } = getUserStats(authUser.id);
+                        const { candidate, userDocs, verifiedDocs, profileCompletion } = getUserStats(authUser.id);
                         const isCurrentUser = authUser.id === user.id;
 
                         // Progression badges
@@ -178,6 +201,25 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                                     <FileText size={12} /> No Docs
                                                 </span>
                                             )}
+                                        </div>
+
+                                        {/* Profile Completion Bar */}
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden max-w-[200px]">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${profileCompletion === 100 ? 'bg-emerald-500' :
+                                                            profileCompletion >= 50 ? 'bg-blue-500' :
+                                                                profileCompletion > 0 ? 'bg-amber-500' : 'bg-slate-300'
+                                                        }`}
+                                                    style={{ width: `${profileCompletion}%` }}
+                                                />
+                                            </div>
+                                            <span className={`text-xs font-semibold ${profileCompletion === 100 ? 'text-emerald-600' :
+                                                    profileCompletion >= 50 ? 'text-blue-600' :
+                                                        profileCompletion > 0 ? 'text-amber-600' : 'text-slate-400'
+                                                }`}>
+                                                {profileCompletion}%
+                                            </span>
                                         </div>
                                     </div>
                                 </div>

@@ -28,55 +28,70 @@ export async function GET(request: Request) {
 
         const supabase = createAdminClient();
 
-        // 1. Total Registered Workers
-        // Use auth.admin.listUsers() — same approach as admin/page.tsx
-        // This is the reliable source of truth since profiles.user_type may not be populated
+        // 1. Total Registered Workers (from auth — same as admin/page.tsx)
         const { data: authData } = await supabase.auth.admin.listUsers();
         const allAuthUsers = authData?.users || [];
-        const totalWorkers = allAuthUsers.filter((u: any) =>
+        const workerUsers = allAuthUsers.filter((u: any) =>
             u.user_metadata?.user_type !== 'employer'
-        ).length;
+        );
+        const totalWorkers = workerUsers.length;
 
-        // 2. Completed Profiles
-        // Count candidates with nationality filled (proxy for profile completion)
-        const { count: completedProfiles, error: profilesError } = await supabase
+        // 2. Completed Profiles (100% completion using same fields as worker/page.tsx)
+        // Fetch all profiles and candidates to calculate per-user completion
+        const { data: allProfiles } = await supabase
+            .from('profiles')
+            .select('id, full_name');
+
+        const { data: allCandidates } = await supabase
             .from('candidates')
-            .select('*', { count: 'exact', head: true })
-            .not('nationality', 'is', null);
+            .select('profile_id, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas');
 
-        if (profilesError) {
-            console.error("[Funnel] Profiles error:", profilesError);
+        const { data: allDocs } = await supabase
+            .from('candidate_documents')
+            .select('user_id, document_type, status');
+
+        const profileMap = new Map(allProfiles?.map(p => [p.id, p]) || []);
+        const candidateMap = new Map(allCandidates?.map(c => [c.profile_id, c]) || []);
+
+        // Count using same 16-field formula as worker/page.tsx
+        let completedCount = 0;
+        for (const wu of workerUsers) {
+            const p = profileMap.get(wu.id);
+            const c = candidateMap.get(wu.id);
+            const docs = allDocs?.filter(d => d.user_id === wu.id) || [];
+
+            const fields = [
+                p?.full_name,
+                c?.phone,
+                c?.nationality,
+                c?.current_country,
+                c?.preferred_job,
+                c?.gender,
+                c?.date_of_birth,
+                c?.birth_country,
+                c?.birth_city,
+                c?.citizenship,
+                c?.marital_status,
+                c?.passport_number,
+                c?.lives_abroad,
+                c?.previous_visas,
+                docs.some(d => d.document_type === 'passport'),
+                docs.some(d => d.document_type === 'biometric_photo'),
+            ];
+            const completion = Math.round((fields.filter(Boolean).length / fields.length) * 100);
+            if (completion === 100) completedCount++;
         }
 
-        // 3. Uploaded Documents
-        // Distinct candidates who have uploaded at least one document
-        const { data: uploadedDocs, error: uploadError } = await supabase
-            .from('documents')
-            .select('candidate_id');
-
-        if (uploadError) {
-            console.error("[Funnel] Upload error:", uploadError);
-        }
-        const distinctUploaded = uploadedDocs
-            ? new Set(uploadedDocs.map(d => d.candidate_id)).size
+        // 3. Uploaded Documents — distinct users with at least one doc in candidate_documents
+        const distinctUploaded = allDocs
+            ? new Set(allDocs.map(d => d.user_id)).size
             : 0;
 
-        // 4. Verified Documents
-        // Distinct candidates with at least one verified document
-        const { data: verifiedDocs, error: verifyError } = await supabase
-            .from('documents')
-            .select('candidate_id')
-            .eq('verification_status', 'verified');
+        // 4. Verified — distinct users with verified docs (status = 'verified')
+        const verifiedDocs = allDocs?.filter(d => d.status === 'verified') || [];
+        const distinctVerified = new Set(verifiedDocs.map(d => d.user_id)).size;
 
-        if (verifyError) {
-            console.error("[Funnel] Verify error:", verifyError);
-        }
-        const distinctVerified = verifiedDocs
-            ? new Set(verifiedDocs.map(d => d.candidate_id)).size
-            : 0;
-
-        // 5. Job Matched (or Emailed)
-        // Count distinct recipients of 'job_match' emails
+        // 5. Job Matched — distinct recipients of 'job_match' emails
         const { data: jobMatches, error: matchError } = await supabase
             .from('email_queue')
             .select('recipient_email')
@@ -93,7 +108,7 @@ export async function GET(request: Request) {
             success: true,
             data: {
                 total_users: totalWorkers,
-                completed_profiles: completedProfiles || 0,
+                completed_profiles: completedCount,
                 uploaded_documents: distinctUploaded,
                 verified: distinctVerified,
                 job_matched: distinctMatched
