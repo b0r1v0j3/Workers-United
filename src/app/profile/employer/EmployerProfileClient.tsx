@@ -10,7 +10,7 @@ import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/co
 interface EmployerProfile {
     id: string;
     company_name: string;
-    pib: string | null;
+
     company_registration_number: string | null;
     company_address: string | null;
     contact_phone: string | null;
@@ -62,7 +62,7 @@ export default function EmployerProfilePage() {
     const [saving, setSaving] = useState(false);
     const [companyAlert, setCompanyAlert] = useState<{ type: "success" | "error"; msg: string } | null>(null);
     const [companyForm, setCompanyForm] = useState({
-        company_name: "", pib: "", company_registration_number: "",
+        company_name: "", company_registration_number: "",
         company_address: "", contact_phone: "", country: "", city: "",
         website: "", industry: "", company_size: "", founded_year: "", description: "",
     });
@@ -98,7 +98,7 @@ export default function EmployerProfilePage() {
                 setEmployer(emp);
                 setCompanyForm({
                     company_name: emp.company_name || "",
-                    pib: emp.pib || "",
+
                     company_registration_number: emp.company_registration_number || "",
                     company_address: emp.company_address || "",
                     contact_phone: emp.contact_phone || "",
@@ -139,7 +139,7 @@ export default function EmployerProfilePage() {
         setCompanyAlert(null);
         try {
             if (!companyForm.company_name.trim()) throw new Error("Company name is required");
-            if (companyForm.pib && !/^\d{9}$/.test(companyForm.pib)) throw new Error("Tax ID must be exactly 9 digits");
+
             if (companyForm.company_registration_number && !/^\d{8}$/.test(companyForm.company_registration_number))
                 throw new Error("Registration Number must be exactly 8 digits");
             if (companyForm.contact_phone) {
@@ -149,7 +149,7 @@ export default function EmployerProfilePage() {
 
             const data = {
                 company_name: companyForm.company_name,
-                pib: companyForm.pib || null,
+
                 company_registration_number: companyForm.company_registration_number || null,
                 company_address: companyForm.company_address || null,
                 contact_phone: companyForm.contact_phone ? companyForm.contact_phone.replace(/[\s\-()]/g, '') : null,
@@ -190,7 +190,7 @@ export default function EmployerProfilePage() {
         if (employer) {
             setCompanyForm({
                 company_name: employer.company_name || "",
-                pib: employer.pib || "",
+
                 company_registration_number: employer.company_registration_number || "",
                 company_address: employer.company_address || "",
                 contact_phone: employer.contact_phone || "",
@@ -218,7 +218,6 @@ export default function EmployerProfilePage() {
         setJobAlert(null);
         try {
             if (!employer) throw new Error("Please save your company info first");
-            if (!employer.pib) throw new Error("Please add your Tax ID (PIB) to company info first");
             if (!jobForm.title.trim()) throw new Error("Job title is required");
             if (!jobForm.industry) throw new Error("Industry is required");
             if (Number(jobForm.salary_rsd) < 60000) throw new Error("Minimum salary is 60,000 RSD");
@@ -393,8 +392,8 @@ export default function EmployerProfilePage() {
                         <div className="flex items-center gap-2">
                             {employer && (
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${employer.status === 'active' ? 'bg-green-100 text-green-700' :
-                                        employer.status === 'verified' ? 'bg-blue-100 text-blue-700' :
-                                            'bg-amber-100 text-amber-700'
+                                    employer.status === 'verified' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-amber-100 text-amber-700'
                                     }`}>
                                     {employer.status?.toUpperCase() || 'NEW'}
                                 </span>
@@ -427,11 +426,7 @@ export default function EmployerProfilePage() {
                                         <label className={labelClass}>Company Name <span className="text-red-500">*</span></label>
                                         <input type="text" name="company_name" required value={companyForm.company_name} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., ABC Construction d.o.o." />
                                     </div>
-                                    <div>
-                                        <label className={labelClass}>Tax ID (PIB) <span className="text-red-500">*</span></label>
-                                        <input type="text" name="pib" value={companyForm.pib} onChange={handleCompanyChange} className={inputClass} placeholder="123456789" maxLength={9} />
-                                        <p className="text-[11px] text-gray-500 mt-1">9 digits — Tax Identification Number</p>
-                                    </div>
+
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -518,7 +513,7 @@ export default function EmployerProfilePage() {
                             <div className="space-y-3">
                                 <InfoRow label="Company Name" value={companyForm.company_name} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <InfoRow label="Tax ID (PIB)" value={companyForm.pib} />
+
                                     <InfoRow label="Registration No." value={companyForm.company_registration_number} />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
