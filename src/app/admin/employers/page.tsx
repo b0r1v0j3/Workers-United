@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
-import { EmployerStatusButton } from "@/components/EmployerStatusButton";
 
 export default async function EmployersPage() {
     const supabase = await createClient();
@@ -22,7 +21,7 @@ export default async function EmployersPage() {
 
     const adminClient = createAdminClient();
 
-    // Fetch employers with their profile info — use correct columns
+    // Fetch employers with their profile info — correct columns
     const { data: employers } = await adminClient
         .from("employers")
         .select(`
@@ -42,12 +41,22 @@ export default async function EmployersPage() {
         `)
         .order("created_at", { ascending: false });
 
+    // Count jobs per employer
+    const { data: jobCounts } = await adminClient
+        .from("job_requests")
+        .select("employer_id");
+
+    const jobCountMap = new Map<string, number>();
+    jobCounts?.forEach((j: any) => {
+        jobCountMap.set(j.employer_id, (jobCountMap.get(j.employer_id) || 0) + 1);
+    });
+
     return (
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <h1 className="text-2xl font-bold text-slate-900">Employers</h1>
-                    <p className="text-slate-500">Manage and approve employer accounts ({employers?.length || 0})</p>
+                    <p className="text-slate-500">View registered employers ({employers?.length || 0}). Job approvals are managed in the Jobs section.</p>
                 </div>
 
                 {/* Employers List */}
@@ -87,12 +96,10 @@ export default async function EmployersPage() {
                                     </div>
                                 </div>
 
-                                {/* Status + Actions */}
-                                <div className="shrink-0">
-                                    <EmployerStatusButton
-                                        employerId={employer.id}
-                                        currentStatus={employer.status || "pending"}
-                                    />
+                                {/* Job Count */}
+                                <div className="shrink-0 text-center">
+                                    <div className="text-2xl font-bold text-blue-600">{jobCountMap.get(employer.id) || 0}</div>
+                                    <div className="text-xs text-slate-500">Jobs Posted</div>
                                 </div>
                             </div>
                         </div>

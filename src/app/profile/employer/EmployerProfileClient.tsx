@@ -80,29 +80,23 @@ function calculateCompletion(form: CompanyForm) {
 // ─── Component: Verification Status Card ────────────────────────
 function EmployerVerificationCard({ employer, form }: { employer: EmployerProfile | null, form: CompanyForm }) {
     const completion = calculateCompletion(form);
-    const isVerified = employer?.status === 'verified';
-    const isPending = employer?.status === 'pending';
 
-    // If verified, maybe show nothing or a small badge. Let's show nothing to keep UI clean,
-    // or a small "Verified" indicator which is already in the header.
-    if (isVerified) return null;
+    // Hide if profile is fully complete and employer exists
+    if (completion === 100 && employer) return null;
 
     if (completion === 100) {
         return (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-5 mb-6">
                 <div className="flex items-start gap-4">
-                    <div className="bg-blue-100 p-2 rounded-full shrink-0">
-                        <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <div className="bg-emerald-100 p-2 rounded-full shrink-0">
+                        <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-blue-900 text-lg">Profile Under Review</h3>
-                        <p className="text-blue-700 mt-1">
-                            Great job! Your profile is 100% complete. Admin will review your details and contact you for authorization.
-                        </p>
-                        <p className="text-sm text-blue-600 mt-2">
-                            Status: <span className="font-bold uppercase tracking-wide">Pending Approval</span>
+                        <h3 className="font-semibold text-emerald-900 text-lg">Profile Complete!</h3>
+                        <p className="text-emerald-700 mt-1">
+                            Your company profile is ready. You can now post job requests below.
                         </p>
                     </div>
                 </div>
