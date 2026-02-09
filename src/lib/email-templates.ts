@@ -10,7 +10,8 @@ export type EmailType =
     | "document_expiring"
     | "job_match"
     | "admin_update"
-    | "announcement";
+    | "announcement"
+    | "profile_incomplete";
 
 interface EmailTemplate {
     subject: string;
@@ -439,6 +440,38 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </p>
                     </div>
                 `, data.title || "Workers United", "Official Announcement")
+            };
+
+        case "profile_incomplete":
+            return {
+                subject: data.subject || "Action Required: Complete Your Profile",
+                html: wrapModernTemplate(`
+                    <div style="padding: 40px;">
+                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Profile Update Needed</h2>
+                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
+                            Hello ${name},<br><br>
+                            We've recently updated our platform and your profile is missing some information. Please take a moment to fill in the required fields.
+                        </p>
+                        
+                        <div style="background:#fff7ed; border: 1px solid #ffedd5; border-radius:12px; padding:25px; margin:25px 0;">
+                            <h3 style="margin:0 0 15px; color:#9a3412; font-size:16px;">Missing Fields:</h3>
+                            <div style="color:#92400e; font-size:15px; line-height: 1.8;">
+                                ${data.missingFields || "Some fields are incomplete."}
+                            </div>
+                        </div>
+                        
+                        <div style="background:#f0f9ff; border-radius:12px; padding:20px; margin:25px 0; text-align:center;">
+                            <div style="font-size:42px; font-weight:bold; color:#2f6fed;">${data.completion || "0"}%</div>
+                            <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Profile Completion</p>
+                        </div>
+                        
+                        <div style="text-align:center; margin-top:35px;">
+                            <a href="https://workersunited.eu/profile" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
+                                Complete Your Profile
+                            </a>
+                        </div>
+                    </div>
+                `, "Profile Update", "Action Required")
             };
 
         default:
