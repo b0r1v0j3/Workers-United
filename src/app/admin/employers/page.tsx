@@ -22,10 +22,10 @@ export default async function EmployersPage() {
     const adminClient = createAdminClient();
 
     // Fetch employers and profiles separately (no FK dependency)
-    const { data: rawEmployers } = await adminClient
+    const { data: rawEmployers, error: empError } = await adminClient
         .from("employers")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("*");
+    if (empError) console.error("Employers fetch error:", empError);
 
     const { data: allProfiles } = await adminClient
         .from("profiles")
