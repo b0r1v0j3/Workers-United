@@ -146,7 +146,7 @@ export default function DashboardClient({
 
                 {/* Profile Completion — always visible */}
                 {profileCompletion < 100 && (
-                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 mb-4">
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="font-bold text-[#050505]">Profile Completion</h3>
                             <span className="text-sm font-bold text-[#1877f2]">
@@ -180,11 +180,8 @@ export default function DashboardClient({
 
                         {/* Personal Information */}
                         <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="mb-4">
                                 <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
-                                <Link href="/profile/worker/edit" className="text-[#1877f2] text-sm font-semibold hover:underline">
-                                    Edit
-                                </Link>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
