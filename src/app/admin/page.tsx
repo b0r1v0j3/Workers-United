@@ -19,7 +19,7 @@ export default async function AdminDashboard() {
     const { data: authData } = await adminClient.auth.admin.listUsers();
     const allAuthUsers = authData?.users || [];
     const candidatesCount = allAuthUsers.filter((u: any) =>
-        u.user_metadata?.user_type !== 'employer'
+        u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin'
     ).length;
 
     const { count: employersCount } = await adminClient
@@ -37,7 +37,7 @@ export default async function AdminDashboard() {
 
     // Recent candidates from auth users (excluding employers)
     const recentCandidates = allAuthUsers
-        .filter((u: any) => u.user_metadata?.user_type !== 'employer')
+        .filter((u: any) => u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin')
         .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 5)
         .map((u: any) => ({
