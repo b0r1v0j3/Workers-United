@@ -1,31 +1,41 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
+import { EmployerStatusButton } from "@/components/EmployerStatusButton";
 
 export default async function EmployersPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.role !== "admin" && !isGodModeUser(user.email)) {
+        redirect("/profile");
+    }
+
     const adminClient = createAdminClient();
 
-    // Fetch employers with their profile info
+    // Fetch employers with their profile info — use correct columns
     const { data: employers } = await adminClient
         .from("employers")
         .select(`
             id,
             profile_id,
             company_name,
-            pib,
+            company_registration_number,
             company_address,
-            accommodation_address,
             contact_phone,
-            workers_needed,
-            job_description,
-            salary_range,
-            work_location,
+            country,
+            city,
+            company_size,
+            website,
             status,
             created_at,
             profiles!inner(email, full_name)
@@ -36,65 +46,63 @@ export default async function EmployersPage() {
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h1 className="text-2xl font-bold text-slate-900">All Employers</h1>
-                    <p className="text-slate-500">View and manage employer accounts.</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Employers</h1>
+                    <p className="text-slate-500">Manage and approve employer accounts ({employers?.length || 0})</p>
                 </div>
 
-                {/* Employers Table */}
-                <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">#</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Company</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Contact</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Workers Needed</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Location</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {employers?.map((employer: any, index: number) => (
-                                    <tr key={employer.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-5 text-slate-500 font-medium">{index + 1}</td>
-                                        <td className="px-6 py-5">
-                                            <div className="font-bold text-slate-900">{employer.company_name || "N/A"}</div>
-                                            <div className="text-xs text-slate-500">PIB: {employer.pib || "N/A"}</div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="font-medium text-slate-900">{employer.profiles?.full_name || "N/A"}</div>
-                                            <div className="text-xs text-slate-500">{employer.profiles?.email}</div>
-                                            <div className="text-xs text-slate-400">{employer.contact_phone}</div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="text-blue-600 font-bold text-lg">{employer.workers_needed || 0}</div>
-                                            <div className="text-xs text-slate-500 max-w-[200px] truncate">{employer.job_description || "-"}</div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="text-slate-900 font-medium">{employer.work_location || "N/A"}</div>
-                                            <div className="text-xs text-slate-500">{employer.salary_range || "-"}</div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${employer.status === 'active' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                employer.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
-                                                    'bg-gray-100 text-gray-600 border border-gray-200'
-                                                }`}>
-                                                {employer.status || "pending"}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {(!employers || employers.length === 0) && (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-10 text-center text-slate-400 italic">
-                                            No employers found.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                {/* Employers List */}
+                <div className="grid grid-cols-1 gap-4">
+                    {employers?.map((employer: any) => (
+                        <div key={employer.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-blue-200 transition-all">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                {/* Company Info */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm shrink-0">
+                                            {(employer.company_name || "?").charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 text-base">{employer.company_name || "No Name"}</h3>
+                                            <div className="text-sm text-slate-500">{employer.profiles?.full_name} • {employer.profiles?.email}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Details Row */}
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-sm text-slate-600">
+                                        {employer.company_registration_number && (
+                                            <span>🏢 Reg: {employer.company_registration_number}</span>
+                                        )}
+                                        {employer.country && (
+                                            <span>🌍 {employer.city ? `${employer.city}, ` : ""}{employer.country}</span>
+                                        )}
+                                        {employer.contact_phone && (
+                                            <span>📞 {employer.contact_phone}</span>
+                                        )}
+                                        {employer.company_size && (
+                                            <span>👥 {employer.company_size}</span>
+                                        )}
+                                        {employer.website && (
+                                            <span>🔗 {employer.website}</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Status + Actions */}
+                                <div className="shrink-0">
+                                    <EmployerStatusButton
+                                        employerId={employer.id}
+                                        currentStatus={employer.status || "pending"}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {(!employers || employers.length === 0) && (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-10 text-center text-slate-400 italic">
+                            No employers registered yet.
+                        </div>
+                    )}
                 </div>
             </div>
         </AppShell>
