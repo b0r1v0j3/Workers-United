@@ -380,9 +380,20 @@ export default function EmployerProfilePage() {
             <div className="max-w-[900px] mx-auto px-4 py-6 space-y-6">
 
                 {/* Page Header */}
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Company Profile</h1>
-                    <p className="text-gray-500 mt-1">Manage your company and job postings</p>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Company Profile</h1>
+                        <p className="text-gray-500 mt-1">Manage your company and job postings</p>
+                    </div>
+                    {employer && !editing && (
+                        <button
+                            onClick={() => setEditing(true)}
+                            className="bg-[#1877f2] text-white px-5 py-2.5 rounded-md font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                            Edit Profile
+                        </button>
+                    )}
                 </div>
 
                 {/* ═══════════════ CARD 1: Company Info ═══════════════ */}
