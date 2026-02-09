@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-09 (Profile reminder cron fix, admin worker 404 fix, email_queue type fix)
+> **Poslednje ažuriranje:** 09.02.2026 (Bulk Email + Admin Updates + Incomplete Profile Reminders)
 
 ---
 
@@ -178,6 +178,13 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 ### ✅ Završeno
 
+**Bulk Email & Admin Notifications + Incomplete Profile Reminders (09.02.2026)**
+- **Admin Announcements** — nova stranica (`/admin/announcements`) za masovno slanje obaveštenja (Workers / Employers / Everyone)
+- **Admin Update Emails** — automatsko slanje emaila kandidatima pri promeni statusa (Verified/Rejected) ili dokumenta (Approve/Reject/Request New)
+- **Incomplete Profile Reminders** — novi cron job (`/api/cron/check-incomplete-profiles`) šalje email sa listom nedostajućih polja (daily 10 AM UTC)
+- **Developer Workflow** — dokumentovan proces za dodavanje novih polja (`.agent/workflows/add-profile-field.md`)
+- **AppShell Sidebar** — dodat link za Announcements
+
 **Admin worker 404 fix + Cron reminder fix + email_queue fix (09.02.2026)**
 - **Admin worker detail 404** — profili bez `profiles` reda davali 404. Sada koristi auth user data kao fallback + amber banner "profile not completed"
 - **Profile reminder cron** — proveravao samo 3 dokumenta, sada proverava **svih 15 polja profila** (ista logika kao worker profil stranica)
@@ -340,6 +347,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | Employer Jobs | `src/app/profile/employer/jobs/` | Job request-ovi |
 | Account Settings | `src/app/profile/settings/page.tsx` | GDPR: delete account, export data |
 | Admin | `src/app/admin/` | Admin panel |
+| Admin Announcements | `src/app/admin/announcements/` | Bulk email sender |
 | Admin Workers | `src/app/admin/workers/` | Lista radnika |
 | Admin Worker Detail | `src/app/admin/workers/[id]/` | Detalji radnika |
 | GodModePanel | `src/components/GodModePanel.tsx` | Dev testiranje |
