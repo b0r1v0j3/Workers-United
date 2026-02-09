@@ -56,12 +56,28 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     const candidateMap = new Map(candidates?.map(c => [c.profile_id, c]) || []);
     const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-    // Build set of employer profile IDs to exclude
-    const employerProfileIds = new Set(
-        (profiles || [])
-            .filter(p => p.user_type === "employer" || p.user_type === "admin")
-            .map(p => p.id)
-    );
+    // Also fetch employer profile IDs directly from employers table
+    const { data: employerRows } = await adminClient
+        .from("employers")
+        .select("profile_id");
+
+    // Build set of employer/admin profile IDs to exclude (use ALL sources)
+    const employerProfileIds = new Set<string>();
+
+    // From profiles.user_type
+    (profiles || [])
+        .filter(p => p.user_type === "employer" || p.user_type === "admin")
+        .forEach(p => employerProfileIds.add(p.id));
+
+    // From employers table
+    (employerRows || []).forEach((e: any) => {
+        if (e.profile_id) employerProfileIds.add(e.profile_id);
+    });
+
+    // From auth user_metadata
+    allAuthUsers
+        .filter((u: any) => u.user_metadata?.user_type === 'employer' || u.user_metadata?.user_type === 'admin')
+        .forEach((u: any) => employerProfileIds.add(u.id));
 
     // Calculate user progress
     const getUserStats = (userId: string) => {
