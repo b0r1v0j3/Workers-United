@@ -509,10 +509,6 @@ export default function EmployerProfilePage() {
                                         <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Full registered business address..." />
                                     </div>
 
-                                    <div>
-                                        <label className={labelClass}>Company Description</label>
-                                        <textarea name="description" value={companyForm.description} onChange={handleCompanyChange} rows={3} className={`${inputClass} resize-none`} placeholder="Brief description of your company and business activities..." />
-                                    </div>
 
                                     <div className="flex justify-end gap-2 pt-2">
                                         {employer && (
@@ -547,12 +543,7 @@ export default function EmployerProfilePage() {
                                     <InfoRow icon={<Calendar size={18} />} label="Founded" value={companyForm.founded_year} />
                                     <InfoRow icon={<MapPin size={18} />} label="Address" value={companyForm.company_address} />
                                 </div>
-                                {companyForm.description && (
-                                    <div className="mt-4 p-3 rounded-lg bg-[#f7f8fa] border border-[#f0f2f5]">
-                                        <div className="text-xs font-semibold text-[#65676b] uppercase tracking-wide mb-1">Description</div>
-                                        <p className="text-[#050505] text-[15px]">{companyForm.description}</p>
-                                    </div>
-                                )}
+
                             </div>
                         )}
                     </div>
