@@ -67,7 +67,7 @@ const cardHeaderClass = "px-4 py-3 border-b border-gray-200 flex items-center ju
 function calculateCompletion(form: CompanyForm) {
     const required: (keyof CompanyForm)[] = [
         "company_name", "tax_id", "company_registration_number", "company_address",
-        "contact_phone", "country", "city"
+        "contact_phone", "country", "city", "company_size", "founded_year"
     ];
 
     const filled = required.filter(key => {
@@ -565,11 +565,11 @@ export default function EmployerProfilePage() {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className={labelClass}>City</label>
+                                        <label className={labelClass}>City <span className="text-red-500">*</span></label>
                                         <input type="text" name="city" value={companyForm.city} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., Belgrade" />
                                     </div>
                                     <div>
-                                        <label className={labelClass}>Company Size</label>
+                                        <label className={labelClass}>Company Size <span className="text-red-500">*</span></label>
                                         <select name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass}>
                                             <option value="">Select size...</option>
                                             {COMPANY_SIZES.map(s => (<option key={s} value={s}>{s}</option>))}
@@ -579,7 +579,7 @@ export default function EmployerProfilePage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label className={labelClass}>Contact Phone</label>
+                                        <label className={labelClass}>Contact Phone <span className="text-red-500">*</span></label>
                                         <input type="tel" name="contact_phone" value={companyForm.contact_phone}
                                             onChange={(e) => {
                                                 let val = e.target.value;
@@ -594,13 +594,13 @@ export default function EmployerProfilePage() {
                                         <input type="url" name="website" value={companyForm.website} onChange={handleCompanyChange} className={inputClass} placeholder="https://yourcompany.com" />
                                     </div>
                                     <div>
-                                        <label className={labelClass}>Founded Year</label>
+                                        <label className={labelClass}>Founded Year <span className="text-red-500">*</span></label>
                                         <input type="text" name="founded_year" value={companyForm.founded_year} onChange={handleCompanyChange} className={inputClass} placeholder="2010" maxLength={4} />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className={labelClass}>Company Address</label>
+                                    <label className={labelClass}>Company Address <span className="text-red-500">*</span></label>
                                     <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Full registered business address..." />
                                 </div>
 
