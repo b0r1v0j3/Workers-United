@@ -1,6 +1,6 @@
 # 🏗️ Workers United — PROJECT PLAN
 
-> **Poslednje ažuriranje:** 2026-02-08 (Brand boje, admin delete, gradient fix, mobilna responsivnost, dizajn konzistencija, dead code cleanup)
+> **Poslednje ažuriranje:** 2026-02-09 (Profile reminder cron fix, admin worker 404 fix, email_queue type fix)
 
 ---
 
@@ -163,11 +163,25 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - Poslodavac: profil MORA biti na **100%** da bi mogao da se verifikuje
 - 100% znači: sva obavezna polja popunjena + svi dokumenti uploadovani i AI-verifikovani
 
+### ⚠️ Dodavanje novih obaveznih polja u profil:
+Kad se doda novo obavezno polje, MORA se uraditi sledeće:
+1. **Profil completion % se automatski smanjuje** — jer novo polje nije popunjeno, procenat pada (npr. 100% → 93%)
+2. **Poslati email svim radnicima** sa obaveljenjem da je novo polje dodato:
+   - **Za radnike koji NISU platili** — standardan podsetnik da dopune profil pre nego što mogu da apliciraju
+   - **Za radnike koji SU platili (IN_QUEUE)** — drugačija poruka: traženje posla se NE prekida, ali ih zamoliti da dopune profil jer je potrebno za vizni proces / aplikaciju
+3. **Cron logika i profil stranica** moraju se ažurirati da uključe novo polje
+4. **NIKAD ne blokirati plaćene korisnike** zbog novog polja — oni ostaju u queue-u, samo ih zamoliti da dopune
+
 ---
 
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**Admin worker 404 fix + Cron reminder fix + email_queue fix (09.02.2026)**
+- **Admin worker detail 404** — profili bez `profiles` reda davali 404. Sada koristi auth user data kao fallback + amber banner "profile not completed"
+- **Profile reminder cron** — proveravao samo 3 dokumenta, sada proverava **svih 15 polja profila** (ista logika kao worker profil stranica)
+- **email_queue CHECK constraint** — cron koristio `profile_reminder` type koji ne postoji u bazi → insert tiho padao. Zamenjeno sa `document_reminder`
 
 **Mobilna responsivnost + Dizajn konzistencija + Cleanup (08.02.2026)**
 - Kompletna **mobilna responsivnost** — login, signup, homepage, worker profil, employer profil, admin stranice

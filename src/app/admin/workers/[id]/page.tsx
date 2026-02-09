@@ -37,16 +37,18 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         adminClient = supabase;
     }
 
-    // Fetch candidate info
+    // Fetch auth user first (always exists if the user was created)
+    const { data: { user: authUser }, error: authUserError } = await adminClient.auth.admin.getUserById(id);
+    if (!authUser || authUserError) {
+        notFound();
+    }
+
+    // Fetch candidate profile (may not exist if user never completed signup)
     const { data: candidateProfile } = await adminClient
         .from("profiles")
         .select("*")
         .eq("id", id)
         .single();
-
-    if (!candidateProfile) {
-        notFound();
-    }
 
     const { data: candidateData } = await adminClient
         .from("candidates")
@@ -187,17 +189,24 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column: Candidate Info */}
                     <div className="lg:col-span-1 space-y-6">
+                        {/* No Profile Notice */}
+                        {!candidateProfile && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-[16px] p-4 text-amber-800 text-sm font-medium">
+                                ⚠️ This user has not completed their profile yet. Only basic auth data is available.
+                            </div>
+                        )}
+
                         {/* Profile Card */}
                         <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
                             <h2 className="font-bold text-[#1e293b] text-xl mb-4">Profile Info</h2>
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-[12px] text-[#64748b] uppercase font-bold">Full Name</label>
-                                    <div className="text-[#1e293b] font-medium">{candidateProfile.full_name || "—"}</div>
+                                    <div className="text-[#1e293b] font-medium">{candidateProfile?.full_name || authUser.user_metadata?.full_name || "—"}</div>
                                 </div>
                                 <div>
                                     <label className="text-[12px] text-[#64748b] uppercase font-bold">Email</label>
-                                    <div className="text-[#1e293b] font-medium">{candidateProfile.email}</div>
+                                    <div className="text-[#1e293b] font-medium">{candidateProfile?.email || authUser.email || "—"}</div>
                                 </div>
                                 <div>
                                     <label className="text-[12px] text-[#64748b] uppercase font-bold">Phone</label>
@@ -409,7 +418,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                         <input type="hidden" name="doc_id" value={doc.id} />
                                                         <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
                                                         <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                        <input type="hidden" name="user_email" value={candidateProfile.email} />
+                                                        <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
                                                         <label className="text-[11px] text-orange-700 uppercase font-bold block mb-1">
                                                             Reason for requesting new document:
                                                         </label>
