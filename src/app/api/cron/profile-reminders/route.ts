@@ -138,12 +138,28 @@ export async function GET(request: Request) {
                             </a>
                         </div>
                     </div>
-                    <div style="padding: 16px 24px; background: #f8fafc; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; text-align: center;">
+                    <div style="padding: 16px 24px; background: #f8fafc; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
                         <p style="margin: 0; font-size: 12px; color: #6c7a89;">
                             Workers United LLC &middot; 75 E 3rd St., Sheridan, Wyoming 82801, USA<br>
                             <a href="https://workersunited.eu" style="color: #2f6fed;">workersunited.eu</a>
                         </p>
                     </div>
+                    <div style="padding: 16px 24px; background: #f8fafc; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
+                        <div style="margin-bottom: 12px;">
+                            <a href="https://www.facebook.com/profile.php?id=61585104076725" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="Facebook">f</a>
+                            <a href="https://www.instagram.com/workersunited.eu/" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="Instagram">📷</a>
+                            <a href="https://www.threads.com/@workersunited.eu" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px;" title="Threads"><img src="https://workersunited.eu/threads-logo.svg" alt="Threads" style="width: 16px; height: 16px; vertical-align: middle;" /></a>
+                            <a href="https://www.linkedin.com/company/workersunited-eu/" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="LinkedIn">in</a>
+                            <a href="https://x.com/WorkersUnitedEU" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="X">𝕏</a>
+                            <a href="https://www.tiktok.com/@www.workersunited.eu" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="TikTok">♪</a>
+                            <a href="https://www.reddit.com/r/WorkersUnitedEU/" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="Reddit">◉</a>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #6c7a89;">
+                            Workers United LLC &middot; 75 E 3rd St., Sheridan, Wyoming 82801, USA<br>
+                            <a href="https://workersunited.eu" style="color: #2f6fed;">workersunited.eu</a>
+                        </p>
+                    </div>
+                    <div style="height: 12px; background: linear-gradient(135deg, #2f6fed, #1c4dd6); border-radius: 0 0 12px 12px;"></div>
                 </div>
             `;
 
