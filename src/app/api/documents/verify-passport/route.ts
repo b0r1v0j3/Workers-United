@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
                 ai_processed_at: new Date().toISOString(),
                 name_matches: nameMatches,
                 data_discrepancies: discrepancies,
+                expires_at: result.data.expiry_date || null,
             })
             .eq("id", documentId);
 

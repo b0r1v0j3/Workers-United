@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS } from "@/lib/constants";
+import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
 
 interface Profile {
     id: string;
@@ -99,6 +99,7 @@ export default function ProfilePage() {
         address: "",
         current_country: "",
         preferred_job: "",
+        desired_countries: [] as string[],
         // New visa fields
         birth_country: "",
         birth_city: "",
@@ -188,6 +189,7 @@ export default function ProfilePage() {
                     address: candidateData.address || "",
                     current_country: candidateData.current_country || "",
                     preferred_job: candidateData.preferred_job || "",
+                    desired_countries: candidateData.desired_countries || [],
                     // New fields
                     birth_country: candidateData.birth_country || "",
                     birth_city: candidateData.birth_city || "",
@@ -318,6 +320,7 @@ export default function ProfilePage() {
                 address: formData.address || null,
                 current_country: formData.current_country || null,
                 preferred_job: formData.preferred_job || null,
+                desired_countries: formData.desired_countries && formData.desired_countries.length > 0 ? formData.desired_countries : null,
                 // New fields
                 birth_country: formData.birth_country || null,
                 birth_city: formData.birth_city || null,
@@ -1020,6 +1023,57 @@ export default function ProfilePage() {
                                         <option value="">Select industry...</option>
                                         {WORKER_INDUSTRIES.map(ind => (<option key={ind} value={ind}>{ind}</option>))}
                                     </select>
+                                </div>
+
+                                <div>
+                                    <label className={labelClass}>
+                                        Preferred Destinations (Europe)
+                                    </label>
+
+                                    <div className="bg-gray-50 border border-gray-200 rounded-md p-3 max-h-60 overflow-y-auto">
+                                        <label className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-200">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.desired_countries.includes("Any")}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setFormData(prev => ({ ...prev, desired_countries: ["Any"] }));
+                                                    } else {
+                                                        setFormData(prev => ({ ...prev, desired_countries: [] }));
+                                                    }
+                                                }}
+                                                className="rounded text-[#1877f2] focus:ring-[#1877f2]"
+                                            />
+                                            <span className="text-sm font-medium text-gray-900">Any (Open to anywhere in Europe)</span>
+                                        </label>
+
+                                        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 ${formData.desired_countries.includes("Any") ? "opacity-50 pointer-events-none" : ""}`}>
+                                            {EUROPEAN_COUNTRIES.map(country => (
+                                                <label key={country} className="flex items-center space-x-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.desired_countries.includes(country)}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            setFormData(prev => {
+                                                                const current = prev.desired_countries.filter(c => c !== "Any");
+                                                                if (checked) {
+                                                                    return { ...prev, desired_countries: [...current, country] };
+                                                                } else {
+                                                                    return { ...prev, desired_countries: current.filter(c => c !== country) };
+                                                                }
+                                                            });
+                                                        }}
+                                                        className="rounded text-[#1877f2] focus:ring-[#1877f2]"
+                                                    />
+                                                    <span className="text-sm text-gray-700">{country}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <p className="text-[12px] text-gray-500 mt-2">
+                                        ⓘ Selecting a specific country doesn&apos;t guarantee a job there. You might receive offers from other EU countries.
+                                    </p>
                                 </div>
                             </div>
                         </div>

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
 import { Users, Building2 } from "lucide-react";
+import FunnelChart from "./FunnelChart";
 
 export default async function AdminDashboard() {
     const supabase = await createClient();
@@ -69,6 +70,9 @@ export default async function AdminDashboard() {
                     <StatCard href="/admin/workers" icon={<Users size={24} />} label="Total Workers" value={candidatesCount || 0} color="blue" />
                     <StatCard href="/admin/employers" icon={<Building2 size={24} />} label="Total Employers" value={employersCount || 0} color="purple" />
                 </div>
+
+                {/* Funnel Overview */}
+                <FunnelChart />
 
                 {/* Activity Feed / Recent Lists */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
