@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { processBiometricPhoto, fixImageOrientation, stitchImages } from "@/lib/imageUtils";
+import { processBiometricPhoto, fixImageOrientation, stitchImages, compressImage } from "@/lib/imageUtils";
+import { MAX_FILE_SIZE_MB, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
 
 interface FileUpload {
     file: File | null;
@@ -73,13 +74,24 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
         loadExistingDocs();
     }, [candidateId]);
 
+    // Update status helper
+    const updateStatus = (type: string, status: FileUpload["status"], message: string, file: File | null = null) => {
+        setUploads(prev => ({
+            ...prev,
+            [type]: { file, status, message }
+        }));
+    };
+
     // Handle multi-file select for passport/diploma (stitch 2 photos into 1)
     async function handleMultiFileSelect(type: string, files: FileList | null) {
         if (!files || files.length === 0) return;
 
+        // Reset status
+        updateStatus(type, "missing", "");
+
         for (let i = 0; i < files.length; i++) {
-            if (files[i].size > 5 * 1024 * 1024) {
-                alert("File is too large. Maximum size is 5MB per photo.");
+            if (files[i].size > MAX_FILE_SIZE_BYTES) {
+                updateStatus(type, "error", `File too large. Max ${MAX_FILE_SIZE_MB}MB.`);
                 return;
             }
         }
@@ -87,13 +99,9 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
         let file: File;
         if (files.length >= 2) {
             // Stitch 2 photos into 1
-            setUploads(prev => ({
-                ...prev,
-                [type]: { file: null, status: "uploaded", message: "Combining photos..." }
-            }));
+            updateStatus(type, "uploaded", "Combining photos...");
             try {
                 file = await stitchImages(files[0], files[1]);
-                console.log(`[Upload] Stitched 2 ${type} photos into 1`);
             } catch (err) {
                 console.error('[Upload] Stitch failed:', err);
                 file = files[0]; // fallback to first photo
@@ -108,30 +116,29 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
     async function handleFileSelect(type: string, file: File | null) {
         if (!file) return;
 
-        if (file.size > 10 * 1024 * 1024) {
-            alert("File is too large. Maximum size is 10MB.");
+        // Double check size (redundant but safe)
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            updateStatus(type, "error", `File too large. Max ${MAX_FILE_SIZE_MB}MB.`);
             return;
         }
 
-        setUploads(prev => ({
-            ...prev,
-            [type]: { file, status: "uploaded", message: "Processing..." }
-        }));
+        updateStatus(type, "uploaded", "Compressing & Processing...", file);
 
         try {
             // Client-side image processing
             let uploadFile = file;
             if (file.type.startsWith('image/')) {
                 try {
+                    // 1. Fix orientation / Crop
                     if (type === 'biometric_photo') {
-                        // Biometric: EXIF rotate + center-crop to 7:9
                         uploadFile = await processBiometricPhoto(file);
-                        console.log('[Upload] Biometric photo: rotated & cropped');
                     } else {
-                        // Passport/diploma: just fix EXIF rotation
                         uploadFile = await fixImageOrientation(file);
-                        console.log(`[Upload] ${type}: EXIF rotation fixed`);
                     }
+
+                    // 2. Compress
+                    uploadFile = await compressImage(uploadFile);
+
                 } catch (processErr) {
                     console.warn('[Upload] Image processing failed, uploading original:', processErr);
                 }
@@ -139,6 +146,8 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
 
             const fileName = `${Date.now()}_${uploadFile.name}`;
             const storagePath = `${candidateId}/${type}/${fileName}`;
+
+            updateStatus(type, "uploaded", "Uploading...", uploadFile);
 
             // Upload to candidate-docs bucket
             const { error: uploadError } = await supabase.storage
@@ -157,10 +166,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             }, { onConflict: 'user_id,document_type' });
 
             // Set to verifying
-            setUploads(prev => ({
-                ...prev,
-                [type]: { file, status: "verifying", message: "Verifying..." }
-            }));
+            updateStatus(type, "verifying", "Verifying with AI...");
 
             await supabase.from("candidate_documents").update({
                 status: 'verifying',
@@ -181,7 +187,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                     const newUploads = {
                         ...prev,
                         [type]: {
-                            file,
+                            file: uploadFile,
                             status: result.status,
                             message: result.status === 'verified' ? '✓ Verified' : 'Verification failed.'
                         }
@@ -209,23 +215,17 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             if (errorMessage.includes("storage")) {
                 displayMessage = "Storage error. Check bucket permissions.";
             } else if (errorMessage.includes("row-level security") || errorMessage.includes("RLS")) {
-                displayMessage = "Permission denied. Contact support.";
+                displayMessage = "Permission denied. Please refresh.";
             } else if (errorMessage.includes("verification") || errorMessage.includes("AI")) {
                 displayMessage = "Verification failed. Try again.";
             }
 
-            setUploads(prev => ({
-                ...prev,
-                [type]: { file: null, status: "error", message: displayMessage }
-            }));
+            updateStatus(type, "error", displayMessage);
         }
     }
 
     function removeFile(type: string) {
-        setUploads(prev => ({
-            ...prev,
-            [type]: { file: null, status: "missing", message: "" }
-        }));
+        updateStatus(type, "missing", "");
     }
 
     function getStatusColor(status: string) {

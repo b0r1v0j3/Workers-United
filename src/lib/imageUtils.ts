@@ -1,10 +1,60 @@
+import { COMPRESSED_IMAGE_QUALITY, COMPRESSED_MAX_WIDTH, COMPRESSED_MAX_HEIGHT } from "./constants";
+
 /**
  * Client-side image processing for document uploads.
- * Handles EXIF rotation for all images and center-cropping for biometric photos.
+ * Handles EXIF rotation for all images, center-cropping for biometric photos,
+ * and high-quality compression to reduce upload implementation size.
  */
 
 const BIOMETRIC_WIDTH = 600;
 const BIOMETRIC_HEIGHT = 770; // ~35x45mm ratio (7:9)
+
+/**
+ * Compress an image file while maintaining aspect ratio.
+ * Limits max dimensions to 1920x1920 and quality to 0.8 (JPEG).
+ */
+export async function compressImage(file: File): Promise<File> {
+    // If it's not an image (e.g. PDF), return original
+    if (!file.type.startsWith("image/")) return file;
+
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    let { width, height } = bitmap;
+
+    // Scale down if larger than max dimensions
+    if (width > COMPRESSED_MAX_WIDTH || height > COMPRESSED_MAX_HEIGHT) {
+        const ratio = Math.min(COMPRESSED_MAX_WIDTH / width, COMPRESSED_MAX_HEIGHT / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+        bitmap.close();
+        return file; // Fallback to original
+    }
+
+    // Draw to canvas (this strips EXIF but we might want to preserve rotation manually first)
+    // Note: fixImageOrientation already handles rotation, so we assume input is handled or we handle it here.
+    // For simplicity in this flow, we'll assume this runs *after* or *as part of* orientation fix.
+    // However, createImageBitmap with 'from-image' usually respects EXIF orientation in modern browsers.
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/jpeg", COMPRESSED_IMAGE_QUALITY)
+    );
+
+    if (!blob) return file;
+
+    return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+    });
+}
 
 /**
  * Fix EXIF orientation for any image.

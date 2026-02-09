@@ -181,7 +181,6 @@ export async function GET(request: NextRequest) {
         }
 
         const isGod = isGodModeUser(user.email);
-        console.log("God mode check:", { email: user.email, isGod });
 
         return NextResponse.json({
             godMode: isGod,

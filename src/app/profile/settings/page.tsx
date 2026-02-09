@@ -8,6 +8,7 @@ export default function AccountSettingsPage() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [exportLoading, setExportLoading] = useState(false);
+    const [exportError, setExportError] = useState<string | null>(null);
     const [confirmText, setConfirmText] = useState("");
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
@@ -45,13 +46,14 @@ export default function AccountSettingsPage() {
 
     const handleExportData = async () => {
         setExportLoading(true);
+        setExportError(null);
 
         try {
             const response = await fetch("/api/account/export");
 
             if (!response.ok) {
                 const data = await response.json();
-                alert(data.error || "Failed to export data.");
+                setExportError(data.error || "Failed to export data.");
                 return;
             }
 
@@ -65,8 +67,8 @@ export default function AccountSettingsPage() {
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-        } catch (err: any) {
-            alert(err.message || "An error occurred.");
+        } catch (err) {
+            setExportError(err instanceof Error ? err.message : "An error occurred.");
         } finally {
             setExportLoading(false);
         }
@@ -121,6 +123,9 @@ export default function AccountSettingsPage() {
                                     "Download My Data (JSON)"
                                 )}
                             </button>
+                            {exportError && (
+                                <p className="text-sm text-red-600 mt-2">{exportError}</p>
+                            )}
                         </div>
                     </div>
                 </div>
