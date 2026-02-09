@@ -52,10 +52,13 @@ export default function DashboardClient({
 
     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
 
+    // Check if required documents are uploaded (independently of profile fields)
+    const docsUploaded = documents.filter(d => d.status === 'verified').length >= 2;
+
     // Application stages
     const stages = [
         { label: "Profile Created", done: true },
-        { label: "Documents Uploaded", done: isReady },
+        { label: "Documents Uploaded", done: docsUploaded },
         { label: "Verified", done: inQueue },
         { label: "In Queue", done: inQueue },
         { label: "Matched", done: false },
@@ -326,34 +329,46 @@ export default function DashboardClient({
                         </div>
 
                         {/* Current Status Card */}
-                        <div className={`rounded-xl shadow-sm border p-5 ${inQueue
-                            ? 'bg-emerald-50 border-emerald-200'
-                            : isReady
-                                ? 'bg-blue-50 border-blue-200'
-                                : 'bg-amber-50 border-amber-200'
-                            }`}>
-                            <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${inQueue ? 'bg-emerald-500' : isReady ? 'bg-[#1877f2]' : 'bg-amber-500'
-                                    } text-white`}>
-                                    {inQueue ? <CheckCircle2 size={20} /> : isReady ? <Clock size={20} /> : <AlertCircle size={20} />}
+                        {(() => {
+                            const profileDone = profileCompletion === 100;
+                            let bg, border, iconBg, iconEl, title, subtitle, titleColor, subtitleColor;
+
+                            if (inQueue) {
+                                bg = 'bg-emerald-50'; border = 'border-emerald-200'; iconBg = 'bg-emerald-500';
+                                iconEl = <CheckCircle2 size={20} />; titleColor = 'text-emerald-800'; subtitleColor = 'text-emerald-600';
+                                title = "You're in the queue!";
+                                subtitle = "We're actively matching you with employers. You'll be notified when there's a match.";
+                            } else if (isReady) {
+                                bg = 'bg-blue-50'; border = 'border-blue-200'; iconBg = 'bg-[#1877f2]';
+                                iconEl = <Clock size={20} />; titleColor = 'text-blue-800'; subtitleColor = 'text-blue-600';
+                                title = "Profile complete — ready for queue";
+                                subtitle = "Your profile and documents are verified. Contact admin to join the queue.";
+                            } else if (docsUploaded && !profileDone) {
+                                bg = 'bg-amber-50'; border = 'border-amber-200'; iconBg = 'bg-amber-500';
+                                iconEl = <AlertCircle size={20} />; titleColor = 'text-amber-800'; subtitleColor = 'text-amber-600';
+                                title = "Almost there — complete your profile";
+                                subtitle = `Your documents are verified, but your profile is ${profileCompletion}% complete. Fill in the missing fields to continue.`;
+                            } else {
+                                bg = 'bg-amber-50'; border = 'border-amber-200'; iconBg = 'bg-amber-500';
+                                iconEl = <AlertCircle size={20} />; titleColor = 'text-amber-800'; subtitleColor = 'text-amber-600';
+                                title = "Complete your profile";
+                                subtitle = "Upload your documents and fill in your profile information to get started.";
+                            }
+
+                            return (
+                                <div className={`rounded-xl shadow-sm border p-5 ${bg} ${border}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBg} text-white`}>
+                                            {iconEl}
+                                        </div>
+                                        <div>
+                                            <h4 className={`font-bold ${titleColor}`}>{title}</h4>
+                                            <p className={`text-sm ${subtitleColor}`}>{subtitle}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 className={`font-bold ${inQueue ? 'text-emerald-800' : isReady ? 'text-blue-800' : 'text-amber-800'
-                                        }`}>
-                                        {inQueue ? "You're in the queue!" : isReady ? "Profile complete — ready for queue" : "Complete your profile"}
-                                    </h4>
-                                    <p className={`text-sm ${inQueue ? 'text-emerald-600' : isReady ? 'text-blue-600' : 'text-amber-600'
-                                        }`}>
-                                        {inQueue
-                                            ? "We're actively matching you with employers. You'll be notified when there's a match."
-                                            : isReady
-                                                ? "Your documents are verified. Contact admin to join the queue."
-                                                : "Upload and verify your documents to continue."
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                            );
+                        })()}
 
                         {/* Pending Offers in Status */}
                         {hasPendingOffer && (
