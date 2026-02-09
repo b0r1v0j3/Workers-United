@@ -21,25 +21,21 @@ export default async function EmployersPage() {
 
     const adminClient = createAdminClient();
 
-    // Fetch employers with their profile info — correct columns
-    const { data: employers } = await adminClient
+    // Fetch employers and profiles separately (no FK dependency)
+    const { data: rawEmployers } = await adminClient
         .from("employers")
-        .select(`
-            id,
-            profile_id,
-            company_name,
-            company_registration_number,
-            company_address,
-            contact_phone,
-            country,
-            city,
-            company_size,
-            website,
-            status,
-            created_at,
-            profiles!inner(email, full_name)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
+
+    const { data: allProfiles } = await adminClient
+        .from("profiles")
+        .select("id, email, full_name");
+
+    const profileLookup = new Map(allProfiles?.map((p: any) => [p.id, p]) || []);
+    const employers = (rawEmployers || []).map((e: any) => ({
+        ...e,
+        profiles: profileLookup.get(e.profile_id) || { email: "Unknown", full_name: "Unknown" }
+    }));
 
     // Count jobs per employer
     const { data: jobCounts } = await adminClient
