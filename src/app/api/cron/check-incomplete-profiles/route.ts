@@ -5,34 +5,35 @@ import { queueEmail } from '@/lib/email-templates';
 export const dynamic = 'force-dynamic';
 
 // Field labels for human-readable emails
+// Field labels with explanations for human-readable emails
 const WORKER_FIELD_LABELS: Record<string, string> = {
-    full_name: "Full Name",
-    phone: "Phone Number",
-    nationality: "Nationality",
-    current_country: "Current Country",
-    preferred_job: "Preferred Job",
-    gender: "Gender",
-    date_of_birth: "Date of Birth",
-    birth_country: "Birth Country",
-    birth_city: "Birth City",
-    citizenship: "Citizenship",
-    marital_status: "Marital Status",
-    passport_number: "Passport Number",
-    lives_abroad: "Lives Abroad",
-    previous_visas: "Previous Visas",
-    passport_doc: "Passport Upload",
-    biometric_photo_doc: "Biometric Photo Upload",
+    full_name: "Full Name (Required for identity verification)",
+    phone: "Phone Number (To contact you about job offers)",
+    nationality: "Nationality (Required for visa eligibility)",
+    current_country: "Current Country (To determine visa processing path)",
+    preferred_job: "Preferred Job (To match you with the right employers)",
+    gender: "Gender (Required for visa application forms)",
+    date_of_birth: "Date of Birth (Required for legal age verification)",
+    birth_country: "Birth Country (Required for visa application)",
+    birth_city: "Birth City (Required for visa application)",
+    citizenship: "Citizenship (Required for visa support)",
+    marital_status: "Marital Status (Required for visa application)",
+    passport_number: "Passport Number (Crucial for all travel documents)",
+    lives_abroad: "Lives Abroad (Helps us understand your relocation needs)",
+    previous_visas: "Previous Visas (Important for visa history check)",
+    passport_doc: "Passport Upload (We need a scan of your passport)",
+    biometric_photo_doc: "Biometric Photo (Required for visa application)",
 };
 
 const EMPLOYER_FIELD_LABELS: Record<string, string> = {
-    company_name: "Company Name",
-    company_registration_number: "Company Registration Number",
-    company_address: "Company Address",
-    contact_phone: "Contact Phone",
-    country: "Country",
-    city: "City",
-    industry: "Industry",
-    description: "Company Description",
+    company_name: "Company Name (Required for contracts)",
+    company_registration_number: "Registration Number (To verify business legitimacy)",
+    company_address: "Company Address (Required for invoicing)",
+    contact_phone: "Contact Phone (To reach you about candidates)",
+    country: "Country (To show candidates where the job is)",
+    city: "City (To show candidates the specific location)",
+    industry: "Industry (To match you with relevant workers)",
+    description: "Company Description (Helps candidates understand your business)",
 };
 
 export async function GET(request: Request) {
