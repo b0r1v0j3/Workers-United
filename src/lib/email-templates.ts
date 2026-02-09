@@ -61,7 +61,6 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <div style="background:white; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05); overflow: hidden; ${baseStyles}">
             <!-- Header Bar -->
             <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
-            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
                 <img src="https://workersunited.eu/logo.png" alt="Workers United" width="48" height="48" style="vertical-align: middle; background-color: white; border-radius: 50%; padding: 4px;">
                 <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">${title}</div>
                 <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">${subtitle}</div>
