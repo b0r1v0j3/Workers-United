@@ -143,7 +143,7 @@ export default function EmployerProfilePage() {
     const supabase = createClient();
 
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<{ id: string } | null>(null);
+    const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: Record<string, string> } | null>(null);
     const [employer, setEmployer] = useState<EmployerProfile | null>(null);
     const [jobs, setJobs] = useState<JobRequest[]>([]);
 
@@ -235,6 +235,7 @@ export default function EmployerProfilePage() {
         setSaving(true);
         setCompanyAlert(null);
         try {
+            if (!user) throw new Error("Not logged in");
             if (!companyForm.company_name.trim()) throw new Error("Company name is required");
 
             if (companyForm.company_registration_number && !/^\d{8}$/.test(companyForm.company_registration_number))
@@ -263,6 +264,15 @@ export default function EmployerProfilePage() {
                 const { error } = await supabase.from("employers").update(data).eq("id", employer.id);
                 if (error) throw error;
             } else {
+                // Ensure profiles row exists (signup trigger may have failed)
+                const { error: profileErr } = await supabase.from("profiles").upsert({
+                    id: user!.id,
+                    email: user!.email || "",
+                    full_name: user!.user_metadata?.full_name || "",
+                    user_type: "employer",
+                }, { onConflict: "id" });
+                if (profileErr) throw profileErr;
+
                 const { error } = await supabase.from("employers")
                     .insert({ ...data, profile_id: user.id, status: "pending" });
                 if (error) throw error;
