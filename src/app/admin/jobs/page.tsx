@@ -107,14 +107,22 @@ function JobStatusBadge({ status }: { status: string }) {
 function TriggerMatchButton({ jobRequestId }: { jobRequestId: string }) {
     async function triggerMatch() {
         "use server";
+        const { revalidatePath } = await import("next/cache");
 
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/queue/auto-match`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ jobRequestId }),
-        });
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/queue/auto-match`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jobRequestId }),
+            });
+            if (!res.ok) {
+                console.error("Trigger match failed:", res.status, await res.text());
+            }
+        } catch (err) {
+            console.error("Trigger match error:", err);
+        }
 
-        redirect("/admin/jobs");
+        revalidatePath("/admin/jobs");
     }
 
     return (
