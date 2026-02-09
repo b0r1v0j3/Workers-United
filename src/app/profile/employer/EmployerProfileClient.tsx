@@ -276,8 +276,11 @@ export default function EmployerProfilePage() {
             setCompanyAlert({ type: "success", msg: "Company info saved!" });
             setEditing(false);
             setTimeout(() => setCompanyAlert(null), 3000);
-        } catch (err) {
-            setCompanyAlert({ type: "error", msg: err instanceof Error ? err.message : "Failed to save" });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message
+                : (err && typeof err === 'object' && 'message' in err) ? String((err as { message: unknown }).message)
+                    : "Failed to save";
+            setCompanyAlert({ type: "error", msg: message });
         } finally {
             setSaving(false);
         }
