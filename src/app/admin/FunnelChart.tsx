@@ -12,15 +12,25 @@ export default function FunnelChart() {
         job_matched: 0
     });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const res = await fetch("/api/admin/funnel-metrics");
                 const json = await res.json();
-                if (json.success) setData(json.data);
-            } catch (error) {
-                console.error("Failed to fetch funnel metrics:", error);
+                if (!res.ok) {
+                    setError(json.error || `HTTP ${res.status}`);
+                    return;
+                }
+                if (json.success) {
+                    setData(json.data);
+                } else {
+                    setError("API returned unsuccessful response");
+                }
+            } catch (err) {
+                console.error("Failed to fetch funnel metrics:", err);
+                setError("Network error");
             } finally {
                 setLoading(false);
             }
@@ -32,6 +42,15 @@ export default function FunnelChart() {
         return (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-[400px] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-2">Pipeline Overview</h2>
+                <p className="text-red-500 text-sm">Error loading metrics: {error}</p>
             </div>
         );
     }
