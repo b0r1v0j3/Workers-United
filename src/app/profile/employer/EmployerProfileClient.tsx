@@ -618,12 +618,7 @@ export default function EmployerProfilePage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className={labelClass}>Experience Required (years)</label>
-                                        <input type="number" name="experience_required_years" min={0} max={20} value={jobForm.experience_required_years} onChange={handleJobChange} className={inputClass} />
-                                        <p className="text-[11px] text-gray-500 mt-1">Set to 0 for no experience required</p>
-                                    </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className={labelClass}>Accommodation City <span className="text-red-500">*</span></label>
                                         <input type="text" name="work_city" value={jobForm.work_city} onChange={handleJobChange} className={inputClass} placeholder="City where workers will be accommodated" />
