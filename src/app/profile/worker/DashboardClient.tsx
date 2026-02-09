@@ -104,24 +104,6 @@ export default function DashboardClient({
             {/* MAIN CONTENT */}
             <div className="max-w-[900px] mx-auto px-4 py-6">
 
-                {/* PAGE HEADER */}
-                <div className="mb-6">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
-                            <p className="text-gray-500 mt-1">
-                                {candidate?.preferred_job || "Worker"} • {candidate?.nationality || "International"}
-                            </p>
-                        </div>
-                        <Link
-                            href="/profile/worker/edit"
-                            className="bg-[#1877f2] text-white px-5 py-2.5 rounded-md font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2"
-                        >
-                            <Pencil size={16} /> Edit Profile
-                        </Link>
-                    </div>
-                </div>
-
                 {/* Coming Soon / Job Matching CTA — will become payment gateway */}
                 <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -167,10 +149,20 @@ export default function DashboardClient({
 
                 {/* TABS */}
                 <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
-                    <div className="flex px-2 overflow-x-auto scrollbar-hide">
-                        <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
-                        <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
-                        <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
+                    <div className="flex items-center px-2">
+                        <div className="flex overflow-x-auto scrollbar-hide">
+                            <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+                            <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
+                            <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
+                        </div>
+                        <div className="ml-auto pr-2">
+                            <Link
+                                href="/profile/worker/edit"
+                                className="bg-[#1877f2] text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 whitespace-nowrap"
+                            >
+                                <Pencil size={14} /> Edit Profile
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
