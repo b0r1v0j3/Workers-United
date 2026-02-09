@@ -285,7 +285,7 @@ export default function EmployerProfilePage() {
             const { data: jobData } = await supabase.from("job_requests").select("*").eq("employer_id", employer!.id).order("created_at", { ascending: false });
             setJobs(jobData || []);
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Failed to post";
+            const msg = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err) ? String((err as { message: string }).message) : "Failed to post";
             setJobAlert({ type: "error", msg });
         } finally { setPostingJob(false); }
     };
