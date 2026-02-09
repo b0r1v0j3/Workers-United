@@ -50,8 +50,7 @@ export default async function AdminDashboard() {
     // Fetch recent employers
     const { data: recentEmployers } = await adminClient
         .from("employers")
-        .select("id, company_name, workers_needed, created_at")
-        .order("created_at", { ascending: false })
+        .select("id, company_name, profile_id")
         .limit(5);
 
     return (
@@ -113,14 +112,9 @@ export default async function AdminDashboard() {
                                                 <Building2 size={20} />
                                             </div>
                                             <div>
-                                                <p className="font-semibold text-slate-900 text-sm">{e.company_name}</p>
-                                                <p className="text-xs text-slate-500">{new Date(e.created_at).toLocaleDateString('en-GB')}</p>
+                                                <p className="font-semibold text-slate-900 text-sm">{e.company_name || "No Name"}</p>
+                                                <p className="text-xs text-slate-500">{profileMap.get(e.profile_id)?.email || ""}</p>
                                             </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs font-medium">
-                                                <Users size={12} /> {e.workers_needed} needed
-                                            </span>
                                         </div>
                                     </div>
                                 ))}
