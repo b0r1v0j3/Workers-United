@@ -10,7 +10,7 @@ import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/co
 interface EmployerProfile {
     id: string;
     company_name: string;
-
+    pib: string | null;
     company_registration_number: string | null;
     company_address: string | null;
     contact_phone: string | null;
@@ -44,6 +44,7 @@ interface JobRequest {
 // ─── Company form type ──────────────────────────────────────────
 interface CompanyForm {
     company_name: string;
+    pib: string;
     company_registration_number: string;
     company_address: string;
     contact_phone: string;
@@ -65,7 +66,7 @@ const cardHeaderClass = "px-4 py-3 border-b border-gray-200 flex items-center ju
 // ─── Helper: Calculate Completion ───────────────────────────────
 function calculateCompletion(form: CompanyForm) {
     const required: (keyof CompanyForm)[] = [
-        "company_name", "company_registration_number", "company_address",
+        "company_name", "pib", "company_registration_number", "company_address",
         "contact_phone", "country", "city"
     ];
 
@@ -151,7 +152,7 @@ export default function EmployerProfilePage() {
     const [saving, setSaving] = useState(false);
     const [companyAlert, setCompanyAlert] = useState<{ type: "success" | "error"; msg: string } | null>(null);
     const [companyForm, setCompanyForm] = useState({
-        company_name: "", company_registration_number: "",
+        company_name: "", pib: "", company_registration_number: "",
         company_address: "", contact_phone: "", country: "", city: "",
         website: "", industry: "", company_size: "", founded_year: "", description: "",
     });
@@ -189,7 +190,7 @@ export default function EmployerProfilePage() {
                 setEmployer(emp);
                 setCompanyForm({
                     company_name: emp.company_name || "",
-
+                    pib: emp.pib || "",
                     company_registration_number: emp.company_registration_number || "",
                     company_address: emp.company_address || "",
                     contact_phone: emp.contact_phone || "",
@@ -208,6 +209,11 @@ export default function EmployerProfilePage() {
                     .order("created_at", { ascending: false });
                 setJobs(jobData || []);
             } else {
+                // Pre-fill company name from signup metadata
+                const metaCompanyName = user.user_metadata?.company_name || "";
+                if (metaCompanyName) {
+                    setCompanyForm(prev => ({ ...prev, company_name: metaCompanyName }));
+                }
                 setEditing(true); // New employer, start in edit mode
             }
         } catch (err) {
@@ -240,7 +246,7 @@ export default function EmployerProfilePage() {
 
             const data = {
                 company_name: companyForm.company_name,
-
+                pib: companyForm.pib || null,
                 company_registration_number: companyForm.company_registration_number || null,
                 company_address: companyForm.company_address || null,
                 contact_phone: companyForm.contact_phone ? companyForm.contact_phone.replace(/[\s\-()]/g, '') : null,
@@ -284,7 +290,7 @@ export default function EmployerProfilePage() {
         if (employer) {
             setCompanyForm({
                 company_name: employer.company_name || "",
-
+                pib: employer.pib || "",
                 company_registration_number: employer.company_registration_number || "",
                 company_address: employer.company_address || "",
                 contact_phone: employer.contact_phone || "",
@@ -541,6 +547,10 @@ export default function EmployerProfilePage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
+                                        <label className={labelClass}>Tax ID <span className="text-red-500">*</span></label>
+                                        <input type="text" name="pib" value={companyForm.pib} onChange={handleCompanyChange} className={inputClass} placeholder="123456789" maxLength={9} />
+                                    </div>
+                                    <div>
                                         <label className={labelClass}>Company Registration Number <span className="text-red-500">*</span></label>
                                         <input type="text" name="company_registration_number" value={companyForm.company_registration_number} onChange={handleCompanyChange} className={inputClass} placeholder="12345678" maxLength={8} />
                                     </div>
@@ -613,7 +623,7 @@ export default function EmployerProfilePage() {
                             <div className="space-y-3">
                                 <InfoRow label="Company Name" value={companyForm.company_name} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-
+                                    <InfoRow label="Tax ID" value={companyForm.pib} />
                                     <InfoRow label="Company Reg. No." value={companyForm.company_registration_number} />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
