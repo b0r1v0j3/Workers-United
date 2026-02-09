@@ -61,7 +61,8 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <div style="background:white; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05); overflow: hidden; ${baseStyles}">
             <!-- Header Bar -->
             <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
-                <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="48" height="48" style="vertical-align: middle;">
+            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
+                <img src="https://workersunited.eu/logo.png" alt="Workers United" width="48" height="48" style="vertical-align: middle; background-color: white; border-radius: 50%; padding: 4px;">
                 <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">${title}</div>
                 <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">${subtitle}</div>
             </div>
@@ -75,13 +76,7 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <!-- Footer -->
         <div style="text-align:center; margin-top:30px; color:#6c7a89; font-size:12px;">
             <div style="margin-bottom:20px;">
-                <a href="#" style="text-decoration:none; margin:0 8px;"><img src="https://cdn-icons-png.flaticon.com/32/145/145802.png" width="24" height="24" alt="Facebook" style="vertical-align:middle; opacity:0.8;"></a>
-                <a href="#" style="text-decoration:none; margin:0 8px;"><img src="https://cdn-icons-png.flaticon.com/32/3955/3955024.png" width="24" height="24" alt="Instagram" style="vertical-align:middle; opacity:0.8;"></a>
-                <a href="#" style="text-decoration:none; margin:0 8px;"><img src="https://cdn-icons-png.flaticon.com/32/145/145807.png" width="24" height="24" alt="LinkedIn" style="vertical-align:middle; opacity:0.8;"></a>
-                <a href="#" style="text-decoration:none; margin:0 8px;"><img src="https://cdn-icons-png.flaticon.com/32/5969/5969020.png" width="24" height="24" alt="X" style="vertical-align:middle; opacity:0.8;"></a>
-                <a href="#" style="text-decoration:none; margin:0 8px;"><img src="https://cdn-icons-png.flaticon.com/32/3046/3046122.png" width="24" height="24" alt="TikTok" style="vertical-align:middle; opacity:0.8;"></a>
-                <a href="#" style="text-decoration:none; margin:0 8px;"><img src="https://cdn-icons-png.flaticon.com/32/4302/4302055.png" width="24" height="24" alt="Threads" style="vertical-align:middle; opacity:0.8;"></a>
-                <a href="#" style="text-decoration:none; margin:0 8px;"><img src="https://cdn-icons-png.flaticon.com/32/3669/3669970.png" width="24" height="24" alt="Reddit" style="vertical-align:middle; opacity:0.8;"></a>
+               <!-- Social links removed as requested -->
             </div>
             <p style="margin:0 0 10px;">Workers United LLC</p>
             <p style="margin:0 0 10px;">75 E 3rd St., Sheridan, Wyoming 82801</p>
