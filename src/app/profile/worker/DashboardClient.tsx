@@ -143,6 +143,28 @@ export default function DashboardClient({
                         </div>
                     </div>
                 </div>
+
+                {/* Profile Completion — always visible */}
+                {profileCompletion < 100 && (
+                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-bold text-[#050505]">Profile Completion</h3>
+                            <span className="text-sm font-bold text-[#1877f2]">
+                                {profileCompletion}%
+                            </span>
+                        </div>
+                        <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden">
+                            <div
+                                className="h-full rounded-full transition-all duration-500 bg-[#1877f2]"
+                                style={{ width: `${profileCompletion}%` }}
+                            />
+                        </div>
+                        <p className="text-xs text-[#65676b] mt-2">
+                            Complete your profile to get matched with employers faster.
+                        </p>
+                    </div>
+                )}
+
                 {/* TABS */}
                 <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
                     <div className="flex px-2 overflow-x-auto scrollbar-hide">
@@ -155,26 +177,6 @@ export default function DashboardClient({
                 {/* ====================== PROFILE INFO TAB ====================== */}
                 {activeTab === 'profile' && (
                     <div className="space-y-4">
-                        {/* Profile Completion */}
-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-bold text-[#050505]">Profile Completion</h3>
-                                <span className={`text-sm font-bold ${profileCompletion === 100 ? 'text-emerald-600' : 'text-[#1877f2]'}`}>
-                                    {profileCompletion}%
-                                </span>
-                            </div>
-                            <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden">
-                                <div
-                                    className={`h-full rounded-full transition-all duration-500 ${profileCompletion === 100 ? 'bg-emerald-500' : 'bg-[#1877f2]'}`}
-                                    style={{ width: `${profileCompletion}%` }}
-                                />
-                            </div>
-                            {profileCompletion < 100 && (
-                                <p className="text-xs text-[#65676b] mt-2">
-                                    Complete your profile to get matched with employers faster.
-                                </p>
-                            )}
-                        </div>
 
                         {/* Personal Information */}
                         <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
