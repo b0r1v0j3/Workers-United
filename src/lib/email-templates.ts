@@ -9,7 +9,8 @@ export type EmailType =
     | "refund_approved"
     | "document_expiring"
     | "job_match"
-    | "admin_update";
+    | "admin_update"
+    | "announcement";
 
 interface EmailTemplate {
     subject: string;
@@ -412,6 +413,32 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                     </div>
                 `, "Account Update", "Important Notification")
+            };
+
+        case "announcement":
+            return {
+                subject: data.subject || "Announcement from Workers United",
+                html: wrapModernTemplate(`
+                    <div style="padding: 40px;">
+                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">${data.title || "Announcement"}</h2>
+                        
+                        <div style="font-size: 16px; color: #334155; line-height: 1.6; margin-bottom: 30px; white-space: pre-line;">
+                            ${data.message || "No content."}
+                        </div>
+                        
+                        ${data.actionLink ? `
+                        <div style="text-align:center; margin-top:35px;">
+                            <a href="${data.actionLink}" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
+                                ${data.actionText || "View Details"}
+                            </a>
+                        </div>
+                        ` : ''}
+                        
+                        <p style="text-align: center; font-size: 13px; color: #94a3b8; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                            You received this email because you are a registered user of Workers United.
+                        </p>
+                    </div>
+                `, data.title || "Workers United", "Official Announcement")
             };
 
         default:
