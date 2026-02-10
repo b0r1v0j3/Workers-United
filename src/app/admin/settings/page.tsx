@@ -28,24 +28,27 @@ async function checkSupabase(): Promise<ServiceCheck> {
 }
 
 async function checkVercel(): Promise<ServiceCheck> {
-    let siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    if (!siteUrl) {
-        // Auto-detect from Vercel's built-in env vars
+    // Build the health check URL from available env vars
+    let baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (!baseUrl) {
         const vercelUrl = process.env.VERCEL_URL;
         if (vercelUrl) {
-            siteUrl = `https://${vercelUrl}`;
+            baseUrl = `https://${vercelUrl}`;
         } else {
-            // If we're serving the page, Vercel is clearly working
-            return { name: "Vercel", description: "Hosting & Deployment", status: "operational", details: "Serving requests (no URL configured for ping)" };
+            return { name: "Vercel", description: "Hosting & Deployment", status: "degraded", details: "NEXT_PUBLIC_SITE_URL not set — add it in Vercel env vars" };
         }
     }
+    const healthUrl = `${baseUrl}/api/health`;
     const start = Date.now();
     try {
-        const res = await fetch(siteUrl, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+        const res = await fetch(healthUrl, { signal: AbortSignal.timeout(5000) });
         const responseTime = Date.now() - start;
-        return { name: "Vercel", description: "Hosting & Deployment", status: res.ok ? "operational" : "degraded", responseTime, details: `${siteUrl} — HTTP ${res.status} (${responseTime}ms)` };
+        if (res.ok) {
+            return { name: "Vercel", description: "Hosting & Deployment", status: "operational", responseTime, details: `Health check OK (${responseTime}ms)` };
+        }
+        return { name: "Vercel", description: "Hosting & Deployment", status: "degraded", responseTime, details: `Health check returned HTTP ${res.status} (${responseTime}ms)` };
     } catch {
-        return { name: "Vercel", description: "Hosting & Deployment", status: "operational", responseTime: Date.now() - start, details: "Serving requests (ping timeout)" };
+        return { name: "Vercel", description: "Hosting & Deployment", status: "down", responseTime: Date.now() - start, details: "Health check unreachable" };
     }
 }
 
