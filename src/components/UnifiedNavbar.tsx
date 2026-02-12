@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import NotificationBell from "./NotificationBell";
 
 interface UnifiedNavbarProps {
     variant: "public" | "dashboard" | "admin";
@@ -89,6 +90,8 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             )}
 
                             <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+                                {/* Notifications */}
+                                {variant !== "public" && <NotificationBell />}
                                 {/* Profile/Logout */}
                                 <span className="text-sm font-semibold text-[#050505] hidden sm:block">
                                     {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}

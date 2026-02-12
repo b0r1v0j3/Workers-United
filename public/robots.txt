@@ -1,0 +1,9 @@
+# Workers United Robots.txt
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /profile/
+Disallow: /auth/
+
+Sitemap: https://workersunited.eu/sitemap.xml

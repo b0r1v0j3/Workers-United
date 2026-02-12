@@ -17,7 +17,8 @@ const SOCIAL_FOOTER = `
         </div>
         <p style="margin: 0; font-size: 12px; color: #6c7a89;">
             Workers United LLC &middot; 75 E 3rd St., Sheridan, Wyoming 82801, USA<br>
-            <a href="https://workersunited.eu" style="color: #2f6fed;">workersunited.eu</a>
+            <a href="https://workersunited.eu" style="color: #2f6fed;">workersunited.eu</a> &middot;
+            <a href="https://workersunited.eu/profile/settings" style="color: #2f6fed;">Unsubscribe</a>
         </p>
     </div>
     <div style="height: 12px; background: linear-gradient(135deg, #2f6fed, #1c4dd6); border-radius: 0 0 12px 12px;"></div>

@@ -1,0 +1,24 @@
+{
+    "name": "Workers United",
+    "short_name": "Workers United",
+    "description": "Find verified jobs across Europe — complete your profile, upload documents, and get matched with employers.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f0f2f5",
+    "theme_color": "#1877f2",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/logo.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
