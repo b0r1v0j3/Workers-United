@@ -104,9 +104,10 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
             </div>
             <p style="margin:0 0 10px;">Workers United LLC</p>
             <p style="margin:0 0 10px;">75 E 3rd St., Sheridan, Wyoming 82801</p>
-            <p style="margin:0;">
+            <p style="margin:0 0 10px;">
                 <a href="https://workersunited.eu/privacy-policy" style="color:#2f6fed; text-decoration:none;">Privacy Policy</a> · 
-                <a href="https://workersunited.eu/terms" style="color:#2f6fed; text-decoration:none;">Terms of Service</a>
+                <a href="https://workersunited.eu/terms" style="color:#2f6fed; text-decoration:none;">Terms of Service</a> · 
+                <a href="https://workersunited.eu/profile/settings" style="color:#2f6fed; text-decoration:none;">Unsubscribe</a>
             </p>
         </div>
     </div>

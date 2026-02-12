@@ -250,6 +250,19 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
         }
     }
 
+    function ProgressBar({ status }: { status: string }) {
+        if (status !== 'uploaded' && status !== 'verifying') return null;
+        const width = status === 'verifying' ? '80%' : '40%';
+        return (
+            <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                    className="h-full bg-blue-500 rounded-full transition-all duration-700 ease-out"
+                    style={{ width, animation: 'pulse 1.5s ease-in-out infinite' }}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="bg-gradient-to-br from-[#2f6fed] to-[#1e40af] rounded-2xl p-6 text-white mb-6">
             <div className="mb-4">
@@ -302,6 +315,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                             )}
                         </div>
                     </div>
+                    <ProgressBar status={uploads.passport.status} />
                 </div>
 
                 {/* Photo */}
@@ -345,6 +359,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                             )}
                         </div>
                     </div>
+                    <ProgressBar status={uploads.biometric_photo.status} />
                 </div>
 
                 {/* Diploma */}
@@ -389,6 +404,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                             )}
                         </div>
                     </div>
+                    <ProgressBar status={uploads.diploma.status} />
                 </div>
             </div>
 

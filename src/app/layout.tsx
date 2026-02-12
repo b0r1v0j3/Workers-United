@@ -46,6 +46,13 @@ export const metadata: Metadata = {
       "Transparent process. Full legal work visa guidance for international workers and companies.",
     images: ["/logo-full.jpg"],
   },
+  manifest: "/manifest.json",
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "theme-color": "#1877f2",
+  },
 };
 
 export default function RootLayout({

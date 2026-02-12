@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 12.02.2026 (Email System Improvements — shared profile-completion lib, cron consolidation, spam fix, strict types, admin email preview)
+> **Poslednje ažuriranje:** 12.02.2026 (Feature Sprint — notifications, PWA, analytics, SEO, unsubscribe, welcome email)
 
 ---
 
@@ -399,6 +399,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | Admin | `src/app/admin/` | Admin panel |
 | Admin Announcements | `src/app/admin/announcements/` | Bulk email sender |
 | Admin Email Preview | `src/app/admin/email-preview/` | Preview svih email template-ova |
+| Admin Analytics | `src/app/admin/analytics/` | Conversion funnel dashboard |
 | Admin Workers | `src/app/admin/workers/` | Lista radnika |
 | Admin Worker Detail | `src/app/admin/workers/[id]/` | Detalji radnika |
 | GodModePanel | `src/components/GodModePanel.tsx` | Dev testiranje |
@@ -442,10 +443,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~**Konsolidacija email sistema** — spojen `check-incomplete-profiles` u `profile-reminders`, shared `profile-completion.ts` lib, strict TemplateData, admin email preview~~
 - [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
 - [ ] **n8n WhatsApp bot** — automatski status update-ovi, FAQ odgovori
-- [ ] **Trust Building Features** — bez success stories
-    - **Visa Eligibility Quiz** (Homepage) — "Check My Eligibility" (5 pitanja → High/Medium/Low score)
-    - **Live Visa Process Tracker** — "Currently processing: 124 applications", "Documents verified today: 15"
-    - **"Work in [Country]" Pages** — SEO deep-dive pages (npr. /work-in-germany) sa tačnim pravnim koracima
+- [ ] **Live Visa Process Tracker** — "Currently processing: X applications", "Documents verified today: Y". ⏳ **USLOV: 100+ korisnika u sistemu**
+- [ ] **"Work in [Country]" Pages** — SEO stranice (npr. /work-in-germany) sa pravnim koracima, platama, troškovima. ⏳ **USLOV: bar 2 aktivne zemlje**
 
 ### Prioritet: Nizak (kad bude živih korisnika)
 - [ ] **Success Stories** — pravi case studies sa video snimcima (oprema nabavljena: iPhone 17 Pro)
