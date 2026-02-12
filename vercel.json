@@ -38,10 +38,6 @@
     {
       "path": "/api/cron/match-jobs",
       "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron/check-incomplete-profiles",
-      "schedule": "0 10 * * *"
     }
   ]
 }

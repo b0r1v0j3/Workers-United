@@ -1,31 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  let user = null;
-  let profileName = "";
-
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
-
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
-      profileName = profile?.full_name || "";
-    }
-  } catch (err) {
-    console.error("Supabase client failed to initialize:", err);
-  }
-
+export default function Home() {
   return (
     <>
       <script
@@ -61,7 +38,7 @@ export default async function Home() {
         }}
       />
       <div className="min-h-screen bg-[var(--bg)] font-montserrat">
-        <UnifiedNavbar variant="public" user={user} profileName={profileName} />
+        <UnifiedNavbar variant="public" />
 
         <main>
           {/* Hero Section - Clean, centered, impactful */}

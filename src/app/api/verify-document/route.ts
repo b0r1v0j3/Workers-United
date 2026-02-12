@@ -8,8 +8,6 @@ export async function POST(request: Request) {
         const supabase = await createClient();
         const { candidateId, docType } = await request.json();
 
-        console.log(`[Verify] Starting verification for ${docType} of candidate ${candidateId}`);
-
         // 1. Fetch document data
         const { data: document, error: fetchError } = await supabase
             .from("candidate_documents")
@@ -23,8 +21,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Document not found" }, { status: 404 });
         }
 
-        console.log(`[Verify] Found document with storage_path: ${document.storage_path}`);
-
         // 2. Get the public URL for the uploaded document
         const { data: urlData } = supabase.storage
             .from("candidate-docs")
@@ -36,16 +32,13 @@ export async function POST(request: Request) {
         }
 
         let imageUrl = urlData.publicUrl;
-        console.log(`[Verify] Document URL: ${imageUrl}`);
 
         // 2.5. Smart auto-crop: detect document boundaries and crop if needed
         if (docType === 'passport' || docType === 'diploma') {
             try {
-                console.log(`[Verify] Detecting document boundaries for ${docType}...`);
                 const bounds = await detectDocumentBounds(imageUrl, docType);
 
                 if (bounds.found && bounds.crop) {
-                    console.log(`[Verify] Document needs cropping:`, bounds.crop);
 
                     // Download original image
                     const imageData = await fetchImageAsBase64(imageUrl);
@@ -84,10 +77,8 @@ export async function POST(request: Request) {
                             .getPublicUrl(document.storage_path);
                         imageUrl = newUrlData?.publicUrl || imageUrl;
 
-                        console.log(`[Verify] Document auto-cropped and re-uploaded`);
                     }
                 } else {
-                    console.log(`[Verify] No cropping needed — document fills the frame`);
                 }
             } catch (cropErr) {
                 console.warn("[Verify] Auto-crop failed, continuing with original:", cropErr);
@@ -103,7 +94,6 @@ export async function POST(request: Request) {
         try {
             switch (docType) {
                 case 'passport': {
-                    console.log("[Verify] Running passport extraction...");
                     const result = await extractPassportData(imageUrl);
 
                     if (result.success && result.data) {
@@ -136,7 +126,6 @@ export async function POST(request: Request) {
                 }
 
                 case 'biometric_photo': {
-                    console.log("[Verify] Running biometric photo analysis...");
                     const result = await verifyBiometricPhoto(imageUrl);
 
                     if (result.success) {
@@ -156,7 +145,6 @@ export async function POST(request: Request) {
                 }
 
                 case 'diploma': {
-                    console.log("[Verify] Running diploma verification...");
                     const result = await verifyDiploma(imageUrl);
 
                     if (result.success) {
@@ -182,8 +170,6 @@ export async function POST(request: Request) {
                     ocrJson = { note: "No specific verification for this document type" };
             }
 
-            console.log(`[Verify] Verification complete: status=${status}`);
-
         } catch (aiError) {
             console.error("[Verify] AI processing error:", aiError);
             // If AI fails, mark for manual review rather than outright rejection
@@ -195,7 +181,6 @@ export async function POST(request: Request) {
         // 4. Handle verification result
         if (status === 'rejected') {
             // Delete failed documents to avoid clutter
-            console.log(`[Verify] Document rejected - deleting from storage and database`);
 
             // Delete from storage
             await supabase.storage

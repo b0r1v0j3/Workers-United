@@ -20,8 +20,6 @@ export async function GET(request: Request) {
         const sixMonthsFromNow = new Date();
         sixMonthsFromNow.setMonth(today.getMonth() + 6);
 
-        console.log(`[Cron] Checking expiring documents between ${today.toISOString()} and ${sixMonthsFromNow.toISOString()}`);
-
         // Query verified documents with expiry dates
         const { data: docs, error } = await supabase
             .from('documents')
@@ -45,19 +43,28 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        console.log(`[Cron] Found ${docs?.length || 0} documents expring soon.`);
-
         let processed = 0;
 
-        // Note: In a production environment, you should check a 'last_notified_at' column 
-        // to avoid sending daily emails for the same document. 
-        // For now, this implementation sends alerts for any found document in the range.
+        // Check which users already got a document_expiring email in the last 30 days
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentEmails } = await supabase
+            .from('email_queue')
+            .select('user_id')
+            .eq('email_type', 'document_expiring')
+            .gte('created_at', thirtyDaysAgo);
+
+        const recentlyNotified = new Set(recentEmails?.map(e => e.user_id) || []);
 
         for (const doc of docs || []) {
             const profile = (doc.candidates as any)?.profiles;
 
             if (!profile || !profile.email) {
                 console.warn(`[Cron] Missing profile/email for document ${doc.id}`);
+                continue;
+            }
+
+            // Skip if user was already notified in the last 30 days
+            if (recentlyNotified.has(profile.id)) {
                 continue;
             }
 
@@ -69,11 +76,13 @@ export async function GET(request: Request) {
                 profile.email,
                 profile.full_name || "User",
                 {
-                    jobTitle: (doc.document_type || "Document").toUpperCase(),
-                    startDate: new Date(doc.expires_at).toLocaleDateString("en-GB"),
+                    documentType: (doc.document_type || "Document").toUpperCase(),
+                    expirationDate: new Date(doc.expires_at).toLocaleDateString("en-GB"),
                     offerLink: "https://workersunited.eu/profile/worker/documents"
                 }
             );
+            // Mark as notified so we don't send for another doc of the same user in this batch
+            recentlyNotified.add(profile.id);
             processed++;
         }
 

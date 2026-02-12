@@ -93,9 +93,7 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
 
   try {
     const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
-    if (result.success) {
-      console.log(`✅ Offer notification sent to ${data.candidateEmail}`);
-    } else {
+    if (!result.success) {
       console.error(`❌ Failed to send offer notification: ${result.error}`);
     }
   } catch (err) {
@@ -136,9 +134,7 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
 
   try {
     const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
-    if (result.success) {
-      console.log(`✅ Offer expired notification sent to ${data.candidateEmail}`);
-    } else {
+    if (!result.success) {
       console.error(`❌ Failed to send expired notification: ${result.error}`);
     }
   } catch (err) {
@@ -194,9 +190,7 @@ export async function sendQueueJoinedNotification(data: {
 
   try {
     const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
-    if (result.success) {
-      console.log(`✅ Queue joined notification sent to ${data.candidateEmail}`);
-    } else {
+    if (!result.success) {
       console.error(`❌ Failed to send queue notification: ${result.error}`);
     }
   } catch (err) {

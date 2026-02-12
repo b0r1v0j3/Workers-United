@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getWorkerCompletion } from "@/lib/profile-completion";
 import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
@@ -51,27 +52,10 @@ export default async function WorkerProfilePage() {
     const verifiedCount = verifiedDocs.length;
     const inQueue = candidate?.status === "IN_QUEUE";
 
-    // Calculate profile completion (only count fields the user can fill)
-    const profileFields = [
-        profile?.full_name,
-        candidate?.phone,
-        candidate?.nationality,
-        candidate?.current_country,
-        candidate?.preferred_job,
-        candidate?.gender,
-        candidate?.date_of_birth,
-        candidate?.birth_country,
-        candidate?.birth_city,
-        candidate?.citizenship,
-        candidate?.marital_status,
-        candidate?.passport_number,
-        candidate?.lives_abroad,
-        candidate?.previous_visas,
-        documents?.some(d => d.document_type === "passport"),
-        documents?.some(d => d.document_type === "biometric_photo"),
-    ];
-    const completedFields = profileFields.filter(Boolean).length;
-    const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
+    // Calculate profile completion using shared function
+    const { completion: profileCompletion } = getWorkerCompletion({
+        profile, candidate, documents: documents || []
+    });
     const isReady = profileCompletion === 100 && verifiedCount >= 2;
 
     return (

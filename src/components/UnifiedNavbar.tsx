@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 
 interface UnifiedNavbarProps {
     variant: "public" | "dashboard" | "admin";
@@ -10,9 +11,36 @@ interface UnifiedNavbarProps {
     profileName?: string; // Full name from profiles table (takes priority)
 }
 
-export default function UnifiedNavbar({ variant, user, profileName }: UnifiedNavbarProps) {
+export default function UnifiedNavbar({ variant, user: userProp, profileName: profileNameProp }: UnifiedNavbarProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [clientUser, setClientUser] = useState<any>(userProp || null);
+    const [clientProfileName, setClientProfileName] = useState(profileNameProp || "");
     const pathname = usePathname();
+
+    // Client-side auth fetch for public variant (allows homepage to be statically cached)
+    useEffect(() => {
+        if (userProp || variant !== "public") return; // skip if user already provided or not public
+        const supabase = createBrowserClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        supabase.auth.getUser().then(({ data }) => {
+            if (data.user) {
+                setClientUser(data.user);
+                supabase
+                    .from("profiles")
+                    .select("full_name")
+                    .eq("id", data.user.id)
+                    .single()
+                    .then(({ data: profile }) => {
+                        setClientProfileName(profile?.full_name || "");
+                    });
+            }
+        });
+    }, [userProp, variant]);
+
+    const user = userProp || clientUser;
+    const profileName = profileNameProp || clientProfileName;
 
     return (
         <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">

@@ -121,8 +121,6 @@ export async function GET(request: Request) {
             }
         }
 
-        console.log("Cron job completed:", results);
-
         return NextResponse.json({
             success: true,
             timestamp: now,
@@ -169,7 +167,6 @@ async function shiftOfferToNextCandidate(
         .single();
 
     if (!nextCandidate) {
-        console.log("No more candidates in queue for job request:", expiredOffer.job_request_id);
         return null;
     }
 
@@ -239,6 +236,5 @@ async function shiftOfferToNextCandidate(
         }
     }
 
-    console.log(`Shifted offer to candidate ${nextCandidate.id} (queue #${nextCandidate.queue_position})`);
     return newOffer.id;
 }
