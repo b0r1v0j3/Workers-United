@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Eye, ChevronDown } from "lucide-react";
+import { Mail, Eye, ChevronDown, Monitor, Smartphone } from "lucide-react";
 
 // ─── Mock data for each email template ──────────────────────────
 
@@ -90,6 +90,7 @@ export default function EmailPreviewPage() {
     const [htmlContent, setHtmlContent] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
 
     const loadPreview = async (type: string) => {
         setLoading(true);
@@ -152,6 +153,30 @@ export default function EmailPreviewPage() {
                         <Eye size={16} />
                         {loading ? "Loading..." : "Load Preview"}
                     </button>
+
+                    {/* Desktop / Mobile toggle */}
+                    <div className="flex items-center bg-white border border-[#dddfe2] rounded-lg overflow-hidden ml-auto">
+                        <button
+                            onClick={() => setViewMode("desktop")}
+                            className={`px-3 py-2.5 flex items-center gap-1.5 text-sm font-medium transition-colors ${viewMode === "desktop"
+                                    ? "bg-[#1877f2] text-white"
+                                    : "text-[#65676b] hover:bg-[#f0f2f5]"
+                                }`}
+                        >
+                            <Monitor size={16} />
+                            Desktop
+                        </button>
+                        <button
+                            onClick={() => setViewMode("mobile")}
+                            className={`px-3 py-2.5 flex items-center gap-1.5 text-sm font-medium transition-colors ${viewMode === "mobile"
+                                    ? "bg-[#1877f2] text-white"
+                                    : "text-[#65676b] hover:bg-[#f0f2f5]"
+                                }`}
+                        >
+                            <Smartphone size={16} />
+                            Mobile
+                        </button>
+                    </div>
                 </div>
 
                 {/* Error */}
@@ -172,13 +197,21 @@ export default function EmailPreviewPage() {
                                 {EMAIL_LABELS[selectedType]} — Preview
                             </span>
                         </div>
-                        <iframe
-                            srcDoc={htmlContent}
-                            title="Email Preview"
-                            className="w-full border-0"
-                            style={{ height: "800px" }}
-                            sandbox="allow-same-origin"
-                        />
+                        <div className="flex justify-center bg-[#e5e7eb] p-4" style={{ minHeight: "820px" }}>
+                            <iframe
+                                srcDoc={htmlContent}
+                                title="Email Preview"
+                                className="border-0 bg-white transition-all duration-300"
+                                style={{
+                                    width: viewMode === "mobile" ? "360px" : "100%",
+                                    maxWidth: "100%",
+                                    height: "800px",
+                                    boxShadow: viewMode === "mobile" ? "0 4px 24px rgba(0,0,0,0.12)" : "none",
+                                    borderRadius: viewMode === "mobile" ? "12px" : "0",
+                                }}
+                                sandbox="allow-same-origin"
+                            />
+                        </div>
                     </div>
                 ) : !loading && (
                     <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-16 text-center">

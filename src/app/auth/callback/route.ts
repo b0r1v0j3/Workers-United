@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { queueEmail } from '@/lib/email-templates';
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
@@ -21,6 +22,24 @@ export async function GET(request: Request) {
 
             if (user) {
                 const userType = user.user_metadata?.user_type;
+
+                // Queue welcome email if not already sent (avoids duplicate with signup-form auto-confirm path)
+                const { data: existing } = await supabase
+                    .from('email_queue')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('email_type', 'welcome')
+                    .limit(1);
+
+                if (!existing || existing.length === 0) {
+                    queueEmail(
+                        supabase,
+                        user.id,
+                        'welcome',
+                        user.email || '',
+                        user.user_metadata?.full_name || user.email?.split('@')[0] || 'there'
+                    ).catch(() => { }); // fire-and-forget
+                }
 
                 if (userType === 'admin') {
                     return NextResponse.redirect(`${origin}/admin`);

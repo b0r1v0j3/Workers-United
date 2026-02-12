@@ -28,12 +28,29 @@ export async function GET(request: Request) {
 
         const supabase = createAdminClient();
 
+        // Parse date range from query params (optional)
+        const url = new URL(request.url);
+        const fromDate = url.searchParams.get('from');
+        const toDate = url.searchParams.get('to');
+
         // 1. Total Registered Workers (from auth — same as admin/page.tsx)
         const { data: authData } = await supabase.auth.admin.listUsers();
         const allAuthUsers = authData?.users || [];
-        const workerUsers = allAuthUsers.filter((u: any) =>
+        let workerUsers = allAuthUsers.filter((u: any) =>
             u.user_metadata?.user_type !== 'employer'
         );
+
+        // Filter by date range if provided
+        if (fromDate) {
+            const from = new Date(fromDate);
+            workerUsers = workerUsers.filter((u: any) => new Date(u.created_at) >= from);
+        }
+        if (toDate) {
+            const to = new Date(toDate);
+            to.setHours(23, 59, 59, 999);
+            workerUsers = workerUsers.filter((u: any) => new Date(u.created_at) <= to);
+        }
+
         const totalWorkers = workerUsers.length;
 
         // 2. Completed Profiles (100% completion using same fields as worker/page.tsx)
@@ -73,12 +90,20 @@ export async function GET(request: Request) {
                 c?.citizenship,
                 c?.marital_status,
                 c?.passport_number,
-                c?.lives_abroad,
-                c?.previous_visas,
+                c?.lives_abroad,      // index 12 — boolean answer, false = valid
+                c?.previous_visas,    // index 13 — boolean answer, false = valid
                 docs.some(d => d.document_type === 'passport'),
                 docs.some(d => d.document_type === 'biometric_photo'),
             ];
-            const completion = Math.round((fields.filter(Boolean).length / fields.length) * 100);
+            // lives_abroad (12) and previous_visas (13): false is a valid answer
+            // Everything else: use truthiness
+            const BOOLEAN_ANSWER_INDICES = new Set([12, 13]);
+            const filledCount = fields.filter((v, i) =>
+                BOOLEAN_ANSWER_INDICES.has(i)
+                    ? v !== null && v !== undefined
+                    : !!v
+            ).length;
+            const completion = Math.round((filledCount / fields.length) * 100);
             if (completion === 100) completedCount++;
         }
 

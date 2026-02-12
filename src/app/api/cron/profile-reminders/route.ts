@@ -7,6 +7,7 @@ import { getEmailTemplate } from "@/lib/email-templates";
 // ─── Main cron handler ──────────────────────────────────────────
 // Runs daily via Vercel cron — sends profile completion reminders + auto-deletes after 30 days
 // Applies to BOTH workers and employers
+// Performance: uses batch queries (~6 total) instead of per-user queries
 
 export async function GET(request: Request) {
     // Verify cron secret (Vercel sends this header)
@@ -28,9 +29,7 @@ export async function GET(request: Request) {
 
         const eligibleUsers = allUsers.filter((u: any) => {
             const ut = u.user_metadata?.user_type;
-            // Skip admins — never delete admin accounts
             if (ut === "admin") return false;
-            // Only check users who signed up more than 24h ago
             return new Date(u.created_at) < new Date(Date.now() - 24 * 60 * 60 * 1000);
         });
 
@@ -38,6 +37,45 @@ export async function GET(request: Request) {
             return NextResponse.json({ sent: 0, message: "No users to check" });
         }
 
+        // ─── BATCH FETCH ALL DATA (6 queries total instead of ~3N) ─────────
+        const [
+            { data: allProfiles },
+            { data: allCandidates },
+            { data: allEmployers },
+            { data: allDocs },
+            { data: allEmails },
+        ] = await Promise.all([
+            supabase.from("profiles").select("id, full_name"),
+            supabase.from("candidates").select("*"),
+            supabase.from("employers").select("*"),
+            supabase.from("candidate_documents").select("user_id, document_type, status"),
+            supabase.from("email_queue").select("id, recipient_email, email_type, subject, created_at")
+                .in("email_type", ["profile_reminder", "profile_warning"]),
+        ]);
+
+        // Build lookup maps for O(1) access
+        const profileMap = new Map((allProfiles || []).map(p => [p.id, p]));
+        const candidateMap = new Map((allCandidates || []).map(c => [c.profile_id, c]));
+        const employerMap = new Map((allEmployers || []).map(e => [e.profile_id, e]));
+        const docsByUser = new Map<string, typeof allDocs>();
+        for (const d of allDocs || []) {
+            if (!docsByUser.has(d.user_id)) docsByUser.set(d.user_id, []);
+            docsByUser.get(d.user_id)!.push(d);
+        }
+
+        // Build email dedup sets
+        const recentReminders = new Set<string>(); // emails sent <24h ago
+        const warningSubjects = new Set<string>();  // "email|subject" combos already sent
+        for (const e of allEmails || []) {
+            if (e.email_type === "profile_reminder" && e.created_at > oneDayAgo) {
+                recentReminders.add(e.recipient_email);
+            }
+            if (e.email_type === "profile_warning") {
+                warningSubjects.add(`${e.recipient_email}|${e.subject}`);
+            }
+        }
+
+        // ─── PROCESS EACH USER (no DB queries in this loop) ───────────────
         let sent = 0;
         let skipped = 0;
         let warned = 0;
@@ -55,42 +93,21 @@ export async function GET(request: Request) {
 
             if (!email) continue;
 
-            // Calculate account age in days
             const accountAgeDays = Math.floor(
                 (Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)
             );
 
-            // Get profile data
-            const { data: profileData } = await supabase
-                .from("profiles")
-                .select("full_name")
-                .eq("id", userId)
-                .single();
+            const profileData = profileMap.get(userId) || null;
 
             let missingItems: string[];
 
             if (isEmployer) {
-                // ── Employer: check company profile ──
-                const { data: employer } = await supabase
-                    .from("employers")
-                    .select("*")
-                    .eq("profile_id", userId)
-                    .single();
-
+                const employer = employerMap.get(userId) || null;
                 const result = getEmployerCompletion({ employer });
                 missingItems = result.missingFields;
             } else {
-                // ── Worker: check candidate profile + documents ──
-                const { data: candidate } = await supabase
-                    .from("candidates")
-                    .select("*")
-                    .eq("profile_id", userId)
-                    .single();
-
-                const { data: docs } = await supabase
-                    .from("candidate_documents")
-                    .select("document_type, status")
-                    .eq("user_id", userId);
+                const candidate = candidateMap.get(userId) || null;
+                const docs = docsByUser.get(userId) || [];
 
                 // NEVER delete paid workers or workers with accepted offers
                 if (candidate?.status === "IN_QUEUE" || candidate?.status === "OFFER_ACCEPTED") {
@@ -100,7 +117,7 @@ export async function GET(request: Request) {
                 const result = getWorkerCompletion({
                     profile: profileData,
                     candidate,
-                    documents: docs || []
+                    documents: docs as { document_type: string }[]
                 });
                 missingItems = result.missingFields;
             }
@@ -113,15 +130,12 @@ export async function GET(request: Request) {
 
             // ========== DAY 30+: DELETE ACCOUNT ==========
             if (accountAgeDays >= DELETE_AFTER_DAYS) {
-
-                // Send deletion notification email BEFORE deleting
                 const { subject, html } = getEmailTemplate("profile_deletion", {
                     name: firstName,
                     isEmployer,
                 });
                 await sendEmail(email, subject, html);
 
-                // Delete the auth user (cascades to profiles, candidates/employers, documents)
                 const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
                 if (deleteError) {
                     console.error(`[Reminders] Failed to delete user ${email}:`, deleteError);
@@ -136,21 +150,15 @@ export async function GET(request: Request) {
             const isWarningDay = WARNING_DAYS.includes(accountAgeDays);
 
             if (isWarningDay) {
-                // Check if we already sent this specific warning
                 const { subject: warningSubject, html } = getEmailTemplate("profile_warning", {
                     name: firstName,
                     isEmployer,
                     daysLeft,
                     todoList,
                 });
-                const { data: existingWarning } = await supabase
-                    .from("email_queue")
-                    .select("id")
-                    .eq("recipient_email", email)
-                    .eq("subject", warningSubject)
-                    .limit(1);
 
-                if (existingWarning && existingWarning.length > 0) {
+                // Check dedup from pre-fetched data (no DB query)
+                if (warningSubjects.has(`${email}|${warningSubject}`)) {
                     skipped++;
                     continue;
                 }
@@ -175,15 +183,8 @@ export async function GET(request: Request) {
             }
 
             // ========== NORMAL DAYS: REGULAR REMINDER ==========
-            const { data: recentEmail } = await supabase
-                .from("email_queue")
-                .select("id")
-                .eq("recipient_email", email)
-                .eq("email_type", "profile_reminder")
-                .gt("created_at", oneDayAgo)
-                .limit(1);
-
-            if (recentEmail && recentEmail.length > 0) {
+            // Check dedup from pre-fetched data (no DB query)
+            if (recentReminders.has(email)) {
                 skipped++;
                 continue;
             }

@@ -85,6 +85,9 @@ export function getWorkerCompletion(data: WorkerData): ProfileCompletionResult {
     const { profile, candidate, documents } = data;
     const docTypes = (documents || []).map(d => d.document_type);
 
+    // Fields where `false` is a valid user answer (they chose "No")
+    const BOOLEAN_ANSWER_FIELDS = new Set(['lives_abroad', 'previous_visas']);
+
     const fields: Record<string, any> = {
         full_name: profile?.full_name,
         phone: candidate?.phone,
@@ -104,12 +107,21 @@ export function getWorkerCompletion(data: WorkerData): ProfileCompletionResult {
         biometric_photo_doc: docTypes.includes("biometric_photo"),
     };
 
+    // For boolean answer fields, `false` counts as filled (user answered "No")
+    // For everything else, use truthiness (so passport_doc: false = not uploaded)
+    const isFieldFilled = (key: string, value: any): boolean => {
+        if (BOOLEAN_ANSWER_FIELDS.has(key)) {
+            return value !== null && value !== undefined;
+        }
+        return !!value;
+    };
+
     const totalFields = Object.keys(fields).length;
-    const completedFields = Object.values(fields).filter(Boolean).length;
+    const completedFields = Object.entries(fields).filter(([k, v]) => isFieldFilled(k, v)).length;
     const completion = Math.round((completedFields / totalFields) * 100);
 
     const missingFields = Object.entries(fields)
-        .filter(([_, v]) => !v)
+        .filter(([k, v]) => !isFieldFilled(k, v))
         .map(([k]) => WORKER_FIELD_LABELS[k] || k);
 
     return { completion, missingFields, totalFields, completedFields };
@@ -130,11 +142,11 @@ export function getEmployerCompletion(data: EmployerData): ProfileCompletionResu
     };
 
     const totalFields = Object.keys(fields).length;
-    const completedFields = Object.values(fields).filter(Boolean).length;
+    const completedFields = Object.values(fields).filter(v => v !== null && v !== undefined && v !== '').length;
     const completion = Math.round((completedFields / totalFields) * 100);
 
     const missingFields = Object.entries(fields)
-        .filter(([_, v]) => !v)
+        .filter(([_, v]) => v === null || v === undefined || v === '')
         .map(([k]) => EMPLOYER_FIELD_LABELS[k] || k);
 
     return { completion, missingFields, totalFields, completedFields };
