@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 12.02.2026 (Feature Sprint — notifications, PWA, analytics, SEO, unsubscribe, welcome email)
+> **Poslednje ažuriranje:** 12.02.2026 (Sprint 2 — PWA service worker, notification read tracking, analytics filters, batch cron, vitest)
 
 ---
 
@@ -18,6 +18,7 @@ Ovaj fajl je **jedini izvor istine** za ceo projekat. Svaki novi chat MORA da pr
 7. **POSTAVLJAJ PITANJA** — ako vidiš nešto sumnjivo ili neusklađeno, pitaj korisnika pre nego što nastaviš. Bolje pitati 1 pitanje i uštedeti 30 minuta popravljanja.
 8. **PREDLAŽI UNAPREĐENJA** — na kraju svakog task-a, pogledaj šta se može poboljšati i predloži. Ti si partner u razvoju.
 9. **AŽURIRAJ DOKUMENTACIJU** — posle svake značajne promene u arhitekturi (novi fajlovi, nove rute, novi env vars, promena tech stack-a), ažuriraj `AGENTS.md` i `.agent/workflows/project-architecture.md` da odražavaju trenutno stanje projekta.
+10. **ZAVRŠI ŠTO POČNEŠ** — NIKAD ne implementiraj feature polovično. Ako dodaješ PWA, dodaj i service worker — ne samo manifest. Ako dodaješ notifikacije, dodaj i read tracking — ne hardkodiraj `read: false`. Ako nešto ne može da se završi u jednom chatu, RECI to korisniku ODMAH na početku. Polovičan feature je gori od nula feature-a jer stvara lažnu sliku da nešto radi.
 
 ### Pravila za ažuriranje ovog fajla:
 1. **NIKAD ne briši Sekcije 1-4** — one su trajne i menjaju se samo kad vlasnik projekta to eksplicitno traži
@@ -251,6 +252,13 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
   3. `VALID_TYPES` niz u `admin/email-preview/route.ts`
   4. Title/icon mape u `notifications/route.ts`
 - **Funnel metrics bug** — `uploaded_documents` i `verified` brojali SVE korisnike a `total_users` samo workere → inflatirani analytics. Sad filtrirano na worker ID-ove
+
+**filter(Boolean) bug popravljen (12.02.2026)**
+- ⚠️ **NIKAD ne koristi `filter(Boolean)` za prover polja u profile completion** — `false` je validan odgovor za `lives_abroad` i `previous_visas` (korisnik je odgovorio "Ne"). Koristi `isFieldFilled()` helper iz `profile-completion.ts` koji razlikuje boolean odgovore od computed polja.
+- Isti fix primenjen u `funnel-metrics/route.ts`
+
+**email_queue tabela (12.02.2026)**
+- ⚠️ **Tabela `email_queue` MORA postojati u Supabase** — SQL migracija u `supabase/migrations/001_create_email_queue.sql`. Bez nje ne rade: notifikacije, email preview, cron reminderi, analytics funnel.
 
 **Email Template Fixes + Social Links (09.02.2026)**
 - **Social Media Links** — dodati pravi linkovi (Facebook, Instagram, LinkedIn, X, TikTok, Threads, Reddit) sa Icons8 ikonicama umesto lažnih placeholder-a

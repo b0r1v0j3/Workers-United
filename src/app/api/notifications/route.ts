@@ -14,7 +14,7 @@ export async function GET() {
         // Get last 20 emails sent to this user as notifications
         const { data: notifications, error } = await supabase
             .from("email_queue")
-            .select("id, email_type, status, created_at")
+            .select("id, email_type, status, created_at, read_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
             .limit(20);
@@ -30,10 +30,53 @@ export async function GET() {
             title: getNotificationTitle(n.email_type),
             icon: getNotificationIcon(n.email_type),
             time: n.created_at,
-            read: false, // Future: track read state
+            read: !!n.read_at,
         }));
 
-        return NextResponse.json({ notifications: items });
+        const unreadCount = items.filter((n) => !n.read).length;
+
+        return NextResponse.json({ notifications: items, unreadCount });
+    } catch {
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    }
+}
+
+// Mark notification(s) as read
+export async function PATCH(request: Request) {
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await request.json();
+        const { id, markAll } = body;
+
+        if (markAll) {
+            // Mark all unread notifications as read
+            const { error } = await supabase
+                .from("email_queue")
+                .update({ read_at: new Date().toISOString() })
+                .eq("user_id", user.id)
+                .is("read_at", null);
+
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        } else if (id) {
+            // Mark single notification as read
+            const { error } = await supabase
+                .from("email_queue")
+                .update({ read_at: new Date().toISOString() })
+                .eq("id", id)
+                .eq("user_id", user.id);
+
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        } else {
+            return NextResponse.json({ error: "Provide id or markAll" }, { status: 400 });
+        }
+
+        return NextResponse.json({ success: true });
     } catch {
         return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }

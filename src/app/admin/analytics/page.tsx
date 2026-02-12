@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, Users, FileCheck, Briefcase, Shield } from "lucide-react";
+import { BarChart3, TrendingUp, Users, FileCheck, Briefcase, Shield, Calendar } from "lucide-react";
 
 interface FunnelData {
     total_users: number;
@@ -11,13 +11,53 @@ interface FunnelData {
     job_matched: number;
 }
 
+type Period = "all" | "7d" | "30d" | "this_month" | "last_month";
+
+function getDateRange(period: Period): { from?: string; to?: string } {
+    const now = new Date();
+    switch (period) {
+        case "7d": {
+            const from = new Date(now);
+            from.setDate(from.getDate() - 7);
+            return { from: from.toISOString().split("T")[0] };
+        }
+        case "30d": {
+            const from = new Date(now);
+            from.setDate(from.getDate() - 30);
+            return { from: from.toISOString().split("T")[0] };
+        }
+        case "this_month": {
+            const from = new Date(now.getFullYear(), now.getMonth(), 1);
+            return { from: from.toISOString().split("T")[0] };
+        }
+        case "last_month": {
+            const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const to = new Date(now.getFullYear(), now.getMonth(), 0);
+            return {
+                from: from.toISOString().split("T")[0],
+                to: to.toISOString().split("T")[0],
+            };
+        }
+        default:
+            return {};
+    }
+}
+
 export default function AnalyticsPage() {
     const [data, setData] = useState<FunnelData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [period, setPeriod] = useState<Period>("all");
 
-    useEffect(() => {
-        fetch("/api/admin/funnel-metrics")
+    const loadData = (p: Period) => {
+        setLoading(true);
+        setError(null);
+        const range = getDateRange(p);
+        const params = new URLSearchParams();
+        if (range.from) params.set("from", range.from);
+        if (range.to) params.set("to", range.to);
+        const qs = params.toString();
+        fetch(`/api/admin/funnel-metrics${qs ? `?${qs}` : ""}`)
             .then((res) => res.json())
             .then((json) => {
                 if (json.success) setData(json.data);
@@ -25,7 +65,9 @@ export default function AnalyticsPage() {
             })
             .catch((err) => setError(err.message))
             .finally(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => { loadData(period); }, [period]);
 
     if (loading) {
         return (
@@ -63,16 +105,40 @@ export default function AnalyticsPage() {
 
     const maxVal = Math.max(...steps.map((s) => s.value), 1);
 
+    const PERIOD_LABELS: Record<Period, string> = {
+        all: "All Time",
+        "7d": "Last 7 Days",
+        "30d": "Last 30 Days",
+        this_month: "This Month",
+        last_month: "Last Month",
+    };
+
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#1877f2] flex items-center justify-center text-white">
-                    <TrendingUp size={20} />
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#1877f2] flex items-center justify-center text-white">
+                        <TrendingUp size={20} />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold text-[#050505]">Analytics Dashboard</h1>
+                        <p className="text-sm text-[#65676b]">Conversion funnel — from signup to job match</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-xl font-bold text-[#050505]">Analytics Dashboard</h1>
-                    <p className="text-sm text-[#65676b]">Conversion funnel — from signup to job match</p>
+
+                {/* Period Filter */}
+                <div className="flex items-center gap-2 bg-white border border-[#dddfe2] rounded-lg px-3 py-2">
+                    <Calendar size={16} className="text-[#65676b]" />
+                    <select
+                        value={period}
+                        onChange={(e) => setPeriod(e.target.value as Period)}
+                        className="text-sm font-medium text-[#050505] bg-transparent border-none outline-none cursor-pointer"
+                    >
+                        {Object.entries(PERIOD_LABELS).map(([key, label]) => (
+                            <option key={key} value={key}>{label}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
