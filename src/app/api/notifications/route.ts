@@ -52,6 +52,9 @@ function getNotificationTitle(type: string): string {
         job_match: "New job match found for you",
         admin_update: "Update from Workers United",
         announcement: "New announcement",
+        profile_reminder: "Reminder: complete your profile",
+        profile_warning: "Urgent: your account will be deleted soon",
+        profile_deletion: "Your account has been removed",
     };
     return titles[type] || "Notification";
 }
@@ -69,6 +72,9 @@ function getNotificationIcon(type: string): string {
         job_match: "🎯",
         admin_update: "📢",
         announcement: "📣",
+        profile_reminder: "📝",
+        profile_warning: "⚠️",
+        profile_deletion: "🗑️",
     };
     return icons[type] || "🔔";
 }
