@@ -54,6 +54,18 @@ const MOCK_DATA: Record<string, Record<string, string>> = {
         missingFields: "• Phone Number<br>• Passport Number<br>• Biometric Photo<br>• Date of Birth<br>• Birth City<br>• Passport Document",
         completion: "63",
     },
+    profile_reminder: {
+        name: "Marko Petrović",
+        todoList: '<li style="padding: 6px 0;">Upload Passport</li><li style="padding: 6px 0;">Add Phone Number</li><li style="padding: 6px 0;">Set Date of Birth</li>',
+    },
+    profile_warning: {
+        name: "Marko Petrović",
+        todoList: '<li style="padding: 6px 0;">Upload Passport</li><li style="padding: 6px 0;">Add Phone Number</li>',
+        daysLeft: "3",
+    },
+    profile_deletion: {
+        name: "Marko Petrović",
+    },
 };
 
 const EMAIL_LABELS: Record<string, string> = {
@@ -68,6 +80,9 @@ const EMAIL_LABELS: Record<string, string> = {
     admin_update: "Admin Update",
     announcement: "Announcement",
     profile_incomplete: "Profile Incomplete",
+    profile_reminder: "Profile Reminder",
+    profile_warning: "Profile Warning",
+    profile_deletion: "Profile Deletion",
 };
 
 export default function EmailPreviewPage() {
