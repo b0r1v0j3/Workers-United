@@ -6,6 +6,7 @@ const VALID_TYPES: EmailType[] = [
     "welcome", "profile_complete", "payment_success", "job_offer",
     "offer_reminder", "refund_approved", "document_expiring", "job_match",
     "admin_update", "announcement", "profile_incomplete",
+    "profile_reminder", "profile_warning", "profile_deletion",
 ];
 
 export async function POST(request: Request) {

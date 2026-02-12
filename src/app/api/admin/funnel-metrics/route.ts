@@ -82,13 +82,13 @@ export async function GET(request: Request) {
             if (completion === 100) completedCount++;
         }
 
-        // 3. Uploaded Documents — distinct users with at least one doc in candidate_documents
-        const distinctUploaded = allDocs
-            ? new Set(allDocs.map(d => d.user_id)).size
-            : 0;
+        // 3. Uploaded Documents — distinct WORKER users with at least one doc
+        const workerIds = new Set(workerUsers.map((u: any) => u.id));
+        const workerDocs = allDocs?.filter(d => workerIds.has(d.user_id)) || [];
+        const distinctUploaded = new Set(workerDocs.map(d => d.user_id)).size;
 
-        // 4. Verified — distinct users with verified docs (status = 'verified')
-        const verifiedDocs = allDocs?.filter(d => d.status === 'verified') || [];
+        // 4. Verified — distinct WORKER users with verified docs (status = 'verified')
+        const verifiedDocs = workerDocs.filter(d => d.status === 'verified');
         const distinctVerified = new Set(verifiedDocs.map(d => d.user_id)).size;
 
         // 5. Job Matched — distinct recipients of 'job_match' emails
