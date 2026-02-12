@@ -71,7 +71,7 @@ export default async function AnnouncementsPage() {
             }
         }
 
-        console.log(`[Announcements] Queued ${count} emails for ${targetAudience}`);
+        // Announcement emails queued
         redirect("/admin/announcements?success=true&count=" + count);
     }
 

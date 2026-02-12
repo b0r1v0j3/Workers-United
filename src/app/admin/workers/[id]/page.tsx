@@ -183,7 +183,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
             );
         }
 
-        console.log(`[Admin] Requested new ${docType} from ${userEmail}. Reason: ${reason}`);
+        // Admin requested new document
 
         revalidatePath(`/admin/workers/${id}`);
     }

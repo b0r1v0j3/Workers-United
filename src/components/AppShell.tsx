@@ -95,6 +95,7 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
                     <SidebarLink href="/admin/queue" icon="📋" label="Queue" />
                     <SidebarLink href="/admin/refunds" icon="💸" label="Refunds" />
                     <SidebarLink href="/admin/announcements" icon="📢" label="Announcements" />
+                    <SidebarLink href="/admin/email-preview" icon="✉️" label="Email Preview" />
                     <SidebarLink href="/admin/settings" icon="⚙️" label="Settings" />
                 </>
             )}

@@ -71,7 +71,6 @@ export async function POST(req: NextRequest) {
                 if (error) {
                     // Handle unique constraint violation (idempotency)
                     if (error.code === "23505") {
-                        console.log(`Payment already processed for session ${session.id}`);
                         return NextResponse.json({ received: true, message: "Duplicate event ignored" });
                     }
                     throw error;
@@ -90,8 +89,6 @@ export async function POST(req: NextRequest) {
                         job_search_activated_at: new Date().toISOString(),
                     })
                     .eq("profile_id", userId);
-
-                console.log(`Entry fee processed — user ${userId} is now IN_QUEUE`);
             } else if (paymentType === "confirmation_fee" && offerId) {
                 // Accept the offer
                 await supabase
@@ -104,11 +101,8 @@ export async function POST(req: NextRequest) {
                     .from("candidates")
                     .update({ status: "OFFER_ACCEPTED" })
                     .eq("profile_id", userId);
-
-                console.log(`Confirmation fee processed — offer ${offerId} accepted for user ${userId}`);
             }
 
-            console.log(`Successfully processed ${paymentType} payment for user ${userId}`);
         } catch (err: any) {
             console.error(`Database error: ${err.message}`);
             return NextResponse.json({ error: "Database error" }, { status: 500 });

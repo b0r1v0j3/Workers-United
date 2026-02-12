@@ -17,7 +17,6 @@ export async function GET(request: Request) {
 
     try {
         const supabase = createAdminClient();
-        console.log("[Job Match] Starting automated job matching...");
 
         // 1. Fetch Open Jobs
         const { data: openJobs, error: jobsError } = await supabase
@@ -31,20 +30,15 @@ export async function GET(request: Request) {
         }
 
         if (!openJobs || openJobs.length === 0) {
-            console.log("[Job Match] No open jobs found.");
             return NextResponse.json({ message: "No open jobs to process", matched_count: 0 });
         }
 
         // 2. Fetch Verified Candidates (those with at least one verified passport document)
-        // Note: Joining across tables in Supabase can be tricky without foreign keys set up perfectly.
-        // We'll fetch all candidates and their profiles, then filter by verification status if possible.
-        // Or fetch verified documents first.
-
         const { data: verifiedDocs, error: docsError } = await supabase
             .from('documents')
             .select('candidate_id')
             .eq('verification_status', 'verified')
-            .eq('document_type', 'passport'); // Focusing on passport verification
+            .eq('document_type', 'passport');
 
         if (docsError) {
             console.error("[Job Match] Error fetching verified docs:", docsError);
@@ -54,7 +48,6 @@ export async function GET(request: Request) {
         const verifiedCandidateIds = verifiedDocs?.map(d => d.candidate_id) || [];
 
         if (verifiedCandidateIds.length === 0) {
-            console.log("[Job Match] No verified candidates found.");
             return NextResponse.json({ message: "No verified candidates to match", matched_count: 0 });
         }
 
@@ -81,23 +74,19 @@ export async function GET(request: Request) {
                 // Skip if no profile (should rely on inner join but safety check)
                 if (!candidate.profiles) continue;
 
-                // A. Indutry Match
-                // Job industry: string (e.g. "construction")
-                // Candidate preferred_job: string (e.g. "Construction") or "Any"
+                // A. Industry Match
                 const jobIndustry = (job.industry || "").toLowerCase();
                 const candidateIndustry = (candidate.preferred_job || "").toLowerCase();
 
                 const industryMatch =
                     candidateIndustry === "any" ||
                     candidateIndustry === jobIndustry ||
-                    (jobIndustry === "other" && candidateIndustry !== ""); // Weak match for 'other'
+                    (jobIndustry === "other" && candidateIndustry !== "");
 
                 if (!industryMatch) continue;
 
                 // B. Location Match
-                // Job destination_country: string (e.g. "Germany")
-                // Candidate desired_countries: string[] (e.g. ["Germany", "Austria"]) or ["Any"]
-                const jobLocation = job.destination_country || "Serbia"; // Default fallback
+                const jobLocation = job.destination_country || "Serbia";
                 const candidateLocations = candidate.desired_countries || [];
 
                 const locationMatch =
@@ -107,15 +96,6 @@ export async function GET(request: Request) {
                 if (!locationMatch) continue;
 
                 // C. Match Found! Check if already notified.
-                // We use email_queue to check for previous notifications for this specific job+candidate combo.
-                // We'll query JSONB metadata to be efficient? No, metadata filtering can be slow.
-                // But for Cron it's okay.
-                // Better: Check if we sent 'job_match' to this email with this job ID in metadata.
-
-                /* 
-                   Note on Supabase querying JSONB for specific key-value:
-                   .contains('template_data', { jobId: job.id }) 
-                */
                 const { data: existingEmails } = await supabase
                     .from('email_queue')
                     .select('id')
@@ -125,13 +105,10 @@ export async function GET(request: Request) {
                     .limit(1);
 
                 if (existingEmails && existingEmails.length > 0) {
-                    // Already notified about this job
                     continue;
                 }
 
                 // D. Send Notification
-                console.log(`[Job Match] Matched Job ${job.id} (${job.title}) with Candidate ${candidate.id} (${candidate.profiles.email})`);
-
                 await queueEmail(
                     supabase,
                     candidate.profiles.id,
@@ -139,12 +116,12 @@ export async function GET(request: Request) {
                     candidate.profiles.email,
                     candidate.profiles.full_name || "Candidate",
                     {
-                        jobId: job.id, // Critical for deduping
+                        jobId: job.id,
                         jobTitle: job.title,
                         location: job.destination_country || "Serbia",
                         salary: `${Number(job.salary_rsd || 0).toLocaleString('de-DE')} RSD`,
                         industry: job.industry,
-                        offerLink: `https://workersunited.eu/jobs/${job.id}` // Assuming this route exists or will exist
+                        offerLink: `https://workersunited.eu/jobs/${job.id}`
                     }
                 );
 
@@ -152,8 +129,6 @@ export async function GET(request: Request) {
                 emailsSent++;
             }
         }
-
-        console.log(`[Job Match] Completed. Found ${totalMatches} matches, sent ${emailsSent} emails.`);
 
         return NextResponse.json({
             success: true,

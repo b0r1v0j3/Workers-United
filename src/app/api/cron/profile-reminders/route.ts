@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/mailer";
+import { getWorkerCompletion, getEmployerCompletion } from "@/lib/profile-completion";
 
 // ─── Shared email footer with social links ──────────────────────
 const SOCIAL_FOOTER = `
     <div style="padding: 16px 24px; background: #f8fafc; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
         <div style="margin-bottom: 12px;">
-            <a href="https://www.facebook.com/profile.php?id=61585104076725" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="Facebook">f</a>
-            <a href="https://www.instagram.com/workersunited.eu/" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="Instagram">📷</a>
-            <a href="https://www.threads.com/@workersunited.eu" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px;" title="Threads"><img src="https://workersunited.eu/threads-logo.svg" alt="Threads" style="width: 16px; height: 16px; vertical-align: middle;" /></a>
-            <a href="https://www.linkedin.com/company/workersunited-eu/" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="LinkedIn">in</a>
-            <a href="https://x.com/WorkersUnitedEU" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="X">𝕏</a>
-            <a href="https://www.tiktok.com/@www.workersunited.eu" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="TikTok">♪</a>
-            <a href="https://www.reddit.com/r/WorkersUnitedEU/" style="display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #e4ebff; border-radius: 50%; text-decoration: none; margin: 0 4px; font-size: 14px;" title="Reddit">◉</a>
+            <a href="https://www.facebook.com/profile.php?id=61585104076725" style="text-decoration:none; margin:0 4px;"><img src="https://img.icons8.com/color/48/facebook-new.png" width="24" height="24" alt="Facebook" style="vertical-align:middle;"></a>
+            <a href="https://www.instagram.com/workersunited.eu/" style="text-decoration:none; margin:0 4px;"><img src="https://img.icons8.com/color/48/instagram-new.png" width="24" height="24" alt="Instagram" style="vertical-align:middle;"></a>
+            <a href="https://www.linkedin.com/company/workersunited-eu/" style="text-decoration:none; margin:0 4px;"><img src="https://img.icons8.com/color/48/linkedin.png" width="24" height="24" alt="LinkedIn" style="vertical-align:middle;"></a>
+            <a href="https://x.com/WorkersUnitedEU" style="text-decoration:none; margin:0 4px;"><img src="https://img.icons8.com/ios-filled/50/000000/x.png" width="22" height="22" alt="X" style="vertical-align:middle; opacity:0.8;"></a>
+            <a href="https://www.tiktok.com/@www.workersunited.eu" style="text-decoration:none; margin:0 4px;"><img src="https://img.icons8.com/color/48/tiktok.png" width="24" height="24" alt="TikTok" style="vertical-align:middle;"></a>
+            <a href="https://www.threads.com/@workersunited.eu" style="text-decoration:none; margin:0 4px;"><img src="https://img.icons8.com/ios-filled/50/000000/threads.png" width="22" height="22" alt="Threads" style="vertical-align:middle; opacity:0.8;"></a>
+            <a href="https://www.reddit.com/r/WorkersUnitedEU/" style="text-decoration:none; margin:0 4px;"><img src="https://img.icons8.com/color/48/reddit.png" width="24" height="24" alt="Reddit" style="vertical-align:middle;"></a>
         </div>
         <p style="margin: 0; font-size: 12px; color: #6c7a89;">
             Workers United LLC &middot; 75 E 3rd St., Sheridan, Wyoming 82801, USA<br>
@@ -23,6 +24,22 @@ const SOCIAL_FOOTER = `
 `;
 
 // ─── Email builders ─────────────────────────────────────────────
+
+function wrapHtmlDocument(content: string, preheader: string = ""): string {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6fb;">
+    ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>` : ""}
+    <div style="max-width:600px; margin:0 auto; padding:40px 20px;">
+        ${content}
+    </div>
+</body>
+</html>`;
+}
 
 function buildReminderEmail(firstName: string, todoList: string, isEmployer: boolean): string {
     const subtitle = isEmployer
@@ -39,10 +56,11 @@ function buildReminderEmail(firstName: string, todoList: string, isEmployer: boo
         ? "A complete company profile helps workers trust your job postings and speeds up the hiring process."
         : "The sooner you complete your profile, the sooner we can match you with suitable job opportunities.";
 
-    return `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color: #1b2430;">
-            <div style="background: linear-gradient(135deg, #2f6fed, #1c4dd6); padding: 24px; border-radius: 12px 12px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 20px;">Workers United</h1>
+    return wrapHtmlDocument(`
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1b2430;">
+            <div style="background: linear-gradient(135deg, #2f6fed, #1c4dd6); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+                <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="48" height="48" style="vertical-align: middle;">
+                <h1 style="color: white; margin: 10px 0 0; font-size: 20px;">Workers United</h1>
                 <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">${subtitle}</p>
             </div>
             <div style="padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
@@ -61,7 +79,7 @@ function buildReminderEmail(firstName: string, todoList: string, isEmployer: boo
             </div>
             ${SOCIAL_FOOTER}
         </div>
-    `;
+    `, subtitle);
 }
 
 function buildWarningEmail(firstName: string, daysLeft: number, todoList: string, isEmployer: boolean): string {
@@ -78,10 +96,11 @@ function buildWarningEmail(firstName: string, daysLeft: number, todoList: string
         ? "https://workersunited.eu/profile/employer"
         : "https://workersunited.eu/profile/worker/edit";
 
-    return `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color: #1b2430;">
-            <div style="background: linear-gradient(135deg, ${urgencyColor}, #991b1b); padding: 24px; border-radius: 12px 12px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 20px;">⚠️ Workers United</h1>
+    return wrapHtmlDocument(`
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1b2430;">
+            <div style="background: linear-gradient(135deg, ${urgencyColor}, #991b1b); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+                <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="48" height="48" style="vertical-align: middle;">
+                <h1 style="color: white; margin: 10px 0 0; font-size: 20px;">⚠️ Workers United</h1>
                 <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">${urgencyText}</p>
             </div>
             <div style="padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
@@ -107,7 +126,7 @@ function buildWarningEmail(firstName: string, daysLeft: number, todoList: string
             </div>
             ${SOCIAL_FOOTER}
         </div>
-    `;
+    `, urgencyText);
 }
 
 function buildDeletionEmail(firstName: string, isEmployer: boolean): string {
@@ -118,10 +137,11 @@ function buildDeletionEmail(firstName: string, isEmployer: boolean): string {
         ? "If you'd like to try again, you're always welcome to create a new employer account and complete your company profile:"
         : "If you'd like to try again, you're always welcome to create a new account and complete your profile:";
 
-    return `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color: #1b2430;">
-            <div style="background: linear-gradient(135deg, #6b7280, #374151); padding: 24px; border-radius: 12px 12px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 20px;">Workers United</h1>
+    return wrapHtmlDocument(`
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1b2430;">
+            <div style="background: linear-gradient(135deg, #6b7280, #374151); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+                <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="48" height="48" style="vertical-align: middle;">
+                <h1 style="color: white; margin: 10px 0 0; font-size: 20px;">Workers United</h1>
                 <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">Account removed</p>
             </div>
             <div style="padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
@@ -138,101 +158,7 @@ function buildDeletionEmail(firstName: string, isEmployer: boolean): string {
             </div>
             ${SOCIAL_FOOTER}
         </div>
-    `;
-}
-
-// ─── Type Definitions ──────────────────────────────────────────
-
-interface ProfileData {
-    full_name: string | null;
-}
-
-interface Candidate {
-    id: string;
-    status: string;
-    entry_fee_paid: boolean;
-    phone: string | null;
-    nationality: string | null;
-    current_country: string | null;
-    preferred_job: string | null;
-    gender: string | null;
-    date_of_birth: string | null;
-    birth_country: string | null;
-    birth_city: string | null;
-    citizenship: string | null;
-    marital_status: string | null;
-    passport_number: string | null;
-    lives_abroad: boolean | null;
-    previous_visas: boolean | null;
-}
-
-interface Employer {
-    company_name: string | null;
-    company_registration_number: string | null;
-    country: string | null;
-    contact_phone: string | null;
-    industry: string | null;
-    company_address: string | null;
-}
-
-interface CandidateDocument {
-    document_type: string;
-    status: string;
-}
-
-
-// ─── Profile completeness checks ────────────────────────────────
-
-function getWorkerMissingItems(
-    profileData: ProfileData | null,
-    candidate: Candidate | null,
-    docs: CandidateDocument[]
-): string[] {
-    const missing: string[] = [];
-
-    if (!candidate) {
-        missing.push("Complete your worker profile");
-        return missing;
-    }
-
-    if (!profileData?.full_name) missing.push("Add your full name");
-    if (!candidate.phone) missing.push("Add your phone number");
-    if (!candidate.nationality) missing.push("Add your nationality");
-    if (!candidate.current_country) missing.push("Add your current country");
-    if (!candidate.preferred_job) missing.push("Select your preferred job type");
-    if (!candidate.gender) missing.push("Select your gender");
-    if (!candidate.date_of_birth) missing.push("Add your date of birth");
-    if (!candidate.birth_country) missing.push("Add your birth country");
-    if (!candidate.birth_city) missing.push("Add your birth city");
-    if (!candidate.citizenship) missing.push("Add your citizenship");
-    if (!candidate.marital_status) missing.push("Select your marital status");
-    if (!candidate.passport_number) missing.push("Add your passport number");
-    if (candidate.lives_abroad === null || candidate.lives_abroad === undefined) missing.push("Indicate if you live abroad");
-    if (candidate.previous_visas === null || candidate.previous_visas === undefined) missing.push("Indicate previous visa history");
-
-    const docTypes = (docs || []).map((d) => d.document_type);
-    if (!docTypes.includes("passport")) missing.push("Upload your passport");
-    if (!docTypes.includes("biometric_photo")) missing.push("Upload a biometric photo");
-
-    return missing;
-}
-
-function getEmployerMissingItems(employer: Employer | null): string[] {
-    const missing: string[] = [];
-
-    if (!employer) {
-        missing.push("Set up your company profile");
-        return missing;
-    }
-
-    if (!employer.company_name) missing.push("Add your company name");
-    if (!employer.company_registration_number) missing.push("Add your company registration number");
-    if (!employer.country) missing.push("Select your country");
-    if (!employer.contact_phone) missing.push("Add your contact phone number");
-    if (!employer.industry) missing.push("Select your industry");
-    if (!employer.company_address) missing.push("Add your company address");
-
-    return missing;
+    `, "Your account has been removed due to an incomplete profile.");
 }
 
 // ─── Main cron handler ──────────────────────────────────────────
@@ -304,16 +230,17 @@ export async function GET(request: Request) {
                 // ── Employer: check company profile ──
                 const { data: employer } = await supabase
                     .from("employers")
-                    .select("company_name, company_registration_number, country, contact_phone, industry, company_address")
+                    .select("*")
                     .eq("profile_id", userId)
                     .single();
 
-                missingItems = getEmployerMissingItems(employer);
+                const result = getEmployerCompletion({ employer });
+                missingItems = result.missingFields;
             } else {
                 // ── Worker: check candidate profile + documents ──
                 const { data: candidate } = await supabase
                     .from("candidates")
-                    .select("id, status, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas")
+                    .select("*")
                     .eq("profile_id", userId)
                     .single();
 
@@ -327,7 +254,12 @@ export async function GET(request: Request) {
                     continue;
                 }
 
-                missingItems = getWorkerMissingItems(profileData, candidate, docs || []);
+                const result = getWorkerCompletion({
+                    profile: profileData,
+                    candidate,
+                    documents: docs || []
+                });
+                missingItems = result.missingFields;
             }
 
             // Profile is complete — skip
@@ -338,7 +270,6 @@ export async function GET(request: Request) {
 
             // ========== DAY 30+: DELETE ACCOUNT ==========
             if (accountAgeDays >= DELETE_AFTER_DAYS) {
-                console.log(`[Reminders] Deleting ${isEmployer ? "employer" : "worker"} ${email} (account age: ${accountAgeDays} days)`);
 
                 // Send deletion notification email BEFORE deleting
                 const html = buildDeletionEmail(firstName, isEmployer);
@@ -350,7 +281,6 @@ export async function GET(request: Request) {
                     console.error(`[Reminders] Failed to delete user ${email}:`, deleteError);
                 } else {
                     deleted++;
-                    console.log(`[Reminders] Deleted ${isEmployer ? "employer" : "worker"} ${email}`);
                 }
                 continue;
             }
@@ -390,7 +320,6 @@ export async function GET(request: Request) {
                         scheduled_for: new Date().toISOString(),
                     });
                     warned++;
-                    console.log(`[Reminders] Sent ${daysLeft}-day warning to ${isEmployer ? "employer" : "worker"} ${email}`);
                 }
                 continue;
             }
@@ -433,7 +362,6 @@ export async function GET(request: Request) {
             }
         }
 
-        console.log(`[Reminders] Sent ${sent} reminders, ${warned} warnings, ${deleted} deleted, skipped ${skipped}`);
         return NextResponse.json({ sent, warned, deleted, skipped, total_checked: eligibleUsers.length });
     } catch (err: any) {
         console.error("[Reminders] Error:", err);

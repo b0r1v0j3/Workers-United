@@ -18,16 +18,33 @@ interface EmailTemplate {
     html: string;
 }
 
-interface TemplateData {
+// ─── Strict template data — every field must be listed here ─────
+// No more [key: string]: any. If you need a new field, add it explicitly.
+export interface TemplateData {
     name?: string;
     email?: string;
+    // Job & payment
     jobTitle?: string;
     companyName?: string;
     country?: string;
-    daysRemaining?: number;
     amount?: string;
     offerLink?: string;
-    [key: string]: any;
+    // Document expiring
+    documentType?: string;
+    expirationDate?: string;
+    // Job match
+    location?: string;
+    salary?: string;
+    industry?: string;
+    // Admin & announcements
+    subject?: string;
+    title?: string;
+    message?: string;
+    actionLink?: string;
+    actionText?: string;
+    // Profile incomplete
+    missingFields?: string;
+    completion?: string;
 }
 
 const baseStyles = `
@@ -56,12 +73,14 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin:0; padding:0; background-color:#f4f6fb;">
+    <!-- Preheader text for inbox preview -->
+    <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${subtitle}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
     <div style="max-width:600px; margin:0 auto; padding:40px 20px;">
         <!-- Content -->
         <div style="background:white; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05); overflow: hidden; ${baseStyles}">
             <!-- Header Bar -->
             <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
-                <img src="https://workersunited.eu/logo.png" alt="Workers United" width="60" height="60" style="vertical-align: middle; filter: brightness(0) invert(1);">
+                <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="60" height="60" style="vertical-align: middle;">
                 <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">${title}</div>
                 <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">${subtitle}</div>
             </div>
@@ -112,22 +131,24 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         
                         <div style="background:#f0f7ff; border-radius:12px; padding:30px; margin:25px 0;">
                             <h3 style="margin:0 0 20px; font-size:18px; color: #183b56;">Your Next Steps:</h3>
-                            <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
-                                <div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; flex-shrink: 0;">✓</div>
-                                <div style="font-size: 16px; color: #2d3748; padding-top: 2px;">1. Complete your profile information</div>
-                            </div>
-                            <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
-                                <div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; flex-shrink: 0;">✓</div>
-                                <div style="font-size: 16px; color: #2d3748; padding-top: 2px;">2. Upload documents</div>
-                            </div>
-                            <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
-                                <div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; flex-shrink: 0;">✓</div>
-                                <div style="font-size: 16px; color: #2d3748; padding-top: 2px;">3. Wait for verification</div>
-                            </div>
-                            <div style="display: flex; align-items: flex-start;">
-                                <div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; flex-shrink: 0;">✓</div>
-                                <div style="font-size: 16px; color: #2d3748; padding-top: 2px;">4. Get matched with employers!</div>
-                            </div>
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td width="36" valign="top" style="padding-bottom: 12px;"><div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px;">✓</div></td>
+                                    <td valign="top" style="font-size: 16px; color: #2d3748; padding-top: 2px; padding-bottom: 12px;">1. Complete your profile information</td>
+                                </tr>
+                                <tr>
+                                    <td width="36" valign="top" style="padding-bottom: 12px;"><div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px;">✓</div></td>
+                                    <td valign="top" style="font-size: 16px; color: #2d3748; padding-top: 2px; padding-bottom: 12px;">2. Upload documents</td>
+                                </tr>
+                                <tr>
+                                    <td width="36" valign="top" style="padding-bottom: 12px;"><div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px;">✓</div></td>
+                                    <td valign="top" style="font-size: 16px; color: #2d3748; padding-top: 2px; padding-bottom: 12px;">3. Wait for verification</td>
+                                </tr>
+                                <tr>
+                                    <td width="36" valign="top"><div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px;">✓</div></td>
+                                    <td valign="top" style="font-size: 16px; color: #2d3748; padding-top: 2px;">4. Get matched with employers!</td>
+                                </tr>
+                            </table>
                         </div>
                         
                         <div style="text-align:center; margin-top:35px; margin-bottom: 20px;">
@@ -163,7 +184,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                         
                         <div style="text-align:center; margin-top:35px;">
-                            <a href="https://workersunited.eu/profile" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
+                            <a href="https://workersunited.eu/profile/worker" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
                                 Activate Now
                             </a>
                         </div>
@@ -182,28 +203,30 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </p>
                         
                         <div style="background:#f0fff4; border: 1px solid #bbf7d0; border-radius:12px; padding:30px; margin:25px 0; text-align:center;">
-                            <div style="background: #10b981; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 20px;">✓</div>
+                            <div style="background: #10b981; color: white; width: 60px; height: 60px; border-radius: 50%; text-align: center; line-height: 60px; font-size: 32px; margin: 0 auto 20px;">✓</div>
                             <h3 style="margin:0; font-size:20px; color: #065f46;">Your job search has started!</h3>
                         </div>
                         
                         <div style="background:#f4f6fb; border-radius:12px; padding:30px; margin:25px 0;">
                             <h3 style="margin:0 0 15px; font-size:18px; color: #183b56;">What happens next:</h3>
-                            <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-                                <div style="color: #2f6fed; margin-right: 10px; font-weight: bold;">•</div>
-                                <div>We match your profile with employer requests</div>
-                            </div>
-                            <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-                                <div style="color: #2f6fed; margin-right: 10px; font-weight: bold;">•</div>
-                                <div>You'll receive job offers via email</div>
-                            </div>
-                            <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-                                <div style="color: #2f6fed; margin-right: 10px; font-weight: bold;">•</div>
-                                <div>Accept offers within 24 hours</div>
-                            </div>
-                            <div style="display: flex; align-items: flex-start;">
-                                <div style="color: #2f6fed; margin-right: 10px; font-weight: bold;">•</div>
-                                <div>We handle visa and documentation</div>
-                            </div>
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td width="20" valign="top" style="color: #2f6fed; font-weight: bold; padding-bottom: 10px;">•</td>
+                                    <td valign="top" style="padding-bottom: 10px;">We match your profile with employer requests</td>
+                                </tr>
+                                <tr>
+                                    <td width="20" valign="top" style="color: #2f6fed; font-weight: bold; padding-bottom: 10px;">•</td>
+                                    <td valign="top" style="padding-bottom: 10px;">You'll receive job offers via email</td>
+                                </tr>
+                                <tr>
+                                    <td width="20" valign="top" style="color: #2f6fed; font-weight: bold; padding-bottom: 10px;">•</td>
+                                    <td valign="top" style="padding-bottom: 10px;">Accept offers within 24 hours</td>
+                                </tr>
+                                <tr>
+                                    <td width="20" valign="top" style="color: #2f6fed; font-weight: bold;">•</td>
+                                    <td valign="top">We handle visa and documentation</td>
+                                </tr>
+                            </table>
                         </div>
                         
                         <div style="text-align:center; margin-top:35px;">
@@ -233,14 +256,16 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                                 <h3 style="margin:0 0 5px; font-size:22px; color:#183b56;">${data.jobTitle || "Job Opportunity"}</h3>
                                 <p style="margin:0 0 20px; color: #64748b; font-size: 16px;">${data.companyName || "Employer"}</p>
                                 
-                                <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                                    <div style="width: 24px; text-align: center; margin-right: 10px;">📍</div>
-                                    <div style="font-weight: 500;">${data.country || "Europe"}</div>
-                                </div>
-                                <div style="display: flex; align-items: center;">
-                                    <div style="width: 24px; text-align: center; margin-right: 10px;">💰</div>
-                                    <div style="font-weight: 500;">Competitive Salary</div>
-                                </div>
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                    <tr>
+                                        <td width="34" valign="middle" style="text-align: center; padding-bottom: 15px;">📍</td>
+                                        <td valign="middle" style="font-weight: 500; padding-bottom: 15px;">${data.country || "Europe"}</td>
+                                    </tr>
+                                    <tr>
+                                        <td width="34" valign="middle" style="text-align: center;">💰</td>
+                                        <td valign="middle" style="font-weight: 500;">Competitive Salary</td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
                         
@@ -315,14 +340,14 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Document Alert</h2>
                         <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
                             Hello ${name},<br><br>
-                            Your <strong>${data.jobTitle || 'document'}</strong> is set to expire on <strong>${data.startDate || 'soon'}</strong>.
+                            Your <strong>${data.documentType || 'document'}</strong> is set to expire on <strong>${data.expirationDate || 'soon'}</strong>.
                         </p>
                         
                         <div style="background:#fff4e5; border:1px solid #ffe0b2; border-radius:12px; padding:25px; margin:25px 0; text-align:center;">
                             <div style="font-size:32px; margin-bottom:10px;">🕒</div>
                             <h3 style="margin:0 0 10px; color:#d97706; font-size:18px;">Expiration Date</h3>
                             <p style="margin:0; font-weight:bold; color:#b45309; font-size:20px;">
-                                ${data.startDate || 'Unknown'}
+                                ${data.expirationDate || 'Unknown'}
                             </p>
                             <p style="margin:10px 0 0; font-size:14px; color:#9a3412;">
                                 Please renew this document to maintain your verified status.
@@ -466,7 +491,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                         
                         <div style="text-align:center; margin-top:35px;">
-                            <a href="https://workersunited.eu/profile" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
+                            <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
                                 Complete Your Profile
                             </a>
                         </div>

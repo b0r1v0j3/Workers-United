@@ -1,6 +1,6 @@
-# 🏗️ Workers United — PROJECT PLAN
+# 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 09.02.2026 (Email Template Fixes + Social Links + Profile Reminders)
+> **Poslednje ažuriranje:** 12.02.2026 (Email System Improvements — shared profile-completion lib, cron consolidation, spam fix, strict types, admin email preview)
 
 ---
 
@@ -17,6 +17,7 @@ Ovaj fajl je **jedini izvor istine** za ceo projekat. Svaki novi chat MORA da pr
 6. **PROAKTIVNO USKLAĐIVANJE** — kad menjaš jednu formu, UVEK proveri da li se ista polja koriste na drugom mestu (onboarding, edit, profil prikaz, employer, admin). Ako vidiš neusklađenost (npr. text input vs dropdown, lowercase vs uppercase vrednosti, polje postoji na jednom mestu a ne na drugom) — ODMAH to popravi ili predloži. **NE ČEKAJ da korisnik primeti.**
 7. **POSTAVLJAJ PITANJA** — ako vidiš nešto sumnjivo ili neusklađeno, pitaj korisnika pre nego što nastaviš. Bolje pitati 1 pitanje i uštedeti 30 minuta popravljanja.
 8. **PREDLAŽI UNAPREĐENJA** — na kraju svakog task-a, pogledaj šta se može poboljšati i predloži. Ti si partner u razvoju.
+9. **AŽURIRAJ DOKUMENTACIJU** — posle svake značajne promene u arhitekturi (novi fajlovi, nove rute, novi env vars, promena tech stack-a), ažuriraj `AGENTS.md` i `.agent/workflows/project-architecture.md` da odražavaju trenutno stanje projekta.
 
 ### Pravila za ažuriranje ovog fajla:
 1. **NIKAD ne briši Sekcije 1-4** — one su trajne i menjaju se samo kad vlasnik projekta to eksplicitno traži
@@ -144,12 +145,49 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - `/admin/settings` — admin podešavanja
 
 ### Tehnički stack:
-- **Frontend:** Next.js 16 (App Router), React, TypeScript
-- **Backend:** Supabase (Auth + Database + Storage)
-- **Plaćanja:** Stripe
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript
+- **Styling:** Tailwind CSS v4, Montserrat font
+- **Backend:** Supabase (Auth + PostgreSQL + Storage)
+- **Plaćanja:** Stripe (Checkout Sessions + Webhooks)
 - **AI:** Gemini 2.0 Flash (verifikacija dokumenata, auto-reply na kontakt formu)
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
-- **Hosting:** Vercel
+- **Hosting:** Vercel (sa cron jobovima)
+- **Icons:** Lucide React
+
+### Setup i pokretanje:
+```bash
+npm install        # Instalacija dependency-ja
+npm run dev        # Development server (localhost:3000)
+npm run build      # Production build
+npm run start      # Production server
+npm run lint       # ESLint provera
+```
+
+### Environment Variables:
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Stripe
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
+
+# Google Gemini AI
+GEMINI_API_KEY=your-gemini-key
+
+# Email (Google Workspace SMTP)
+SMTP_USER=contact@workersunited.eu
+SMTP_PASS=your-app-password
+
+# Vercel Cron
+CRON_SECRET=your-cron-secret
+
+# App
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+```
 
 ### Dokumenta koja radnik mora da upload-uje:
 1. **Pasoš** (passport)
@@ -178,8 +216,34 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 ### ✅ Završeno
 
+**Performance Optimization (11.02.2026)**
+- Homepage sad statički keširan (uklonjen `force-dynamic`, auth prebačen na klijentsku stranu u `UnifiedNavbar.tsx`)
+- Obrisano svih ~35 `console.log` iz produkcijskog koda (10 fajlova), ostali samo `console.error`/`console.warn`
+- Uklonjen `playwright` iz production dependencies
+
+**Site Audit Cleanup (11.02.2026)**
+- Obrisan dupli `public/robots.txt` — koristimo dinamički `src/app/robots.ts`
+- Obrisan zastareli `public/sitemap.xml` (pogrešni .html URL-ovi, nepostojeće sekcije) — koristimo `src/app/sitemap.ts`
+- Obrisan `openai` paket iz dependencies (zamenjen Gemini-jem)
+- Obrisano 9 nekorišćenih fajlova iz `public/` (Next.js template SVG-ovi, backup logo, duplikat logo-email.jpg, stari PDF-ovi, humans.txt)
+- Obrisan ceo `legacy/` folder (stari statički HTML sajt, 22 fajla)
+
+**Konsolidacija dokumentacije (10.02.2026)**
+- Spojeni `PROJECT_PLAN.md` + `README.md` u jedan `AGENTS.md` fajl
+- Kreiran `.agent/workflows/project-architecture.md` (tehnička arhitektura)
+- Obrisan `README.md` i `PROJECT_PLAN.md`
+
+**Email Template Fixes v2 — Gmail Compatibility (12.02.2026)**
+- **Logo fix** — kreiran `logo-white.png` (beli logo sa prozirnom pozadinom). Gmail ne podržava CSS `filter`, pa je stari pristup (CSS filter na `logo.png`) zamenjen direktnim korišćenjem `logo-white.png`
+- **Flexbox → Table** — svi `display: flex` u `email-templates.ts` zamenjeni `<table>` layoutom (Gmail ne podržava flexbox)
+- **Profile-reminders fix** — dodan logo + zamenjene text-character social ikonice (f, 📷, ♪) sa pravim icons8 slikama
+- **HTML wrapper** — `profile-reminders` mejlovi nisu imali `<!DOCTYPE html>` / `<meta charset>` — sad imaju
+- **Broken linkovi** — `profile_complete` → `/profile/worker`, `profile_incomplete` → `/profile/worker/edit`
+- **document_expiring** — koristio pogrešna polja (`jobTitle`/`startDate` umesto `documentType`/`expirationDate`), popravljeno i u šablonu i u `check-expiring-docs` cron jobu
+- **Parenthetical explanations** — uklonjeni iz field labela u `check-incomplete-profiles` ("Passport Number (Crucial for...)" → "Passport Number")
+- **Preheader text** — dodat skriveni preheader u `wrapModernTemplate` za bolji inbox preview
+
 **Email Template Fixes + Social Links (09.02.2026)**
-- **Logo fix** — popravljen broken `logo-white.png` → koristi `logo.png` sa CSS filterom za beli prikaz na plavom headeru
 - **Social Media Links** — dodati pravi linkovi (Facebook, Instagram, LinkedIn, X, TikTok, Threads, Reddit) sa Icons8 ikonicama umesto lažnih placeholder-a
 - **Missing Field Descriptions** — cron job za nepotpune profile sada šalje objašnjenja zašto je svako polje potrebno (npr. "Passport Number — Crucial for all travel documents")
 
@@ -314,31 +378,9 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 ---
 
-## 7. 💡 PREDLOZI ZA UNAPREĐENJE
-> AI treba da dopunjuje ovu listu kad vidi priliku. Korisnik odlučuje šta se implementira.
+## 6. 🏛️ ARHITEKTURA
 
-### Prioritet: Visok
-- [x] ~~**Istekli dokumenti** — dodati `expires_at` polje za pasoš, automatski alert kad ističe za <6 meseci~~
-- [x] ~~**Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza~~
-
-### Prioritet: Srednji
-- [ ] **Per-Country Landing Pages ZA POSLODAVCE** — `/hire-workers-serbia`, `/hire-workers-germany` sa info za poslodavce kako da nađu radnike preko nas (SEO). Radnici traže posao, ne landing page.
-- [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
-- [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
-- [ ] **n8n WhatsApp bot** — automatski status update-ovi, FAQ odgovori
-- [ ] **Trust Building Features** — bez success stories
-    - **Visa Eligibility Quiz** (Homepage) — "Check My Eligibility" (5 pitanja → High/Medium/Low score)
-    - **Live Visa Process Tracker** — "Currently processing: 124 applications", "Documents verified today: 15"
-    - **"Work in [Country]" Pages** — SEO deep-dive pages (npr. /work-in-germany) sa tačnim pravnim koracima
-
-### Prioritet: Nizak (kad bude živih korisnika)
-- [ ] **Success Stories** — pravi case studies sa video snimcima (oprema nabavljena: iPhone 17 Pro)
-- [ ] **Referral sistem** — radnik koji je uspešno plasiran preporučuje druge
-- [ ] **Multi-language support** — ključne instrukcije na jezicima radnika
-
----
-
-## 8. 🏛️ ARHITEKTURA
+> Za detaljnu tehničku arhitekturu (folder structure, data flow, key files, gotchas) pogledaj `.agent/workflows/project-architecture.md`
 
 | Komponenta | Putanja | Opis |
 |---|---|---|
@@ -356,6 +398,56 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | Account Settings | `src/app/profile/settings/page.tsx` | GDPR: delete account, export data |
 | Admin | `src/app/admin/` | Admin panel |
 | Admin Announcements | `src/app/admin/announcements/` | Bulk email sender |
+| Admin Email Preview | `src/app/admin/email-preview/` | Preview svih email template-ova |
 | Admin Workers | `src/app/admin/workers/` | Lista radnika |
 | Admin Worker Detail | `src/app/admin/workers/[id]/` | Detalji radnika |
 | GodModePanel | `src/components/GodModePanel.tsx` | Dev testiranje |
+
+### Key Libraries:
+| Fajl | Namena |
+|---|---|
+| `src/lib/profile-completion.ts` | Shared profile completion — **single source of truth** za worker i employer |
+| `src/lib/email-templates.ts` | Svi email templateovi + strict `TemplateData` (bez `[key: string]: any`) |
+
+### Cron Jobs (vercel.json):
+| Putanja | Raspored | Namena |
+|---|---|---|
+| `/api/cron/check-expiry` | Svaki sat | Provera isteklih sesija |
+| `/api/cron/profile-reminders` | Daily 9 AM UTC | Podsetnik za nepotpune profile (reminder + warning + deletion) |
+| `/api/cron/check-expiring-docs` | Daily 8 AM UTC | Alert za pasoš koji ističe za <6 meseci (max 1 email/30 dana) |
+| `/api/cron/match-jobs` | Svaki sat | Auto-matching radnika i poslova |
+
+### ⚠️ Email Common Gotchas:
+- **DVA email sistema** — `email-templates.ts` (wrapModernTemplate) i `profile-reminders/route.ts` (sopstveni builderi). Kad menjaš dizajn/footer/logo — moraš menjati OBA.
+- **Gmail ne podržava:** `display: flex`, CSS `filter`, `backdrop-filter`, `box-shadow`, SVG u `<img>`. Koristiti `<table>` layout i PNG slike.
+- **Logo:** uvek `https://workersunited.eu/logo-white.png` (ne CSS filter na `logo.png`)
+- **Social ikonice:** koristiti icons8 PNG slike, ne text karaktere (f, 📷, ♪)
+- **Linkovi u mejlovima:** `/profile` ne postoji kao destinacija — uvek koristiti `/profile/worker`, `/profile/worker/edit`, ili `/profile/employer`
+- **TemplateData:** Striktni tipovi — dodaj novo polje eksplicitno u `TemplateData` interface, nema više `[key: string]: any`
+- **Profile completion:** UVEK koristi `getWorkerCompletion()` / `getEmployerCompletion()` iz `src/lib/profile-completion.ts`. NIKAD ne dodavaj novu inline kalkulaciju.
+- **check-expiring-docs:** Ima 30-dnevnu zaštitu od spam-a — ne šalje dupli email istom korisniku unutar 30 dana
+
+---
+
+## 7. 💡 PREDLOZI ZA UNAPREĐENJE
+> AI treba da dopunjuje ovu listu kad vidi priliku. Korisnik odlučuje šta se implementira.
+
+### Prioritet: Visok
+- [x] ~~**Istekli dokumenti** — dodati `expires_at` polje za pasoš, automatski alert kad ističe za <6 meseci~~
+- [x] ~~**Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza~~
+
+### Prioritet: Srednji
+- [ ] **Per-Country Landing Pages ZA POSLODAVCE** — `/hire-workers-serbia`, `/hire-workers-germany` sa info za poslodavce kako da nađu radnike preko nas (SEO). Radnici traže posao, ne landing page.
+- [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
+- [x] ~~**Konsolidacija email sistema** — spojen `check-incomplete-profiles` u `profile-reminders`, shared `profile-completion.ts` lib, strict TemplateData, admin email preview~~
+- [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
+- [ ] **n8n WhatsApp bot** — automatski status update-ovi, FAQ odgovori
+- [ ] **Trust Building Features** — bez success stories
+    - **Visa Eligibility Quiz** (Homepage) — "Check My Eligibility" (5 pitanja → High/Medium/Low score)
+    - **Live Visa Process Tracker** — "Currently processing: 124 applications", "Documents verified today: 15"
+    - **"Work in [Country]" Pages** — SEO deep-dive pages (npr. /work-in-germany) sa tačnim pravnim koracima
+
+### Prioritet: Nizak (kad bude živih korisnika)
+- [ ] **Success Stories** — pravi case studies sa video snimcima (oprema nabavljena: iPhone 17 Pro)
+- [ ] **Referral sistem** — radnik koji je uspešno plasiran preporučuje druge
+- [ ] **Multi-language support** — ključne instrukcije na jezicima radnika
