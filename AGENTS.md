@@ -243,6 +243,15 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - **Parenthetical explanations** — uklonjeni iz field labela u `check-incomplete-profiles` ("Passport Number (Crucial for...)" → "Passport Number")
 - **Preheader text** — dodat skriveni preheader u `wrapModernTemplate` za bolji inbox preview
 
+**Email konsolidacija u jedan sistem (12.02.2026)**
+- Sva email renderinga prebačena u `email-templates.ts` — `profile-reminders/route.ts` više NEMA sopstvene buildere
+- ⚠️ **Kad dodaješ novi `EmailType`, ažuriraj ČETIRI mesta:**
+  1. `EmailType` union u `email-templates.ts`
+  2. `getEmailTemplate()` case u `email-templates.ts`
+  3. `VALID_TYPES` niz u `admin/email-preview/route.ts`
+  4. Title/icon mape u `notifications/route.ts`
+- **Funnel metrics bug** — `uploaded_documents` i `verified` brojali SVE korisnike a `total_users` samo workere → inflatirani analytics. Sad filtrirano na worker ID-ove
+
 **Email Template Fixes + Social Links (09.02.2026)**
 - **Social Media Links** — dodati pravi linkovi (Facebook, Instagram, LinkedIn, X, TikTok, Threads, Reddit) sa Icons8 ikonicama umesto lažnih placeholder-a
 - **Missing Field Descriptions** — cron job za nepotpune profile sada šalje objašnjenja zašto je svako polje potrebno (npr. "Passport Number — Crucial for all travel documents")
