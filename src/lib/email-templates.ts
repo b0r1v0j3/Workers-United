@@ -11,7 +11,10 @@ export type EmailType =
     | "job_match"
     | "admin_update"
     | "announcement"
-    | "profile_incomplete";
+    | "profile_incomplete"
+    | "profile_reminder"
+    | "profile_warning"
+    | "profile_deletion";
 
 interface EmailTemplate {
     subject: string;
@@ -29,6 +32,7 @@ export interface TemplateData {
     country?: string;
     amount?: string;
     offerLink?: string;
+    jobId?: string;
     // Document expiring
     documentType?: string;
     expirationDate?: string;
@@ -45,6 +49,10 @@ export interface TemplateData {
     // Profile incomplete
     missingFields?: string;
     completion?: string;
+    // Profile reminders (used by cron)
+    todoList?: string;
+    daysLeft?: number;
+    isEmployer?: boolean;
 }
 
 const baseStyles = `
@@ -499,6 +507,92 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                 `, "Profile Update", "Action Required")
             };
+
+        case "profile_reminder": {
+            const isEmp = data.isEmployer || false;
+            const subtitle = isEmp ? "Complete your company profile to start hiring" : "Complete your profile to get matched";
+            const cta = isEmp
+                ? "Thanks for registering your company with Workers United! To start posting jobs and finding qualified workers, please complete your company profile:"
+                : "Thanks for signing up with Workers United! We noticed your profile isn\u2019t complete yet. To start receiving job opportunities, please finish these steps:";
+            const btnText = isEmp ? "Complete Company Profile" : "Complete My Profile";
+            const btnLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
+            const outro = isEmp
+                ? "A complete company profile helps workers trust your job postings and speeds up the hiring process."
+                : "The sooner you complete your profile, the sooner we can match you with suitable job opportunities.";
+            return {
+                subject: isEmp ? "Complete your Workers United company profile" : "Your Workers United profile is almost ready!",
+                html: wrapModernTemplate(`
+                    <div style="padding: 40px;">
+                        <p style="margin-top:0;">Hi ${name},</p>
+                        <p style="line-height:1.6;">${cta}</p>
+                        <ul style="background:#f8fafc; padding:16px 16px 16px 32px; border-radius:8px; border:1px solid #e5e7eb;">
+                            ${data.todoList || ""}
+                        </ul>
+                        <p style="line-height:1.6;">${outro}</p>
+                        <div style="text-align:center; margin:24px 0;">
+                            <a href="${btnLink}" style="${buttonStyle}">${btnText}</a>
+                        </div>
+                    </div>
+                `, "Workers United", subtitle)
+            };
+        }
+
+        case "profile_warning": {
+            const isEmp = data.isEmployer || false;
+            const daysLeft = data.daysLeft || 0;
+            const urgencyColor = daysLeft <= 1 ? "#dc2626" : daysLeft <= 3 ? "#ea580c" : "#d97706";
+            const urgencyBg = daysLeft <= 1 ? "#fef2f2" : daysLeft <= 3 ? "#fff7ed" : "#fffbeb";
+            const urgencyText = daysLeft <= 1 ? "Your account will be deleted tomorrow" : `Your account will be deleted in ${daysLeft} days`;
+            const explanation = isEmp
+                ? "We haven\u2019t received your complete company profile information yet. To keep your account active and continue using Workers United for hiring, please complete your profile before the deadline."
+                : "We haven\u2019t received your complete profile information yet. To keep your account active, please complete your profile before the deadline.";
+            const btnText = isEmp ? "Complete Company Profile Now" : "Complete My Profile Now";
+            const btnLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
+            const warnSubject = `Action required: ${daysLeft} ${daysLeft === 1 ? "day" : "days"} until account removal`;
+            return {
+                subject: warnSubject,
+                html: wrapModernTemplate(`
+                    <div style="padding: 40px;">
+                        <p style="margin-top:0;">Hi ${name},</p>
+                        <div style="background:${urgencyBg}; border:1px solid ${urgencyColor}33; border-radius:8px; padding:16px; margin-bottom:16px;">
+                            <p style="margin:0; color:${urgencyColor}; font-weight:bold; font-size:16px;">\u26A0\uFE0F ${urgencyText}</p>
+                            <p style="margin:8px 0 0; color:#1b2430;">${explanation}</p>
+                        </div>
+                        <p style="line-height:1.6;">Here\u2019s what\u2019s still missing:</p>
+                        <ul style="background:#f8fafc; padding:16px 16px 16px 32px; border-radius:8px; border:1px solid #e5e7eb;">
+                            ${data.todoList || ""}
+                        </ul>
+                        <div style="text-align:center; margin:24px 0;">
+                            <a href="${btnLink}" style="display:inline-block; padding:14px 36px; background:linear-gradient(135deg,${urgencyColor},#991b1b); color:white; text-decoration:none; border-radius:30px; font-weight:bold; font-size:16px;">${btnText}</a>
+                        </div>
+                    </div>
+                `, "\u26A0\uFE0F Workers United", urgencyText)
+            };
+        }
+
+        case "profile_deletion": {
+            const isEmp = data.isEmployer || false;
+            const explanation = isEmp
+                ? "Your Workers United company account has been removed because your company profile was not completed within 30 days of registration."
+                : "Your Workers United account has been removed because your profile was not completed within 30 days of registration.";
+            const ctaText = isEmp
+                ? "If you\u2019d like to try again, you\u2019re always welcome to create a new employer account and complete your company profile:"
+                : "If you\u2019d like to try again, you\u2019re always welcome to create a new account and complete your profile:";
+            return {
+                subject: "Your Workers United account has been removed",
+                html: wrapModernTemplate(`
+                    <div style="padding: 40px;">
+                        <p style="margin-top:0;">Hi ${name},</p>
+                        <p style="line-height:1.6;">${explanation}</p>
+                        <p style="line-height:1.6;">${ctaText}</p>
+                        <div style="text-align:center; margin:24px 0;">
+                            <a href="https://workersunited.eu/signup" style="${buttonStyle}">Create New Account</a>
+                        </div>
+                        <p style="line-height:1.6; color:#6c7a89; font-size:14px;">If you believe this was a mistake, please contact us at <a href="mailto:contact@workersunited.eu" style="color:#2f6fed;">contact@workersunited.eu</a>.</p>
+                    </div>
+                `, "Workers United", "Account removed")
+            };
+        }
 
         default:
             return {
