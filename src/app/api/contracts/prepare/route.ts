@@ -113,6 +113,8 @@ export async function POST(request: NextRequest) {
                 employer_representative_name: employer.profiles?.full_name,
                 employer_mb: null, // MB ne postoji na employers tabeli, admin popunjava ručno
                 employer_city: null, // Admin popunjava ručno (grad + poštanski broj)
+                employer_founding_date: null, // Admin popunjava ručno
+                employer_apr_number: null, // Admin popunjava ručno
                 employer_director: employer.profiles?.full_name,
 
                 // Job data
@@ -126,6 +128,7 @@ export async function POST(request: NextRequest) {
                 start_date: startDate.toISOString().split("T")[0],
                 end_date: endDate.toISOString().split("T")[0],
                 signing_date: new Date().toISOString().split("T")[0],
+                signing_city: null, // Admin popunjava ručno (grad gde se potpisuje ugovor)
 
                 // Contact
                 contact_email: employer.contact_email || "contact@workersunited.eu",
