@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
                 "candidate_place_of_birth", "candidate_gender",
                 "employer_company_name", "employer_pib", "employer_address",
                 "employer_representative_name", "employer_mb", "employer_director",
+                "employer_city",
                 "job_title", "job_description_sr", "job_description_en",
                 "salary_rsd", "accommodation_address", "contract_duration_months",
                 "work_schedule", "start_date", "end_date", "signing_date",
