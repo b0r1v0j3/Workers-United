@@ -14,6 +14,7 @@ const TEMPLATES_DIR = path.join(process.cwd(), "public", "templates");
 
 const UGOVOR_REPLACEMENTS = [
     ["Tatjana Cvetković", "{EMPLOYER_DIRECTOR}"],
+    ["Tatjana  Cvetković", "{EMPLOYER_DIRECTOR}"], // Double space found in XML
     ["Tatjana Cvetkovi\u0107", "{EMPLOYER_DIRECTOR}"],
     // PIB
     ["PIB:  111413669", "PIB: {EMPLOYER_PIB}"],
@@ -53,6 +54,11 @@ const OVLASCENJE_REPLACEMENTS = [
 ];
 
 const POZIVNO_REPLACEMENTS = [
+    // Split text nodes in XML
+    ["PARTIZANSKA BR. 28", "{ACCOMMODATION_ADDRESS}"],
+    [", NOVI SAD \u2013 KA\u0106", ""], // Erase the second part
+    [", NOVI SAD – KAĆ", ""],
+    // Fallback for full string if not split
     ["PARTIZANSKA BR. 28, NOVI SAD \u2013 KA\u0106", "{ACCOMMODATION_ADDRESS}"],
     ["PARTIZANSKA BR. 28, NOVI SAD – KAĆ", "{ACCOMMODATION_ADDRESS}"],
     ["PARTIZANSKA BR. 28, NOVI SAD", "{ACCOMMODATION_ADDRESS}"],
