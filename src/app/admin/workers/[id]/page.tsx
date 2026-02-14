@@ -5,6 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
 import { queueEmail } from "@/lib/email-templates";
+import ManualMatchButton from "@/components/admin/ManualMatchButton";
+import ReVerifyButton from "@/components/admin/ReVerifyButton";
+import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -358,6 +361,17 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                 <div className="text-[#94a3b8] italic">No signature on file</div>
                             )}
                         </div>
+
+                        {/* Manual Match */}
+                        {candidateData && (
+                            <ManualMatchButton candidateId={candidateData.id} />
+                        )}
+
+                        {/* Download Documents */}
+                        <SingleWorkerDownload
+                            profileId={id}
+                            workerName={candidateProfile?.full_name || authUser.user_metadata?.full_name || "Worker"}
+                        />
                     </div>
 
                     {/* Right Column: Documents */}
@@ -454,6 +468,9 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
                                             {/* Admin Actions */}
                                             <div className="flex flex-wrap gap-2 mt-3">
+                                                {/* Re-Verify Document */}
+                                                <ReVerifyButton documentId={doc.id} />
+
                                                 {/* Delete Document */}
                                                 <form action={deleteDocument}>
                                                     <input type="hidden" name="doc_id" value={doc.id} />

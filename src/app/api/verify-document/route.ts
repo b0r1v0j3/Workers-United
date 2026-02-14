@@ -33,56 +33,113 @@ export async function POST(request: Request) {
 
         let imageUrl = urlData.publicUrl;
 
-        // 2.5. Smart auto-crop: detect document boundaries and crop if needed
-        if (docType === 'passport' || docType === 'diploma') {
-            try {
-                const bounds = await detectDocumentBounds(imageUrl, docType);
+        // 2.5. Convert PDF to image if needed
+        try {
+            const fileData = await fetchImageAsBase64(imageUrl);
+            if (fileData.mimeType === 'application/pdf' || document.storage_path.toLowerCase().endsWith('.pdf')) {
+                const pdfBuffer = Buffer.from(fileData.data, 'base64');
 
-                if (bounds.found && bounds.crop) {
+                // Convert first page of PDF to JPEG using sharp
+                const jpegBuffer = await sharp(pdfBuffer, { density: 200 })
+                    .jpeg({ quality: 92 })
+                    .toBuffer();
 
-                    // Download original image
-                    const imageData = await fetchImageAsBase64(imageUrl);
-                    const imageBuffer = Buffer.from(imageData.data, 'base64');
+                // Replace PDF with JPEG in storage
+                const jpegPath = document.storage_path.replace(/\.pdf$/i, '.jpg');
+                await supabase.storage
+                    .from("candidate-docs")
+                    .upload(jpegPath, jpegBuffer, {
+                        contentType: 'image/jpeg',
+                        upsert: true
+                    });
 
-                    // Get image dimensions
-                    const metadata = await sharp(imageBuffer).metadata();
+                // Delete old PDF
+                await supabase.storage.from("candidate-docs").remove([document.storage_path]);
+
+                // Update DB with new path
+                await supabase.from("candidate_documents")
+                    .update({ storage_path: jpegPath, updated_at: new Date().toISOString() })
+                    .eq("user_id", candidateId)
+                    .eq("document_type", docType);
+
+                // Refresh URL
+                const { data: jpegUrlData } = supabase.storage
+                    .from("candidate-docs")
+                    .getPublicUrl(jpegPath);
+                imageUrl = jpegUrlData?.publicUrl || imageUrl;
+            }
+        } catch (pdfErr) {
+            console.warn("[Verify] PDF conversion failed, continuing with original:", pdfErr);
+        }
+
+        // 2.6. Smart auto-crop + auto-rotate: detect document boundaries and rotation
+        try {
+            const bounds = await detectDocumentBounds(imageUrl, docType);
+            const needsRotation = bounds.found && bounds.rotationDegrees && bounds.rotationDegrees !== 0;
+            const needsCropping = bounds.found && bounds.crop;
+
+            if (needsRotation || needsCropping) {
+                // Download the image
+                const imageData = await fetchImageAsBase64(imageUrl);
+                const imageBuffer = Buffer.from(imageData.data, 'base64');
+
+                let pipeline = sharp(imageBuffer).rotate(); // EXIF auto-rotate first
+
+                // Apply content rotation if AI detected sideways/upside-down
+                if (needsRotation) {
+                    pipeline = sharp(await pipeline.toBuffer()).rotate(bounds.rotationDegrees!);
+                }
+
+                // Apply crop if needed
+                if (needsCropping) {
+                    // Get dimensions AFTER rotation
+                    const rotatedBuffer = await pipeline.toBuffer();
+                    const metadata = await sharp(rotatedBuffer).metadata();
                     const imgW = metadata.width || 1;
                     const imgH = metadata.height || 1;
 
-                    // Convert percentage crop to pixel values
-                    const cropX = Math.round((bounds.crop.x / 100) * imgW);
-                    const cropY = Math.round((bounds.crop.y / 100) * imgH);
-                    const cropW = Math.min(Math.round((bounds.crop.width / 100) * imgW), imgW - cropX);
-                    const cropH = Math.min(Math.round((bounds.crop.height / 100) * imgH), imgH - cropY);
+                    const cropX = Math.round((bounds.crop!.x / 100) * imgW);
+                    const cropY = Math.round((bounds.crop!.y / 100) * imgH);
+                    const cropW = Math.min(Math.round((bounds.crop!.width / 100) * imgW), imgW - cropX);
+                    const cropH = Math.min(Math.round((bounds.crop!.height / 100) * imgH), imgH - cropY);
 
                     if (cropW > 50 && cropH > 50) {
-                        // Crop and auto-rotate with sharp
-                        const croppedBuffer = await sharp(imageBuffer)
-                            .rotate() // auto-rotate based on EXIF
-                            .extract({ left: cropX, top: cropY, width: cropW, height: cropH })
-                            .jpeg({ quality: 92 })
-                            .toBuffer();
-
-                        // Replace the original file in storage
-                        await supabase.storage
-                            .from("candidate-docs")
-                            .update(document.storage_path, croppedBuffer, {
-                                contentType: 'image/jpeg',
-                                upsert: true
-                            });
-
-                        // Refresh URL after replacement
-                        const { data: newUrlData } = supabase.storage
-                            .from("candidate-docs")
-                            .getPublicUrl(document.storage_path);
-                        imageUrl = newUrlData?.publicUrl || imageUrl;
-
+                        pipeline = sharp(rotatedBuffer).extract({
+                            left: cropX, top: cropY, width: cropW, height: cropH
+                        });
+                    } else {
+                        pipeline = sharp(rotatedBuffer);
                     }
-                } else {
                 }
-            } catch (cropErr) {
-                console.warn("[Verify] Auto-crop failed, continuing with original:", cropErr);
+
+                const processedBuffer = await pipeline.jpeg({ quality: 92 }).toBuffer();
+
+                // Get current storage path (may have changed from PDF conversion)
+                const { data: currentDoc } = await supabase
+                    .from("candidate_documents")
+                    .select("storage_path")
+                    .eq("user_id", candidateId)
+                    .eq("document_type", docType)
+                    .single();
+
+                const storagePath = currentDoc?.storage_path || document.storage_path;
+
+                // Replace in storage
+                await supabase.storage
+                    .from("candidate-docs")
+                    .update(storagePath, processedBuffer, {
+                        contentType: 'image/jpeg',
+                        upsert: true
+                    });
+
+                // Refresh URL
+                const { data: newUrlData } = supabase.storage
+                    .from("candidate-docs")
+                    .getPublicUrl(storagePath);
+                imageUrl = newUrlData?.publicUrl || imageUrl;
             }
+        } catch (cropErr) {
+            console.warn("[Verify] Auto-crop/rotate failed, continuing with original:", cropErr);
         }
 
         // 3. Perform AI verification based on document type
@@ -155,9 +212,11 @@ export async function POST(request: Request) {
                             analyzed_at: new Date().toISOString()
                         };
                     } else {
-                        // Diploma is optional, so just mark as manual review instead of reject
-                        status = 'manual_review';
-                        rejectReason = result.qualityIssues?.join(", ") || "Could not verify diploma";
+                        // Reject wrong document types — worker must upload a real school diploma
+                        status = 'rejected';
+                        rejectReason = !result.isCorrectType
+                            ? "This does not appear to be a school diploma. Please upload your high school or university diploma."
+                            : result.qualityIssues?.join(", ") || "Could not verify diploma";
                         qualityIssues = result.qualityIssues || [];
                         ocrJson = { issues: result.qualityIssues, confidence: result.confidence };
                     }

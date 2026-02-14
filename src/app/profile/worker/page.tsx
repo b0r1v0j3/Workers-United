@@ -14,7 +14,7 @@ export default async function WorkerProfilePage() {
         redirect("/login");
     }
 
-    // Redirect employers to employer profile
+    // Redirect employers to employer profile (admin can access for testing)
     const userType = user.user_metadata?.user_type;
     if (userType === 'employer') {
         redirect("/profile/employer");

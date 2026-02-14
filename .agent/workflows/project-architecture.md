@@ -69,6 +69,7 @@ Workers-United/
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics
 │   │   │   ├── cron/          # 5 cron jobs (see below)
 │   │   │   ├── documents/     # verify, verify-passport
+│   │   │   ├── contracts/     # prepare, generate (DOCX documents)
 │   │   │   ├── stripe/        # create-checkout, webhook
 │   │   │   ├── email-queue/   # Email queue processor
 │   │   │   ├── godmode/       # Dev testing endpoint
@@ -87,6 +88,7 @@ Workers-United/
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
 │   │   ├── CookieConsent.tsx   # GDPR cookie banner
 │   │   ├── DocumentWizard.tsx  # Document upload flow
+│   │   ├── DocumentGenerator.tsx # Admin: generate 4 DOCX visa docs
 │   │   ├── SignaturePad.tsx    # Digital signature component
 │   │   ├── DeleteUserButton.tsx # Admin: delete user completely
 │   │   ├── EmployerStatusButton.tsx # Admin: change employer status
@@ -106,6 +108,7 @@ Workers-United/
 │   │   ├── admin.ts           # Admin utility functions
 │   │   ├── constants.ts       # Shared constants
 │   │   ├── godmode.ts         # GodMode utilities
+│   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
 │   │   └── imageUtils.ts      # Image processing helpers
 │   └── types/                 # TypeScript types (currently empty)
 ├── vercel.json                # Vercel config: security headers + 5 cron jobs
@@ -215,6 +218,7 @@ User (Browser)
 | `src/lib/gemini.ts` | All Gemini AI functions |
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/notifications.ts` | Email notification dispatch helpers |
+| `src/lib/docx-generator.ts` | DOCX generation from templates (docxtemplater + pizzip) |
 | `src/lib/constants.ts` | Shared constants (industries, countries, etc.) |
 
 ---
@@ -315,6 +319,11 @@ When adding a new feature, follow this order:
 - Security headers are in `vercel.json` (X-Frame-Options: DENY, etc.)
 - Cron jobs require `CRON_SECRET` Bearer token auth
 - All 5 cron jobs must stay in `vercel.json` — don't remove them
+
+### AI Document Verification
+- **Prompts must be STRICT** — never say "be lenient" or "accept any". Explicitly list what IS and IS NOT acceptable.
+- **Error handlers must be fail-closed** — if AI crashes, return `success: false`, never `success: true`.
+- **Wrong document type = rejected** — not `manual_review`. Worker must re-upload the correct document.
 
 ---
 

@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         const { data: authData } = await supabase.auth.admin.listUsers();
         const allAuthUsers = authData?.users || [];
         let workerUsers = allAuthUsers.filter((u: any) =>
-            u.user_metadata?.user_type !== 'employer'
+            u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin'
         );
 
         // Filter by date range if provided

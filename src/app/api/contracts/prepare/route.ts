@@ -82,6 +82,12 @@ export async function POST(request: NextRequest) {
 
         const passportData = passportDoc.ai_extracted_data || {};
 
+        // Compute dates
+        const startDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        const durationMonths = jobRequest?.contract_duration_months || 12;
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + durationMonths);
+
         // Create contract data record
         const { data: contractData, error: insertError } = await supabase
             .from("contract_data")
@@ -95,20 +101,34 @@ export async function POST(request: NextRequest) {
                 candidate_date_of_birth: passportData.date_of_birth,
                 candidate_passport_expiry: passportData.expiry_date,
                 candidate_address: candidate.country || "",
+                candidate_passport_issue_date: passportData.date_of_issue || null,
+                candidate_passport_issuer: passportData.issuing_authority || null,
+                candidate_place_of_birth: passportData.place_of_birth || null,
+                candidate_gender: passportData.gender || null,
 
                 // Employer data
                 employer_company_name: employer.company_name,
                 employer_pib: employer.pib,
                 employer_address: employer.company_address || employer.accommodation_address,
                 employer_representative_name: employer.profiles?.full_name,
+                employer_mb: employer.mb || null,
+                employer_director: employer.profiles?.full_name,
 
                 // Job data
                 job_title: jobRequest?.title,
+                job_description_sr: jobRequest?.description || null,
+                job_description_en: jobRequest?.description_en || null,
                 salary_rsd: jobRequest?.salary_rsd,
                 accommodation_address: jobRequest?.accommodation_address || employer.accommodation_address,
-                contract_duration_months: jobRequest?.contract_duration_months || 12,
+                contract_duration_months: durationMonths,
                 work_schedule: jobRequest?.work_schedule,
-                start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], // 30 days from now
+                start_date: startDate.toISOString().split("T")[0],
+                end_date: endDate.toISOString().split("T")[0],
+                signing_date: new Date().toISOString().split("T")[0],
+
+                // Contact
+                contact_email: employer.contact_email || "contact@workersunited.eu",
+                contact_phone: employer.contact_phone || "",
 
                 // Contract template
                 contract_template: contractTemplate || "01",

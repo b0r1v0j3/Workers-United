@@ -42,7 +42,7 @@ export default async function AnnouncementsPage() {
         let recipients = [];
 
         if (targetAudience === 'workers') {
-            recipients = allUsers.filter((u: any) => u.user_metadata?.user_type !== 'employer');
+            recipients = allUsers.filter((u: any) => u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin');
         } else if (targetAudience === 'employers') {
             recipients = allUsers.filter((u: any) => u.user_metadata?.user_type === 'employer');
         } else {
