@@ -124,15 +124,21 @@ CREATE TABLE matches (
 
 CREATE TABLE payments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    profile_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     candidate_id UUID REFERENCES candidates(id) ON DELETE SET NULL,
     offer_id UUID,
-    payment_type TEXT NOT NULL,
-    amount_cents INTEGER NOT NULL,
+    payment_type TEXT NOT NULL DEFAULT 'entry_fee',
+    amount DECIMAL(10,2) NOT NULL,
     currency TEXT DEFAULT 'USD',
     stripe_session_id TEXT,
     stripe_payment_intent_id TEXT,
+    stripe_checkout_session_id TEXT,
     status TEXT DEFAULT 'pending',
+    paid_at TIMESTAMPTZ,
+    deadline_at TIMESTAMPTZ,
+    metadata JSONB DEFAULT '{}',
+    refund_status TEXT,
+    refund_notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
