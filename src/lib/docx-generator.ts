@@ -234,7 +234,7 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
         EMPLOYER_FULL_REFERENCE: [
             data.employer_company_name,
             data.employer_address,
-            data.employer_city || "NOVI SAD",
+            data.employer_city,
         ].filter(Boolean).join(", "),
         EMPLOYER_ADDRESS: data.employer_address || "___________",
         EMPLOYER_CITY: data.employer_city || "___________",
@@ -351,7 +351,14 @@ export function validateContractData(data: ContractDataForDocs): string[] {
     if (!data.candidate_passport_expiry) missing.push("Passport expiry date");
     if (!data.employer_company_name) missing.push("Employer company name");
     if (!data.employer_address) missing.push("Employer address");
+    if (!data.employer_pib) missing.push("Employer PIB");
+    if (!data.employer_city) missing.push("Employer city");
+    if (!data.employer_mb) missing.push("Employer MB (matični broj)");
+    if (!data.employer_director) missing.push("Employer director");
+    if (!data.signing_city) missing.push("Signing city");
+    if (!data.accommodation_address) missing.push("Accommodation address");
     if (!data.job_title) missing.push("Job title");
+    if (!data.salary_rsd) missing.push("Salary (RSD)");
     if (!data.start_date) missing.push("Contract start date");
     if (!data.end_date) missing.push("Contract end date");
     if (!data.signing_date) missing.push("Signing date");
