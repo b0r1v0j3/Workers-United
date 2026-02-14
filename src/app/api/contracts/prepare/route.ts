@@ -112,26 +112,26 @@ export async function POST(request: NextRequest) {
                 employer_address: employer.company_address || employer.accommodation_address,
                 employer_representative_name: employer.profiles?.full_name,
                 employer_mb: null, // MB ne postoji na employers tabeli, admin popunjava ručno
-                employer_city: null, // Admin popunjava ručno (grad + poštanski broj)
-                employer_founding_date: null, // Admin popunjava ručno
-                employer_apr_number: null, // Admin popunjava ručno
-                employer_director: employer.profiles?.full_name,
+                employer_city: null, // Nema u employers tabeli, admin popunjava (grad + poštanski broj)
+                employer_founding_date: null, // Nema u employers tabeli, admin popunjava
+                employer_apr_number: null, // Nema u employers tabeli, admin popunjava
+                employer_director: employer.profiles?.full_name || null,
 
                 // Job data
                 job_title: jobRequest?.title,
                 job_description_sr: jobRequest?.description || null,
                 job_description_en: jobRequest?.description_en || null,
                 salary_rsd: jobRequest?.salary_rsd,
-                accommodation_address: jobRequest?.accommodation_address || employer.accommodation_address,
+                accommodation_address: employer.accommodation_address || null,
                 contract_duration_months: durationMonths,
                 work_schedule: jobRequest?.work_schedule,
                 start_date: startDate.toISOString().split("T")[0],
                 end_date: endDate.toISOString().split("T")[0],
                 signing_date: new Date().toISOString().split("T")[0],
-                signing_city: null, // Admin popunjava ručno (grad gde se potpisuje ugovor)
+                signing_city: null, // Admin popunjava ručno (grad gde se potpisuje)
 
                 // Contact
-                contact_email: employer.contact_email || "contact@workersunited.eu",
+                contact_email: "contact@workersunited.eu",
                 contact_phone: employer.contact_phone || "",
 
                 // Contract template
