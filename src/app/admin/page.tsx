@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
 import { Users, Building2 } from "lucide-react";
 import FunnelChart from "./FunnelChart";
+import BulkDocumentActions from "@/components/admin/BulkDocumentActions";
 
 export default async function AdminDashboard() {
     const supabase = await createClient();
@@ -72,6 +73,9 @@ export default async function AdminDashboard() {
 
                 {/* Funnel Overview */}
                 <FunnelChart />
+
+                {/* Bulk Document Actions */}
+                <BulkDocumentActions />
 
                 {/* Activity Feed / Recent Lists */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

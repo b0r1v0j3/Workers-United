@@ -14,6 +14,8 @@ export interface PassportData {
     expiry_date: string;
     gender?: string;
     place_of_birth?: string;
+    date_of_issue?: string;
+    issuing_authority?: string;
 }
 
 export interface VerificationResult {
@@ -78,6 +80,8 @@ Return a JSON object with EXACTLY these fields (use null if not readable):
   "nationality": "COUNTRY",
   "date_of_birth": "YYYY-MM-DD",
   "expiry_date": "YYYY-MM-DD",
+  "date_of_issue": "YYYY-MM-DD",
+  "issuing_authority": "ISSUING AUTHORITY NAME",
   "gender": "M or F",
   "place_of_birth": "CITY",
   "readable": true/false,
@@ -85,6 +89,8 @@ Return a JSON object with EXACTLY these fields (use null if not readable):
   "issues": ["list of problems if any"]
 }
 
+For date_of_issue: Look for "Date of Issue" or similar field on the passport.
+For issuing_authority: Look for "Authority" or "Issuing Authority" field. For Nepalese passports this is typically "MOFA, DEPARTMENT OF PASSPORTS".
 If the image is blurry, too dark, or not a passport, set readable to false and list issues.
 Return ONLY the JSON object, no other text.`;
 
@@ -110,6 +116,8 @@ Return ONLY the JSON object, no other text.`;
                 expiry_date: parsed.expiry_date,
                 gender: parsed.gender,
                 place_of_birth: parsed.place_of_birth,
+                date_of_issue: parsed.date_of_issue,
+                issuing_authority: parsed.issuing_authority,
             },
             confidence: parsed.confidence || 0.8,
             issues: parsed.issues || [],
@@ -149,12 +157,26 @@ export function compareNames(aiName: string, signupName: string): boolean {
 
 export async function verifyDiploma(imageUrl: string): Promise<DocumentQualityResult> {
     try {
-        const prompt = `You are a document analyzer. Check if this looks like any kind of educational document, certificate, or diploma.
-Be very lenient - this is an OPTIONAL document.
+        const prompt = `You are a strict document verification system. Your job is to determine whether the uploaded image is a FORMAL SCHOOL DIPLOMA or DEGREE CERTIFICATE.
+
+ACCEPTABLE documents (is_school_diploma = true):
+- High school diploma / secondary school leaving certificate
+- University degree certificate (Bachelor, Master, PhD)
+- Vocational school diploma / trade school certificate
+- Formal educational institution graduation document
+
+NOT ACCEPTABLE (is_school_diploma = false):
+- Professional certificates (IT certs, safety training, language courses)
+- Course completion certificates
+- Workshop or seminar certificates
+- Training completion documents
+- Awards or recognition certificates
+- Random documents, IDs, receipts, or anything else
 
 Return JSON:
 {
-  "is_diploma": true/false,
+  "is_school_diploma": true/false,
+  "document_description": "brief description of what this document actually is",
   "readable": true/false,
   "quality_issues": [],
   "confidence": 0.0-1.0,
@@ -163,30 +185,31 @@ Return JSON:
   "graduation_year": "year if readable"
 }
 
-Accept any document that looks like a certificate, diploma, training completion, or educational record.
+Be STRICT. If unsure, set is_school_diploma to false.
 Return ONLY the JSON object, no other text.`;
 
         const content = await callGeminiVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
 
         return {
-            success: parsed.is_diploma === true || parsed.readable === true,
-            isCorrectType: parsed.is_diploma || false,
+            success: parsed.is_school_diploma === true && (parsed.confidence ?? 0) >= 0.7,
+            isCorrectType: parsed.is_school_diploma || false,
             qualityIssues: parsed.quality_issues || [],
-            confidence: parsed.confidence || 0.8,
+            confidence: parsed.confidence || 0,
             extractedData: {
                 institution_name: parsed.institution_name,
                 degree_type: parsed.degree_type,
                 graduation_year: parsed.graduation_year,
+                document_description: parsed.document_description,
             },
         };
     } catch (error) {
         console.error("Diploma verification error:", error);
         return {
-            success: true,
-            isCorrectType: true,
-            qualityIssues: [],
-            confidence: 0.5,
+            success: false,
+            isCorrectType: false,
+            qualityIssues: ["Verification failed — please try again"],
+            confidence: 0,
         };
     }
 }
@@ -231,25 +254,29 @@ Return ONLY the JSON object, no other text.`;
 }
 
 /**
- * Detect document boundaries within an image.
- * Returns crop coordinates as percentages (0-100) so the caller can crop.
- * Used when a user photographs a document on a table — we crop to just the document.
+ * Detect document boundaries and rotation within an image.
+ * Returns crop coordinates as percentages (0-100) and rotation angle.
+ * Used when a user photographs a document on a table — we crop and rotate to just the document.
  */
 export async function detectDocumentBounds(imageUrl: string, docType: string): Promise<{
     found: boolean;
     crop?: { x: number; y: number; width: number; height: number };
+    rotationDegrees?: number;
 }> {
     try {
         const docLabel = docType === 'passport' ? 'passport data page' :
             docType === 'diploma' ? 'diploma, certificate, or educational document' :
-                'document';
+                docType === 'biometric_photo' ? 'person photo' :
+                    'document';
 
-        const prompt = `You are a document detector. Find the ${docLabel} in this image.
+        const prompt = `You are a document detector and orientation analyzer. Find the ${docLabel} in this image.
 The document may be photographed on a table, desk, or other surface with background visible.
+The document may also be ROTATED — text might be sideways or upside down.
 
 Return JSON:
 {
   "document_found": true/false,
+  "rotation_degrees": 0,
   "crop_x_percent": 0-100,
   "crop_y_percent": 0-100,
   "crop_width_percent": 0-100,
@@ -257,7 +284,15 @@ Return JSON:
   "needs_cropping": true/false
 }
 
-Rules:
+Rules for rotation_degrees:
+- Look at the TEXT orientation in the document
+- 0 = text is upright (normal reading position)
+- 90 = text is rotated 90° clockwise (reader must tilt head left to read)
+- 180 = text is upside down
+- 270 = text is rotated 90° counter-clockwise (reader must tilt head right to read)
+- ONLY use values: 0, 90, 180, or 270
+
+Rules for cropping:
 - If the document fills most of the image (>80% area), set needs_cropping to false
 - crop_x_percent and crop_y_percent are the top-left corner of the document
 - Add 2% padding around the document edges for safety
@@ -266,12 +301,25 @@ Rules:
         const content = await callGeminiVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
 
-        if (!parsed.document_found || !parsed.needs_cropping) {
-            return { found: parsed.document_found ?? false };
+        // Normalize rotation to 0/90/180/270
+        const rawRotation = parsed.rotation_degrees || 0;
+        const rotationDegrees = [0, 90, 180, 270].includes(rawRotation) ? rawRotation : 0;
+
+        if (!parsed.document_found) {
+            return { found: false };
+        }
+
+        // Return rotation even if no cropping needed
+        if (!parsed.needs_cropping) {
+            return {
+                found: true,
+                rotationDegrees,
+            };
         }
 
         return {
             found: true,
+            rotationDegrees,
             crop: {
                 x: Math.max(0, parsed.crop_x_percent || 0),
                 y: Math.max(0, parsed.crop_y_percent || 0),

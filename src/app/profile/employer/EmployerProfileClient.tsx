@@ -128,7 +128,7 @@ export default function EmployerProfilePage() {
         setUser(u);
 
         const { data: profile } = await supabase.from("profiles").select("user_type").eq("id", u.id).single();
-        if (profile?.user_type !== "employer") { router.replace("/profile/worker"); return; }
+        if (profile?.user_type !== "employer" && profile?.user_type !== "admin") { router.replace("/profile/worker"); return; }
 
         const { data: emp } = await supabase.from("employers").select("*").eq("profile_id", u.id).single();
         if (emp) {

@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 12.02.2026 (Sprint 2 — PWA service worker, notification read tracking, analytics filters, batch cron, vitest)
+> **Poslednje ažuriranje:** 14.02.2026 (Sprint 3 — admin panel enhancements: test profiles, manual match, edit data, re-verify, bulk docs, ZIP download)
 
 ---
 
@@ -253,6 +253,17 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
   4. Title/icon mape u `notifications/route.ts`
 - **Funnel metrics bug** — `uploaded_documents` i `verified` brojali SVE korisnike a `total_users` samo workere → inflatirani analytics. Sad filtrirano na worker ID-ove
 
+**Auto-rotacija i crop dokumenata + PDF konverzija (12.02.2026)**
+- Dokumenti se sada automatski rotiraju na ispravan položaj pomoću AI detekcije (0°/90°/180°/270°)
+- PDF-ovi se automatski konvertuju u JPEG na serveru pre obrade
+- Auto-crop radi za SVE tipove dokumenata (pasoš, diploma, biometrijska foto), ne samo za pasoš/diplomu
+- Pipeline: PDF→JPEG → AI detekcija rotacije/granica → sharp rotira → sharp crop-uje → zameni u storage
+
+**Diploma verifikacija — AI previše popustljiv (12.02.2026)**
+- ⚠️ **AI prompt za verifikaciju dokumenata MORA biti striktan** — prethodni prompt je govorio "Be very lenient" i prihvatao bilo koji sertifikat. Sada zahteva formalni školski diploma (srednja škola, fakultet, zanat). Profesionalni sertifikati, kursevi i trening dokumenti se odbijaju.
+- ⚠️ **Error handler u verifikaciji MORA biti fail-closed** — `catch` blok u `verifyDiploma()` je ranije vraćao `success: true` (auto-approve na grešku). Sada vraća `success: false`.
+- ⚠️ **Pogrešan tip dokumenta = rejected (ne manual_review)** — kad radnik upload-uje pogrešan dokument, status mora biti `rejected` da bi bio primoran da upload-uje ispravno
+
 **filter(Boolean) bug popravljen (12.02.2026)**
 - ⚠️ **NIKAD ne koristi `filter(Boolean)` za prover polja u profile completion** — `false` je validan odgovor za `lives_abroad` i `previous_visas` (korisnik je odgovorio "Ne"). Koristi `isFieldFilled()` helper iz `profile-completion.ts` koji razlikuje boolean odgovore od computed polja.
 - Isti fix primenjen u `funnel-metrics/route.ts`
@@ -385,9 +396,16 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~Automatsko matchovanje radnika sa poslodavcima~~
 - [x] ~~Email notifikacije za sve korake procesa~~
 - [ ] Prebaciti Coming Soon → Stripe checkout ($9 entry fee) kad bude spremno
+- [x] ~~**Automatsko generisanje dokumenata za vize** — UGOVOR, IZJAVA, OVLAŠĆENJE, POZIVNO PISMO (Sekcija 8)~~
 - [x] ~~Worker preferred_job: text → dropdown (sync sa employer)~~
 - [x] ~~Onboarding dropdown sync (lowercase → uppercase vrednosti)~~
 - [x] ~~Employer country dropdown (46 evropskih država)~~
+- [x] ~~**Admin Test Profiles** — admin može da pristupi worker i employer profilima za testiranje~~
+- [x] ~~**Manual Match** — admin može ručno da poveže radnika sa Job Request-om~~
+- [x] ~~**Edit Data API** — admin inline editovanje worker/employer/contract_data polja~~
+- [x] ~~**Re-Verification** — admin može ponovo da trigeruje AI verifikaciju dokumenata~~
+- [x] ~~**Bulk Generation** — generiše 4 DOCX dokumenta za SVE matchovane radnike~~
+- [x] ~~**Bulk ZIP Download** — download svih dokumenata u strukturiranom ZIP-u (IME PREZIME/ folderi)~~
 
 ### ⏸️ ČEKA SE (blokirano)
 - [ ] **WhatsApp integracija** — čeka se tax ID → bankovni račun → broj telefona na firmu
@@ -420,12 +438,26 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | Admin Workers | `src/app/admin/workers/` | Lista radnika |
 | Admin Worker Detail | `src/app/admin/workers/[id]/` | Detalji radnika |
 | GodModePanel | `src/components/GodModePanel.tsx` | Dev testiranje |
+| DocumentGenerator | `src/components/DocumentGenerator.tsx` | Admin: generiše 4 DOCX za radne vize |
+| ManualMatchButton | `src/components/admin/ManualMatchButton.tsx` | Admin: ručno matchovanje radnika → job |
+| ReVerifyButton | `src/components/admin/ReVerifyButton.tsx` | Admin: re-trigger AI verifikacije |
+| BulkDocumentActions | `src/components/admin/BulkDocumentActions.tsx` | Admin: bulk generisanje + ZIP download |
+
+### Admin API Routes:
+| Putanja | Metoda | Namena |
+|---|---|---|
+| `/api/admin/manual-match` | POST/GET | Ručno matchovanje kandidata → posao |
+| `/api/admin/edit-data` | POST | Inline editovanje user/employer/contract polja |
+| `/api/admin/re-verify` | POST | Re-trigger AI verifikacije dokumenta |
+| `/api/contracts/generate-all` | POST | Bulk generisanje DOCX za sve matchovane |
+| `/api/contracts/download-all` | POST | ZIP download svih dokumenata |
 
 ### Key Libraries:
 | Fajl | Namena |
 |---|---|
 | `src/lib/profile-completion.ts` | Shared profile completion — **single source of truth** za worker i employer |
 | `src/lib/email-templates.ts` | Svi email templateovi + strict `TemplateData` (bez `[key: string]: any`) |
+| `src/lib/docx-generator.ts` | DOCX generisanje iz šablona (docxtemplater + nationality mapping) |
 
 ### Cron Jobs (vercel.json):
 | Putanja | Raspored | Namena |
@@ -467,3 +499,131 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Success Stories** — pravi case studies sa video snimcima (oprema nabavljena: iPhone 17 Pro)
 - [ ] **Referral sistem** — radnik koji je uspešno plasiran preporučuje druge
 - [ ] **Multi-language support** — ključne instrukcije na jezicima radnika
+
+---
+
+## 8. 📄 GENERISANJE DOKUMENATA ZA RADNE VIZE
+
+> **Status:** ✅ IMPLEMENTIRANO — 14.02.2026
+>
+> Referentni fajlovi (lokalni offline pipeline sa svim popravkama): `C:\VIZE\NEPALCI\13.2.2026\`
+> Workflow sa detaljnim koracima: `C:\VIZE\NEPALCI\13.2.2026\.agent\workflows\generate-documents.md`
+
+### Šta treba da se generiše
+Za svakog matchovanog radnika se generišu **4 dokumenta**:
+
+| Dokument | Opis | Format |
+|---|---|---|
+| UGOVOR O RADU | Ugovor o radu — srpski levo, engleski desno (2 kolone) | DOCX → PDF |
+| IZJAVA O SAGLASNOSTI | Izjava o saglasnosti radnika | DOCX → PDF |
+| OVLAŠĆENJE | Ovlašćenje za zastupanje | DOCX → PDF |
+| POZIVNO PISMO | Pozivno pismo za vizu | DOCX → PDF |
+
+### Šta već postoji ✅
+- `api/contracts/prepare/route.ts` — sklapa `contract_data` iz match (radnik + poslodavac + job)
+- `contract_data` Supabase tabela — čuva sve podatke za ugovor
+- `gemini.ts → extractPassportData()` — AI čita pasoše (full_name, passport_number, nationality, DOB, expiry, gender, POB)
+- `documents` tabela sa `ai_extracted_data` JSON poljem
+
+### Šta fali ❌
+
+#### 1. Čisti DOCX šabloni sa placeholder-ima
+Šabloni treba da imaju generičke placeholder-e umesto konkretnih podataka:
+```
+{{WORKER_FULL_NAME}}       — ime i prezime radnika
+{{WORKER_FIRST_NAME}}      — samo ime
+{{WORKER_LAST_NAME}}       — samo prezime
+{{PASSPORT_NUMBER}}        — broj pasoša
+{{NATIONALITY_SR}}         — "državljanin Nepala" (srpski, padež)
+{{NATIONALITY_EN}}         — "Nepalese" (engleski)
+{{DATE_OF_BIRTH}}          — datum rođenja
+{{PLACE_OF_BIRTH}}         — mesto rođenja
+{{PASSPORT_ISSUE_DATE}}    — datum izdavanja pasoša
+{{PASSPORT_EXPIRY_DATE}}   — datum isteka pasoša
+{{PASSPORT_ISSUER}}        — izdavač pasoša
+{{EMPLOYER_NAME}}          — ime firme
+{{EMPLOYER_ADDRESS}}       — adresa firme
+{{EMPLOYER_PIB}}           — PIB firme
+{{EMPLOYER_MB}}            — matični broj firme
+{{EMPLOYER_DIRECTOR}}      — ime direktora
+{{JOB_TITLE_SR}}           — naziv posla (srpski)
+{{JOB_TITLE_EN}}           — naziv posla (engleski)
+{{JOB_DESC_SR_1}}          — opis posla bullet 1 (srpski)
+{{JOB_DESC_SR_2}}          — opis posla bullet 2 (srpski)
+{{JOB_DESC_SR_3}}          — opis posla bullet 3 (srpski)
+{{JOB_DESC_EN_1}}          — opis posla bullet 1 (engleski)
+{{JOB_DESC_EN_2}}          — opis posla bullet 2 (engleski)
+{{JOB_DESC_EN_3}}          — opis posla bullet 3 (engleski)
+{{SALARY_RSD}}             — plata u RSD
+{{CONTRACT_START_DATE}}    — datum početka
+{{CONTRACT_END_DATE}}      — datum kraja
+{{SIGNING_DATE_SR}}        — datum potpisivanja (srpski format)
+{{SIGNING_DATE_EN}}        — datum potpisivanja (engleski format)
+{{CONTACT_EMAIL}}          — mejl
+{{CONTACT_PHONE}}          — telefon
+{{WORKER_ADDRESS}}         — adresa radnika u matičnoj zemlji
+```
+
+> [!CAUTION]
+> **UGOVOR O RADU** ima **2-kolonski layout** (newspaper-style columns u DOCX). Srpski tekst ide u levu kolonu, engleski u desnu. NE koristiti tabele — koristiti DOCX section columns.
+
+> [!CAUTION]
+> **Opis posla ima 3 bullet-a po jeziku** — svaki bullet je zaseban paragraf u šablonu. NIKAD ne mapirati sve bullet-e na isti tekst jer to pravi 3x duplikaciju! Uvek `{{JOB_DESC_SR_1}}`, `{{JOB_DESC_SR_2}}`, `{{JOB_DESC_SR_3}}` zasebno.
+
+#### 2. Proširiti Gemini passport ekstrakciju
+Trenutno `extractPassportData()` ne izvlači:
+- `date_of_issue` — datum izdavanja pasoša (POTREBNO za UGOVOR i POZIVNO PISMO)
+- `issuing_authority` — izdavač pasoša (POTREBNO za POZIVNO PISMO)
+
+Dodati u:
+- `gemini.ts` → prompt i `PassportData` interface
+- `ai_extracted_data` JSON se automatski ažurira (nema schema promene u Supabase za ovo)
+
+#### 3. Proširiti `contract_data` tabelu
+Dodati kolone u Supabase:
+```sql
+ALTER TABLE contract_data 
+  ADD COLUMN candidate_passport_issue_date DATE,
+  ADD COLUMN candidate_passport_issuer TEXT;
+```
+
+#### 4. Server-side DOCX generisanje
+Implementirati API rutu (npr. `api/contracts/generate/route.ts`) koja:
+1. Čita `contract_data` za dati match
+2. Učitava DOCX šablon iz `public/templates/` ili Supabase Storage
+3. Zameni sve `{{PLACEHOLDER}}` sa pravim podacima
+4. Konvertuje DOCX → PDF (koristiti `docx-templates` ili `pizzip + docxtemplater` npm pakete)
+5. Upload PDF u Supabase Storage
+6. Vrati URL za download
+
+#### 5. Admin UI za generisanje
+Dugme "Generate Contracts" na admin match detail stranici:
+- Generiše sva 4 dokumenta
+- Prikazuje status (generating / done / error)
+- Link za download ZIP-a sa svim dokumentima
+
+### Dupla verifikacija (online + offline)
+
+```
+Upload pasoša → Gemini čita (online, primarni) → čuva u ai_extracted_data
+                                                      ↓
+Admin: "Generate Contracts" → sajt generiše DOCX/PDF iz šablona
+                                                      ↓
+Offline verifikacija: admin preuzme PDF-ove lokalno
+→ pokrene verify_all.py (provera legacy teksta i missing data)
+→ vizuelna provera (layout, podaci, duplikacije)
+→ gotovo
+```
+
+> [!IMPORTANT]
+> **Gemini je primarni izvor podataka** — Tesseract (lokalni OCR) se NE koristi kao dupli OCR jer je manje pouzdan.
+> Lokalna verifikacija je **rule-based** (provera formata, logičnosti) + **vizuelna** (PDF pregled).
+
+### ⚠️ Gotchas za dokument generisanje
+1. **Job description 3x duplikacija** — NIKAD ne mapirati sve 3 bullet linije opisa posla na isti ceo tekst. Svaka linija mora imati svoj zaseban placeholder.
+2. **Issuer** — za nepalske pasoše uvek `MOFA, DEPARTMENT OF PASSPORTS`. OCR/AI može da vrati garbage. Najbolje hardcoded po zemlji.
+3. **Encoding** — DOCX generisanje mora podržati UTF-8 (srpski znakovi: Č, Ć, Š, Ž, Đ).
+4. **Replacement sorting** — ako se radi string replacement (ne placeholder), sortirati parove LONGEST-FIRST.
+5. **DOCX run splitting** — Word deli tekst u run-ove nepredvidivo. Placeholder `{{NAME}}` može biti u 2-3 run-a. Koristiti biblioteku koja to handluje (docxtemplater).
+6. **Admin user counting** — kad se broje workeri iz auth usera, UVEK isključiti i `employer` I `admin` (`user_type !== 'employer' && user_type !== 'admin'`). Inače admin nalog ulazi u worker statistike.
+7. **Admin profile access** — admin mora proći `user_type` check na 3 mesta: server-side `page.tsx`, klijentski `EmployerProfileClient.tsx fetchData()`, i layout guard. Ako dodaš novu zaštitu, proveri SVA 3.
