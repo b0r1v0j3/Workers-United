@@ -33,6 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-signature-canvas": "^1.0.7",
+    "adm-zip": "^0.5.16",
     "eslint": "^9",
     "eslint-config-next": "^16.1.6",
     "tailwindcss": "^4",
