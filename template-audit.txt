@@ -1,0 +1,1085 @@
+
+
+========== UGOVOR_O_RADU.docx ==========
+Na osnovu čl. 30. i 33. Zakona o radu ("Sl. Glasnik RS", br.24/2005, 61/2005, 54/2009, 32/2013,
+ 
+75/2014,
+ 
+13/2017-OUS, 113/2017
+ 
+i
+95/2018
+ 
+-Autentično
+ 
+tumačenje),
+ 
+ugovarači:
+POSLODAVAC: {EMPLOYER_NAME}, sa
+sedištem u opstini: Novi Sad, ul. {EMPLOYER_ADDRESS}, maticni broj: {EMPLOYER_MB}, PIB: {EMPLOYER_PIB}, koga zastupa direktor {EMPLOYER_DIRECTOR}.
+ZAPOSLENI:{WORKER_FULL_NAME}, državljanin {NATIONALITY_SR_GENITIVE}, rođen {DATE_OF_BIRTH}. godine, broj pasoša {PASSPORT_NUMBER}, izdat od strane {PASSPORT_ISSUER}
+Zaključuju u {SIGNING_CITY}, dana {SIGNING_DATE_SR} godine sledeći
+Pursuant to article 30 and article 33 of the Employment Act ("Off. Herald of RS", 
+Nos.24/2005,
+61/2005,
+54/2009,
+32/2013,75/2014,13/2017-Decision of the CC, 
+113/2017
+and
+95/2018-authentici 
+interpretation), contracting parties:
+EMPLOYER: {EMPLOYER_NAME}, seated
+in {EMPLOYER_CITY} municipality, {EMPLOYER_ADDRESS} street, registration No: {EMPLOYER_MB}, Tax identification No: {EMPLOYER_PIB}, represented by director {EMPLOYER_DIRECTOR}.
+EMPLOYEE: {WORKER_FULL_NAME}, citizen of {NATIONALITY_EN}, born {DATE_OF_BIRTH}. passport no: {PASSPORT_NUMBER}, issued by {PASSPORT_ISSUER}
+Concluded in {SIGNING_CITY}, on {SIGNING_DATE_SR} following
+PREDLOG
+ 
+UGOVORA
+ 
+O
+ RADU
+EMPLOYMENT
+ 
+CONTRACT
+ 
+PROPOSAL
+Uslovi
+ 
+potrebni
+ 
+za
+ 
+radno
+ 
+mesto
+Poslodavac zasniva radni odnos sa zaposlenim na radnom mestu: {JOB_TITLE_SR}.
+Zaposleni
+ 
+je
+ 
+lice
+ 
+bez
+ 
+strucne
+ 
+spreme.
+U skladu sa opstim aktom Poslodavca za navedeno radon mesto se ne zahteva posebna stručna sprema.
+Dodatni uslov: poželjno poznavanje engleskog jezika—početni nivo.
+Naziv
+ 
+i
+ 
+opis
+ 
+poslova
+Zaposleni će obavljati poslove na radom mestu – {JOB_TITLE_SR}.
+Opis
+ 
+poslova:
+{JOB_DESC_SR_1}
+{JOB_DESC_SR_2}
+{JOB_DESC_SR_3}
+Conditions
+ 
+needed
+ 
+for
+ 
+the
+ 
+job
+ 
+position
+The employer establishes the employment relationship with the employee for the position: {JOB_TITLE_EN}.
+The employee has no professional 
+qualifications.
+Pursuant
+ 
+to
+ 
+general
+ 
+act
+ 
+of
+ 
+the
+ 
+Employer,
+ 
+no particular professional qualifications are required
+ 
+for
+ 
+the
+ 
+above
+ 
+mentioned
+ 
+position.
+Additional requirement: Desirable english language competency-beginner level.
+Name
+ 
+and
+ 
+Description
+ 
+of
+ 
+Jobs
+The employee shall work on a job position of {JOB_TITLE_EN}.
+Job
+ 
+Description
+ 
+for:
+{JOB_DESC_EN_1}
+{JOB_DESC_EN_2}
+{JOB_DESC_EN_3}
+mase,
+ 
+kao
+ 
+i
+ 
+korišćenje
+ 
+zaštitne
+ 
+opreme
+ 
+u skladu sa propisima.
+Pomoć pri pripremi i rasporedu materijala, utovar i istovar materijala ručno ili uz pomoć mehanizacije.
+Održavanje radne zone čistom i bezbednom, uz poštovanje svih pravila zaštite na radu.
+compounds, and using protective gear in compliance with safety regulations.
+Assisting in preparing and organizing materials, loading and unloading manually
+ 
+or
+ 
+with
+ 
+mechanical
+ 
+assistance.
+Keeping
+ 
+the
+ 
+work
+ 
+area
+ 
+clean
+ 
+and
+ 
+safe
+ 
+while
+ 
+strictly
+ 
+following
+ 
+workplace safety rules.
+Mesto
+ 
+rada
+Zaposleni ce obavljati poslove na teritoriji {EMPLOYER_CITY}, a po potrebi poslodavca na teritoriji cele Srbije.
+Vreme
+ 
+trajanja
+ 
+ugovora
+ 
+i
+ 
+datum
+ 
+stupanja na radu
+Zaposleni zasniva radni odnos na određeno vreme, počev od {CONTRACT_START_DATE}godine do {CONTRACT_END_DATE} godine.
+Zaposleni
+ 
+zasniva
+ 
+radni
+ 
+odnos
+ 
+na
+ 
+određeno vreme zbog ograničenog trajanja radne dozvole za zapošljavanje.
+Zaposleni je dužan da stupi na rad danom dobijanja radne dozvole od strane nadležnog organa Republike Srbije.
+Poslodavac se obavezuje da, najkasnije pre stupanja zaposlenog na rad, podnese sve propisane prijave na obavezno socijalno osiguranje i da blagovremeno uplaćuje doprinose u skladu sa zakonom.
+Radno
+ 
+vreme
+ 
+(Vrsta,
+ 
+trajanje
+ 
+i
+ 
+raspored)
+Zaposleni zasniva radni odnos sa punim radnim vremenom, u trajanju od 8 časova dnevno i 40 časova nedeljno.
+Place
+ 
+of
+ 
+work
+The employee will perform tasks in the territory of the City of {EMPLOYER_CITY}, and if necessary
+ 
+by
+ 
+the
+ 
+employer,
+ 
+in
+ 
+the
+ 
+territory of the whole of Serbia.
+Term
+ 
+of
+ 
+the
+ 
+Contract
+ 
+and
+ 
+Date
+ 
+of Commencement of work
+The employee establishes the employment relationship for a definite period of time starting on the {CONTRACT_START_DATE} up to the {CONTRACT_END_DATE}
+The
+ 
+employee
+ 
+establishes
+ 
+the
+ 
+employment relationship for a definite period of time due to time-limited work permit for 
+employment.
+The employee is hereby bound to commence his Work duties on the day of the
+ 
+starting
+ 
+date
+ 
+of his work
+ 
+permit
+ 
+issued by competent authority of the Republic of 
+Serbia.
+The employer is obliged to, at the latest prior
+ 
+to
+ 
+the
+ 
+moment
+ 
+of
+ 
+the employee’s Commencement of work, file a required application for mandatory social insurance and pay contributions in conformity with law.
+Working Hours 
+(Type,Duration,Schedule)
+The
+ 
+employee
+ 
+establishes
+ 
+the
+ 
+employment relationship with full-time working hours that is 8 hours per day and 40 hours per 
+week.
+O promeni radnog vremena poslodavac će zaposlenog obavestiti najmanje pet dana pre promene.
+Zaposleni prihvata da u toku rada bude raspoređen
+ 
+u
+ 
+slučaju
+ 
+potrebe
+ 
+procesa
+ 
+rada i organizacije rada,na svako radno mesto koje odgovara njegovoj stručnoj spremi.
+Naknada
+ 
+za
+ 
+rad
+ 
+-
+ 
+Zarada,
+ 
+naknada zarade i druga primanja
+Zaposlenom se utvrđuje zarada za poslove koje obavlja, koja ne može biti manja od minimalne zarade i to zarada zaposlenog utvrdena je u skladu sa zakonom u iznosu od 
+RSD
+ 
+{SALARY_RSD}
+ 
+neto
+ 
+mesečno,
+ 
+uvećano za pripadajuće poreze i doprinose.
+Zaposleni ima pravo na isplatu toplog obroka I pravo na isplatu regresa u skladu sa odlukom direktora.
+Po osnovu radnog učinka, zarada može da se uveća odnosno umanji po oceni 
+poslodavca.
+Zarada se isplaćuje u celosti do petog u tekućem mesecu za prethodni mesec.
+Odmori
+ 
+i
+ 
+odsustva
+Zaposleni ima pravo na godišnji odmor za svaku kalendarsku godinu u trajanju od najmanje 20 radnih dana.
+Zaposleni ima pravo na dvanaestinu godišnjeg odmora za svakih mesec dana rada u kalendarskoj godini u kojoj je prvi put zasnovao radni odnos ili u kojoj mu prestaje radni odnos.
+Naknada
+ 
+štete
+Poslodavac je dužan da organizuje rad kojim se obezbeđuje bezbednost, te
+ 
+zaštita života i zdravlja zaposlenog u skladu sa zakonom i drugim propisima. Zaposleni je
+The employer is obliged to inform the employee about the changes to the working hours schedule at least five days in advance.
+The employee gives his consent to be assigned to other working duties or position
+ 
+which
+ 
+are
+ 
+in
+ 
+accordance
+ 
+with
+ 
+his qualification if work processes and work organization so require.
+Compensation for work -Salary, Compensation
+ 
+of
+ 
+Salary,
+ 
+Other
+ 
+Earnings
+The employee is entitled to a salary determined for performing his work duties, which can’t be less than minimum wage, as follows: The employee' salary is determined in accordance with law in the amount
+ 
+of
+ 
+RSD
+ 
+{SALARY_RSD}
+ 
+netto
+ 
+per
+ 
+month, increased by the amount of taxes and contributions thereon.
+The employee is entitled to a refund of expenses for food during work and for subsidy for the use of annual leave in a accordance with director’s decisions.
+Based on
+ 
+work
+ 
+performance, salary can be raised or reduced by the employer’s 
+evaluation.
+Salary is to be paid in full amount by the fifth of the current month for the previous 
+month.
+Vacations
+ 
+and
+ 
+Leaves
+The
+ 
+employee
+ 
+is entitled
+ 
+to
+ 
+annual
+ 
+leave
+ 
+in theduration of no less than 20 work days for every calendar year.
+The
+ 
+employee
+ 
+is
+ 
+entitled
+ 
+to
+ 
+a
+ 
+twelfth
+ 
+of
+ 
+the annual leave
+ 
+for every working month
+ 
+in a calendar year in which he establishes the employment relationship for the
+ 
+first time or
+ 
+in
+ 
+which
+ 
+the
+ 
+employment
+ 
+relationship
+ 
+is 
+terminated.
+Tort
+ 
+liablity
+The employer is obliged to organize work in such way that it secures safety and protection of life and health in conformity with
+ 
+the
+ 
+law
+ 
+and
+ 
+other
+ 
+regulations.
+dužan da se pridržava propisanih mera bezbednosti I zaštite života i zdravlja na 
+radu.
+Zaposleni izjavljuje da nema zdravstvenih ograničenja koja mogu uticati na nesmetano
+ 
+obavljanje
+ 
+poslova
+ 
+predviđenih ovim ugovorom.
+Poslodavac je dužan da zaposlenom nadoknadi
+ 
+štetu
+ 
+koju
+ 
+ovaj
+ 
+pretrpi
+ 
+u
+ 
+slučaju povrede na radu ili u vezi sa radom.
+Zaposleni je odgovoran za štetu koju je, na radu ili u vezi sa radom, namerno ili iz 
+krajnje
+nepažnje
+prouzrokovao poslodavcu.
+Postojanje
+ 
+štete,
+ 
+njenu
+ 
+visinu
+ 
+i
+ 
+odgovornost zaposlenog
+ 
+utvrđuje
+ 
+poslodavac
+ 
+na
+ 
+predlog neposrednog rukovodioca koji je dužan da sasluša zaposlenog.
+Poslodavac može, u opravdanim slučajevima delimično (ili potpuno) osloboditi zaposlenog od naknade štete koju je prouzrokovao, osim ako je štetu prouzrokovao namerno.
+Predlog za oslobađanje od naknade štete može podneti zaposleni.
+Otkaz
+ ugovora
+Svaka od ugovornih strana može otkazati ovaj ugovor, pod uslovima, u slučajevima i procedure utvrđenim zakonom, opštim aktom i ugovorom o radu.
+Otkazom ugovora o radu u saglasnosti sa zakonom,
+ 
+prestaje
+ 
+radni
+ 
+odnos
+ 
+zaposlenog.
+Poslodavac može zaposlenom da otkaže ugovoro radu ako za to postoji opravdani razlog koji se odnosi na radnu sposobnost zaposlenog i njegovo ponašanje.
+Poslodavac može da otkaže ugovor o radu zaposlenom koji svojom krivicom učini povredu radne obaveze.
+Poslodavac može da otkaže ugovor o radu zaposlenom koji ne poštuje radnu 
+disciplinu.
+Employee
+ 
+is obliged
+ 
+to
+ 
+respect
+ 
+regulations on safety and protection of life and health at work.
+The employee herby states that they have no health disabilities which may affect their capability to perform their agreed work duties without difficulties.
+The employer is obliged to pay to the employee a compensation of damage sustained due to an injury sustained at work or related to work.
+The Employee is liable for the damage he causes to the employer, at work or in relation to work, with intent or by gross 
+negligence.
+Damage existence, its’ amount and the employee’s liability is determined by the employer upon receiving the proposal of immediate supervisor, who is obliged to hear out the employee.
+The employer can, due to justifiable reasons, partially (or fully) relieve the employee of compensation for damage caused, unless the damage was caused 
+intentionally.
+The employee can file a proposal for excused from liability for the damage 
+caused.
+Termination
+ 
+of
+ 
+Employment
+ 
+Contract
+Each of the contracting parties can cancel this contract, under conditions, in cases and following procedures as determined by law, by law and employment contract.
+By cancellation of employment contract in accordance with the law, the employment relationship is terminated.
+The
+ 
+employer may
+ 
+cancel
+ 
+the employment contract for just cause which relates to employee’s work ability and his conduct.
+The
+ 
+employer
+ 
+may
+ 
+cancel
+ 
+the employment contract of the employee who on his own fault commits a breach of a work duty.
+The
+ 
+employer
+ 
+may
+ 
+cancel
+ 
+the employment contract of an employee who does not respect the work discipline.
+The employee’s employment relationship may
+ 
+be
+ 
+terminated
+ 
+if
+ 
+there
+ 
+is
+ 
+a
+ 
+valid
+ 
+reason
+Zaposlenom
+ 
+može
+ 
+da
+ 
+prestane
+ 
+radni
+ 
+odnos ako zato postoji opravdan razlog koji se odnosi na potrebe poslodavca I to :
+ako
+ 
+usled
+ 
+tehnoloških,ekonomskih ili organizacionih promena prestane potreba za obavljanjem određenog posla ili dođe do smanjenja obima posla;
+ako odbije zaključenje aneksa ugovora
+ 
+u
+ 
+smislu
+ 
+člana
+ 
+171.
+ 
+stav
+ 
+1. tač. 1-5)ovog Zakona o radu.
+Ugovor o radu je moguće raskinuti i sporazumom ugovornih strana,u kom slučaju sporazumom regulišu međusobna prava i obaveze, u skladu sa zakonom,opštim
+ 
+aktom
+ 
+I
+ 
+ugovorom
+ 
+o
+ 
+radu.
+Završne
+ 
+odredbe
+Zaposleni i poslodavac prihvataju da se na sva prava,obaveze i odgovornosti koja nisu
+ 
+utvrđena
+ 
+o
+ 
+vim
+ 
+ugovorom,
+ 
+primenju
+ 
+ju odgovarajuće odredbe zakona i opsteg 
+akta.
+U
+ 
+slucaju
+ 
+spora
+ 
+po
+ 
+ovom
+ 
+ugovoru
+ 
+koji
+ 
+se ne moze resiti dogovorom ugovornih strana,odgovorna je nadleznost Osnovnog suda u Beogradu.
+Ugovorne
+ 
+strane
+ 
+saglasno
+ 
+konstatuju
+ 
+da su procitale I razumele odredbe ovog ugovora i da prihvataju iste, to potvrduju svojim potpisima na ovom ugovoru.
+U slucaju jezickih nedoumica,vazeca je verzija
+ 
+ugovora na srpskom jeziku.
+Ovaj
+ 
+ugovor
+ 
+je
+ 
+sacinjen
+ 
+u
+ 
+4
+ 
+primerka,
+ 
+od kojih zaposleni zadrzava 1 primerak,a poslodavac 3 primerka.
+relating to the employer's needs, as follows: 1) If as a result of technological, economic or organizational changes, the need to perform a specific job ceases, or there
+ 
+is a
+ 
+decrease
+ 
+in workload;
+ 
+2) If
+ 
+they refuse to conclude the annex of the contract in terms of Article 171,paragraph1,items1-5) of Employment 
+Act.
+Employment contract is cancellable by anagreement between contracting
+ 
+parties, in
+ 
+which
+ 
+cas
+ 
+emutual
+ 
+rights
+ 
+and
+ 
+obligations are regulated by the agreement in accordance with the law,the by law and employment contract.
+Final
+ 
+provisions
+The employee and the employer accept that the relevant provisions of
+ 
+the law and by law apply to the rights, obligations and responsibilities which were not specified by the employment contract.
+Any dispute between the parties in connection
+ 
+with
+ 
+this
+ 
+contract,
+ 
+unless
+ 
+it
+ 
+can be
+ 
+resolved
+ 
+internally,
+ 
+shall
+ 
+be
+ 
+resolved
+ 
+by Basic Courtin Belgrade.
+Contracting parties hereby declare that they
+ 
+have
+ 
+read,
+ 
+understood and agreed to the terms and conditions set in this contract which they confirm by their 
+signature.
+In
+ 
+the
+ 
+event
+ 
+of
+ 
+any
+ 
+linguistic
+ 
+doubts,
+ 
+the Serbian version of this contract shall 
+prevail.
+This contract is made in four identical copies of which the employee keeps one and the employer keeps three.
+Za
+ 
+poslodavca/for
+ 
+Employer
+Employee
+ 
+{EMPLOYER_DIRECTOR}
+{WORKER_FULL_NAME}
+
+========== IZJAVA_O_SAGLASNOSTI.docx ==========
+IZJAVA O SAGLASNOSTI
+Saglasan sam da moj poslodavac {EMPLOYER_NAME} (matični broj {EMPLOYER_MB}), sa sedištem na adresi ul. {EMPLOYER_ADDRESS}, aplicira i podnese u moje ime i za moj račun zahtev za izdavanje vize D (viza za duži boravak) po osnovu zapošljavanja.
+Ova izjava data je iz navedenih razloga, a radi postupanja pred državnim organima Republike Srbije i ne može se koristiti u druge svrhe.
+U {NATIONALITY_SR_LOCATIVE}, 
+{SIGNING_DATE_SR} godine   
+/ In {NATIONALITY_EN}
+{SIGNING_DATE_EN}                                                                       
+STATEMENT OF CONSENT
+I consent to my employer, {EMPLOYER_NAME} (Company Registration Number: {EMPLOYER_MB}), with its registered office at {EMPLOYER_ADDRESS}, {EMPLOYER_CITY}, applying for and submitting on my behalf and for my account, a request for the issuance of a D visa (long-stay visa) based on employment.
+This statement is given for the  
+aforementioned reasons, for the purpose of proceedings before the state authorities of the Republic of Serbia, and may not be used for any other purposes.
+Davalac saglasnosti / Granter of Consent
+__________________________________
+ {WORKER_FULL_NAME}, br. pasoša {PASSPORT_NUMBER}
+
+========== OVLASCENJE.docx ==========
+OVLAŠĆENJE ZA PODNOŠENJE ZAHTEVA
+ 
+Ja, {WORKER_FULL_NAME}, iz {NATIONALITY_SR_GENITIVE}, sa pašošem broj {PASSPORT_NUMBER}, i mestom prebivališta {WORKER_ADDRESS}, dajem ovlašćenje i ovlašćujem kompaniju “{EMPLOYER_NAME}”, iz Republike Srbije, {EMPLOYER_CITY}, {EMPLOYER_ADDRESS}, PIB {EMPLOYER_PIB}, Matični broj {EMPLOYER_MB}, osnovana {EMPLOYER_FOUNDING_DATE}. godine, rešenjem iz Agencije za Privredne registe {EMPLOYER_APR_NUMBER}, da može u moje ime i za moj račun da aplicira za vizu D, radi mog dolaska u Republiku Srbiju i zasnivanja radnog odnosa sa kompanijom “{EMPLOYER_NAME}”.
+                                                                                              
+DAVALAC OVLAŠĆENJA
+                                                                                                                 NAME&amp;SURNAME:{WORKER_FULL_NAME}
+                                                                                                                 PASSPORT NUMBER: {PASSPORT_NUMBER}
+{WORKER_ADDRESS}
+                                                                                                                ________________________________
+                                                                                                                SIGNATURE
+
+========== POZIVNO_PISMO.docx ==========
+Позивар
+ 
+је
+ 
+правно
+ 
+лице
+ПОЗИВНО
+ 
+ПИСМО
+  {EMPLOYER_FULL_REFERENCE}
+назив и
+ 
+седиште
+ 
+правног
+ 
+лица
+   {EMPLOYER_MB}
+{EMPLOYER_DIRECTOR}
+Матични
+ 
+бр.
+ 
+у
+ 
+регистру
+име
+ 
+и
+ 
+презиме особе
+ 
+овлашћене 
+за
+ 
+заступање
+Овим
+ 
+позивам:
+ИМЕ / NAME
+{WORKER_LAST_NAME}
+ПРЕЗИМЕ / SURNAME
+{WORKER_FIRST_NAME}
+                                                                     ДАТУМ РОЂЕЊА / DATE OF BIRTH        {DATE_OF_BIRTH}
+                                            МЕСТО РОЂЕЊА / PLACE OF BIRTH     
+     {PLACE_OF_BIRTH}
+ДРЖАВЉАНИН / CITIZENSHIP
+ {NATIONALITY_EN}
+                                                        БРОЈ ПАСОША / PASSPORT NO
+{PASSPORT_NUMBER}
+                                                   ИЗДАТ У / PLACE OF ISSUE
+ {PASSPORT_ISSUER}
+                                                            ДАТУМ ИЗДАВАЊА / DATE OF ISSUE     {PASSPORT_ISSUE_DATE}
+                                            ВАЖИ ДО / DATE OF EXPIRY
+  {PASSPORT_EXPIRY_DATE}
+  ПРЕБИВАЛИШТЕ И БОРАВИШТЕ  {WORKER_ADDRESS}              
+    ЗАНИМАЊЕ / PROFESSION  {JOB_TITLE_SR} 
+   БРОЈ
+ 
+ПОСЕТА /
+ 
+NO.
+ 
+OFATTENDANCE  
+ 
+  1 JEDNA (ONE)
+У ПЕРИОДУ ОД / IN STATE ON
+ {CONTRACT_START_DATE}
+ДO/ TO     {CONTRACT_END_DATE}
+С
+ 
+тим
+ 
+што
+ 
+ће
+ 
+укупно
+ 
+трајање
+ 
+боравка
+ 
+у
+ 
+Републици
+ 
+Србији
+ 
+бит
+и
+ 180 дана
+ 
+у
+ 
+сврху
+ 
+наставка
+ 
+пословне
+ 
+сарадње,
+ 
+будући
+ 
+да
+ 
+је
+ 
+особа
+ 
+већ
+ 
+боравила
+ 
+у
+ 
+Србији
+ 
+поводом
+ 
+тога.
+Именовани
+ 
+ће
+ 
+боравити
+ 
+на
+ 
+адреси
+ 
+ 
+{ACCOMMODATION_ADDRESS}
+                                                                                   
+назив
+ 
+хотела
+ 
+и
+ 
+адреса    
+Особа за контакт за сва обавештења је   {EMPLOYER_DIRECTOR}
+     Direktor {CONTACT_PHONE}               
+{CONTACT_EMAIL}
+                                                           
+радна
+ 
+функција,
+ 
+broj телефона
+ 
+и
+ 
+факс
+Овим се обавезујемо да ћемо према потреби сносити све трошкове произишле из
+ 
+боравка
+ 
+именованог
+ 
+у
+ 
+Републици
+ 
+Србији,
+ 
+укључујући
+ 
+и
+ 
+трошкове
+ 
+смештаја
+ 
+и
+ 
+издржавања, као и евентуалне трошкове принудног удаљења Републике Србије.
+ 
+Обавезујемo се и да ћемо испунити све обавезе именованог које настану према
+ 
+Министарству
+ 
+унутрашњих
+ 
+послова
+ 
+Републике
+ 
+Србије
+ 
+евентуалним
+ 
+смештајем
+ 
+именованог
+ 
+у
+ 
+Прихватни
+ 
+центар
+ 
+до
+ 
+принудног
+ 
+удаљења из
+ 
+Републике
+ 
+Србије.
+У
+{SIGNING_CITY}
+дана
+{SIGNING_DATE_SR}год.
+(
+место)
+(датум)
+4046855
+144145
+(потпис
+ 
+и
+ 
+печат
+ 
+позивара)
+Напомена: 
+Према Члану 27. Закона о странцима „ Позивар се позивним писмом обавезује да ће сносити
+ 
+трошкове
+ 
+боравка
+ 
+и
+ 
+принудног
+ 
+удаљења
+ 
+странца
+ 
+са
+ 
+територије
+ 
+Републике
+ 
+Србије,
+ 
+као
+ 
+и
+ 
+трошкове
+ 
+евентуалног боравка и смештаја странца у прихватилишту за странце, уколико се они не могу наплатити
+ 
+од
+ 
+странца.
+ 
+“
