@@ -40,6 +40,7 @@ export interface ContractDataForDocs {
     employer_address: string;
     employer_representative_name: string;
     employer_mb?: string | null;
+    employer_city?: string | null;
     employer_director?: string | null;
 
     // Job
@@ -227,7 +228,7 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
         EMPLOYER_FULL_REFERENCE: [
             data.employer_company_name,
             data.employer_address,
-            "NOVI SAD",
+            data.employer_city || "NOVI SAD",
         ].filter(Boolean).join(", "),
         EMPLOYER_ADDRESS: data.employer_address || "___________",
         EMPLOYER_MB: data.employer_mb || "___________",

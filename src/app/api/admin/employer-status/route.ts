@@ -14,11 +14,11 @@ export async function PATCH(request: NextRequest) {
         // Check admin access
         const { data: profile } = await supabase
             .from("profiles")
-            .select("role")
+            .select("user_type")
             .eq("id", user.id)
             .single();
 
-        if (profile?.role !== "admin" && !isGodModeUser(user.email)) {
+        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: "employerId and status are required" }, { status: 400 });
         }
 
-        const validStatuses = ["active", "pending", "rejected"];
+        const validStatuses = ["PENDING", "ACTIVE", "VERIFIED", "REJECTED", "SUSPENDED"];
         if (!validStatuses.includes(status)) {
             return NextResponse.json({ error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` }, { status: 400 });
         }

@@ -45,7 +45,11 @@ export async function createCheckoutSession() {
         if (session.url) {
             redirect(session.url);
         }
-    } catch (err) {
+    } catch (err: any) {
+        // Next.js redirect() works by throwing — don't catch it
+        if (err?.digest?.startsWith("NEXT_REDIRECT")) {
+            throw err;
+        }
         console.error("Stripe error:", err);
         throw new Error("Failed to create checkout session.");
     }

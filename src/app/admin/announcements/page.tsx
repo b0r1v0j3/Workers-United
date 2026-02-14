@@ -13,12 +13,12 @@ export default async function AnnouncementsPage() {
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("user_type")
         .eq("id", user.id)
         .single();
 
     const isOwner = isGodModeUser(user.email);
-    if (profile?.role !== 'admin' && !isOwner) {
+    if (profile?.user_type !== 'admin' && !isOwner) {
         redirect("/profile");
     }
 

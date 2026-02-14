@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
                 employer_pib: employer.pib,
                 employer_address: employer.company_address || employer.accommodation_address,
                 employer_representative_name: employer.profiles?.full_name,
-                employer_mb: employer.mb || null,
+                employer_mb: null, // MB ne postoji na employers tabeli, admin popunjava ručno
                 employer_director: employer.profiles?.full_name,
 
                 // Job data
@@ -172,6 +172,17 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Admin-only check
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.user_type !== "admin") {
+        return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
     const { data: contractData, error } = await supabase

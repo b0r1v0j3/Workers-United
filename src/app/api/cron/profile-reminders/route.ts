@@ -13,9 +13,7 @@ export async function GET(request: Request) {
     // Verify cron secret (Vercel sends this header)
     const authHeader = request.headers.get("authorization");
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        if (process.env.CRON_SECRET) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
@@ -110,7 +108,7 @@ export async function GET(request: Request) {
                 const docs = docsByUser.get(userId) || [];
 
                 // NEVER delete paid workers or workers with accepted offers
-                if (candidate?.status === "IN_QUEUE" || candidate?.status === "OFFER_ACCEPTED") {
+                if (candidate?.status === "IN_QUEUE" || candidate?.status === "OFFER_PENDING") {
                     continue;
                 }
 

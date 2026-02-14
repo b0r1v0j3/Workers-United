@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateAllDocuments, validateContractData, type DocumentType, type ContractDataForDocs } from "@/lib/docx-generator";
 
 export const dynamic = "force-dynamic";
@@ -55,10 +55,7 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const adminSupabase = createSupabaseAdmin(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
+        const adminSupabase = createAdminClient();
 
         const results = {
             generated: 0,
@@ -93,7 +90,7 @@ export async function POST(request: NextRequest) {
                 const documents = await generateAllDocuments(contractData as ContractDataForDocs);
 
                 const workerName = (contractData.candidate_full_name || "unknown")
-                    .replace(/[^a-zA-Z0-9\s]/g, "")
+                    .replace(/[^\p{L}\p{N}\s]/gu, "")
                     .replace(/\s+/g, "_");
 
                 const storagePath = `contracts/${contractData.match_id}`;
@@ -104,7 +101,7 @@ export async function POST(request: NextRequest) {
                     const fullPath = `${storagePath}/${fileName}`;
 
                     const { error: uploadError } = await adminSupabase.storage
-                        .from("documents")
+                        .from("candidate-docs")
                         .upload(fullPath, buffer, {
                             contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                             upsert: true,
@@ -115,14 +112,14 @@ export async function POST(request: NextRequest) {
                     }
 
                     const { data: urlData } = adminSupabase.storage
-                        .from("documents")
+                        .from("candidate-docs")
                         .getPublicUrl(fullPath);
 
                     generatedDocs[docType] = urlData.publicUrl;
                 }
 
                 // Update contract_data
-                await supabase
+                await adminSupabase
                     .from("contract_data")
                     .update({
                         generated_documents: generatedDocs,

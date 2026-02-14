@@ -35,9 +35,9 @@ export async function GET(request: Request) {
 
         // 2. Fetch Verified Candidates (those with at least one verified passport document)
         const { data: verifiedDocs, error: docsError } = await supabase
-            .from('documents')
-            .select('candidate_id')
-            .eq('verification_status', 'verified')
+            .from('candidate_documents')
+            .select('user_id')
+            .eq('status', 'verified')
             .eq('document_type', 'passport');
 
         if (docsError) {
@@ -45,20 +45,20 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: docsError.message }, { status: 500 });
         }
 
-        const verifiedCandidateIds = verifiedDocs?.map(d => d.candidate_id) || [];
+        const verifiedUserIds = verifiedDocs?.map(d => d.user_id) || [];
 
-        if (verifiedCandidateIds.length === 0) {
+        if (verifiedUserIds.length === 0) {
             return NextResponse.json({ message: "No verified candidates to match", matched_count: 0 });
         }
 
-        // Fetch candidate details for verified IDs
+        // Fetch candidate details for verified user IDs
         const { data: candidates, error: candidatesError } = await supabase
             .from('candidates')
             .select(`
                 *,
                 profiles!inner(*)
             `)
-            .in('id', verifiedCandidateIds);
+            .in('profile_id', verifiedUserIds);
 
         if (candidatesError) {
             console.error("[Job Match] Error fetching candidates:", candidatesError);

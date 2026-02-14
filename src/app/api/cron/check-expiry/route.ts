@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendOfferNotification, sendOfferExpiredNotification } from "@/lib/notifications";
 
 // Vercel Cron: runs every hour
@@ -9,13 +9,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 60 second timeout for edge functions
 
 export async function GET(request: Request) {
-    // Verify cron secret (optional security)
+    // Verify cron secret
     const authHeader = request.headers.get("authorization");
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const now = new Date().toISOString();
 
     const results = {
@@ -60,9 +60,16 @@ export async function GET(request: Request) {
 
                     // Send expiry notification
                     try {
+                        // Fetch profile to get email and name
+                        const { data: candidateProfile } = await supabase
+                            .from("profiles")
+                            .select("email, full_name")
+                            .eq("id", offer.candidates?.profile_id)
+                            .single();
+
                         await sendOfferExpiredNotification({
-                            candidateEmail: offer.candidates?.profile_id, // needs join to profiles
-                            candidateName: offer.candidates?.phone || "Candidate",
+                            candidateEmail: candidateProfile?.email || "",
+                            candidateName: candidateProfile?.full_name || "Candidate",
                             jobTitle: offer.job_requests?.title || "Position",
                             queuePosition: offer.candidates?.queue_position || 0,
                         });
@@ -136,7 +143,7 @@ export async function GET(request: Request) {
 }
 
 async function shiftOfferToNextCandidate(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: ReturnType<typeof createAdminClient>,
     expiredOffer: {
         id: string;
         job_request_id: string;

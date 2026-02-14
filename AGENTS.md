@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 14.02.2026 (Sprint 3 — admin panel enhancements: test profiles, manual match, edit data, re-verify, bulk docs, ZIP download)
+> **Poslednje ažuriranje:** 14.02.2026 (Sprint 3 — admin panel: document preview, favicon fix, test profiles, manual match, edit data, re-verify, bulk docs, ZIP download)
 
 ---
 
@@ -216,6 +216,11 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**Document Preview + Favicon Fix (14.02.2026)**
+- **Admin Document Preview** — nova komponenta `DocumentPreview.tsx` na worker detail stranici prikazuje SVE placeholder vrednosti koje idu u DOCX dokumenta (radnik, pasoš, nacionalnost, poslodavac, posao, datumi, kontakt). Nedostajuća polja su crveno označena.
+- **API endpoint** — `GET /api/contracts/preview?profileId=...` koristi postojeću `buildPlaceholderData()` iz `docx-generator.ts` za potpuno tačan preview.
+- **Favicon fix** — obrisan stari `src/app/favicon.ico` (Vercel default). `layout.tsx` metadata `icons: { icon: '/logo.png' }` sada radi jer ga `favicon.ico` više ne override-uje.
 
 **Performance Optimization (11.02.2026)**
 - Homepage sad statički keširan (uklonjen `force-dynamic`, auth prebačen na klijentsku stranu u `UnifiedNavbar.tsx`)
@@ -442,6 +447,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | ManualMatchButton | `src/components/admin/ManualMatchButton.tsx` | Admin: ručno matchovanje radnika → job |
 | ReVerifyButton | `src/components/admin/ReVerifyButton.tsx` | Admin: re-trigger AI verifikacije |
 | BulkDocumentActions | `src/components/admin/BulkDocumentActions.tsx` | Admin: bulk generisanje + ZIP download |
+| DocumentPreview | `src/components/admin/DocumentPreview.tsx` | Admin: preview placeholder podataka za DOCX dokumente |
 
 ### Admin API Routes:
 | Putanja | Metoda | Namena |
@@ -451,6 +457,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | `/api/admin/re-verify` | POST | Re-trigger AI verifikacije dokumenta |
 | `/api/contracts/generate-all` | POST | Bulk generisanje DOCX za sve matchovane |
 | `/api/contracts/download-all` | POST | ZIP download svih dokumenata |
+| `/api/contracts/preview` | GET | Preview placeholder podataka za DOCX dokumente |
 
 ### Key Libraries:
 | Fajl | Namena |
@@ -627,3 +634,19 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 5. **DOCX run splitting** — Word deli tekst u run-ove nepredvidivo. Placeholder `{{NAME}}` može biti u 2-3 run-a. Koristiti biblioteku koja to handluje (docxtemplater).
 6. **Admin user counting** — kad se broje workeri iz auth usera, UVEK isključiti i `employer` I `admin` (`user_type !== 'employer' && user_type !== 'admin'`). Inače admin nalog ulazi u worker statistike.
 7. **Admin profile access** — admin mora proći `user_type` check na 3 mesta: server-side `page.tsx`, klijentski `EmployerProfileClient.tsx fetchData()`, i layout guard. Ako dodaš novu zaštitu, proveri SVA 3.
+8. **Storage bucket je `candidate-docs`** — NIKAD ne koristiti `from("documents")` za storage. Bucket `documents` NE POSTOJI. Jedini bucket je `candidate-docs`. Generisani DOCX ugovori idu u `candidate-docs/contracts/{matchId}/`.
+9. **Whitelist za edit-data mora da odgovara stvarnoj DB šemi** — pre dodavanja kolone u whitelist, PROVERI da kolona zaista postoji u tabeli (FULL_SETUP.sql + migracije). Phantom kolone u whitelistu = tihi fail.
+10. **CHECK constraint na candidates.status** — dozvoljene vrednosti: `NEW, DOCS_REQUESTED, DOCS_RECEIVED, UNDER_REVIEW, APPROVED, REJECTED, IN_QUEUE, OFFER_PENDING, VISA_PROCESS_STARTED, REFUND_FLAGGED`. Svaka druga vrednost → DB error.
+11. **JS operator precedence u ternary** — `A || B ? C : D` se evaluira kao `(A||B) ? C : D`, NE kao `A || (B ? C : D)`. Uvijek stavljaj zagrade.
+12. **Unicode u regex** — za srpska imena (Č, Ć, Š, Ž, Đ) koristiti `\p{L}` sa `u` flagom, NIKAD `[A-Z]`.
+13. **`profiles` tabela NEMA `role` kolonu** — kolona se zove `user_type`. NIKAD ne koristiti `profile?.role`. Svuda koristiti `profile?.user_type !== 'admin'`. Ovo je bila sistemska greška u 14 fajlova.
+14. **Employer status vrednosti su UPPERCASE** — DB CHECK dozvoljava samo `PENDING`, `VERIFIED`, `REJECTED`. NIKAD lowercase `active/pending/rejected`.
+15. **Admin auth check pattern** — za API rute: `select("user_type")` + `profile?.user_type !== "admin"`. Za stranice: isti pattern + `isGodModeUser()` fallback. Za server actions: samo `user_type`, bez godmode.
+16. **Webhook/Cron rute MORAJU koristiti `createAdminClient()`** — `createClient()` zahteva auth cookies. Stripe webhooks, WhatsApp webhooks, i Vercel cron jobs NEMAJU cookies. Sve DB operacije će tiho da failuju. Uvek koristiti `createAdminClient()` za ove rute.
+17. **`OFFER_ACCEPTED` status NE POSTOJI u candidates CHECK constraint** — dodaj ga SQL migracijom pre nego što offers/stripe flow radi. Trenutno CHECK dozvoljava: `NEW, DOCS_REQUESTED, DOCS_RECEIVED, UNDER_REVIEW, APPROVED, REJECTED, IN_QUEUE, OFFER_PENDING, VISA_PROCESS_STARTED, REFUND_FLAGGED`.
+18. **`payments` tabela schema drift** — kod koristi `user_id` i `amount`, ali FULL_SETUP.sql ima `profile_id` i `amount_cents`. Proveri produkcijsku bazu pre promene koda.
+19. **Next.js `redirect()` u try/catch** — `redirect()` radi tako što THROWUJE specijalan error sa `digest: "NEXT_REDIRECT"`. Ako imaš try/catch, MORAŠ re-throwovati: `if (err?.digest?.startsWith("NEXT_REDIRECT")) throw err;`. Inače redirect nikad neće raditi.
+20. **Admin stranice zahtevaju EKSPLICITAN auth check** — `AppShell variant="admin"` NE štiti stranicu. Svaka admin `page.tsx` MORA imati `profiles.user_type === 'admin'` check. Bez toga, SVAKI ulogovani korisnik može da vidi admin dashboard, queue, jobs.
+21. **`email_queue.read_at` kolona** — notifications API čita/piše `read_at`, ali je kreirana tek u migraciji `007_round10_fixes.sql`. Ako migracija nije pokrenuta, notifications endpoint crashuje.
+22. **Supabase `.in()` sa praznim nizom crashuje** — `.in("id", [])` baca error. UVEK koristi guard: `.in("id", ids.length > 0 ? ids : ["__none__"])`. Videti `document-status/route.ts` za ispravan pattern.
+23. **`verify-document` storage/DB ops moraju koristiti admin klijent za admin pozive** — kada admin triggeruje re-verify (preko `/api/admin/re-verify`), `verify-document` prima admin-ove cookies. Ali storage operacije (upload/remove/update) koriste RLS. Admin ne može menjati tuđe fajlove preko RLS-bound klijenta. Koristiti `storageClient = isAdmin ? createAdminClient() : supabase` pattern.

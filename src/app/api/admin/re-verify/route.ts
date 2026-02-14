@@ -17,11 +17,11 @@ export async function POST(request: NextRequest) {
         // Admin check
         const { data: profile } = await supabase
             .from("profiles")
-            .select("role, user_type")
+            .select("user_type")
             .eq("id", user.id)
             .single();
 
-        if (profile?.role !== "admin" && profile?.user_type !== "admin") {
+        if (profile?.user_type !== "admin") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Call the existing verify-document endpoint internally
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : "http://localhost:3000";
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+            || process.env.NEXT_PUBLIC_APP_URL
+            || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
         const verifyRes = await fetch(`${baseUrl}/api/verify-document`, {
             method: "POST",
@@ -77,10 +77,8 @@ export async function POST(request: NextRequest) {
                 Cookie: request.headers.get("cookie") || "",
             },
             body: JSON.stringify({
-                documentId: doc.id,
-                documentType: doc.document_type,
-                imageUrl: storageUrl,
-                userId: doc.user_id,
+                candidateId: doc.user_id,
+                docType: doc.document_type,
             }),
         });
 
