@@ -42,6 +42,8 @@ export interface ContractDataForDocs {
     employer_mb?: string | null;
     employer_city?: string | null;
     employer_director?: string | null;
+    employer_founding_date?: string | null;
+    employer_apr_number?: string | null;
 
     // Job
     job_title: string;
@@ -57,6 +59,10 @@ export interface ContractDataForDocs {
     // Contact
     contact_email?: string | null;
     contact_phone?: string | null;
+
+    // Accommodation & signing
+    accommodation_address?: string | null;
+    signing_city?: string | null;
 }
 
 // ─── Nationality Mappings ────────────────────────────────────────────────────
@@ -232,8 +238,11 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
         ].filter(Boolean).join(", "),
         EMPLOYER_ADDRESS: data.employer_address || "___________",
         EMPLOYER_CITY: data.employer_city || "___________",
+        EMPLOYER_PIB: data.employer_pib || "___________",
         EMPLOYER_MB: data.employer_mb || "___________",
         EMPLOYER_DIRECTOR: data.employer_director || data.employer_representative_name || "___________",
+        EMPLOYER_FOUNDING_DATE: data.employer_founding_date || "___________",
+        EMPLOYER_APR_NUMBER: data.employer_apr_number || "___________",
 
         // Job data
         JOB_TITLE_SR: data.job_title || "___________",
@@ -244,6 +253,9 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
         JOB_DESC_EN_1: descEn1,
         JOB_DESC_EN_2: descEn2,
         JOB_DESC_EN_3: descEn3,
+        SALARY_RSD: data.salary_rsd
+            ? new Intl.NumberFormat("sr-RS", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(data.salary_rsd)
+            : "___________",
 
         // Dates
         CONTRACT_START_DATE: formatDateSR(data.start_date),
@@ -254,6 +266,10 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
         // Contact
         CONTACT_EMAIL: data.contact_email || "contact@workersunited.eu",
         CONTACT_PHONE: data.contact_phone || "",
+
+        // Accommodation & signing location
+        ACCOMMODATION_ADDRESS: data.accommodation_address || "___________",
+        SIGNING_CITY: data.signing_city || "___________",
     };
 }
 

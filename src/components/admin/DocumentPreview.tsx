@@ -50,8 +50,12 @@ const SECTIONS: { title: string; icon: string; keys: string[] }[] = [
             "EMPLOYER_NAME",
             "EMPLOYER_FULL_REFERENCE",
             "EMPLOYER_ADDRESS",
+            "EMPLOYER_CITY",
+            "EMPLOYER_PIB",
             "EMPLOYER_MB",
             "EMPLOYER_DIRECTOR",
+            "EMPLOYER_FOUNDING_DATE",
+            "EMPLOYER_APR_NUMBER",
         ],
     },
     {
@@ -66,6 +70,7 @@ const SECTIONS: { title: string; icon: string; keys: string[] }[] = [
             "JOB_DESC_EN_1",
             "JOB_DESC_EN_2",
             "JOB_DESC_EN_3",
+            "SALARY_RSD",
         ],
     },
     {
@@ -83,14 +88,18 @@ const SECTIONS: { title: string; icon: string; keys: string[] }[] = [
         icon: "📧",
         keys: ["CONTACT_EMAIL", "CONTACT_PHONE"],
     },
+    {
+        title: "Boravište / Accommodation",
+        icon: "🏠",
+        keys: ["ACCOMMODATION_ADDRESS", "SIGNING_CITY"],
+    },
 ];
 
-// Human-readable labels for placeholder keys
 const LABELS: Record<string, string> = {
     WORKER_FULL_NAME: "Ime i prezime",
     WORKER_FIRST_NAME: "Ime",
     WORKER_LAST_NAME: "Prezime",
-    WORKER_ADDRESS: "Adresa",
+    WORKER_ADDRESS: "Adresa radnika",
     PASSPORT_NUMBER: "Broj pasoša",
     DATE_OF_BIRTH: "Datum rođenja",
     PLACE_OF_BIRTH: "Mesto rođenja",
@@ -102,9 +111,13 @@ const LABELS: Record<string, string> = {
     NATIONALITY_EN: "English",
     EMPLOYER_NAME: "Naziv firme",
     EMPLOYER_FULL_REFERENCE: "Puna referenca",
-    EMPLOYER_ADDRESS: "Adresa",
+    EMPLOYER_ADDRESS: "Adresa firme",
+    EMPLOYER_CITY: "Grad (poštanski br.)",
+    EMPLOYER_PIB: "PIB",
     EMPLOYER_MB: "Matični broj",
     EMPLOYER_DIRECTOR: "Direktor",
+    EMPLOYER_FOUNDING_DATE: "Datum osnivanja",
+    EMPLOYER_APR_NUMBER: "APR broj",
     JOB_TITLE_SR: "Naziv posla (SR)",
     JOB_TITLE_EN: "Job Title (EN)",
     JOB_DESC_SR_1: "Opis (SR) 1",
@@ -113,12 +126,15 @@ const LABELS: Record<string, string> = {
     JOB_DESC_EN_1: "Desc (EN) 1",
     JOB_DESC_EN_2: "Desc (EN) 2",
     JOB_DESC_EN_3: "Desc (EN) 3",
+    SALARY_RSD: "Plata (RSD neto)",
     CONTRACT_START_DATE: "Početak ugovora",
     CONTRACT_END_DATE: "Kraj ugovora",
     SIGNING_DATE_SR: "Datum potpisivanja (SR)",
     SIGNING_DATE_EN: "Signing Date (EN)",
     CONTACT_EMAIL: "Email",
     CONTACT_PHONE: "Telefon",
+    ACCOMMODATION_ADDRESS: "Adresa boravišta",
+    SIGNING_CITY: "Grad potpisivanja",
 };
 
 export default function DocumentPreview({ profileId }: { profileId: string }) {
@@ -189,7 +205,6 @@ export default function DocumentPreview({ profileId }: { profileId: string }) {
                 )}
             </button>
 
-            {/* Preview Content */}
             {open && data && (
                 <div className="mt-4 space-y-4">
                     {!data.hasData ? (
@@ -198,14 +213,12 @@ export default function DocumentPreview({ profileId }: { profileId: string }) {
                         </div>
                     ) : (
                         <>
-                            {/* Generated status */}
                             {data.generatedAt && (
                                 <div className="px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs font-medium">
                                     ✅ Dokumenta generisana: {new Date(data.generatedAt).toLocaleString("sr-RS")}
                                 </div>
                             )}
 
-                            {/* Missing fields warning */}
                             {data.missingFields && data.missingFields.length > 0 && (
                                 <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
                                     <strong>⚠️ Nedostaju polja:</strong>
@@ -217,7 +230,6 @@ export default function DocumentPreview({ profileId }: { profileId: string }) {
                                 </div>
                             )}
 
-                            {/* Placeholder sections */}
                             {data.placeholders && SECTIONS.map((section) => (
                                 <div
                                     key={section.title}
@@ -235,10 +247,9 @@ export default function DocumentPreview({ profileId }: { profileId: string }) {
                                             return (
                                                 <div
                                                     key={key}
-                                                    className={`flex items-start gap-3 px-4 py-2 text-sm ${missing ? "bg-red-50" : ""
-                                                        }`}
+                                                    className={`flex items-start gap-3 px-4 py-2 text-sm ${missing ? "bg-red-50" : ""}`}
                                                 >
-                                                    <span className="text-[#64748b] text-xs font-mono min-w-[130px] pt-0.5 shrink-0">
+                                                    <span className="text-[#64748b] text-xs font-mono min-w-[140px] pt-0.5 shrink-0">
                                                         {LABELS[key] || key}
                                                     </span>
                                                     <span
