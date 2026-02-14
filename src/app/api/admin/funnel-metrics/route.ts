@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isGodModeUser } from '@/lib/godmode';
+import { getWorkerCompletion } from '@/lib/profile-completion';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
 
         const { data: allCandidates } = await supabase
             .from('candidates')
-            .select('profile_id, phone, country, preferred_job');
+            .select('profile_id, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas');
 
         const { data: allDocs } = await supabase
             .from('candidate_documents')
@@ -70,24 +71,19 @@ export async function GET(request: Request) {
         const profileMap = new Map(allProfiles?.map(p => [p.id, p]) || []);
         const candidateMap = new Map(allCandidates?.map(c => [c.profile_id, c]) || []);
 
-        // Count using same 16-field formula as worker/page.tsx
+        // Count using shared 16-field getWorkerCompletion() — single source of truth
         let completedCount = 0;
         for (const wu of workerUsers) {
             const p = profileMap.get(wu.id);
             const c = candidateMap.get(wu.id);
-            const docs = allDocs?.filter(d => d.user_id === wu.id) || [];
+            const docs = (allDocs?.filter(d => d.user_id === wu.id) || []) as { document_type: string }[];
 
-            const fields = [
-                p?.full_name,
-                c?.phone,
-                c?.country,
-                c?.preferred_job,
-                docs.some(d => d.document_type === 'passport'),
-                docs.some(d => d.document_type === 'biometric_photo'),
-            ];
-            const filledCount = fields.filter(v => !!v).length;
-            const completion = Math.round((filledCount / fields.length) * 100);
-            if (completion === 100) completedCount++;
+            const result = getWorkerCompletion({
+                profile: p || null,
+                candidate: c || null,
+                documents: docs,
+            });
+            if (result.completion === 100) completedCount++;
         }
 
         // 3. Uploaded Documents — distinct WORKER users with at least one doc
