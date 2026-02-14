@@ -43,19 +43,72 @@ export async function DELETE() {
             .delete()
             .eq("user_id", userId);
 
-        // 5. Delete candidates
+        // 5. Get candidate ID for cascade cleanup
+        const { data: candidate } = await adminClient
+            .from("candidates")
+            .select("id")
+            .eq("profile_id", userId)
+            .single();
+
+        if (candidate) {
+            // 5a. Delete contract_data via matches
+            const { data: matches } = await adminClient
+                .from("matches")
+                .select("id")
+                .eq("candidate_id", candidate.id);
+
+            if (matches && matches.length > 0) {
+                const matchIds = matches.map(m => m.id);
+                await adminClient
+                    .from("contract_data")
+                    .delete()
+                    .in("match_id", matchIds);
+            }
+
+            // 5b. Delete offers
+            await adminClient
+                .from("offers")
+                .delete()
+                .eq("candidate_id", candidate.id);
+
+            // 5c. Delete matches
+            await adminClient
+                .from("matches")
+                .delete()
+                .eq("candidate_id", candidate.id);
+        }
+
+        // 6. Delete payments
+        await adminClient
+            .from("payments")
+            .delete()
+            .eq("user_id", userId);
+
+        // 7. Delete email_queue
+        await adminClient
+            .from("email_queue")
+            .delete()
+            .eq("user_id", userId);
+
+        // 8. Delete whatsapp_messages
+        await adminClient
+            .from("whatsapp_messages")
+            .delete()
+            .eq("user_id", userId);
+
+        // 9. Delete candidates
         await adminClient
             .from("candidates")
             .delete()
             .eq("profile_id", userId);
 
-        // 6. Delete employers (if employer)
+        // 10. Delete employers (if employer)
         await adminClient
             .from("employers")
             .delete()
             .eq("profile_id", userId);
 
-        // 7. Delete profiles
+        // 11. Delete profiles
         await adminClient
             .from("profiles")
             .delete()
