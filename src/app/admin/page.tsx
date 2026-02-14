@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 import { Users, Building2 } from "lucide-react";
 import FunnelChart from "./FunnelChart";
@@ -12,6 +13,16 @@ export default async function AdminDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) redirect("/login");
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.user_type !== 'admin' && !isGodModeUser(user.email)) {
+        redirect("/profile");
+    }
 
     // Use admin client for stats (bypasses RLS)
     const adminClient = createAdminClient();
@@ -52,6 +63,7 @@ export default async function AdminDashboard() {
     const { data: recentEmployers } = await adminClient
         .from("employers")
         .select("id, company_name, profile_id")
+        .order("created_at", { ascending: false })
         .limit(5);
 
     return (

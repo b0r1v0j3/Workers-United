@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateAllDocuments, validateContractData, type DocumentType, type ContractDataForDocs } from "@/lib/docx-generator";
 
 // POST: Generate all 4 DOCX documents for a contract
@@ -61,13 +61,10 @@ export async function POST(request: NextRequest) {
         const documents = await generateAllDocuments(contractData as ContractDataForDocs);
 
         // Upload to Supabase Storage
-        const adminSupabase = createAdminClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
+        const adminSupabase = createAdminClient();
 
         const workerName = (contractData.candidate_full_name || "unknown")
-            .replace(/[^a-zA-Z0-9\s]/g, "")
+            .replace(/[^\p{L}\p{N}\s]/gu, "")
             .replace(/\s+/g, "_");
 
         const storagePath = `contracts/${matchId}`;
@@ -86,7 +83,7 @@ export async function POST(request: NextRequest) {
 
             // Upload to storage (upsert to overwrite if re-generating)
             const { error: uploadError } = await adminSupabase.storage
-                .from("documents")
+                .from("candidate-docs")
                 .upload(fullPath, buffer, {
                     contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     upsert: true,
@@ -99,14 +96,14 @@ export async function POST(request: NextRequest) {
 
             // Get public URL
             const { data: urlData } = adminSupabase.storage
-                .from("documents")
+                .from("candidate-docs")
                 .getPublicUrl(fullPath);
 
             generatedDocs[docType] = urlData.publicUrl;
         }
 
         // Update contract_data with generated document URLs and timestamp
-        const { error: updateError } = await supabase
+        const { error: updateError } = await adminSupabase
             .from("contract_data")
             .update({
                 generated_documents: generatedDocs,
@@ -146,6 +143,17 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Admin-only check
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.user_type !== "admin") {
+        return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
     const { data: contractData, error } = await supabase

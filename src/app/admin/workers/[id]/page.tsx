@@ -8,6 +8,7 @@ import { queueEmail } from "@/lib/email-templates";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
 import ReVerifyButton from "@/components/admin/ReVerifyButton";
 import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
+import DocumentPreview from "@/components/admin/DocumentPreview";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -24,11 +25,11 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("user_type")
         .eq("id", user.id)
         .single();
 
-    if (profile?.role !== 'admin' && !isOwner) {
+    if (profile?.user_type !== 'admin' && !isOwner) {
         redirect("/profile");
     }
 
@@ -89,8 +90,22 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         const adminNotes = formData.get("admin_notes") as string;
 
         const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Unauthorized");
 
-        await supabase
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.user_type !== 'admin') {
+            throw new Error("Forbidden: Admin access only");
+        }
+
+        const adminClient = createAdminClient();
+
+        await adminClient
             .from("candidate_documents")
             .update({
                 status: newStatus,
@@ -111,7 +126,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     : `Your ${docType} has been rejected. ${adminNotes ? `Reason: ${adminNotes}` : 'Please upload a valid document.'}`;
 
                 await queueEmail(
-                    supabase,
+                    adminClient,
                     id,
                     "admin_update",
                     userEmail,
@@ -130,16 +145,30 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         const storagePath = formData.get("storage_path") as string;
 
         const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Unauthorized");
+
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.user_type !== 'admin') {
+            throw new Error("Forbidden: Admin access only");
+        }
+
+        const adminClient = createAdminClient();
 
         // Delete from storage
         if (storagePath) {
-            await supabase.storage
+            await adminClient.storage
                 .from("candidate-docs")
                 .remove([storagePath]);
         }
 
         // Delete from database
-        await supabase
+        await adminClient
             .from("candidate_documents")
             .delete()
             .eq("id", docId);
@@ -156,16 +185,30 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         const userEmail = formData.get("user_email") as string;
 
         const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Unauthorized");
+
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.user_type !== 'admin') {
+            throw new Error("Forbidden: Admin access only");
+        }
+
+        const adminClient = createAdminClient();
 
         // Delete from storage
         if (storagePath) {
-            await supabase.storage
+            await adminClient.storage
                 .from("candidate-docs")
                 .remove([storagePath]);
         }
 
         // Delete from database  
-        await supabase
+        await adminClient
             .from("candidate_documents")
             .delete()
             .eq("id", docId);
@@ -173,7 +216,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         // Send email notification to user
         if (userEmail) {
             await queueEmail(
-                supabase,
+                adminClient,
                 id,
                 "admin_update",
                 userEmail,
@@ -197,8 +240,22 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         const userEmail = formData.get("user_email") as string;
 
         const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Unauthorized");
 
-        await supabase
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.user_type !== 'admin') {
+            throw new Error("Forbidden: Admin access only");
+        }
+
+        const adminClient = createAdminClient();
+
+        await adminClient
             .from("candidates")
             .update({
                 status: newStatus,
@@ -209,7 +266,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         // Send email notification
         if (userEmail) {
             await queueEmail(
-                supabase,
+                adminClient,
                 id,
                 "admin_update",
                 userEmail,
@@ -298,9 +355,13 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                 <div className="mb-4">
                                     <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Update Status</label>
                                     <select name="status" className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm">
-                                        <option value="pending">Pending</option>
-                                        <option value="verified">Verified</option>
-                                        <option value="rejected">Rejected</option>
+                                        <option value="REGISTERED">Registered</option>
+                                        <option value="VERIFIED">Verified</option>
+                                        <option value="IN_QUEUE">In Queue</option>
+                                        <option value="OFFER_PENDING">Offer Pending</option>
+                                        <option value="OFFER_ACCEPTED">Offer Accepted</option>
+                                        <option value="VISA_PROCESS_STARTED">Visa Process Started</option>
+                                        <option value="REFUND_FLAGGED">Refund Flagged</option>
                                     </select>
                                 </div>
                                 <button type="submit" className="w-full bg-[#2f6fed] text-white py-2 rounded-lg font-bold text-sm hover:bg-[#1e5cd6] transition-colors">
@@ -337,6 +398,9 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                 <div className="text-[#94a3b8] italic">No payments found</div>
                             )}
                         </div>
+
+                        {/* Document Preview */}
+                        <DocumentPreview profileId={id} />
 
                         {/* Signature Card */}
                         <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">

@@ -2,12 +2,23 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 
 export default async function AdminJobsPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.user_type !== 'admin' && !isGodModeUser(user.email)) {
+        redirect("/profile");
+    }
 
     const adminClient = createAdminClient();
 

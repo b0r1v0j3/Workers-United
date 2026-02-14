@@ -18,11 +18,11 @@ export async function POST(request: NextRequest) {
         // Admin check
         const { data: profile } = await supabase
             .from("profiles")
-            .select("role, user_type")
+            .select("user_type")
             .eq("id", user.id)
             .single();
 
-        if (profile?.role !== "admin" && profile?.user_type !== "admin") {
+        if (profile?.user_type !== "admin") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
         const { data: employer } = await admin
             .from("employers")
-            .select("company_name, company_address, pib, tax_id")
+            .select("company_name, company_address, pib")
             .eq("id", job.employer_id)
             .single();
 
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
             match_id: match.id,
             candidate_full_name: candidateProfile?.full_name || null,
             employer_company_name: employer?.company_name || null,
-            employer_pib: employer?.pib || employer?.tax_id || null,
+            employer_pib: employer?.pib || null,
             employer_address: employer?.company_address || null,
             job_title: job.title,
             salary_rsd: null,
@@ -167,6 +167,17 @@ export async function GET(request: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Admin check
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.user_type !== "admin") {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         const admin = createAdminClient();

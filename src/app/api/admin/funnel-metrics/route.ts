@@ -17,12 +17,12 @@ export async function GET(request: Request) {
         // Check admin role — matches admin/layout.tsx pattern
         const { data: profile } = await authSupabase
             .from('profiles')
-            .select('role')
+            .select('user_type')
             .eq('id', user.id)
             .single();
 
         const isOwner = isGodModeUser(user.email);
-        if (profile?.role !== 'admin' && !isOwner) {
+        if (profile?.user_type !== 'admin' && !isOwner) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
 
         const { data: allCandidates } = await supabase
             .from('candidates')
-            .select('profile_id, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas');
+            .select('profile_id, phone, country, preferred_job');
 
         const { data: allDocs } = await supabase
             .from('candidate_documents')
@@ -80,29 +80,12 @@ export async function GET(request: Request) {
             const fields = [
                 p?.full_name,
                 c?.phone,
-                c?.nationality,
-                c?.current_country,
+                c?.country,
                 c?.preferred_job,
-                c?.gender,
-                c?.date_of_birth,
-                c?.birth_country,
-                c?.birth_city,
-                c?.citizenship,
-                c?.marital_status,
-                c?.passport_number,
-                c?.lives_abroad,      // index 12 — boolean answer, false = valid
-                c?.previous_visas,    // index 13 — boolean answer, false = valid
                 docs.some(d => d.document_type === 'passport'),
                 docs.some(d => d.document_type === 'biometric_photo'),
             ];
-            // lives_abroad (12) and previous_visas (13): false is a valid answer
-            // Everything else: use truthiness
-            const BOOLEAN_ANSWER_INDICES = new Set([12, 13]);
-            const filledCount = fields.filter((v, i) =>
-                BOOLEAN_ANSWER_INDICES.has(i)
-                    ? v !== null && v !== undefined
-                    : !!v
-            ).length;
+            const filledCount = fields.filter(v => !!v).length;
             const completion = Math.round((filledCount / fields.length) * 100);
             if (completion === 100) completedCount++;
         }

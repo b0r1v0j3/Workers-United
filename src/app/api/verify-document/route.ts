@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumentBounds, fetchImageAsBase64 } from "@/lib/gemini";
 import sharp from "sharp";
 
@@ -7,6 +8,32 @@ export async function POST(request: Request) {
     try {
         const supabase = await createClient();
         const { candidateId, docType } = await request.json();
+
+        // Auth check: must be logged in
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Authorization: must be document owner or admin
+        const isOwner = user.id === candidateId;
+        let isAdmin = false;
+        if (!isOwner) {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("user_type")
+                .eq("id", user.id)
+                .single();
+
+            if (profile?.user_type !== "admin") {
+                return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+            }
+            isAdmin = true;
+        }
+
+        // Use admin client for storage/DB ops when admin is acting on another user's docs
+        // This bypasses RLS which would block cross-user storage operations
+        const storageClient = isAdmin ? createAdminClient() : supabase;
 
         // 1. Fetch document data
         const { data: document, error: fetchError } = await supabase
@@ -46,7 +73,7 @@ export async function POST(request: Request) {
 
                 // Replace PDF with JPEG in storage
                 const jpegPath = document.storage_path.replace(/\.pdf$/i, '.jpg');
-                await supabase.storage
+                await storageClient.storage
                     .from("candidate-docs")
                     .upload(jpegPath, jpegBuffer, {
                         contentType: 'image/jpeg',
@@ -54,10 +81,10 @@ export async function POST(request: Request) {
                     });
 
                 // Delete old PDF
-                await supabase.storage.from("candidate-docs").remove([document.storage_path]);
+                await storageClient.storage.from("candidate-docs").remove([document.storage_path]);
 
                 // Update DB with new path
-                await supabase.from("candidate_documents")
+                await storageClient.from("candidate_documents")
                     .update({ storage_path: jpegPath, updated_at: new Date().toISOString() })
                     .eq("user_id", candidateId)
                     .eq("document_type", docType);
@@ -125,7 +152,7 @@ export async function POST(request: Request) {
                 const storagePath = currentDoc?.storage_path || document.storage_path;
 
                 // Replace in storage
-                await supabase.storage
+                await storageClient.storage
                     .from("candidate-docs")
                     .update(storagePath, processedBuffer, {
                         contentType: 'image/jpeg',
@@ -242,12 +269,12 @@ export async function POST(request: Request) {
             // Delete failed documents to avoid clutter
 
             // Delete from storage
-            await supabase.storage
+            await storageClient.storage
                 .from("candidate-docs")
                 .remove([document.storage_path]);
 
             // Delete from database
-            await supabase
+            await storageClient
                 .from("candidate_documents")
                 .delete()
                 .eq("user_id", candidateId)
@@ -287,7 +314,7 @@ export async function POST(request: Request) {
             };
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await storageClient
             .from("candidate_documents")
             .update(updateData)
             .eq("user_id", candidateId)

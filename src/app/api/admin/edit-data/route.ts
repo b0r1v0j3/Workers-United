@@ -17,11 +17,11 @@ export async function POST(request: NextRequest) {
         // Admin check
         const { data: profile } = await supabase
             .from("profiles")
-            .select("role, user_type")
+            .select("user_type")
             .eq("id", user.id)
             .single();
 
-        if (profile?.role !== "admin" && profile?.user_type !== "admin") {
+        if (profile?.user_type !== "admin") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -30,29 +30,30 @@ export async function POST(request: NextRequest) {
         // Whitelist allowed tables and fields
         const ALLOWED: Record<string, string[]> = {
             candidates: [
-                "phone", "nationality", "current_country", "preferred_job",
-                "experience_years", "desired_countries", "status",
-                "date_of_birth", "gender", "address", "education_level",
+                "phone", "country", "preferred_job",
+                "experience_years", "status",
             ],
             profiles: [
                 "full_name", "email",
             ],
             employers: [
-                "company_name", "tax_id", "company_registration_number",
-                "company_address", "contact_phone", "country", "city",
-                "website", "industry", "company_size", "founded_year",
-                "description", "status",
+                "company_name", "pib",
+                "company_address", "contact_phone", "country",
+                "company_website", "industry", "employees_count",
+                "accommodation_address", "min_salary_rsd", "status",
             ],
             contract_data: [
                 "candidate_full_name", "candidate_passport_number",
                 "candidate_nationality", "candidate_date_of_birth",
                 "candidate_passport_expiry", "candidate_address",
-                "employer_company_name", "employer_pib", "employer_address",
-                "employer_representative_name", "job_title", "salary_rsd",
-                "accommodation_address", "contract_duration_months",
-                "work_schedule", "start_date",
                 "candidate_passport_issue_date", "candidate_passport_issuer",
-                "job_description_sr", "job_description_en",
+                "candidate_place_of_birth", "candidate_gender",
+                "employer_company_name", "employer_pib", "employer_address",
+                "employer_representative_name", "employer_mb", "employer_director",
+                "job_title", "job_description_sr", "job_description_en",
+                "salary_rsd", "accommodation_address", "contract_duration_months",
+                "work_schedule", "start_date", "end_date", "signing_date",
+                "contact_email", "contact_phone",
             ],
         };
 

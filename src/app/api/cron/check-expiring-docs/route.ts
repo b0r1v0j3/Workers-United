@@ -22,18 +22,16 @@ export async function GET(request: Request) {
 
         // Query verified documents with expiry dates
         const { data: docs, error } = await supabase
-            .from('documents')
+            .from('candidate_documents')
             .select(`
                 *,
-                candidates!inner(
-                    profiles!inner(
-                        id,
-                        email,
-                        full_name
-                    )
+                profiles:user_id(
+                    id,
+                    email,
+                    full_name
                 )
             `)
-            .eq('verification_status', 'verified')
+            .eq('status', 'verified')
             .gt('expires_at', today.toISOString())
             .lte('expires_at', sixMonthsFromNow.toISOString())
             .limit(50); // Limit batch size to prevent timeouts
@@ -56,7 +54,7 @@ export async function GET(request: Request) {
         const recentlyNotified = new Set(recentEmails?.map(e => e.user_id) || []);
 
         for (const doc of docs || []) {
-            const profile = (doc.candidates as any)?.profiles;
+            const profile = (doc as any).profiles;
 
             if (!profile || !profile.email) {
                 console.warn(`[Cron] Missing profile/email for document ${doc.id}`);

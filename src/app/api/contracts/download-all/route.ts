@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         const { data: candidates } = await admin
             .from("candidates")
             .select("id, profile_id")
-            .in("id", candidateIds);
+            .in("id", candidateIds.length > 0 ? candidateIds : ["__none__"]);
 
         const candidateProfileIds = (candidates || []).map(c => c.profile_id);
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         const { data: profiles } = await admin
             .from("profiles")
             .select("id, full_name")
-            .in("id", candidateProfileIds);
+            .in("id", candidateProfileIds.length > 0 ? candidateProfileIds : ["__none__"]);
 
         const profileMap = new Map((profiles || []).map(p => [p.id, p]));
         const candidateMap = new Map((candidates || []).map(c => [c.id, c]));
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         const { data: workerDocs } = await admin
             .from("candidate_documents")
             .select("*")
-            .in("user_id", candidateProfileIds)
+            .in("user_id", candidateProfileIds.length > 0 ? candidateProfileIds : ["__none__"])
             .in("document_type", ["passport", "biometric_photo", "diploma"]);
 
         const docsByUser = new Map<string, any[]>();
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
             const profileData = profileMap.get(candidate.profile_id);
             const folderName = (profileData?.full_name || "Unknown")
                 .toUpperCase()
-                .replace(/[^A-Z\s]/g, "")
+                .replace(/[^\p{L}\p{N}\s]/gu, "")
                 .trim();
 
             const folder = zip.folder(folderName);

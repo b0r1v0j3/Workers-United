@@ -19,11 +19,11 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("user_type")
         .eq("id", user.id)
         .single();
 
-    if (profile?.role !== 'admin' && !isOwner) {
+    if (profile?.user_type !== 'admin' && !isOwner) {
         redirect("/profile");
     }
 
@@ -105,7 +105,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
             userDocs.some(d => d.document_type === 'passport'),
             userDocs.some(d => d.document_type === 'biometric_photo'),
         ];
-        const profileCompletion = Math.round((fields.filter(Boolean).length / fields.length) * 100);
+        const profileCompletion = Math.round((fields.filter(f => f != null && f !== '' && f !== undefined).length / fields.length) * 100);
 
         return { candidate, userDocs, verifiedDocs, profileCompletion };
     };

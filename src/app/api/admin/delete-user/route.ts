@@ -15,11 +15,11 @@ export async function DELETE(request: NextRequest) {
 
         const { data: profile } = await supabase
             .from("profiles")
-            .select("role")
+            .select("user_type")
             .eq("id", user.id)
             .single();
 
-        if (profile?.role !== 'admin' && !isGodModeUser(user.email)) {
+        if (profile?.user_type !== 'admin' && !isGodModeUser(user.email)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -35,39 +35,40 @@ export async function DELETE(request: NextRequest) {
 
         const adminClient = createAdminClient();
 
-        // 1. Delete auth user FIRST (before DB rows that may have FK constraints)
-        const { error: authError } = await adminClient.auth.admin.deleteUser(userId);
+        // 1. Delete from storage (documents bucket) — supports nested folders
+        const docTypes = ['passport', 'biometric_photo', 'diploma'];
+        for (const docType of docTypes) {
+            const { data: files } = await adminClient.storage
+                .from("candidate-docs")
+                .list(`${userId}/${docType}`);
 
-        if (authError) {
-            console.error("Auth delete error:", authError);
-            return NextResponse.json({ error: `Failed to delete auth user: ${authError.message}` }, { status: 500 });
+            if (files && files.length > 0) {
+                const filePaths = files.map(f => `${userId}/${docType}/${f.name}`);
+                await adminClient.storage.from("candidate-docs").remove(filePaths);
+            }
         }
 
-        // 2. Delete from storage (documents bucket)
-        const { data: files } = await adminClient.storage
-            .from("documents")
-            .list(userId);
-
-        if (files && files.length > 0) {
-            const filePaths = files.map(f => `${userId}/${f.name}`);
-            await adminClient.storage.from("documents").remove(filePaths);
-        }
-
-        // 3. Delete candidate_documents
+        // 2. Delete candidate_documents
         await adminClient
             .from("candidate_documents")
             .delete()
             .eq("user_id", userId);
 
-        // 4. Delete signatures
+        // 3. Delete signatures
         await adminClient
             .from("signatures")
             .delete()
             .eq("user_id", userId);
 
-        // 5. Delete candidates
+        // 4. Delete candidates
         await adminClient
             .from("candidates")
+            .delete()
+            .eq("profile_id", userId);
+
+        // 5. Delete employers (if employer)
+        await adminClient
+            .from("employers")
             .delete()
             .eq("profile_id", userId);
 
@@ -76,6 +77,14 @@ export async function DELETE(request: NextRequest) {
             .from("profiles")
             .delete()
             .eq("id", userId);
+
+        // 7. Delete auth user LAST (after all DB/storage cleanup)
+        const { error: authError } = await adminClient.auth.admin.deleteUser(userId);
+
+        if (authError) {
+            console.error("Auth delete error:", authError);
+            return NextResponse.json({ error: `Failed to delete auth user: ${authError.message}` }, { status: 500 });
+        }
 
         return NextResponse.json({ success: true, message: "User deleted completely" });
 

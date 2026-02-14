@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export async function markRefunded(userId: string, notes: string) {
@@ -12,16 +13,19 @@ export async function markRefunded(userId: string, notes: string) {
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("user_type")
         .eq("id", user.id)
         .single();
 
-    if (profile?.role !== 'admin') {
+    if (profile?.user_type !== 'admin') {
         throw new Error("Forbidden: Admin access only");
     }
 
+    // Use admin client to bypass RLS — we're updating another user's payment
+    const adminClient = createAdminClient();
+
     // Update the latest payment record for this user
-    const { error } = await supabase
+    const { error } = await adminClient
         .from("payments")
         .update({
             refund_status: 'completed',

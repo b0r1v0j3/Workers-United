@@ -11,11 +11,11 @@ export default async function EmployersPage() {
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("user_type")
         .eq("id", user.id)
         .single();
 
-    if (profile?.role !== "admin" && !isGodModeUser(user.email)) {
+    if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
         redirect("/profile");
     }
 

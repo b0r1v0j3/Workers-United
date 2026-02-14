@@ -67,8 +67,6 @@ export async function POST(request: NextRequest) {
                         entry_fee_paid: false,
                         queue_position: null,
                         queue_joined_at: null,
-                        rejection_count: 0,
-                        refund_eligible: true,
                         updated_at: new Date().toISOString()
                     })
                     .eq("profile_id", user.id);
@@ -86,7 +84,7 @@ export async function POST(request: NextRequest) {
                     await supabase.from("employers").insert({
                         profile_id: user.id,
                         company_name: "Test Company",
-                        status: "pending"
+                        status: "PENDING"
                     });
                 }
 

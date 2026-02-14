@@ -14,6 +14,17 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        // Admin check
+        const { data: userProfile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (userProfile?.user_type !== "admin") {
+            return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+        }
+
         const admin = createAdminClient();
 
         // Fetch all matches with contract_data

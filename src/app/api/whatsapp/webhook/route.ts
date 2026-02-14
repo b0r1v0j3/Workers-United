@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Webhook endpoint for incoming WhatsApp messages (from Twilio/360dialog)
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient();
+        const supabase = createAdminClient();
         const body = await request.json();
 
         // Parse message based on provider format (adjust for Twilio/360dialog)
