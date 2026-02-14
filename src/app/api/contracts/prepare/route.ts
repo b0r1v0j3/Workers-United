@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
                 employer_address: employer.company_address || employer.accommodation_address,
                 employer_representative_name: employer.profiles?.full_name,
                 employer_mb: null, // MB ne postoji na employers tabeli, admin popunjava ručno
+                employer_city: null, // Admin popunjava ručno (grad + poštanski broj)
                 employer_director: employer.profiles?.full_name,
 
                 // Job data

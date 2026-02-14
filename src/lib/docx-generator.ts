@@ -231,6 +231,7 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
             data.employer_city || "NOVI SAD",
         ].filter(Boolean).join(", "),
         EMPLOYER_ADDRESS: data.employer_address || "___________",
+        EMPLOYER_CITY: data.employer_city || "___________",
         EMPLOYER_MB: data.employer_mb || "___________",
         EMPLOYER_DIRECTOR: data.employer_director || data.employer_representative_name || "___________",
 
