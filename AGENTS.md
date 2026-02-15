@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 14.02.2026 (Sprint 3 — admin panel: document preview, favicon fix, test profiles, manual match, edit data, re-verify, bulk docs, ZIP download)
+> **Poslednje ažuriranje:** 15.02.2026 (Sprint 3 — admin approval constraint fix, status normalization)
 
 ---
 
@@ -636,14 +636,14 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 7. **Admin profile access** — admin mora proći `user_type` check na 3 mesta: server-side `page.tsx`, klijentski `EmployerProfileClient.tsx fetchData()`, i layout guard. Ako dodaš novu zaštitu, proveri SVA 3.
 8. **Storage bucket je `candidate-docs`** — NIKAD ne koristiti `from("documents")` za storage. Bucket `documents` NE POSTOJI. Jedini bucket je `candidate-docs`. Generisani DOCX ugovori idu u `candidate-docs/contracts/{matchId}/`.
 9. **Whitelist za edit-data mora da odgovara stvarnoj DB šemi** — pre dodavanja kolone u whitelist, PROVERI da kolona zaista postoji u tabeli (FULL_SETUP.sql + migracije). Phantom kolone u whitelistu = tihi fail.
-10. **CHECK constraint na candidates.status** — dozvoljene vrednosti: `NEW, DOCS_REQUESTED, DOCS_RECEIVED, UNDER_REVIEW, APPROVED, REJECTED, IN_QUEUE, OFFER_PENDING, VISA_PROCESS_STARTED, REFUND_FLAGGED`. Svaka druga vrednost → DB error.
+10. **CHECK constraint na candidates.status** — dozvoljene vrednosti: `NEW, PROFILE_COMPLETE, PENDING_APPROVAL, VERIFIED, APPROVED, IN_QUEUE, OFFER_PENDING, OFFER_ACCEPTED, VISA_PROCESS_STARTED, VISA_APPROVED, PLACED, REJECTED, REFUND_FLAGGED`. Svaka druga vrednost → DB error. Migracija: `007_admin_approval.sql`. **Kad dodaješ novi status, ažuriraj I migraciju I ovaj spisak.**
 11. **JS operator precedence u ternary** — `A || B ? C : D` se evaluira kao `(A||B) ? C : D`, NE kao `A || (B ? C : D)`. Uvijek stavljaj zagrade.
 12. **Unicode u regex** — za srpska imena (Č, Ć, Š, Ž, Đ) koristiti `\p{L}` sa `u` flagom, NIKAD `[A-Z]`.
 13. **`profiles` tabela NEMA `role` kolonu** — kolona se zove `user_type`. NIKAD ne koristiti `profile?.role`. Svuda koristiti `profile?.user_type !== 'admin'`. Ovo je bila sistemska greška u 14 fajlova.
 14. **Employer status vrednosti su UPPERCASE** — DB CHECK dozvoljava samo `PENDING`, `VERIFIED`, `REJECTED`. NIKAD lowercase `active/pending/rejected`.
 15. **Admin auth check pattern** — za API rute: `select("user_type")` + `profile?.user_type !== "admin"`. Za stranice: isti pattern + `isGodModeUser()` fallback. Za server actions: samo `user_type`, bez godmode.
 16. **Webhook/Cron rute MORAJU koristiti `createAdminClient()`** — `createClient()` zahteva auth cookies. Stripe webhooks, WhatsApp webhooks, i Vercel cron jobs NEMAJU cookies. Sve DB operacije će tiho da failuju. Uvek koristiti `createAdminClient()` za ove rute.
-17. **`OFFER_ACCEPTED` status** — ~~NE POSTOJI u CHECK constraint~~ FIXED u migraciji `004_bugfix_schema_sync.sql`. CHECK sad uključuje: `NEW, DOCS_REQUESTED, DOCS_RECEIVED, DOCS_PENDING, DOCS_VERIFYING, UNDER_REVIEW, APPROVED, VERIFIED, REJECTED, REJECTED_TWICE, IN_QUEUE, OFFER_PENDING, OFFER_ACCEPTED, VISA_PROCESS_STARTED, REFUND_FLAGGED`.
+17. **`OFFER_ACCEPTED` status** — ~~NE POSTOJI u CHECK constraint~~ FIXED u migraciji `007_admin_approval.sql`. Videti Gotcha #10 za potpunu listu dozvoljenih statusa.
 18. **`payments` tabela schema** — ~~drift~~ FIXED. `COMPLETE_RESET.sql` sada koristi `user_id` i `amount` (ne `profile_id`/`amount_cents`). Dodate kolone: `stripe_checkout_session_id`, `paid_at`, `deadline_at`, `metadata`, `refund_status`, `refund_notes`.
 19. **Next.js `redirect()` u try/catch** — `redirect()` radi tako što THROWUJE specijalan error sa `digest: "NEXT_REDIRECT"`. Ako imaš try/catch, MORAŠ re-throwovati: `if (err?.digest?.startsWith("NEXT_REDIRECT")) throw err;`. Inače redirect nikad neće raditi.
 20. **Admin stranice zahtevaju EKSPLICITAN auth check** — `AppShell variant="admin"` NE štiti stranicu. Svaka admin `page.tsx` MORA imati `profiles.user_type === 'admin'` check. Bez toga, SVAKI ulogovani korisnik može da vidi admin dashboard, queue, jobs.

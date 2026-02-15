@@ -43,7 +43,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                         <>
                             <BottomNavLink href="/admin" icon="🏠" label="Home" />
                             <BottomNavLink href="/admin/workers" icon="👤" label="Workers" />
-                            <BottomNavLink href="/admin/queue" icon="📋" label="Queue" />
+                            <BottomNavLink href="/admin/employers" icon="🏢" label="Employers" />
                             <BottomNavLink href="/admin/settings" icon="⚙️" label="Settings" />
                         </>
                     ) : (
@@ -91,18 +91,7 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
                 <>
                     <SidebarLink href="/admin/workers" icon="👤" label="Workers" />
                     <SidebarLink href="/admin/employers" icon="🏢" label="Employers" />
-                    <SidebarLink href="/admin/jobs" icon="💼" label="Jobs" />
-                    <SidebarLink href="/admin/queue" icon="📋" label="Queue" />
-                    <SidebarLink href="/admin/refunds" icon="💸" label="Refunds" />
-                    <SidebarLink href="/admin/announcements" icon="📢" label="Announcements" />
-                    <SidebarLink href="/admin/email-preview" icon="✉️" label="Email Preview" />
-                    <SidebarLink href="/admin/analytics" icon="📊" label="Analytics" />
                     <SidebarLink href="/admin/settings" icon="⚙️" label="Settings" />
-
-                    <hr className="border-gray-300 my-2 mx-2" />
-                    <div className="px-2 text-xs font-semibold text-gray-400 mb-1 mt-2 uppercase tracking-wider">Test Profiles</div>
-                    <SidebarLink href="/profile/worker" icon="🧪" label="Test Worker" />
-                    <SidebarLink href="/profile/employer" icon="🧪" label="Test Employer" />
                 </>
             )}
 
