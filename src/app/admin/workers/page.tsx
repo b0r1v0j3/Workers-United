@@ -43,15 +43,15 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         .from("candidates")
         .select("*");
 
-    // Fetch all profiles (include user_type to filter)
+    // Fetch all profiles
     const { data: profiles } = await adminClient
         .from("profiles")
-        .select("id, email, full_name, first_name, last_name, avatar_url, user_type");
+        .select("*");
 
     // Fetch all documents
     const { data: allDocs } = await adminClient
         .from("candidate_documents")
-        .select("user_id, document_type, status");
+        .select("*");
 
     // Create lookup maps
     const candidateMap = new Map(candidates?.map(c => [c.profile_id, c]) || []);
