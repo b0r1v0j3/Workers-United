@@ -41,7 +41,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     // Fetch all candidates
     const { data: candidates } = await adminClient
         .from("candidates")
-        .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed, current_country, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas, admin_approved, admin_approved_at");
+        .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed, current_country, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, admin_approved, admin_approved_at");
 
     // Fetch all profiles (include user_type to filter)
     const { data: profiles } = await adminClient
