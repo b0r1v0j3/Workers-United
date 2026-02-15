@@ -93,6 +93,16 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
             documents: userDocs,
         });
 
+        // DEBUG: Trace Suresh's data
+        if (p?.email?.includes('suresh')) {
+            console.log('[DEBUG-SURESH] userId:', userId);
+            console.log('[DEBUG-SURESH] profile:', JSON.stringify(p));
+            console.log('[DEBUG-SURESH] candidate keys:', candidate ? Object.keys(candidate).filter(k => (candidate as any)[k] != null) : 'NO CANDIDATE');
+            console.log('[DEBUG-SURESH] candidate data:', JSON.stringify(candidate));
+            console.log('[DEBUG-SURESH] docs:', JSON.stringify(userDocs));
+            console.log('[DEBUG-SURESH] result:', JSON.stringify(result));
+        }
+
         return { candidate, userDocs, verifiedDocs, profileCompletion: result.completion };
     };
 
