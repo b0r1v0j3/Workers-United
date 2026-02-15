@@ -16,10 +16,14 @@ const WORKER_FIELD_LABELS: Record<string, string> = {
     citizenship: "Citizenship",
     marital_status: "Marital Status",
     passport_number: "Passport Number",
+    passport_issued_by: "Passport Issuing Authority",
+    passport_issue_date: "Passport Issue Date",
+    passport_expiry_date: "Passport Expiry Date",
     lives_abroad: "Lives Abroad",
     previous_visas: "Previous Visas",
     passport_doc: "Passport Document",
     biometric_photo_doc: "Biometric Photo",
+    diploma_doc: "Diploma / Certificate",
 };
 
 const EMPLOYER_FIELD_LABELS: Record<string, string> = {
@@ -60,6 +64,9 @@ interface WorkerData {
         citizenship?: string | null;
         marital_status?: string | null;
         passport_number?: string | null;
+        passport_issued_by?: string | null;
+        passport_issue_date?: string | null;
+        passport_expiry_date?: string | null;
         lives_abroad?: boolean | null;
         previous_visas?: boolean | null;
     } | null;
@@ -101,10 +108,14 @@ export function getWorkerCompletion(data: WorkerData): ProfileCompletionResult {
         citizenship: candidate?.citizenship,
         marital_status: candidate?.marital_status,
         passport_number: candidate?.passport_number,
+        passport_issued_by: candidate?.passport_issued_by,
+        passport_issue_date: candidate?.passport_issue_date,
+        passport_expiry_date: candidate?.passport_expiry_date,
         lives_abroad: candidate?.lives_abroad,
         previous_visas: candidate?.previous_visas,
         passport_doc: docTypes.includes("passport"),
         biometric_photo_doc: docTypes.includes("biometric_photo"),
+        diploma_doc: docTypes.includes("diploma"),
     };
 
     // For boolean answer fields, `false` counts as filled (user answered "No")

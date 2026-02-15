@@ -201,6 +201,27 @@ export async function POST(request: Request) {
                                 qualityIssues.push("Passport expires within 6 months");
                             }
                         }
+
+                        // Cross-check passport number: OCR vs manually entered
+                        if (status !== 'rejected') {
+                            const { data: candidate } = await supabase
+                                .from("candidates")
+                                .select("passport_number")
+                                .eq("user_id", candidateId)
+                                .single();
+
+                            if (candidate?.passport_number && result.data.passport_number) {
+                                const ocrNum = result.data.passport_number.replace(/\s/g, '').toUpperCase();
+                                const manualNum = candidate.passport_number.replace(/\s/g, '').toUpperCase();
+                                if (ocrNum !== manualNum) {
+                                    status = 'manual_review';
+                                    qualityIssues.push(`Passport number mismatch: scanned="${ocrNum}" vs entered="${manualNum}"`);
+                                    ocrJson.passport_number_verified = false;
+                                } else {
+                                    ocrJson.passport_number_verified = true;
+                                }
+                            }
+                        }
                     } else {
                         status = 'rejected';
                         rejectReason = result.issues?.join(", ") || "Could not read passport";
