@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
 import { queueEmail } from "@/lib/email-templates";
+import { getWorkerCompletion } from "@/lib/profile-completion";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
 import ReVerifyButton from "@/components/admin/ReVerifyButton";
 import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
@@ -82,6 +83,13 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         .eq("user_id", id)
         .order("created_at", { ascending: false })
         .limit(1);
+
+    // Profile completion
+    const { completion: profileCompletion } = getWorkerCompletion({
+        profile: candidateProfile,
+        candidate: candidateData,
+        documents: (documents || []).map((d: any) => ({ document_type: d.document_type })),
+    });
 
     async function updateDocumentStatus(formData: FormData) {
         "use server";
@@ -356,33 +364,62 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                             </div>
                         )}
 
-                        {/* Profile Card */}
-                        <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
-                            <h2 className="font-bold text-[#1e293b] text-xl mb-4">Profile Info</h2>
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="text-[12px] text-[#64748b] uppercase font-bold">Full Name</label>
-                                    <div className="text-[#1e293b] font-medium">{candidateProfile?.full_name || authUser.user_metadata?.full_name || "—"}</div>
+                        {/* Profile Card — All Fields */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="font-bold text-slate-900 text-lg">Profile Info</h2>
+                                <span className="text-xs font-bold text-slate-500">{profileCompletion}% complete</span>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="w-full bg-slate-100 rounded-full h-2 mb-5">
+                                <div className={`h-2 rounded-full transition-all ${profileCompletion === 100 ? 'bg-emerald-500' : profileCompletion >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                                    style={{ width: `${profileCompletion}%` }} />
+                            </div>
+
+                            {/* Basic Info */}
+                            <div className="mb-4">
+                                <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Basic Info</h3>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <InfoRow label="Full Name" value={candidateProfile?.full_name || authUser.user_metadata?.full_name} />
+                                    <InfoRow label="Email" value={candidateProfile?.email || authUser.email} />
+                                    <InfoRow label="Phone" value={candidateData?.phone} />
+                                    <InfoRow label="Gender" value={candidateData?.gender} />
                                 </div>
-                                <div>
-                                    <label className="text-[12px] text-[#64748b] uppercase font-bold">Email</label>
-                                    <div className="text-[#1e293b] font-medium">{candidateProfile?.email || authUser.email || "—"}</div>
+                            </div>
+
+                            {/* Personal Details */}
+                            <div className="mb-4">
+                                <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Personal Details</h3>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    <InfoRow label="Date of Birth" value={candidateData?.date_of_birth ? new Date(candidateData.date_of_birth).toLocaleDateString('en-GB') : null} />
+                                    <InfoRow label="Nationality" value={candidateData?.nationality} />
+                                    <InfoRow label="Citizenship" value={candidateData?.citizenship} />
+                                    <InfoRow label="Current Country" value={candidateData?.current_country} />
+                                    <InfoRow label="Birth Country" value={candidateData?.birth_country} />
+                                    <InfoRow label="Birth City" value={candidateData?.birth_city} />
+                                    <InfoRow label="Marital Status" value={candidateData?.marital_status} />
+                                    <InfoRow label="Lives Abroad" value={candidateData?.lives_abroad != null ? (candidateData.lives_abroad ? 'Yes' : 'No') : null} />
+                                    <InfoRow label="Previous Visas" value={candidateData?.previous_visas != null ? (candidateData.previous_visas ? 'Yes' : 'No') : null} />
                                 </div>
-                                <div>
-                                    <label className="text-[12px] text-[#64748b] uppercase font-bold">Phone</label>
-                                    <div className="text-[#1e293b] font-medium">{candidateData?.phone || "—"}</div>
+                            </div>
+
+                            {/* Passport Details */}
+                            <div className="mb-4">
+                                <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Passport</h3>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    <InfoRow label="Passport Number" value={candidateData?.passport_number} />
+                                    <InfoRow label="Issued By" value={candidateData?.passport_issued_by} />
+                                    <InfoRow label="Issue Date" value={candidateData?.passport_issue_date ? new Date(candidateData.passport_issue_date).toLocaleDateString('en-GB') : null} />
+                                    <InfoRow label="Expiry Date" value={candidateData?.passport_expiry_date ? new Date(candidateData.passport_expiry_date).toLocaleDateString('en-GB') : null} />
                                 </div>
-                                <div>
-                                    <label className="text-[12px] text-[#64748b] uppercase font-bold">Nationality</label>
-                                    <div className="text-[#1e293b] font-medium">{candidateData?.nationality || "—"}</div>
-                                </div>
-                                <div>
-                                    <label className="text-[12px] text-[#64748b] uppercase font-bold">Current Country</label>
-                                    <div className="text-[#1e293b] font-medium">{candidateData?.current_country || "—"}</div>
-                                </div>
-                                <div>
-                                    <label className="text-[12px] text-[#64748b] uppercase font-bold">Preferred Job</label>
-                                    <div className="text-[#1e293b] font-medium">{candidateData?.preferred_job || "—"}</div>
+                            </div>
+
+                            {/* Preferences */}
+                            <div>
+                                <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Preferences</h3>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <InfoRow label="Preferred Job" value={candidateData?.preferred_job} />
                                 </div>
                             </div>
                         </div>
@@ -675,5 +712,19 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                 </div>
             </div>
         </>
+    );
+}
+
+// ─── Helper Component ────────────────────────────────────────
+
+function InfoRow({ label, value }: { label: string; value: any }) {
+    const isEmpty = value === null || value === undefined || value === '';
+    return (
+        <div>
+            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">{label}</div>
+            <div className={`text-sm font-medium ${isEmpty ? 'text-red-400' : 'text-slate-800'}`}>
+                {isEmpty ? '—' : String(value)}
+            </div>
+        </div>
     );
 }
