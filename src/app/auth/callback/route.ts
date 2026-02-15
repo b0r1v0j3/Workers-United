@@ -24,25 +24,24 @@ export async function GET(request: Request) {
             if (user) {
                 const userType = user.user_metadata?.user_type;
 
-                // Welcome email DISABLED during preparation — see AGENTS.md gotcha #30
-                // TODO: Re-enable when team approves email sending
-                // const { data: existing } = await supabase
-                //     .from('email_queue')
-                //     .select('id')
-                //     .eq('user_id', user.id)
-                //     .eq('email_type', 'welcome')
-                //     .limit(1);
+                // Queue welcome email if not already sent (avoids duplicate with signup-form auto-confirm path)
+                const { data: existing } = await supabase
+                    .from('email_queue')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('email_type', 'welcome')
+                    .limit(1);
 
-                // if (!existing || existing.length === 0) {
-                //     const adminClient = createAdminClient();
-                //     queueEmail(
-                //         adminClient,
-                //         user.id,
-                //         'welcome',
-                //         user.email || '',
-                //         user.user_metadata?.full_name || user.email?.split('@')[0] || 'there'
-                //     ).catch(() => { }); // fire-and-forget
-                // }
+                if (!existing || existing.length === 0) {
+                    const adminClient = createAdminClient();
+                    queueEmail(
+                        adminClient,
+                        user.id,
+                        'welcome',
+                        user.email || '',
+                        user.user_metadata?.full_name || user.email?.split('@')[0] || 'there'
+                    ).catch(() => { }); // fire-and-forget
+                }
 
                 if (userType === 'admin') {
                     return NextResponse.redirect(`${origin}/admin`);

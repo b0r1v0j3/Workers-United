@@ -67,14 +67,13 @@ export function SignupForm({ userType }: SignupFormProps) {
                 return;
             }
 
-            // If auto-confirmed, redirect (welcome email DISABLED during preparation — see AGENTS.md gotcha #30)
+            // If auto-confirmed, queue welcome email and redirect
             if (data.session) {
-                // TODO: Re-enable when team approves email sending
-                // fetch("/api/queue-user-email", {
-                //     method: "POST",
-                //     headers: { "Content-Type": "application/json" },
-                //     body: JSON.stringify({ emailType: "welcome" }),
-                // }).catch(() => { }); // fire-and-forget
+                fetch("/api/queue-user-email", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ emailType: "welcome" }),
+                }).catch(() => { }); // fire-and-forget
             }
 
             router.push(userType === "employer" ? "/profile/employer" : "/profile/worker");
