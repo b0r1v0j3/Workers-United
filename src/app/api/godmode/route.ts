@@ -169,12 +169,8 @@ export async function GET(request: NextRequest) {
 
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        if (authError) {
-            console.error("God mode auth error:", authError);
-            return NextResponse.json({ godMode: false, error: authError.message });
-        }
-
-        if (!user) {
+        if (authError || !user) {
+            // Not logged in — normal for public pages, not an error
             return NextResponse.json({ godMode: false });
         }
 
