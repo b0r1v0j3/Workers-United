@@ -6,6 +6,7 @@ import { isGodModeUser } from "@/lib/godmode";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 import AppShell from "@/components/AppShell";
 import { Phone, FileText, CheckCircle2, Clock } from "lucide-react";
+import { getWorkerCompletion } from "@/lib/profile-completion";
 
 export default async function CandidatesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const params = await searchParams;
@@ -79,35 +80,20 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         .filter((u: any) => u.user_metadata?.user_type === 'employer' || u.user_metadata?.user_type === 'admin')
         .forEach((u: any) => employerProfileIds.add(u.id));
 
-    // Calculate user progress
+    // Calculate user progress — uses shared getWorkerCompletion() as single source of truth
     const getUserStats = (userId: string) => {
         const candidate = candidateMap.get(userId);
         const p = profileMap.get(userId);
-        const userDocs = allDocs?.filter(d => d.user_id === userId) || [];
-        const verifiedDocs = userDocs.filter(d => d.status === 'verified').length;
+        const userDocs = (allDocs?.filter(d => d.user_id === userId) || []) as { document_type: string }[];
+        const verifiedDocs = userDocs.filter((d: any) => d.status === 'verified').length;
 
-        // Same 16-field completion formula as worker/page.tsx
-        const fields = [
-            p?.full_name,
-            candidate?.phone,
-            candidate?.nationality,
-            candidate?.current_country,
-            candidate?.preferred_job,
-            candidate?.gender,
-            candidate?.date_of_birth,
-            candidate?.birth_country,
-            candidate?.birth_city,
-            candidate?.citizenship,
-            candidate?.marital_status,
-            candidate?.passport_number,
-            candidate?.lives_abroad,
-            candidate?.previous_visas,
-            userDocs.some(d => d.document_type === 'passport'),
-            userDocs.some(d => d.document_type === 'biometric_photo'),
-        ];
-        const profileCompletion = Math.round((fields.filter(f => f != null && f !== '' && f !== undefined).length / fields.length) * 100);
+        const result = getWorkerCompletion({
+            profile: p || null,
+            candidate: candidate || null,
+            documents: userDocs,
+        });
 
-        return { candidate, userDocs, verifiedDocs, profileCompletion };
+        return { candidate, userDocs, verifiedDocs, profileCompletion: result.completion };
     };
 
     // Filter: only show workers (exclude employers and admins)
