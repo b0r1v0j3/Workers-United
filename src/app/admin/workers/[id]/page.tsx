@@ -392,8 +392,8 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                             <h2 className="font-bold text-[#1e293b] text-xl mb-3">Admin Approval</h2>
                             <div className="flex items-center gap-2 mb-3">
                                 <span className={`text-xs font-bold uppercase px-3 py-1.5 rounded-full border ${candidateData?.admin_approved
-                                        ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
-                                        : 'bg-amber-100 text-amber-700 border-amber-300'
+                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                                    : 'bg-amber-100 text-amber-700 border-amber-300'
                                     }`}>
                                     {candidateData?.admin_approved ? '✓ Approved' : '⏳ Pending Approval'}
                                 </span>
@@ -439,10 +439,13 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                         <option value="NEW">New</option>
                                         <option value="PROFILE_COMPLETE">Profile Complete</option>
                                         <option value="PENDING_APPROVAL">Pending Approval</option>
+                                        <option value="VERIFIED">Verified</option>
                                         <option value="IN_QUEUE">In Queue</option>
                                         <option value="OFFER_PENDING">Offer Pending</option>
                                         <option value="OFFER_ACCEPTED">Offer Accepted</option>
                                         <option value="VISA_PROCESS_STARTED">Visa Process Started</option>
+                                        <option value="VISA_APPROVED">Visa Approved</option>
+                                        <option value="PLACED">Placed</option>
                                         <option value="REJECTED">Rejected</option>
                                         <option value="REFUND_FLAGGED">Refund Flagged</option>
                                     </select>

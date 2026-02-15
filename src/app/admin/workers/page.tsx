@@ -101,6 +101,8 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
 
     // Apply filter
     let filteredUsers = activeAuthUsers;
+    const statusFilters = ['NEW', 'PROFILE_COMPLETE', 'PENDING_APPROVAL', 'VERIFIED', 'IN_QUEUE', 'OFFER_PENDING', 'OFFER_ACCEPTED', 'VISA_PROCESS_STARTED', 'VISA_APPROVED', 'PLACED', 'REJECTED', 'REFUND_FLAGGED'];
+
     if (filter === 'pending') {
         filteredUsers = activeAuthUsers.filter((u: any) => {
             const userDocs = allDocs?.filter(d => d.user_id === u.id) || [];
@@ -118,30 +120,49 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
             const { profileCompletion } = getUserStats(u.id);
             return candidate && profileCompletion === 100 && !candidate.admin_approved;
         });
+    } else if (statusFilters.includes(filter)) {
+        // Status-based filter from pipeline badges
+        filteredUsers = activeAuthUsers.filter((u: any) => {
+            const candidate = candidateMap.get(u.id);
+            return candidate?.status === filter;
+        });
     }
 
-    const filterLabel = filter === 'pending' ? 'Pending Docs' : filter === 'verified' ? 'Verified Docs' : filter === 'needs_approval' ? 'Needs Approval' : 'All';
+    const filterLabels: Record<string, string> = {
+        all: 'All', pending: 'Pending Docs', verified: 'Verified Docs', needs_approval: 'Needs Approval',
+        NEW: 'New', PROFILE_COMPLETE: 'Profile Complete', PENDING_APPROVAL: 'Pending Approval',
+        VERIFIED: 'Verified', IN_QUEUE: 'In Queue', OFFER_PENDING: 'Offer Pending',
+        OFFER_ACCEPTED: 'Offer Accepted', VISA_PROCESS_STARTED: 'Visa Started',
+        VISA_APPROVED: 'Visa Approved', PLACED: 'Placed', REJECTED: 'Rejected', REFUND_FLAGGED: 'Refund',
+    };
+    const filterLabel = filterLabels[filter] || 'All';
 
     return (
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
                 {/* Header */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200">
+                    <div className="flex justify-between items-center mb-3">
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900">Workers</h1>
-                            <p className="text-slate-500">
-                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `Manage registered workers (${activeAuthUsers.length})`}
+                            <h1 className="text-xl font-bold text-slate-900">Workers</h1>
+                            <p className="text-sm text-slate-500">
+                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `${activeAuthUsers.length} registered`}
                             </p>
                         </div>
                     </div>
 
-                    {/* Filter Tabs */}
-                    <div className="flex gap-2 mt-4">
-                        <Link href="/admin/workers" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>All</Link>
-                        <Link href="/admin/workers?filter=needs_approval" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'needs_approval' ? 'bg-purple-100 text-purple-700' : 'text-slate-600 hover:bg-slate-100'}`}>Needs Approval</Link>
-                        <Link href="/admin/workers?filter=pending" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'pending' ? 'bg-amber-100 text-amber-700' : 'text-slate-600 hover:bg-slate-100'}`}>Pending Docs</Link>
-                        <Link href="/admin/workers?filter=verified" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'}`}>Verified</Link>
+                    {/* Status Filter Tabs */}
+                    <div className="flex flex-wrap gap-1.5">
+                        <FilterTab href="/admin/workers" label="All" active={filter === 'all'} color="slate" />
+                        <FilterTab href="/admin/workers?filter=NEW" label="New" active={filter === 'NEW'} color="slate" />
+                        <FilterTab href="/admin/workers?filter=VERIFIED" label="Verified" active={filter === 'VERIFIED'} color="emerald" />
+                        <FilterTab href="/admin/workers?filter=IN_QUEUE" label="In Queue" active={filter === 'IN_QUEUE'} color="amber" />
+                        <FilterTab href="/admin/workers?filter=OFFER_PENDING" label="Offer" active={filter === 'OFFER_PENDING' || filter === 'OFFER_ACCEPTED'} color="orange" />
+                        <FilterTab href="/admin/workers?filter=VISA_PROCESS_STARTED" label="Visa" active={filter === 'VISA_PROCESS_STARTED' || filter === 'VISA_APPROVED'} color="green" />
+                        <FilterTab href="/admin/workers?filter=PLACED" label="Placed" active={filter === 'PLACED'} color="green" />
+                        <FilterTab href="/admin/workers?filter=REJECTED" label="Rejected" active={filter === 'REJECTED'} color="red" />
+                        <FilterTab href="/admin/workers?filter=REFUND_FLAGGED" label="Refund" active={filter === 'REFUND_FLAGGED'} color="rose" />
+                        <FilterTab href="/admin/workers?filter=needs_approval" label="⏳ Needs Approval" active={filter === 'needs_approval'} color="purple" />
                     </div>
                 </div>
 
@@ -206,10 +227,15 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                                 </span>
                                             )}
 
+                                            {/* Candidate Status Badge */}
+                                            {hasCandidate && candidate.status && (
+                                                <StatusBadge status={candidate.status} />
+                                            )}
+
                                             {/* Admin Approval Badge */}
-                                            {hasCandidate && profileCompletion === 100 && (
-                                                <span className={`flex items-center gap-1 px-2 py-1 rounded font-medium ${candidate.admin_approved ? 'bg-emerald-50 text-emerald-700' : 'bg-purple-50 text-purple-700'}`}>
-                                                    {candidate.admin_approved ? '✓ Approved' : '⏳ Needs Approval'}
+                                            {hasCandidate && profileCompletion === 100 && !candidate.admin_approved && (
+                                                <span className="flex items-center gap-1 px-2 py-1 rounded font-medium bg-purple-50 text-purple-700">
+                                                    ⏳ Needs Approval
                                                 </span>
                                             )}
 
@@ -258,5 +284,54 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                 </div>
             </div>
         </AppShell>
+    );
+}
+
+// ─── Components ──────────────────────────────────────────────
+
+function FilterTab({ href, label, active, color }: {
+    href: string; label: string; active: boolean; color: string;
+}) {
+    const colorMap: Record<string, { activeBg: string; activeText: string }> = {
+        slate: { activeBg: "bg-slate-100", activeText: "text-slate-800" },
+        emerald: { activeBg: "bg-emerald-100", activeText: "text-emerald-700" },
+        amber: { activeBg: "bg-amber-100", activeText: "text-amber-700" },
+        orange: { activeBg: "bg-orange-100", activeText: "text-orange-700" },
+        green: { activeBg: "bg-green-100", activeText: "text-green-700" },
+        red: { activeBg: "bg-red-100", activeText: "text-red-700" },
+        rose: { activeBg: "bg-rose-100", activeText: "text-rose-700" },
+        purple: { activeBg: "bg-purple-100", activeText: "text-purple-700" },
+    };
+    const c = colorMap[color] || colorMap.slate;
+
+    return (
+        <Link href={href}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${active ? `${c.activeBg} ${c.activeText}` : 'text-slate-500 hover:bg-slate-50'
+                }`}
+        >
+            {label}
+        </Link>
+    );
+}
+
+function StatusBadge({ status }: { status: string }) {
+    const styles: Record<string, string> = {
+        NEW: "bg-slate-100 text-slate-600",
+        PROFILE_COMPLETE: "bg-blue-100 text-blue-700",
+        PENDING_APPROVAL: "bg-indigo-100 text-indigo-700",
+        VERIFIED: "bg-emerald-100 text-emerald-700",
+        IN_QUEUE: "bg-amber-100 text-amber-700",
+        OFFER_PENDING: "bg-orange-100 text-orange-700",
+        OFFER_ACCEPTED: "bg-orange-100 text-orange-700",
+        VISA_PROCESS_STARTED: "bg-green-100 text-green-700",
+        VISA_APPROVED: "bg-green-100 text-green-700",
+        PLACED: "bg-green-100 text-green-800",
+        REJECTED: "bg-red-100 text-red-700",
+        REFUND_FLAGGED: "bg-rose-100 text-rose-700",
+    };
+    return (
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${styles[status] || 'bg-slate-100 text-slate-600'}`}>
+            {status?.replace(/_/g, ' ') || 'UNKNOWN'}
+        </span>
     );
 }
