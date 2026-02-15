@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendOfferNotification } from "@/lib/notifications";
 
 // POST: Trigger auto-matching for a job request
@@ -30,8 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+        const admin = createAdminClient();
+
         // Get job request
-        const { data: jobRequest, error: jobError } = await supabase
+        const { data: jobRequest, error: jobError } = await admin
             .from("job_requests")
             .select(`
         *,
@@ -55,7 +58,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Find eligible candidates in FIFO order
-        const { data: candidates, error: candidatesError } = await supabase
+        const { data: candidates, error: candidatesError } = await admin
             .from("candidates")
             .select(`
         *,
@@ -79,7 +82,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Filter out candidates with existing offers for this job
-        const { data: existingOffers } = await supabase
+        const { data: existingOffers } = await admin
             .from("offers")
             .select("candidate_id")
             .eq("job_request_id", jobRequestId);
@@ -94,7 +97,7 @@ export async function POST(request: NextRequest) {
 
         for (const candidate of eligibleCandidates) {
             // Create offer
-            const { data: offer, error: offerError } = await supabase
+            const { data: offer, error: offerError } = await admin
                 .from("offers")
                 .insert({
                     job_request_id: jobRequestId,
@@ -111,7 +114,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Update candidate status
-            await supabase
+            await admin
                 .from("candidates")
                 .update({ status: "OFFER_PENDING" })
                 .eq("id", candidate.id);
@@ -138,7 +141,7 @@ export async function POST(request: NextRequest) {
 
         // Update job request status
         if (matchedOffers.length > 0) {
-            await supabase
+            await admin
                 .from("job_requests")
                 .update({
                     status: "matching",
