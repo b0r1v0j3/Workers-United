@@ -25,6 +25,19 @@ export default async function AnnouncementsPage() {
     async function sendAnnouncement(formData: FormData) {
         "use server";
 
+        // Re-verify admin status inside server action (action endpoints can be called directly)
+        const { createClient: createServerClient } = await import("@/lib/supabase/server");
+        const { isGodModeUser: checkGodMode } = await import("@/lib/godmode");
+        const actionSupabase = await createServerClient();
+        const { data: { user: actionUser } } = await actionSupabase.auth.getUser();
+        if (!actionUser) return;
+        const { data: actionProfile } = await actionSupabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", actionUser.id)
+            .single();
+        if (actionProfile?.user_type !== 'admin' && !checkGodMode(actionUser.email)) return;
+
         const targetAudience = formData.get("target") as string;
         const subject = formData.get("subject") as string;
         const message = formData.get("message") as string;

@@ -119,16 +119,24 @@ function TriggerMatchButton({ jobRequestId }: { jobRequestId: string }) {
     async function triggerMatch() {
         "use server";
         const { revalidatePath } = await import("next/cache");
+        const { createAdminClient: createAdmin } = await import("@/lib/supabase/admin");
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/queue/auto-match`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ jobRequestId }),
-            });
-            if (!res.ok) {
-                console.error("Trigger match failed:", res.status, await res.text());
-            }
+            const adminClient = createAdmin();
+
+            // Mark job as triggered
+            await adminClient
+                .from("job_requests")
+                .update({ auto_match_triggered: true })
+                .eq("id", jobRequestId);
+
+            // Queue auto-match
+            await adminClient
+                .from("job_requests")
+                .update({ status: "matching" })
+                .eq("id", jobRequestId)
+                .eq("status", "open");
+
         } catch (err) {
             console.error("Trigger match error:", err);
         }
