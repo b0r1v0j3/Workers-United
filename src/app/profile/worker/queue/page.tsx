@@ -64,17 +64,41 @@ export default async function QueuePage() {
 
                 {/* Queue Status Card */}
                 <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-6">
-                    {!candidate.entry_fee_paid ? (
-                        // Not in queue yet
+                    {!candidate.admin_approved ? (
+                        // Not approved by admin yet
+                        <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 8v4M12 16h.01" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-semibold text-[#050505] mb-2">Profile Under Review</h2>
+                            <p className="text-[#65676b] mb-4 max-w-md mx-auto">
+                                Your profile is being reviewed by our team. Once approved, you&apos;ll be able to pay the entry fee and join the active queue.
+                            </p>
+                            <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 text-sm font-medium px-4 py-2 rounded-full border border-amber-200">
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Pending Admin Approval
+                            </div>
+                        </div>
+                    ) : !candidate.entry_fee_paid ? (
+                        // Approved but not paid yet
                         <div className="text-center py-8">
                             <div className="w-16 h-16 bg-[#e7f3ff] rounded-full flex items-center justify-center mx-auto mb-4">
                                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1877f2" strokeWidth="2">
                                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                                 </svg>
                             </div>
+                            <div className="mb-3 inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-bold uppercase px-3 py-1.5 rounded-full border border-emerald-200">
+                                ✓ Profile Approved
+                            </div>
                             <h2 className="text-xl font-semibold text-[#050505] mb-2">Join the Active Queue</h2>
                             <p className="text-[#65676b] mb-6 max-w-md mx-auto">
-                                Pay the $9 entry fee to join the active worker queue and become eligible for job matches.
+                                Your profile has been approved! Pay the $9 entry fee to join the active worker queue and become eligible for job matches.
                             </p>
                             <PayToJoinButton />
                         </div>

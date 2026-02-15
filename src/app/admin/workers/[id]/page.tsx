@@ -234,6 +234,52 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         revalidatePath(`/admin/workers/${id}`);
     }
 
+    async function approveWorker(formData: FormData) {
+        "use server";
+        const action = formData.get("action") as string; // "approve" or "revoke"
+
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Unauthorized");
+
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.user_type !== 'admin' && !isGodModeUser(user.email)) {
+            throw new Error("Forbidden: Admin access only");
+        }
+
+        const adminClient = createAdminClient();
+
+        if (action === "approve") {
+            await adminClient
+                .from("candidates")
+                .update({
+                    admin_approved: true,
+                    admin_approved_at: new Date().toISOString(),
+                    admin_approved_by: user.id,
+                    status: 'PENDING_APPROVAL', // Mark as ready to pay
+                    updated_at: new Date().toISOString()
+                })
+                .eq("profile_id", id);
+        } else {
+            await adminClient
+                .from("candidates")
+                .update({
+                    admin_approved: false,
+                    admin_approved_at: null,
+                    admin_approved_by: null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq("profile_id", id);
+        }
+
+        revalidatePath(`/admin/workers/${id}`);
+    }
+
     async function updateCandidateStatus(formData: FormData) {
         "use server";
         const newStatus = formData.get("status") as string;
@@ -341,6 +387,41 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                             </div>
                         </div>
 
+                        {/* Admin Approval */}
+                        <div className={`rounded-[16px] shadow-sm border p-6 ${candidateData?.admin_approved ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                            <h2 className="font-bold text-[#1e293b] text-xl mb-3">Admin Approval</h2>
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className={`text-xs font-bold uppercase px-3 py-1.5 rounded-full border ${candidateData?.admin_approved
+                                        ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                                        : 'bg-amber-100 text-amber-700 border-amber-300'
+                                    }`}>
+                                    {candidateData?.admin_approved ? '✓ Approved' : '⏳ Pending Approval'}
+                                </span>
+                            </div>
+                            {candidateData?.admin_approved && candidateData?.admin_approved_at && (
+                                <p className="text-xs text-emerald-600 mb-3">
+                                    Approved {new Date(candidateData.admin_approved_at).toLocaleDateString('en-GB')} at {new Date(candidateData.admin_approved_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            )}
+                            <form action={approveWorker}>
+                                {candidateData?.admin_approved ? (
+                                    <>
+                                        <input type="hidden" name="action" value="revoke" />
+                                        <button type="submit" className="w-full bg-red-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-red-600 transition-colors">
+                                            Revoke Approval
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <input type="hidden" name="action" value="approve" />
+                                        <button type="submit" className="w-full bg-emerald-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-emerald-600 transition-colors">
+                                            ✓ Approve for Payment
+                                        </button>
+                                    </>
+                                )}
+                            </form>
+                        </div>
+
                         {/* Status Control */}
                         <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
                             <h2 className="font-bold text-[#1e293b] text-xl mb-4">Candidate Status</h2>
@@ -355,12 +436,14 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                 <div className="mb-4">
                                     <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Update Status</label>
                                     <select name="status" className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm">
-                                        <option value="REGISTERED">Registered</option>
-                                        <option value="VERIFIED">Verified</option>
+                                        <option value="NEW">New</option>
+                                        <option value="PROFILE_COMPLETE">Profile Complete</option>
+                                        <option value="PENDING_APPROVAL">Pending Approval</option>
                                         <option value="IN_QUEUE">In Queue</option>
                                         <option value="OFFER_PENDING">Offer Pending</option>
                                         <option value="OFFER_ACCEPTED">Offer Accepted</option>
                                         <option value="VISA_PROCESS_STARTED">Visa Process Started</option>
+                                        <option value="REJECTED">Rejected</option>
                                         <option value="REFUND_FLAGGED">Refund Flagged</option>
                                     </select>
                                 </div>

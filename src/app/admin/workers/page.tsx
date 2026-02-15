@@ -41,7 +41,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     // Fetch all candidates
     const { data: candidates } = await adminClient
         .from("candidates")
-        .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed, current_country, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas");
+        .select("profile_id, status, phone, nationality, preferred_job, signature_url, onboarding_completed, current_country, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas, admin_approved, admin_approved_at");
 
     // Fetch all profiles (include user_type to filter)
     const { data: profiles } = await adminClient
@@ -112,9 +112,15 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
             const verifiedCount = userDocs.filter(d => d.status === 'verified').length;
             return verifiedCount >= 3;
         });
+    } else if (filter === 'needs_approval') {
+        filteredUsers = activeAuthUsers.filter((u: any) => {
+            const candidate = candidateMap.get(u.id);
+            const { profileCompletion } = getUserStats(u.id);
+            return candidate && profileCompletion === 100 && !candidate.admin_approved;
+        });
     }
 
-    const filterLabel = filter === 'pending' ? 'Pending Docs' : filter === 'verified' ? 'Verified Docs' : 'All';
+    const filterLabel = filter === 'pending' ? 'Pending Docs' : filter === 'verified' ? 'Verified Docs' : filter === 'needs_approval' ? 'Needs Approval' : 'All';
 
     return (
         <AppShell user={user} variant="admin">
@@ -133,6 +139,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                     {/* Filter Tabs */}
                     <div className="flex gap-2 mt-4">
                         <Link href="/admin/workers" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>All</Link>
+                        <Link href="/admin/workers?filter=needs_approval" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'needs_approval' ? 'bg-purple-100 text-purple-700' : 'text-slate-600 hover:bg-slate-100'}`}>Needs Approval</Link>
                         <Link href="/admin/workers?filter=pending" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'pending' ? 'bg-amber-100 text-amber-700' : 'text-slate-600 hover:bg-slate-100'}`}>Pending Docs</Link>
                         <Link href="/admin/workers?filter=verified" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'}`}>Verified</Link>
                     </div>
@@ -196,6 +203,13 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                             {hasCandidate && candidate.phone && (
                                                 <span className="flex items-center gap-1 text-slate-600 bg-slate-50 px-2 py-1 rounded">
                                                     <Phone size={12} /> {candidate.phone}
+                                                </span>
+                                            )}
+
+                                            {/* Admin Approval Badge */}
+                                            {hasCandidate && profileCompletion === 100 && (
+                                                <span className={`flex items-center gap-1 px-2 py-1 rounded font-medium ${candidate.admin_approved ? 'bg-emerald-50 text-emerald-700' : 'bg-purple-50 text-purple-700'}`}>
+                                                    {candidate.admin_approved ? '✓ Approved' : '⏳ Needs Approval'}
                                                 </span>
                                             )}
 
