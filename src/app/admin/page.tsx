@@ -140,17 +140,6 @@ export default async function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* ─── Employers Summary ─── */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                    <div className="flex items-center justify-between mb-2">
-                        <h2 className="font-bold text-slate-900 text-lg">Employers</h2>
-                        <Link href="/admin/employers" className="text-sm text-blue-600 font-semibold hover:underline flex items-center gap-1">
-                            View All <ChevronRight size={14} />
-                        </Link>
-                    </div>
-                    <p className="text-sm text-slate-500">{totalEmployers} registered</p>
-                </div>
-
                 {/* ─── 90-Day Countdown ─── */}
                 {queueWorkers.length > 0 && (
                     <div className="bg-white rounded-2xl border border-slate-200 p-5">
