@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 15.02.2026 (Sprint 3 — admin approval constraint fix, status normalization)
+> **Poslednje ažuriranje:** 15.02.2026 (Launch plan: 01.03.2026 Go-Live, Stripe + n8n integration roadmap)
 
 ---
 
@@ -390,31 +390,24 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 **Facebook-Style Layout (Feb 2026)**
 - AppShell, UnifiedNavbar, kartice, tabovi — ceo sajt u FB stilu
 
-### 🔲 TODO
-- [x] ~~**GDPR Usklađenost** — consent pri registraciji, pravo na brisanje, privacy policy sadržaj~~
-- [x] ~~Admin unapređenje — kompletna funkcionalnost (sve da može da radi)~~
-- [x] ~~Forgot Password flow~~
-- [x] ~~Coming Soon placeholder za plaćanje~~
-- [x] ~~Mobilna responsivnost (mobile-first)~~
+### 🔲 TODO — Pre-Launch (do 01.03.2026)
+- [ ] **Stripe integracija** — Coming Soon → pravi $9 Checkout Session (Sekcija 9)
+- [ ] **Payment webhook testiranje** — entry fee + placement fee flow
+- [ ] **n8n email automation** — retry failed emails, auto-responder za inbox
+- [ ] **Upaliti cron jobove** — `profile-reminders`, `check-expiring-docs`, `match-jobs`, `check-expiry` nazad u `vercel.json`
 - [ ] Multi-country pricing za placement fee
-- [x] ~~Employer profil verifikacija (100% pravilo — UI Completion Tracker & Pending Approval)~~
-- [x] ~~Automatsko matchovanje radnika sa poslodavcima~~
-- [x] ~~Email notifikacije za sve korake procesa~~
-- [ ] Prebaciti Coming Soon → Stripe checkout ($9 entry fee) kad bude spremno
-- [x] ~~**Automatsko generisanje dokumenata za vize** — UGOVOR, IZJAVA, OVLAŠĆENJE, POZIVNO PISMO (Sekcija 8)~~
-- [x] ~~Worker preferred_job: text → dropdown (sync sa employer)~~
-- [x] ~~Onboarding dropdown sync (lowercase → uppercase vrednosti)~~
-- [x] ~~Employer country dropdown (46 evropskih država)~~
-- [x] ~~**Admin Test Profiles** — admin može da pristupi worker i employer profilima za testiranje~~
-- [x] ~~**Manual Match** — admin može ručno da poveže radnika sa Job Request-om~~
-- [x] ~~**Edit Data API** — admin inline editovanje worker/employer/contract_data polja~~
-- [x] ~~**Re-Verification** — admin može ponovo da trigeruje AI verifikaciju dokumenata~~
-- [x] ~~**Bulk Generation** — generiše 4 DOCX dokumenta za SVE matchovane radnike~~
-- [x] ~~**Bulk ZIP Download** — download svih dokumenata u strukturiranom ZIP-u (IME PREZIME/ folderi)~~
+- [ ] Admin dashboard statistike (registracije, completion, prihod)
+
+### ✅ TODO — Završeno
+- [x] ~~GDPR, Forgot Password, Coming Soon, Mobilna responsivnost~~
+- [x] ~~Admin panel (manual match, edit data, re-verify, bulk docs, ZIP download)~~
+- [x] ~~Email notifikacije, template sistem, profile reminders~~
+- [x] ~~Automatsko generisanje dokumenata za vize~~
+- [x] ~~Employer profil verifikacija + Admin approval flow~~
 
 ### ⏸️ ČEKA SE (blokirano)
-- [ ] **WhatsApp integracija** — čeka se tax ID → bankovni račun → broj telefona na firmu
-- [ ] **Stripe plaćanja** — čeka se tax ID → bankovni račun → povezivanje sa sajtom
+- [ ] **Stripe plaćanja** — bankovni račun se otvara 17.02. → Stripe kreiranje ~21.02.
+- [ ] **WhatsApp integracija** — čeka bankovni račun → broj telefona na firmu
 
 ---
 
@@ -658,3 +651,59 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 29. **⚠️ SVI CRON JOBOVI SU UGAŠENI — sistem je u fazi pripreme** — `vercel.json` crons array je prazan. Četiri cron joba su bila aktivna i slala emailove korisnicima: `match-jobs` (svaki sat — matchovao workere sa jobovima), `check-expiry` (svaki sat — procesovao expired offers), `profile-reminders` (svaki dan — slao remindere i **BRISAO KORISNIKE posle 30 dana**), `check-expiring-docs` (svaki dan). Rute i dalje postoje u `/api/cron/` i mogu se ručno pozvati. Kad sistem bude spreman za produkciju, dodaj schedule-ove nazad u `vercel.json`.
 30. **🚫 AUTOMATSKI CRON MEJLOVI SU UGAŠENI — welcome/signup emailovi RADE normalno** — Cron jobovi su ugašeni jer su slali lažne notifikacije (npr. "pronađen vam je posao") kad nema odobrenih profila u sistemu. Welcome email, signup potvrda, admin announcements, kontakt forma — SVE TO RADI. Samo `match-jobs`, `profile-reminders`, `check-expiring-docs`, `check-expiry` su isključeni u `vercel.json`. NE uključivati ih dok tim ne kaže.
 31. **🛡️ MANUELNA ADMIN VERIFIKACIJA JE OBAVEZNA** — Radnici NE mogu da plate $9 entry fee dok admin ne odobri profil. Flow: radnik popuni profil 100% → admin pregleda u `/admin/workers/[id]` → klikne "Approve for Payment" → tek tada radnik vidi Pay dugme na queue stranici. Server-side zaštita: Stripe `create-checkout` odbija neodobrene radnike sa 403. DB kolone: `admin_approved`, `admin_approved_at`, `admin_approved_by` na `candidates` i `employers` tabelama. Migracija: `007_admin_approval.sql`.
+32. **🚀 LAUNCH DATUM: 01.03.2026** — sve mora biti gotovo do tada. Videti Sekciju 9.
+
+---
+
+## 9. 🚀 LAUNCH ROADMAP — 01.03.2026 GO-LIVE
+
+> **Cilj:** 1. marta sajt počinje da zarađuje. Radnici mogu da plate $9 entry fee, automatski mejlovi rade, cron jobovi aktivni.
+
+### Nedelja 1: Infrastruktura (17.02 – 21.02)
+| Dan | Task | Ko |
+|---|---|---|
+| Pon 17.02 | Otvaranje bankovnog računa | Borivoje |
+| Uto-Pet | Čekanje na Stripe odobrenje | Borivoje |
+| Uto-Pet | Priprema koda za Stripe (mock testiranje) | AI |
+
+**AI tasks tokom čekanja:**
+- [ ] Pripremiti Stripe integraciju sa test API ključevima
+- [ ] Implementirati `create-checkout-session` API ruta (test mode)
+- [ ] Implementirati webhook handler za `checkout.session.completed`
+- [ ] Testirati ceo flow sa Stripe test karticama
+- [ ] Pripremiti admin dashboard statistike (registracije ovog meseca, prihod, completion rate)
+
+### Nedelja 2: Integracija (22.02 – 28.02)
+| Dan | Task | Ko |
+|---|---|---|
+| Kad Stripe bude odobren | Prebaciti sa test → live API ključevi | Zajedno |
+| +1 dan | Coming Soon → Stripe Checkout ($9) | AI |
+| +2 dana | Payment flow end-to-end test (pravi $1 test charge) | Borivoje |
+| +3 dana | n8n setup — email retry, auto-responder, WhatsApp (ako dostupno) | AI |
+| +4 dana | Upaliti cron jobove u `vercel.json` | AI |
+| +5 dana | Finalni smoke test — signup → profil → admin approve → plati → queue | Zajedno |
+
+**AI tasks:**
+- [ ] Coming Soon dugme → pravi Stripe Checkout Session
+- [ ] Webhook: `payment_success` email, update `payments` tabela, set kandidat status `IN_QUEUE`
+- [ ] n8n: konfigurisati email retry za failed emails iz `email_queue`
+- [ ] Aktivirati crons: `profile-reminders`, `check-expiring-docs`, `match-jobs`, `check-expiry`
+- [ ] Admin dashboard: broj registracija, prihod, konverzija
+- [ ] Smoke test: ceo flow od A do Ž
+
+### 01.03.2026 — 🟢 GO LIVE
+- [ ] Prebaciti Stripe u live mode
+- [ ] Verifikovati da mejlovi stižu (welcome, profile reminder, payment success)
+- [ ] Verifikovati cron jobove
+- [ ] Monitoring: Vercel logs, Stripe dashboard, email delivery rate
+
+### ⚠️ Preduslovi za launch
+1. ✅ Sajt radi (Vercel deploy)
+2. ✅ Auth (signup/login/logout)
+3. ✅ Worker profil + dokumenta + AI verifikacija
+4. ✅ Admin panel + manual approval
+5. ✅ Email sistem (welcome, reminders, admin updates)
+6. ⬜ Stripe plaćanja ($9 entry fee)
+7. ⬜ Cron jobovi aktivni
+8. ⬜ n8n email automation
+9. ⬜ Smoke test passed
