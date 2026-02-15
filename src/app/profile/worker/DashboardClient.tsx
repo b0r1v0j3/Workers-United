@@ -32,12 +32,13 @@ interface DashboardClientProps {
     profileCompletion: number;
     isReady: boolean;
     inQueue: boolean;
+    adminApproved: boolean;
 }
 
 type TabType = "profile" | "documents" | "status";
 
 export default function DashboardClient({
-    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue
+    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue, adminApproved
 }: DashboardClientProps) {
     const [activeTab, setActiveTab] = useState<TabType>("profile");
 
@@ -59,8 +60,8 @@ export default function DashboardClient({
     const stages = [
         { label: "Profile Created", done: true },
         { label: "Documents Uploaded", done: docsUploaded },
-        { label: "Verified", done: inQueue },
-        { label: "In Queue", done: inQueue },
+        { label: "Admin Approved", done: adminApproved },
+        { label: "Payment & Queue", done: inQueue },
         { label: "Matched", done: false },
     ];
 
@@ -338,11 +339,16 @@ export default function DashboardClient({
                                 iconEl = <CheckCircle2 size={20} />; titleColor = 'text-emerald-800'; subtitleColor = 'text-emerald-600';
                                 title = "You're in the queue!";
                                 subtitle = "We're actively matching you with employers. You'll be notified when there's a match.";
-                            } else if (isReady) {
+                            } else if (isReady && adminApproved) {
                                 bg = 'bg-blue-50'; border = 'border-blue-200'; iconBg = 'bg-[#1877f2]';
                                 iconEl = <Clock size={20} />; titleColor = 'text-blue-800'; subtitleColor = 'text-blue-600';
-                                title = "Profile complete — ready for queue";
-                                subtitle = "Your profile and documents are verified. Contact admin to join the queue.";
+                                title = "Profile approved — ready to pay";
+                                subtitle = "Your profile has been approved by our team. Pay the entry fee to join the queue.";
+                            } else if (isReady && !adminApproved) {
+                                bg = 'bg-purple-50'; border = 'border-purple-200'; iconBg = 'bg-purple-500';
+                                iconEl = <Clock size={20} />; titleColor = 'text-purple-800'; subtitleColor = 'text-purple-600';
+                                title = "Profile under review";
+                                subtitle = "Your profile is complete and being reviewed by our team. You'll be notified once approved.";
                             } else if (docsUploaded && !profileDone) {
                                 bg = 'bg-amber-50'; border = 'border-amber-200'; iconBg = 'bg-amber-500';
                                 iconEl = <AlertCircle size={20} />; titleColor = 'text-amber-800'; subtitleColor = 'text-amber-600';

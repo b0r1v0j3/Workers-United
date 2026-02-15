@@ -59,13 +59,17 @@ export async function POST(request: NextRequest) {
             offer = offerData;
         }
 
-        // For entry fee, check if already paid
+        // For entry fee, check if already paid and if admin approved
         if (type === "entry_fee") {
             const { data: candidate } = await supabase
                 .from("candidates")
-                .select("entry_fee_paid")
+                .select("entry_fee_paid, admin_approved")
                 .eq("profile_id", user.id)
                 .single();
+
+            if (!candidate?.admin_approved) {
+                return NextResponse.json({ error: "Profile not yet approved by admin" }, { status: 403 });
+            }
 
             if (candidate?.entry_fee_paid) {
                 return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
