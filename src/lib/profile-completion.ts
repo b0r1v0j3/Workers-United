@@ -24,6 +24,7 @@ const WORKER_FIELD_LABELS: Record<string, string> = {
     passport_doc: "Passport Document",
     biometric_photo_doc: "Biometric Photo",
     diploma_doc: "Diploma / Certificate",
+    spouse_data: "Spouse Details (required if married)",
 };
 
 const EMPLOYER_FIELD_LABELS: Record<string, string> = {
@@ -69,6 +70,10 @@ interface WorkerData {
         passport_expiry_date?: string | null;
         lives_abroad?: boolean | null;
         previous_visas?: boolean | null;
+        family_data?: {
+            spouse?: { first_name?: string; last_name?: string; dob?: string } | null;
+            children?: any[] | null;
+        } | null;
     } | null;
     documents: { document_type: string }[];
 }
@@ -117,6 +122,13 @@ export function getWorkerCompletion(data: WorkerData): ProfileCompletionResult {
         biometric_photo_doc: docTypes.includes("biometric_photo"),
         diploma_doc: docTypes.includes("diploma"),
     };
+
+    // Conditional: married workers must have spouse data
+    const isMarried = candidate?.marital_status?.toLowerCase() === 'married';
+    if (isMarried) {
+        const spouse = candidate?.family_data?.spouse;
+        fields.spouse_data = !!(spouse?.first_name && spouse?.last_name);
+    }
 
     // For boolean answer fields, `false` counts as filled (user answered "No")
     // For everything else, use truthiness (so passport_doc: false = not uploaded)

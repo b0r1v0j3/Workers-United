@@ -416,12 +416,43 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                             </div>
 
                             {/* Preferences */}
-                            <div>
+                            <div className="mb-4">
                                 <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Preferences</h3>
                                 <div className="grid grid-cols-1 gap-2">
                                     <InfoRow label="Preferred Job" value={candidateData?.preferred_job} />
                                 </div>
                             </div>
+
+                            {/* Family Data — only when married */}
+                            {candidateData?.marital_status?.toLowerCase() === 'married' && (
+                                <div>
+                                    <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">
+                                        Family <span className="text-amber-500 normal-case">(required for married)</span>
+                                    </h3>
+                                    {candidateData?.family_data?.spouse ? (
+                                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-3">
+                                            <InfoRow label="Spouse First Name" value={candidateData.family_data.spouse.first_name} />
+                                            <InfoRow label="Spouse Last Name" value={candidateData.family_data.spouse.last_name} />
+                                            <InfoRow label="Spouse DOB" value={candidateData.family_data.spouse.dob ? new Date(candidateData.family_data.spouse.dob).toLocaleDateString('en-GB') : null} />
+                                            <InfoRow label="Spouse Birth Country" value={candidateData.family_data.spouse.birth_country} />
+                                            <InfoRow label="Spouse Birth City" value={candidateData.family_data.spouse.birth_city} />
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-red-400 font-medium mb-3">⚠ No spouse data entered</div>
+                                    )}
+                                    {candidateData?.family_data?.children?.length > 0 && (
+                                        <div>
+                                            <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mb-1">Children ({candidateData.family_data.children.length})</div>
+                                            {candidateData.family_data.children.map((child: any, i: number) => (
+                                                <div key={i} className="grid grid-cols-3 gap-x-2 gap-y-1 mb-2 pl-2 border-l-2 border-slate-100">
+                                                    <InfoRow label={`Child ${i + 1} Name`} value={`${child.first_name || ''} ${child.last_name || ''}`} />
+                                                    <InfoRow label="DOB" value={child.dob ? new Date(child.dob).toLocaleDateString('en-GB') : null} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Admin Approval */}
