@@ -66,7 +66,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex font-sans flex-col lg:flex-row">
+        <div className="min-h-screen flex font-montserrat flex-col lg:flex-row">
             {/* Left Side: Brand/Info Panel */}
             <div className="hidden lg:flex w-1/2 text-white p-12 flex-col justify-between relative overflow-hidden"
                 style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #2563EB 100%)' }}

@@ -11,7 +11,7 @@
   --color-green: #1dbf73;
   --color-bg-primary: #f4f6fb;
   --color-border-soft: #dde3ec;
-
+  --font-montserrat: "Montserrat", sans-serif;
 }
 
 :root {
@@ -36,6 +36,7 @@
 
 body {
   margin: 0;
+  font-family: 'Montserrat', sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
@@ -92,6 +93,7 @@ section {
 }
 
 .logo-text {
+  font-family: 'Montserrat', sans-serif;
   font-weight: 700;
   font-size: 18px;
   color: var(--primary);
@@ -330,7 +332,7 @@ section {
   font-size: 13px;
   color: #94a3b8;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .step-circle.active {
@@ -372,8 +374,15 @@ section {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .step-title {
@@ -602,7 +611,9 @@ section {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Background gradient for the whole wizard page */

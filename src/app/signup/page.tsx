@@ -14,7 +14,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     const userType = params.type === "employer" ? "employer" : "worker";
 
     return (
-        <div className="min-h-screen flex font-sans flex-col lg:flex-row">
+        <div className="min-h-screen flex font-montserrat flex-col lg:flex-row">
             {/* Left Side: Brand Panel */}
             <div className="hidden lg:flex w-1/2 text-white p-12 flex-col justify-between relative overflow-hidden"
                 style={{

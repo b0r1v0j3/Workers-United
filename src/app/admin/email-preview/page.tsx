@@ -120,7 +120,7 @@ export default function EmailPreviewPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5] p-6 font-sans">
+        <div className="min-h-screen bg-[#f0f2f5] p-6 font-montserrat">
             <div className="max-w-[1600px] mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
