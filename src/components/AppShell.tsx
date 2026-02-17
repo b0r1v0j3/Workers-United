@@ -1,5 +1,16 @@
 "use client";
 
+import {
+    LayoutDashboard,
+    Users,
+    Building2,
+    Settings,
+    Mail,
+    Briefcase,
+    Home,
+    User,
+    LogOut
+} from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
 
@@ -41,19 +52,20 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 <div className="flex items-center justify-around h-14">
                     {variant === 'admin' ? (
                         <>
-                            <BottomNavLink href="/admin" icon="🏠" label="Home" />
-                            <BottomNavLink href="/admin/workers" icon="👤" label="Workers" />
-                            <BottomNavLink href="/admin/employers" icon="🏢" label="Employers" />
-                            <BottomNavLink href="/admin/settings" icon="⚙️" label="Settings" />
+                            <BottomNavLink href="/admin" icon={<LayoutDashboard size={20} />} label="Home" />
+                            <BottomNavLink href="/admin/workers" icon={<Users size={20} />} label="Workers" />
+                            <BottomNavLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" />
+                            <BottomNavLink href="/admin/email-preview" icon={<Mail size={20} />} label="Emails" />
+                            <BottomNavLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" />
                         </>
                     ) : (
                         <>
-                            <BottomNavLink href={homeHref} icon="🏠" label="Home" />
-                            <BottomNavLink href={profileHref} icon="👤" label="Profile" />
+                            <BottomNavLink href={homeHref} icon={<Home size={20} />} label="Home" />
+                            <BottomNavLink href={profileHref} icon={<User size={20} />} label="Profile" />
                             {userType === 'employer' && (
-                                <BottomNavLink href="/profile/employer/jobs" icon="💼" label="Jobs" />
+                                <BottomNavLink href="/profile/employer/jobs" icon={<Briefcase size={20} />} label="Jobs" />
                             )}
-                            <BottomNavLink href="/profile/settings" icon="⚙️" label="Settings" />
+                            <BottomNavLink href="/profile/settings" icon={<Settings size={20} />} label="Settings" />
                         </>
                     )}
                 </div>
@@ -71,8 +83,8 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
             : '/profile/worker';
 
     return (
-        <div className="space-y-2">
-            <SidebarLink href={homeHref} icon="🏠" label="Home" />
+        <div className="space-y-1">
+            <SidebarLink href={homeHref} icon={<LayoutDashboard size={20} />} label="Dashboard" />
 
             {/* Only show profile link outside admin mode */}
             {variant !== 'admin' && (
@@ -85,20 +97,21 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
 
             <hr className="border-gray-300 my-2 mx-2" />
 
-            <div className="px-2 text-lg font-semibold text-gray-500 mb-2 mt-4">Shortcuts</div>
+            <div className="px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 mt-4">Menu</div>
 
             {variant === 'admin' && (
                 <>
-                    <SidebarLink href="/admin/workers" icon="👤" label="Workers" />
-                    <SidebarLink href="/admin/employers" icon="🏢" label="Employers" />
-                    <SidebarLink href="/admin/settings" icon="⚙️" label="Settings" />
+                    <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" />
+                    <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" />
+                    <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" />
+                    <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" />
                 </>
             )}
 
             {/* Employer shortcuts only outside admin mode */}
             {variant !== 'admin' && userType === 'employer' && (
                 <>
-                    <SidebarLink href="/profile/employer/jobs" icon="💼" label="Job Postings" />
+                    <SidebarLink href="/profile/employer/jobs" icon={<Briefcase size={20} />} label="Job Postings" />
                 </>
             )}
 
@@ -106,7 +119,7 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
             {variant !== 'admin' && (
                 <>
                     <hr className="border-gray-300 my-2 mx-2" />
-                    <SidebarLink href="/profile/settings" icon="⚙️" label="Account Settings" />
+                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" />
                 </>
             )}
         </div>
@@ -115,19 +128,21 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
 
 function SidebarLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
     return (
-        <Link href={href} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-200 transition-colors group">
-            <div className="w-9 h-9 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+        <Link href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-200 transition-colors group text-gray-700 hover:text-gray-900">
+            <div className="w-5 h-5 flex items-center justify-center text-gray-500 group-hover:text-gray-900 transition-colors">
                 {icon}
             </div>
-            <span className="font-medium text-[#050505] text-[15px]">{label}</span>
+            <span className="font-medium text-[15px]">{label}</span>
         </Link>
     );
 }
 
-function BottomNavLink({ href, icon, label }: { href: string; icon: string; label: string }) {
+function BottomNavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
     return (
-        <Link href={href} className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 text-[#65676b] hover:text-[#1877f2] transition-colors">
-            <span className="text-xl">{icon}</span>
+        <Link href={href} className="flex flex-col items-center justify-center gap-1 px-2 py-1 text-[#65676b] hover:text-[#1877f2] transition-colors w-full">
+            <div className="text-current transition-transform active:scale-95">
+                {icon}
+            </div>
             <span className="text-[10px] font-semibold">{label}</span>
         </Link>
     );
