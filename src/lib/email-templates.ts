@@ -21,8 +21,7 @@ interface EmailTemplate {
     html: string;
 }
 
-// ─── Strict template data — every field must be listed here ─────
-// No more [key: string]: any. If you need a new field, add it explicitly.
+// ─── Strict template data ──────────────────────────────────────────────
 export interface TemplateData {
     name?: string;
     email?: string;
@@ -56,67 +55,72 @@ export interface TemplateData {
 }
 
 const baseStyles = `
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #183b56;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    color: #1f2937;
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
 `;
 
 const buttonStyle = `
     display: inline-block;
-    background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%);
-    color: white !important;
-    padding: 14px 32px;
-    border-radius: 30px;
+    background-color: #2563eb;
+    color: #ffffff !important;
+    padding: 14px 28px;
+    border-radius: 99px;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 16px;
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    transition: background-color 0.2s;
 `;
 
 // Helper to wrap content in the modern design with dynamic header
-const wrapModernTemplate = (content: string, title: string = "Workers United", subtitle: string = "Welcome to the team!"): string => `
+const wrapModernTemplate = (content: string, title: string = "Workers United", subtitle: string = ""): string => `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
 </head>
-<body style="margin:0; padding:0; background-color:#f4f6fb;">
+<body style="margin:0; padding:0; background-color:#f3f4f6; ${baseStyles}">
     <!-- Preheader text for inbox preview -->
     <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${subtitle}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+    
     <div style="max-width:600px; margin:0 auto; padding:40px 20px;">
-        <!-- Content -->
-        <div style="background:white; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05); overflow: hidden; ${baseStyles}">
-            <!-- Header Bar -->
-            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); padding: 30px 20px; text-align: center;">
-                <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="60" height="60" style="vertical-align: middle;">
-                <div style="color: white; font-size: 24px; font-weight: bold; margin-top: 10px;">${title}</div>
-                <div style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 5px;">${subtitle}</div>
-            </div>
+        
+        <!-- Header: Clean & inviting -->
+        <div style="text-align: center; margin-bottom: 30px;">
+             <!-- Using Logo-Full for email headers usually looks better if background is not white, 
+                  but here we want a clean look. Let's use the icon + text or just icon. 
+                  Let's stick to the blue icon for brand recognition. -->
+            <img src="https://workersunited.eu/logo.png" alt="Workers United" width="50" height="50" style="vertical-align: middle; border-radius: 12px;">
+            <div style="font-weight: 800; font-size: 24px; margin-top: 15px; color: #111827; letter-spacing: -0.5px;">Workers United</div>
+        </div>
 
+        <!-- Main Card -->
+        <div style="background:white; border-radius:24px; box-shadow:0 10px 40px rgba(0,0,0,0.08); overflow: hidden; padding: 40px;">
             ${content}
-
-            <!-- Bottom Bar -->
-            <div style="background: linear-gradient(135deg, #2f6fed 0%, #1e5cd6 100%); height: 8px;"></div>
         </div>
         
-        <!-- Footer -->
-        <div style="text-align:center; margin-top:30px; color:#6c7a89; font-size:12px;">
-            <div style="margin-bottom:20px;">
-                <a href="https://www.facebook.com/profile.php?id=61585104076725" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/facebook-new.png" width="24" height="24" alt="Facebook" style="vertical-align:middle;"></a>
-                <a href="https://www.instagram.com/workersunited.eu/" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/instagram-new.png" width="24" height="24" alt="Instagram" style="vertical-align:middle;"></a>
-                <a href="https://www.linkedin.com/company/workersunited-eu/" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/linkedin.png" width="24" height="24" alt="LinkedIn" style="vertical-align:middle;"></a>
-                <a href="https://x.com/WorkersUnitedEU" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/ios-filled/50/000000/x.png" width="22" height="22" alt="X" style="vertical-align:middle; opacity:0.8;"></a>
-                <a href="https://www.tiktok.com/@www.workersunited.eu" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/tiktok.png" width="24" height="24" alt="TikTok" style="vertical-align:middle;"></a>
-                <a href="https://www.threads.com/@workersunited.eu" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/ios-filled/50/000000/threads.png" width="22" height="22" alt="Threads" style="vertical-align:middle; opacity:0.8;"></a>
-                <a href="https://www.reddit.com/r/WorkersUnitedEU/" style="text-decoration:none; margin:0 8px;"><img src="https://img.icons8.com/color/48/reddit.png" width="24" height="24" alt="Reddit" style="vertical-align:middle;"></a>
+        <!-- Footer: Friendly & Helpful -->
+        <div style="text-align:center; margin-top:40px; color:#6b7280; font-size:13px;">
+            <p style="margin-bottom:20px; font-weight: 500;">Stay connected</p>
+            <div style="margin-bottom:30px;">
+                <a href="https://www.facebook.com/profile.php?id=61585104076725" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/facebook-new.png" width="28" height="28" alt="Facebook"></a>
+                <a href="https://www.instagram.com/workersunited.eu/" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/instagram-new.png" width="28" height="28" alt="Instagram"></a>
+                <a href="https://www.linkedin.com/company/workersunited-eu/" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/linkedin.png" width="28" height="28" alt="LinkedIn"></a>
+                <a href="https://x.com/WorkersUnitedEU" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/ios-filled/50/333333/x.png" width="24" height="24" alt="X"></a>
+                <a href="https://www.tiktok.com/@www.workersunited.eu" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/tiktok.png" width="28" height="28" alt="TikTok"></a>
             </div>
-            <p style="margin:0 0 10px;">Workers United LLC</p>
-            <p style="margin:0 0 10px;">75 E 3rd St., Sheridan, Wyoming 82801</p>
-            <p style="margin:0 0 10px;">
-                <a href="https://workersunited.eu/privacy-policy" style="color:#2f6fed; text-decoration:none;">Privacy Policy</a> · 
-                <a href="https://workersunited.eu/terms" style="color:#2f6fed; text-decoration:none;">Terms of Service</a> · 
-                <a href="https://workersunited.eu/profile/settings" style="color:#2f6fed; text-decoration:none;">Unsubscribe</a>
-            </p>
+            
+            <p style="margin:0 0 8px;">&copy; ${new Date().getFullYear()} Workers United LLC</p>
+            <p style="margin:0 0 20px;">75 E 3rd St., Sheridan, Wyoming 82801</p>
+            <div style="margin-bottom: 20px;">
+                <a href="https://workersunited.eu/privacy-policy" style="color:#6b7280; text-decoration:underline; margin: 0 10px;">Privacy</a>
+                <a href="https://workersunited.eu/terms" style="color:#6b7280; text-decoration:underline; margin: 0 10px;">Terms</a>
+                <a href="https://workersunited.eu/profile/settings" style="color:#6b7280; text-decoration:underline; margin: 0 10px;">Preferences</a>
+            </div>
         </div>
     </div>
 </body>
@@ -124,475 +128,422 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
 `;
 
 export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemplate {
-    const name = data.name || "there";
+    const name = data.name || "friend";
+    const firstName = name.split(" ")[0];
 
     switch (type) {
         case "welcome":
             return {
-                subject: "Welcome to Workers United! 🎉",
+                subject: "Welcome to the team! 👋",
                 html: wrapModernTemplate(`
-                    <!-- Body Content -->
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Welcome, ${name}!</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            Thank you for joining Workers United! We're excited to help you find the right job opportunities in Europe.
-                        </p>
-                        
-                        <div style="background:#f0f7ff; border-radius:12px; padding:30px; margin:25px 0;">
-                            <h3 style="margin:0 0 20px; font-size:18px; color: #183b56;">Your Next Steps:</h3>
-                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                                <tr>
-                                    <td width="36" valign="top" style="padding-bottom: 12px;"><div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px;">✓</div></td>
-                                    <td valign="top" style="font-size: 16px; color: #2d3748; padding-top: 2px; padding-bottom: 12px;">1. Complete your profile information</td>
-                                </tr>
-                                <tr>
-                                    <td width="36" valign="top" style="padding-bottom: 12px;"><div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px;">✓</div></td>
-                                    <td valign="top" style="font-size: 16px; color: #2d3748; padding-top: 2px; padding-bottom: 12px;">2. Upload documents</td>
-                                </tr>
-                                <tr>
-                                    <td width="36" valign="top" style="padding-bottom: 12px;"><div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px;">✓</div></td>
-                                    <td valign="top" style="font-size: 16px; color: #2d3748; padding-top: 2px; padding-bottom: 12px;">3. Wait for verification</td>
-                                </tr>
-                                <tr>
-                                    <td width="36" valign="top"><div style="background: #2f6fed; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px;">✓</div></td>
-                                    <td valign="top" style="font-size: 16px; color: #2d3748; padding-top: 2px;">4. Get matched with employers!</td>
-                                </tr>
-                            </table>
-                        </div>
-                        
-                        <div style="text-align:center; margin-top:35px; margin-bottom: 20px;">
-                            <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
-                                Complete Your Profile
-                            </a>
-                        </div>
-                        
-                        <p style="text-align: center; color:#6c7a89; font-size:14px; margin-top: 30px;">
-                            Questions? Reply to this email or contact us at <a href="mailto:contact@workersunited.eu" style="color: #2f6fed; text-decoration: none;">contact@workersunited.eu</a>
-                        </p>
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="margin:0; color:#111827; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Welcome, ${firstName}!</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 10px;">We're thrilled to have you onboard.</p>
                     </div>
-                `, "Workers United", "Welcome to the team!")
+
+                    <p style="font-size: 16px; color: #374151; margin-bottom: 25px;">
+                        Workers United is your bridge to great job opportunities in Europe. We handle the paperwork, so you can focus on building your future.
+                    </p>
+                    
+                    <div style="background:#f9fafb; border-radius:16px; padding:25px; margin:30px 0; border: 1px solid #e5e7eb;">
+                        <h3 style="margin:0 0 20px; font-size:16px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Your Journey Starts Here</h3>
+                        
+                        <div style="display: flex; align-items: start; margin-bottom: 15px;">
+                            <span style="font-size: 20px; margin-right: 15px;">📝</span>
+                            <div>
+                                <strong style="color: #111827;">1. Complete Profile</strong>
+                                <div style="color: #6b7280; font-size: 14px;">Review all fields</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: start; margin-bottom: 15px;">
+                            <span style="font-size: 20px; margin-right: 15px;">📤</span>
+                            <div>
+                                <strong style="color: #111827;">2. Upload Docs</strong>
+                                <div style="color: #6b7280; font-size: 14px;">Passport, Photo, Diploma</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: start; margin-bottom: 15px;">
+                            <span style="font-size: 20px; margin-right: 15px;">🤖</span>
+                            <div>
+                                <strong style="color: #111827;">3. AI Verification</strong>
+                                <div style="color: #6b7280; font-size: 14px;">Instant checks</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: start;">
+                            <span style="font-size: 20px; margin-right: 15px;">🚀</span>
+                            <div>
+                                <strong style="color: #111827;">4. Get Hired</strong>
+                                <div style="color: #6b7280; font-size: 14px;">Matched with employers</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align:center; margin-top:40px;">
+                        <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle}">
+                            Start Your Profile
+                        </a>
+                    </div>
+                `, "Welcome to Workers United", "Let's get you hired!")
             };
 
         case "profile_complete":
             return {
-                subject: "Your profile is complete! One more step... 📋",
+                subject: "You're Verified! 🎉",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Great job, ${name}!</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            Your profile and documents are now verified. You're just one step away from starting your job search.
-                        </p>
-                        
-                        <div style="background:linear-gradient(135deg, #183b56 0%, #2f6fed 100%); border-radius:12px; padding:30px; margin:25px 0; color:white; text-align:center;">
-                            <h3 style="margin:0 0 10px; font-size:20px;">Activate Your Profile</h3>
-                            <p style="margin:0 0 20px; opacity:0.9; font-size: 16px;">Pay just $9 to enter our job matching queue</p>
-                            <div style="font-size:42px; font-weight:bold; margin-bottom: 10px;">$9</div>
-                            <div style="background: rgba(255,255,255,0.1); display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 13px;">
-                                90-day money-back guarantee
-                            </div>
-                        </div>
-                        
-                        <div style="text-align:center; margin-top:35px;">
-                            <a href="https://workersunited.eu/profile/worker" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
-                                Activate Now
-                            </a>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">🎉</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Verification Complete!</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 5px;">Your documents are approved.</p>
+                    </div>
+
+                    <p style="margin-top: 30px; color: #374151;">
+                        Great news, ${firstName}! Your profile is now 100% verified. You are officially ready to enter our job matching queue.
+                    </p>
+                    
+                    <div style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius:20px; padding:35px; margin:35px 0; color:white; text-align:center; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);">
+                        <h3 style="margin:0 0 10px; font-size:22px;">Activate Job Search</h3>
+                        <p style="margin:0 0 25px; opacity:0.9; font-size: 16px;">One-time entry fee</p>
+                        <div style="font-size:56px; font-weight:800; margin-bottom: 15px; letter-spacing: -2px;">$9</div>
+                        <div style="background: rgba(255,255,255,0.2); display: inline-block; padding: 6px 16px; border-radius: 99px; font-size: 13px; font-weight: 600;">
+                            ✨ 90-day money-back guarantee
                         </div>
                     </div>
-                `, "Profile Verified", "You're ready for the next step!")
+                    
+                    <div style="text-align:center; margin-top:10px;">
+                        <a href="https://workersunited.eu/profile/worker" style="color: #2563eb; text-decoration: none; font-weight: 600;">
+                             Go to Dashboard &rarr;
+                        </a>
+                    </div>
+                `, "Profile Verified", "Ready to start?")
             };
 
         case "payment_success":
             return {
-                subject: "Payment confirmed! Your job search has started 🚀",
+                subject: "You're in the Queue! 🚀",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">You're all set, ${name}!</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            Your payment of <strong>${data.amount || "$9"}</strong> has been confirmed. Your profile is now active in our job matching queue.
-                        </p>
-                        
-                        <div style="background:#f0fff4; border: 1px solid #bbf7d0; border-radius:12px; padding:30px; margin:25px 0; text-align:center;">
-                            <div style="background: #10b981; color: white; width: 60px; height: 60px; border-radius: 50%; text-align: center; line-height: 60px; font-size: 32px; margin: 0 auto 20px;">✓</div>
-                            <h3 style="margin:0; font-size:20px; color: #065f46;">Your job search has started!</h3>
-                        </div>
-                        
-                        <div style="background:#f4f6fb; border-radius:12px; padding:30px; margin:25px 0;">
-                            <h3 style="margin:0 0 15px; font-size:18px; color: #183b56;">What happens next:</h3>
-                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                                <tr>
-                                    <td width="20" valign="top" style="color: #2f6fed; font-weight: bold; padding-bottom: 10px;">•</td>
-                                    <td valign="top" style="padding-bottom: 10px;">We match your profile with employer requests</td>
-                                </tr>
-                                <tr>
-                                    <td width="20" valign="top" style="color: #2f6fed; font-weight: bold; padding-bottom: 10px;">•</td>
-                                    <td valign="top" style="padding-bottom: 10px;">You'll receive job offers via email</td>
-                                </tr>
-                                <tr>
-                                    <td width="20" valign="top" style="color: #2f6fed; font-weight: bold; padding-bottom: 10px;">•</td>
-                                    <td valign="top" style="padding-bottom: 10px;">Accept offers within 24 hours</td>
-                                </tr>
-                                <tr>
-                                    <td width="20" valign="top" style="color: #2f6fed; font-weight: bold;">•</td>
-                                    <td valign="top">We handle visa and documentation</td>
-                                </tr>
-                            </table>
-                        </div>
-                        
-                        <div style="text-align:center; margin-top:35px;">
-                            <a href="https://workersunited.eu/profile" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
-                                View Your Dashboard
-                            </a>
-                        </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">🚀</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Payment Confirmed</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 5px;">Your job search is active.</p>
                     </div>
-                `, "Payment Confirmed", "Your future starts here!")
+
+                    <div style="background:#ecfdf5; border-radius:16px; padding:20px; margin:30px 0; text-align: center; border: 1px solid #d1fae5;">
+                        <p style="margin:0; color: #059669; font-weight: 600; font-size: 18px;">
+                            ✓ ${data.amount || "$9"} Payment Received
+                        </p>
+                    </div>
+                    
+                    <div style="margin: 30px 0;">
+                        <h3 style="color:#111827; font-size: 18px;">What happens now?</h3>
+                        <p style="color:#374151;">
+                            Sit back and relax. Our system is now actively matching your profile with employers across Europe.
+                        </p>
+                        <p style="color:#374151;">
+                            You will receive an email instantly when we find a match!
+                        </p>
+                    </div>
+
+                    <div style="text-align:center; margin-top:40px;">
+                        <a href="https://workersunited.eu/profile" style="${buttonStyle}">
+                            View My Status
+                        </a>
+                    </div>
+                `, "Payment Confirmed", "Good luck!")
             };
 
         case "job_offer":
             return {
-                subject: `🎉 Job offer from ${data.companyName || "an employer"}!`,
+                subject: `✨ Job Offer: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Great news, ${name}!</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            You have received a job offer. Please review and respond within <strong>24 hours</strong>.
-                        </p>
-                        
-                        <div style="background:white; border: 1px solid #e2e8f0; border-radius:12px; padding:0; margin:25px 0; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                            <div style="background: #f8fafc; padding: 15px 25px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #475569;">
-                                JOB DETAILS
-                            </div>
-                            <div style="padding: 25px;">
-                                <h3 style="margin:0 0 5px; font-size:22px; color:#183b56;">${data.jobTitle || "Job Opportunity"}</h3>
-                                <p style="margin:0 0 20px; color: #64748b; font-size: 16px;">${data.companyName || "Employer"}</p>
-                                
-                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                                    <tr>
-                                        <td width="34" valign="middle" style="text-align: center; padding-bottom: 15px;">📍</td>
-                                        <td valign="middle" style="font-weight: 500; padding-bottom: 15px;">${data.country || "Europe"}</td>
-                                    </tr>
-                                    <tr>
-                                        <td width="34" valign="middle" style="text-align: center;">💰</td>
-                                        <td valign="middle" style="font-weight: 500;">Competitive Salary</td>
-                                    </tr>
-                                </table>
-                            </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">✨</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">You've been picked!</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 5px;">A company wants to hire you.</p>
+                    </div>
+
+                    <div style="background:#fff; border: 2px solid #f3f4f6; border-radius:20px; margin:30px 0; overflow: hidden;">
+                        <div style="background: #f9fafb; padding: 20px; border-bottom: 2px solid #f3f4f6; text-align: center;">
+                             <div style="font-size: 14px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Job Offer</div>
                         </div>
-                        
-                        <div style="background:#fff7ed; border: 1px solid #ffedd5; border-radius:12px; padding:15px; margin:25px 0; color: #9a3412;">
-                            <strong>⚠️ Important:</strong> You have 24 hours to respond. Declining may affect your refund eligibility.
-                        </div>
-                        
-                        <div style="text-align:center; margin-top:35px;">
-                            <a href="${data.offerLink || "https://workersunited.eu/profile"}" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
-                                View & Accept Offer
-                            </a>
+                        <div style="padding: 30px; text-align: center;">
+                            <h2 style="margin:0 0 10px; font-size: 24px; color: #111827;">${data.jobTitle}</h2>
+                            <p style="margin:0 0 20px; color: #6b7280; font-size: 18px;">${data.companyName}</p>
+                            
+                            <div style="display: inline-block; background: #eff6ff; color: #2563eb; padding: 8px 16px; border-radius: 99px; font-weight: 600; font-size: 14px;">
+                                📍 ${data.country || "Europe"}
+                            </div>
                         </div>
                     </div>
-                `, "New Job Offer", "A company wants to hire you!")
+                    
+                    <div style="background:#fff7ed; border-radius:12px; padding:15px; text-align: center; color: #c2410c; font-weight: 500; font-size: 15px;">
+                        ⏰ Please respond within 24 hours
+                    </div>
+                    
+                    <div style="text-align:center; margin-top:40px;">
+                        <a href="${data.offerLink || "https://workersunited.eu/profile"}" style="${buttonStyle}">
+                            View & Accept Offer
+                        </a>
+                    </div>
+                `, "Job Offer", "Congrats!")
             };
 
         case "offer_reminder":
             return {
-                subject: "⏰ Your job offer expires soon!",
+                subject: "⏰ Offer Expiring Soon!",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#dc3545; font-size: 28px; text-align: center;">Action Required</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            Hi ${name}, you have a pending job offer that will expire in a few hours.
-                        </p>
-                        
-                        <div style="background:#fee2e2; border-radius:12px; padding:30px; margin:25px 0; text-align:center; color: #991b1b;">
-                            <div style="font-size:48px; margin-bottom:15px;">⏰</div>
-                            <h3 style="margin:0; font-size:20px; font-weight:bold;">Don't miss this opportunity!</h3>
-                            <p style="margin:10px 0 0;">This offer is waiting for your response.</p>
-                        </div>
-                        
-                        <div style="text-align:center; margin-top:35px;">
-                            <a href="${data.offerLink || "https://workersunited.eu/profile"}" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center; background: linear-gradient(135deg, #dc3545 0%, #b91c1c 100%);">
-                                Respond Now
-                            </a>
-                        </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">⏰</div>
+                        <h1 style="color:#be123c; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Hurry up!</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 5px;">Your job offer is waiting.</p>
                     </div>
-                `, "Offer Expiring", "Please respond immediately")
+
+                    <p style="text-align: center; color: #374151; margin: 30px 0;">
+                        Hey ${firstName}, you have a pending job offer that expires soon. Don't let this opportunity slip away!
+                    </p>
+                    
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="${data.offerLink || "https://workersunited.eu/profile"}" style="${buttonStyle} background-color: #be123c; box-shadow: 0 4px 6px rgba(190, 18, 60, 0.2);">
+                            Respond Now
+                        </a>
+                    </div>
+                `, "Action Required", "Tick tock...")
             };
 
         case "refund_approved":
             return {
-                subject: "Your refund has been processed",
+                subject: "Refund Processed 💸",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Refund Processed</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            Hi ${name}, as promised under our 90-day guarantee, your refund of <strong>${data.amount || "$9"}</strong> has been processed.
-                        </p>
-                        
-                        <div style="background:#f4f6fb; border-radius:12px; padding:25px; margin:25px 0; text-align: center;">
-                             <div style="font-size:48px; margin-bottom:15px;">💸</div>
-                            <p style="margin:0; font-size: 16px; color: #183b56; font-weight: 500;">Funds sent to your original payment method</p>
-                            <p style="margin:10px 0 0; font-size: 14px; color: #64748b;">Expect it within 5-10 business days.</p>
-                        </div>
-                        
-                        <p style="text-align: center; font-size: 15px; color: #4a5568; margin-top: 30px;">
-                            We're sorry we couldn't find you a job this time. You're always welcome to try again in the future.
-                            <br><br>
-                            Thank you for giving Workers United a try.
-                        </p>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">💸</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Refund Sent</h1>
                     </div>
-                `, "Refund Approved", "Money is on the way")
+
+                    <p style="color: #374151; margin-bottom: 25px;">
+                        Hi ${firstName}, as per our 90-day guarantee, we have processed your refund of <strong>${data.amount || "$9"}</strong>.
+                    </p>
+                    
+                    <div style="background:#f3f4f6; border-radius:12px; padding:20px; text-align: center; color: #4b5563; font-size: 14px;">
+                        The funds should appear in your account within 5-10 business days.
+                    </div>
+                    
+                    <p style="margin-top: 25px; color: #6b7280; font-size: 15px;">
+                        We're sorry we couldn't find the perfect match this time. You are always welcome back!
+                    </p>
+                `, "Refund Processed", "Funds returned")
             };
 
         case "document_expiring":
             return {
-                subject: "Action Required: Document Expiring Soon ⚠️",
+                subject: "⚠️ Document Alert",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Document Alert</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            Hello ${name},<br><br>
-                            Your <strong>${data.documentType || 'document'}</strong> is set to expire on <strong>${data.expirationDate || 'soon'}</strong>.
-                        </p>
-                        
-                        <div style="background:#fff4e5; border:1px solid #ffe0b2; border-radius:12px; padding:25px; margin:25px 0; text-align:center;">
-                            <div style="font-size:32px; margin-bottom:10px;">🕒</div>
-                            <h3 style="margin:0 0 10px; color:#d97706; font-size:18px;">Expiration Date</h3>
-                            <p style="margin:0; font-weight:bold; color:#b45309; font-size:20px;">
-                                ${data.expirationDate || 'Unknown'}
-                            </p>
-                            <p style="margin:10px 0 0; font-size:14px; color:#9a3412;">
-                                Please renew this document to maintain your verified status.
-                            </p>
-                        </div>
-                        
-                        <div style="text-align:center; margin-top:35px;">
-                            <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
-                                Update Document
-                            </a>
-                        </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Check your docs</h1>
                     </div>
-                `, "Expiration Alert", "Please check your documents")
+
+                    <p style="color: #374151; text-align: center; margin-bottom: 30px;">
+                        Your <strong>${data.documentType}</strong> is expiring on <strong style="color:#c2410c">${data.expirationDate}</strong>.
+                    </p>
+                    
+                    <div style="background:#fff7ed; border-radius:12px; padding:20px; text-align: center; color: #c2410c;">
+                        Please update it to keep your profile active.
+                    </div>
+                    
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">
+                            Update Document
+                        </a>
+                    </div>
+                `, "Document Alert", "Action needed")
             };
 
         case "job_match":
             return {
-                subject: `New Job Match: ${data.jobTitle} in ${data.location}`,
+                subject: `New Match: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <div style="background-color: #e3f2fd; color: #1565c0; display: inline-block; padding: 8px 16px; border-radius: 50px; font-weight: 600; font-size: 14px;">
-                                🎯 New Match found for you!
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">🎯</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">New Match!</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 5px;">We found a job for you.</p>
+                    </div>
+
+                    <div style="background:white; border: 2px solid #e5e7eb; border-radius:16px; overflow:hidden; margin: 30px 0;">
+                        <div style="padding: 25px;">
+                            <h3 style="margin:0 0 5px; color:#111827; font-size: 20px;">${data.jobTitle}</h3>
+                            <div style="color: #6b7280; font-size: 16px; margin-bottom: 20px;">${data.industry}</div>
+                            
+                            <div style="display: flex; gap: 10px;">
+                                <span style="background: #eff6ff; color: #2563eb; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 600;">
+                                    ${data.location}
+                                </span>
+                                <span style="background: #ecfdf5; color: #059669; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 600;">
+                                    ${data.salary}
+                                </span>
                             </div>
                         </div>
-                        
-                        <h2 style="margin:0 0 15px; color:#183b56; font-size: 24px; text-align: center;">${data.jobTitle}</h2>
-                        
-                        <div style="background: #f8fafc; border-radius: 12px; padding: 25px; margin: 25px 0; border: 1px solid #e2e8f0;">
-                            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-                                <tr>
-                                    <td style="padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
-                                        <span style="color: #64748b; font-size: 14px;">Location</span><br>
-                                        <strong style="color: #183b56; font-size: 16px;">${data.location}</strong>
-                                    </td>
-                                    <td style="padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
-                                        <span style="color: #64748b; font-size: 14px;">Salary</span><br>
-                                        <strong style="color: #10b981; font-size: 16px;">${data.salary}</strong>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2" style="padding-top: 15px;">
-                                        <span style="color: #64748b; font-size: 14px;">Industry</span><br>
-                                        <strong style="color: #183b56; font-size: 16px;">${data.industry}</strong>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-
-                        <p style="text-align: center; font-size: 15px; color: #4a5568; margin-bottom: 30px;">
-                            This job matches your profile preferences. Apply now before the position is filled!
-                        </p>
-                        
-                        <div style="text-align: center; margin: 35px 0;">
-                            <a href="${data.offerLink}" style="background-color: #1877f2; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(24, 119, 242, 0.25);">
-                                View Job Details
-                            </a>
-                        </div>
-                        
-                        <p style="text-align: center; font-size: 13px; color: #94a3b8; margin-top: 20px;">
-                            You received this because your profile matches this job opening.
-                        </p>
                     </div>
-                `, "New Job Match", "Opportunity for you")
+                    
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="${data.offerLink}" style="${buttonStyle}">
+                            View Details
+                        </a>
+                    </div>
+                `, "New Match", "Check it out")
             };
 
         case "admin_update":
             return {
                 subject: data.subject || "Update from Workers United",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Profile Update</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            Hello ${name},<br><br>
-                            An administrator has updated your profile status or documents.
-                        </p>
-                        
-                        <div style="background:#f0f9ff; border-left: 4px solid #0ea5e9; border-radius:4px; padding:20px; margin:25px 0;">
-                            <h3 style="margin:0 0 10px; color:#0369a1; font-size:18px;">${data.title || "Update Details"}</h3>
-                            <p style="margin:0; color:#334155; font-size:16px; line-height: 1.6;">
-                                ${data.message || "Your profile has been updated."}
-                            </p>
-                        </div>
-                        
-                        <div style="text-align:center; margin-top:35px;">
-                            <a href="https://workersunited.eu/profile" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
-                                View Your Profile
-                            </a>
-                        </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">📢</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Profile Update</h1>
                     </div>
-                `, "Account Update", "Important Notification")
+
+                    <div style="background:#f3f4f6; border-radius:16px; padding:25px; margin:30px 0;">
+                        <h3 style="margin-top:0; color: #111827;">${data.title}</h3>
+                        <p style="margin-bottom:0; color: #4b5563;">${data.message}</p>
+                    </div>
+                    
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="https://workersunited.eu/profile" style="${buttonStyle}">
+                            Check Profile
+                        </a>
+                    </div>
+                `, "Account Update", "Notification")
             };
 
         case "announcement":
             return {
-                subject: data.subject || "Announcement from Workers United",
+                subject: data.subject || "Announcement",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">${data.title || "Announcement"}</h2>
-                        
-                        <div style="font-size: 16px; color: #334155; line-height: 1.6; margin-bottom: 30px; white-space: pre-line;">
-                            ${data.message || "No content."}
-                        </div>
-                        
-                        ${data.actionLink ? `
-                        <div style="text-align:center; margin-top:35px;">
-                            <a href="${data.actionLink}" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
-                                ${data.actionText || "View Details"}
-                            </a>
-                        </div>
-                        ` : ''}
-                        
-                        <p style="text-align: center; font-size: 13px; color: #94a3b8; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                            You received this email because you are a registered user of Workers United.
-                        </p>
+                    <div style="text-align: center;">
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">${data.title}</h1>
                     </div>
-                `, data.title || "Workers United", "Official Announcement")
+
+                    <div style="color: #374151; font-size: 16px; line-height: 1.7; margin: 30px 0; white-space: pre-line;">
+                        ${data.message}
+                    </div>
+
+                    ${data.actionLink ? `
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="${data.actionLink}" style="${buttonStyle}">
+                            ${data.actionText || "Learn More"}
+                        </a>
+                    </div>
+                    ` : ''}
+                `, "Announcement", "News for you")
             };
 
         case "profile_incomplete":
             return {
-                subject: data.subject || "Action Required: Complete Your Profile",
+                subject: "Finish your profile! 📝",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <h2 style="margin:0 0 20px; color:#183b56; font-size: 28px; text-align: center;">Profile Update Needed</h2>
-                        <p style="text-align: center; font-size: 16px; color: #4a5568; margin-bottom: 30px;">
-                            Hello ${name},<br><br>
-                            We've recently updated our platform and your profile is missing some information. Please take a moment to fill in the required fields.
-                        </p>
-                        
-                        <div style="background:#fff7ed; border: 1px solid #ffedd5; border-radius:12px; padding:25px; margin:25px 0;">
-                            <h3 style="margin:0 0 15px; color:#9a3412; font-size:16px;">Missing Fields:</h3>
-                            <div style="color:#92400e; font-size:15px; line-height: 1.8;">
-                                ${data.missingFields || "Some fields are incomplete."}
-                            </div>
-                        </div>
-                        
-                        <div style="background:#f0f9ff; border-radius:12px; padding:20px; margin:25px 0; text-align:center;">
-                            <div style="font-size:42px; font-weight:bold; color:#2f6fed;">${data.completion || "0"}%</div>
-                            <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Profile Completion</p>
-                        </div>
-                        
-                        <div style="text-align:center; margin-top:35px;">
-                            <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle} width: 100%; box-sizing: border-box; text-align: center;">
-                                Complete Your Profile
-                            </a>
-                        </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">📝</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Almost there!</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 5px;">You're missing a few things.</p>
                     </div>
-                `, "Profile Update", "Action Required")
+
+                    <div style="margin: 30px 0;">
+                         <p style="color: #374151; text-align: center; margin-bottom: 20px;">
+                            We want to match you with a job, but we need these details first:
+                         </p>
+                         
+                         <div style="background:#fff7ed; border: 1px dashed #fdba74; border-radius:12px; padding:20px; color: #c2410c; font-weight: 500;">
+                            ${data.missingFields}
+                         </div>
+                    </div>
+                    
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle}">
+                            Finish Profile
+                        </a>
+                    </div>
+                `, "Complete Profile", "Action required")
             };
 
         case "profile_reminder": {
             const isEmp = data.isEmployer || false;
-            const subtitle = isEmp ? "Complete your company profile to start hiring" : "Complete your profile to get matched";
-            const cta = isEmp
-                ? "Thanks for registering your company with Workers United! To start posting jobs and finding qualified workers, please complete your company profile:"
-                : "Thanks for signing up with Workers United! We noticed your profile isn\u2019t complete yet. To start receiving job opportunities, please finish these steps:";
-            const btnText = isEmp ? "Complete Company Profile" : "Complete My Profile";
+            const title = isEmp ? "Start Hiring!" : "Start working!";
+            const text = isEmp
+                ? "Complete your company profile to find great workers."
+                : "Complete your profile to get matched with jobs.";
             const btnLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
-            const outro = isEmp
-                ? "A complete company profile helps workers trust your job postings and speeds up the hiring process."
-                : "The sooner you complete your profile, the sooner we can match you with suitable job opportunities.";
+
             return {
-                subject: isEmp ? "Complete your Workers United company profile" : "Your Workers United profile is almost ready!",
+                subject: "Don't forget your profile! ⏳",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <p style="margin-top:0;">Hi ${name},</p>
-                        <p style="line-height:1.6;">${cta}</p>
-                        <ul style="background:#f8fafc; padding:16px 16px 16px 32px; border-radius:8px; border:1px solid #e5e7eb;">
-                            ${data.todoList || ""}
-                        </ul>
-                        <p style="line-height:1.6;">${outro}</p>
-                        <div style="text-align:center; margin:24px 0;">
-                            <a href="${btnLink}" style="${buttonStyle}">${btnText}</a>
-                        </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">⏳</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">${title}</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 5px;">${text}</p>
                     </div>
-                `, "Workers United", subtitle)
+
+                   <div style="background:#f9fafb; border-radius:16px; padding:25px; margin:30px 0;">
+                        <strong style="display:block; margin-bottom:15px; color:#111827;">What's missing:</strong>
+                        <ul style="padding-left: 20px; margin: 0; color: #4b5563;">
+                            ${data.todoList}
+                        </ul>
+                    </div>
+
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="${btnLink}" style="${buttonStyle}">
+                            Complete Now
+                        </a>
+                    </div>
+                `, "Profile Reminder", "Don't wait")
             };
         }
 
         case "profile_warning": {
-            const isEmp = data.isEmployer || false;
             const daysLeft = data.daysLeft || 0;
-            const urgencyColor = daysLeft <= 1 ? "#dc2626" : daysLeft <= 3 ? "#ea580c" : "#d97706";
-            const urgencyBg = daysLeft <= 1 ? "#fef2f2" : daysLeft <= 3 ? "#fff7ed" : "#fffbeb";
-            const urgencyText = daysLeft <= 1 ? "Your account will be deleted tomorrow" : `Your account will be deleted in ${daysLeft} days`;
-            const explanation = isEmp
-                ? "We haven\u2019t received your complete company profile information yet. To keep your account active and continue using Workers United for hiring, please complete your profile before the deadline."
-                : "We haven\u2019t received your complete profile information yet. To keep your account active, please complete your profile before the deadline.";
-            const btnText = isEmp ? "Complete Company Profile Now" : "Complete My Profile Now";
-            const btnLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
-            const warnSubject = `Action required: ${daysLeft} ${daysLeft === 1 ? "day" : "days"} until account removal`;
+            const color = daysLeft <= 1 ? "#dc2626" : "#d97706";
+
             return {
-                subject: warnSubject,
+                subject: `Last chance: ${daysLeft} days left`,
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <p style="margin-top:0;">Hi ${name},</p>
-                        <div style="background:${urgencyBg}; border:1px solid ${urgencyColor}33; border-radius:8px; padding:16px; margin-bottom:16px;">
-                            <p style="margin:0; color:${urgencyColor}; font-weight:bold; font-size:16px;">\u26A0\uFE0F ${urgencyText}</p>
-                            <p style="margin:8px 0 0; color:#1b2430;">${explanation}</p>
-                        </div>
-                        <p style="line-height:1.6;">Here\u2019s what\u2019s still missing:</p>
-                        <ul style="background:#f8fafc; padding:16px 16px 16px 32px; border-radius:8px; border:1px solid #e5e7eb;">
-                            ${data.todoList || ""}
-                        </ul>
-                        <div style="text-align:center; margin:24px 0;">
-                            <a href="${btnLink}" style="display:inline-block; padding:14px 36px; background:linear-gradient(135deg,${urgencyColor},#991b1b); color:white; text-decoration:none; border-radius:30px; font-weight:bold; font-size:16px;">${btnText}</a>
-                        </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">🫣</div>
+                        <h1 style="color:${color}; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Account Warning</h1>
+                        <p style="font-size: 18px; color: #6b7280; margin-top: 5px;">
+                            Your account will be deleted in <strong>${daysLeft} days</strong>.
+                        </p>
                     </div>
-                `, "\u26A0\uFE0F Workers United", urgencyText)
+
+                    <p style="text-align: center; color: #374151; margin: 30px 0;">
+                        We delete incomplete profiles to keep our platform valid. Please finish your signup to stay with us!
+                    </p>
+
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle} background-color: ${color}; box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);">
+                            Save My Account
+                        </a>
+                    </div>
+                `, "Final Warning", "Please act now")
             };
         }
 
-        case "profile_deletion": {
-            const isEmp = data.isEmployer || false;
-            const explanation = isEmp
-                ? "Your Workers United company account has been removed because your company profile was not completed within 30 days of registration."
-                : "Your Workers United account has been removed because your profile was not completed within 30 days of registration.";
-            const ctaText = isEmp
-                ? "If you\u2019d like to try again, you\u2019re always welcome to create a new employer account and complete your company profile:"
-                : "If you\u2019d like to try again, you\u2019re always welcome to create a new account and complete your profile:";
+        case "profile_deletion":
             return {
-                subject: "Your Workers United account has been removed",
+                subject: "Account Removed",
                 html: wrapModernTemplate(`
-                    <div style="padding: 40px;">
-                        <p style="margin-top:0;">Hi ${name},</p>
-                        <p style="line-height:1.6;">${explanation}</p>
-                        <p style="line-height:1.6;">${ctaText}</p>
-                        <div style="text-align:center; margin:24px 0;">
-                            <a href="https://workersunited.eu/signup" style="${buttonStyle}">Create New Account</a>
-                        </div>
-                        <p style="line-height:1.6; color:#6c7a89; font-size:14px;">If you believe this was a mistake, please contact us at <a href="mailto:contact@workersunited.eu" style="color:#2f6fed;">contact@workersunited.eu</a>.</p>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">👋</div>
+                        <h1 style="color:#111827; font-size: 28px; font-weight: 800; margin-bottom: 10px;">Goodbye for now</h1>
                     </div>
-                `, "Workers United", "Account removed")
+
+                    <p style="text-align: center; color: #374151; margin: 30px 0;">
+                         Your account has been removed due to inactivity. You are always welcome to sign up again when you are ready!
+                    </p>
+                    
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="https://workersunited.eu/signup" style="${buttonStyle}">
+                            Create New Account
+                        </a>
+                    </div>
+                `, "Account Deleted", "See you later")
             };
-        }
 
         default:
             return {
@@ -629,7 +580,7 @@ export async function queueEmail(
         scheduled_for: scheduledFor?.toISOString() || new Date().toISOString()
     }).select().single();
 
-    // Send immediately via SMTP (no need to wait for n8n)
+    // Send immediately via SMTP
     if (!scheduledFor) {
         try {
             const { sendEmail } = await import("@/lib/mailer");

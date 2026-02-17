@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import DocumentWizard from "@/components/DocumentWizard";
+import confetti from "canvas-confetti";
+import { toast } from "sonner";
 import {
     FileText,
     Briefcase,
@@ -41,6 +43,18 @@ export default function DashboardClient({
     user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue, adminApproved
 }: DashboardClientProps) {
     const [activeTab, setActiveTab] = useState<TabType>("profile");
+
+    useEffect(() => {
+        if (profileCompletion === 100 && !sessionStorage.getItem("celebrated_profile")) {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+            toast.success("Profile 100% Complete! 🎉");
+            sessionStorage.setItem("celebrated_profile", "true");
+        }
+    }, [profileCompletion]);
 
     const getDocStatus = (type: string) => {
         const doc = documents.find(d => d.document_type === type);
@@ -109,7 +123,7 @@ export default function DashboardClient({
             <div className="max-w-[900px] mx-auto px-4 py-6">
 
                 {/* Coming Soon / Job Matching CTA — will become payment gateway */}
-                <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden">
+                <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden transform hover:scale-[1.02] transition-all duration-300 cursor-default">
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -175,7 +189,7 @@ export default function DashboardClient({
                     <div className="space-y-4">
 
                         {/* Personal Information */}
-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
                             <div className="mb-4">
                                 <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
                             </div>
@@ -200,7 +214,7 @@ export default function DashboardClient({
 
                         {/* Family Information */}
                         {candidate?.family_data && (candidate.family_data.spouse || (candidate.family_data.children && candidate.family_data.children.length > 0)) && (
-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
                                 <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
                                     <Users size={20} /> Family Information
                                 </h3>
@@ -232,7 +246,7 @@ export default function DashboardClient({
 
                         {/* Passport Information */}
                         {candidate?.passport_number && (
-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
                                 <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
                                     <Shield size={20} /> Passport & Travel
                                 </h3>
@@ -249,7 +263,7 @@ export default function DashboardClient({
 
                         {/* Pending Offers */}
                         {hasPendingOffer && (
-                            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5">
+                            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5 hover:shadow-md transition-shadow duration-300">
                                 <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
                                     🎉 You have a job offer!
                                 </h3>
@@ -301,7 +315,7 @@ export default function DashboardClient({
                 {activeTab === 'status' && (
                     <div className="space-y-4">
                         {/* Progress Tracker */}
-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 hover:shadow-md transition-shadow duration-300">
                             <h3 className="font-bold text-[#050505] text-lg mb-6">Application Progress</h3>
                             <div className="relative">
                                 {stages.map((stage, index) => (

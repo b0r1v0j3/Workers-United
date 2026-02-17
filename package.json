@@ -13,7 +13,9 @@
     "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/nodemailer": "^7.0.9",
+    "canvas-confetti": "^1.9.4",
     "docxtemplater": "^3.68.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.563.0",
@@ -25,6 +27,7 @@
     "react-dom": "^19.2.4",
     "react-signature-canvas": "^1.1.0-alpha.2",
     "sharp": "^0.34.5",
+    "sonner": "^2.0.7",
     "stripe": "^15.12.0"
   },
   "devDependencies": {
