@@ -55,7 +55,7 @@ export interface TemplateData {
 }
 
 const baseStyles = `
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Montserrat', sans-serif;
     color: #334155;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
@@ -83,6 +83,10 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+    </style>
 </head>
 <body style="margin:0; padding:0; background-color:#f1f5f9; ${baseStyles}">
     <!-- Preheader text for inbox preview -->
@@ -139,7 +143,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
     switch (type) {
         case "welcome":
             return {
-                subject: "Welcome to the team! 👋",
+                subject: "Welcome to the team!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center; margin-bottom: 30px;">
                          <img src="https://img.icons8.com/fluency/96/group.png" width="80" height="80" alt="Welcome" style="margin-bottom: 20px;">
@@ -196,7 +200,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "profile_complete":
             return {
-                subject: "You're Verified! 🎉",
+                subject: "You're Verified!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/fluency/96/verified-account.png" width="80" height="80" alt="Verified" style="margin-bottom: 20px;">
@@ -213,7 +217,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <p style="margin:0 0 25px; opacity:0.9; font-size: 16px; color: #dbeafe;">One-time entry fee</p>
                         <div style="font-size:56px; font-weight:800; margin-bottom: 15px; letter-spacing: -2px; color: white;">$9</div>
                         <div style="background: rgba(255,255,255,0.2); display: inline-block; padding: 6px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; color: white;">
-                            ✨ 90-day money-back guarantee
+                            90-day money-back guarantee
                         </div>
                     </div>
                     
@@ -227,7 +231,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "payment_success":
             return {
-                subject: "You're in the Queue! 🚀",
+                subject: "You're in the Queue!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/fluency/96/rocket.png" width="80" height="80" alt="Rocket" style="margin-bottom: 20px;">
@@ -276,7 +280,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                             <p style="margin:0 0 20px; color: #64748b; font-size: 16px; font-weight: 500;">${data.companyName}</p>
                             
                             <div style="display: inline-block; background: #eff6ff; color: #2563eb; padding: 6px 16px; border-radius: 99px; font-weight: 600; font-size: 13px;">
-                                📍 ${data.country || "Europe"}
+                                ${data.country || "Europe"}
                             </div>
                         </div>
                     </div>
@@ -295,7 +299,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "offer_reminder":
             return {
-                subject: "⏰ Offer Expiring Soon!",
+                subject: "Offer Expiring Soon!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/fluency/96/alarm-clock.png" width="80" height="80" alt="Clock" style="margin-bottom: 20px;">
@@ -317,7 +321,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "refund_approved":
             return {
-                subject: "Refund Processed 💸",
+                subject: "Refund Processed",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/fluency/96/refund.png" width="80" height="80" alt="Refund" style="margin-bottom: 20px;">
@@ -340,7 +344,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "document_expiring":
             return {
-                subject: "⚠️ Document Alert",
+                subject: "Document Alert",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                          <img src="https://img.icons8.com/fluency/96/expired.png" width="80" height="80" alt="Expired" style="margin-bottom: 20px;">
@@ -444,7 +448,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "profile_incomplete":
             return {
-                subject: "Finish your profile! 📝",
+                subject: "Finish your profile!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/fluency/96/edit-property.png" width="80" height="80" alt="Edit" style="margin-bottom: 20px;">
@@ -479,7 +483,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             const btnLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
 
             return {
-                subject: "Don't forget your profile! ⏳",
+                subject: "Don't forget your profile!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/fluency/96/todo-list.png" width="80" height="80" alt="Todo" style="margin-bottom: 20px;">
