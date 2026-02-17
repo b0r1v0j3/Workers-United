@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import {
     Building2, MapPin, Globe, Phone, Calendar, FileText, Hash, Users,
-    Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp
+    Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp, Banknote
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -617,7 +617,9 @@ export default function EmployerProfilePage() {
                                     <div>
                                         <label className={labelClass}>Accommodation Address <span className="text-red-500">*</span></label>
                                         <input type="text" name="accommodation_address" value={jobForm.accommodation_address} onChange={handleJobChange} className={inputClass} placeholder="Full address for accommodation" />
-                                        <p className="text-[11px] text-gray-500 mt-1">⚠️ Required by law for visa processing</p>
+                                        <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
+                                            <AlertCircle size={10} /> Required by law for visa processing
+                                        </p>
                                     </div>
                                 </div>
 
@@ -626,7 +628,7 @@ export default function EmployerProfilePage() {
                                         className="px-6 py-2.5 bg-gradient-to-r from-[#10b981] to-[#059669] text-white rounded-md hover:from-[#059669] hover:to-[#047857] font-semibold text-[14px] disabled:opacity-50 flex items-center gap-2 shadow-sm">
                                         {postingJob ? (
                                             <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> Posting...</>
-                                        ) : "Post Job ✓"}
+                                        ) : <><Plus className="w-4 h-4" /> Post Job</>}
                                     </button>
                                 </div>
                             </div>
@@ -662,7 +664,7 @@ export default function EmployerProfilePage() {
                                             <div className="flex items-center gap-3 text-xs text-[#65676b] mt-1.5 flex-wrap">
                                                 <span className="flex items-center gap-1"><Briefcase size={12} /> {job.industry}</span>
                                                 <span className="flex items-center gap-1"><Users size={12} /> {job.positions_filled}/{job.positions_count} positions</span>
-                                                {job.salary_rsd && <span>💰 {job.salary_rsd.toLocaleString()} RSD</span>}
+                                                {job.salary_rsd && <span className="flex items-center gap-1"><Banknote size={12} /> {job.salary_rsd.toLocaleString()} RSD</span>}
                                                 <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(job.created_at).toLocaleDateString('en-GB')}</span>
                                             </div>
                                         </div>

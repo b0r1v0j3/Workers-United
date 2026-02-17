@@ -31,7 +31,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
     const profileHref = userType === 'employer' ? '/profile/employer' : '/profile/worker';
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5] flex flex-col font-montserrat">
+        <div className="min-h-screen bg-[#f0f2f5] flex flex-col font-sans">
             {/* Fixed Navbar */}
             <UnifiedNavbar variant={variant} user={user} />
 

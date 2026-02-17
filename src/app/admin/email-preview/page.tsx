@@ -120,7 +120,7 @@ export default function EmailPreviewPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5] p-6 font-montserrat">
+        <div className="min-h-screen bg-[#f0f2f5] p-6 font-sans">
             <div className="max-w-[1600px] mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -175,8 +175,8 @@ export default function EmailPreviewPage() {
                                     key={key}
                                     onClick={() => loadPreview(key)}
                                     className={`w-full text-left px-4 py-3 text-sm font-medium transition-all flex items-center justify-between group ${selectedType === key
-                                            ? "bg-blue-50 text-[#1877f2] border-l-4 border-[#1877f2]"
-                                            : "text-gray-600 hover:bg-gray-50 border-l-4 border-transparent hover:pl-5"
+                                        ? "bg-blue-50 text-[#1877f2] border-l-4 border-[#1877f2]"
+                                        : "text-gray-600 hover:bg-gray-50 border-l-4 border-transparent hover:pl-5"
                                         }`}
                                 >
                                     <span>{label}</span>
