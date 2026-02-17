@@ -107,13 +107,13 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <div style="text-align:center; margin-top:40px; color:#6b7280; font-size:13px;">
             <p style="margin-bottom:20px; font-weight: 500;">Stay connected</p>
             <div style="margin-bottom:30px;">
-                <a href="https://www.facebook.com/profile.php?id=61585104076725" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/facebook-new.png" width="28" height="28" alt="Facebook"></a>
-                <a href="https://www.instagram.com/workersunited.eu/" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/instagram-new.png" width="28" height="28" alt="Instagram"></a>
-                <a href="https://www.threads.net/@workersunited.eu" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://workersunited.eu/threads-logo.svg" width="24" height="24" alt="Threads"></a>
-                <a href="https://www.linkedin.com/company/workersunited-eu/" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/linkedin.png" width="28" height="28" alt="LinkedIn"></a>
-                <a href="https://x.com/WorkersUnitedEU" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://workersunited.eu/x-logo.svg" width="24" height="24" alt="X"></a>
-                <a href="https://www.tiktok.com/@workersunited.eu" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/tiktok.png" width="28" height="28" alt="TikTok"></a>
-                <a href="https://www.reddit.com/user/workersunited-eu" style="text-decoration:none; margin:0 10px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/reddit.png" width="28" height="28" alt="Reddit"></a>
+                <a href="https://www.facebook.com/profile.php?id=61585104076725" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/facebook-new.png" width="28" height="28" alt="Facebook"></a>
+                <a href="https://www.instagram.com/workersunited.eu/" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/instagram-new.png" width="28" height="28" alt="Instagram"></a>
+                <a href="https://www.threads.net/@workersunited.eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://workersunited.eu/threads-logo.svg" width="24" height="24" alt="Threads"></a>
+                <a href="https://www.reddit.com/user/workersunited-eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/reddit.png" width="28" height="28" alt="Reddit"></a>
+                <a href="https://x.com/WorkersUnitedEU" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://workersunited.eu/x-logo.svg" width="24" height="24" alt="X"></a>
+                <a href="https://www.tiktok.com/@workersunited.eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/tiktok.png" width="28" height="28" alt="TikTok"></a>
+                <a href="https://www.linkedin.com/company/workersunited-eu/" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/linkedin.png" width="28" height="28" alt="LinkedIn"></a>
             </div>
             
             <p style="margin:0 0 8px;">&copy; ${new Date().getFullYear()} Workers United LLC</p>
