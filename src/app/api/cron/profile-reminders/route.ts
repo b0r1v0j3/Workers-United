@@ -134,6 +134,27 @@ export async function GET(request: Request) {
                 });
                 await sendEmail(email, subject, html);
 
+                // Clean up all related data before deleting auth user
+                // (mirrors account/delete and admin/delete-user patterns)
+                await supabase.from("candidate_documents").delete().eq("user_id", userId);
+                await supabase.from("signatures").delete().eq("user_id", userId);
+                await supabase.from("payments").delete().eq("user_id", userId);
+                await supabase.from("email_queue").delete().eq("user_id", userId);
+                await supabase.from("candidates").delete().eq("profile_id", userId);
+                await supabase.from("employers").delete().eq("profile_id", userId);
+                await supabase.from("profiles").delete().eq("id", userId);
+
+                // Delete storage files
+                for (const docType of ['passport', 'biometric_photo', 'diploma']) {
+                    const { data: files } = await supabase.storage
+                        .from("candidate-docs")
+                        .list(`${userId}/${docType}`);
+                    if (files && files.length > 0) {
+                        const filePaths = files.map((f: any) => `${userId}/${docType}/${f.name}`);
+                        await supabase.storage.from("candidate-docs").remove(filePaths);
+                    }
+                }
+
                 const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
                 if (deleteError) {
                     console.error(`[Reminders] Failed to delete user ${email}:`, deleteError);

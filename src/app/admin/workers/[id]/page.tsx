@@ -10,6 +10,7 @@ import ManualMatchButton from "@/components/admin/ManualMatchButton";
 import ReVerifyButton from "@/components/admin/ReVerifyButton";
 import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
 import DocumentPreview from "@/components/admin/DocumentPreview";
+import { AlertTriangle, Check, Clock, Trash2, Mail, Paperclip, Brain, StickyNote, X } from "lucide-react";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -359,8 +360,8 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     <div className="lg:col-span-1 space-y-6">
                         {/* No Profile Notice */}
                         {!candidateProfile && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-[16px] p-4 text-amber-800 text-sm font-medium">
-                                ⚠️ This user has not completed their profile yet. Only basic auth data is available.
+                            <div className="bg-amber-50 border border-amber-200 rounded-[16px] p-4 text-amber-800 text-sm font-medium flex items-center gap-2">
+                                <AlertTriangle size={16} /> This user has not completed their profile yet. Only basic auth data is available.
                             </div>
                         )}
 
@@ -438,7 +439,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                             <InfoRow label="Spouse Birth City" value={candidateData.family_data.spouse.birth_city} />
                                         </div>
                                     ) : (
-                                        <div className="text-sm text-red-400 font-medium mb-3">⚠ No spouse data entered</div>
+                                        <div className="text-sm text-red-400 font-medium mb-3 flex items-center gap-1"><AlertTriangle size={14} /> No spouse data entered</div>
                                     )}
                                     {candidateData?.family_data?.children?.length > 0 && (
                                         <div>
@@ -463,7 +464,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                     ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
                                     : 'bg-amber-100 text-amber-700 border-amber-300'
                                     }`}>
-                                    {candidateData?.admin_approved ? '✓ Approved' : '⏳ Pending Approval'}
+                                    {candidateData?.admin_approved ? <span className="flex items-center gap-1"><Check size={14} /> Approved</span> : <span className="flex items-center gap-1"><Clock size={14} /> Pending Approval</span>}
                                 </span>
                             </div>
                             {candidateData?.admin_approved && candidateData?.admin_approved_at && (
@@ -483,7 +484,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                     <>
                                         <input type="hidden" name="action" value="approve" />
                                         <button type="submit" className="w-full bg-emerald-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-emerald-600 transition-colors">
-                                            ✓ Approve for Payment
+                                            <span className="flex items-center justify-center gap-2"><Check size={16} /> Approve for Payment</span>
                                         </button>
                                     </>
                                 )}
@@ -625,7 +626,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                         rel="noopener noreferrer"
                                                         className="text-[#2f6fed] font-semibold hover:underline"
                                                     >
-                                                        📎 View Document
+                                                        <span className="flex items-center gap-1"><Paperclip size={14} /> View Document</span>
                                                     </a>
                                                 </div>
                                             )}
@@ -633,7 +634,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                             {/* AI Verification Result */}
                                             {doc.verification_result && (
                                                 <div className="mb-4 bg-[#f0f9ff] rounded-lg p-4 border border-[#bae6fd]">
-                                                    <h4 className="font-bold text-[#0369a1] text-sm mb-2">🤖 AI Verification Result</h4>
+                                                    <h4 className="font-bold text-[#0369a1] text-sm mb-2 flex items-center gap-2"><Brain size={14} /> AI Verification Result</h4>
                                                     <pre className="text-[12px] text-[#0c4a6e] whitespace-pre-wrap">
                                                         {typeof doc.verification_result === 'object'
                                                             ? JSON.stringify(doc.verification_result, null, 2)
@@ -645,7 +646,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                             {/* Admin Notes */}
                                             {doc.admin_notes && (
                                                 <div className="mb-4 bg-[#fef3c7] rounded-lg p-4 border border-[#fde68a]">
-                                                    <h4 className="font-bold text-[#92400e] text-sm mb-1">📝 Admin Notes</h4>
+                                                    <h4 className="font-bold text-[#92400e] text-sm mb-1 flex items-center gap-2"><StickyNote size={14} /> Admin Notes</h4>
                                                     <p className="text-[#78350f] text-sm">{doc.admin_notes}</p>
                                                 </div>
                                             )}
@@ -661,8 +662,8 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                         <select name="status" defaultValue={doc.status} className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm bg-white">
                                                             <option value="pending">Pending</option>
                                                             <option value="verifying">Verifying</option>
-                                                            <option value="verified">Verified ✓</option>
-                                                            <option value="rejected">Rejected ✗</option>
+                                                            <option value="verified">Verified</option>
+                                                            <option value="rejected">Rejected</option>
                                                         </select>
                                                     </div>
                                                     <div>
@@ -697,14 +698,14 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                         type="submit"
                                                         className="bg-red-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-red-600 transition-colors"
                                                     >
-                                                        🗑️ Delete Document
+                                                        <span className="flex items-center gap-1"><Trash2 size={12} /> Delete Document</span>
                                                     </button>
                                                 </form>
 
                                                 {/* Request New Document */}
                                                 <details className="group">
                                                     <summary className="bg-orange-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-orange-600 transition-colors cursor-pointer list-none">
-                                                        📨 Request New Document
+                                                        <span className="flex items-center gap-1"><Mail size={12} /> Request New Document</span>
                                                     </summary>
                                                     <form action={requestNewDocument} className="mt-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
                                                         <input type="hidden" name="doc_id" value={doc.id} />

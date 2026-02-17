@@ -51,14 +51,16 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: "No verified candidates to match", matched_count: 0 });
         }
 
-        // Fetch candidate details for verified user IDs
+        // Fetch candidate details for verified user IDs — only those IN_QUEUE and paid
         const { data: candidates, error: candidatesError } = await supabase
             .from('candidates')
             .select(`
                 *,
                 profiles!inner(*)
             `)
-            .in('profile_id', verifiedUserIds);
+            .in('profile_id', verifiedUserIds)
+            .eq('status', 'IN_QUEUE')
+            .eq('entry_fee_paid', true);
 
         if (candidatesError) {
             console.error("[Job Match] Error fetching candidates:", candidatesError);
