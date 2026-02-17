@@ -146,7 +146,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "Welcome to the team!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center; margin-bottom: 30px;">
-                         <img src="https://img.icons8.com/fluency/96/group.png" width="80" height="80" alt="Welcome" style="margin-bottom: 20px;">
+                         <img src="https://img.icons8.com/ios/100/2563eb/conference-call.png" width="80" height="80" alt="Welcome" style="margin-bottom: 20px;">
                         <h1 style="margin:0; color:#1e293b; font-size: 26px; font-weight: 700;">Welcome, ${firstName}!</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 10px;">We're thrilled to have you onboard.</p>
                     </div>
@@ -160,28 +160,28 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
-                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/fluency/48/edit-user-female.png" width="32"></td>
+                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/ios/50/2563eb/edit-user-male.png" width="32"></td>
                                 <td style="padding-bottom: 15px;">
                                     <strong style="color: #1e293b;">1. Complete Profile</strong>
                                     <div style="color: #64748b; font-size: 14px;">Review all fields</div>
                                 </td>
                             </tr>
                             <tr>
-                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/fluency/48/upload-to-cloud.png" width="32"></td>
+                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/ios/50/2563eb/upload-to-cloud.png" width="32"></td>
                                 <td style="padding-bottom: 15px;">
                                     <strong style="color: #1e293b;">2. Upload Docs</strong>
                                     <div style="color: #64748b; font-size: 14px;">Passport, Photo, Diploma</div>
                                 </td>
                             </tr>
                             <tr>
-                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/fluency/48/artificial-intelligence.png" width="32"></td>
+                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/ios/50/2563eb/brain.png" width="32"></td>
                                 <td style="padding-bottom: 15px;">
                                     <strong style="color: #1e293b;">3. AI Verification</strong>
                                     <div style="color: #64748b; font-size: 14px;">Instant checks</div>
                                 </td>
                             </tr>
                             <tr>
-                                <td width="50" style="vertical-align: top;"><img src="https://img.icons8.com/fluency/48/rocket.png" width="32"></td>
+                                <td width="50" style="vertical-align: top;"><img src="https://img.icons8.com/ios/50/2563eb/rocket.png" width="32"></td>
                                 <td>
                                     <strong style="color: #1e293b;">4. Get Hired</strong>
                                     <div style="color: #64748b; font-size: 14px;">Matched with employers</div>
@@ -203,7 +203,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "You're Verified!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/verified-account.png" width="80" height="80" alt="Verified" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/verified-account.png" width="80" height="80" alt="Verified" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Verification Complete!</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">Your documents are approved.</p>
                     </div>
@@ -234,14 +234,14 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "You're in the Queue!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/rocket.png" width="80" height="80" alt="Rocket" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/rocket.png" width="80" height="80" alt="Rocket" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Payment Confirmed</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">Your job search is active.</p>
                     </div>
 
                     <div style="background:#f0fdf4; border-radius:12px; padding:15px; margin:30px 0; text-align: center; border: 1px solid #bbf7d0;">
                         <p style="margin:0; color: #166534; font-weight: 600; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <img src="https://img.icons8.com/fluency/48/checked.png" width="20">
+                            <img src="https://img.icons8.com/ios/50/166534/checked.png" width="20">
                             ${data.amount || "$9"} Payment Received
                         </p>
                     </div>
@@ -266,7 +266,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: `✨ Job Offer: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/briefcase.png" width="80" height="80" alt="Job" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/briefcase.png" width="80" height="80" alt="Job" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">You've been picked!</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">A company wants to hire you.</p>
                     </div>
@@ -302,7 +302,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "Offer Expiring Soon!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/alarm-clock.png" width="80" height="80" alt="Clock" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/dc2626/alarm-clock.png" width="80" height="80" alt="Clock" style="margin-bottom: 20px;">
                         <h1 style="color:#dc2626; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Hurry up!</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">Your job offer is waiting.</p>
                     </div>
@@ -324,7 +324,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "Refund Processed",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/refund.png" width="80" height="80" alt="Refund" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/refund.png" width="80" height="80" alt="Refund" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Refund Sent</h1>
                     </div>
 
@@ -347,7 +347,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "Document Alert",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                         <img src="https://img.icons8.com/fluency/96/expired.png" width="80" height="80" alt="Expired" style="margin-bottom: 20px;">
+                         <img src="https://img.icons8.com/ios/100/ea580c/expired.png" width="80" height="80" alt="Expired" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Check your docs</h1>
                     </div>
 
@@ -372,7 +372,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: `New Match: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/bullish.png" width="80" height="80" alt="Match" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/bullish.png" width="80" height="80" alt="Match" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">New Match!</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">We found a job for you.</p>
                     </div>
@@ -406,7 +406,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: data.subject || "Update from Workers United",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/commercial.png" width="80" height="80" alt="News" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/commercial.png" width="80" height="80" alt="News" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Profile Update</h1>
                     </div>
 
@@ -428,7 +428,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: data.subject || "Announcement",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/megaphone.png" width="80" height="80" alt="Announcement" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/megaphone.png" width="80" height="80" alt="Announcement" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${data.title}</h1>
                     </div>
 
@@ -451,7 +451,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "Finish your profile!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/edit-property.png" width="80" height="80" alt="Edit" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/edit-property.png" width="80" height="80" alt="Edit" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Almost there!</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">You're missing a few things.</p>
                     </div>
@@ -486,7 +486,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "Don't forget your profile!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/todo-list.png" width="80" height="80" alt="Todo" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/2563eb/todo-list.png" width="80" height="80" alt="Todo" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${title}</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">${text}</p>
                     </div>
@@ -515,7 +515,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: `Last chance: ${daysLeft} days left`,
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/high-priority.png" width="80" height="80" alt="Warning" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/dc2626/high-priority.png" width="80" height="80" alt="Warning" style="margin-bottom: 20px;">
                         <h1 style="color:${color}; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Account Warning</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">
                             Your account will be deleted in <strong>${daysLeft} days</strong>.
@@ -540,7 +540,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: "Account Removed",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/trash.png" width="80" height="80" alt="Deleted" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/ios/100/64748b/trash.png" width="80" height="80" alt="Deleted" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Goodbye for now</h1>
                     </div>
 
