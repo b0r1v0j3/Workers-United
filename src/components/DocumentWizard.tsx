@@ -299,8 +299,8 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {uploads.passport.status !== 'missing' && (
-                                <span className={`text-sm font-medium ${uploads.passport.status === 'verified' ? 'text-green-600' : uploads.passport.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
+                            {uploads.passport.status !== 'missing' && uploads.passport.status !== 'verified' && (
+                                <span className={`text-sm font-medium ${uploads.passport.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
                                     {getStatusIcon(uploads.passport.status)} {uploads.passport.message}
                                 </span>
                             )}
@@ -343,8 +343,8 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {uploads.biometric_photo.status !== 'missing' && (
-                                <span className={`text-sm font-medium ${uploads.biometric_photo.status === 'verified' ? 'text-green-600' : uploads.biometric_photo.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
+                            {uploads.biometric_photo.status !== 'missing' && uploads.biometric_photo.status !== 'verified' && (
+                                <span className={`text-sm font-medium ${uploads.biometric_photo.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
                                     {getStatusIcon(uploads.biometric_photo.status)} {uploads.biometric_photo.message}
                                 </span>
                             )}
@@ -388,8 +388,8 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {uploads.diploma.status !== 'missing' && (
-                                <span className={`text-sm font-medium ${uploads.diploma.status === 'verified' ? 'text-green-600' : uploads.diploma.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
+                            {uploads.diploma.status !== 'missing' && uploads.diploma.status !== 'verified' && (
+                                <span className={`text-sm font-medium ${uploads.diploma.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
                                     {getStatusIcon(uploads.diploma.status)} {uploads.diploma.message}
                                 </span>
                             )}
@@ -412,11 +412,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                 </div>
             </div>
 
-            {isComplete && (
-                <div className="mt-4 p-3 bg-green-500/20 rounded-lg text-center">
-                    <span className="text-white font-medium">✓ All required documents verified!</span>
-                </div>
-            )}
+
         </div>
     );
 }

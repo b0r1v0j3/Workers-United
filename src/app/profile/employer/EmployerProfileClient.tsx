@@ -107,7 +107,7 @@ export default function EmployerProfilePage() {
     const [jobAlert, setJobAlert] = useState<{ type: "success" | "error"; msg: string } | null>(null);
     const emptyJob = {
         title: "", description: "", industry: "",
-        positions_count: "1", salary_rsd: "60000",
+        positions_count: "1", salary_rsd: "70000",
         work_city: "", accommodation_address: "", different_accommodation: false,
         work_schedule: "Full-time (40 hours/week)",
         contract_duration_months: "12", experience_required_years: "0",
@@ -268,7 +268,7 @@ export default function EmployerProfilePage() {
                 description: jobForm.description || null,
                 industry: jobForm.industry,
                 positions_count: parseInt(jobForm.positions_count) || 1,
-                salary_rsd: parseFloat(jobForm.salary_rsd) || 60000,
+                salary_rsd: parseFloat(jobForm.salary_rsd) || 70000,
                 work_city: jobForm.work_city,
                 accommodation_address: jobForm.accommodation_address,
                 work_schedule: jobForm.work_schedule,
@@ -295,7 +295,7 @@ export default function EmployerProfilePage() {
         setEditJobForm({
             title: job.title, description: job.description || "",
             industry: job.industry,
-            positions_count: String(job.positions_count), salary_rsd: String(job.salary_rsd || "60000"),
+            positions_count: String(job.positions_count), salary_rsd: String(job.salary_rsd || "70000"),
             work_city: job.work_city || "",
             accommodation_address: job.accommodation_address || "",
             different_accommodation: false,
@@ -314,7 +314,7 @@ export default function EmployerProfilePage() {
                 description: editJobForm.description || null,
                 industry: editJobForm.industry,
                 positions_count: parseInt(editJobForm.positions_count) || 1,
-                salary_rsd: parseFloat(editJobForm.salary_rsd) || 60000,
+                salary_rsd: parseFloat(editJobForm.salary_rsd) || 70000,
                 work_city: editJobForm.work_city || null,
                 accommodation_address: editJobForm.accommodation_address || null,
                 work_schedule: editJobForm.work_schedule,
@@ -588,8 +588,8 @@ export default function EmployerProfilePage() {
                                     </div>
                                     <div>
                                         <label className={labelClass}>Salary (RSD) <span className="text-red-500">*</span></label>
-                                        <input type="number" name="salary_rsd" min={60000} step={1000} value={jobForm.salary_rsd} onChange={handleJobChange} className={inputClass} />
-                                        <p className="text-[11px] text-gray-500 mt-1">Min: 60,000 RSD</p>
+                                        <input type="number" name="salary_rsd" min={70000} step={1000} value={jobForm.salary_rsd} onChange={handleJobChange} className={inputClass} />
+                                        <p className="text-[11px] text-gray-500 mt-1">Min: 70,000 RSD</p>
                                     </div>
                                     <div>
                                         <label className={labelClass}>Schedule</label>
@@ -715,7 +715,7 @@ export default function EmployerProfilePage() {
                                                 </div>
                                                 <div>
                                                     <label className={labelClass}>Salary (RSD)</label>
-                                                    <input type="number" min={60000} step={1000} value={editJobForm.salary_rsd} onChange={(e) => setEditJobForm(p => ({ ...p, salary_rsd: e.target.value }))} className={inputClass} />
+                                                    <input type="number" min={70000} step={1000} value={editJobForm.salary_rsd} onChange={(e) => setEditJobForm(p => ({ ...p, salary_rsd: e.target.value }))} className={inputClass} />
                                                 </div>
                                                 <div>
                                                     <label className={labelClass}>Schedule</label>
