@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { processBiometricPhoto, fixImageOrientation, stitchImages, compressImage } from "@/lib/imageUtils";
 import { toast } from "sonner";
 import { MAX_FILE_SIZE_MB, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
+import { FileText, BookUser, Camera, GraduationCap } from "lucide-react";
 
 interface FileUpload {
     file: File | null;
@@ -270,8 +271,8 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
     return (
         <div className="bg-gradient-to-br from-[#2f6fed] to-[#1e40af] rounded-2xl p-6 text-white mb-6">
             <div className="mb-4">
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                    📄 Upload Documents
+                <h2 className="text-lg font-bold flex items-center gap-2 text-white">
+                    <FileText className="w-5 h-5" /> Upload Documents
                 </h2>
                 <p className="text-white/70 text-sm">Upload required documents for visa processing</p>
             </div>
@@ -292,7 +293,9 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                     />
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="text-2xl">🛂</div>
+                            <div className="p-2 bg-blue-100/20 rounded-full text-white/90">
+                                <BookUser size={24} />
+                            </div>
                             <div>
                                 <div className="font-semibold text-[#183b56]">Passport Photo Page *</div>
                                 <div className="text-xs text-[#64748b]">Select 1-2 photos (front & back)</div>
@@ -336,7 +339,9 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                     />
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="text-2xl">📷</div>
+                            <div className="p-2 bg-blue-100/20 rounded-full text-white/90">
+                                <Camera size={24} />
+                            </div>
                             <div>
                                 <div className="font-semibold text-[#183b56]">Biometric Photo *</div>
                                 <div className="text-xs text-[#64748b]">Passport-style, white background</div>
@@ -381,7 +386,9 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                     />
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="text-2xl">🎓</div>
+                            <div className="p-2 bg-blue-100/20 rounded-full text-white/90">
+                                <GraduationCap size={24} />
+                            </div>
                             <div>
                                 <div className="font-semibold text-[#183b56]">Diploma / Certificate *</div>
                                 <div className="text-xs text-[#64748b]">Select 1-2 photos (front & back)</div>

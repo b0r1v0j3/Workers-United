@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SignupForm } from "./signup-form";
 import Image from "next/image";
+import { Globe, FileText, CheckCircle2, Zap, Building2, BookUser } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     const userType = params.type === "employer" ? "employer" : "worker";
 
     return (
-        <div className="min-h-screen flex font-montserrat flex-col lg:flex-row">
+        <div className="min-h-screen flex font-sans flex-col lg:flex-row">
             {/* Left Side: Brand Panel */}
             <div className="hidden lg:flex w-1/2 text-white p-12 flex-col justify-between relative overflow-hidden"
                 style={{
@@ -44,15 +45,15 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     <div className="space-y-4">
                         {userType === "employer" ? (
                             <>
-                                <Feature icon="🌍" text="Access global talent pool" />
-                                <Feature icon="📋" text="Automated documentation" />
-                                <Feature icon="✅" text="100% compliance ready" />
+                                <Feature icon={<Globe className="text-emerald-200" />} text="Access global talent pool" />
+                                <Feature icon={<FileText className="text-emerald-200" />} text="Automated documentation" />
+                                <Feature icon={<CheckCircle2 className="text-emerald-200" />} text="100% compliance ready" />
                             </>
                         ) : (
                             <>
-                                <Feature icon="⚡" text="Instant document verification" />
-                                <Feature icon="🏢" text="Verified employers only" />
-                                <Feature icon="🛂" text="Full visa support included" />
+                                <Feature icon={<Zap className="text-blue-200" />} text="Instant document verification" />
+                                <Feature icon={<Building2 className="text-blue-200" />} text="Verified employers only" />
+                                <Feature icon={<BookUser className="text-blue-200" />} text="Full visa support included" />
                             </>
                         )}
                     </div>
@@ -116,7 +117,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     );
 }
 
-function Feature({ icon, text }: { icon: string; text: string }) {
+function Feature({ icon, text }: { icon: React.ReactNode; text: string }) {
     return (
         <div className="flex items-center gap-3 bg-white/10 p-3.5 rounded-xl backdrop-blur-sm">
             <span className="text-xl">{icon}</span>

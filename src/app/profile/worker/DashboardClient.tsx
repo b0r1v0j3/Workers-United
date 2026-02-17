@@ -22,7 +22,10 @@ import {
     Calendar,
     Shield,
     Heart,
-    Users
+    Users,
+    Rocket,
+    PartyPopper,
+    Sparkles
 } from "lucide-react";
 
 interface DashboardClientProps {
@@ -51,7 +54,7 @@ export default function DashboardClient({
                 spread: 70,
                 origin: { y: 0.6 }
             });
-            toast.success("Profile 100% Complete! 🎉");
+            toast.success("Profile 100% Complete!");
             sessionStorage.setItem("celebrated_profile", "true");
         }
     }, [profileCompletion]);
@@ -129,7 +132,7 @@ export default function DashboardClient({
                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <span className="text-2xl">🚀</span>
+                                <Rocket className="w-6 h-6 text-white" />
                                 <h3 className="font-bold text-lg">Get Matched with Employers</h3>
                             </div>
                             <p className="text-blue-100 text-sm max-w-md">
@@ -265,7 +268,7 @@ export default function DashboardClient({
                         {hasPendingOffer && (
                             <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5 hover:shadow-md transition-shadow duration-300">
                                 <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
-                                    🎉 You have a job offer!
+                                    <PartyPopper className="w-5 h-5" /> You have a job offer!
                                 </h3>
                                 {pendingOffers.map((offer: any) => (
                                     <Link

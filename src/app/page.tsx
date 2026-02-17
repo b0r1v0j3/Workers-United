@@ -38,7 +38,7 @@ export default function Home() {
           }),
         }}
       />
-      <div className="min-h-screen bg-[var(--bg)] font-montserrat">
+      <div className="min-h-screen bg-[var(--bg)] font-sans">
         <UnifiedNavbar variant="public" />
 
         <main>
