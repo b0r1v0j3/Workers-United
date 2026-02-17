@@ -19,11 +19,11 @@ interface OfferExpiredData {
 }
 
 export async function sendOfferNotification(data: OfferNotificationData): Promise<void> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const paymentUrl = `${baseUrl}/profile/offers/${data.offerId}`;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const paymentUrl = `${baseUrl}/profile/worker/offers/${data.offerId}`;
 
   const expiryDate = new Date(data.expiresAt);
-  const formattedExpiry = expiryDate.toLocaleString("en-US", {
+  const formattedExpiry = expiryDate.toLocaleString("en-GB", {
     weekday: "long",
     year: "numeric",
     month: "long",

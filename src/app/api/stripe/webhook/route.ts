@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
                     .update({
                         entry_fee_paid: true,
                         status: "IN_QUEUE",
+                        queue_joined_at: new Date().toISOString(),
                         job_search_active: true,
                         job_search_activated_at: new Date().toISOString(),
                     })

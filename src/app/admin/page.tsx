@@ -39,6 +39,7 @@ export default async function AdminDashboard() {
         adminClient.from("profiles").select("id, full_name, email"),
     ]);
 
+
     const allAuthUsers = authData?.users || [];
     const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
 
@@ -265,7 +266,7 @@ function PipelineBadge({ label, count, color, href }: {
 }
 
 function PipelineArrow() {
-    return <span className="text-slate-300 self-center hidden sm:inline">→</span>;
+    return <ChevronRight size={16} className="text-slate-300 self-center hidden sm:inline" />;
 }
 
 function StatusBadge({ status }: { status: string }) {

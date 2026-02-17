@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
+import { Check, Shield, Globe, Clock, ArrowRight, UserCheck, FileCheck, Briefcase, HeartHandshake } from "lucide-react";
 
 export default function Home() {
   return (
@@ -68,16 +69,16 @@ export default function Home() {
                 </Link>
                 <Link
                   href="/login"
-                  className="px-10 py-5 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-[#183b56] hover:text-white transition-all"
+                  className="px-10 py-5 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-[#f0f4ff] hover:border-[#2f6fed] hover:text-[#2f6fed] transition-all"
                 >
                   Sign In
                 </Link>
               </div>
 
               <div className="flex flex-wrap gap-6 justify-center text-sm text-[#6c7a89]">
-                <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> No hidden fees</span>
-                <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> 90-day guarantee</span>
-                <span className="flex items-center gap-2"><span className="text-[#1dbf73] text-lg">✓</span> Real visa support</span>
+                <span className="flex items-center gap-2"><Check className="w-5 h-5 text-[#1dbf73]" /> No hidden fees</span>
+                <span className="flex items-center gap-2"><Shield className="w-5 h-5 text-[#1dbf73]" /> 90-day guarantee</span>
+                <span className="flex items-center gap-2"><Globe className="w-5 h-5 text-[#1dbf73]" /> Real visa support</span>
               </div>
             </div>
           </section>
@@ -95,14 +96,14 @@ export default function Home() {
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { num: 1, title: "Create your profile", text: "Sign up as a worker or employer. It takes less than 2 minutes." },
-                  { num: 2, title: "Upload your documents", text: "Add your passport, CV, and basic information so we can verify you." },
-                  { num: 3, title: "We match you with opportunities", text: "We review your profile and connect you with suitable jobs or workers." },
-                  { num: 4, title: "Visa & arrival support", text: "We help with visa documents and stay available after you start working." }
-                ].map((step) => (
-                  <div key={step.num} className="bg-[#f4f6fb] rounded-2xl p-6 border border-[#dde3ec]/80 hover:shadow-lg hover:border-[#2f6fed]/30 transition-all">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white font-bold text-lg flex items-center justify-center mb-4 shadow-md">
-                      {step.num}
+                  { icon: UserCheck, title: "Create your profile", text: "Sign up as a worker or employer. It takes less than 2 minutes." },
+                  { icon: FileCheck, title: "Upload your documents", text: "Add your passport, CV, and basic information so we can verify you." },
+                  { icon: Briefcase, title: "We match you", text: "We review your profile and connect you with suitable jobs or workers." },
+                  { icon: HeartHandshake, title: "Visa & arrival support", text: "We help with visa documents and stay available after you start working." }
+                ].map((step, i) => (
+                  <div key={i} className="bg-[#f4f6fb] rounded-2xl p-6 border border-[#dde3ec]/80 hover:shadow-lg hover:border-[#2f6fed]/30 transition-all group">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white flex items-center justify-center mb-4 shadow-md group-hover:scale-110 transition-transform">
+                      <step.icon className="w-6 h-6" />
                     </div>
                     <h3 className="font-bold text-[#183b56] mb-2 text-lg">{step.title}</h3>
                     <p className="text-sm text-[#6c7a89] leading-relaxed">{step.text}</p>
@@ -128,15 +129,15 @@ export default function Home() {
                   </p>
                   <ul className="space-y-4 text-[#1b2430]">
                     <li className="flex items-start gap-3">
-                      <span className="text-[#1dbf73] font-bold text-lg">✓</span>
+                      <Check className="w-6 h-6 text-[#1dbf73] shrink-0" />
                       <span>We explain your contract in simple language – salary, working hours, accommodation.</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="text-[#1dbf73] font-bold text-lg">✓</span>
+                      <Check className="w-6 h-6 text-[#1dbf73] shrink-0" />
                       <span>We tell you honestly if an offer looks unrealistic or dangerous.</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="text-[#1dbf73] font-bold text-lg">✓</span>
+                      <Check className="w-6 h-6 text-[#1dbf73] shrink-0" />
                       <span>We support you with documents for work visa step by step.</span>
                     </li>
                   </ul>
@@ -145,15 +146,15 @@ export default function Home() {
                   <h3 className="font-bold text-[#183b56] mb-4 text-lg">What workers usually ask us</h3>
                   <ul className="space-y-3 text-[#1b2430]">
                     <li className="flex items-start gap-2">
-                      <span className="text-[#1dbf73]">•</span>
+                      <ArrowRight className="w-5 h-5 text-[#1dbf73] shrink-0 mt-0.5" />
                       <span>Already have an offer but not sure if it's safe or fair</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-[#1dbf73]">•</span>
+                      <ArrowRight className="w-5 h-5 text-[#1dbf73] shrink-0 mt-0.5" />
                       <span>Need help understanding the contract and visa documents</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-[#1dbf73]">•</span>
+                      <ArrowRight className="w-5 h-5 text-[#1dbf73] shrink-0 mt-0.5" />
                       <span>Want someone to check the employer before deciding</span>
                     </li>
                   </ul>
@@ -170,19 +171,19 @@ export default function Home() {
                   <h3 className="font-bold text-[#183b56] mb-4 text-lg">What serious employers get</h3>
                   <ul className="space-y-3 text-[#1b2430]">
                     <li className="flex items-start gap-2">
-                      <span className="text-[#2f6fed] font-bold">✓</span>
+                      <Check className="w-5 h-5 text-[#2f6fed] shrink-0 mt-0.5" />
                       <span>Workers who understand the job before travelling</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-[#2f6fed] font-bold">✓</span>
+                      <Check className="w-5 h-5 text-[#2f6fed] shrink-0 mt-0.5" />
                       <span>Correct documents for work visa applications</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-[#2f6fed] font-bold">✓</span>
+                      <Check className="w-5 h-5 text-[#2f6fed] shrink-0 mt-0.5" />
                       <span>Less misunderstandings and early resignations</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-[#2f6fed] font-bold">✓</span>
+                      <Check className="w-5 h-5 text-[#2f6fed] shrink-0 mt-0.5" />
                       <span>Support after arrival to solve issues early</span>
                     </li>
                   </ul>
@@ -199,15 +200,15 @@ export default function Home() {
                   </p>
                   <ul className="space-y-4 text-[#1b2430]">
                     <li className="flex items-start gap-3">
-                      <span className="text-[#6c7a89]">•</span>
+                      <ArrowRight className="w-5 h-5 text-[#6c7a89] shrink-0 mt-0.5" />
                       <span>We help connect legal requirements with worker expectations.</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="text-[#6c7a89]">•</span>
+                      <ArrowRight className="w-5 h-5 text-[#6c7a89] shrink-0 mt-0.5" />
                       <span>Available in flexible hours when workers can really talk.</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="text-[#6c7a89]">•</span>
+                      <ArrowRight className="w-5 h-5 text-[#6c7a89] shrink-0 mt-0.5" />
                       <span>We build cooperation step by step – starting small and growing.</span>
                     </li>
                   </ul>

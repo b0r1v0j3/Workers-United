@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
+import { Building2, MapPin, Phone, Users, Globe } from "lucide-react";
 
 export default async function EmployersPage() {
     const supabase = await createClient();
@@ -75,19 +76,19 @@ export default async function EmployersPage() {
                                     {/* Details Row */}
                                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-sm text-slate-600">
                                         {employer.company_registration_number && (
-                                            <span>🏢 Reg: {employer.company_registration_number}</span>
+                                            <span className="flex items-center gap-1"><Building2 size={14} /> Reg: {employer.company_registration_number}</span>
                                         )}
                                         {employer.country && (
-                                            <span>🌍 {employer.city ? `${employer.city}, ` : ""}{employer.country}</span>
+                                            <span className="flex items-center gap-1"><MapPin size={14} /> {employer.city ? `${employer.city}, ` : ""}{employer.country}</span>
                                         )}
                                         {employer.contact_phone && (
-                                            <span>📞 {employer.contact_phone}</span>
+                                            <span className="flex items-center gap-1"><Phone size={14} /> {employer.contact_phone}</span>
                                         )}
                                         {employer.company_size && (
-                                            <span>👥 {employer.company_size}</span>
+                                            <span className="flex items-center gap-1"><Users size={14} /> {employer.company_size}</span>
                                         )}
                                         {employer.website && (
-                                            <span>🔗 {employer.website}</span>
+                                            <span className="flex items-center gap-1"><Globe size={14} /> {employer.website}</span>
                                         )}
                                     </div>
                                 </div>

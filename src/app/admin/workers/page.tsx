@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 import AppShell from "@/components/AppShell";
-import { Phone, FileText, CheckCircle2, Clock } from "lucide-react";
+import { Phone, FileText, CheckCircle2, Clock, Globe, Hourglass } from "lucide-react";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 
 export default async function CandidatesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
@@ -162,7 +162,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                         <FilterTab href="/admin/workers?filter=PLACED" label="Placed" active={filter === 'PLACED'} color="green" />
                         <FilterTab href="/admin/workers?filter=REJECTED" label="Rejected" active={filter === 'REJECTED'} color="red" />
                         <FilterTab href="/admin/workers?filter=REFUND_FLAGGED" label="Refund" active={filter === 'REFUND_FLAGGED'} color="rose" />
-                        <FilterTab href="/admin/workers?filter=needs_approval" label="⏳ Needs Approval" active={filter === 'needs_approval'} color="purple" />
+                        <FilterTab href="/admin/workers?filter=needs_approval" label="Needs Approval" icon={<Hourglass size={12} />} active={filter === 'needs_approval'} color="purple" />
                     </div>
                 </div>
 
@@ -218,7 +218,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                         <div className="flex flex-wrap items-center gap-2 mt-3 text-xs md:text-sm">
                                             {hasCandidate && candidate.nationality && (
                                                 <span className="flex items-center gap-1 text-slate-600 bg-slate-50 px-2 py-1 rounded">
-                                                    🌍 {candidate.nationality}
+                                                    <Globe size={12} /> {candidate.nationality}
                                                 </span>
                                             )}
                                             {hasCandidate && candidate.phone && (
@@ -235,7 +235,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                             {/* Admin Approval Badge */}
                                             {hasCandidate && profileCompletion === 100 && !candidate.admin_approved && (
                                                 <span className="flex items-center gap-1 px-2 py-1 rounded font-medium bg-purple-50 text-purple-700">
-                                                    ⏳ Needs Approval
+                                                    <Hourglass size={12} /> Needs Approval
                                                 </span>
                                             )}
 
@@ -289,8 +289,8 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
 
 // ─── Components ──────────────────────────────────────────────
 
-function FilterTab({ href, label, active, color }: {
-    href: string; label: string; active: boolean; color: string;
+function FilterTab({ href, label, active, color, icon }: {
+    href: string; label: string; active: boolean; color: string; icon?: React.ReactNode;
 }) {
     const colorMap: Record<string, { activeBg: string; activeText: string }> = {
         slate: { activeBg: "bg-slate-100", activeText: "text-slate-800" },
@@ -309,6 +309,7 @@ function FilterTab({ href, label, active, color }: {
             className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${active ? `${c.activeBg} ${c.activeText}` : 'text-slate-500 hover:bg-slate-50'
                 }`}
         >
+            {icon && <span className="mr-1 inline-block align-text-bottom">{icon}</span>}
             {label}
         </Link>
     );
