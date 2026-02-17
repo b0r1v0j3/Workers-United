@@ -262,7 +262,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: `✨ Job Offer: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="https://img.icons8.com/fluency/96/cv.png" width="80" height="80" alt="Job" style="margin-bottom: 20px;">
+                        <img src="https://img.icons8.com/fluency/96/briefcase.png" width="80" height="80" alt="Job" style="margin-bottom: 20px;">
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">You've been picked!</h1>
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">A company wants to hire you.</p>
                     </div>
