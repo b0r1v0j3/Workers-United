@@ -75,7 +75,7 @@ const buttonStyle = `
     text-align: center;
 `;
 
-// Helper to wrap content in the Classic Blue Header design
+// Helper to wrap content in the Contained Blue Header design
 const wrapModernTemplate = (content: string, title: string = "Workers United", subtitle: string = ""): string => `
 <!DOCTYPE html>
 <html>
@@ -88,17 +88,22 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
     <!-- Preheader text for inbox preview -->
     <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${subtitle}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
     
-    <!-- Blue Gradient Header Block -->
-    <div style="width: 100%; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 50px 0 80px 0; text-align: center;">
-        <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="160" style="vertical-align: middle; max-width: 100%;">
-    </div>
-
-    <!-- Main Card Container -->
-    <div style="max-width:600px; margin: -50px auto 0 auto; padding: 0 15px;">
+    <!-- Main Email Container -->
+    <div style="max-width:600px; margin: 40px auto; padding: 0 15px;">
         
-        <!-- White Card overlapping header -->
-        <div style="background:white; border-radius:16px; box-shadow:0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); overflow: hidden; padding: 40px; position: relative;">
-            ${content}
+        <!-- The "Window" (Card) -->
+        <div style="background:white; border-radius:16px; box-shadow:0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+            
+            <!-- Blue Header "Integrated" into the window -->
+            <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px 40px; text-align: center;">
+                 <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="48" height="48" style="vertical-align: middle; display: inline-block; margin-right: 12px;">
+                 <span style="color: white; font-size: 24px; font-weight: 700; vertical-align: middle; letter-spacing: -0.5px;">Workers United</span>
+            </div>
+
+            <!-- Content Area -->
+            <div style="padding: 40px;">
+                ${content}
+            </div>
         </div>
         
         <!-- Footer -->
@@ -108,7 +113,7 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
                 <a href="https://www.facebook.com/profile.php?id=61585104076725" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/facebook-new.png" width="28" height="28" alt="Facebook"></a>
                 <a href="https://www.instagram.com/workersunited.eu/" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/instagram-new.png" width="28" height="28" alt="Instagram"></a>
                 <a href="https://www.threads.net/@workersunited.eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://workersunited.eu/threads-logo.svg" width="24" height="24" alt="Threads"></a>
-                <a href="https://www.reddit.com/user/workersunited-eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/reddit.png" width="28" height="28" alt="Reddit"></a>
+                 <a href="https://www.reddit.com/user/workersunited-eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/reddit.png" width="28" height="28" alt="Reddit"></a>
                 <a href="https://x.com/WorkersUnitedEU" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://workersunited.eu/x-logo.svg" width="24" height="24" alt="X"></a>
                 <a href="https://www.tiktok.com/@workersunited.eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/tiktok.png" width="28" height="28" alt="TikTok"></a>
                 <a href="https://www.linkedin.com/company/workersunited-eu/" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/linkedin.png" width="28" height="28" alt="LinkedIn"></a>
