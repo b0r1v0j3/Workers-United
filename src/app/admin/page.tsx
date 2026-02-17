@@ -53,8 +53,9 @@ export default async function AdminDashboard() {
     ];
     pipelineStatuses.forEach(s => statusCounts[s] = 0);
     allCandidates?.forEach((c: any) => {
-        if (c.status && statusCounts[c.status] !== undefined) {
-            statusCounts[c.status]++;
+        const status = c.status || 'NEW'; // null/empty = NEW (same as Recent Workers logic)
+        if (statusCounts[status] !== undefined) {
+            statusCounts[status]++;
         }
     });
     const totalWorkers = allCandidates?.length || 0;

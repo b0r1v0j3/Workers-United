@@ -21,7 +21,7 @@ export default function CreateJobClient() {
         destination_country: "Serbia",
         industry: "",
         positions_count: 1,
-        salary_rsd: 60000,
+        salary_rsd: 70000,
         accommodation_address: "",
         work_schedule: "Full-time (40 hours/week)",
         contract_duration_months: 12,
@@ -40,8 +40,8 @@ export default function CreateJobClient() {
         setLoading(true);
 
         try {
-            if (formData.salary_rsd < 60000) {
-                throw new Error("Minimum salary must be at least 60,000 RSD");
+            if (formData.salary_rsd < 70000) {
+                throw new Error("Minimum salary must be at least 70,000 RSD");
             }
             if (!formData.accommodation_address.trim()) {
                 throw new Error("Accommodation address is required for visa processing");
@@ -103,7 +103,7 @@ export default function CreateJobClient() {
             return formData.title && formData.industry;
         }
         if (currentStep === 1) {
-            return formData.salary_rsd >= 60000;
+            return formData.salary_rsd >= 70000;
         }
         return formData.accommodation_address.trim().length > 0;
     };
@@ -325,7 +325,7 @@ export default function CreateJobClient() {
                                             type="number"
                                             name="salary_rsd"
                                             required
-                                            min={60000}
+                                            min={70000}
                                             step={1000}
                                             value={formData.salary_rsd}
                                             onChange={handleChange}
