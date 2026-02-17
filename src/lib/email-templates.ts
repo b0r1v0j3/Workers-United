@@ -95,9 +95,9 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <div style="background:white; border-radius:16px; box-shadow:0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); overflow: hidden;">
             
             <!-- Blue Header "Integrated" into the window -->
-            <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px 40px; text-align: center;">
-                 <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="48" height="48" style="vertical-align: middle; display: inline-block; margin-right: 12px;">
-                 <span style="color: white; font-size: 24px; font-weight: 700; vertical-align: middle; letter-spacing: -0.5px;">Workers United</span>
+            <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 40px 40px 30px; text-align: center;">
+                 <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="80" height="auto" style="vertical-align: middle; display: block; margin: 0 auto 15px auto;">
+                 <div style="color: white; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Workers United</div>
             </div>
 
             <!-- Content Area -->
