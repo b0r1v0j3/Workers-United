@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Mail, Eye, ChevronDown, Monitor, Smartphone } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Mail, Monitor, Smartphone, CheckCircle, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
 
 // ─── Mock data for each email template ──────────────────────────
 
@@ -92,6 +92,11 @@ export default function EmailPreviewPage() {
     const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
 
+    // Load preview on mount
+    useEffect(() => {
+        loadPreview(selectedType);
+    }, []);
+
     const loadPreview = async (type: string) => {
         setLoading(true);
         setError(null);
@@ -115,110 +120,141 @@ export default function EmailPreviewPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5] p-6">
-            <div className="max-w-[1200px] mx-auto">
+        <div className="min-h-screen bg-[#f0f2f5] p-6 font-montserrat">
+            <div className="max-w-[1600px] mx-auto">
                 {/* Header */}
-                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-full bg-[#1877f2] flex items-center justify-center text-white">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#1877f2] flex items-center justify-center text-white shadow-sm">
                             <Mail size={20} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold text-[#050505]">Email Template Preview</h1>
-                            <p className="text-sm text-[#65676b]">Preview all email templates with mock data — no deploy needed</p>
+                            <h1 className="text-xl font-bold text-[#050505]">Email Templates</h1>
+                            <p className="text-sm text-[#65676b]">Preview and test all system emails</p>
                         </div>
                     </div>
-                </div>
 
-                {/* Controls */}
-                <div className="flex gap-4 mb-6 flex-wrap">
-                    <div className="relative">
-                        <select
-                            value={selectedType}
-                            onChange={(e) => loadPreview(e.target.value)}
-                            className="appearance-none bg-white border border-[#dddfe2] rounded-lg px-4 py-2.5 pr-10 text-sm font-semibold text-[#050505] cursor-pointer focus:ring-2 focus:ring-[#1877f2] focus:outline-none"
-                        >
-                            {Object.entries(EMAIL_LABELS).map(([key, label]) => (
-                                <option key={key} value={key}>{label}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#65676b] pointer-events-none" />
-                    </div>
-
-                    <button
-                        onClick={() => loadPreview(selectedType)}
-                        disabled={loading}
-                        className="bg-[#1877f2] text-white px-4 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <Eye size={16} />
-                        {loading ? "Loading..." : "Load Preview"}
-                    </button>
-
-                    {/* Desktop / Mobile toggle */}
-                    <div className="flex items-center bg-white border border-[#dddfe2] rounded-lg overflow-hidden ml-auto">
+                    {/* View Controls */}
+                    <div className="flex items-center bg-white border border-[#dddfe2] rounded-lg overflow-hidden shadow-sm self-start md:self-auto">
                         <button
                             onClick={() => setViewMode("desktop")}
-                            className={`px-3 py-2.5 flex items-center gap-1.5 text-sm font-medium transition-colors ${viewMode === "desktop"
-                                    ? "bg-[#1877f2] text-white"
-                                    : "text-[#65676b] hover:bg-[#f0f2f5]"
+                            className={`px-4 py-2 flex items-center gap-2 text-sm font-medium transition-colors ${viewMode === "desktop"
+                                ? "bg-[#1877f2] text-white"
+                                : "text-[#65676b] hover:bg-[#f0f2f5]"
                                 }`}
                         >
                             <Monitor size={16} />
-                            Desktop
+                            <span className="hidden sm:inline">Desktop</span>
                         </button>
+                        <div className="w-[1px] bg-[#dddfe2] h-full" />
                         <button
                             onClick={() => setViewMode("mobile")}
-                            className={`px-3 py-2.5 flex items-center gap-1.5 text-sm font-medium transition-colors ${viewMode === "mobile"
-                                    ? "bg-[#1877f2] text-white"
-                                    : "text-[#65676b] hover:bg-[#f0f2f5]"
+                            className={`px-4 py-2 flex items-center gap-2 text-sm font-medium transition-colors ${viewMode === "mobile"
+                                ? "bg-[#1877f2] text-white"
+                                : "text-[#65676b] hover:bg-[#f0f2f5]"
                                 }`}
                         >
                             <Smartphone size={16} />
-                            Mobile
+                            <span className="hidden sm:inline">Mobile</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Error */}
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6 text-sm">
-                        {error}
-                    </div>
-                )}
-
-                {/* Preview */}
-                {htmlContent ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-hidden">
-                        <div className="bg-[#f7f8fa] border-b border-[#dddfe2] px-4 py-2.5 flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-red-400" />
-                            <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                            <div className="w-3 h-3 rounded-full bg-green-400" />
-                            <span className="ml-4 text-xs text-[#65676b] font-mono">
-                                {EMAIL_LABELS[selectedType]} — Preview
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Sidebar List */}
+                    <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-hidden sticky top-6">
+                        <div className="p-4 border-b border-[#dddfe2] bg-gray-50 flex justify-between items-center">
+                            <h2 className="font-semibold text-gray-700 text-xs uppercase tracking-wide">Select Template</h2>
+                            <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
+                                {Object.keys(EMAIL_LABELS).length}
                             </span>
                         </div>
-                        <div className="flex justify-center bg-[#e5e7eb] p-4" style={{ minHeight: "820px" }}>
-                            <iframe
-                                srcDoc={htmlContent}
-                                title="Email Preview"
-                                className="border-0 bg-white transition-all duration-300"
-                                style={{
-                                    width: viewMode === "mobile" ? "360px" : "100%",
-                                    maxWidth: "100%",
-                                    height: "800px",
-                                    boxShadow: viewMode === "mobile" ? "0 4px 24px rgba(0,0,0,0.12)" : "none",
-                                    borderRadius: viewMode === "mobile" ? "12px" : "0",
-                                }}
-                                sandbox="allow-same-origin"
-                            />
+                        <div className="divide-y divide-gray-100 max-h-[calc(100vh-200px)] overflow-y-auto">
+                            {Object.entries(EMAIL_LABELS).map(([key, label]) => (
+                                <button
+                                    key={key}
+                                    onClick={() => loadPreview(key)}
+                                    className={`w-full text-left px-4 py-3 text-sm font-medium transition-all flex items-center justify-between group ${selectedType === key
+                                            ? "bg-blue-50 text-[#1877f2] border-l-4 border-[#1877f2]"
+                                            : "text-gray-600 hover:bg-gray-50 border-l-4 border-transparent hover:pl-5"
+                                        }`}
+                                >
+                                    <span>{label}</span>
+                                    {selectedType === key && <ChevronRight size={16} className="text-[#1877f2]" />}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                ) : !loading && (
-                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-16 text-center">
-                        <Mail size={48} className="mx-auto text-[#bcc0c4] mb-4" />
-                        <p className="text-[#65676b]">Select a template and click "Load Preview" to see it</p>
+
+                    {/* Preview Area */}
+                    <div className="lg:col-span-9">
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 text-sm flex items-center gap-2">
+                                <AlertCircle size={18} />
+                                <span className="font-bold">Error:</span> {error}
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-hidden min-h-[800px] flex flex-col transition-all duration-300">
+                            {/* Preview Toolbar */}
+                            <div className="bg-[#f7f8fa] border-b border-[#dddfe2] px-4 py-3 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+                                        <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm" />
+                                        <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm" />
+                                        <div className="w-3 h-3 rounded-full bg-green-400 shadow-sm" />
+                                    </div>
+                                    <div className="w-[1px] h-4 bg-gray-300 mx-2" />
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-semibold text-gray-700">{EMAIL_LABELS[selectedType]}</span>
+                                        <span className="text-[10px] text-gray-400 font-mono">{selectedType}.html</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => loadPreview(selectedType)}
+                                    disabled={loading}
+                                    className="text-xs font-semibold text-gray-600 hover:text-[#1877f2] disabled:opacity-50 flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-md hover:bg-gray-50 transition-colors"
+                                >
+                                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                                    Refresh
+                                </button>
+                            </div>
+
+                            {/* Iframe Container */}
+                            <div className={`flex-1 bg-[#e5e7eb] p-4 flex justify-center items-start overflow-auto transition-opacity duration-200 ${loading ? "opacity-50" : "opacity-100"}`}>
+                                {htmlContent ? (
+                                    <iframe
+                                        srcDoc={htmlContent}
+                                        title="Email Preview"
+                                        className="border-0 bg-white transition-all duration-500 shadow-lg"
+                                        style={{
+                                            width: viewMode === "mobile" ? "375px" : "100%",
+                                            maxWidth: "1000px",
+                                            height: "100%",
+                                            minHeight: "800px",
+                                            borderRadius: viewMode === "mobile" ? "20px" : "4px",
+                                        }}
+                                        sandbox="allow-same-origin"
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full mt-20 text-center">
+                                        {loading ? (
+                                            <>
+                                                <div className="w-10 h-10 border-4 border-[#1877f2] border-t-transparent rounded-full animate-spin mb-4" />
+                                                <p className="text-gray-500 text-sm font-medium">Generating preview...</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Mail size={48} className="text-gray-300 mb-4" />
+                                                <p className="text-gray-500 font-medium">Select a template to view preview</p>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
