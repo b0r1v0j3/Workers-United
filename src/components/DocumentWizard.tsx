@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { processBiometricPhoto, fixImageOrientation, stitchImages, compressImage } from "@/lib/imageUtils";
+import { toast } from "sonner";
 import { MAX_FILE_SIZE_MB, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
 
 interface FileUpload {
@@ -183,6 +184,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             const result = await response.json();
 
             if (result.success) {
+                toast.success(`${type.replace('_', ' ')} verified successfully!`);
                 setUploads(prev => {
                     const newUploads = {
                         ...prev,
@@ -198,6 +200,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         newUploads.biometric_photo?.status === 'verified' &&
                         newUploads.diploma?.status === 'verified') {
                         setIsComplete(true);
+                        toast.success("All documents verified! You're ready to proceed.");
                     }
 
                     return newUploads;
@@ -220,6 +223,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                 displayMessage = "Verification failed. Try again.";
             }
 
+            toast.error(displayMessage);
             updateStatus(type, "error", displayMessage);
         }
     }
@@ -275,7 +279,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             <div className="grid gap-4">
                 {/* Passport */}
                 <div
-                    className={`rounded-xl p-4 cursor-pointer transition-all ${getStatusColor(uploads.passport.status)}`}
+                    className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.01] duration-200 ${getStatusColor(uploads.passport.status)}`}
                     onClick={() => uploads.passport.status === 'missing' && passportInputRef.current?.click()}
                 >
                     <input
@@ -320,7 +324,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
 
                 {/* Photo */}
                 <div
-                    className={`rounded-xl p-4 cursor-pointer transition-all ${getStatusColor(uploads.biometric_photo.status)}`}
+                    className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.01] duration-200 ${getStatusColor(uploads.biometric_photo.status)}`}
                     onClick={() => uploads.biometric_photo.status === 'missing' && photoInputRef.current?.click()}
                 >
                     <input
@@ -364,7 +368,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
 
                 {/* Diploma */}
                 <div
-                    className={`rounded-xl p-4 cursor-pointer transition-all ${getStatusColor(uploads.diploma.status)}`}
+                    className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.01] duration-200 ${getStatusColor(uploads.diploma.status)}`}
                     onClick={() => uploads.diploma.status === 'missing' && diplomaInputRef.current?.click()}
                 >
                     <input

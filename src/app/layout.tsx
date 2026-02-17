@@ -3,6 +3,7 @@ import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { GodModeWrapper } from "@/components/GodModeWrapper";
 import CookieConsent from "@/components/CookieConsent";
+import ToastProvider from "@/components/ToastProvider";
 
 
 const montserrat = Montserrat({
@@ -66,6 +67,7 @@ export default function RootLayout({
         {children}
         <GodModeWrapper />
         <CookieConsent />
+        <ToastProvider />
         <script
           dangerouslySetInnerHTML={{
             __html: `

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
 
 interface Profile {
@@ -85,8 +87,7 @@ export default function ProfilePage() {
     const [candidate, setCandidate] = useState<Candidate | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState(false);
+    // Removed error/success state as we use Toast now
 
     // Form state
     const [formData, setFormData] = useState({
@@ -252,8 +253,7 @@ export default function ProfilePage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true);
-        setError("");
-        setSuccess(false);
+        // Removed setError/setSuccess
 
         try {
             // Validate phone format for WhatsApp compatibility
@@ -358,11 +358,10 @@ export default function ProfilePage() {
                 if (insertErr) throw new Error(insertErr.message);
             }
 
-            setSuccess(true);
+            toast.success("Profile saved successfully!");
             await fetchProfile();
-            setTimeout(() => setSuccess(false), 3000);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to save");
+            toast.error(err instanceof Error ? err.message : "Failed to save");
         } finally {
             setSaving(false);
         }
@@ -394,8 +393,53 @@ export default function ProfilePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
-                <div className="animate-spin w-10 h-10 border-4 border-[#1877f2] border-t-transparent rounded-full"></div>
+            <div className="min-h-screen bg-[#f0f2f5]">
+                {/* Navbar Skeleton */}
+                <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
+                    <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-10 w-40" />
+                        <div className="w-[120px]" />
+                    </div>
+                </nav>
+
+                <div className="max-w-[900px] mx-auto px-4 py-6">
+                    {/* Header Skeleton */}
+                    <div className="mb-6 space-y-2">
+                        <Skeleton className="h-8 w-48" />
+                        <Skeleton className="h-4 w-96" />
+                    </div>
+
+                    <div className="space-y-4">
+                        {/* Card 1 Skeleton */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+                            <Skeleton className="h-6 w-40 mb-4" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-20" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-20" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Card 2 Skeleton */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+                            <Skeleton className="h-6 w-40 mb-4" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                                <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                                <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -426,24 +470,9 @@ export default function ProfilePage() {
                     <p className="text-gray-500 mt-1">Complete your profile to get verified and matched with employers.</p>
                 </div>
 
-                {/* Alerts */}
-                {success && (
-                    <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Profile saved successfully!
-                    </div>
-                )}
-                {error && (
-                    <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                        {error}
-                    </div>
-                )}
-
                 <form onSubmit={handleSubmit}>
                     <div className="space-y-4">
-                        {/* ••••••••••••••• Account Information Card ••••••••••••••• */}
+                        {/* • • • • • • • • • • • • • • •  Account Information Card • • • • • • • • • • • • • • •  */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Account Information</h2>
@@ -476,7 +505,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* ••••••••••••••• Personal Information Card ••••••••••••••• */}
+                        {/* • • • • • • • • • • • • • • •  Personal Information Card • • • • • • • • • • • • • • •  */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Personal Information</h2>
@@ -715,7 +744,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* ••••••••••••••• Family Information Card ••••••••••••••• */}
+                        {/* • • • • • • • • • • • • • • •  Family Information Card • • • • • • • • • • • • • • •  */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Family Information</h2>
@@ -898,7 +927,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* ••••••••••••••• Passport & Travel Card ••••••••••••••• */}
+                        {/* • • • • • • • • • • • • • • •  Passport & Travel Card • • • • • • • • • • • • • • •  */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Passport & Travel</h2>
@@ -1004,7 +1033,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* ••••••••••••••• Job Preferences Card ••••••••••••••• */}
+                        {/* • • • • • • • • • • • • • • •  Job Preferences Card • • • • • • • • • • • • • • •  */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Job Preferences</h2>
