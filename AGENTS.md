@@ -652,6 +652,11 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 30. **🚫 AUTOMATSKI CRON MEJLOVI SU UGAŠENI — welcome/signup emailovi RADE normalno** — Cron jobovi su ugašeni jer su slali lažne notifikacije (npr. "pronađen vam je posao") kad nema odobrenih profila u sistemu. Welcome email, signup potvrda, admin announcements, kontakt forma — SVE TO RADI. Samo `match-jobs`, `profile-reminders`, `check-expiring-docs`, `check-expiry` su isključeni u `vercel.json`. NE uključivati ih dok tim ne kaže.
 31. **🛡️ MANUELNA ADMIN VERIFIKACIJA JE OBAVEZNA** — Radnici NE mogu da plate $9 entry fee dok admin ne odobri profil. Flow: radnik popuni profil 100% → admin pregleda u `/admin/workers/[id]` → klikne "Approve for Payment" → tek tada radnik vidi Pay dugme na queue stranici. Server-side zaštita: Stripe `create-checkout` odbija neodobrene radnike sa 403. DB kolone: `admin_approved`, `admin_approved_at`, `admin_approved_by` na `candidates` i `employers` tabelama. Migracija: `007_admin_approval.sql`.
 32. **🚀 LAUNCH DATUM: 01.03.2026** — sve mora biti gotovo do tada. Videti Sekciju 9.
+33. **Stripe webhook MORA da postavi `queue_joined_at`** — kad se kandidat prebaci u `IN_QUEUE` posle plaćanja entry fee, MORA se postaviti i `queue_joined_at: new Date().toISOString()`. Bez toga, 90-dnevni countdown na admin dashboardu ne radi jer je `queue_joined_at` null.
+34. **`notifications.ts` koristi `NEXT_PUBLIC_BASE_URL`** — env var za base URL je `NEXT_PUBLIC_BASE_URL`, NE `NEXT_PUBLIC_SITE_URL`. Offer link je `/profile/worker/offers/{id}`, NE `/profile/offers/{id}`. Format datuma je `en-GB`, NE `en-US`.
+35. **`match-jobs` cron MORA filtrirati `IN_QUEUE` + `entry_fee_paid`** — bez ovih filtera, cron matchuje SVE kandidate sa verifikovanim pasošem, uključujući one koji nisu platili entry fee ni ušli u queue.
+36. **Auto-deletion u `profile-reminders` MORA da obriše SVE tabele** — samo brisanje auth usera (`deleteUser`) ostavlja siročiće u `candidates`, `profiles`, `candidate_documents`, `payments`, `email_queue`, `employers`. UVEK brisati SVE povezane tabele + storage pre brisanja auth usera. Isti pattern kao `account/delete` i `admin/delete-user`.
+
 
 ---
 
