@@ -9,7 +9,7 @@ export const metadata = {
 
 export default function ContactPage() {
     return (
-        <div className="min-h-screen bg-[#F0F4F8]">
+        <div className="min-h-screen bg-[#F0F4F8] flex flex-col">
             <UnifiedNavbar variant="public" />
 
             {/* Hero */}
@@ -24,7 +24,7 @@ export default function ContactPage() {
             </div>
 
             {/* Content */}
-            <div className="max-w-5xl mx-auto px-6 py-12">
+            <div className="max-w-5xl mx-auto px-6 py-12 flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Contact Methods */}
                     <div className="space-y-6">
@@ -118,12 +118,13 @@ export default function ContactPage() {
             </div>
 
             {/* Footer */}
-            <footer className="bg-white border-t border-slate-100 py-8 px-6">
-                <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-500">
+            <footer className="bg-[#0F172A] py-8 px-6">
+                <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-400">
                     <p>© {new Date().getFullYear()} Workers United. All rights reserved.</p>
                     <div className="flex gap-6">
-                        <Link href="/privacy-policy" className="hover:text-slate-900 transition-colors">Privacy Policy</Link>
-                        <Link href="/terms" className="hover:text-slate-900 transition-colors">Terms of Service</Link>
+                        <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                        <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+                        <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
                     </div>
                 </div>
             </footer>
