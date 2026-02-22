@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isGodModeUser } from "@/lib/godmode";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateAllDocuments, validateContractData, type DocumentType, type ContractDataForDocs } from "@/lib/pdf-generator";
 
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
             .eq("id", user.id)
             .single();
 
-        if (profile?.user_type !== "admin") {
+        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
             return NextResponse.json({ error: "Admin access required" }, { status: 403 });
         }
 

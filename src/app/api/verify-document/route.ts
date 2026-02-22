@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isGodModeUser } from "@/lib/godmode";
 import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumentBounds, fetchImageAsBase64 } from "@/lib/gemini";
 import sharp from "sharp";
 
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
                 .eq("id", user.id)
                 .single();
 
-            if (profile?.user_type !== "admin") {
+            if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
                 return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
             }
             isAdmin = true;

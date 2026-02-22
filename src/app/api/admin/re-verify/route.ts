@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isGodModeUser } from "@/lib/godmode";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
             .eq("id", user.id)
             .single();
 
-        if (profile?.user_type !== "admin") {
+        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
