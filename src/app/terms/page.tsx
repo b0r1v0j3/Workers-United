@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
+import {
+    FileText, Info, User, DollarSign, Fingerprint, ShieldCheck, Cookie, Copyright, Ban, AlertCircle, Shield, Link as LinkIcon, RefreshCcw, AlertTriangle, UserX, Scale, RefreshCw
+} from 'lucide-react';
 
 export const metadata = {
     title: "Terms and Conditions - Workers United",
@@ -44,12 +47,12 @@ export default async function TermsPage() {
             <main className="flex-grow max-w-3xl mx-auto px-6 py-8 w-full">
                 <div className="space-y-12">
 
-                    <TermsSection title="1. Agreement to Terms">
+                    <TermsSection title="1. Agreement to Terms" icon={FileText} colorClass="bg-blue-50 text-blue-600">
                         <p className="mb-4">By accessing or using <a href="https://workersunited.eu" className="text-[#0066CC] hover:underline">https://workersunited.eu</a> (&quot;the Platform&quot;), you agree to be bound by these Terms and Conditions. If you do not agree, you must not use the Platform.</p>
                         <p>These Terms apply to all users of the Platform, including workers, employers, and visitors.</p>
                     </TermsSection>
 
-                    <TermsSection title="2. About Workers United">
+                    <TermsSection title="2. About Workers United" icon={Info} colorClass="bg-slate-100 text-slate-600">
                         <p className="mb-4">Workers United LLC (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) provides a visa facilitation service that connects international workers with European employers. We handle the complete process including documentation, visa application, and placement.</p>
                         <p className="font-semibold text-[#1D1D1F] mb-2">Key points:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
@@ -60,7 +63,7 @@ export default async function TermsPage() {
                         </ul>
                     </TermsSection>
 
-                    <TermsSection title="3. User Accounts">
+                    <TermsSection title="3. User Accounts" icon={User} colorClass="bg-indigo-50 text-indigo-600">
                         <p className="font-semibold text-[#1D1D1F] mb-2">By creating an account, you agree that:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
                             <li>You are at least 18 years of age</li>
@@ -72,7 +75,7 @@ export default async function TermsPage() {
                         <p className="mt-4">We reserve the right to suspend or terminate accounts that violate these Terms or provide false information.</p>
                     </TermsSection>
 
-                    <TermsSection title="4. Fees and Payments">
+                    <TermsSection title="4. Fees and Payments" icon={DollarSign} colorClass="bg-emerald-50 text-emerald-600">
                         <p className="font-semibold text-[#1D1D1F] mb-2">The following fees apply:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
                             <li><strong className="text-[#1D1D1F]">Entry fee:</strong> $9 USD — paid by the worker to enter the matching queue</li>
@@ -83,7 +86,7 @@ export default async function TermsPage() {
                         <p className="mt-2 text-[#86868B]">All payments are processed securely by Stripe. We do not store your payment card details.</p>
                     </TermsSection>
 
-                    <TermsSection title="5. Documents and Verification">
+                    <TermsSection title="5. Documents and Verification" icon={Fingerprint} colorClass="bg-violet-50 text-violet-600">
                         <p className="mb-4">Workers are required to upload certain documents (passport, biometric photo, diploma) for identity verification and visa processing.</p>
                         <p className="font-semibold text-[#1D1D1F] mb-2">By uploading documents, you confirm that:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
@@ -94,7 +97,7 @@ export default async function TermsPage() {
                         </ul>
                     </TermsSection>
 
-                    <TermsSection title="6. Data Protection and GDPR">
+                    <TermsSection title="6. Data Protection and GDPR" icon={ShieldCheck} colorClass="bg-sky-50 text-sky-600">
                         <p className="mb-4">We are committed to protecting your personal data in accordance with the General Data Protection Regulation (GDPR) and other applicable data protection laws.</p>
                         <p className="font-semibold text-[#1D1D1F] mb-2">Your rights include:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
@@ -107,11 +110,11 @@ export default async function TermsPage() {
                         <p className="mt-4">For full details on how we process your data, please read our <Link href="/privacy-policy" className="text-[#0066CC] hover:underline">Privacy Policy</Link>.</p>
                     </TermsSection>
 
-                    <TermsSection title="7. Cookies">
+                    <TermsSection title="7. Cookies" icon={Cookie} colorClass="bg-amber-50 text-amber-600">
                         <p>We use only essential cookies required for authentication and site functionality. We do not use tracking or advertising cookies. For more information, see our <Link href="/privacy-policy" className="text-[#0066CC] hover:underline">Privacy Policy</Link>.</p>
                     </TermsSection>
 
-                    <TermsSection title="8. Intellectual Property">
+                    <TermsSection title="8. Intellectual Property" icon={Copyright} colorClass="bg-rose-50 text-rose-600">
                         <p className="mb-4">All content on the Platform, including text, graphics, logos, and software, is the property of Workers United LLC and is protected by intellectual property laws.</p>
                         <p className="font-semibold text-[#1D1D1F] mb-2">You must not:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
@@ -121,7 +124,7 @@ export default async function TermsPage() {
                         </ul>
                     </TermsSection>
 
-                    <TermsSection title="9. Prohibited Activities">
+                    <TermsSection title="9. Prohibited Activities" icon={Ban} colorClass="bg-red-50 text-red-600">
                         <p className="font-semibold text-[#1D1D1F] mb-2">You agree not to:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
                             <li>Provide false, misleading, or fraudulent information</li>
@@ -133,7 +136,7 @@ export default async function TermsPage() {
                         </ul>
                     </TermsSection>
 
-                    <TermsSection title="10. Disclaimers and Warranties">
+                    <TermsSection title="10. Disclaimers and Warranties" icon={AlertCircle} colorClass="bg-orange-50 text-orange-600">
                         <p className="mb-4 uppercase font-bold text-[#1D1D1F] text-xs leading-relaxed tracking-wide">
                             THE PLATFORM AND ALL MATERIALS, INFORMATION, PRODUCTS AND SERVICES AVAILABLE THROUGH THE PLATFORM ARE PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMISSIBLE PURSUANT TO APPLICABLE LAW, WORKERS UNITED LLC DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
                         </p>
@@ -145,15 +148,15 @@ export default async function TermsPage() {
                         </p>
                     </TermsSection>
 
-                    <TermsSection title="11. Indemnification">
+                    <TermsSection title="11. Indemnification" icon={Shield} colorClass="bg-slate-100 text-slate-600">
                         <p>You agree to defend, indemnify and hold harmless Workers United LLC, its affiliates, officers, directors, employees, agents, successors and assigns from and against any and all claims, damages, liabilities, costs and expenses (including reasonable legal fees) arising out of or related to: (a) your use of the Platform; (b) your breach of these Terms; (c) any information or documents you have provided to us; or (d) your violation of any law or the rights of any third party.</p>
                     </TermsSection>
 
-                    <TermsSection title="12. Third-Party Links">
+                    <TermsSection title="12. Third-Party Links" icon={LinkIcon} colorClass="bg-blue-50 text-blue-600">
                         <p>The Platform may contain links to third-party websites or services that are not owned or controlled by Workers United. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services. You acknowledge and agree that Workers United shall not be responsible or liable, directly or indirectly, for any damage or loss caused or alleged to be caused by or in connection with the use of any such content, goods, or services available on or through any such websites or services.</p>
                     </TermsSection>
 
-                    <TermsSection title="13. Refund Policy">
+                    <TermsSection title="13. Refund Policy" icon={RefreshCcw} colorClass="bg-emerald-50 text-emerald-600">
                         <p className="mb-4">Our refund policy is as follows:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
                             <li><strong className="text-[#1D1D1F]">Entry fee ($9 USD):</strong> Fully refundable if a worker is not matched with an employer within 90 days of payment.</li>
@@ -162,7 +165,7 @@ export default async function TermsPage() {
                         <p className="mt-4">Refund requests should be directed to <a href="mailto:contact@workersunited.eu" className="text-[#0066CC] hover:underline">contact@workersunited.eu</a>. Approved refunds will be processed within 10 business days to the original payment method.</p>
                     </TermsSection>
 
-                    <TermsSection title="14. Limitation of Liability">
+                    <TermsSection title="14. Limitation of Liability" icon={AlertTriangle} colorClass="bg-red-50 text-red-600">
                         <p className="mb-4 uppercase font-bold text-[#1D1D1F] text-xs leading-relaxed tracking-wide">
                             UNDER NO CIRCUMSTANCES, INCLUDING BUT NOT LIMITED TO NEGLIGENCE, SHALL WORKERS UNITED LLC, ITS AFFILIATES, OR ITS OFFICERS, DIRECTORS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR EXEMPLARY DAMAGES THAT RESULT FROM THE USE OF, OR THE INABILITY TO USE, THE PLATFORM OR OUR SERVICES, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
                         </p>
@@ -170,18 +173,18 @@ export default async function TermsPage() {
                         <p>Nothing in these Terms excludes or limits our liability for death or personal injury caused by negligence, fraud, or any liability that cannot be excluded or limited by applicable law. For users in the European Union, nothing in these Terms affects your statutory rights as a consumer.</p>
                     </TermsSection>
 
-                    <TermsSection title="15. Termination">
+                    <TermsSection title="15. Termination" icon={UserX} colorClass="bg-rose-50 text-rose-600">
                         <p className="mb-4">We may suspend or terminate your access to the Platform at any time, without prior notice, for conduct that we believe violates these Terms, is harmful to other users, or is otherwise objectionable.</p>
                         <p>Upon termination, your right to use the Platform will immediately cease. The disclaimers, limitations of liability, indemnification, and other provisions of these Terms that by their nature should survive shall survive termination.</p>
                     </TermsSection>
 
-                    <TermsSection title="16. Governing Law and Disputes">
+                    <TermsSection title="16. Governing Law and Disputes" icon={Scale} colorClass="bg-indigo-50 text-indigo-600">
                         <p className="mb-4">These Terms are governed by and construed in accordance with the laws of the State of Wyoming, USA, without regard to its conflict of law provisions. Any dispute arising from these Terms shall be subject to the exclusive jurisdiction of the courts of the State of Wyoming.</p>
                         <p className="mb-4">For users within the European Union, nothing in these Terms affects your rights under mandatory consumer protection laws of your country of residence.</p>
                         <p>If any provision of these Terms is found to be unlawful, void, or unenforceable, that provision shall be deemed severable and shall not affect the validity and enforceability of the remaining provisions.</p>
                     </TermsSection>
 
-                    <TermsSection title="17. Changes to These Terms">
+                    <TermsSection title="17. Changes to These Terms" icon={RefreshCw} colorClass="bg-sky-50 text-sky-600">
                         <p>We reserve the right to modify these Terms at any time. Material changes will be communicated via email or a notice on the Platform. Your continued use of the Platform after such changes constitutes acceptance of the updated Terms.</p>
                     </TermsSection>
 
@@ -253,11 +256,16 @@ export default async function TermsPage() {
     );
 }
 
-function TermsSection({ title, children }: { title: string; children: React.ReactNode }) {
+function TermsSection({ title, icon: Icon, colorClass, children }: { title: string; icon: any; colorClass: string; children: React.ReactNode }) {
     return (
-        <section className="text-[#424245] text-lg leading-relaxed">
-            <h2 className="text-2xl font-bold text-[#1D1D1F] mb-4 tracking-tight">{title}</h2>
-            {children}
+        <section className="flex flex-col md:flex-row gap-4 md:gap-6">
+            <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${colorClass}`}>
+                <Icon className="w-6 h-6" strokeWidth={2} />
+            </div>
+            <div className="flex-1 text-[#424245] text-lg leading-relaxed pt-1">
+                <h2 className="text-2xl font-bold text-[#1D1D1F] mb-3 tracking-tight">{title}</h2>
+                {children}
+            </div>
         </section>
     );
 }
