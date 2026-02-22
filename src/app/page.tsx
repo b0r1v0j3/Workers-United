@@ -246,9 +246,9 @@ export default function Home() {
         </main>
 
         {/* Footer - Cleaner */}
-        <footer className="text-white py-10" style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)' }}>
-          <div className="max-w-[1120px] mx-auto px-5 pb-4">
-            <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+        <footer className="text-white py-5" style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)' }}>
+          <div className="max-w-[1120px] mx-auto px-5 pb-2">
+            <div className="flex flex-col md:flex-row justify-between items-start gap-4">
               <div className="text-left">
                 <div className="text-sm text-gray-300 mb-2">© {new Date().getFullYear()} Workers United. All rights reserved.</div>
                 <div className="text-sm text-gray-400">
@@ -269,7 +269,7 @@ export default function Home() {
           </div>
 
           {/* Social Links */}
-          <div className="flex justify-center gap-2 sm:gap-3 py-4 flex-wrap">
+          <div className="flex justify-center gap-2 sm:gap-3 py-3 flex-wrap">
             <a href="https://www.facebook.com/profile.php?id=61585104076725" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="Facebook">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.6 1.6-1.6H16.7V4.9c-.3 0-1.4-.1-2.7-.1-2.7 0-4.5 1.6-4.5 4.6V11H7v3h2.8v8h3.7z" /></svg>
             </a>

@@ -123,6 +123,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             <Link
                                 href="/signup"
                                 className="px-5 py-1.5 bg-[#1877f2] text-white font-bold text-sm rounded-md shadow-sm hover:bg-[#166fe5] transition-colors"
+                                style={{ color: '#ffffff' }}
                             >
                                 Sign Up
                             </Link>
