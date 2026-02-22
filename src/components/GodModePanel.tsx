@@ -48,21 +48,21 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
     if (!mounted) return null;
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4 pointer-events-none font-sans">
+        <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3 sm:gap-4 pointer-events-none font-sans">
 
             {/* Main Panel (Popover) */}
             {isOpen && (
-                <div className="w-[280px] bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200 origin-bottom-right pointer-events-auto ring-1 ring-slate-900/5">
+                <div className="w-[250px] sm:w-[280px] bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200 origin-bottom-right pointer-events-auto ring-1 ring-slate-900/5">
 
                     {/* Header */}
-                    <div className="bg-slate-50/80 p-4 border-b border-slate-100 flex justify-between items-center backdrop-blur-sm">
-                        <div className="flex items-center gap-2.5">
+                    <div className="bg-slate-50/80 p-3 sm:p-4 border-b border-slate-100 flex justify-between items-center backdrop-blur-sm">
+                        <div className="flex items-center gap-2">
                             <div className={`p-1.5 rounded-lg ${current.bg} ring-1 ring-inset ${current.ring}`}>
                                 <Zap size={14} className={`${current.color} fill-current`} />
                             </div>
                             <div>
                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-0.5">God Mode</div>
-                                <div className="font-bold text-slate-800 text-sm leading-none">{userName}</div>
+                                <div className="font-bold text-slate-800 text-xs sm:text-sm leading-none truncate max-w-[140px] sm:max-w-none">{userName}</div>
                             </div>
                         </div>
                         <button
@@ -74,9 +74,9 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                     </div>
 
                     {/* Content */}
-                    <div className="p-3 bg-white">
+                    <div className="p-2.5 sm:p-3 bg-white">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 pl-1">Switch Perspective</div>
-                        <div className="grid grid-cols-1 gap-2">
+                        <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
                             {currentRole !== "admin" && (
                                 <ActionButton
                                     icon={Shield}
@@ -109,16 +109,16 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                 </div>
             )}
 
-            {/* Trigger Button */}
+            {/* Trigger Button — compact on mobile */}
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="group pointer-events-auto flex items-center gap-2.5 bg-white border border-slate-200 text-slate-700 pl-3 pr-4 py-2.5 rounded-full shadow-lg shadow-slate-200/50 transition-all hover:bg-slate-50 hover:shadow-xl hover:-translate-y-0.5 ring-1 ring-slate-900/5"
+                    className="group pointer-events-auto flex items-center gap-1.5 sm:gap-2.5 bg-white border border-slate-200 text-slate-700 pl-2.5 pr-3 py-2 sm:pl-3 sm:pr-4 sm:py-2.5 rounded-full shadow-lg shadow-slate-200/50 transition-all hover:bg-slate-50 hover:shadow-xl hover:-translate-y-0.5 ring-1 ring-slate-900/5"
                 >
-                    <div className={`p-1.5 rounded-full ${current.bg} ${current.ring} ${loading ? 'animate-spin' : ''}`}>
-                        <Zap size={16} className={`${current.color} fill-current`} />
+                    <div className={`p-1 sm:p-1.5 rounded-full ${current.bg} ${current.ring} ${loading ? 'animate-spin' : ''}`}>
+                        <Zap size={14} className={`${current.color} fill-current sm:w-4 sm:h-4`} />
                     </div>
-                    <span className="font-bold text-xs tracking-wide text-slate-800">
+                    <span className="font-bold text-[10px] sm:text-xs tracking-wide text-slate-800">
                         {current.label}
                     </span>
                 </button>
