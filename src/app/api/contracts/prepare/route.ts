@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isGodModeUser } from "@/lib/godmode";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 
 // API to populate contract_data when a match is accepted
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
             .eq("id", user.id)
             .single();
 
-        if (profile?.user_type !== "admin") {
+        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
             return NextResponse.json({ error: "Admin access required" }, { status: 403 });
         }
 
@@ -206,7 +207,7 @@ export async function GET(request: NextRequest) {
         .eq("id", user.id)
         .single();
 
-    if (profile?.user_type !== "admin") {
+    if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
         return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 

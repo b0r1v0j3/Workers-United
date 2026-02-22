@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isGodModeUser } from "@/lib/godmode";
 import { sendOfferNotification } from "@/lib/notifications";
 
 // POST: Trigger auto-matching for a job request
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id)
         .single();
 
-    if (profile?.user_type !== "admin") {
+    if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
         return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
