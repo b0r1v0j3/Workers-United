@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getEmailTemplate } from "@/lib/email-templates";
+import { isGodModeUser } from "@/lib/godmode";
 import type { EmailType } from "@/lib/email-templates";
 
 const VALID_TYPES: EmailType[] = [
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
             .eq("id", user.id)
             .single();
 
-        if (profile?.user_type !== "admin") {
+        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
