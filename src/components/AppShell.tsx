@@ -9,7 +9,9 @@ import {
     Briefcase,
     Home,
     User,
-    LogOut
+    LogOut,
+    BarChart3,
+    ListOrdered,
 } from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
@@ -106,6 +108,9 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
                 <>
                     <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" />
                     <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" />
+                    <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" />
+                    <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" />
+                    <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" />
                     <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" />
                 </>
@@ -137,8 +142,8 @@ function SidebarLink({ href, icon, label }: { href: string; icon: React.ReactNod
         <Link
             href={href}
             className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group relative overflow-hidden ${isActive
-                    ? "bg-blue-50 text-blue-700 shadow-sm"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-blue-50 text-blue-700 shadow-sm"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
         >
             {isActive && (

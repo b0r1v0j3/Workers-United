@@ -61,7 +61,6 @@ export default async function AdminDashboard() {
             statusCounts[status]++;
         }
     });
-    const totalWorkers = allCandidates?.length || 0;
     const totalEmployers = employers?.length || 0;
 
     // ─── Quick Stats ───
@@ -70,6 +69,7 @@ export default async function AdminDashboard() {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const workerAuthUsers = allAuthUsers.filter((u: any) => u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin');
+    const totalWorkers = workerAuthUsers.length || allCandidates?.length || 0;
     const registrationsThisWeek = workerAuthUsers.filter((u: any) => new Date(u.created_at) >= weekAgo).length;
     const registrationsThisMonth = workerAuthUsers.filter((u: any) => new Date(u.created_at) >= monthStart).length;
     const employerRegistrationsThisMonth = (employers || []).filter((e: any) => new Date(e.created_at) >= monthStart).length;
