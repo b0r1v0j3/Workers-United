@@ -1,18 +1,26 @@
-import Docxtemplater from "docxtemplater";
-import PizZip from "pizzip";
-import fs from "fs";
-import path from "path";
+import React from "react";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+
+// Re-export styles registration (must be imported so fonts are registered)
+import "./pdf-templates/styles";
+
+// Import PDF template components
+import UgovorORadu from "./pdf-templates/UgovorORadu";
+import IzjavaOSaglasnosti from "./pdf-templates/IzjavaOSaglasnosti";
+import Ovlascenje from "./pdf-templates/Ovlascenje";
+import PozivnoPismo from "./pdf-templates/PozivnoPismo";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export const TEMPLATE_FILES = {
-    UGOVOR: "UGOVOR_O_RADU.docx",
-    IZJAVA: "IZJAVA_O_SAGLASNOSTI.docx",
-    OVLASCENJE: "OVLASCENJE.docx",
-    POZIVNO_PISMO: "POZIVNO_PISMO.docx",
+export const DOCUMENT_TYPES = {
+    UGOVOR: "UGOVOR",
+    IZJAVA: "IZJAVA",
+    OVLASCENJE: "OVLASCENJE",
+    POZIVNO_PISMO: "POZIVNO_PISMO",
 } as const;
 
-export type DocumentType = keyof typeof TEMPLATE_FILES;
+export type DocumentType = keyof typeof DOCUMENT_TYPES;
 
 export const DOCUMENT_LABELS: Record<DocumentType, string> = {
     UGOVOR: "UGOVOR O RADU",
@@ -198,7 +206,7 @@ function getPassportIssuer(
 
 /**
  * Build the placeholder→value map from contract_data.
- * Keys match the {PLACEHOLDER} tags in all 4 DOCX templates.
+ * Keys match the placeholder variables used in all 4 PDF templates.
  */
 export function buildPlaceholderData(data: ContractDataForDocs): Record<string, string> {
     const natForms = getNationalityForms(data.candidate_nationality);
@@ -273,46 +281,73 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
     };
 }
 
+// ─── PDF Template Map ────────────────────────────────────────────────────────
+
+const TEMPLATE_COMPONENTS: Record<DocumentType, React.FC<{ data: Record<string, string> }>> = {
+    UGOVOR: UgovorORadu,
+    IZJAVA: IzjavaOSaglasnosti,
+    OVLASCENJE: Ovlascenje,
+    POZIVNO_PISMO: PozivnoPismo,
+};
+
 /**
- * Generate a single DOCX document from a template.
- * Returns a Buffer containing the generated DOCX file.
+ * Stamp bilingual page numbers on every page of a PDF using pdf-lib.
+ * Uses Helvetica (built-in) since page number text is ASCII-only.
+ * Format: "Strana 1 od 3 / Page 1 of 3"
+ */
+async function stampPageNumbers(pdfBytes: Uint8Array): Promise<Uint8Array> {
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const pages = pdfDoc.getPages();
+    const totalPages = pages.length;
+    const fontSize = 7.5;
+    const color = rgb(0.5, 0.5, 0.5); // gray
+
+    for (let i = 0; i < totalPages; i++) {
+        const page = pages[i];
+        const { width } = page.getSize();
+        const text = `Strana ${i + 1} od ${totalPages} / Page ${i + 1} of ${totalPages}`;
+        const textWidth = font.widthOfTextAtSize(text, fontSize);
+
+        page.drawText(text, {
+            x: (width - textWidth) / 2,
+            y: 18,
+            size: fontSize,
+            font,
+            color,
+        });
+    }
+
+    const resultBytes = await pdfDoc.save();
+    return Buffer.from(resultBytes);
+}
+
+/**
+ * Generate a single PDF document.
+ * Returns a Buffer containing the generated PDF file.
  */
 export async function generateDocument(
-    templateName: string,
+    docType: DocumentType,
     contractData: ContractDataForDocs
 ): Promise<Buffer> {
-    const templatePath = path.join(process.cwd(), "public", "templates", templateName);
-
-    if (!fs.existsSync(templatePath)) {
-        throw new Error(`Template not found: ${templatePath}`);
+    const Component = TEMPLATE_COMPONENTS[docType];
+    if (!Component) {
+        throw new Error(`Unknown document type: ${docType}`);
     }
-
-    const templateContent = fs.readFileSync(templatePath, "binary");
-    const zip = new PizZip(templateContent);
-
-    const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-        // Don't throw on missing tags — replace with placeholder
-        nullGetter: () => "___________",
-    });
 
     const placeholderData = buildPlaceholderData(contractData);
-    doc.setData(placeholderData);
+    const element = React.createElement(Component, { data: placeholderData });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(element as any);
 
-    try {
-        doc.render();
-    } catch (error) {
-        console.error("DOCX template render error:", error);
-        throw new Error(`Failed to render template ${templateName}: ${error}`);
+    let pdfBuffer = Buffer.from(buffer);
+
+    // Stamp page numbers on UGOVOR (the only multi-page document)
+    if (docType === "UGOVOR") {
+        pdfBuffer = Buffer.from(await stampPageNumbers(pdfBuffer));
     }
 
-    const buf = doc.getZip().generate({
-        type: "nodebuffer",
-        compression: "DEFLATE",
-    });
-
-    return buf;
+    return pdfBuffer;
 }
 
 /**
@@ -324,10 +359,10 @@ export async function generateAllDocuments(
 ): Promise<Map<DocumentType, Buffer>> {
     const results = new Map<DocumentType, Buffer>();
 
-    for (const [docType, templateFile] of Object.entries(TEMPLATE_FILES)) {
+    for (const docType of Object.keys(DOCUMENT_TYPES) as DocumentType[]) {
         try {
-            const buffer = await generateDocument(templateFile, contractData);
-            results.set(docType as DocumentType, buffer);
+            const buffer = await generateDocument(docType, contractData);
+            results.set(docType, buffer);
         } catch (error) {
             console.error(`Failed to generate ${docType}:`, error);
             throw new Error(`Failed to generate ${docType}: ${error}`);

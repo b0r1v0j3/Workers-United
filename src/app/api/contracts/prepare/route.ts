@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getWorkerCompletion } from "@/lib/profile-completion";
 
 // API to populate contract_data when a match is accepted
 export async function POST(request: NextRequest) {
@@ -80,6 +81,26 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // ── Profile completion gate ──────────────────────────────────
+        // Worker profile must be 100% complete before contract documents
+        // can be generated. This prevents incomplete data in legal documents.
+        const { completion, missingFields } = getWorkerCompletion({
+            profile: candidate.profiles,
+            candidate,
+            documents: candidate.documents || [],
+        });
+
+        if (completion < 100) {
+            return NextResponse.json(
+                {
+                    error: `Worker profile is ${completion}% complete. Must be 100% before generating documents.`,
+                    missingFields,
+                    completion,
+                },
+                { status: 400 }
+            );
+        }
+
         const passportData = passportDoc.ai_extracted_data || {};
 
         // Compute dates
@@ -108,13 +129,13 @@ export async function POST(request: NextRequest) {
 
                 // Employer data
                 employer_company_name: employer.company_name,
-                employer_pib: employer.pib,
+                employer_pib: employer.tax_id || employer.pib,
                 employer_address: employer.company_address || employer.accommodation_address,
                 employer_representative_name: employer.profiles?.full_name,
-                employer_mb: null, // MB ne postoji na employers tabeli, admin popunjava ručno
-                employer_city: null, // Nema u employers tabeli, admin popunjava (grad + poštanski broj)
-                employer_founding_date: null, // Nema u employers tabeli, admin popunjava
-                employer_apr_number: null, // Nema u employers tabeli, admin popunjava
+                employer_mb: employer.company_registration_number || null,
+                employer_city: [employer.city, employer.postal_code].filter(Boolean).join(", ") || null,
+                employer_founding_date: employer.founding_date || null,
+                employer_apr_number: employer.business_registry_number || null,
                 employer_director: employer.profiles?.full_name || null,
 
                 // Job data
@@ -128,7 +149,7 @@ export async function POST(request: NextRequest) {
                 start_date: startDate.toISOString().split("T")[0],
                 end_date: endDate.toISOString().split("T")[0],
                 signing_date: new Date().toISOString().split("T")[0],
-                signing_city: null, // Admin popunjava ručno (grad gde se potpisuje)
+                signing_city: employer.city || null, // Grad u kom je registrovano pravno lice
 
                 // Contact
                 contact_email: "contact@workersunited.eu",

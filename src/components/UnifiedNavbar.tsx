@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
 import NotificationBell from "./NotificationBell";
 
@@ -49,9 +50,11 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-                        <img
+                        <Image
                             src="/logo.png"
                             alt="Workers United"
+                            width={200}
+                            height={60}
                             className="h-[60px] w-auto object-contain"
                         />
                         <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline tracking-tight">

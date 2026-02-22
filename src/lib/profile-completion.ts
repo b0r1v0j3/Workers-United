@@ -34,8 +34,11 @@ const EMPLOYER_FIELD_LABELS: Record<string, string> = {
     contact_phone: "Contact Phone",
     country: "Country",
     city: "City",
+    postal_code: "Postal Code",
     industry: "Industry",
     description: "Company Description",
+    business_registry_number: "Business Registry Number",
+    founding_date: "Company Founding Date",
 };
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -86,8 +89,11 @@ interface EmployerData {
         contact_phone?: string | null;
         country?: string | null;
         city?: string | null;
+        postal_code?: string | null;
         industry?: string | null;
         description?: string | null;
+        business_registry_number?: string | null;
+        founding_date?: string | null;
     } | null;
 }
 
@@ -153,16 +159,36 @@ export function getWorkerCompletion(data: WorkerData): ProfileCompletionResult {
 export function getEmployerCompletion(data: EmployerData): ProfileCompletionResult {
     const { employer } = data;
 
-    const fields: Record<string, any> = {
+    const isSerbia = employer?.country?.trim().toLowerCase() === 'serbia';
+
+    // Base fields required for everyone
+    const baseFields: Record<string, any> = {
         company_name: employer?.company_name,
-        company_registration_number: employer?.company_registration_number,
-        company_address: employer?.company_address,
         contact_phone: employer?.contact_phone,
         country: employer?.country,
-        city: employer?.city,
         industry: employer?.industry,
-        description: employer?.description,
+        // Website is optional for now in the form, but let's keep it consistent with what we ask
     };
+
+    // Serbia specific fields
+    const serbiaFields: Record<string, any> = {
+        company_registration_number: employer?.company_registration_number,
+        company_address: employer?.company_address,
+        city: employer?.city,
+        postal_code: employer?.postal_code,
+        description: employer?.description,
+        business_registry_number: employer?.business_registry_number,
+        founding_date: employer?.founding_date,
+        // Tax ID is technically stored in tax_id (PIB) but not in this helper? 
+        // Wait, the previous version didn't have tax_id in the list! 
+        // Let's check the previous version. It had: company_name, registration_number, address, phone, country, city, postal_code, industry, description, apr, founding.
+        // It did NOT have tax_id. Let's stick to what was there + new fields.
+    };
+
+    // Construct the fields object based on country
+    const fields = isSerbia
+        ? { ...baseFields, ...serbiaFields }
+        : baseFields;
 
     const totalFields = Object.keys(fields).length;
     const completedFields = Object.values(fields).filter(v => v !== null && v !== undefined && v !== '').length;

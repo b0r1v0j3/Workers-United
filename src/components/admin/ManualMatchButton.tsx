@@ -63,8 +63,8 @@ export default function ManualMatchButton({ candidateId }: { candidateId: string
 
             {result && (
                 <div className={`mb-3 px-3 py-2 rounded-lg text-sm font-medium ${result.type === "success"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-red-50 text-red-700 border border-red-200"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-red-50 text-red-700 border border-red-200"
                     }`}>
                     {result.msg}
                 </div>
@@ -80,7 +80,17 @@ export default function ManualMatchButton({ candidateId }: { candidateId: string
             ) : (
                 <div className="space-y-2">
                     {loading ? (
-                        <div className="text-center py-4 text-[#64748b] text-sm">Loading jobs...</div>
+                        <div className="space-y-3 py-2">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-[#f1f5f9] animate-pulse">
+                                    <div className="min-w-0 flex-1 space-y-2">
+                                        <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                                        <div className="h-3 bg-slate-100 rounded w-1/2"></div>
+                                    </div>
+                                    <div className="ml-3 shrink-0 h-8 w-16 bg-slate-200 rounded-lg"></div>
+                                </div>
+                            ))}
+                        </div>
                     ) : jobs.length === 0 ? (
                         <div className="text-center py-4 text-[#94a3b8] italic text-sm">No jobs with open positions</div>
                     ) : (

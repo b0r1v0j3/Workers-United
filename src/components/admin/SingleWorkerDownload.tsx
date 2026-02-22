@@ -67,7 +67,7 @@ export default function SingleWorkerDownload({ profileId, workerName }: { profil
                 )}
             </button>
             <p className="text-[11px] text-[#94a3b8] mt-2 text-center">
-                Generated DOCX + uploaded passport, photo, diploma
+                Generated PDF + uploaded passport, photo, diploma
             </p>
         </div>
     );

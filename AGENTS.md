@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 15.02.2026 (Launch plan: 01.03.2026 Go-Live, Stripe + n8n integration roadmap)
+> **Poslednje ažuriranje:** 17.02.2026 (PDF templates finalized, page numbers via pdf-lib, profile completion gate)
 
 ---
 
@@ -712,3 +712,35 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 7. ⬜ Cron jobovi aktivni
 8. ⬜ n8n email automation
 9. ⬜ Smoke test passed
+
+---
+
+## 📛 Common Gotchas
+
+1. **NEVER delete or rewrite lawyer-written documents without reading them first.** DOCX templates in `public/templates/` contain legal text written by a lawyer. When migrating formats (e.g., DOCX → PDF), always extract and use the exact original text. Use PowerShell to extract XML from DOCX files: they are ZIP archives with `word/document.xml` inside.
+
+2. **POZIVNO PISMO uses Cyrillic script** — not Serbian Latin like the other 3 documents. The Noto Sans font supports both scripts.
+
+3. **Font files must be committed** — `public/fonts/NotoSans-Regular.ttf` and `NotoSans-Bold.ttf` are required for PDF generation. If missing, `@react-pdf/renderer` will silently fall back to a font that doesn't support Serbian characters.
+
+4. **PDF generation uses `@react-pdf/renderer`** — templates are React components in `src/lib/pdf-templates/`. The entry point is `src/lib/pdf-generator.ts` which has the same public API as the old `docx-generator.ts`.
+
+5. **@react-pdf `render` prop does NOT work server-side** — the `render` callback (used for dynamic page numbers) returns nothing when using `renderToBuffer()`. Workaround: use `pdf-lib` for post-processing. The `stampPageNumbers()` function in `pdf-generator.ts` adds page numbers using Helvetica after the PDF is generated. Do NOT attempt to use the `render` prop again for dynamic content.
+
+6. **Profile completion gate blocks contract preparation** — `contracts/prepare/route.ts` checks `getWorkerCompletion()` and returns 400 if profile is not 100% complete. This prevents generating documents with missing data.
+
+7. **International Employer Simplification** — Non-Serbian employers only need Company Name, Phone, and Country to register (for interest tracking). Serbian employers need verified Tax ID, Reg No, etc. for contracts. `calculateCompletion` and `getEmployerCompletion` handle this bifurcation conditionally based on `country`. Both UI and backend logic MUST be aligned on which fields are required.
+
+8. **`tax_id` is the canonical column, NOT `pib`** — The legacy `pib` column exists in `FULL_SETUP.sql` for backwards compatibility, but `tax_id` is the universal name (works for all countries, not just Serbia). Backend code must read `tax_id` (with `pib` fallback for old data). The UI `saveCompany` writes only to `tax_id`. Never reference `pib` in new code.
+
+9. **Completion % must be synced** — `calculateCompletion()` in `EmployerProfileClient.tsx` and `getEmployerCompletion()` in `profile-completion.ts` must have exactly the same required fields. If you change one, change both. The server function is the source of truth (used as contract readiness gate).
+
+---
+
+## 💡 Suggestions
+
+1. Consider adding article/section numbers back to UGOVOR O RADU — the original DOCX didn't have numbered articles (just section headers), but adding them could improve readability.
+2. The POZIVNO PISMO has a hardcoded "1 ЈЕДНА (ONE)" for number of visits — this could be made configurable.
+3. Consider adding a PDF preview feature in the admin panel before generating final documents.
+4. **Payment/Stripe integration** — kad se bude pravio payment flow, profil gate je već na mestu na API nivou (`contracts/prepare/route.ts`). Samo treba dodati frontend poruku na worker dashboard-u tipa "Complete your profile to proceed to payment" i disable-ovati payment dugme dok `profileCompletion < 100`.
+

@@ -14,5 +14,9 @@ ALTER TABLE contract_data
   ADD COLUMN IF NOT EXISTS signing_date DATE,
   ADD COLUMN IF NOT EXISTS contact_email TEXT,
   ADD COLUMN IF NOT EXISTS contact_phone TEXT,
+  ADD COLUMN IF NOT EXISTS employer_city TEXT,
+  ADD COLUMN IF NOT EXISTS signing_city TEXT,
+  ADD COLUMN IF NOT EXISTS employer_founding_date TEXT,
+  ADD COLUMN IF NOT EXISTS employer_apr_number TEXT,
   ADD COLUMN IF NOT EXISTS generated_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS generated_documents JSONB DEFAULT '{}';
