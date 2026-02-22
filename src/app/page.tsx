@@ -234,12 +234,12 @@ export default function Home() {
                 >
                   Create Free Account
                 </Link>
-                <Link
-                  href="/contact"
+                <a
+                  href="mailto:contact@workersunited.eu"
                   className="px-10 py-4 rounded-full bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] font-bold text-lg hover:bg-blue-50 hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-md"
                 >
                   Contact Us
-                </Link>
+                </a>
               </div>
             </div>
           </section>
@@ -260,7 +260,6 @@ export default function Home() {
                 <div className="flex gap-4 text-sm">
                   <Link href="/privacy-policy" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</Link>
                   <Link href="/terms" className="text-gray-300 hover:text-white transition-colors">Terms and Conditions</Link>
-                  <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">Contact</Link>
                 </div>
                 <a href="mailto:contact@workersunited.eu" className="text-gray-300 hover:text-white transition-colors text-sm">
                   contact@workersunited.eu
