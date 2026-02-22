@@ -241,23 +241,23 @@ export default async function PrivacyPolicyPage() {
                 </div>
             </main>
 
-            {/* Footer - Consistent with Homepage */}
-            <footer className="text-white py-5 mt-10" style={{ background: '#0F172A' }}>
-                <div className="max-w-[1120px] mx-auto px-6 pb-2 md:pb-4">
+            {/* Footer - Same as Homepage */}
+            <footer className="text-white py-5 mt-10 w-full relative z-10" style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)' }}>
+                <div className="max-w-[1120px] mx-auto px-5 pb-2">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                         <div className="text-left">
-                            <div className="text-sm text-gray-400 mb-3">© {new Date().getFullYear()} Workers United. All rights reserved.</div>
-                            <div className="text-sm text-gray-400 leading-relaxed">
-                                <strong className="text-gray-200">Workers United LLC</strong><br />
+                            <div className="text-sm text-gray-300 mb-2">© {new Date().getFullYear()} Workers United. All rights reserved.</div>
+                            <div className="text-sm text-gray-400">
+                                <strong>Workers United LLC</strong><br />
                                 75 E 3rd St., Sheridan, Wyoming 82801, USA
                             </div>
                         </div>
-                        <div className="flex flex-col items-start md:items-end gap-4 md:gap-3">
-                            <div className="flex gap-6 text-sm">
+                        <div className="flex flex-col items-start md:items-end gap-3">
+                            <div className="flex gap-4 text-sm">
                                 <span className="text-white font-semibold">Privacy Policy</span>
-                                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms and Conditions</Link>
+                                <Link href="/terms" className="text-gray-300 hover:text-white transition-colors">Terms and Conditions</Link>
                             </div>
-                            <a href="mailto:contact@workersunited.eu" className="text-gray-400 hover:text-white transition-colors text-sm">
+                            <a href="mailto:contact@workersunited.eu" className="text-gray-300 hover:text-white transition-colors text-sm">
                                 contact@workersunited.eu
                             </a>
                         </div>
@@ -265,27 +265,27 @@ export default async function PrivacyPolicyPage() {
                 </div>
 
                 {/* Social Links */}
-                <div className="flex justify-center gap-3 py-3 border-t border-white/10 max-w-[1120px] mx-auto">
-                    <a href="https://www.facebook.com/profile.php?id=61585104076725" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Facebook">
-                        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.6 1.6-1.6H16.7V4.9c-.3 0-1.4-.1-2.7-.1-2.7 0-4.5 1.6-4.5 4.6V11H7v3h2.8v8h3.7z" /></svg>
+                <div className="flex justify-center gap-2 sm:gap-3 py-3 flex-wrap border-t border-white/10 max-w-[1120px] mx-auto">
+                    <a href="https://www.facebook.com/profile.php?id=61585104076725" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="Facebook">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.6 1.6-1.6H16.7V4.9c-.3 0-1.4-.1-2.7-.1-2.7 0-4.5 1.6-4.5 4.6V11H7v3h2.8v8h3.7z" /></svg>
                     </a>
-                    <a href="https://www.instagram.com/workersunited.eu/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Instagram">
-                        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm9 2h-9A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9A3.5 3.5 0 0 0 20 16.5v-9A3.5 3.5 0 0 0 16.5 4z" /><path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2.1A2.9 2.9 0 1 0 12 15a2.9 2.9 0 0 0 0-5.9z" /><path d="M17.6 6.3a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0z" /></svg>
+                    <a href="https://www.instagram.com/workersunited.eu/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="Instagram">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm9 2h-9A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9A3.5 3.5 0 0 0 20 16.5v-9A3.5 3.5 0 0 0 16.5 4z" /><path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2.1A2.9 2.9 0 1 0 12 15a2.9 2.9 0 0 0 0-5.9z" /><path d="M17.6 6.3a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0z" /></svg>
                     </a>
-                    <a href="https://www.threads.com/@workersunited.eu" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Threads">
-                        <img src="/threads-logo.svg" alt="Threads" className="w-6 h-6 opacity-60 hover:opacity-100 invert" />
+                    <a href="https://www.threads.com/@workersunited.eu" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="Threads">
+                        <img src="/threads-logo.svg" alt="Threads" className="w-5 h-5 invert" />
                     </a>
-                    <a href="https://www.reddit.com/r/WorkersUnitedEU/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Reddit">
-                        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.498 1.199-.498a1.7 1.7 0 0 1 1.698 1.698c0 .648-.37 1.2-.91 1.48.024.19.039.38.039.57 0 2.899-3.376 5.253-7.544 5.253-4.168 0-7.544-2.354-7.544-5.253 0-.19.014-.38.04-.57a1.7 1.7 0 0 1-.91-1.48 1.7 1.7 0 0 1 1.698-1.698c.47 0 .891.19 1.198.498 1.195-.856 2.85-1.417 4.674-1.488l.8-3.747 2.597.547a1.25 1.25 0 0 1 1.136-.739zM8.5 12.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-6.74 4.26c-.19.19-.19.51 0 .7 1.07 1.07 3.41 1.16 3.24 1.16s2.17-.09 3.24-1.16a.49.49 0 0 0 0-.7.49.49 0 0 0-.7 0c-.67.68-2.06.93-2.54.93s-1.87-.25-2.54-.93a.49.49 0 0 0-.7 0z" /></svg>
+                    <a href="https://www.reddit.com/r/WorkersUnitedEU/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="Reddit">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.498 1.199-.498a1.7 1.7 0 0 1 1.698 1.698c0 .648-.37 1.2-.91 1.48.024.19.039.38.039.57 0 2.899-3.376 5.253-7.544 5.253-4.168 0-7.544-2.354-7.544-5.253 0-.19.014-.38.04-.57a1.7 1.7 0 0 1-.91-1.48 1.7 1.7 0 0 1 1.698-1.698c.47 0 .891.19 1.198.498 1.195-.856 2.85-1.417 4.674-1.488l.8-3.747 2.597.547a1.25 1.25 0 0 1 1.136-.739zM8.5 12.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-6.74 4.26c-.19.19-.19.51 0 .7 1.07 1.07 3.41 1.16 3.24 1.16s2.17-.09 3.24-1.16a.49.49 0 0 0 0-.7.49.49 0 0 0-.7 0c-.67.68-2.06.93-2.54.93s-1.87-.25-2.54-.93a.49.49 0 0 0-.7 0z" /></svg>
                     </a>
-                    <a href="https://x.com/WorkersUnitedEU" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="X">
-                        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M18.7 2H21l-6.7 7.6L22 22h-6.1l-4.8-6.2L5.6 22H3.3l7.2-8.2L2 2h6.2l4.3 5.6L18.7 2zm-1.1 18h1.2L6.3 3.9H5.1L17.6 20z" /></svg>
+                    <a href="https://x.com/WorkersUnitedEU" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="X">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M18.7 2H21l-6.7 7.6L22 22h-6.1l-4.8-6.2L5.6 22H3.3l7.2-8.2L2 2h6.2l4.3 5.6L18.7 2zm-1.1 18h1.2L6.3 3.9H5.1L17.6 20z" /></svg>
                     </a>
-                    <a href="https://www.tiktok.com/@workersunited.eu" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="TikTok">
-                        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M14 2h2.2c.2 1.8 1.2 3.2 3.8 3.6V8c-1.7 0-3.2-.6-4.1-1.4V14c0 4-2.7 6-6 6-2.5 0-4.9-1.7-4.9-4.9 0-3.1 2.4-5 5.4-5 .5 0 1 .1 1.5.2V13c-.4-.2-.9-.3-1.5-.3-1.3 0-2.6.8-2.6 2.4 0 1.5 1.1 2.4 2.5 2.4 1.7 0 2.6-1.1 2.6-3V2z" /></svg>
+                    <a href="https://www.tiktok.com/@workersunited.eu" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="TikTok">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M14 2h2.2c.2 1.8 1.2 3.2 3.8 3.6V8c-1.7 0-3.2-.6-4.1-1.4V14c0 4-2.7 6-6 6-2.5 0-4.9-1.7-4.9-4.9 0-3.1 2.4-5 5.4-5 .5 0 1 .1 1.5.2V13c-.4-.2-.9-.3-1.5-.3-1.3 0-2.6.8-2.6 2.4 0 1.5 1.1 2.4 2.5 2.4 1.7 0 2.6-1.1 2.6-3V2z" /></svg>
                     </a>
-                    <a href="https://www.linkedin.com/company/workersunited-eu/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="LinkedIn">
-                        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M4.5 3.5A2 2 0 1 1 4.5 7.5a2 2 0 0 1 0-4zM3 9h3v12H3V9zm7 0h2.9v1.6h.1c.4-.8 1.6-1.7 3.2-1.7 3.4 0 4 2.2 4 5.1V21h-3v-6.1c0-1.5 0-3.3-2-3.3s-2.3 1.6-2.3 3.2V21h-3V9z" /></svg>
+                    <a href="https://www.linkedin.com/company/workersunited-eu/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="LinkedIn">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M4.5 3.5A2 2 0 1 1 4.5 7.5a2 2 0 0 1 0-4zM3 9h3v12H3V9zm7 0h2.9v1.6h.1c.4-.8 1.6-1.7 3.2-1.7 3.4 0 4 2.2 4 5.1V21h-3v-6.1c0-1.5 0-3.3-2-3.3s-2.3 1.6-2.3 3.2V21h-3V9z" /></svg>
                     </a>
                 </div>
             </footer>
