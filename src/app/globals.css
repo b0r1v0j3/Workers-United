@@ -93,7 +93,7 @@ html {
 body {
   margin: 0;
   font-family: 'Montserrat', sans-serif;
-  background: var(--bg);
+  background: #0F172A;
   color: var(--text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
