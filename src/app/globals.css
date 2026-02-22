@@ -86,6 +86,10 @@
   box-sizing: border-box;
 }
 
+html {
+  background: #0F172A;
+}
+
 body {
   margin: 0;
   font-family: 'Montserrat', sans-serif;
