@@ -735,6 +735,10 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 9. **Completion % must be synced** — `calculateCompletion()` in `EmployerProfileClient.tsx` and `getEmployerCompletion()` in `profile-completion.ts` must have exactly the same required fields. If you change one, change both. The server function is the source of truth (used as contract readiness gate).
 
+10. **Body background is DARK NAVY (#0F172A)** — The `body` background in `globals.css` is set to dark navy to match all page footers. Each page component sets its own light background on its outer `min-h-screen` div (e.g., `bg-[#F8FAFC]`). Do NOT change the body background back to a light color — it will cause visible white/gray space below all page footers.
+
+11. **All admin API routes MUST include `isGodModeUser()` check** — The owner account's `profile.user_type` is "worker", not "admin". Any admin API route checking `profile?.user_type !== "admin"` must also check `!isGodModeUser(user.email)`. Pattern: `if (profile?.user_type !== "admin" && !isGodModeUser(user.email))`. Import from `@/lib/godmode`.
+
 ---
 
 ## 💡 Suggestions
