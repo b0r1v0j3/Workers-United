@@ -234,12 +234,12 @@ export default function Home() {
                 >
                   Create Free Account
                 </Link>
-                <a
-                  href="mailto:contact@workersunited.eu"
+                <Link
+                  href="/contact"
                   className="px-10 py-4 rounded-full bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] font-bold text-lg hover:bg-blue-50 hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-md"
                 >
                   Contact Us
-                </a>
+                </Link>
               </div>
             </div>
           </section>
@@ -247,7 +247,7 @@ export default function Home() {
 
         {/* Footer - Cleaner */}
         <footer className="text-white py-10" style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)' }}>
-          <div className="max-w-[1120px] mx-auto px-5 pb-4 md:pb-16">
+          <div className="max-w-[1120px] mx-auto px-5 pb-4">
             <div className="flex flex-col md:flex-row justify-between items-start gap-6">
               <div className="text-left">
                 <div className="text-sm text-gray-300 mb-2">© {new Date().getFullYear()} Workers United. All rights reserved.</div>
@@ -260,6 +260,7 @@ export default function Home() {
                 <div className="flex gap-4 text-sm">
                   <Link href="/privacy-policy" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</Link>
                   <Link href="/terms" className="text-gray-300 hover:text-white transition-colors">Terms and Conditions</Link>
+                  <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">Contact</Link>
                 </div>
                 <a href="mailto:contact@workersunited.eu" className="text-gray-300 hover:text-white transition-colors text-sm">
                   contact@workersunited.eu
