@@ -112,7 +112,7 @@ export default function DashboardClient({
                     </div>
                 </div>
 
-                {/* Coming Soon CTA */}
+                {/* Employer Matching CTA */}
                 <div className="mb-8 bg-white rounded-3xl p-1 shadow-sm border border-slate-100">
                     <div className="bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-[20px] p-6 text-white relative overflow-hidden group hover:shadow-lg transition-all duration-300">
                         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/15 transition-colors" />
@@ -123,12 +123,12 @@ export default function DashboardClient({
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-xl">Get Matched with Employers</h3>
-                                    <p className="text-blue-100 text-sm opacity-90">We're building a fast-track job matching system. Stay tuned!</p>
+                                    <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
                                 </div>
                             </div>
-                            <span className="bg-white text-[#1877f2] font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full shadow-lg">
-                                Coming Soon
-                            </span>
+                            <Link href="/profile/worker/edit" className="bg-white text-[#1877f2] font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow whitespace-nowrap">
+                                Complete Profile
+                            </Link>
                         </div>
                     </div>
                 </div>
