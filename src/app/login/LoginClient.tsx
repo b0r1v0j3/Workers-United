@@ -219,19 +219,19 @@ export default function LoginPage() {
                                     onClick={() => handleSocialLogin('google')}
                                     className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
                                 >
-                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                                    <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => handleSocialLogin('facebook')}
                                     className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
                                 >
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" alt="Facebook" className="w-5 h-5" />
+                                    <Image src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" alt="Facebook" width={20} height={20} className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => handleSocialLogin('apple')}
                                     className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
                                 >
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" className="w-4 h-5" />
+                                    <Image src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" width={16} height={20} className="w-4 h-5" />
                                 </button>
                             </div>
                         </>

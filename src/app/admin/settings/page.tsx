@@ -29,13 +29,13 @@ async function checkSupabase(): Promise<ServiceCheck> {
 
 async function checkVercel(): Promise<ServiceCheck> {
     // Build the health check URL from available env vars
-    let baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     if (!baseUrl) {
         const vercelUrl = process.env.VERCEL_URL;
         if (vercelUrl) {
             baseUrl = `https://${vercelUrl}`;
         } else {
-            return { name: "Vercel", description: "Hosting & Deployment", status: "degraded", details: "NEXT_PUBLIC_SITE_URL not set — add it in Vercel env vars" };
+            return { name: "Vercel", description: "Hosting & Deployment", status: "degraded", details: "NEXT_PUBLIC_BASE_URL not set — add it in Vercel env vars" };
         }
     }
     const healthUrl = `${baseUrl}/api/health`;
@@ -148,7 +148,7 @@ export default async function AdminSettingsPage() {
                         <InfoRow label="Logged in as" value={user.email || "Unknown"} />
                         <InfoRow label="God Mode" value={isOwner ? "✅ Active" : "❌ Inactive"} />
                         <InfoRow label="Environment" value={process.env.NODE_ENV || "production"} />
-                        <InfoRow label="Site URL" value={process.env.NEXT_PUBLIC_SITE_URL || "Not set"} />
+                        <InfoRow label="Site URL" value={process.env.NEXT_PUBLIC_BASE_URL || "Not set"} />
                     </div>
                 </div>
 

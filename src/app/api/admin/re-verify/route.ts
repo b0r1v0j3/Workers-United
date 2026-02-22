@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Call the existing verify-document endpoint internally
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
             || process.env.NEXT_PUBLIC_APP_URL
             || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 

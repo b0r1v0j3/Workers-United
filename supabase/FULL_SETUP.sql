@@ -211,6 +211,9 @@ CREATE TABLE IF NOT EXISTS contract_data (
     employer_representative_name TEXT,
     employer_mb TEXT,
     employer_director TEXT,
+    employer_city TEXT,
+    employer_founding_date TEXT,
+    employer_apr_number TEXT,
     -- Job data
     job_title TEXT,
     job_description_sr TEXT,
@@ -224,6 +227,7 @@ CREATE TABLE IF NOT EXISTS contract_data (
     signing_date DATE,
     contact_email TEXT,
     contact_phone TEXT,
+    signing_city TEXT,
     -- Contract
     contract_template TEXT CHECK (contract_template IN ('01', '02', '03', '04', '05')),
     contract_pdf_url TEXT,

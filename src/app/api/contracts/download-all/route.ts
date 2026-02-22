@@ -107,13 +107,13 @@ export async function POST(request: NextRequest) {
             const folder = zip.folder(folderName);
             if (!folder) continue;
 
-            // 1. Add generated DOCX documents
+            // 1. Add generated PDF documents
             const generatedDocs = contract.generated_documents || {};
             const docFileNames: Record<string, string> = {
-                UGOVOR: "UGOVOR_O_RADU.docx",
-                IZJAVA: "IZJAVA_O_SAGLASNOSTI.docx",
-                OVLASCENJE: "OVLASCENJE.docx",
-                POZIVNO_PISMO: "POZIVNO_PISMO.docx",
+                UGOVOR: "UGOVOR_O_RADU.pdf",
+                IZJAVA: "IZJAVA_O_SAGLASNOSTI.pdf",
+                OVLASCENJE: "OVLASCENJE.pdf",
+                POZIVNO_PISMO: "POZIVNO_PISMO.pdf",
             };
 
             for (const [docType, url] of Object.entries(generatedDocs)) {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
                     if (response.ok) {
                         const buffer = await response.arrayBuffer();
                         folder.file(
-                            docFileNames[docType] || `${docType}.docx`,
+                            docFileNames[docType] || `${docType}.pdf`,
                             buffer
                         );
                     }

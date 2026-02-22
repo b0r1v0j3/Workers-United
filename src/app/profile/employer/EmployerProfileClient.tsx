@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
+import UnifiedNavbar from "@/components/UnifiedNavbar";
 import {
     Building2, MapPin, Globe, Phone, Calendar, FileText, Hash, Users,
-    Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp, Banknote
+    Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp, Banknote,
+    LayoutDashboard
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -26,6 +28,9 @@ interface EmployerProfile {
     description: string | null;
     country: string | null;
     city: string | null;
+    postal_code: string | null;
+    business_registry_number: string | null;
+    founding_date: string | null;
 }
 
 interface JobRequest {
@@ -55,23 +60,37 @@ interface CompanyForm {
     contact_phone: string;
     country: string;
     city: string;
+    postal_code: string;
     website: string;
     industry: string;
     company_size: string;
     founded_year: string;
     description: string;
+    business_registry_number: string;
+    founding_date: string;
 }
 
 // ─── Shared styles ──────────────────────────────────────────────
-const inputClass = "w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
-const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
+const inputClass = "w-full border border-gray-200 rounded-xl px-4 py-3 text-[15px] focus:ring-2 focus:ring-[#1877f2]/20 focus:border-[#1877f2] bg-gray-50 hover:bg-white focus:bg-white transition-all duration-200 outline-none";
+const labelClass = "block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2";
 
 // ─── Helper: Calculate Completion ───────────────────────────────
 function calculateCompletion(form: CompanyForm) {
-    const required: (keyof CompanyForm)[] = [
-        "company_name", "tax_id", "company_registration_number", "company_address",
-        "contact_phone", "country", "city", "company_size", "founded_year"
+    // Must match getEmployerCompletion() in profile-completion.ts
+    // Base fields required for all employers
+    const baseRequired: (keyof CompanyForm)[] = [
+        "company_name", "contact_phone", "country", "industry"
     ];
+    // Serbia: additional fields required for contracts
+    const serbiaExtra: (keyof CompanyForm)[] = [
+        "company_registration_number", "company_address",
+        "city", "postal_code", "description",
+        "business_registry_number", "founding_date"
+    ];
+
+    const isSerbia = form.country.toLowerCase() === 'serbia';
+    const required = isSerbia ? [...baseRequired, ...serbiaExtra] : baseRequired;
+
     const filled = required.filter(key => {
         const val = form[key];
         return val && val.trim().length > 0;
@@ -98,8 +117,9 @@ export default function EmployerProfilePage() {
     const [companyAlert, setCompanyAlert] = useState<{ type: "success" | "error"; msg: string } | null>(null);
     const [companyForm, setCompanyForm] = useState({
         company_name: "", tax_id: "", company_registration_number: "",
-        company_address: "", contact_phone: "", country: "", city: "",
+        company_address: "", contact_phone: "", country: "", city: "", postal_code: "",
         website: "", industry: "", company_size: "", founded_year: "", description: "",
+        business_registry_number: "", founding_date: "",
     });
 
     // ─ Job posting state
@@ -141,11 +161,14 @@ export default function EmployerProfilePage() {
                 contact_phone: emp.contact_phone || "",
                 country: emp.country || "",
                 city: emp.city || "",
+                postal_code: emp.postal_code || "",
                 website: emp.website || "",
                 industry: emp.industry || "",
                 company_size: emp.company_size || "",
                 founded_year: emp.founded_year || "",
                 description: emp.description || "",
+                business_registry_number: emp.business_registry_number || "",
+                founding_date: emp.founding_date || "",
             });
             const { data: jobData } = await supabase.from("job_requests").select("*").eq("employer_id", emp.id).order("created_at", { ascending: false });
             setJobs(jobData || []);
@@ -173,8 +196,16 @@ export default function EmployerProfilePage() {
         try {
             if (!user) throw new Error("Not logged in");
             if (!companyForm.company_name.trim()) throw new Error("Company name is required");
-            if (companyForm.company_registration_number && !/^\d{8}$/.test(companyForm.company_registration_number))
-                throw new Error("Registration Number must be exactly 8 digits");
+            if (!companyForm.country.trim()) throw new Error("Country is required");
+
+            const isSerbia = companyForm.country.toLowerCase() === 'serbia';
+
+            // Serbia-specific validation
+            if (isSerbia) {
+                if (companyForm.company_registration_number && !/^\d{8}$/.test(companyForm.company_registration_number))
+                    throw new Error("Registration Number must be exactly 8 digits");
+            }
+
             if (companyForm.contact_phone) {
                 const clean = companyForm.contact_phone.replace(/[\s\-()]/g, '');
                 if (!/^\+\d{7,15}$/.test(clean)) throw new Error("Phone must start with + and country code");
@@ -182,16 +213,22 @@ export default function EmployerProfilePage() {
 
             const data = {
                 company_name: companyForm.company_name,
-                tax_id: companyForm.tax_id || null,
-                company_registration_number: companyForm.company_registration_number || null,
-                company_address: companyForm.company_address || null,
                 contact_phone: companyForm.contact_phone ? companyForm.contact_phone.replace(/[\s\-()]/g, '') : null,
                 country: companyForm.country || null,
-                city: companyForm.city || null,
                 website: companyForm.website || null,
                 industry: companyForm.industry || null,
-                company_size: companyForm.company_size || null,
-                founded_year: companyForm.founded_year || null,
+
+                // Serbia-specific fields (set to null if not Serbia)
+                tax_id: isSerbia ? (companyForm.tax_id || null) : null,
+                company_registration_number: isSerbia ? (companyForm.company_registration_number || null) : null,
+                company_address: isSerbia ? (companyForm.company_address || null) : null,
+                city: isSerbia ? (companyForm.city || null) : null,
+                postal_code: isSerbia ? (companyForm.postal_code || null) : null,
+                company_size: isSerbia ? (companyForm.company_size || null) : null,
+                founded_year: isSerbia ? (companyForm.founded_year || null) : null,
+                business_registry_number: isSerbia ? (companyForm.business_registry_number || null) : null,
+                founding_date: isSerbia ? (companyForm.founding_date || null) : null,
+
                 description: companyForm.description || null,
             };
 
@@ -199,7 +236,6 @@ export default function EmployerProfilePage() {
                 const { error } = await supabase.from("employers").update(data).eq("id", employer.id);
                 if (error) throw error;
             } else {
-                // Ensure profiles row exists (signup trigger may have failed)
                 const { error: profileErr } = await supabase.from("profiles").upsert({
                     id: user.id,
                     email: user.email || "",
@@ -209,7 +245,7 @@ export default function EmployerProfilePage() {
                 if (profileErr) throw profileErr;
 
                 const { error } = await supabase.from("employers")
-                    .insert({ ...data, profile_id: user.id, status: "pending" });
+                    .insert({ ...data, profile_id: user.id, status: "PENDING" });
                 if (error) throw error;
             }
 
@@ -220,9 +256,7 @@ export default function EmployerProfilePage() {
             setEditing(false);
             setTimeout(() => setCompanyAlert(null), 3000);
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message
-                : (typeof err === "object" && err !== null && "message" in err)
-                    ? String((err as { message: unknown }).message) : "Failed to save";
+            const message = err instanceof Error ? err.message : String(err);
             setCompanyAlert({ type: "error", msg: message });
         } finally { setSaving(false); }
     };
@@ -237,11 +271,14 @@ export default function EmployerProfilePage() {
                 contact_phone: employer.contact_phone || "",
                 country: employer.country || "",
                 city: employer.city || "",
+                postal_code: employer.postal_code || "",
                 website: employer.website || "",
                 industry: employer.industry || "",
                 company_size: employer.company_size || "",
                 founded_year: employer.founded_year || "",
                 description: employer.description || "",
+                business_registry_number: employer.business_registry_number || "",
+                founding_date: employer.founding_date || "",
             });
         }
         setEditing(false);
@@ -285,8 +322,8 @@ export default function EmployerProfilePage() {
             const { data: jobData } = await supabase.from("job_requests").select("*").eq("employer_id", employer!.id).order("created_at", { ascending: false });
             setJobs(jobData || []);
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err) ? String((err as { message: string }).message) : "Failed to post";
-            setJobAlert({ type: "error", msg });
+            const message = err instanceof Error ? err.message : String(err);
+            setJobAlert({ type: "error", msg: message });
         } finally { setPostingJob(false); }
     };
 
@@ -342,422 +379,437 @@ export default function EmployerProfilePage() {
     const completion = calculateCompletion(companyForm);
 
     if (loading) return (
-        <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
-            <div className="animate-spin h-8 w-8 border-4 border-[#1877f2] border-t-transparent rounded-full" />
+        <div className="min-h-screen bg-[#F0F4F8] flex items-center justify-center">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
     );
 
+    // Country gate: full features only available for Serbia
+    const isSerbia = companyForm.country.toLowerCase() === 'serbia';
+    const hasCountry = companyForm.country.trim().length > 0;
+
     return (
-        <div className="min-h-screen bg-[#f0f2f5]">
+        <div className="min-h-screen bg-[#F0F4F8]">
             {/* NAVBAR */}
-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
-                <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline tracking-tight">
-                            Workers United
-                        </span>
-                    </Link>
-                    <div className="flex items-center gap-3">
-                        <span className="text-sm font-semibold text-[#050505] hidden sm:block">
-                            {companyForm.company_name || "Employer"}
-                        </span>
-                        <Link
-                            href="/profile/settings"
-                            className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
-                            title="Account Settings"
-                        >
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" />
-                            </svg>
-                        </Link>
-                        <a
-                            href="/auth/signout"
-                            className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
-                            title="Logout"
-                        >
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                <path d="M16 13v-2H7V8l-5 4 5 4v-3z" />
-                                <path d="M20 3h-9c-1.103 0-2 .897-2 2v4h2V5h9v14h-9v-4H9v4c0 1.103.897 2 2 2h9c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2z" />
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </nav>
+            <UnifiedNavbar variant="dashboard" user={user} profileName={companyForm.company_name || ""} />
 
             {/* MAIN CONTENT */}
-            <div className="max-w-[900px] mx-auto px-4 py-6">
+            <div className="max-w-6xl mx-auto px-4 py-8">
 
-                {/* Profile Completion — show when incomplete */}
-                {completion < 100 && (
-                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-bold text-[#050505]">Profile Completion</h3>
-                            <span className="text-sm font-bold text-[#1877f2]">{completion}%</span>
+                {/* Hero Section */}
+                <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1E3A5F] via-[#2f6fed] to-[#2563EB] p-8 text-white shadow-xl">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                                    <Building2 className="text-white" />
+                                </div>
+                                <h1 className="text-3xl font-bold">{companyForm.company_name || "Company Profile"}</h1>
+                            </div>
+                            <p className="text-blue-100 opacity-90 max-w-lg">
+                                Manage your company information and job postings.
+                            </p>
                         </div>
-                        <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden">
-                            <div
-                                className="h-full rounded-full transition-all duration-500 bg-[#1877f2]"
-                                style={{ width: `${completion}%` }}
-                            />
-                        </div>
-                        <p className="text-xs text-[#65676b] mt-2">
-                            Complete your company profile to start posting job requests.
-                        </p>
-                    </div>
-                )}
-
-                {/* TABS */}
-                <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
-                    <div className="flex items-center px-2">
-                        <div className="flex overflow-x-auto scrollbar-hide">
-                            <TabButton label="Company Info" active={activeTab === 'company'} onClick={() => setActiveTab('company')} />
-                            {employer && <TabButton label="Post a Job" active={activeTab === 'post-job'} onClick={() => setActiveTab('post-job')} />}
-                            {employer && <TabButton label={`Jobs (${jobs.length})`} active={activeTab === 'jobs'} onClick={() => setActiveTab('jobs')} />}
-                        </div>
-                        {employer && !editing && activeTab === 'company' && (
-                            <div className="ml-auto pr-2">
-                                <button
-                                    onClick={() => setEditing(true)}
-                                    className="bg-[#1877f2] text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 whitespace-nowrap"
-                                >
-                                    <Pencil size={14} /> Edit Profile
-                                </button>
+                        {completion < 100 && (
+                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 min-w-[200px]">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Completion</span>
+                                    <span className="font-bold">{completion}%</span>
+                                </div>
+                                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                                    <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${completion}%` }} />
+                                </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* ====================== COMPANY INFO TAB ====================== */}
-                {activeTab === 'company' && (
-                    <div className="space-y-4">
-                        {/* Alert */}
-                        {companyAlert && (
-                            <div className={`px-4 py-3 rounded-xl text-sm font-medium ${companyAlert.type === "success"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-red-50 text-red-700 border border-red-200"}`}>
-                                {companyAlert.msg}
+                <div className="flex flex-col md:flex-row gap-6">
+                    {/* Sidebar Tabs */}
+                    <div className="md:w-64 flex-shrink-0 space-y-2">
+                        <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 sticky top-24">
+                            <TabButton label="Company Info" icon={<LayoutDashboard size={18} />} active={activeTab === 'company'} onClick={() => setActiveTab('company')} />
+                            {employer && isSerbia && <TabButton label="Post a Job" icon={<Plus size={18} />} active={activeTab === 'post-job'} onClick={() => setActiveTab('post-job')} />}
+                            {employer && isSerbia && <TabButton label={`Active Jobs (${jobs.length})`} icon={<Briefcase size={18} />} active={activeTab === 'jobs'} onClick={() => setActiveTab('jobs')} />}
+
+                            {employer && !editing && activeTab === 'company' && (
+                                <>
+                                    <div className="my-2 border-t border-slate-100"></div>
+                                    <button
+                                        onClick={() => setEditing(true)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                                    >
+                                        <Pencil size={18} /> Edit Profile
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Tab Content */}
+                    <div className="flex-1 min-w-0">
+                        {/* Coming soon banner for non-Serbian employers */}
+                        {employer && hasCountry && !isSerbia && !editing && (
+                            <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <Globe className="text-amber-600" size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-amber-900 text-lg mb-1">We&apos;re expanding to {companyForm.country} soon!</h3>
+                                        <p className="text-amber-800 text-sm leading-relaxed">
+                                            Workers United is currently available for employers registered in <strong>Serbia</strong>.
+                                            We&apos;re actively working on expanding to other countries. Your registration helps us
+                                            prioritize — we&apos;ll notify you as soon as we&apos;re ready in {companyForm.country}.
+                                        </p>
+                                        <p className="text-amber-700 text-xs mt-3 font-medium">
+                                            💡 In the meantime, you can complete your company profile so everything is ready when we launch.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
-                        {editing ? (
-                            /* ── Edit Mode ── */
-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
-                                <h3 className="font-bold text-[#050505] text-lg mb-4">Edit Company Information</h3>
-                                <div className="space-y-4">
+                        {/* ====================== COMPANY INFO TAB ====================== */}
+                        {activeTab === 'company' && (
+                            <div className="space-y-6">
+                                {/* Alert */}
+                                {companyAlert && (
+                                    <div className={`px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2 ${companyAlert.type === "success"
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                        : "bg-red-50 text-red-700 border border-red-200"}`}>
+                                        {companyAlert.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                                        {companyAlert.msg}
+                                    </div>
+                                )}
+
+                                {editing ? (
+                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+                                        <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
+                                            <Pencil size={20} className="text-blue-500" /> Edit Company Details
+                                        </h3>
+
+                                        <div className="space-y-6">
+                                            <div>
+                                                <label className={labelClass}>Company Name <span className="text-red-500">*</span></label>
+                                                <input type="text" name="company_name" required value={companyForm.company_name} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., ABC Construction d.o.o." />
+                                            </div>
+
+                                            <div>
+                                                <label className={labelClass}>Industry <span className="text-red-500">*</span></label>
+                                                <select name="industry" value={companyForm.industry} onChange={handleCompanyChange} className={inputClass}>
+                                                    <option value="">Select industry...</option>
+                                                    {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                                                </select>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {isSerbia && (
+                                                    <div>
+                                                        <label className={labelClass}>Tax ID (PIB)</label>
+                                                        <input type="text" name="tax_id" value={companyForm.tax_id} onChange={handleCompanyChange} className={inputClass} placeholder="123456789" maxLength={9} />
+                                                    </div>
+                                                )}
+                                                {isSerbia && (
+                                                    <div>
+                                                        <label className={labelClass}>Registration Number <span className="text-red-500">*</span></label>
+                                                        <input type="text" name="company_registration_number" value={companyForm.company_registration_number} onChange={handleCompanyChange} className={inputClass} placeholder="12345678" maxLength={8} />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div>
+                                                    <label className={labelClass}>Country <span className="text-red-500">*</span></label>
+                                                    <select name="country" value={companyForm.country} onChange={handleCompanyChange} className={inputClass}>
+                                                        <option value="">Select country...</option>
+                                                        {EUROPEAN_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                                    </select>
+                                                </div>
+                                                {isSerbia && (
+                                                    <div>
+                                                        <label className={labelClass}>City <span className="text-red-500">*</span></label>
+                                                        <input type="text" name="city" value={companyForm.city} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., Belgrade" />
+                                                    </div>
+                                                )}
+                                                {isSerbia && (
+                                                    <div>
+                                                        <label className={labelClass}>Postal Code <span className="text-red-500">*</span></label>
+                                                        <input type="text" name="postal_code" value={companyForm.postal_code} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., 11000" maxLength={10} />
+                                                    </div>
+                                                )}
+                                                {isSerbia && (
+                                                    <div>
+                                                        <label className={labelClass}>Company Size</label>
+                                                        <select name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass}>
+                                                            <option value="">Select size...</option>
+                                                            {COMPANY_SIZES.map(s => (<option key={s} value={s}>{s}</option>))}
+                                                        </select>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div>
+                                                    <label className={labelClass}>Contact Phone <span className="text-red-500">*</span></label>
+                                                    <input type="tel" name="contact_phone" value={companyForm.contact_phone}
+                                                        onChange={(e) => {
+                                                            let val = e.target.value;
+                                                            if (val.length === 1 && val !== '+') val = '+' + val;
+                                                            setCompanyForm(prev => ({ ...prev, contact_phone: val }));
+                                                        }}
+                                                        className={inputClass} placeholder="+381111234567" />
+                                                </div>
+                                                <div>
+                                                    <label className={labelClass}>Website (Optional)</label>
+                                                    <input type="url" name="website" value={companyForm.website} onChange={handleCompanyChange} className={inputClass} placeholder="https://yourcompany.com" />
+                                                </div>
+                                                {isSerbia && (
+                                                    <div>
+                                                        <label className={labelClass}>Founded Year</label>
+                                                        <input type="text" name="founded_year" value={companyForm.founded_year} onChange={handleCompanyChange} className={inputClass} placeholder="2010" maxLength={4} />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {isSerbia && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <label className={labelClass}>Business Registry Number <span className="text-red-500">*</span></label>
+                                                        <input type="text" name="business_registry_number" value={companyForm.business_registry_number} onChange={handleCompanyChange} className={inputClass} placeholder="BD 12345/2020" />
+                                                    </div>
+                                                    <div>
+                                                        <label className={labelClass}>Company Founding Date <span className="text-red-500">*</span></label>
+                                                        <input type="text" name="founding_date" value={companyForm.founding_date} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., 15.01.2010" />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {isSerbia && (
+                                                <div>
+                                                    <label className={labelClass}>Company Address <span className="text-red-500">*</span></label>
+                                                    <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Full registered business address..." />
+                                                </div>
+                                            )}
+
+                                            {isSerbia && (
+                                                <div>
+                                                    <label className={labelClass}>Company Description <span className="text-red-500">*</span></label>
+                                                    <textarea name="description" value={companyForm.description} onChange={handleCompanyChange} rows={3} className={`${inputClass} resize-none`} placeholder="Brief description of your company and activities..." />
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                                                {employer && (
+                                                    <button type="button" onClick={cancelEdit} className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-colors">
+                                                        Cancel
+                                                    </button>
+                                                )}
+                                                <button type="button" onClick={saveCompany} disabled={saving}
+                                                    className="px-8 py-3 bg-[#1877f2] text-white rounded-xl hover:bg-[#166fe5] font-bold shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2 transition-all">
+                                                    {saving ? "Saving..." : "Save Changes"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+                                        <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
+                                            <Building2 className="text-blue-500" /> Company Information
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <InfoRow icon={<Building2 size={18} />} label="Company Name" value={companyForm.company_name} />
+                                            <InfoRow icon={<Briefcase size={18} />} label="Industry" value={companyForm.industry} />
+                                            {isSerbia && <InfoRow icon={<Hash size={18} />} label="Tax ID" value={companyForm.tax_id} />}
+                                            {isSerbia && <InfoRow icon={<FileText size={18} />} label="Registration No." value={companyForm.company_registration_number} />}
+                                            <InfoRow icon={<Globe size={18} />} label="Country" value={companyForm.country} />
+                                            {isSerbia && <InfoRow icon={<MapPin size={18} />} label="City" value={companyForm.city} />}
+                                            {isSerbia && <InfoRow icon={<Users size={18} />} label="Company Size" value={companyForm.company_size} />}
+                                            <InfoRow icon={<Phone size={18} />} label="Phone" value={companyForm.contact_phone} />
+                                            <InfoRow icon={<Globe size={18} />} label="Website" value={companyForm.website} />
+                                            {isSerbia && <InfoRow icon={<Calendar size={18} />} label="Founded" value={companyForm.founded_year} />}
+                                            {isSerbia && <InfoRow icon={<MapPin size={18} />} label="Postal Code" value={companyForm.postal_code} />}
+                                            {isSerbia && <InfoRow icon={<FileText size={18} />} label="Business Registry No." value={companyForm.business_registry_number} />}
+                                            {isSerbia && <InfoRow icon={<Calendar size={18} />} label="Founding Date" value={companyForm.founding_date} />}
+                                            {isSerbia && <InfoRow icon={<MapPin size={18} />} label="Address" value={companyForm.company_address} />}
+                                            {isSerbia && companyForm.description && <InfoRow icon={<FileText size={18} />} label="Description" value={companyForm.description} />}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ====================== POST A JOB TAB ====================== */}
+                        {activeTab === 'post-job' && employer && (
+                            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+                                <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
+                                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><Plus size={20} /></div>
+                                    Post a New Job
+                                </h3>
+
+                                {jobAlert && (
+                                    <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium ${jobAlert.type === "success"
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                        : "bg-red-50 text-red-700 border border-red-200"}`}>
+                                        {jobAlert.msg}
+                                    </div>
+                                )}
+
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className={labelClass}>Job Title <span className="text-red-500">*</span></label>
+                                            <input type="text" name="title" value={jobForm.title} onChange={handleJobChange} className={inputClass} placeholder="e.g., Construction Worker, Welder" />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Industry <span className="text-red-500">*</span></label>
+                                            <select value={jobForm.industry} onChange={(e) => setJobForm(prev => ({ ...prev, industry: e.target.value }))} className={inputClass}>
+                                                <option value="">Select Industry</option>
+                                                {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <label className={labelClass}>Company Name <span className="text-red-500">*</span></label>
-                                        <input type="text" name="company_name" required value={companyForm.company_name} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., ABC Construction d.o.o." />
+                                        <label className={labelClass}>Job Description</label>
+                                        <textarea name="description" value={jobForm.description} onChange={handleJobChange} rows={3} className={`${inputClass} resize-none`} placeholder="Describe responsibilities, requirements..." />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label className={labelClass}>Positions <span className="text-red-500">*</span></label>
+                                            <input type="number" name="positions_count" min={1} max={50} value={jobForm.positions_count} onChange={handleJobChange} className={inputClass} />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Salary (RSD) <span className="text-red-500">*</span></label>
+                                            <input type="number" name="salary_rsd" min={70000} step={1000} value={jobForm.salary_rsd} onChange={handleJobChange} className={inputClass} />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Schedule</label>
+                                            <select name="work_schedule" value={jobForm.work_schedule} onChange={handleJobChange} className={inputClass}>
+                                                <option value="Full-time (40 hours/week)">Full-time (40h)</option>
+                                                <option value="Shift work">Shift work</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Contract</label>
+                                            <select name="contract_duration_months" value={jobForm.contract_duration_months} onChange={handleJobChange} className={inputClass}>
+                                                <option value="6">6 months</option>
+                                                <option value="12">12 months</option>
+                                                <option value="24">24 months</option>
+                                                <option value="36">36+ months</option>
+                                            </select>
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className={labelClass}>Tax ID <span className="text-red-500">*</span></label>
-                                            <input type="text" name="tax_id" value={companyForm.tax_id} onChange={handleCompanyChange} className={inputClass} placeholder="123456789" maxLength={9} />
+                                            <label className={labelClass}>Accommodation City <span className="text-red-500">*</span></label>
+                                            <input type="text" name="work_city" value={jobForm.work_city} onChange={handleJobChange} className={inputClass} placeholder="City where workers will be accommodated" />
                                         </div>
                                         <div>
-                                            <label className={labelClass}>Company Registration Number <span className="text-red-500">*</span></label>
-                                            <input type="text" name="company_registration_number" value={companyForm.company_registration_number} onChange={handleCompanyChange} className={inputClass} placeholder="12345678" maxLength={8} />
+                                            <label className={labelClass}>Accommodation Address <span className="text-red-500">*</span></label>
+                                            <input type="text" name="accommodation_address" value={jobForm.accommodation_address} onChange={handleJobChange} className={inputClass} placeholder="Full address for accommodation" />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className={labelClass}>Country <span className="text-red-500">*</span></label>
-                                            <select name="country" value={companyForm.country} onChange={handleCompanyChange} className={inputClass}>
-                                                <option value="">Select country...</option>
-                                                {EUROPEAN_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className={labelClass}>City <span className="text-red-500">*</span></label>
-                                            <input type="text" name="city" value={companyForm.city} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., Belgrade" />
-                                        </div>
-                                        <div>
-                                            <label className={labelClass}>Company Size <span className="text-red-500">*</span></label>
-                                            <select name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass}>
-                                                <option value="">Select size...</option>
-                                                {COMPANY_SIZES.map(s => (<option key={s} value={s}>{s}</option>))}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className={labelClass}>Contact Phone <span className="text-red-500">*</span></label>
-                                            <input type="tel" name="contact_phone" value={companyForm.contact_phone}
-                                                onChange={(e) => {
-                                                    let val = e.target.value;
-                                                    if (val.length === 1 && val !== '+') val = '+' + val;
-                                                    setCompanyForm(prev => ({ ...prev, contact_phone: val }));
-                                                }}
-                                                className={inputClass} placeholder="+381111234567" />
-                                            <p className="text-[11px] text-gray-500 mt-1">Must include country code</p>
-                                        </div>
-                                        <div>
-                                            <label className={labelClass}>Website</label>
-                                            <input type="url" name="website" value={companyForm.website} onChange={handleCompanyChange} className={inputClass} placeholder="https://yourcompany.com" />
-                                        </div>
-                                        <div>
-                                            <label className={labelClass}>Founded Year <span className="text-red-500">*</span></label>
-                                            <input type="text" name="founded_year" value={companyForm.founded_year} onChange={handleCompanyChange} className={inputClass} placeholder="2010" maxLength={4} />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className={labelClass}>Company Address <span className="text-red-500">*</span></label>
-                                        <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Full registered business address..." />
-                                    </div>
-
-
-                                    <div className="flex justify-end gap-2 pt-2">
-                                        {employer && (
-                                            <button type="button" onClick={cancelEdit} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[14px]">
-                                                Cancel
-                                            </button>
-                                        )}
-                                        <button type="button" onClick={saveCompany} disabled={saving}
-                                            className="px-5 py-2 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium text-[14px] disabled:opacity-50 flex items-center gap-2">
-                                            {saving ? (
-                                                <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> Saving...</>
-                                            ) : "Save Changes"}
+                                    <div className="flex justify-end pt-4 border-t border-slate-100">
+                                        <button type="button" onClick={submitJob} disabled={postingJob}
+                                            className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-lg shadow-emerald-500/30 disabled:opacity-50 flex items-center gap-2 transition-all">
+                                            {postingJob ? (
+                                                <><div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div> Posting...</>
+                                            ) : <><Plus className="w-5 h-5" /> Post Job Request</>}
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                        ) : (
-                            /* ── View Mode ── */
-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
-                                <div className="mb-4">
-                                    <h3 className="font-bold text-[#050505] text-lg">Company Information</h3>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <InfoRow icon={<Building2 size={18} />} label="Company Name" value={companyForm.company_name} />
-                                    <InfoRow icon={<Hash size={18} />} label="Tax ID" value={companyForm.tax_id} />
-                                    <InfoRow icon={<FileText size={18} />} label="Registration No." value={companyForm.company_registration_number} />
-                                    <InfoRow icon={<Globe size={18} />} label="Country" value={companyForm.country} />
-                                    <InfoRow icon={<MapPin size={18} />} label="City" value={companyForm.city} />
-                                    <InfoRow icon={<Users size={18} />} label="Company Size" value={companyForm.company_size} />
-                                    <InfoRow icon={<Phone size={18} />} label="Phone" value={companyForm.contact_phone} />
-                                    <InfoRow icon={<Globe size={18} />} label="Website" value={companyForm.website} />
-                                    <InfoRow icon={<Calendar size={18} />} label="Founded" value={companyForm.founded_year} />
-                                    <InfoRow icon={<MapPin size={18} />} label="Address" value={companyForm.company_address} />
-                                </div>
-
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* ====================== POST A JOB TAB ====================== */}
-                {activeTab === 'post-job' && employer && (
-                    <div className="space-y-4">
-                        {jobAlert && (
-                            <div className={`px-4 py-3 rounded-xl text-sm font-medium ${jobAlert.type === "success"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-red-50 text-red-700 border border-red-200"}`}>
-                                {jobAlert.msg}
-                            </div>
                         )}
 
-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
-                            <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
-                                <Plus size={20} /> Post a New Job
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>Job Title <span className="text-red-500">*</span></label>
-                                        <input type="text" name="title" value={jobForm.title} onChange={handleJobChange} className={inputClass} placeholder="e.g., Construction Worker, Welder" />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Industry <span className="text-red-500">*</span></label>
-                                        <IndustrySelect value={jobForm.industry} onChange={(v) => setJobForm(prev => ({ ...prev, industry: v }))} />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className={labelClass}>Job Description</label>
-                                    <textarea name="description" value={jobForm.description} onChange={handleJobChange} rows={3} className={`${inputClass} resize-none`} placeholder="Describe responsibilities, requirements..." />
-                                </div>
-
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div>
-                                        <label className={labelClass}>Positions <span className="text-red-500">*</span></label>
-                                        <input type="number" name="positions_count" min={1} max={50} value={jobForm.positions_count} onChange={handleJobChange} className={inputClass} />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Salary (RSD) <span className="text-red-500">*</span></label>
-                                        <input type="number" name="salary_rsd" min={70000} step={1000} value={jobForm.salary_rsd} onChange={handleJobChange} className={inputClass} />
-                                        <p className="text-[11px] text-gray-500 mt-1">Min: 70,000 RSD</p>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Schedule</label>
-                                        <select name="work_schedule" value={jobForm.work_schedule} onChange={handleJobChange} className={inputClass}>
-                                            <option value="Full-time (40 hours/week)">Full-time (40h)</option>
-                                            <option value="Shift work">Shift work</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Contract</label>
-                                        <select name="contract_duration_months" value={jobForm.contract_duration_months} onChange={handleJobChange} className={inputClass}>
-                                            <option value="6">6 months</option>
-                                            <option value="12">12 months</option>
-                                            <option value="24">24 months</option>
-                                            <option value="36">36+ months</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>Accommodation City <span className="text-red-500">*</span></label>
-                                        <input type="text" name="work_city" value={jobForm.work_city} onChange={handleJobChange} className={inputClass} placeholder="City where workers will be accommodated" />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Accommodation Address <span className="text-red-500">*</span></label>
-                                        <input type="text" name="accommodation_address" value={jobForm.accommodation_address} onChange={handleJobChange} className={inputClass} placeholder="Full address for accommodation" />
-                                        <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
-                                            <AlertCircle size={10} /> Required by law for visa processing
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end pt-2">
-                                    <button type="button" onClick={submitJob} disabled={postingJob}
-                                        className="px-6 py-2.5 bg-gradient-to-r from-[#10b981] to-[#059669] text-white rounded-md hover:from-[#059669] hover:to-[#047857] font-semibold text-[14px] disabled:opacity-50 flex items-center gap-2 shadow-sm">
-                                        {postingJob ? (
-                                            <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> Posting...</>
-                                        ) : <><Plus className="w-4 h-4" /> Post Job</>}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* ====================== POSTED JOBS TAB ====================== */}
-                {activeTab === 'jobs' && employer && (
-                    <div className="space-y-4">
-                        {editJobError && (
-                            <div className="px-4 py-3 rounded-xl text-sm font-medium bg-red-50 text-red-700 border border-red-200">
-                                {editJobError}
-                            </div>
-                        )}
-
-                        {jobs.length === 0 ? (
-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-8 text-center">
-                                <Briefcase size={48} className="mx-auto text-[#bcc0c4] mb-3" />
-                                <p className="text-lg font-semibold text-[#65676b] mb-1">No jobs posted yet</p>
-                                <p className="text-sm text-[#bcc0c4]">Go to the "Post a Job" tab to create your first job listing</p>
-                            </div>
-                        ) : (
-                            jobs.map(job => (
-                                <div key={job.id} className="bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-hidden">
-                                    {/* Job summary */}
-                                    <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="font-bold text-[#050505] text-[15px]">{job.title}</h3>
-                                                <JobStatusBadge status={job.status} />
-                                            </div>
-                                            <div className="flex items-center gap-3 text-xs text-[#65676b] mt-1.5 flex-wrap">
-                                                <span className="flex items-center gap-1"><Briefcase size={12} /> {job.industry}</span>
-                                                <span className="flex items-center gap-1"><Users size={12} /> {job.positions_filled}/{job.positions_count} positions</span>
-                                                {job.salary_rsd && <span className="flex items-center gap-1"><Banknote size={12} /> {job.salary_rsd.toLocaleString()} RSD</span>}
-                                                <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(job.created_at).toLocaleDateString('en-GB')}</span>
-                                            </div>
+                        {/* ====================== POSTED JOBS TAB ====================== */}
+                        {activeTab === 'jobs' && employer && (
+                            <div className="space-y-6">
+                                {jobs.length === 0 ? (
+                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-12 text-center">
+                                        <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <Briefcase size={32} className="text-slate-400" />
                                         </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            {editingJobId === job.id ? (
-                                                <>
-                                                    <button onClick={() => setEditingJobId(null)} className="text-xs px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 font-medium">Cancel</button>
-                                                    <button onClick={saveEditJob} disabled={savingJob}
-                                                        className="text-xs px-3 py-1.5 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium disabled:opacity-50">
-                                                        {savingJob ? "Saving..." : "Save"}
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button onClick={() => startEditJob(job)} className="text-xs px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 font-medium text-[#1877f2]">Edit</button>
-                                                    {confirmDeleteJobId === job.id ? (
-                                                        <div className="flex gap-1">
-                                                            <button onClick={() => deleteJob(job.id)} className="text-xs px-2 py-1 bg-red-600 text-white rounded font-bold hover:bg-red-700">Yes</button>
-                                                            <button onClick={() => setConfirmDeleteJobId(null)} className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300">No</button>
+                                        <h3 className="text-xl font-bold text-slate-800 mb-2">No jobs posted yet</h3>
+                                        <p className="text-slate-500 mb-6">Create your first job request to start matching with workers.</p>
+                                        <button onClick={() => setActiveTab('post-job')} className="px-6 py-3 bg-[#1877f2] text-white rounded-xl font-bold hover:bg-blue-600 transition-colors">
+                                            Post a Job
+                                        </button>
+                                    </div>
+                                ) : (
+                                    jobs.map(job => (
+                                        <div key={job.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+                                            <div className="p-6">
+                                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+                                                    <div>
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <h3 className="font-bold text-xl text-slate-900">{job.title}</h3>
+                                                            <JobStatusBadge status={job.status} />
                                                         </div>
-                                                    ) : (
-                                                        <button onClick={() => setConfirmDeleteJobId(job.id)} className="text-xs px-3 py-1.5 border border-red-200 rounded-md hover:bg-red-50 font-medium text-red-600">Delete</button>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
+                                                        <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+                                                            <span className="flex items-center gap-1"><Briefcase size={14} /> {job.industry}</span>
+                                                            <span className="flex items-center gap-1"><MapPin size={14} /> {job.work_city}</span>
+                                                            <span className="flex items-center gap-1"><Banknote size={14} /> {job.salary_rsd?.toLocaleString()} RSD</span>
+                                                            <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(job.created_at).toLocaleDateString('en-GB')}</span>
+                                                        </div>
+                                                    </div>
 
-                                    {/* Inline edit form */}
-                                    {editingJobId === job.id && (
-                                        <div className="border-t border-[#dddfe2] bg-[#f7f8fa] p-5 space-y-3">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className={labelClass}>Job Title</label>
-                                                    <input type="text" value={editJobForm.title} onChange={(e) => setEditJobForm(p => ({ ...p, title: e.target.value }))} className={inputClass} />
+                                                    <div className="flex items-center gap-2">
+                                                        {editingJobId === job.id ? (
+                                                            <>
+                                                                <button onClick={() => setEditingJobId(null)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancel</button>
+                                                                <button onClick={saveEditJob} disabled={savingJob} className="px-4 py-2 text-sm font-bold bg-[#1877f2] text-white rounded-lg hover:bg-blue-600">Save</button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <button onClick={() => startEditJob(job)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                                                    <Pencil size={18} />
+                                                                </button>
+                                                                {confirmDeleteJobId === job.id ? (
+                                                                    <div className="flex items-center gap-2 bg-red-50 p-1 rounded-lg">
+                                                                        <button onClick={() => deleteJob(job.id)} className="text-xs font-bold text-red-600 px-2 py-1 hover:bg-red-100 rounded">Delete?</button>
+                                                                        <button onClick={() => setConfirmDeleteJobId(null)} className="text-xs font-bold text-slate-500 px-2 py-1 hover:bg-slate-200 rounded">No</button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button onClick={() => setConfirmDeleteJobId(job.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                                                        <Trash2 size={18} />
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <label className={labelClass}>Industry</label>
-                                                    <IndustrySelect value={editJobForm.industry} onChange={(v) => setEditJobForm(p => ({ ...p, industry: v }))} />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className={labelClass}>Description</label>
-                                                <textarea value={editJobForm.description} onChange={(e) => setEditJobForm(p => ({ ...p, description: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
-                                            </div>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                <div>
-                                                    <label className={labelClass}>Positions</label>
-                                                    <input type="number" min={1} max={50} value={editJobForm.positions_count} onChange={(e) => setEditJobForm(p => ({ ...p, positions_count: e.target.value }))} className={inputClass} />
-                                                </div>
-                                                <div>
-                                                    <label className={labelClass}>Salary (RSD)</label>
-                                                    <input type="number" min={70000} step={1000} value={editJobForm.salary_rsd} onChange={(e) => setEditJobForm(p => ({ ...p, salary_rsd: e.target.value }))} className={inputClass} />
-                                                </div>
-                                                <div>
-                                                    <label className={labelClass}>Schedule</label>
-                                                    <select value={editJobForm.work_schedule} onChange={(e) => setEditJobForm(p => ({ ...p, work_schedule: e.target.value }))} className={inputClass}>
-                                                        <option value="Full-time (40 hours/week)">Full-time</option>
-                                                        <option value="Shift work">Shift work</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className={labelClass}>Contract</label>
-                                                    <select value={editJobForm.contract_duration_months} onChange={(e) => setEditJobForm(p => ({ ...p, contract_duration_months: e.target.value }))} className={inputClass}>
-                                                        <option value="6">6 months</option>
-                                                        <option value="12">12 months</option>
-                                                        <option value="24">24 months</option>
-                                                        <option value="36">36+ months</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                <div>
-                                                    <label className={labelClass}>Experience (years)</label>
-                                                    <input type="number" min={0} max={20} value={editJobForm.experience_required_years} onChange={(e) => setEditJobForm(p => ({ ...p, experience_required_years: e.target.value }))} className={inputClass} />
-                                                </div>
-                                                <div>
-                                                    <label className={labelClass}>Accommodation City</label>
-                                                    <input type="text" value={editJobForm.work_city} onChange={(e) => setEditJobForm(p => ({ ...p, work_city: e.target.value }))} className={inputClass} />
-                                                </div>
-                                                <div>
-                                                    <label className={labelClass}>Accommodation Address</label>
-                                                    <input type="text" value={editJobForm.accommodation_address} onChange={(e) => setEditJobForm(p => ({ ...p, accommodation_address: e.target.value }))} className={inputClass} />
-                                                </div>
+
+                                                {/* Editing Form */}
+                                                {editingJobId === job.id && (
+                                                    <div className="mt-6 pt-6 border-t border-slate-100 bg-slate-50/50 -mx-6 -mb-6 p-6">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                                            <div>
+                                                                <label className={labelClass}>Job Title</label>
+                                                                <input type="text" value={editJobForm.title} onChange={(e) => setEditJobForm(p => ({ ...p, title: e.target.value }))} className={inputClass} />
+                                                            </div>
+                                                            <div>
+                                                                <label className={labelClass}>Industry</label>
+                                                                <select value={editJobForm.industry} onChange={(e) => setEditJobForm(p => ({ ...p, industry: e.target.value }))} className={inputClass}>
+                                                                    {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        {/* More edit fields can go here similar to post job form */}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            ))
+                                    ))
+                                )}
+                            </div>
                         )}
                     </div>
-                )}
-
+                </div>
             </div>
         </div>
     );
@@ -765,32 +817,30 @@ export default function EmployerProfilePage() {
 
 // ─── Helper Components ──────────────────────────────────────────
 
-function TabButton({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) {
+function TabButton({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode }) {
     return (
         <button
             onClick={onClick}
-            className={`px-5 py-3.5 font-semibold text-[15px] whitespace-nowrap transition-colors relative ${active
-                ? 'text-[#1877f2]'
-                : 'text-[#65676b] hover:bg-[#f0f2f5] rounded-t-lg'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${active
+                ? 'bg-blue-50 text-blue-700 shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
                 }`}
         >
+            <span className={active ? 'text-blue-600' : 'text-slate-400'}>{icon}</span>
             {label}
-            {active && (
-                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1877f2] rounded-t-full" />
-            )}
         </button>
     );
 }
 
 function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | null | undefined }) {
     return (
-        <div className="flex items-start gap-3 p-3 rounded-lg bg-[#f7f8fa] border border-[#f0f2f5]">
-            <div className="text-[#65676b] mt-0.5 shrink-0">{icon}</div>
-            <div className="min-w-0">
-                <div className="text-xs font-semibold text-[#65676b] uppercase tracking-wide">{label}</div>
-                <div className="text-[#050505] font-medium text-[15px] truncate">
-                    {value || <span className="text-[#bcc0c4] italic">Not provided</span>}
-                </div>
+        <div className="group">
+            <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-slate-400 group-hover:text-blue-500 transition-colors">{icon}</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+            </div>
+            <div className="pl-7 font-medium text-slate-900 text-base border-b border-transparent group-hover:border-slate-100 pb-1 transition-colors">
+                {value || <span className="text-slate-300 italic">Not provided</span>}
             </div>
         </div>
     );
@@ -798,24 +848,21 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string,
 
 function JobStatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
-        open: "bg-emerald-100 text-emerald-700",
-        matching: "bg-blue-100 text-blue-700",
-        filled: "bg-indigo-100 text-indigo-700",
-        closed: "bg-slate-100 text-slate-700",
-        cancelled: "bg-red-100 text-red-700",
+        open: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        closed: "bg-slate-100 text-slate-600 border-slate-200",
+        filled: "bg-blue-100 text-blue-700 border-blue-200",
+        draft: "bg-amber-100 text-amber-700 border-amber-200",
     };
     return (
-        <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${styles[status] || styles.closed}`}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+        <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border ${styles[status] || styles.closed}`}>
+            {status}
         </span>
     );
 }
 
-function IndustrySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-    return (
-        <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
-            <option value="">Select industry...</option>
-            {EMPLOYER_INDUSTRIES.map(i => (<option key={i} value={i}>{i}</option>))}
-        </select>
-    );
-}
+const IndustrySelect = ({ value, onChange }: { value: string, onChange: (v: string) => void }) => (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+        <option value="">Select Industry</option>
+        {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+    </select>
+);

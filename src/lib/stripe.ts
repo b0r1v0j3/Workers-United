@@ -22,7 +22,7 @@ export const PRICES = {
 export type PaymentType = "entry_fee" | "confirmation_fee";
 
 export function getCheckoutSuccessUrl(type: PaymentType): string {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     switch (type) {
         case "entry_fee":
@@ -35,7 +35,7 @@ export function getCheckoutSuccessUrl(type: PaymentType): string {
 }
 
 export function getCheckoutCancelUrl(type: PaymentType): string {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     switch (type) {
         case "entry_fee":

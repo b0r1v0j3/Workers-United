@@ -63,6 +63,14 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         .eq("profile_id", id)
         .single();
 
+    // Fetch contract data to allow manual editing for PDF generation
+    let contractData = null;
+    const { data: matches } = await adminClient.from("matches").select("id").eq("candidate_id", candidateData?.id).order("created_at", { ascending: false }).limit(1);
+    if (matches && matches.length > 0) {
+        const res = await adminClient.from("contract_data").select("*").eq("match_id", matches[0].id).single();
+        contractData = res.data;
+    }
+
     // Fetch documents
     const { data: documents } = await adminClient
         .from("candidate_documents")
@@ -524,6 +532,30 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                 </button>
                             </form>
                         </div>
+
+                        {/* Employer & Contract Custom Data (For PDF Generation) */}
+                        {contractData && (
+                            <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
+                                <h2 className="font-bold text-[#1e293b] text-xl mb-4">Contract Data (PDF)</h2>
+                                <p className="text-xs text-slate-500 mb-4">Values used when generating this worker's contract and visa docs.</p>
+
+                                {/* A grid for displaying current config and a hint to use Edit API if needed */}
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                        <InfoRow label="Employer Company Name" value={contractData.employer_company_name} />
+                                        <InfoRow label="Employer City" value={contractData.employer_city} />
+                                        <InfoRow label="APR Number" value={contractData.employer_apr_number} />
+                                        <InfoRow label="Founding Date" value={contractData.employer_founding_date} />
+                                        <InfoRow label="Signing City" value={contractData.signing_city} />
+                                        <InfoRow label="PIB" value={contractData.employer_pib} />
+                                        <InfoRow label="MB" value={contractData.employer_mb} />
+                                    </div>
+                                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+                                        <strong>Note:</strong> To modify these fields, please utilize the `/api/admin/edit-data` route directly (via GodMode console) or database UI until a dedicated edit form is available here.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Payment History */}
                         <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">

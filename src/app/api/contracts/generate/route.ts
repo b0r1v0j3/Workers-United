@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateAllDocuments, validateContractData, type DocumentType, type ContractDataForDocs } from "@/lib/docx-generator";
+import { generateAllDocuments, validateContractData, type DocumentType, type ContractDataForDocs } from "@/lib/pdf-generator";
 
-// POST: Generate all 4 DOCX documents for a contract
+// POST: Generate all 4 PDF documents for a contract
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -78,14 +78,14 @@ export async function POST(request: NextRequest) {
         };
 
         for (const [docType, buffer] of documents) {
-            const fileName = `${docTypeNames[docType]}_${workerName}.docx`;
+            const fileName = `${docTypeNames[docType]}_${workerName}.pdf`;
             const fullPath = `${storagePath}/${fileName}`;
 
             // Upload to storage (upsert to overwrite if re-generating)
             const { error: uploadError } = await adminSupabase.storage
                 .from("candidate-docs")
                 .upload(fullPath, buffer, {
-                    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    contentType: "application/pdf",
                     upsert: true,
                 });
 

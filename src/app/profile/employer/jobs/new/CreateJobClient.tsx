@@ -55,12 +55,12 @@ export default function CreateJobClient() {
 
             const { data: employer } = await supabase
                 .from("employers")
-                .select("id, pib")
+                .select("id, tax_id")
                 .eq("profile_id", user.id)
                 .single();
 
             if (!employer) throw new Error("Employer profile not found");
-            if (!employer.pib) throw new Error("Please complete your company profile with PIB first");
+            if (!employer.tax_id) throw new Error("Please complete your company profile with Tax ID (PIB) first");
 
             const { error: insertError } = await supabase
                 .from("job_requests")

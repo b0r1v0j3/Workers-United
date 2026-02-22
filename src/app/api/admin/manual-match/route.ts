@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
         const { data: employer } = await admin
             .from("employers")
-            .select("company_name, company_address, pib")
+            .select("company_name, company_address, pib, tax_id")
             .eq("id", job.employer_id)
             .single();
 
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
             match_id: match.id,
             candidate_full_name: candidateProfile?.full_name || null,
             employer_company_name: employer?.company_name || null,
-            employer_pib: employer?.pib || null,
+            employer_pib: employer?.tax_id || employer?.pib || null,
             employer_address: employer?.company_address || null,
             job_title: job.title,
             salary_rsd: null,
