@@ -87,13 +87,13 @@
 }
 
 html {
-  background: #0F172A;
+  background: var(--bg);
 }
 
 body {
   margin: 0;
   font-family: 'Montserrat', sans-serif;
-  background: #0F172A;
+  background: var(--bg);
   color: var(--text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -208,9 +208,7 @@ a {
   padding: 0 20px;
 }
 
-section {
-  padding: 80px 0;
-}
+/* section padding removed - each section uses Tailwind padding classes */
 
 /* Header & Nav */
 .header-glass {
