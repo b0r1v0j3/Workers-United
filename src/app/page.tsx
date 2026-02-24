@@ -45,10 +45,6 @@ export default function Home() {
           {/* Hero Section - Clean, centered, impactful */}
           <section className="py-10 md:py-16">
             <div className="max-w-[900px] mx-auto px-5 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#e4ebff] to-[#f0f4ff] rounded-full text-sm text-[#2f6fed] font-semibold mb-8 border border-[#2f6fed]/20 shadow-sm">
-                <span className="w-2.5 h-2.5 bg-[#1dbf73] rounded-full animate-pulse"></span>
-                Safe, legal and transparent
-              </div>
 
               <h1 className="text-4xl md:text-6xl font-bold text-[#183b56] leading-tight tracking-tight mb-6">
                 International hiring<br />made simple & legal.
