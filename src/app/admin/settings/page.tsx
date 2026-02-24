@@ -46,6 +46,10 @@ async function checkVercel(): Promise<ServiceCheck> {
         if (res.ok) {
             return { name: "Vercel", description: "Hosting & Deployment", status: "operational", responseTime, details: `Health check OK (${responseTime}ms)` };
         }
+        // 401/403 = Vercel Deployment Protection is active (normal for production)
+        if (res.status === 401 || res.status === 403) {
+            return { name: "Vercel", description: "Hosting & Deployment", status: "operational", responseTime, details: `Deployment Protection active (${responseTime}ms)` };
+        }
         return { name: "Vercel", description: "Hosting & Deployment", status: "degraded", responseTime, details: `Health check returned HTTP ${res.status} (${responseTime}ms)` };
     } catch {
         return { name: "Vercel", description: "Hosting & Deployment", status: "down", responseTime: Date.now() - start, details: "Health check unreachable" };
