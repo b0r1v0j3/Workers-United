@@ -49,7 +49,8 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
     };
 
     if (!mounted) return null;
-    if (isAdminPage) return null; // Hide on admin pages — admin is already the panel
+    // Only show on profile pages where role-switching is useful
+    if (!pathname?.startsWith("/profile")) return null;
 
     return (
         <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3 sm:gap-4 pointer-events-none font-sans">
