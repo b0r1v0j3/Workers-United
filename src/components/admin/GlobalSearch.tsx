@@ -112,11 +112,7 @@ export default function GlobalSearch() {
                     >
                         <X size={14} />
                     </button>
-                ) : (
-                    <div className="absolute right-3 hidden lg:flex items-center gap-1">
-                        <kbd className="font-mono text-[9px] font-bold text-slate-400 bg-white border border-slate-200 px-1 rounded">Ctrl K</kbd>
-                    </div>
-                )}
+                ) : null}
             </div>
 
             {/* Dropdown Results */}
