@@ -9,6 +9,7 @@ interface FunnelData {
     uploaded_documents: number;
     verified: number;
     job_matched: number;
+    supply_demand?: { industry: string; supply: number; demand: number }[];
 }
 
 type Period = "all" | "7d" | "30d" | "this_month" | "last_month";
@@ -230,6 +231,56 @@ export default function AnalyticsPage() {
                     })}
                 </div>
             </div>
+
+            {/* Supply vs Demand */}
+            {data.supply_demand && data.supply_demand.length > 0 && (
+                <div className="bg-white rounded-xl border border-[#dddfe2] p-6 shadow-sm">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 className="text-lg font-bold text-[#050505]">Supply vs Demand (IN_QUEUE)</h2>
+                            <p className="text-sm text-[#65676b]">Comparing available workers against open job positions by industry</p>
+                        </div>
+                        <div className="flex gap-4 text-xs font-semibold">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-sm bg-blue-500"></div> Supply (Available Workers)
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-sm bg-orange-500"></div> Demand (Open Jobs)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-5">
+                        {data.supply_demand.map((item, idx) => {
+                            const maxVal = Math.max(item.supply, item.demand, 1);
+                            const supplyPct = (item.supply / maxVal) * 100;
+                            const demandPct = (item.demand / maxVal) * 100;
+
+                            return (
+                                <div key={idx}>
+                                    <div className="flex justify-between text-sm font-semibold text-[#050505] mb-1.5">
+                                        <span>{item.industry}</span>
+                                        <div className="flex gap-4">
+                                            <span className="text-blue-600 font-bold">{item.supply} workers</span>
+                                            <span className="text-orange-600 font-bold">{item.demand} jobs</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        {/* Supply Bar */}
+                                        <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden w-full">
+                                            <div className="h-full bg-blue-500 rounded-full transition-all duration-700 ease-out" style={{ width: `${Math.max(supplyPct, 1)}%` }}></div>
+                                        </div>
+                                        {/* Demand Bar */}
+                                        <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden w-full">
+                                            <div className="h-full bg-orange-500 rounded-full transition-all duration-700 ease-out" style={{ width: `${Math.max(demandPct, 1)}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

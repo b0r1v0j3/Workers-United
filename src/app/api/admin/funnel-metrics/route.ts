@@ -107,6 +107,26 @@ export async function GET(request: Request) {
             ? new Set(jobMatches.map(m => m.recipient_email)).size
             : 0;
 
+        // 6. Supply vs Demand (IN_QUEUE candidates vs open job positions)
+        const { data: queueCandidates } = await supabase.from('candidates').select('preferred_job').eq('status', 'IN_QUEUE');
+        const { data: openJobs } = await supabase.from('job_requests').select('industry, positions_count, positions_filled').in('status', ['open', 'matching']);
+
+        const sdMap = new Map<string, { industry: string, supply: number, demand: number }>();
+
+        queueCandidates?.forEach(c => {
+            const ind = c.preferred_job || 'Unspecified';
+            if (!sdMap.has(ind)) sdMap.set(ind, { industry: ind, supply: 0, demand: 0 });
+            sdMap.get(ind)!.supply += 1;
+        });
+
+        openJobs?.forEach(j => {
+            const ind = j.industry || 'Unspecified';
+            if (!sdMap.has(ind)) sdMap.set(ind, { industry: ind, supply: 0, demand: 0 });
+            sdMap.get(ind)!.demand += Math.max(0, (j.positions_count || 0) - (j.positions_filled || 0));
+        });
+
+        const supplyDemand = Array.from(sdMap.values()).sort((a, b) => (b.demand + b.supply) - (a.demand + a.supply));
+
         return NextResponse.json({
             success: true,
             data: {
@@ -114,7 +134,8 @@ export async function GET(request: Request) {
                 completed_profiles: completedCount,
                 uploaded_documents: distinctUploaded,
                 verified: distinctVerified,
-                job_matched: distinctMatched
+                job_matched: distinctMatched,
+                supply_demand: supplyDemand
             }
         });
 

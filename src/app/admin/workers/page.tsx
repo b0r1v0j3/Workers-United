@@ -5,8 +5,9 @@ import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 import AppShell from "@/components/AppShell";
-import { Phone, FileText, CheckCircle2, Clock, Globe, Hourglass } from "lucide-react";
+import { Hourglass } from "lucide-react";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import WorkersTableClient, { WorkerTableRow } from "./WorkersTableClient";
 
 export default async function CandidatesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const params = await searchParams;
@@ -162,122 +163,32 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                     </div>
                 </div>
 
-                {/* Users Grid */}
-                <div className="grid grid-cols-1 gap-4">
-                    {filteredUsers.map((authUser: any) => {
+                {/* Users Table */}
+                <WorkersTableClient
+                    data={filteredUsers.map((authUser: any) => {
                         const profile = profileMap.get(authUser.id);
                         const { candidate, userDocs, verifiedDocs, profileCompletion } = getUserStats(authUser.id);
-                        const isCurrentUser = authUser.id === user.id;
 
-                        // Progression badges
-                        const hasProfile = !!profile;
-                        const hasCandidate = !!candidate;
-                        const hasDocs = userDocs.length > 0;
-                        const isVerified = verifiedDocs >= 3;
-
-                        return (
-                            <div key={authUser.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-200 transition-all group">
-                                <div className="flex items-start gap-4">
-                                    {/* Avatar */}
-                                    <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden flex-shrink-0 border border-slate-200">
-                                        <img
-                                            src={profile?.avatar_url || authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${(profile?.full_name || "User").replace(' ', '+')}&background=random`}
-                                            alt="Avatar"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-
-                                    {/* Main Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-bold text-slate-900 truncate">
-                                                    {profile?.full_name || authUser.user_metadata?.full_name || "No Name"}
-                                                    {isCurrentUser && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">You</span>}
-                                                </h3>
-                                                <div className="text-sm text-slate-500 truncate">{authUser.email}</div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Link
-                                                    href={`/admin/workers/${authUser.id}`}
-                                                    className="text-sm font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
-                                                >
-                                                    View
-                                                </Link>
-                                                {!isCurrentUser && (
-                                                    <DeleteUserButton userId={authUser.id} userName={profile?.full_name || authUser.email} />
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Status Row */}
-                                        <div className="flex flex-wrap items-center gap-2 mt-3 text-xs md:text-sm">
-                                            {hasCandidate && candidate.nationality && (
-                                                <span className="flex items-center gap-1 text-slate-600 bg-slate-50 px-2 py-1 rounded">
-                                                    <Globe size={12} /> {candidate.nationality}
-                                                </span>
-                                            )}
-                                            {hasCandidate && candidate.phone && (
-                                                <span className="flex items-center gap-1 text-slate-600 bg-slate-50 px-2 py-1 rounded">
-                                                    <Phone size={12} /> {candidate.phone}
-                                                </span>
-                                            )}
-
-                                            {/* Candidate Status Badge */}
-                                            {hasCandidate && candidate.status && (
-                                                <StatusBadge status={candidate.status} />
-                                            )}
-
-                                            {/* Admin Approval Badge */}
-                                            {hasCandidate && profileCompletion === 100 && !candidate.admin_approved && (
-                                                <span className="flex items-center gap-1 px-2 py-1 rounded font-medium bg-purple-50 text-purple-700">
-                                                    <Hourglass size={12} /> Needs Approval
-                                                </span>
-                                            )}
-
-                                            {/* Doc Status Badge */}
-                                            {hasDocs ? (
-                                                <span className={`flex items-center gap-1 px-2 py-1 rounded font-medium ${isVerified ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                                                    {isVerified ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                                                    {verifiedDocs}/3 Docs
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1 text-slate-400 bg-slate-50 px-2 py-1 rounded">
-                                                    <FileText size={12} /> No Docs
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Profile Completion Bar */}
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden max-w-[200px]">
-                                                <div
-                                                    className={`h-full rounded-full transition-all ${profileCompletion === 100 ? 'bg-emerald-500' :
-                                                        profileCompletion >= 50 ? 'bg-blue-500' :
-                                                            profileCompletion > 0 ? 'bg-amber-500' : 'bg-slate-300'
-                                                        }`}
-                                                    style={{ width: `${profileCompletion}%` }}
-                                                />
-                                            </div>
-                                            <span className={`text-xs font-semibold ${profileCompletion === 100 ? 'text-emerald-600' :
-                                                profileCompletion >= 50 ? 'text-blue-600' :
-                                                    profileCompletion > 0 ? 'text-amber-600' : 'text-slate-400'
-                                                }`}>
-                                                {profileCompletion}%
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
+                        return {
+                            id: authUser.id,
+                            profile_id: authUser.id,
+                            name: profile?.full_name || authUser.user_metadata?.full_name || "No Name",
+                            email: authUser.email,
+                            avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${(profile?.full_name || "User").replace(' ', '+')}&background=random`,
+                            created_at: authUser.created_at,
+                            status: candidate?.status || "NEW",
+                            phone: candidate?.phone || "",
+                            nationality: candidate?.nationality || "",
+                            job: candidate?.preferred_job || "",
+                            completion: profileCompletion,
+                            docsCount: userDocs.length,
+                            verifiedDocs: verifiedDocs,
+                            adminApproved: !!candidate?.admin_approved,
+                            isCurrentUser: authUser.id === user.id
+                        } satisfies WorkerTableRow;
                     })}
-
-                    {activeAuthUsers.length === 0 && (
-                        <div className="text-center py-12 text-slate-500">
-                            No users found.
-                        </div>
-                    )}
-                </div>
+                    currentFilter={filter}
+                />
             </div>
         </AppShell>
     );

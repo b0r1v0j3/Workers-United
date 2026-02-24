@@ -116,6 +116,24 @@ export default async function AdminDashboard() {
         })
         .sort((a: any, b: any) => a.daysRemaining - b.daysRemaining);
 
+    // ─── Action Center Data ───
+    const workersReadyForApproval = (allCandidates || [])
+        .filter((c: any) => (c.status === 'PROFILE_COMPLETE' || c.status === 'PENDING_APPROVAL') && !c.admin_approved)
+        .map((c: any) => ({
+            id: c.profile_id,
+            name: profileMap.get(c.profile_id)?.full_name || "Unknown",
+            email: profileMap.get(c.profile_id)?.email || "",
+            status: c.status
+        }));
+
+    const pendingEmployers = (employers || [])
+        .filter((e: any) => e.status === 'PENDING')
+        .map((e: any) => ({
+            id: e.profile_id,
+            companyName: e.company_name || "Unnamed",
+            email: profileMap.get(e.profile_id)?.email || "",
+        }));
+
     // ─── Recent workers ───
     const recentWorkers = allAuthUsers
         .filter((u: any) => u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin')
@@ -176,6 +194,75 @@ export default async function AdminDashboard() {
                     <StatCard icon={<UserCheck size={18} />} label="Pending" value={pendingApproval} subtitle="need approval" color={pendingApproval > 0 ? "amber" : "slate"} />
                     <StatCard icon={<DollarSign size={18} />} label="Revenue" value={`$${totalRevenue}`} subtitle={revenueThisMonth > 0 ? `$${revenueThisMonth} this month` : "no payments yet"} color="green" />
                 </div>
+
+                {/* ─── Action Center ─── */}
+                {(workersReadyForApproval.length > 0 || pendingEmployers.length > 0) && (
+                    <div className="bg-white rounded-3xl p-8 border border-red-100 shadow-[0_2px_20px_-5px_rgba(255,0,0,0.05)] relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                        <div className="mb-6 flex items-center gap-3">
+                            <div className="bg-red-100 p-2 rounded-lg text-red-600 animate-pulse">
+                                <AlertTriangle size={20} />
+                            </div>
+                            <div>
+                                <h2 className="font-bold text-slate-900 text-xl">Requires Your Attention</h2>
+                                <p className="text-slate-500 text-sm">Tasks that are blocking users from proceeding.</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {workersReadyForApproval.length > 0 && (
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center justify-between">
+                                        Workers Ready (<span className="text-red-500">{workersReadyForApproval.length}</span>)
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {workersReadyForApproval.slice(0, 5).map((w: any) => (
+                                            <Link key={w.id} href={`/admin/workers/${w.id}`} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-blue-50 transition-colors group">
+                                                <div>
+                                                    <p className="font-semibold text-slate-800 text-sm group-hover:text-blue-700">{w.name}</p>
+                                                    <p className="text-[11px] text-slate-500">{w.email}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <StatusBadge status={w.status} />
+                                                    <ChevronRight size={16} className="text-slate-400 group-hover:text-blue-500" />
+                                                </div>
+                                            </Link>
+                                        ))}
+                                        {workersReadyForApproval.length > 5 && (
+                                            <Link href="/admin/workers?filter=VERIFIED" className="block text-center text-xs font-bold text-blue-600 mt-2 hover:underline">
+                                                View {workersReadyForApproval.length - 5} more...
+                                            </Link>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {pendingEmployers.length > 0 && (
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center justify-between">
+                                        Pending Employers (<span className="text-red-500">{pendingEmployers.length}</span>)
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {pendingEmployers.slice(0, 5).map((e: any) => (
+                                            <Link key={e.id} href={`/admin/employers?q=${e.companyName}`} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 hover:border-violet-200 hover:bg-violet-50 transition-colors group">
+                                                <div>
+                                                    <p className="font-semibold text-slate-800 text-sm group-hover:text-violet-700">{e.companyName}</p>
+                                                    <p className="text-[11px] text-slate-500">{e.email}</p>
+                                                </div>
+                                                <ChevronRight size={16} className="text-slate-400 group-hover:text-violet-500" />
+                                            </Link>
+                                        ))}
+                                        {pendingEmployers.length > 5 && (
+                                            <Link href="/admin/employers" className="block text-center text-xs font-bold text-violet-600 mt-2 hover:underline">
+                                                View {pendingEmployers.length - 5} more...
+                                            </Link>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* ─── Pipeline Overview ─── */}
                 <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-[0_2px_20px_-5px_rgba(0,0,0,0.05)]">
