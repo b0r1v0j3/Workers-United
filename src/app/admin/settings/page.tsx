@@ -220,6 +220,11 @@ function ServiceCard({ service }: { service: ServiceCheck }) {
             {service.details && (
                 <p className="text-xs text-slate-400 font-mono">{service.details}</p>
             )}
+            {service.status === "not_configured" && (
+                <p className="text-[11px] text-blue-600 font-semibold mt-1.5 cursor-pointer hover:underline" title="Add the required environment variables in Vercel → Settings → Environment Variables">
+                    Configure in Vercel →
+                </p>
+            )}
             {service.responseTime !== undefined && (
                 <div className="mt-2 flex items-center gap-1">
                     <span className="text-xs text-slate-400">⚡</span>

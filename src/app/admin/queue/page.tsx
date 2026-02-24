@@ -123,8 +123,16 @@ export default async function AdminQueuePage() {
 
                             {(!queuedCandidates || queuedCandidates.length === 0) && (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-10 text-center text-slate-400">
-                                        No workers in queue
+                                    <td colSpan={6} className="px-6 py-16">
+                                        <div className="flex flex-col items-center justify-center text-center">
+                                            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-400 mb-4">
+                                                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /><path d="M9 14l2 2 4-4" /></svg>
+                                            </div>
+                                            <h3 className="text-lg font-bold text-slate-800 mb-1">Queue is Empty</h3>
+                                            <p className="text-sm text-slate-500 max-w-[300px]">
+                                                Workers will appear here once they complete their profile, upload documents, and pay the entry fee.
+                                            </p>
+                                        </div>
                                     </td>
                                 </tr>
                             )}

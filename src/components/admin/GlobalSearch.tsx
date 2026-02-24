@@ -96,7 +96,7 @@ export default function GlobalSearch() {
                         setIsOpen(true);
                     }}
                     onFocus={() => setIsOpen(query.length > 0)}
-                    placeholder="Search users, emails, passports... (Ctrl+K)"
+                    placeholder="Search users, emails, passports..."
                     className="w-full bg-slate-100 border-none rounded-full py-2 pl-10 pr-10 text-[13px] font-medium text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:bg-white transition-all shadow-inner outline-none"
                     autoComplete="off"
                 />

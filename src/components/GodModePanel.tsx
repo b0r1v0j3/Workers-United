@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Zap, User, Briefcase, Shield, X, ChevronRight } from "lucide-react";
 
 interface GodModePanelProps {
@@ -12,6 +13,8 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const pathname = usePathname();
+    const isAdminPage = pathname?.startsWith("/admin");
 
     // Prevent hydration mismatch by mounting only on client
     useEffect(() => {
@@ -46,6 +49,7 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
     };
 
     if (!mounted) return null;
+    if (isAdminPage) return null; // Hide on admin pages — admin is already the panel
 
     return (
         <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3 sm:gap-4 pointer-events-none font-sans">

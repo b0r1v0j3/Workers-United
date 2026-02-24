@@ -48,6 +48,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
 
                 {/* MAIN CONTENT — pb-20 for mobile bottom nav clearance */}
                 <main className="flex-1 lg:ml-[280px] px-3 sm:px-6 max-w-[1000px] mx-auto w-full pb-24 lg:pb-10 animate-fade-in-up">
+                    {variant === 'admin' && <AdminBreadcrumbs />}
                     {children}
                 </main>
             </div>
@@ -175,3 +176,43 @@ function BottomNavLink({ href, icon, label }: { href: string; icon: React.ReactN
         </Link>
     );
 }
+
+function AdminBreadcrumbs() {
+    const pathname = usePathname();
+    if (!pathname || pathname === '/admin') return null; // No breadcrumbs on dashboard
+
+    const segments = pathname.replace('/admin', '').split('/').filter(Boolean);
+    if (segments.length === 0) return null;
+
+    const labelMap: Record<string, string> = {
+        workers: 'Workers',
+        employers: 'Employers',
+        jobs: 'Jobs',
+        queue: 'Queue',
+        analytics: 'Analytics',
+        'email-preview': 'Email Preview',
+        settings: 'Settings',
+    };
+
+    return (
+        <nav className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 font-medium">
+            <Link href="/admin" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            {segments.map((seg, idx) => {
+                const href = '/admin/' + segments.slice(0, idx + 1).join('/');
+                const isLast = idx === segments.length - 1;
+                const label = labelMap[seg] || (seg.length > 20 ? seg.slice(0, 8) + '...' : seg);
+                return (
+                    <span key={idx} className="flex items-center gap-1.5">
+                        <span className="text-slate-300">›</span>
+                        {isLast ? (
+                            <span className="text-slate-800 font-semibold">{label}</span>
+                        ) : (
+                            <Link href={href} className="hover:text-blue-600 transition-colors">{label}</Link>
+                        )}
+                    </span>
+                );
+            })}
+        </nav>
+    );
+}
+

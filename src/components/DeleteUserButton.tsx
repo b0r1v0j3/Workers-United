@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 
 interface DeleteUserButtonProps {
     userId: string;
@@ -51,17 +52,18 @@ export function DeleteUserButton({ userId, userName }: DeleteUserButtonProps) {
 
     if (showConfirm) {
         return (
-            <div className="flex gap-1">
+            <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+                <span className="text-[10px] font-bold text-red-700">Delete {userName.split(' ')[0]}?</span>
                 <button
                     onClick={handleDelete}
                     disabled={loading}
-                    className="bg-red-600 text-white px-2 py-1 rounded text-[11px] font-bold hover:bg-red-700 disabled:opacity-50"
+                    className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-bold hover:bg-red-700 disabled:opacity-50"
                 >
                     {loading ? "..." : "Yes"}
                 </button>
                 <button
                     onClick={() => setShowConfirm(false)}
-                    className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-[11px] font-bold hover:bg-gray-300"
+                    className="bg-white text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold hover:bg-slate-100 border border-slate-200"
                 >
                     No
                 </button>
@@ -72,9 +74,11 @@ export function DeleteUserButton({ userId, userName }: DeleteUserButtonProps) {
     return (
         <button
             onClick={() => setShowConfirm(true)}
-            className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-red-50 transition-colors"
+            title={`Delete ${userName}`}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
         >
-            Delete
+            <Trash2 size={15} />
         </button>
     );
 }
+
