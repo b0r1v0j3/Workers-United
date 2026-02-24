@@ -325,6 +325,19 @@ When adding a new feature, follow this order:
 - **Error handlers must be fail-closed** — if AI crashes, return `success: false`, never `success: true`.
 - **Wrong document type = rejected** — not `manual_review`. Worker must re-upload the correct document.
 
+### Supabase Auth Pagination
+- **`listUsers()` only returns 50 users per page by default.** Always use `getAllAuthUsers()` from `src/lib/supabase/admin.ts` — it loops through all pages with `perPage: 1000`. Without this, admin panels, cron jobs, and announcements silently ignore users beyond page 1.
+
+### Supabase Query Limits
+- **`.select()` returns max 1000 rows by default.** If any table could exceed 1000 rows (e.g., `email_queue`, `candidate_documents`), use `.range()` or pagination. Never use `.limit()` on cron job queries that must process ALL records.
+- **Never add `.limit()` to cron job queries** unless you implement pagination. This silently drops records beyond the limit.
+
+### Stripe Webhook Idempotency
+- **Always guard status updates with a precondition check.** Example: `.eq("entry_fee_paid", false)` prevents double webhook delivery from resetting `queue_joined_at`.
+
+### Cron Job Batch Patterns
+- **Pre-fetch dedup data in bulk, not per-record.** Use the same pattern as `profile-reminders` and `match-jobs`: fetch all relevant emails into a Set, then do O(1) lookups in the loop. Never query inside a nested loop.
+
 ---
 
 ## 9. Architecture Update Rule

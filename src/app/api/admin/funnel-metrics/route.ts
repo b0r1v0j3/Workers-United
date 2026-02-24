@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient, getAllAuthUsers } from '@/lib/supabase/admin';
 import { isGodModeUser } from '@/lib/godmode';
 import { getWorkerCompletion } from '@/lib/profile-completion';
 
@@ -34,9 +34,8 @@ export async function GET(request: Request) {
         const fromDate = url.searchParams.get('from');
         const toDate = url.searchParams.get('to');
 
-        // 1. Total Registered Workers (from auth — same as admin/page.tsx)
-        const { data: authData } = await supabase.auth.admin.listUsers();
-        const allAuthUsers = authData?.users || [];
+        // 1. Total Registered Workers (from auth — paginated to get ALL users)
+        const allAuthUsers = await getAllAuthUsers(supabase);
         let workerUsers = allAuthUsers.filter((u: any) =>
             u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin'
         );

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import AppShell from "@/components/AppShell";
@@ -28,14 +28,14 @@ export default async function AdminDashboard() {
     // Parallel data fetching
     const [
         { data: allCandidates },
-        { data: authData },
+        allAuthUsers,
         { data: profiles },
         { data: employers },
         { data: allDocs },
         { data: payments },
     ] = await Promise.all([
         adminClient.from("candidates").select("id, profile_id, status, queue_joined_at, admin_approved, created_at, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas"),
-        adminClient.auth.admin.listUsers(),
+        getAllAuthUsers(adminClient),
         adminClient.from("profiles").select("id, full_name, email"),
         adminClient.from("employers").select("id, profile_id, company_name, status, created_at"),
         adminClient.from("candidate_documents").select("user_id, document_type, status"),
@@ -43,7 +43,6 @@ export default async function AdminDashboard() {
     ]);
 
 
-    const allAuthUsers = authData?.users || [];
     const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
 
     // ─── Pipeline counts ───

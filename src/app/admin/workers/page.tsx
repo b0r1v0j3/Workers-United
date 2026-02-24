@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 import AppShell from "@/components/AppShell";
@@ -31,12 +31,8 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     // Use admin client (service role) — same pattern as admin dashboard
     const adminClient = createAdminClient();
 
-    // Fetch ALL auth users
-    const { data: authData, error: authError } = await adminClient.auth.admin.listUsers();
-    if (authError) {
-        console.error("Failed to fetch auth users:", authError);
-    }
-    const allAuthUsers = authData?.users || [];
+    // Fetch ALL auth users (paginated — listUsers() defaults to 50 per page)
+    const allAuthUsers = await getAllAuthUsers(adminClient);
 
     // Fetch all candidates
     const { data: candidates } = await adminClient

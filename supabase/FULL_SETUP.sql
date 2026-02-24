@@ -396,11 +396,11 @@ BEGIN
         NEW.id,
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-        COALESCE(NEW.raw_user_meta_data->>'user_type', 'candidate')
+        COALESCE(NEW.raw_user_meta_data->>'user_type', 'worker')
     );
     
     -- Auto-create candidate or employer record
-    IF COALESCE(NEW.raw_user_meta_data->>'user_type', 'candidate') = 'candidate' THEN
+    IF COALESCE(NEW.raw_user_meta_data->>'user_type', 'worker') IN ('worker', 'candidate') THEN
         INSERT INTO public.candidates (profile_id) VALUES (NEW.id);
     ELSIF NEW.raw_user_meta_data->>'user_type' = 'employer' THEN
         INSERT INTO public.employers (profile_id, company_name) 

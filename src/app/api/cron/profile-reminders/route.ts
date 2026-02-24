@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/mailer";
 import { getWorkerCompletion, getEmployerCompletion } from "@/lib/profile-completion";
 import { getEmailTemplate } from "@/lib/email-templates";
@@ -21,9 +21,8 @@ export async function GET(request: Request) {
 
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-        // Get ALL auth users (except admins)
-        const { data: authData } = await supabase.auth.admin.listUsers();
-        const allUsers = authData?.users || [];
+        // Get ALL auth users with pagination (listUsers defaults to 50/page)
+        const allUsers = await getAllAuthUsers(supabase);
 
         const eligibleUsers = allUsers.filter((u: any) => {
             const ut = u.user_metadata?.user_type;

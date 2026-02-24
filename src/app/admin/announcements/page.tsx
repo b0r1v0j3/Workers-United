@@ -46,11 +46,11 @@ export default async function AnnouncementsPage() {
 
         if (!subject || !message) return;
 
-        const adminClient = createAdminClient();
+        const { createAdminClient: createAdmin, getAllAuthUsers: fetchAllUsers } = await import("@/lib/supabase/admin");
+        const adminClient = createAdmin();
 
-        // 1. Fetch Users
-        const { data: authData } = await adminClient.auth.admin.listUsers();
-        const allUsers = authData?.users || [];
+        // 1. Fetch ALL Users (paginated)
+        const allUsers = await fetchAllUsers(adminClient);
 
         let recipients = [];
 
