@@ -70,6 +70,21 @@ export async function GET(request: Request) {
         let totalMatches = 0;
         let emailsSent = 0;
 
+        // Pre-fetch ALL existing job_match emails to avoid N+1 queries in the loop
+        const { data: existingMatchEmails } = await supabase
+            .from('email_queue')
+            .select('recipient_email, template_data')
+            .eq('email_type', 'job_match');
+
+        // Build a Set of "email|jobId" keys for O(1) dedup lookups
+        const sentMatchKeys = new Set<string>();
+        for (const e of existingMatchEmails || []) {
+            const jobId = (e.template_data as any)?.jobId;
+            if (jobId && e.recipient_email) {
+                sentMatchKeys.add(`${e.recipient_email}|${jobId}`);
+            }
+        }
+
         // 3. Matching Logic
         for (const job of openJobs) {
             for (const candidate of candidates || []) {
@@ -97,16 +112,9 @@ export async function GET(request: Request) {
 
                 if (!locationMatch) continue;
 
-                // C. Match Found! Check if already notified.
-                const { data: existingEmails } = await supabase
-                    .from('email_queue')
-                    .select('id')
-                    .eq('email_type', 'job_match')
-                    .eq('recipient_email', candidate.profiles.email)
-                    .contains('template_data', { jobId: job.id })
-                    .limit(1);
-
-                if (existingEmails && existingEmails.length > 0) {
+                // C. Match Found! Check if already notified (O(1) lookup from pre-fetched data)
+                const dedupKey = `${candidate.profiles.email}|${job.id}`;
+                if (sentMatchKeys.has(dedupKey)) {
                     continue;
                 }
 
@@ -127,6 +135,8 @@ export async function GET(request: Request) {
                     }
                 );
 
+                // Mark as sent so we don't send again in this batch
+                sentMatchKeys.add(dedupKey);
                 totalMatches++;
                 emailsSent++;
             }

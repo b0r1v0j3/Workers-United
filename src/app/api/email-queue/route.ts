@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
             .eq("status", "pending")
             .lte("scheduled_for", new Date().toISOString())
             .order("scheduled_for", { ascending: true })
-            .limit(50);
+            .limit(500);
 
         return NextResponse.json({ emails: emails || [] });
 

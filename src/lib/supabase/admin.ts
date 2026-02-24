@@ -20,3 +20,32 @@ export function createAdminClient() {
         },
     });
 }
+
+/**
+ * Fetches ALL auth users with pagination.
+ * Supabase listUsers() defaults to 50 per page — this loops through all pages.
+ * Use this instead of adminClient.auth.admin.listUsers() everywhere.
+ */
+export async function getAllAuthUsers(adminClient?: ReturnType<typeof createAdminClient>) {
+    const client = adminClient || createAdminClient();
+    const allUsers: any[] = [];
+    let page = 1;
+    const perPage = 1000; // max allowed by Supabase
+
+    while (true) {
+        const { data, error } = await client.auth.admin.listUsers({
+            page,
+            perPage,
+        });
+        if (error) {
+            console.error("[getAllAuthUsers] Error fetching page", page, error);
+            break;
+        }
+        const users = data?.users || [];
+        allUsers.push(...users);
+        if (users.length < perPage) break; // last page
+        page++;
+    }
+
+    return allUsers;
+}

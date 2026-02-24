@@ -33,8 +33,7 @@ export async function GET(request: Request) {
             `)
             .eq('status', 'verified')
             .gt('expires_at', today.toISOString())
-            .lte('expires_at', sixMonthsFromNow.toISOString())
-            .limit(50); // Limit batch size to prevent timeouts
+            .lte('expires_at', sixMonthsFromNow.toISOString());
 
         if (error) {
             console.error("[Cron] Database error:", error);
