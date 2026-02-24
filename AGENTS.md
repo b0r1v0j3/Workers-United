@@ -748,3 +748,10 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 3. Consider adding a PDF preview feature in the admin panel before generating final documents.
 4. **Payment/Stripe integration** — kad se bude pravio payment flow, profil gate je već na mestu na API nivou (`contracts/prepare/route.ts`). Samo treba dodati frontend poruku na worker dashboard-u tipa "Complete your profile to proceed to payment" i disable-ovati payment dugme dok `profileCompletion < 100`.
 
+
+## ✅ Najnovija ažuriranja: Admin Panel Upgrade ()
+- Implementiran globalni search bar (Ctrl+K)
+- Action Center na dashboardu
+- Napredna tabela radnika sa filtriranjem i sortiranjem
+- Smart Match UI za pametno povezivanje
+- Supply vs Demand analitika

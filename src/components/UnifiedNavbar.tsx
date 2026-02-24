@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
 import NotificationBell from "./NotificationBell";
+import GlobalSearch from "./admin/GlobalSearch";
 
 interface UnifiedNavbarProps {
     variant: "public" | "dashboard" | "admin";
@@ -77,6 +78,11 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                         <NavLink href="#workers" label="For Workers" />
                         <NavLink href="#employers" label="For Employers" />
                     </div>
+                )}
+
+                {/* Center: Admin Global Search */}
+                {variant === "admin" && (
+                    <GlobalSearch />
                 )}
 
                 {/* Right: Actions */}
