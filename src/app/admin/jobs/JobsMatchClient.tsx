@@ -141,8 +141,22 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                             ))}
                             {jobs.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500 text-sm">
-                                        No job requests available.
+                                    <td colSpan={4} className="px-6 py-16">
+                                        <div className="flex flex-col items-center justify-center text-center">
+                                            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-400 mb-4">
+                                                <Briefcase size={36} />
+                                            </div>
+                                            <h3 className="text-lg font-bold text-slate-800 mb-1">No Job Requests Yet</h3>
+                                            <p className="text-sm text-slate-500 max-w-[300px] mb-4">
+                                                Once employers submit job requests, they will appear here. You can then match workers from the queue.
+                                            </p>
+                                            <Link
+                                                href="/admin/employers"
+                                                className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                            >
+                                                View Employers →
+                                            </Link>
+                                        </div>
                                     </td>
                                 </tr>
                             )}

@@ -192,7 +192,7 @@ export default async function AdminDashboard() {
                     <StatCard icon={<BarChart3 size={18} />} label="Avg Completion" value={`${avgCompletion}%`} subtitle={`${fullyComplete} at 100%`} color="cyan" />
                     <StatCard icon={<ShieldCheck size={18} />} label="Approved" value={approvedCount} subtitle="by admin" color="emerald" />
                     <StatCard icon={<UserCheck size={18} />} label="Pending" value={pendingApproval} subtitle="need approval" color={pendingApproval > 0 ? "amber" : "slate"} />
-                    <StatCard icon={<DollarSign size={18} />} label="Revenue" value={`$${totalRevenue}`} subtitle={revenueThisMonth > 0 ? `$${revenueThisMonth} this month` : "no payments yet"} color="green" />
+                    <StatCard icon={<DollarSign size={18} />} label="Revenue" value={totalRevenue > 0 ? `$${totalRevenue}` : "—"} subtitle={totalRevenue > 0 ? `$${revenueThisMonth} this month` : "Stripe not configured"} color={totalRevenue > 0 ? "green" : "slate"} />
                 </div>
 
                 {/* ─── Action Center ─── */}
@@ -204,7 +204,12 @@ export default async function AdminDashboard() {
                                 <AlertTriangle size={20} />
                             </div>
                             <div>
-                                <h2 className="font-bold text-slate-900 text-xl">Requires Your Attention</h2>
+                                <h2 className="font-bold text-slate-900 text-xl flex items-center gap-2">
+                                    Requires Your Attention
+                                    <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                                        {workersReadyForApproval.length + pendingEmployers.length}
+                                    </span>
+                                </h2>
                                 <p className="text-slate-500 text-sm">Tasks that are blocking users from proceeding.</p>
                             </div>
                         </div>
