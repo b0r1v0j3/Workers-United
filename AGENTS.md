@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 17.02.2026 (PDF templates finalized, page numbers via pdf-lib, profile completion gate)
+> **Poslednje ažuriranje:** 25.02.2026 (Google OAuth login added)
 
 ---
 
@@ -216,6 +216,14 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**Google OAuth Login (25.02.2026)**
+- Dodat "Sign in with Google" dugme na login i signup stranice
+- OAuth korisnici bez `user_type` se šalju na `/auth/select-role` stranicu za izbor role (Worker/Employer)
+- Signup stranica automatski prenosi izabranu rolu kroz URL param, pa OAuth korisnici nemaju prekid
+- Auth callback (`/auth/callback`) ažuriran da handluje OAuth korisnike
+- `next.config.ts` — dodat `lh3.googleusercontent.com` za Google profile slike
+- ⚠️ **PREDUSLOVI:** Supabase Dashboard → Providers → Google mora biti uključen sa Google Cloud OAuth Client ID/Secret
 
 **Document Preview + Favicon Fix (14.02.2026)**
 - **Admin Document Preview** — nova komponenta `DocumentPreview.tsx` na worker detail stranici prikazuje SVE placeholder vrednosti koje idu u DOCX dokumenta (radnik, pasoš, nacionalnost, poslodavac, posao, datumi, kontakt). Nedostajuća polja su crveno označena.
@@ -656,6 +664,8 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 34. **`notifications.ts` koristi `NEXT_PUBLIC_BASE_URL`** — env var za base URL je `NEXT_PUBLIC_BASE_URL`, NE `NEXT_PUBLIC_SITE_URL`. Offer link je `/profile/worker/offers/{id}`, NE `/profile/offers/{id}`. Format datuma je `en-GB`, NE `en-US`.
 35. **`match-jobs` cron MORA filtrirati `IN_QUEUE` + `entry_fee_paid`** — bez ovih filtera, cron matchuje SVE kandidate sa verifikovanim pasošem, uključujući one koji nisu platili entry fee ni ušli u queue.
 36. **Auto-deletion u `profile-reminders` MORA da obriše SVE tabele** — samo brisanje auth usera (`deleteUser`) ostavlja siročiće u `candidates`, `profiles`, `candidate_documents`, `payments`, `email_queue`, `employers`. UVEK brisati SVE povezane tabele + storage pre brisanja auth usera. Isti pattern kao `account/delete` i `admin/delete-user`.
+37. **Google OAuth korisnici NEMAJU `user_type` pri prvom login-u** — ako korisnik klikne "Sign in with Google" na login stranici (ne signup), biće preusmeren na `/auth/select-role`. Auth callback proverava `user_metadata.user_type` i ako ga nema, šalje tamo. Signup stranica automatski šalje `user_type` kroz URL param.
+38. **Google OAuth — Supabase Provider MORA biti konfigurisan** — potreban Google Cloud OAuth Client ID + Secret u Supabase Dashboard → Authentication → Providers → Google. Redirect URL iz Supabase mora biti dodat kao Authorized Redirect URI u Google Cloud Console.
 
 
 ---

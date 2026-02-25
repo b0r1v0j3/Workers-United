@@ -16,7 +16,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Framework | **Next.js 16** (App Router) | TypeScript, React 19 |
 | Styling | **Tailwind CSS v4** + `globals.css` | PostCSS via `@tailwindcss/postcss` |
 | Font | **Montserrat** (Google Fonts) | Loaded in `src/app/layout.tsx` via `next/font` |
-| Auth | **Supabase Auth** | Email/password, password reset |
+| Auth | **Supabase Auth** | Email/password, Google OAuth, password reset |
 | Database | **Supabase (PostgreSQL)** | RLS policies, cron-triggered functions |
 | Storage | **Supabase Storage** | Documents (passport, diploma, biometric photo) |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
@@ -79,7 +79,9 @@ Workers-United/
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
 │   │   │   └── whatsapp/      # WhatsApp webhook (pending)
-│   │   ├── auth/              # Auth callback
+│   │   ├── auth/              # Auth callback + role selection
+│   │   │   ├── callback/     # OAuth/email callback handler
+│   │   │   └── select-role/  # Role picker for Google OAuth first-time users
 │   │   ├── privacy-policy/    # GDPR privacy policy page
 │   │   └── terms/             # Terms & conditions page
 │   ├── components/
@@ -158,10 +160,12 @@ User (Browser)
 ```
 
 ### Authentication Flow
-1. User signs up → Supabase creates auth user
-2. On first login → user creates profile in `candidates` or `employers` table
-3. `profiles` table links auth user to their role
-4. Middleware checks auth state on protected routes
+1. User signs up (email/password OR Google OAuth) → Supabase creates auth user
+2. For Google OAuth from signup page: `user_type` is passed via URL param and set in metadata
+3. For Google OAuth from login page (first time): user is redirected to `/auth/select-role` to choose worker/employer
+4. On first login → user creates profile in `candidates` or `employers` table
+5. `profiles` table links auth user to their role
+6. Middleware checks auth state on protected routes
 
 ### Payment Flow
 1. Worker completes profile to 100% → gets verified
