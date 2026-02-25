@@ -12,6 +12,7 @@ export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [resetMode, setResetMode] = useState(false);
     const [resetSent, setResetSent] = useState(false);
@@ -55,14 +56,19 @@ export default function LoginPage() {
         setLoading(false);
     };
 
-    const handleSocialLogin = async (provider: 'google' | 'facebook' | 'apple') => {
+    const handleGoogleLogin = async () => {
+        setGoogleLoading(true);
+        setError(null);
         const { error } = await supabase.auth.signInWithOAuth({
-            provider,
+            provider: 'google',
             options: {
                 redirectTo: `${window.location.origin}/auth/callback`,
             },
         });
-        if (error) setError(error.message);
+        if (error) {
+            setError(error.message);
+            setGoogleLoading(false);
+        }
     };
 
     return (
@@ -203,9 +209,9 @@ export default function LoginPage() {
                         </form>
                     )}
 
-                    {!resetMode && process.env.NEXT_PUBLIC_OAUTH_ENABLED === "true" && (
+                    {!resetMode && (
                         <>
-                            <div className="relative my-10">
+                            <div className="relative my-8">
                                 <div className="absolute inset-0 flex items-center">
                                     <div className="w-full border-t border-[#e2e8f0]"></div>
                                 </div>
@@ -214,26 +220,21 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
-                                <button
-                                    onClick={() => handleSocialLogin('google')}
-                                    className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
-                                >
+                            <button
+                                onClick={handleGoogleLogin}
+                                disabled={googleLoading}
+                                className="w-full flex items-center justify-center gap-3 bg-white border border-[#dadce0] rounded-full py-3.5 px-6 text-[#3c4043] font-semibold text-[15px] hover:bg-[#f8f9fa] hover:border-[#c6c9cc] transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-50"
+                            >
+                                {googleLoading ? (
+                                    <svg className="animate-spin h-5 w-5 text-gray-400" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                ) : (
                                     <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={() => handleSocialLogin('facebook')}
-                                    className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
-                                >
-                                    <Image src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" alt="Facebook" width={20} height={20} className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={() => handleSocialLogin('apple')}
-                                    className="flex items-center justify-center p-3 rounded-xl border border-[#e2e8f0] hover:bg-gray-50 transition-all hover:translate-y-[-1px]"
-                                >
-                                    <Image src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" width={16} height={20} className="w-4 h-5" />
-                                </button>
-                            </div>
+                                )}
+                                {googleLoading ? "Redirecting..." : "Sign in with Google"}
+                            </button>
                         </>
                     )}
 

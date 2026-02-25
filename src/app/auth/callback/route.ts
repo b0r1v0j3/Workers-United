@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
     const next = searchParams.get('next');
+    const userTypeParam = searchParams.get('user_type'); // From signup flow
 
     if (code) {
         const supabase = await createClient();
@@ -22,9 +23,30 @@ export async function GET(request: Request) {
             const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
-                const userType = user.user_metadata?.user_type;
+                let userType = user.user_metadata?.user_type;
 
-                // Queue welcome email if not already sent (avoids duplicate with signup-form auto-confirm path)
+                // If user_type came from signup URL param (Google signup from signup page),
+                // set it in the user's metadata
+                if (!userType && userTypeParam && ['worker', 'employer'].includes(userTypeParam)) {
+                    const adminClient = createAdminClient();
+                    await adminClient.auth.admin.updateUserById(user.id, {
+                        user_metadata: {
+                            ...user.user_metadata,
+                            user_type: userTypeParam,
+                            gdpr_consent: true,
+                            gdpr_consent_at: new Date().toISOString(),
+                        },
+                    });
+                    userType = userTypeParam;
+                }
+
+                // If STILL no user_type (direct Google sign-in without going through signup),
+                // redirect to role selection
+                if (!userType) {
+                    return NextResponse.redirect(`${origin}/auth/select-role`);
+                }
+
+                // Queue welcome email if not already sent
                 const { data: existing } = await supabase
                     .from('email_queue')
                     .select('id')

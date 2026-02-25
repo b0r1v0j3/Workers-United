@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 
 interface SignupFormProps {
     userType: "worker" | "employer";
@@ -18,7 +19,24 @@ export function SignupForm({ userType }: SignupFormProps) {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const router = useRouter();
+
+    const handleGoogleSignup = async () => {
+        setGoogleLoading(true);
+        setError(null);
+        const supabase = createClient();
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback?user_type=${userType}`,
+            },
+        });
+        if (error) {
+            setError(error.message);
+            setGoogleLoading(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -112,149 +130,180 @@ export function SignupForm({ userType }: SignupFormProps) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-5">
             {error && (
                 <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium">
                     {error}
                 </div>
             )}
 
-            <div className="space-y-2">
-                <label htmlFor="fullName" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                    {userType === "employer" ? "Contact Person Name" : "Full Name"}
-                </label>
-                <input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
-                    placeholder={userType === "employer" ? "John Smith" : "John Doe"}
-                    required
-                />
+            {/* Google Sign Up */}
+            <button
+                type="button"
+                onClick={handleGoogleSignup}
+                disabled={googleLoading}
+                className="w-full flex items-center justify-center gap-3 bg-white border border-[#dadce0] rounded-full py-3.5 px-6 text-[#3c4043] font-semibold text-[15px] hover:bg-[#f8f9fa] hover:border-[#c6c9cc] transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-50"
+            >
+                {googleLoading ? (
+                    <svg className="animate-spin h-5 w-5 text-gray-400" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                ) : (
+                    <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} className="w-5 h-5" />
+                )}
+                {googleLoading ? "Redirecting..." : `Sign up with Google`}
+            </button>
+
+            {/* Divider */}
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#e2e8f0]"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase font-bold tracking-widest">
+                    <span className="bg-white px-4 text-[#94a3b8]">Or with email</span>
+                </div>
             </div>
 
-            {userType === "employer" && (
+            <form onSubmit={handleSubmit} className="space-y-5">
+
                 <div className="space-y-2">
-                    <label htmlFor="companyName" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                        Company Name
+                    <label htmlFor="fullName" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                        {userType === "employer" ? "Contact Person Name" : "Full Name"}
                     </label>
                     <input
-                        id="companyName"
+                        id="fullName"
                         type="text"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
                         className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
-                        placeholder="Your Company Ltd."
+                        placeholder={userType === "employer" ? "John Smith" : "John Doe"}
                         required
                     />
                 </div>
-            )}
 
-            <div className="space-y-2">
-                <label htmlFor="email" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                    Email address
-                </label>
-                <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
-                    placeholder={userType === "employer" ? "hr@company.com" : "you@example.com"}
-                    required
-                />
-            </div>
-
-            <div className="space-y-2">
-                <label htmlFor="password" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                    Password
-                </label>
-                <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
-                    placeholder="••••••••"
-                    minLength={6}
-                    required
-                />
-                <p className="text-[11px] text-[#94a3b8] ml-1 font-medium">Must be at least 6 characters</p>
-            </div>
-
-            <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                    Confirm Password
-                </label>
-                <input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all ${password && confirmPassword && password !== confirmPassword
-                        ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
-                        : 'border-[#e2e8f0]'
-                        }`}
-                    placeholder="••••••••"
-                    minLength={6}
-                    required
-                />
-                {password && confirmPassword && password !== confirmPassword && (
-                    <p className="text-xs text-red-500 ml-1 font-medium">Passwords do not match</p>
+                {userType === "employer" && (
+                    <div className="space-y-2">
+                        <label htmlFor="companyName" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                            Company Name
+                        </label>
+                        <input
+                            id="companyName"
+                            type="text"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
+                            placeholder="Your Company Ltd."
+                            required
+                        />
+                    </div>
                 )}
-                {password && confirmPassword && password === confirmPassword && (
-                    <p className="text-xs text-emerald-600 ml-1 font-medium">✓ Passwords match</p>
-                )}
-            </div>
 
-            {/* GDPR Consent */}
-            <div className="flex items-start gap-3 bg-[#f8fbff] p-4 rounded-xl border border-[#e2e8f0]">
-                <input
-                    id="gdprConsent"
-                    type="checkbox"
-                    checked={gdprConsent}
-                    onChange={(e) => setGdprConsent(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 text-[#1877f2] rounded border-gray-300 focus:ring-[#1877f2] cursor-pointer"
-                />
-                <label htmlFor="gdprConsent" className="text-xs text-[#64748b] cursor-pointer leading-relaxed">
-                    I have read and agree to the{" "}
-                    <a href="/terms" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Terms of Service</a>
-                    {" "}and{" "}
-                    <a href="/privacy-policy" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Privacy Policy</a>.
-                    I consent to the processing of my personal data as described in the Privacy Policy.
-                </label>
-            </div>
+                <div className="space-y-2">
+                    <label htmlFor="email" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                        Email address
+                    </label>
+                    <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
+                        placeholder={userType === "employer" ? "hr@company.com" : "you@example.com"}
+                        required
+                    />
+                </div>
 
-            <button
-                type="submit"
-                disabled={loading || (password !== confirmPassword) || !gdprConsent}
-                className="w-full bg-[#1877f2] text-white font-bold py-4 rounded-full shadow-lg shadow-blue-200/50 hover:bg-[#1665d8] transition-all transform hover:translate-y-[-1px] active:scale-[0.98] disabled:opacity-50 disabled:hover:translate-y-0 mt-2"
-            >
-                {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                            <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                                fill="none"
-                            />
-                            <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            />
-                        </svg>
-                        Creating account...
-                    </span>
-                ) : (
-                    <>Create {userType === "employer" ? "employer" : "worker"} account</>
-                )}
-            </button>
-        </form>
+                <div className="space-y-2">
+                    <label htmlFor="password" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                        Password
+                    </label>
+                    <input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
+                        placeholder="••••••••"
+                        minLength={6}
+                        required
+                    />
+                    <p className="text-[11px] text-[#94a3b8] ml-1 font-medium">Must be at least 6 characters</p>
+                </div>
+
+                <div className="space-y-2">
+                    <label htmlFor="confirmPassword" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
+                        Confirm Password
+                    </label>
+                    <input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all ${password && confirmPassword && password !== confirmPassword
+                            ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
+                            : 'border-[#e2e8f0]'
+                            }`}
+                        placeholder="••••••••"
+                        minLength={6}
+                        required
+                    />
+                    {password && confirmPassword && password !== confirmPassword && (
+                        <p className="text-xs text-red-500 ml-1 font-medium">Passwords do not match</p>
+                    )}
+                    {password && confirmPassword && password === confirmPassword && (
+                        <p className="text-xs text-emerald-600 ml-1 font-medium">✓ Passwords match</p>
+                    )}
+                </div>
+
+                {/* GDPR Consent */}
+                <div className="flex items-start gap-3 bg-[#f8fbff] p-4 rounded-xl border border-[#e2e8f0]">
+                    <input
+                        id="gdprConsent"
+                        type="checkbox"
+                        checked={gdprConsent}
+                        onChange={(e) => setGdprConsent(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-[#1877f2] rounded border-gray-300 focus:ring-[#1877f2] cursor-pointer"
+                    />
+                    <label htmlFor="gdprConsent" className="text-xs text-[#64748b] cursor-pointer leading-relaxed">
+                        I have read and agree to the{" "}
+                        <a href="/terms" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Terms of Service</a>
+                        {" "}and{" "}
+                        <a href="/privacy-policy" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Privacy Policy</a>.
+                        I consent to the processing of my personal data as described in the Privacy Policy.
+                    </label>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading || (password !== confirmPassword) || !gdprConsent}
+                    className="w-full bg-[#1877f2] text-white font-bold py-4 rounded-full shadow-lg shadow-blue-200/50 hover:bg-[#1665d8] transition-all transform hover:translate-y-[-1px] active:scale-[0.98] disabled:opacity-50 disabled:hover:translate-y-0 mt-2"
+                >
+                    {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                    fill="none"
+                                />
+                                <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                />
+                            </svg>
+                            Creating account...
+                        </span>
+                    ) : (
+                        <>Create {userType === "employer" ? "employer" : "worker"} account</>
+                    )}
+                </button>
+            </form>
+        </div>
     );
 }
