@@ -88,18 +88,6 @@ export default function DashboardClient({
             {/* MAIN CONTENT */}
             <div className="max-w-5xl mx-auto px-4 py-8">
 
-                {/* Hero / Welcome Section */}
-                <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2563EB] to-[#1E3A5F] p-8 text-white shadow-xl">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div>
-                            <h1 className="text-3xl font-bold mb-2">Welcome back, {displayName.split(' ')[0]}</h1>
-                            <p className="text-blue-100 opacity-90 max-w-lg">
-                                Manage your profile, upload documents, and track your job application status all in one place.
-                            </p>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Employer Matching CTA */}
                 <div className="mb-8 bg-white rounded-3xl p-1 shadow-sm border border-slate-100">
@@ -115,8 +103,8 @@ export default function DashboardClient({
                                     <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
                                 </div>
                             </div>
-                            <Link href="/profile/worker/edit" className="bg-white text-blue-600 hover:text-blue-700 font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap inline-flex items-center">
-                                Complete Profile &rarr;
+                            <Link href="/profile/worker/edit" style={{ color: '#2563eb', backgroundColor: '#ffffff' }} className="font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all whitespace-nowrap inline-flex items-center">
+                                Complete Profile →
                             </Link>
                         </div>
                     </div>
