@@ -100,9 +100,9 @@ export default function DashboardClient({
                         </div>
                         {profileCompletion < 100 && (
                             <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 min-w-[200px]">
-                                <div className="flex justify-between items-center mb-2">
+                                <div className="flex flex-col gap-1 mb-2">
                                     <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Profile Completion</span>
-                                    <span className="font-bold">{profileCompletion}%</span>
+                                    <span className="font-bold text-2xl">{profileCompletion}%</span>
                                 </div>
                                 <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                                     <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${profileCompletion}%` }} />
@@ -126,8 +126,8 @@ export default function DashboardClient({
                                     <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
                                 </div>
                             </div>
-                            <Link href="/profile/worker/edit" className="bg-white text-[#1877f2] font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow whitespace-nowrap">
-                                Complete Profile
+                            <Link href="/profile/worker/edit" className="bg-white text-[#1877f2] font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap">
+                                Complete Profile →
                             </Link>
                         </div>
                     </div>
