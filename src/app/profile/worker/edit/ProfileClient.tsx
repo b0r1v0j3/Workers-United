@@ -358,6 +358,14 @@ export default function ProfilePage() {
                 if (insertErr) throw new Error(insertErr.message);
             }
 
+            // Sync phone to Supabase Auth so it appears in Auth dashboard
+            const cleanPhone = formData.phone ? formData.phone.replace(/[\s\-()]/g, '') : null;
+            if (cleanPhone) {
+                await supabase.auth.updateUser({
+                    data: { phone: cleanPhone }
+                });
+            }
+
             toast.success("Profile saved successfully!");
             await fetchProfile();
         } catch (err) {
