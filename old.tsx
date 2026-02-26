@@ -88,6 +88,29 @@ export default function DashboardClient({
             {/* MAIN CONTENT */}
             <div className="max-w-5xl mx-auto px-4 py-8">
 
+                {/* Hero / Welcome Section */}
+                <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2563EB] to-[#1E3A5F] p-8 text-white shadow-xl">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <h1 className="text-3xl font-bold mb-2">Welcome back, {displayName.split(' ')[0]}</h1>
+                            <p className="text-blue-100 opacity-90 max-w-lg">
+                                Manage your profile, upload documents, and track your job application status all in one place.
+                            </p>
+                        </div>
+                        {profileCompletion < 100 && (
+                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 min-w-[200px]">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Profile Completion</span>
+                                    <span className="font-bold">{profileCompletion}%</span>
+                                </div>
+                                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                                    <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${profileCompletion}%` }} />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
 
                 {/* Employer Matching CTA */}
                 <div className="mb-8 bg-white rounded-3xl p-1 shadow-sm border border-slate-100">
@@ -100,15 +123,16 @@ export default function DashboardClient({
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-xl">Get Matched with Employers</h3>
-                                    <p className="text-blue-100 text-sm opacity-90">We're building a fast-track job matching system. Stay tuned!</p>
+                                    <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
                                 </div>
                             </div>
-                            <span className="bg-white text-blue-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg whitespace-nowrap inline-block">
-                                Coming Soon
-                            </span>
+                            <Link href="/profile/worker/edit" className="bg-white text-[#1877f2] font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow whitespace-nowrap">
+                                Complete Profile
+                            </Link>
                         </div>
                     </div>
                 </div>
+
                 {/* TABS Navigation */}
                 <div className="flex flex-col md:flex-row gap-6">
                     {/* Sidebar Tabs (Desktop) / Top Tabs (Mobile) */}
