@@ -18,6 +18,14 @@ export async function POST(request: NextRequest) {
         const userName = user.user_metadata?.full_name || user.email?.split("@")[0] || "there";
         const userEmail = user.email || "";
 
+        // Lookup phone number for WhatsApp dual-send
+        const { data: candidate } = await supabase
+            .from("candidates")
+            .select("phone")
+            .eq("profile_id", user.id)
+            .maybeSingle();
+        const phone = candidate?.phone || undefined;
+
         // Queue the appropriate email based on type
         switch (emailType) {
             case "welcome":
@@ -26,7 +34,10 @@ export async function POST(request: NextRequest) {
                     user.id,
                     "welcome",
                     userEmail,
-                    userName
+                    userName,
+                    {},
+                    undefined,
+                    phone
                 );
                 break;
 
@@ -36,7 +47,10 @@ export async function POST(request: NextRequest) {
                     user.id,
                     "profile_complete",
                     userEmail,
-                    userName
+                    userName,
+                    {},
+                    undefined,
+                    phone
                 );
                 break;
 
@@ -47,7 +61,9 @@ export async function POST(request: NextRequest) {
                     "payment_success",
                     userEmail,
                     userName,
-                    { amount: "$9" }
+                    { amount: "$9" },
+                    undefined,
+                    phone
                 );
                 break;
 
