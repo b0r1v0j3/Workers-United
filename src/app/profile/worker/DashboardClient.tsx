@@ -115,13 +115,12 @@ export default function DashboardClient({
                                     <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
                                 </div>
                             </div>
-                            <Link href="/profile/worker/edit" className="bg-white text-blue-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap">
-                                Complete Profile →
+                            <Link href="/profile/worker/edit" className="bg-white text-blue-600 hover:text-blue-700 font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap inline-flex items-center">
+                                Complete Profile &rarr;
                             </Link>
                         </div>
                     </div>
                 </div>
-
                 {/* TABS Navigation */}
                 <div className="flex flex-col md:flex-row gap-6">
                     {/* Sidebar Tabs (Desktop) / Top Tabs (Mobile) */}
