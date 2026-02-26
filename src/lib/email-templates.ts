@@ -570,6 +570,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 }
 
 // Helper function to queue an email and send it immediately via SMTP
+// Optionally also sends a WhatsApp template message if recipientPhone is provided
 export async function queueEmail(
     supabase: any,
     userId: string,
@@ -577,7 +578,8 @@ export async function queueEmail(
     recipientEmail: string,
     recipientName: string,
     templateData: TemplateData = {},
-    scheduledFor?: Date
+    scheduledFor?: Date,
+    recipientPhone?: string
 ): Promise<void> {
     const template = getEmailTemplate(emailType, { name: recipientName, ...templateData });
 
@@ -605,6 +607,48 @@ export async function queueEmail(
             }
         } catch (err) {
             console.error("Direct SMTP send failed, n8n will retry:", err);
+        }
+    }
+
+    // Also send WhatsApp template if phone provided
+    if (recipientPhone && !scheduledFor) {
+        try {
+            const wa = await import("@/lib/whatsapp");
+            const firstName = recipientName?.split(" ")[0] || "there";
+
+            // Map EmailType → WhatsApp template
+            switch (emailType) {
+                case "welcome":
+                    await wa.sendWelcome(recipientPhone, firstName, userId);
+                    break;
+                case "profile_complete":
+                    await wa.sendProfileVerified(recipientPhone, firstName, userId);
+                    break;
+                case "payment_success":
+                    await wa.sendPaymentConfirmed(recipientPhone, firstName, templateData.amount || "$9", userId);
+                    break;
+                case "document_expiring":
+                    await wa.sendDocumentReminder(recipientPhone, firstName, templateData.documentType || "document", templateData.expirationDate || "", userId);
+                    break;
+                case "profile_incomplete":
+                    await wa.sendProfileIncomplete(recipientPhone, firstName, templateData.completion || "0", templateData.missingFields || "", userId);
+                    break;
+                case "refund_approved":
+                    await wa.sendRefundProcessed(recipientPhone, firstName, templateData.amount || "$9", userId);
+                    break;
+                case "admin_update":
+                    await wa.sendStatusUpdate(recipientPhone, firstName, templateData.message || "Profile updated", userId);
+                    break;
+                case "announcement":
+                    await wa.sendAnnouncement(recipientPhone, templateData.title || "Announcement", templateData.message || "", templateData.actionLink, userId);
+                    break;
+                // job_offer and offer_reminder are handled separately in notifications.ts
+                default:
+                    break;
+            }
+        } catch (err) {
+            // WhatsApp failure should never block email
+            console.error(`WhatsApp send failed for ${emailType}:`, err);
         }
     }
 }

@@ -22,6 +22,18 @@ export function SignupForm({ userType }: SignupFormProps) {
     const [googleLoading, setGoogleLoading] = useState(false);
     const router = useRouter();
 
+    // Password strength checks
+    const passwordChecks = {
+        minLength: password.length >= 8,
+        hasUppercase: /[A-Z]/.test(password),
+        hasLowercase: /[a-z]/.test(password),
+        hasNumber: /[0-9]/.test(password),
+        hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+    };
+    const allChecksPassed = Object.values(passwordChecks).every(Boolean);
+    const passwordsMatch = password === confirmPassword;
+    const canSubmit = allChecksPassed && passwordsMatch && gdprConsent && !loading;
+
     const handleGoogleSignup = async () => {
         setGoogleLoading(true);
         setError(null);
@@ -48,8 +60,14 @@ export function SignupForm({ userType }: SignupFormProps) {
             return;
         }
 
+        // Check password strength
+        if (!allChecksPassed) {
+            setError("Password does not meet all requirements.");
+            return;
+        }
+
         // Check password match
-        if (password !== confirmPassword) {
+        if (!passwordsMatch) {
             setError("Passwords do not match");
             return;
         }
@@ -225,10 +243,27 @@ export function SignupForm({ userType }: SignupFormProps) {
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
                         placeholder="••••••••"
-                        minLength={6}
+                        minLength={8}
                         required
                     />
-                    <p className="text-[11px] text-[#94a3b8] ml-1 font-medium">Must be at least 6 characters</p>
+                    {password.length > 0 && (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1.5 ml-1">
+                            {[
+                                { check: passwordChecks.minLength, label: "8+ characters" },
+                                { check: passwordChecks.hasUppercase, label: "Uppercase (A-Z)" },
+                                { check: passwordChecks.hasLowercase, label: "Lowercase (a-z)" },
+                                { check: passwordChecks.hasNumber, label: "Number (0-9)" },
+                                { check: passwordChecks.hasSpecial, label: "Special (!@#$)" },
+                            ].map(({ check, label }) => (
+                                <p key={label} className={`text-[11px] font-medium flex items-center gap-1 ${check ? "text-emerald-600" : "text-[#94a3b8]"}`}>
+                                    <span>{check ? "✓" : "○"}</span> {label}
+                                </p>
+                            ))}
+                        </div>
+                    )}
+                    {!password && (
+                        <p className="text-[11px] text-[#94a3b8] ml-1 font-medium">Must include uppercase, lowercase, number, and special character</p>
+                    )}
                 </div>
 
                 <div className="space-y-2">
@@ -240,18 +275,18 @@ export function SignupForm({ userType }: SignupFormProps) {
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all ${password && confirmPassword && password !== confirmPassword
+                        className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all ${password && confirmPassword && !passwordsMatch
                             ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
                             : 'border-[#e2e8f0]'
                             }`}
                         placeholder="••••••••"
-                        minLength={6}
+                        minLength={8}
                         required
                     />
-                    {password && confirmPassword && password !== confirmPassword && (
+                    {password && confirmPassword && !passwordsMatch && (
                         <p className="text-xs text-red-500 ml-1 font-medium">Passwords do not match</p>
                     )}
-                    {password && confirmPassword && password === confirmPassword && (
+                    {password && confirmPassword && passwordsMatch && (
                         <p className="text-xs text-emerald-600 ml-1 font-medium">✓ Passwords match</p>
                     )}
                 </div>
@@ -276,7 +311,7 @@ export function SignupForm({ userType }: SignupFormProps) {
 
                 <button
                     type="submit"
-                    disabled={loading || (password !== confirmPassword) || !gdprConsent}
+                    disabled={!canSubmit}
                     className="w-full bg-[#1877f2] text-white font-bold py-4 rounded-full shadow-lg shadow-blue-200/50 hover:bg-[#1665d8] transition-all transform hover:translate-y-[-1px] active:scale-[0.98] disabled:opacity-50 disabled:hover:translate-y-0 mt-2"
                 >
                     {loading ? (

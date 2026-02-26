@@ -24,6 +24,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
+| WhatsApp | **Meta Cloud API v21.0** | Template messages, inbound bot, delivery tracking |
 
 ---
 
@@ -223,6 +224,7 @@ User (Browser)
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/notifications.ts` | Email notification dispatch helpers |
 | `src/lib/docx-generator.ts` | DOCX generation from templates (docxtemplater + pizzip) |
+| `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging |
 | `src/lib/constants.ts` | Shared constants (industries, countries, etc.) |
 
 ---
@@ -284,6 +286,9 @@ When adding a new feature, follow this order:
 | `SMTP_PASS` | Google Workspace app password | ✅ |
 | `CRON_SECRET` | Vercel cron auth | ✅ |
 | `NEXT_PUBLIC_BASE_URL` | App base URL | ✅ |
+| `WHATSAPP_TOKEN` | Meta WhatsApp Cloud API | For sending |
+| `WHATSAPP_PHONE_NUMBER_ID` | Meta WhatsApp | For sending |
+| `WHATSAPP_VERIFY_TOKEN` | Webhook verification | For webhook |
 
 ---
 

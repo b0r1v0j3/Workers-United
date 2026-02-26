@@ -80,11 +80,18 @@ function checkStripe(): ServiceCheck {
 
 function checkWhatsApp(): ServiceCheck {
     const hasToken = !!process.env.WHATSAPP_TOKEN;
+    const hasPhoneId = !!process.env.WHATSAPP_PHONE_NUMBER_ID;
+    if (hasToken && hasPhoneId) {
+        return { name: "WhatsApp", description: "Messaging & Notifications", status: "operational", details: "Token + Phone Number ID configured" };
+    }
+    if (hasToken || hasPhoneId) {
+        return { name: "WhatsApp", description: "Messaging & Notifications", status: "degraded", details: `Missing: ${!hasToken ? "WHATSAPP_TOKEN" : "WHATSAPP_PHONE_NUMBER_ID"}` };
+    }
     return {
         name: "WhatsApp",
         description: "Messaging & Notifications",
-        status: hasToken ? "operational" : "not_configured",
-        details: hasToken ? "Token configured" : "WHATSAPP_TOKEN not set",
+        status: "not_configured",
+        details: "WHATSAPP_TOKEN + WHATSAPP_PHONE_NUMBER_ID not set",
     };
 }
 
