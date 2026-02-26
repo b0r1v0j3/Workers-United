@@ -114,6 +114,11 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
                     <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" />
                     <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" />
+
+                    <hr className="border-slate-100 my-4 mx-2" />
+                    <div className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">View As</div>
+                    <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Worker Profile" />
+                    <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Employer Profile" />
                 </>
             )}
 
