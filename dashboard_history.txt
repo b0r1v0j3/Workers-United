@@ -1,0 +1,2144 @@
+commit 260afd53879a47f46e30a5ace5a873b0729cbdcb
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Thu Feb 26 23:14:30 2026 +0100
+
+    style: remove Welcome back hero block entirely from worker dashboard
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 8772101..e42fda0 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -88,18 +88,6 @@ export default function DashboardClient({
+             {/* MAIN CONTENT */}
+             <div className="max-w-5xl mx-auto px-4 py-8">
+ 
+-                {/* Hero / Welcome Section */}
+-                <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2563EB] to-[#1E3A5F] p-8 text-white shadow-xl">
+-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+-                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+-                        <div>
+-                            <h1 className="text-3xl font-bold mb-2">Welcome back, {displayName.split(' ')[0]}</h1>
+-                            <p className="text-blue-100 opacity-90 max-w-lg">
+-                                Manage your profile, upload documents, and track your job application status all in one place.
+-                            </p>
+-                        </div>
+-                    </div>
+-                </div>
+ 
+                 {/* Employer Matching CTA */}
+                 <div className="mb-8 bg-white rounded-3xl p-1 shadow-sm border border-slate-100">
+@@ -115,8 +103,8 @@ export default function DashboardClient({
+                                     <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
+                                 </div>
+                             </div>
+-                            <Link href="/profile/worker/edit" className="bg-white text-blue-600 hover:text-blue-700 font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap inline-flex items-center">
+-                                Complete Profile &rarr;
++                            <Link href="/profile/worker/edit" style={{ color: '#2563eb', backgroundColor: '#ffffff' }} className="font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all whitespace-nowrap inline-flex items-center">
++                                Complete Profile →
+                             </Link>
+                         </div>
+                     </div>
+
+commit fc66e6c89bf553341b0a47090a1eedeb4c5446bc
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Thu Feb 26 23:11:10 2026 +0100
+
+    style: refine worker dashboard - restore welcome block, clean cta button text
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 7171069..8772101 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -115,13 +115,12 @@ export default function DashboardClient({
+                                     <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
+                                 </div>
+                             </div>
+-                            <Link href="/profile/worker/edit" className="bg-white text-blue-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap">
+-                                Complete Profile →
++                            <Link href="/profile/worker/edit" className="bg-white text-blue-600 hover:text-blue-700 font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap inline-flex items-center">
++                                Complete Profile &rarr;
+                             </Link>
+                         </div>
+                     </div>
+                 </div>
+-
+                 {/* TABS Navigation */}
+                 <div className="flex flex-col md:flex-row gap-6">
+                     {/* Sidebar Tabs (Desktop) / Top Tabs (Mobile) */}
+
+commit 47355b7fcb49d866162bb3b5400bb07bd9145b1f
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Thu Feb 26 23:07:11 2026 +0100
+
+    fix: remove profile completion block from worker dashboard hero for cleaner UI
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index f4083ba..7171069 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -98,17 +98,6 @@ export default function DashboardClient({
+                                 Manage your profile, upload documents, and track your job application status all in one place.
+                             </p>
+                         </div>
+-                        {profileCompletion < 100 && (
+-                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 min-w-[200px]">
+-                                <div className="flex flex-col gap-1 mb-2">
+-                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Profile Completion</span>
+-                                    <span className="font-bold text-2xl">{profileCompletion}%</span>
+-                                </div>
+-                                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+-                                    <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${profileCompletion}%` }} />
+-                                </div>
+-                            </div>
+-                        )}
+                     </div>
+                 </div>
+ 
+@@ -126,7 +115,7 @@ export default function DashboardClient({
+                                     <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
+                                 </div>
+                             </div>
+-                            <Link href="/profile/worker/edit" className="bg-white text-[#1877f2] font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap">
++                            <Link href="/profile/worker/edit" className="bg-white text-blue-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap">
+                                 Complete Profile →
+                             </Link>
+                         </div>
+
+commit fb1f691d6865c6fe8b163fa5568f58d9d224b3ee
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Thu Feb 26 23:00:41 2026 +0100
+
+    fix: worker dashboard UI - profile completion spacing + button visibility
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 25c340a..f4083ba 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -100,9 +100,9 @@ export default function DashboardClient({
+                         </div>
+                         {profileCompletion < 100 && (
+                             <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 min-w-[200px]">
+-                                <div className="flex justify-between items-center mb-2">
++                                <div className="flex flex-col gap-1 mb-2">
+                                     <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Profile Completion</span>
+-                                    <span className="font-bold">{profileCompletion}%</span>
++                                    <span className="font-bold text-2xl">{profileCompletion}%</span>
+                                 </div>
+                                 <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                                     <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${profileCompletion}%` }} />
+@@ -126,8 +126,8 @@ export default function DashboardClient({
+                                     <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
+                                 </div>
+                             </div>
+-                            <Link href="/profile/worker/edit" className="bg-white text-[#1877f2] font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow whitespace-nowrap">
+-                                Complete Profile
++                            <Link href="/profile/worker/edit" className="bg-white text-[#1877f2] font-bold text-sm px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all whitespace-nowrap">
++                                Complete Profile →
+                             </Link>
+                         </div>
+                     </div>
+
+commit 1803126391b550711bf57861a1992daf4641d33f
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sun Feb 22 16:22:25 2026 +0100
+
+    fix: 4 critical pre-launch fixes
+    
+    - Create /contact page with email, phone, WhatsApp, quick links, FAQ
+    - Replace COMING SOON with Complete Profile CTA on worker dashboard
+    - Fix admin header showing 0 Workers → now shows registered auth users count
+    - Add Jobs, Queue, Analytics links to admin sidebar
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 7d3942b..25c340a 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -112,7 +112,7 @@ export default function DashboardClient({
+                     </div>
+                 </div>
+ 
+-                {/* Coming Soon CTA */}
++                {/* Employer Matching CTA */}
+                 <div className="mb-8 bg-white rounded-3xl p-1 shadow-sm border border-slate-100">
+                     <div className="bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-[20px] p-6 text-white relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+                         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/15 transition-colors" />
+@@ -123,12 +123,12 @@ export default function DashboardClient({
+                                 </div>
+                                 <div>
+                                     <h3 className="font-bold text-xl">Get Matched with Employers</h3>
+-                                    <p className="text-blue-100 text-sm opacity-90">We're building a fast-track job matching system. Stay tuned!</p>
++                                    <p className="text-blue-100 text-sm opacity-90">Complete your profile & upload documents — our team will match you with verified employers in Serbia.</p>
+                                 </div>
+                             </div>
+-                            <span className="bg-white text-[#1877f2] font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full shadow-lg">
+-                                Coming Soon
+-                            </span>
++                            <Link href="/profile/worker/edit" className="bg-white text-[#1877f2] font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow whitespace-nowrap">
++                                Complete Profile
++                            </Link>
+                         </div>
+                     </div>
+                 </div>
+
+commit 921178ab15f2f6210ceb04262014fa13eae12944
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sun Feb 22 15:55:41 2026 +0100
+
+    feat: admin dashboard stats, RLS security fixes, env var standardization
+    
+    - Add Quick Stats grid to admin dashboard (registrations, completion, revenue, approvals)
+    - Standardize NEXT_PUBLIC_SITE_URL to NEXT_PUBLIC_BASE_URL across 4 files
+    - Add SQL migrations for RLS performance fixes (auth.uid -> select auth.uid)
+    - Drop 8 dangerous allow_all RLS policies
+    - Drop 13 duplicate old RLS policies
+    - Drop 8 unused database indexes
+    - Remove unused contractDataInfo variable
+    - Fix TypeScript Buffer type in pdf-generator
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 5cb422f..7d3942b 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -3,6 +3,7 @@
+ import { useState, useEffect } from "react";
+ import Link from "next/link";
+ import DocumentWizard from "@/components/DocumentWizard";
++import UnifiedNavbar from "@/components/UnifiedNavbar";
+ import confetti from "canvas-confetti";
+ import { toast } from "sonner";
+ import {
+@@ -21,11 +22,9 @@ import {
+     User,
+     Calendar,
+     Shield,
+-    Heart,
+     Users,
+     Rocket,
+     PartyPopper,
+-    Sparkles
+ } from "lucide-react";
+ 
+ interface DashboardClientProps {
+@@ -69,8 +68,6 @@ export default function DashboardClient({
+     };
+ 
+     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
+-
+-    // Check if required documents are uploaded (independently of profile fields)
+     const docsUploaded = documents.filter(d => d.status === 'verified').length >= 2;
+ 
+     // Application stages
+@@ -85,335 +82,196 @@ export default function DashboardClient({
+     const hasPendingOffer = pendingOffers && pendingOffers.length > 0;
+ 
+     return (
+-        <div className="min-h-screen bg-[#f0f2f5]">
+-            {/* NAVBAR */}
+-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
+-                <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
+-                    <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+-                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
+-                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline tracking-tight">
+-                            Workers United
+-                        </span>
+-                    </Link>
+-                    <div className="flex items-center gap-3">
+-                        <span className="text-sm font-semibold text-[#050505] hidden sm:block">
+-                            {displayName}
+-                        </span>
+-                        <Link
+-                            href="/profile/settings"
+-                            className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
+-                            title="Account Settings"
+-                        >
+-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+-                                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" />
+-                            </svg>
+-                        </Link>
+-                        <a
+-                            href="/auth/signout"
+-                            className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
+-                            title="Logout"
+-                        >
+-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+-                                <path d="M16 13v-2H7V8l-5 4 5 4v-3z" />
+-                                <path d="M20 3h-9c-1.103 0-2 .897-2 2v4h2V5h9v14h-9v-4H9v4c0 1.103.897 2 2 2h9c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2z" />
+-                            </svg>
+-                        </a>
+-                    </div>
+-                </div>
+-            </nav>
++        <div className="min-h-screen bg-[#F0F4F8]">
++            <UnifiedNavbar variant="dashboard" user={user} profileName={displayName} />
+ 
+             {/* MAIN CONTENT */}
+-            <div className="max-w-[900px] mx-auto px-4 py-6">
++            <div className="max-w-5xl mx-auto px-4 py-8">
+ 
+-                {/* Coming Soon / Job Matching CTA — will become payment gateway */}
+-                <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden transform hover:scale-[1.02] transition-all duration-300 cursor-default">
+-                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+-                    <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
++                {/* Hero / Welcome Section */}
++                <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2563EB] to-[#1E3A5F] p-8 text-white shadow-xl">
++                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
++                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                         <div>
+-                            <div className="flex items-center gap-2 mb-1">
+-                                <Rocket className="w-6 h-6 text-white" />
+-                                <h3 className="font-bold text-lg">Get Matched with Employers</h3>
+-                            </div>
+-                            <p className="text-blue-100 text-sm max-w-md">
+-                                We're building a fast-track job matching system to connect you with verified employers across Europe. Stay tuned!
++                            <h1 className="text-3xl font-bold mb-2">Welcome back, {displayName.split(' ')[0]}</h1>
++                            <p className="text-blue-100 opacity-90 max-w-lg">
++                                Manage your profile, upload documents, and track your job application status all in one place.
+                             </p>
+                         </div>
+-                        <div className="shrink-0">
+-                            <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/30">
+-                                Coming Soon
+-                            </span>
+-                        </div>
++                        {profileCompletion < 100 && (
++                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 min-w-[200px]">
++                                <div className="flex justify-between items-center mb-2">
++                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Profile Completion</span>
++                                    <span className="font-bold">{profileCompletion}%</span>
++                                </div>
++                                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
++                                    <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${profileCompletion}%` }} />
++                                </div>
++                            </div>
++                        )}
+                     </div>
+                 </div>
+ 
+-                {/* Profile Completion — always visible */}
+-                {profileCompletion < 100 && (
+-                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 mb-4">
+-                        <div className="flex items-center justify-between mb-2">
+-                            <h3 className="font-bold text-[#050505]">Profile Completion</h3>
+-                            <span className="text-sm font-bold text-[#1877f2]">
+-                                {profileCompletion}%
++                {/* Coming Soon CTA */}
++                <div className="mb-8 bg-white rounded-3xl p-1 shadow-sm border border-slate-100">
++                    <div className="bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-[20px] p-6 text-white relative overflow-hidden group hover:shadow-lg transition-all duration-300">
++                        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/15 transition-colors" />
++                        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
++                            <div className="flex items-center gap-4">
++                                <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
++                                    <Rocket className="w-6 h-6 text-white" />
++                                </div>
++                                <div>
++                                    <h3 className="font-bold text-xl">Get Matched with Employers</h3>
++                                    <p className="text-blue-100 text-sm opacity-90">We're building a fast-track job matching system. Stay tuned!</p>
++                                </div>
++                            </div>
++                            <span className="bg-white text-[#1877f2] font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-full shadow-lg">
++                                Coming Soon
+                             </span>
+                         </div>
+-                        <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden">
+-                            <div
+-                                className="h-full rounded-full transition-all duration-500 bg-[#1877f2]"
+-                                style={{ width: `${profileCompletion}%` }}
+-                            />
+-                        </div>
+-                        <p className="text-xs text-[#65676b] mt-2">
+-                            Complete your profile to get matched with employers faster.
+-                        </p>
+-                    </div>
+-                )}
+-
+-                {/* TABS */}
+-                <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
+-                    <div className="flex items-center px-2">
+-                        <div className="flex overflow-x-auto scrollbar-hide">
+-                            <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+-                            <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
+-                            <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
+-                        </div>
+-                        <div className="ml-auto pr-2">
+-                            <Link
+-                                href="/profile/worker/edit"
+-                                className="bg-[#1877f2] text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 whitespace-nowrap"
+-                            >
+-                                <Pencil size={14} /> Edit Profile
+-                            </Link>
+-                        </div>
+                     </div>
+                 </div>
+ 
+-                {/* ====================== PROFILE INFO TAB ====================== */}
+-                {activeTab === 'profile' && (
+-                    <div className="space-y-4">
++                {/* TABS Navigation */}
++                <div className="flex flex-col md:flex-row gap-6">
++                    {/* Sidebar Tabs (Desktop) / Top Tabs (Mobile) */}
++                    <div className="md:w-64 flex-shrink-0 space-y-2">
++                        <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 sticky top-24">
++                            <TabButton label="Profile Info" icon={<User size={18} />} active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
++                            <TabButton label="Documents" icon={<FileText size={18} />} active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
++                            <TabButton label="Application Status" icon={<Rocket size={18} />} active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
+ 
+-                        {/* Personal Information */}
+-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
+-                            <div className="mb-4">
+-                                <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
+-                            </div>
+-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+-                                <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
+-                                <InfoRow icon={<User size={18} />} label="Gender" value={candidate?.gender} />
+-                                <InfoRow icon={<Globe size={18} />} label="Nationality" value={candidate?.nationality} />
+-                                <InfoRow icon={<Heart size={18} />} label="Marital Status" value={candidate?.marital_status} />
+-                                <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString('en-GB') : null} />
+-                                <InfoRow icon={<MapPin size={18} />} label="Birth Place" value={candidate?.birth_city && candidate?.birth_country ? `${candidate.birth_city}, ${candidate.birth_country}` : (candidate?.birth_country || null)} />
+-                                <InfoRow icon={<Globe size={18} />} label="Citizenship" value={candidate?.citizenship} />
+-                                <InfoRow icon={<Globe size={18} />} label="Original Citizenship" value={candidate?.original_citizenship && candidate.original_citizenship !== candidate.citizenship ? candidate.original_citizenship : null} />
+-                                <InfoRow icon={<User size={18} />} label="Maiden Name" value={candidate?.maiden_name} />
+-                                <InfoRow icon={<User size={18} />} label="Father's Name" value={candidate?.father_name} />
+-                                <InfoRow icon={<User size={18} />} label="Mother's Name" value={candidate?.mother_name} />
+-                                <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
+-                                <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
+-                                <InfoRow icon={<MapPin size={18} />} label="Address" value={candidate?.address} />
+-                                <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
+-                            </div>
++                            <div className="my-2 border-t border-slate-100"></div>
++
++                            <Link href="/profile/worker/edit" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 font-medium hover:bg-slate-50 transition-colors w-full text-left">
++                                <Pencil size={18} /> Edit Profile
++                            </Link>
+                         </div>
++                    </div>
+ 
+-                        {/* Family Information */}
+-                        {candidate?.family_data && (candidate.family_data.spouse || (candidate.family_data.children && candidate.family_data.children.length > 0)) && (
+-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
+-                                <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
+-                                    <Users size={20} /> Family Information
+-                                </h3>
+-                                {candidate.family_data.spouse && (
+-                                    <div className="mb-4">
+-                                        <h4 className="text-sm font-semibold text-gray-600 mb-2">Spouse</h4>
+-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+-                                            <InfoRow icon={<User size={18} />} label="Name" value={`${candidate.family_data.spouse.first_name} ${candidate.family_data.spouse.last_name}`} />
+-                                            <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate.family_data.spouse.dob ? new Date(candidate.family_data.spouse.dob).toLocaleDateString('en-GB') : null} />
+-                                            <InfoRow icon={<MapPin size={18} />} label="Birth Place" value={candidate.family_data.spouse.birth_city && candidate.family_data.spouse.birth_country ? `${candidate.family_data.spouse.birth_city}, ${candidate.family_data.spouse.birth_country}` : null} />
+-                                        </div>
++                    {/* Tab Content */}
++                    <div className="flex-1 min-w-0">
++                        {/* ====================== PROFILE INFO TAB ====================== */}
++                        {activeTab === 'profile' && (
++                            <div className="space-y-6">
++                                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
++                                    <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
++                                        <User className="text-blue-500" /> Personal Information
++                                    </h3>
++                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
++                                        <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
++                                        <InfoRow icon={<User size={18} />} label="Gender" value={candidate?.gender} />
++                                        <InfoRow icon={<Globe size={18} />} label="Nationality" value={candidate?.nationality} />
++                                        <InfoRow icon={<Users size={18} />} label="Marital Status" value={candidate?.marital_status} />
++                                        <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString('en-GB') : null} />
++                                        <InfoRow icon={<MapPin size={18} />} label="Birth Place" value={candidate?.birth_city && candidate?.birth_country ? `${candidate.birth_city}, ${candidate.birth_country}` : (candidate?.birth_country || null)} />
++                                        <InfoRow icon={<Globe size={18} />} label="Citizenship" value={candidate?.citizenship} />
++                                        <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
++                                        <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
++                                        <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
+                                     </div>
+-                                )}
+-                                {candidate.family_data.children && candidate.family_data.children.length > 0 && (
+-                                    <div>
+-                                        <h4 className="text-sm font-semibold text-gray-600 mb-2">Children ({candidate.family_data.children.length})</h4>
+-                                        <div className="space-y-2">
+-                                            {candidate.family_data.children.map((child: any, i: number) => (
+-                                                <div key={i} className="flex items-center gap-4 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
+-                                                    <span className="font-medium">{child.first_name} {child.last_name}</span>
+-                                                    {child.dob && <span className="text-gray-500">Born: {new Date(child.dob).toLocaleDateString('en-GB')}</span>}
+-                                                </div>
+-                                            ))}
++                                </div>
++
++                                {/* Passport Information */}
++                                {candidate?.passport_number && (
++                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
++                                        <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
++                                            <Shield className="text-emerald-500" /> Passport & Travel
++                                        </h3>
++                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
++                                            <InfoRow icon={<FileText size={18} />} label="Passport Number" value={candidate.passport_number ? `***${candidate.passport_number.slice(-4)}` : null} />
++                                            <InfoRow icon={<Globe size={18} />} label="Issued By" value={candidate.passport_issued_by} />
++                                            <InfoRow icon={<Calendar size={18} />} label="Issue Date" value={candidate.passport_issue_date ? new Date(candidate.passport_issue_date).toLocaleDateString('en-GB') : null} />
++                                            <InfoRow icon={<Calendar size={18} />} label="Expiry Date" value={candidate.passport_expiry_date ? new Date(candidate.passport_expiry_date).toLocaleDateString('en-GB') : null} />
+                                         </div>
+                                     </div>
+                                 )}
+                             </div>
+                         )}
+ 
+-                        {/* Passport Information */}
+-                        {candidate?.passport_number && (
+-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
+-                                <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
+-                                    <Shield size={20} /> Passport & Travel
+-                                </h3>
+-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+-                                    <InfoRow icon={<FileText size={18} />} label="Passport Number" value={candidate.passport_number ? `***${candidate.passport_number.slice(-4)}` : null} />
+-                                    <InfoRow icon={<Globe size={18} />} label="Issued By" value={candidate.passport_issued_by} />
+-                                    <InfoRow icon={<Calendar size={18} />} label="Issue Date" value={candidate.passport_issue_date ? new Date(candidate.passport_issue_date).toLocaleDateString('en-GB') : null} />
+-                                    <InfoRow icon={<Calendar size={18} />} label="Expiry Date" value={candidate.passport_expiry_date ? new Date(candidate.passport_expiry_date).toLocaleDateString('en-GB') : null} />
+-                                    <InfoRow icon={<Globe size={18} />} label="Lives Abroad" value={candidate.lives_abroad} />
+-                                    <InfoRow icon={<FileText size={18} />} label="Previous Visas (3 years)" value={candidate.previous_visas} />
+-                                </div>
+-                            </div>
+-                        )}
+-
+-                        {/* Pending Offers */}
+-                        {hasPendingOffer && (
+-                            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5 hover:shadow-md transition-shadow duration-300">
+-                                <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
+-                                    <PartyPopper className="w-5 h-5" /> You have a job offer!
+-                                </h3>
+-                                {pendingOffers.map((offer: any) => (
+-                                    <Link
+-                                        key={offer.id}
+-                                        href={`/profile/worker/offers/${offer.id}`}
+-                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-200 hover:border-emerald-400 transition-colors group"
+-                                    >
+-                                        <div>
+-                                            <div className="font-bold text-[#050505]">{offer.job_request?.employer?.company_name || "Company"}</div>
+-                                            <div className="text-sm text-[#65676b]">{offer.job_request?.destination_country}</div>
++                        {/* ====================== DOCUMENTS TAB ====================== */}
++                        {activeTab === 'documents' && (
++                            <div className="space-y-6">
++                                {!isReady && (
++                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
++                                        <div className="mb-6">
++                                            <h3 className="font-bold text-slate-900 text-xl">Upload Documents</h3>
++                                            <p className="text-slate-500 mt-1">Please ensure all documents are clear and readable.</p>
+                                         </div>
+-                                        <ChevronRight size={20} className="text-[#65676b] group-hover:text-emerald-600 transition-colors" />
+-                                    </Link>
+-                                ))}
+-                            </div>
+-                        )}
+-                    </div>
+-                )}
++                                        <DocumentWizard candidateId={user.id} email={user.email || ""} />
++                                    </div>
++                                )}
+ 
+-                {/* ====================== DOCUMENTS TAB ====================== */}
+-                {activeTab === 'documents' && (
+-                    <div className="space-y-4">
+-                        {/* Document Upload Wizard (if not ready) */}
+-                        {!isReady && (
+-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+-                                <h3 className="font-bold text-[#050505] text-lg mb-2">Upload Documents</h3>
+-                                <p className="text-sm text-[#65676b] mb-4">
+-                                    Upload your documents below to begin the verification process.
+-                                </p>
+-                                <DocumentWizard candidateId={user.id} email={user.email || ""} />
++                                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
++                                    <h3 className="font-bold text-slate-900 text-xl mb-6">Document Status</h3>
++                                    <div className="space-y-4">
++                                        <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
++                                        <DocumentRow label="Biometric Photo" type="biometric_photo" status={getDocStatus("biometric_photo")} />
++                                        <DocumentRow label="Diploma / Certificate" type="diploma" status={getDocStatus("diploma")} />
++                                    </div>
++                                </div>
+                             </div>
+                         )}
+ 
+-                        {/* Document Status List */}
+-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+-                            <h3 className="font-bold text-[#050505] text-lg mb-4">Document Status</h3>
+-                            <div className="space-y-3">
+-                                <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
+-                                <DocumentRow label="Biometric Photo" type="biometric_photo" status={getDocStatus("biometric_photo")} />
+-                                <DocumentRow label="Diploma / Certificate" type="diploma" status={getDocStatus("diploma")} />
+-                            </div>
+-                        </div>
+-                    </div>
+-                )}
+-
+-                {/* ====================== STATUS TAB ====================== */}
+-                {activeTab === 'status' && (
+-                    <div className="space-y-4">
+-                        {/* Progress Tracker */}
+-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 hover:shadow-md transition-shadow duration-300">
+-                            <h3 className="font-bold text-[#050505] text-lg mb-6">Application Progress</h3>
+-                            <div className="relative">
+-                                {stages.map((stage, index) => (
+-                                    <div key={stage.label} className="flex items-start gap-4 mb-6 last:mb-0">
+-                                        {/* Dot + Line */}
+-                                        <div className="flex flex-col items-center">
+-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shrink-0 transition-colors ${stage.done
+-                                                ? 'bg-emerald-500 border-emerald-500 text-white'
+-                                                : 'bg-white border-[#dddfe2] text-[#65676b]'
+-                                                }`}>
+-                                                {stage.done ? <CheckCircle2 size={16} /> : <span className="text-xs font-bold">{index + 1}</span>}
++                        {/* ====================== STATUS TAB ====================== */}
++                        {activeTab === 'status' && (
++                            <div className="space-y-6">
++                                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
++                                    <h3 className="font-bold text-slate-900 text-xl mb-8">Application Timeline</h3>
++                                    <div className="relative pl-4">
++                                        <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-slate-100" />
++                                        {stages.map((stage, index) => (
++                                            <div key={stage.label} className="relative flex items-center gap-6 mb-8 last:mb-0">
++                                                <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-4 transition-colors ${stage.done
++                                                    ? 'bg-emerald-500 border-white shadow-lg shadow-emerald-200 text-white'
++                                                    : 'bg-white border-slate-100 text-slate-300'
++                                                    }`}>
++                                                    {stage.done ? <CheckCircle2 size={18} /> : <span className="text-xs font-bold">{index + 1}</span>}
++                                                </div>
++                                                <div>
++                                                    <h4 className={`font-bold text-lg ${stage.done ? 'text-slate-900' : 'text-slate-400'}`}>{stage.label}</h4>
++                                                    {stage.done && index === stages.length - 1 && <p className="text-sm text-emerald-600 font-medium">Completed</p>}
++                                                </div>
+                                             </div>
+-                                            {index < stages.length - 1 && (
+-                                                <div className={`w-0.5 h-8 mt-1 ${stage.done ? 'bg-emerald-300' : 'bg-[#dddfe2]'}`} />
+-                                            )}
+-                                        </div>
+-                                        {/* Label */}
+-                                        <div className="pt-1">
+-                                            <span className={`font-semibold text-sm ${stage.done ? 'text-emerald-700' : 'text-[#65676b]'}`}>
+-                                                {stage.label}
+-                                            </span>
+-                                        </div>
+-                                    </div>
+-                                ))}
+-                            </div>
+-                        </div>
+-
+-                        {/* Current Status Card */}
+-                        {(() => {
+-                            const profileDone = profileCompletion === 100;
+-                            let bg, border, iconBg, iconEl, title, subtitle, titleColor, subtitleColor;
+-
+-                            if (inQueue) {
+-                                bg = 'bg-emerald-50'; border = 'border-emerald-200'; iconBg = 'bg-emerald-500';
+-                                iconEl = <CheckCircle2 size={20} />; titleColor = 'text-emerald-800'; subtitleColor = 'text-emerald-600';
+-                                title = "You're in the queue!";
+-                                subtitle = "We're actively matching you with employers. You'll be notified when there's a match.";
+-                            } else if (isReady && adminApproved) {
+-                                bg = 'bg-blue-50'; border = 'border-blue-200'; iconBg = 'bg-[#1877f2]';
+-                                iconEl = <Clock size={20} />; titleColor = 'text-blue-800'; subtitleColor = 'text-blue-600';
+-                                title = "Profile approved — ready to pay";
+-                                subtitle = "Your profile has been approved by our team. Pay the entry fee to join the queue.";
+-                            } else if (isReady && !adminApproved) {
+-                                bg = 'bg-purple-50'; border = 'border-purple-200'; iconBg = 'bg-purple-500';
+-                                iconEl = <Clock size={20} />; titleColor = 'text-purple-800'; subtitleColor = 'text-purple-600';
+-                                title = "Profile under review";
+-                                subtitle = "Your profile is complete and being reviewed by our team. You'll be notified once approved.";
+-                            } else if (docsUploaded && !profileDone) {
+-                                bg = 'bg-amber-50'; border = 'border-amber-200'; iconBg = 'bg-amber-500';
+-                                iconEl = <AlertCircle size={20} />; titleColor = 'text-amber-800'; subtitleColor = 'text-amber-600';
+-                                title = "Almost there — complete your profile";
+-                                subtitle = `Your documents are verified, but your profile is ${profileCompletion}% complete. Fill in the missing fields to continue.`;
+-                            } else {
+-                                bg = 'bg-amber-50'; border = 'border-amber-200'; iconBg = 'bg-amber-500';
+-                                iconEl = <AlertCircle size={20} />; titleColor = 'text-amber-800'; subtitleColor = 'text-amber-600';
+-                                title = "Complete your profile";
+-                                subtitle = "Upload your documents and fill in your profile information to get started.";
+-                            }
+-
+-                            return (
+-                                <div className={`rounded-xl shadow-sm border p-5 ${bg} ${border}`}>
+-                                    <div className="flex items-center gap-3">
+-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBg} text-white`}>
+-                                            {iconEl}
+-                                        </div>
+-                                        <div>
+-                                            <h4 className={`font-bold ${titleColor}`}>{title}</h4>
+-                                            <p className={`text-sm ${subtitleColor}`}>{subtitle}</p>
+-                                        </div>
++                                        ))}
+                                     </div>
+                                 </div>
+-                            );
+-                        })()}
+ 
+-                        {/* Pending Offers in Status */}
+-                        {hasPendingOffer && (
+-                            <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-5">
+-                                <h3 className="font-bold text-[#050505] text-lg mb-3">Active Offers</h3>
+-                                {pendingOffers.map((offer: any) => (
+-                                    <Link
+-                                        key={offer.id}
+-                                        href={`/profile/worker/offers/${offer.id}`}
+-                                        className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-100 hover:border-emerald-300 transition-colors group"
+-                                    >
+-                                        <div>
+-                                            <div className="font-bold text-[#050505]">{offer.job_request?.employer?.company_name || "Company"}</div>
+-                                            <div className="text-sm text-[#65676b]">{offer.job_request?.title} • {offer.job_request?.destination_country}</div>
++                                {hasPendingOffer && (
++                                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl border border-emerald-100 p-8">
++                                        <div className="flex items-center gap-3 mb-6">
++                                            <div className="bg-white p-2.5 rounded-xl shadow-sm text-emerald-600">
++                                                <PartyPopper size={24} />
++                                            </div>
++                                            <div>
++                                                <h3 className="font-bold text-slate-900 text-xl">Job Offers</h3>
++                                                <p className="text-slate-500">Congratulations! You have pending offers.</p>
++                                            </div>
+                                         </div>
+-                                        <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-md uppercase">Pending</span>
+-                                    </Link>
+-                                ))}
++                                        {pendingOffers.map((offer: any) => (
++                                            <Link
++                                                key={offer.id}
++                                                href={`/profile/worker/offers/${offer.id}`}
++                                                className="block bg-white rounded-xl p-5 border border-emerald-100 hover:shadow-md hover:border-emerald-300 transition-all group"
++                                            >
++                                                <div className="flex justify-between items-center">
++                                                    <div>
++                                                        <h4 className="font-bold text-lg text-slate-900 group-hover:text-emerald-600 transition-colors">
++                                                            {offer.job_request?.employer?.company_name || "Confidential Employer"}
++                                                        </h4>
++                                                        <p className="text-slate-500">{offer.job_request?.title} • {offer.job_request?.destination_country}</p>
++                                                    </div>
++                                                    <ChevronRight className="text-slate-300 group-hover:text-emerald-500" />
++                                                </div>
++                                            </Link>
++                                        ))}
++                                    </div>
++                                )}
+                             </div>
+                         )}
+                     </div>
+-                )}
++                </div>
+             </div>
+         </div>
+     );
+@@ -421,32 +279,30 @@ export default function DashboardClient({
+ 
+ // ─── COMPONENTS ──────────────────────────────────────────────
+ 
+-function TabButton({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) {
++function TabButton({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode }) {
+     return (
+         <button
+             onClick={onClick}
+-            className={`px-5 py-3.5 font-semibold text-[15px] whitespace-nowrap transition-colors relative ${active
+-                ? 'text-[#1877f2]'
+-                : 'text-[#65676b] hover:bg-[#f0f2f5] rounded-t-lg'
++            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${active
++                ? 'bg-blue-50 text-blue-700 shadow-sm'
++                : 'text-slate-600 hover:bg-slate-50'
+                 }`}
+         >
++            <span className={active ? 'text-blue-600' : 'text-slate-400'}>{icon}</span>
+             {label}
+-            {active && (
+-                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1877f2] rounded-t-full" />
+-            )}
+         </button>
+     );
+ }
+ 
+ function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: any }) {
+     return (
+-        <div className="flex items-start gap-3 p-3 rounded-lg bg-[#f7f8fa] border border-[#f0f2f5]">
+-            <div className="text-[#65676b] mt-0.5 shrink-0">{icon}</div>
+-            <div className="min-w-0">
+-                <div className="text-xs font-semibold text-[#65676b] uppercase tracking-wide">{label}</div>
+-                <div className="text-[#050505] font-medium text-[15px] truncate">
+-                    {value || <span className="text-[#bcc0c4] italic">Not provided</span>}
+-                </div>
++        <div className="group">
++            <div className="flex items-center gap-2 mb-1.5">
++                <span className="text-slate-400 group-hover:text-blue-500 transition-colors">{icon}</span>
++                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
++            </div>
++            <div className="pl-7 font-medium text-slate-900 text-base border-b border-transparent group-hover:border-slate-100 pb-1 transition-colors">
++                {value || <span className="text-slate-300 italic">Not provided</span>}
+             </div>
+         </div>
+     );
+@@ -455,36 +311,29 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string,
+ function DocumentRow({ label, type, status }: { label: string, type: string, status: any }) {
+     const IconComponent = status.icon;
+     const colorMap: Record<string, string> = {
+-        emerald: "text-emerald-600 bg-emerald-50 border-emerald-200",
+-        red: "text-red-600 bg-red-50 border-red-200",
+-        amber: "text-amber-600 bg-amber-50 border-amber-200",
+-        blue: "text-blue-600 bg-blue-50 border-blue-200",
+-        slate: "text-slate-400 bg-slate-50 border-slate-200",
+-    };
+-    const badgeMap: Record<string, string> = {
+-        emerald: "bg-emerald-100 text-emerald-700",
+-        red: "bg-red-100 text-red-700",
+-        amber: "bg-amber-100 text-amber-700",
+-        blue: "bg-blue-100 text-blue-700",
+-        slate: "bg-slate-100 text-slate-500",
++        emerald: "text-emerald-600 bg-emerald-50 border-emerald-100",
++        red: "text-red-600 bg-red-50 border-red-100",
++        amber: "text-amber-600 bg-amber-50 border-amber-100",
++        blue: "text-blue-600 bg-blue-50 border-blue-100",
++        slate: "text-slate-400 bg-slate-50 border-slate-100",
+     };
+ 
+     return (
+-        <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${colorMap[status.color]}`}>
+-            <div className="flex items-center gap-3">
+-                <div className="w-10 h-10 rounded-lg bg-white border border-current/10 flex items-center justify-center">
+-                    <FileText size={20} />
++        <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all hover:shadow-sm ${colorMap[status.color]}`}>
++            <div className="flex items-center gap-4">
++                <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm">
++                    <FileText size={22} className="opacity-80" />
+                 </div>
+                 <div>
+-                    <h4 className="font-semibold text-[#050505] text-sm">{label}</h4>
+-                    <p className="text-xs text-[#65676b]">{type.replace(/_/g, ' ')}</p>
++                    <h4 className="font-bold text-slate-900">{label}</h4>
++                    <p className="text-xs opacity-70 font-medium">{type.replace(/_/g, ' ')}</p>
+                 </div>
+             </div>
+-            <div className="flex items-center gap-2">
+-                <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-md ${badgeMap[status.color]}`}>
++            <div className="flex items-center gap-3">
++                <span className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-full bg-white/50 border border-current/10`}>
+                     {status.label}
+                 </span>
+-                <IconComponent size={18} className={status.color === 'amber' ? 'animate-spin' : ''} />
++                <IconComponent size={20} className={status.color === 'amber' ? 'animate-spin' : ''} />
+             </div>
+         </div>
+     );
+
+commit 69dcdbefe62dd941df10542f518da1365a4dd012
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Tue Feb 17 16:13:14 2026 +0100
+
+    feat: overhaul design system (Inter font, Lucide icons)
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 3098244..5cb422f 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -22,7 +22,10 @@ import {
+     Calendar,
+     Shield,
+     Heart,
+-    Users
++    Users,
++    Rocket,
++    PartyPopper,
++    Sparkles
+ } from "lucide-react";
+ 
+ interface DashboardClientProps {
+@@ -51,7 +54,7 @@ export default function DashboardClient({
+                 spread: 70,
+                 origin: { y: 0.6 }
+             });
+-            toast.success("Profile 100% Complete! 🎉");
++            toast.success("Profile 100% Complete!");
+             sessionStorage.setItem("celebrated_profile", "true");
+         }
+     }, [profileCompletion]);
+@@ -129,7 +132,7 @@ export default function DashboardClient({
+                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                         <div>
+                             <div className="flex items-center gap-2 mb-1">
+-                                <span className="text-2xl">🚀</span>
++                                <Rocket className="w-6 h-6 text-white" />
+                                 <h3 className="font-bold text-lg">Get Matched with Employers</h3>
+                             </div>
+                             <p className="text-blue-100 text-sm max-w-md">
+@@ -265,7 +268,7 @@ export default function DashboardClient({
+                         {hasPendingOffer && (
+                             <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5 hover:shadow-md transition-shadow duration-300">
+                                 <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
+-                                    🎉 You have a job offer!
++                                    <PartyPopper className="w-5 h-5" /> You have a job offer!
+                                 </h3>
+                                 {pendingOffers.map((offer: any) => (
+                                     <Link
+
+commit e87d94b66d94e41537827f4193a875146733338b
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Tue Feb 17 09:44:22 2026 +0100
+
+    feat: modernize UI with toasts, skeletons, and error pages
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index b89ab8d..3098244 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -1,8 +1,10 @@
+ "use client";
+ 
+-import { useState } from "react";
++import { useState, useEffect } from "react";
+ import Link from "next/link";
+ import DocumentWizard from "@/components/DocumentWizard";
++import confetti from "canvas-confetti";
++import { toast } from "sonner";
+ import {
+     FileText,
+     Briefcase,
+@@ -42,6 +44,18 @@ export default function DashboardClient({
+ }: DashboardClientProps) {
+     const [activeTab, setActiveTab] = useState<TabType>("profile");
+ 
++    useEffect(() => {
++        if (profileCompletion === 100 && !sessionStorage.getItem("celebrated_profile")) {
++            confetti({
++                particleCount: 100,
++                spread: 70,
++                origin: { y: 0.6 }
++            });
++            toast.success("Profile 100% Complete! 🎉");
++            sessionStorage.setItem("celebrated_profile", "true");
++        }
++    }, [profileCompletion]);
++
+     const getDocStatus = (type: string) => {
+         const doc = documents.find(d => d.document_type === type);
+         if (!doc) return { status: "missing", label: "Not uploaded", color: "slate", icon: Upload };
+@@ -109,7 +123,7 @@ export default function DashboardClient({
+             <div className="max-w-[900px] mx-auto px-4 py-6">
+ 
+                 {/* Coming Soon / Job Matching CTA — will become payment gateway */}
+-                <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden">
++                <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden transform hover:scale-[1.02] transition-all duration-300 cursor-default">
+                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+@@ -175,7 +189,7 @@ export default function DashboardClient({
+                     <div className="space-y-4">
+ 
+                         {/* Personal Information */}
+-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
+                             <div className="mb-4">
+                                 <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
+                             </div>
+@@ -200,7 +214,7 @@ export default function DashboardClient({
+ 
+                         {/* Family Information */}
+                         {candidate?.family_data && (candidate.family_data.spouse || (candidate.family_data.children && candidate.family_data.children.length > 0)) && (
+-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
+                                 <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
+                                     <Users size={20} /> Family Information
+                                 </h3>
+@@ -232,7 +246,7 @@ export default function DashboardClient({
+ 
+                         {/* Passport Information */}
+                         {candidate?.passport_number && (
+-                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 hover:shadow-md transition-shadow duration-300">
+                                 <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
+                                     <Shield size={20} /> Passport & Travel
+                                 </h3>
+@@ -249,7 +263,7 @@ export default function DashboardClient({
+ 
+                         {/* Pending Offers */}
+                         {hasPendingOffer && (
+-                            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5">
++                            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5 hover:shadow-md transition-shadow duration-300">
+                                 <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
+                                     🎉 You have a job offer!
+                                 </h3>
+@@ -301,7 +315,7 @@ export default function DashboardClient({
+                 {activeTab === 'status' && (
+                     <div className="space-y-4">
+                         {/* Progress Tracker */}
+-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6">
++                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 hover:shadow-md transition-shadow duration-300">
+                             <h3 className="font-bold text-[#050505] text-lg mb-6">Application Progress</h3>
+                             <div className="relative">
+                                 {stages.map((stage, index) => (
+
+commit 092b1d0d2e4cd5af6f6caf3dd890fec559f84c31
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sun Feb 15 05:03:21 2026 +0100
+
+    feat: manual admin approval workflow for workers and employers
+    
+    - Add DB migration 007_admin_approval.sql (admin_approved columns, PENDING_APPROVAL status)
+    - Gate queue page payment behind admin approval (show 'under review' message)
+    - Add server-side guard in Stripe create-checkout route (403 if not approved)
+    - Add Approve/Revoke button to admin worker detail page with server action
+    - Add 'Needs Approval' filter tab and approval badges to admin workers list
+    - Update worker dashboard progress tracker with 'Admin Approved' stage
+    - Update AGENTS.md with gotcha #31 about mandatory admin approval
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 7b8f17e..b89ab8d 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -32,12 +32,13 @@ interface DashboardClientProps {
+     profileCompletion: number;
+     isReady: boolean;
+     inQueue: boolean;
++    adminApproved: boolean;
+ }
+ 
+ type TabType = "profile" | "documents" | "status";
+ 
+ export default function DashboardClient({
+-    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue
++    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue, adminApproved
+ }: DashboardClientProps) {
+     const [activeTab, setActiveTab] = useState<TabType>("profile");
+ 
+@@ -59,8 +60,8 @@ export default function DashboardClient({
+     const stages = [
+         { label: "Profile Created", done: true },
+         { label: "Documents Uploaded", done: docsUploaded },
+-        { label: "Verified", done: inQueue },
+-        { label: "In Queue", done: inQueue },
++        { label: "Admin Approved", done: adminApproved },
++        { label: "Payment & Queue", done: inQueue },
+         { label: "Matched", done: false },
+     ];
+ 
+@@ -338,11 +339,16 @@ export default function DashboardClient({
+                                 iconEl = <CheckCircle2 size={20} />; titleColor = 'text-emerald-800'; subtitleColor = 'text-emerald-600';
+                                 title = "You're in the queue!";
+                                 subtitle = "We're actively matching you with employers. You'll be notified when there's a match.";
+-                            } else if (isReady) {
++                            } else if (isReady && adminApproved) {
+                                 bg = 'bg-blue-50'; border = 'border-blue-200'; iconBg = 'bg-[#1877f2]';
+                                 iconEl = <Clock size={20} />; titleColor = 'text-blue-800'; subtitleColor = 'text-blue-600';
+-                                title = "Profile complete — ready for queue";
+-                                subtitle = "Your profile and documents are verified. Contact admin to join the queue.";
++                                title = "Profile approved — ready to pay";
++                                subtitle = "Your profile has been approved by our team. Pay the entry fee to join the queue.";
++                            } else if (isReady && !adminApproved) {
++                                bg = 'bg-purple-50'; border = 'border-purple-200'; iconBg = 'bg-purple-500';
++                                iconEl = <Clock size={20} />; titleColor = 'text-purple-800'; subtitleColor = 'text-purple-600';
++                                title = "Profile under review";
++                                subtitle = "Your profile is complete and being reviewed by our team. You'll be notified once approved.";
+                             } else if (docsUploaded && !profileDone) {
+                                 bg = 'bg-amber-50'; border = 'border-amber-200'; iconBg = 'bg-amber-500';
+                                 iconEl = <AlertCircle size={20} />; titleColor = 'text-amber-800'; subtitleColor = 'text-amber-600';
+
+commit 7f1506eaf7710596fea516ae3afae424458831fc
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Mon Feb 9 06:07:30 2026 +0100
+
+    fix: separate docs check from profile, smarter status messaging
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index f7c5fac..7b8f17e 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -52,10 +52,13 @@ export default function DashboardClient({
+ 
+     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
+ 
++    // Check if required documents are uploaded (independently of profile fields)
++    const docsUploaded = documents.filter(d => d.status === 'verified').length >= 2;
++
+     // Application stages
+     const stages = [
+         { label: "Profile Created", done: true },
+-        { label: "Documents Uploaded", done: isReady },
++        { label: "Documents Uploaded", done: docsUploaded },
+         { label: "Verified", done: inQueue },
+         { label: "In Queue", done: inQueue },
+         { label: "Matched", done: false },
+@@ -326,34 +329,46 @@ export default function DashboardClient({
+                         </div>
+ 
+                         {/* Current Status Card */}
+-                        <div className={`rounded-xl shadow-sm border p-5 ${inQueue
+-                            ? 'bg-emerald-50 border-emerald-200'
+-                            : isReady
+-                                ? 'bg-blue-50 border-blue-200'
+-                                : 'bg-amber-50 border-amber-200'
+-                            }`}>
+-                            <div className="flex items-center gap-3">
+-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${inQueue ? 'bg-emerald-500' : isReady ? 'bg-[#1877f2]' : 'bg-amber-500'
+-                                    } text-white`}>
+-                                    {inQueue ? <CheckCircle2 size={20} /> : isReady ? <Clock size={20} /> : <AlertCircle size={20} />}
+-                                </div>
+-                                <div>
+-                                    <h4 className={`font-bold ${inQueue ? 'text-emerald-800' : isReady ? 'text-blue-800' : 'text-amber-800'
+-                                        }`}>
+-                                        {inQueue ? "You're in the queue!" : isReady ? "Profile complete — ready for queue" : "Complete your profile"}
+-                                    </h4>
+-                                    <p className={`text-sm ${inQueue ? 'text-emerald-600' : isReady ? 'text-blue-600' : 'text-amber-600'
+-                                        }`}>
+-                                        {inQueue
+-                                            ? "We're actively matching you with employers. You'll be notified when there's a match."
+-                                            : isReady
+-                                                ? "Your documents are verified. Contact admin to join the queue."
+-                                                : "Upload and verify your documents to continue."
+-                                        }
+-                                    </p>
++                        {(() => {
++                            const profileDone = profileCompletion === 100;
++                            let bg, border, iconBg, iconEl, title, subtitle, titleColor, subtitleColor;
++
++                            if (inQueue) {
++                                bg = 'bg-emerald-50'; border = 'border-emerald-200'; iconBg = 'bg-emerald-500';
++                                iconEl = <CheckCircle2 size={20} />; titleColor = 'text-emerald-800'; subtitleColor = 'text-emerald-600';
++                                title = "You're in the queue!";
++                                subtitle = "We're actively matching you with employers. You'll be notified when there's a match.";
++                            } else if (isReady) {
++                                bg = 'bg-blue-50'; border = 'border-blue-200'; iconBg = 'bg-[#1877f2]';
++                                iconEl = <Clock size={20} />; titleColor = 'text-blue-800'; subtitleColor = 'text-blue-600';
++                                title = "Profile complete — ready for queue";
++                                subtitle = "Your profile and documents are verified. Contact admin to join the queue.";
++                            } else if (docsUploaded && !profileDone) {
++                                bg = 'bg-amber-50'; border = 'border-amber-200'; iconBg = 'bg-amber-500';
++                                iconEl = <AlertCircle size={20} />; titleColor = 'text-amber-800'; subtitleColor = 'text-amber-600';
++                                title = "Almost there — complete your profile";
++                                subtitle = `Your documents are verified, but your profile is ${profileCompletion}% complete. Fill in the missing fields to continue.`;
++                            } else {
++                                bg = 'bg-amber-50'; border = 'border-amber-200'; iconBg = 'bg-amber-500';
++                                iconEl = <AlertCircle size={20} />; titleColor = 'text-amber-800'; subtitleColor = 'text-amber-600';
++                                title = "Complete your profile";
++                                subtitle = "Upload your documents and fill in your profile information to get started.";
++                            }
++
++                            return (
++                                <div className={`rounded-xl shadow-sm border p-5 ${bg} ${border}`}>
++                                    <div className="flex items-center gap-3">
++                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBg} text-white`}>
++                                            {iconEl}
++                                        </div>
++                                        <div>
++                                            <h4 className={`font-bold ${titleColor}`}>{title}</h4>
++                                            <p className={`text-sm ${subtitleColor}`}>{subtitle}</p>
++                                        </div>
++                                    </div>
+                                 </div>
+-                            </div>
+-                        </div>
++                            );
++                        })()}
+ 
+                         {/* Pending Offers in Status */}
+                         {hasPendingOffer && (
+
+commit e5e85f308fb877278242c69cee497f867793c60d
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Mon Feb 9 06:00:54 2026 +0100
+
+    fix: move Edit Profile into tabs bar, remove header section
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 384be60..f7c5fac 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -104,24 +104,6 @@ export default function DashboardClient({
+             {/* MAIN CONTENT */}
+             <div className="max-w-[900px] mx-auto px-4 py-6">
+ 
+-                {/* PAGE HEADER */}
+-                <div className="mb-6">
+-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+-                        <div>
+-                            <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
+-                            <p className="text-gray-500 mt-1">
+-                                {candidate?.preferred_job || "Worker"} • {candidate?.nationality || "International"}
+-                            </p>
+-                        </div>
+-                        <Link
+-                            href="/profile/worker/edit"
+-                            className="bg-[#1877f2] text-white px-5 py-2.5 rounded-md font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2"
+-                        >
+-                            <Pencil size={16} /> Edit Profile
+-                        </Link>
+-                    </div>
+-                </div>
+-
+                 {/* Coming Soon / Job Matching CTA — will become payment gateway */}
+                 <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden">
+                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+@@ -167,10 +149,20 @@ export default function DashboardClient({
+ 
+                 {/* TABS */}
+                 <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
+-                    <div className="flex px-2 overflow-x-auto scrollbar-hide">
+-                        <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+-                        <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
+-                        <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
++                    <div className="flex items-center px-2">
++                        <div className="flex overflow-x-auto scrollbar-hide">
++                            <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
++                            <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
++                            <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
++                        </div>
++                        <div className="ml-auto pr-2">
++                            <Link
++                                href="/profile/worker/edit"
++                                className="bg-[#1877f2] text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 whitespace-nowrap"
++                            >
++                                <Pencil size={14} /> Edit Profile
++                            </Link>
++                        </div>
+                     </div>
+                 </div>
+ 
+
+commit faf781a01a1cd90abe1de5ac9fed00bae6da431d
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Mon Feb 9 05:53:16 2026 +0100
+
+    fix: remove Edit link from Personal Info card, add spacing to completion bar
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index b7da71f..384be60 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -146,7 +146,7 @@ export default function DashboardClient({
+ 
+                 {/* Profile Completion — always visible */}
+                 {profileCompletion < 100 && (
+-                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5 mb-4">
+                         <div className="flex items-center justify-between mb-2">
+                             <h3 className="font-bold text-[#050505]">Profile Completion</h3>
+                             <span className="text-sm font-bold text-[#1877f2]">
+@@ -180,11 +180,8 @@ export default function DashboardClient({
+ 
+                         {/* Personal Information */}
+                         <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+-                            <div className="flex items-center justify-between mb-4">
++                            <div className="mb-4">
+                                 <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
+-                                <Link href="/profile/worker/edit" className="text-[#1877f2] text-sm font-semibold hover:underline">
+-                                    Edit
+-                                </Link>
+                             </div>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                 <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
+
+commit 6f06215d6e8eba1fdfffb46e74aef8e435e059ef
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Mon Feb 9 05:47:13 2026 +0100
+
+    fix: isReady requires 100% profile, move completion bar above tabs, remove PIB
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 4e1ef7b..b7da71f 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -143,6 +143,28 @@ export default function DashboardClient({
+                         </div>
+                     </div>
+                 </div>
++
++                {/* Profile Completion — always visible */}
++                {profileCompletion < 100 && (
++                    <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                        <div className="flex items-center justify-between mb-2">
++                            <h3 className="font-bold text-[#050505]">Profile Completion</h3>
++                            <span className="text-sm font-bold text-[#1877f2]">
++                                {profileCompletion}%
++                            </span>
++                        </div>
++                        <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden">
++                            <div
++                                className="h-full rounded-full transition-all duration-500 bg-[#1877f2]"
++                                style={{ width: `${profileCompletion}%` }}
++                            />
++                        </div>
++                        <p className="text-xs text-[#65676b] mt-2">
++                            Complete your profile to get matched with employers faster.
++                        </p>
++                    </div>
++                )}
++
+                 {/* TABS */}
+                 <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
+                     <div className="flex px-2 overflow-x-auto scrollbar-hide">
+@@ -155,26 +177,6 @@ export default function DashboardClient({
+                 {/* ====================== PROFILE INFO TAB ====================== */}
+                 {activeTab === 'profile' && (
+                     <div className="space-y-4">
+-                        {/* Profile Completion */}
+-                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+-                            <div className="flex items-center justify-between mb-2">
+-                                <h3 className="font-bold text-[#050505]">Profile Completion</h3>
+-                                <span className={`text-sm font-bold ${profileCompletion === 100 ? 'text-emerald-600' : 'text-[#1877f2]'}`}>
+-                                    {profileCompletion}%
+-                                </span>
+-                            </div>
+-                            <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden">
+-                                <div
+-                                    className={`h-full rounded-full transition-all duration-500 ${profileCompletion === 100 ? 'bg-emerald-500' : 'bg-[#1877f2]'}`}
+-                                    style={{ width: `${profileCompletion}%` }}
+-                                />
+-                            </div>
+-                            {profileCompletion < 100 && (
+-                                <p className="text-xs text-[#65676b] mt-2">
+-                                    Complete your profile to get matched with employers faster.
+-                                </p>
+-                            )}
+-                        </div>
+ 
+                         {/* Personal Information */}
+                         <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+
+commit 7a8cf3bccbceb1ce1fc2a44952241d78a123e687
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sun Feb 8 05:49:58 2026 +0100
+
+    Standardize Workers United brand text to dark navy on all pages
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index b36ba33..4e1ef7b 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -70,7 +70,7 @@ export default function DashboardClient({
+                 <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
+                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+                         <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
+-                        <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
++                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline tracking-tight">
+                             Workers United
+                         </span>
+                     </Link>
+
+commit 2a116d3ffe7a7062afcfa058290e3e73f7e5762e
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sun Feb 8 03:38:47 2026 +0100
+
+     Add settings gear icon to worker dashboard and employer profile navbars
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 32912aa..b36ba33 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -78,6 +78,15 @@ export default function DashboardClient({
+                         <span className="text-sm font-semibold text-[#050505] hidden sm:block">
+                             {displayName}
+                         </span>
++                        <Link
++                            href="/profile/settings"
++                            className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
++                            title="Account Settings"
++                        >
++                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
++                                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" />
++                            </svg>
++                        </Link>
+                         <a
+                             href="/auth/signout"
+                             className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
+
+commit 33df2633eb5c9d88d45e9755f603e9b433b00780
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sun Feb 8 02:43:03 2026 +0100
+
+     Mobile responsiveness: bottom nav CTA fix scrollable tabs social links responsive grids
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index e81879e..32912aa 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -117,7 +117,7 @@ export default function DashboardClient({
+                 <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden">
+                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+-                    <div className="relative z-10 flex items-center justify-between">
++                    <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                         <div>
+                             <div className="flex items-center gap-2 mb-1">
+                                 <span className="text-2xl">🚀</span>
+@@ -127,7 +127,7 @@ export default function DashboardClient({
+                                 We're building a fast-track job matching system to connect you with verified employers across Europe. Stay tuned!
+                             </p>
+                         </div>
+-                        <div className="shrink-0 ml-4">
++                        <div className="shrink-0">
+                             <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/30">
+                                 Coming Soon
+                             </span>
+@@ -136,7 +136,7 @@ export default function DashboardClient({
+                 </div>
+                 {/* TABS */}
+                 <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
+-                    <div className="flex px-2">
++                    <div className="flex px-2 overflow-x-auto scrollbar-hide">
+                         <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+                         <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
+                         <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
+
+commit 8f93215c81b863c8c42405915d24b71f20995bf6
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 18:45:49 2026 +0100
+
+    feat: add e-Uprava visa fields to worker/employer profiles - Add 16 new fields to worker edit profile (personal, family, passport, travel) - Mirror new fields in onboarding form - Display new fields on worker dashboard with family/passport cards - Update profile completion to include new fields - Add company_registration_number to employer profile - Create shared constants file for countries, industries, etc.
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 8117b9a..e81879e 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -18,7 +18,9 @@ import {
+     Phone,
+     User,
+     Calendar,
+-    Shield
++    Shield,
++    Heart,
++    Users
+ } from "lucide-react";
+ 
+ interface DashboardClientProps {
+@@ -175,15 +177,72 @@ export default function DashboardClient({
+                             </div>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                 <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
++                                <InfoRow icon={<User size={18} />} label="Gender" value={candidate?.gender} />
+                                 <InfoRow icon={<Globe size={18} />} label="Nationality" value={candidate?.nationality} />
+-                                <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
++                                <InfoRow icon={<Heart size={18} />} label="Marital Status" value={candidate?.marital_status} />
+                                 <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString('en-GB') : null} />
++                                <InfoRow icon={<MapPin size={18} />} label="Birth Place" value={candidate?.birth_city && candidate?.birth_country ? `${candidate.birth_city}, ${candidate.birth_country}` : (candidate?.birth_country || null)} />
++                                <InfoRow icon={<Globe size={18} />} label="Citizenship" value={candidate?.citizenship} />
++                                <InfoRow icon={<Globe size={18} />} label="Original Citizenship" value={candidate?.original_citizenship && candidate.original_citizenship !== candidate.citizenship ? candidate.original_citizenship : null} />
++                                <InfoRow icon={<User size={18} />} label="Maiden Name" value={candidate?.maiden_name} />
++                                <InfoRow icon={<User size={18} />} label="Father's Name" value={candidate?.father_name} />
++                                <InfoRow icon={<User size={18} />} label="Mother's Name" value={candidate?.mother_name} />
++                                <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
+                                 <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
+                                 <InfoRow icon={<MapPin size={18} />} label="Address" value={candidate?.address} />
+                                 <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
+                             </div>
+                         </div>
+ 
++                        {/* Family Information */}
++                        {candidate?.family_data && (candidate.family_data.spouse || (candidate.family_data.children && candidate.family_data.children.length > 0)) && (
++                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                                <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
++                                    <Users size={20} /> Family Information
++                                </h3>
++                                {candidate.family_data.spouse && (
++                                    <div className="mb-4">
++                                        <h4 className="text-sm font-semibold text-gray-600 mb-2">Spouse</h4>
++                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
++                                            <InfoRow icon={<User size={18} />} label="Name" value={`${candidate.family_data.spouse.first_name} ${candidate.family_data.spouse.last_name}`} />
++                                            <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate.family_data.spouse.dob ? new Date(candidate.family_data.spouse.dob).toLocaleDateString('en-GB') : null} />
++                                            <InfoRow icon={<MapPin size={18} />} label="Birth Place" value={candidate.family_data.spouse.birth_city && candidate.family_data.spouse.birth_country ? `${candidate.family_data.spouse.birth_city}, ${candidate.family_data.spouse.birth_country}` : null} />
++                                        </div>
++                                    </div>
++                                )}
++                                {candidate.family_data.children && candidate.family_data.children.length > 0 && (
++                                    <div>
++                                        <h4 className="text-sm font-semibold text-gray-600 mb-2">Children ({candidate.family_data.children.length})</h4>
++                                        <div className="space-y-2">
++                                            {candidate.family_data.children.map((child: any, i: number) => (
++                                                <div key={i} className="flex items-center gap-4 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
++                                                    <span className="font-medium">{child.first_name} {child.last_name}</span>
++                                                    {child.dob && <span className="text-gray-500">Born: {new Date(child.dob).toLocaleDateString('en-GB')}</span>}
++                                                </div>
++                                            ))}
++                                        </div>
++                                    </div>
++                                )}
++                            </div>
++                        )}
++
++                        {/* Passport Information */}
++                        {candidate?.passport_number && (
++                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                                <h3 className="font-bold text-[#050505] text-lg mb-4 flex items-center gap-2">
++                                    <Shield size={20} /> Passport & Travel
++                                </h3>
++                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
++                                    <InfoRow icon={<FileText size={18} />} label="Passport Number" value={candidate.passport_number ? `***${candidate.passport_number.slice(-4)}` : null} />
++                                    <InfoRow icon={<Globe size={18} />} label="Issued By" value={candidate.passport_issued_by} />
++                                    <InfoRow icon={<Calendar size={18} />} label="Issue Date" value={candidate.passport_issue_date ? new Date(candidate.passport_issue_date).toLocaleDateString('en-GB') : null} />
++                                    <InfoRow icon={<Calendar size={18} />} label="Expiry Date" value={candidate.passport_expiry_date ? new Date(candidate.passport_expiry_date).toLocaleDateString('en-GB') : null} />
++                                    <InfoRow icon={<Globe size={18} />} label="Lives Abroad" value={candidate.lives_abroad} />
++                                    <InfoRow icon={<FileText size={18} />} label="Previous Visas (3 years)" value={candidate.previous_visas} />
++                                </div>
++                            </div>
++                        )}
++
+                         {/* Pending Offers */}
+                         {hasPendingOffer && (
+                             <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5">
+
+commit 98207deeb122f53b1ae490842caf1318ab2a8a33
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 17:20:56 2026 +0100
+
+    Remove education field, sync job dropdowns, add employer country, fix date format DD/MM/YYYY
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 27a4c61..8117b9a 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -177,11 +177,10 @@ export default function DashboardClient({
+                                 <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
+                                 <InfoRow icon={<Globe size={18} />} label="Nationality" value={candidate?.nationality} />
+                                 <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
+-                                <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : null} />
++                                <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString('en-GB') : null} />
+                                 <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
+                                 <InfoRow icon={<MapPin size={18} />} label="Address" value={candidate?.address} />
+                                 <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
+-                                <InfoRow icon={<Briefcase size={18} />} label="Education" value={candidate?.education_level} />
+                             </div>
+                         </div>
+ 
+
+commit 33012dccf4e539c4ad3b9f06921d416f6465e45a
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 16:39:47 2026 +0100
+
+    feat: Add address and education_level columns to candidates, restore in save/load/dashboard
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index c445ad6..27a4c61 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -179,7 +179,9 @@ export default function DashboardClient({
+                                 <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
+                                 <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : null} />
+                                 <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
++                                <InfoRow icon={<MapPin size={18} />} label="Address" value={candidate?.address} />
+                                 <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
++                                <InfoRow icon={<Briefcase size={18} />} label="Education" value={candidate?.education_level} />
+                             </div>
+                         </div>
+ 
+
+commit af356e904939042e96b255adbb7407145f977222
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 16:34:31 2026 +0100
+
+    feat: Add coming soon job matching placeholder on worker dashboard
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index c632cb6..c445ad6 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -111,6 +111,27 @@ export default function DashboardClient({
+                     </div>
+                 </div>
+ 
++                {/* Coming Soon / Job Matching CTA — will become payment gateway */}
++                <div className="mb-4 bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-xl shadow-lg p-5 text-white relative overflow-hidden">
++                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
++                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
++                    <div className="relative z-10 flex items-center justify-between">
++                        <div>
++                            <div className="flex items-center gap-2 mb-1">
++                                <span className="text-2xl">🚀</span>
++                                <h3 className="font-bold text-lg">Get Matched with Employers</h3>
++                            </div>
++                            <p className="text-blue-100 text-sm max-w-md">
++                                We're building a fast-track job matching system to connect you with verified employers across Europe. Stay tuned!
++                            </p>
++                        </div>
++                        <div className="shrink-0 ml-4">
++                            <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/30">
++                                Coming Soon
++                            </span>
++                        </div>
++                    </div>
++                </div>
+                 {/* TABS */}
+                 <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
+                     <div className="flex px-2">
+
+commit 7aa50cb52ec7f19b6d76cd3976a892c6a0c8e236
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 08:06:34 2026 +0100
+
+    feat: Redesign worker profile & edit pages - clean card-based design, fix navbar name display
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 4587ecf..c632cb6 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -74,7 +74,7 @@ export default function DashboardClient({
+                     </Link>
+                     <div className="flex items-center gap-3">
+                         <span className="text-sm font-semibold text-[#050505] hidden sm:block">
+-                            {user.email?.split('@')[0]}
++                            {displayName}
+                         </span>
+                         <a
+                             href="/auth/signout"
+@@ -93,42 +93,27 @@ export default function DashboardClient({
+             {/* MAIN CONTENT */}
+             <div className="max-w-[900px] mx-auto px-4 py-6">
+ 
+-                {/* PROFILE CARD */}
+-                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-hidden mb-4">
+-                    {/* Header gradient strip */}
+-                    <div className="h-[120px] bg-gradient-to-r from-[#1877f2] via-[#42a5f5] to-[#1565c0] relative">
+-                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white/20 to-transparent" />
+-                    </div>
+-
+-                    <div className="px-6 pb-4 -mt-8 relative">
+-                        {/* Avatar */}
+-                        <div className="w-[80px] h-[80px] rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center overflow-hidden mb-3">
+-                            <img
+-                                src={user.user_metadata?.avatar_url || "/logo.png"}
+-                                alt={displayName}
+-                                className="w-full h-full object-cover"
+-                                onError={(e) => { e.currentTarget.src = "/logo.png"; }}
+-                            />
+-                        </div>
+-
+-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
+-                            <div>
+-                                <h1 className="text-2xl font-bold text-[#050505] leading-tight">{displayName}</h1>
+-                                <p className="text-[#65676b] text-sm mt-0.5">
+-                                    {candidate?.preferred_job || "Worker"} • {candidate?.nationality || "International"}
+-                                </p>
+-                            </div>
+-                            <Link
+-                                href="/profile/worker/edit"
+-                                className="bg-[#1877f2] text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 shadow-sm"
+-                            >
+-                                <Pencil size={16} /> Edit Profile
+-                            </Link>
++                {/* PAGE HEADER */}
++                <div className="mb-6">
++                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
++                        <div>
++                            <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
++                            <p className="text-gray-500 mt-1">
++                                {candidate?.preferred_job || "Worker"} • {candidate?.nationality || "International"}
++                            </p>
+                         </div>
++                        <Link
++                            href="/profile/worker/edit"
++                            className="bg-[#1877f2] text-white px-5 py-2.5 rounded-md font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2"
++                        >
++                            <Pencil size={16} /> Edit Profile
++                        </Link>
+                     </div>
++                </div>
+ 
+-                    {/* Tabs */}
+-                    <div className="flex border-t border-[#dddfe2] px-2">
++                {/* TABS */}
++                <div className="bg-white rounded-lg shadow-sm border border-[#dddfe2] mb-4">
++                    <div className="flex px-2">
+                         <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+                         <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
+                         <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
+
+commit a41f273a16e566d0bf05773a92d95f89e1d616b9
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 07:59:27 2026 +0100
+
+    feat: Header 10% bigger (62px), logo h-[60px] consistent across all pages
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index bc4e66d..4587ecf 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -64,10 +64,10 @@ export default function DashboardClient({
+     return (
+         <div className="min-h-screen bg-[#f0f2f5]">
+             {/* NAVBAR */}
+-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
++            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
+                 <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
+                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+-                        <img src="/logo.png" alt="Workers United" className="h-20 w-auto object-contain" />
++                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
+                         <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
+                             Workers United
+                         </span>
+
+commit e4e4f5ec1768f12e68daf69edf3558d61c1505fd
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 07:12:04 2026 +0100
+
+    feat: Increase logo size from h-12 to h-20 across all pages
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index b2e5884..bc4e66d 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -67,7 +67,7 @@ export default function DashboardClient({
+             <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
+                 <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
+                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+-                        <img src="/logo.png" alt="Workers United" className="h-12 w-auto object-contain" />
++                        <img src="/logo.png" alt="Workers United" className="h-20 w-auto object-contain" />
+                         <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
+                             Workers United
+                         </span>
+
+commit 0fa07c8d77b175b13cb2c59e116aedb6d1d15106
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 07:01:46 2026 +0100
+
+    feat: Replace logo with better version, increase size across all pages
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index cc24db8..b2e5884 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -67,7 +67,7 @@ export default function DashboardClient({
+             <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
+                 <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
+                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+-                        <img src="/logo.png" alt="Workers United" className="h-10 w-auto object-contain" />
++                        <img src="/logo.png" alt="Workers United" className="h-12 w-auto object-contain" />
+                         <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
+                             Workers United
+                         </span>
+
+commit ef848ea1677725c56a8adaf369ba0a92e1aaf911
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 05:55:49 2026 +0100
+
+    fix: Deep site scan - fix 14 bugs: wrong redirects, dead links, wrong colors, inconsistent logos
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+index 77408d8..cc24db8 100644
+--- a/src/app/profile/worker/DashboardClient.tsx
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -119,7 +119,7 @@ export default function DashboardClient({
+                                 </p>
+                             </div>
+                             <Link
+-                                href="/onboarding"
++                                href="/profile/worker/edit"
+                                 className="bg-[#1877f2] text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 shadow-sm"
+                             >
+                                 <Pencil size={16} /> Edit Profile
+@@ -163,7 +163,7 @@ export default function DashboardClient({
+                         <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
+                             <div className="flex items-center justify-between mb-4">
+                                 <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
+-                                <Link href="/onboarding" className="text-[#1877f2] text-sm font-semibold hover:underline">
++                                <Link href="/profile/worker/edit" className="text-[#1877f2] text-sm font-semibold hover:underline">
+                                     Edit
+                                 </Link>
+                             </div>
+@@ -186,7 +186,7 @@ export default function DashboardClient({
+                                 {pendingOffers.map((offer: any) => (
+                                     <Link
+                                         key={offer.id}
+-                                        href={`/profile/offers/${offer.id}`}
++                                        href={`/profile/worker/offers/${offer.id}`}
+                                         className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-200 hover:border-emerald-400 transition-colors group"
+                                     >
+                                         <div>
+@@ -296,7 +296,7 @@ export default function DashboardClient({
+                                 {pendingOffers.map((offer: any) => (
+                                     <Link
+                                         key={offer.id}
+-                                        href={`/profile/offers/${offer.id}`}
++                                        href={`/profile/worker/offers/${offer.id}`}
+                                         className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-100 hover:border-emerald-300 transition-colors group"
+                                     >
+                                         <div>
+
+commit 3b48f8c9ea4746bcadf8b30553dfd56eeec27c97
+Author: Borivoje <cvetkovicborivoje@gmail.com>
+Date:   Sat Feb 7 04:11:46 2026 +0100
+
+    refactor: Complete rename /dashboard to /profile/worker and /employer to /profile/employer
+
+diff --git a/src/app/profile/worker/DashboardClient.tsx b/src/app/profile/worker/DashboardClient.tsx
+new file mode 100644
+index 0000000..77408d8
+--- /dev/null
++++ b/src/app/profile/worker/DashboardClient.tsx
+@@ -0,0 +1,387 @@
++"use client";
++
++import { useState } from "react";
++import Link from "next/link";
++import DocumentWizard from "@/components/DocumentWizard";
++import {
++    FileText,
++    Briefcase,
++    MapPin,
++    Globe,
++    Clock,
++    Pencil,
++    CheckCircle2,
++    AlertCircle,
++    Loader2,
++    Upload,
++    ChevronRight,
++    Phone,
++    User,
++    Calendar,
++    Shield
++} from "lucide-react";
++
++interface DashboardClientProps {
++    user: any;
++    profile: any;
++    candidate: any;
++    documents: any[];
++    pendingOffers: any[];
++    profileCompletion: number;
++    isReady: boolean;
++    inQueue: boolean;
++}
++
++type TabType = "profile" | "documents" | "status";
++
++export default function DashboardClient({
++    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue
++}: DashboardClientProps) {
++    const [activeTab, setActiveTab] = useState<TabType>("profile");
++
++    const getDocStatus = (type: string) => {
++        const doc = documents.find(d => d.document_type === type);
++        if (!doc) return { status: "missing", label: "Not uploaded", color: "slate", icon: Upload };
++        if (doc.status === "verified") return { status: "verified", label: "Verified", color: "emerald", icon: CheckCircle2 };
++        if (doc.status === "rejected") return { status: "rejected", label: "Rejected", color: "red", icon: AlertCircle };
++        if (doc.status === "verifying") return { status: "verifying", label: "Verifying...", color: "amber", icon: Loader2 };
++        return { status: "uploaded", label: "Uploaded", color: "blue", icon: Clock };
++    };
++
++    const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
++
++    // Application stages
++    const stages = [
++        { label: "Profile Created", done: true },
++        { label: "Documents Uploaded", done: isReady },
++        { label: "Verified", done: inQueue },
++        { label: "In Queue", done: inQueue },
++        { label: "Matched", done: false },
++    ];
++
++    const hasPendingOffer = pendingOffers && pendingOffers.length > 0;
++
++    return (
++        <div className="min-h-screen bg-[#f0f2f5]">
++            {/* NAVBAR */}
++            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[56px]">
++                <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
++                    <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
++                        <img src="/logo.png" alt="Workers United" className="h-10 w-auto object-contain" />
++                        <span className="font-bold text-[#1877f2] text-xl hidden sm:inline tracking-tight">
++                            Workers United
++                        </span>
++                    </Link>
++                    <div className="flex items-center gap-3">
++                        <span className="text-sm font-semibold text-[#050505] hidden sm:block">
++                            {user.email?.split('@')[0]}
++                        </span>
++                        <a
++                            href="/auth/signout"
++                            className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
++                            title="Logout"
++                        >
++                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
++                                <path d="M16 13v-2H7V8l-5 4 5 4v-3z" />
++                                <path d="M20 3h-9c-1.103 0-2 .897-2 2v4h2V5h9v14h-9v-4H9v4c0 1.103.897 2 2 2h9c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2z" />
++                            </svg>
++                        </a>
++                    </div>
++                </div>
++            </nav>
++
++            {/* MAIN CONTENT */}
++            <div className="max-w-[900px] mx-auto px-4 py-6">
++
++                {/* PROFILE CARD */}
++                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-hidden mb-4">
++                    {/* Header gradient strip */}
++                    <div className="h-[120px] bg-gradient-to-r from-[#1877f2] via-[#42a5f5] to-[#1565c0] relative">
++                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white/20 to-transparent" />
++                    </div>
++
++                    <div className="px-6 pb-4 -mt-8 relative">
++                        {/* Avatar */}
++                        <div className="w-[80px] h-[80px] rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center overflow-hidden mb-3">
++                            <img
++                                src={user.user_metadata?.avatar_url || "/logo.png"}
++                                alt={displayName}
++                                className="w-full h-full object-cover"
++                                onError={(e) => { e.currentTarget.src = "/logo.png"; }}
++                            />
++                        </div>
++
++                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
++                            <div>
++                                <h1 className="text-2xl font-bold text-[#050505] leading-tight">{displayName}</h1>
++                                <p className="text-[#65676b] text-sm mt-0.5">
++                                    {candidate?.preferred_job || "Worker"} • {candidate?.nationality || "International"}
++                                </p>
++                            </div>
++                            <Link
++                                href="/onboarding"
++                                className="bg-[#1877f2] text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-[#166fe5] transition-colors flex items-center gap-2 shadow-sm"
++                            >
++                                <Pencil size={16} /> Edit Profile
++                            </Link>
++                        </div>
++                    </div>
++
++                    {/* Tabs */}
++                    <div className="flex border-t border-[#dddfe2] px-2">
++                        <TabButton label="Profile Info" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
++                        <TabButton label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
++                        <TabButton label="Status" active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
++                    </div>
++                </div>
++
++                {/* ====================== PROFILE INFO TAB ====================== */}
++                {activeTab === 'profile' && (
++                    <div className="space-y-4">
++                        {/* Profile Completion */}
++                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                            <div className="flex items-center justify-between mb-2">
++                                <h3 className="font-bold text-[#050505]">Profile Completion</h3>
++                                <span className={`text-sm font-bold ${profileCompletion === 100 ? 'text-emerald-600' : 'text-[#1877f2]'}`}>
++                                    {profileCompletion}%
++                                </span>
++                            </div>
++                            <div className="h-2.5 bg-[#f0f2f5] rounded-full overflow-hidden">
++                                <div
++                                    className={`h-full rounded-full transition-all duration-500 ${profileCompletion === 100 ? 'bg-emerald-500' : 'bg-[#1877f2]'}`}
++                                    style={{ width: `${profileCompletion}%` }}
++                                />
++                            </div>
++                            {profileCompletion < 100 && (
++                                <p className="text-xs text-[#65676b] mt-2">
++                                    Complete your profile to get matched with employers faster.
++                                </p>
++                            )}
++                        </div>
++
++                        {/* Personal Information */}
++                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                            <div className="flex items-center justify-between mb-4">
++                                <h3 className="font-bold text-[#050505] text-lg">Personal Information</h3>
++                                <Link href="/onboarding" className="text-[#1877f2] text-sm font-semibold hover:underline">
++                                    Edit
++                                </Link>
++                            </div>
++                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
++                                <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
++                                <InfoRow icon={<Globe size={18} />} label="Nationality" value={candidate?.nationality} />
++                                <InfoRow icon={<MapPin size={18} />} label="Current Location" value={candidate?.current_country} />
++                                <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={candidate?.date_of_birth ? new Date(candidate.date_of_birth).toLocaleDateString() : null} />
++                                <InfoRow icon={<Phone size={18} />} label="Phone" value={candidate?.phone} />
++                                <InfoRow icon={<Briefcase size={18} />} label="Preferred Job" value={candidate?.preferred_job} />
++                            </div>
++                        </div>
++
++                        {/* Pending Offers */}
++                        {hasPendingOffer && (
++                            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl shadow-sm border border-emerald-200 p-5">
++                                <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
++                                    🎉 You have a job offer!
++                                </h3>
++                                {pendingOffers.map((offer: any) => (
++                                    <Link
++                                        key={offer.id}
++                                        href={`/profile/offers/${offer.id}`}
++                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-200 hover:border-emerald-400 transition-colors group"
++                                    >
++                                        <div>
++                                            <div className="font-bold text-[#050505]">{offer.job_request?.employer?.company_name || "Company"}</div>
++                                            <div className="text-sm text-[#65676b]">{offer.job_request?.destination_country}</div>
++                                        </div>
++                                        <ChevronRight size={20} className="text-[#65676b] group-hover:text-emerald-600 transition-colors" />
++                                    </Link>
++                                ))}
++                            </div>
++                        )}
++                    </div>
++                )}
++
++                {/* ====================== DOCUMENTS TAB ====================== */}
++                {activeTab === 'documents' && (
++                    <div className="space-y-4">
++                        {/* Document Upload Wizard (if not ready) */}
++                        {!isReady && (
++                            <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                                <h3 className="font-bold text-[#050505] text-lg mb-2">Upload Documents</h3>
++                                <p className="text-sm text-[#65676b] mb-4">
++                                    Upload your documents below to begin the verification process.
++                                </p>
++                                <DocumentWizard candidateId={user.id} email={user.email || ""} />
++                            </div>
++                        )}
++
++                        {/* Document Status List */}
++                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
++                            <h3 className="font-bold text-[#050505] text-lg mb-4">Document Status</h3>
++                            <div className="space-y-3">
++                                <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
++                                <DocumentRow label="Biometric Photo" type="biometric_photo" status={getDocStatus("biometric_photo")} />
++                                <DocumentRow label="Diploma / Certificate" type="diploma" status={getDocStatus("diploma")} />
++                            </div>
++                        </div>
++                    </div>
++                )}
++
++                {/* ====================== STATUS TAB ====================== */}
++                {activeTab === 'status' && (
++                    <div className="space-y-4">
++                        {/* Progress Tracker */}
++                        <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6">
++                            <h3 className="font-bold text-[#050505] text-lg mb-6">Application Progress</h3>
++                            <div className="relative">
++                                {stages.map((stage, index) => (
++                                    <div key={stage.label} className="flex items-start gap-4 mb-6 last:mb-0">
++                                        {/* Dot + Line */}
++                                        <div className="flex flex-col items-center">
++                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shrink-0 transition-colors ${stage.done
++                                                ? 'bg-emerald-500 border-emerald-500 text-white'
++                                                : 'bg-white border-[#dddfe2] text-[#65676b]'
++                                                }`}>
++                                                {stage.done ? <CheckCircle2 size={16} /> : <span className="text-xs font-bold">{index + 1}</span>}
++                                            </div>
++                                            {index < stages.length - 1 && (
++                                                <div className={`w-0.5 h-8 mt-1 ${stage.done ? 'bg-emerald-300' : 'bg-[#dddfe2]'}`} />
++                                            )}
++                                        </div>
++                                        {/* Label */}
++                                        <div className="pt-1">
++                                            <span className={`font-semibold text-sm ${stage.done ? 'text-emerald-700' : 'text-[#65676b]'}`}>
++                                                {stage.label}
++                                            </span>
++                                        </div>
++                                    </div>
++                                ))}
++                            </div>
++                        </div>
++
++                        {/* Current Status Card */}
++                        <div className={`rounded-xl shadow-sm border p-5 ${inQueue
++                            ? 'bg-emerald-50 border-emerald-200'
++                            : isReady
++                                ? 'bg-blue-50 border-blue-200'
++                                : 'bg-amber-50 border-amber-200'
++                            }`}>
++                            <div className="flex items-center gap-3">
++                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${inQueue ? 'bg-emerald-500' : isReady ? 'bg-[#1877f2]' : 'bg-amber-500'
++                                    } text-white`}>
++                                    {inQueue ? <CheckCircle2 size={20} /> : isReady ? <Clock size={20} /> : <AlertCircle size={20} />}
++                                </div>
++                                <div>
++                                    <h4 className={`font-bold ${inQueue ? 'text-emerald-800' : isReady ? 'text-blue-800' : 'text-amber-800'
++                                        }`}>
++                                        {inQueue ? "You're in the queue!" : isReady ? "Profile complete — ready for queue" : "Complete your profile"}
++                                    </h4>
++                                    <p className={`text-sm ${inQueue ? 'text-emerald-600' : isReady ? 'text-blue-600' : 'text-amber-600'
++                                        }`}>
++                                        {inQueue
++                                            ? "We're actively matching you with employers. You'll be notified when there's a match."
++                                            : isReady
++                                                ? "Your documents are verified. Contact admin to join the queue."
++                                                : "Upload and verify your documents to continue."
++                                        }
++                                    </p>
++                                </div>
++                            </div>
++                        </div>
++
++                        {/* Pending Offers in Status */}
++                        {hasPendingOffer && (
++                            <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-5">
++                                <h3 className="font-bold text-[#050505] text-lg mb-3">Active Offers</h3>
++                                {pendingOffers.map((offer: any) => (
++                                    <Link
++                                        key={offer.id}
++                                        href={`/profile/offers/${offer.id}`}
++                                        className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-100 hover:border-emerald-300 transition-colors group"
++                                    >
++                                        <div>
++                                            <div className="font-bold text-[#050505]">{offer.job_request?.employer?.company_name || "Company"}</div>
++                                            <div className="text-sm text-[#65676b]">{offer.job_request?.title} • {offer.job_request?.destination_country}</div>
++                                        </div>
++                                        <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-md uppercase">Pending</span>
++                                    </Link>
++                                ))}
++                            </div>
++                        )}
++                    </div>
++                )}
++            </div>
++        </div>
++    );
++}
++
++// ─── COMPONENTS ──────────────────────────────────────────────
++
++function TabButton({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) {
++    return (
++        <button
++            onClick={onClick}
++            className={`px-5 py-3.5 font-semibold text-[15px] whitespace-nowrap transition-colors relative ${active
++                ? 'text-[#1877f2]'
++                : 'text-[#65676b] hover:bg-[#f0f2f5] rounded-t-lg'
++                }`}
++        >
++            {label}
++            {active && (
++                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#1877f2] rounded-t-full" />
++            )}
++        </button>
++    );
++}
++
++function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: any }) {
++    return (
++        <div className="flex items-start gap-3 p-3 rounded-lg bg-[#f7f8fa] border border-[#f0f2f5]">
++            <div className="text-[#65676b] mt-0.5 shrink-0">{icon}</div>
++            <div className="min-w-0">
++                <div className="text-xs font-semibold text-[#65676b] uppercase tracking-wide">{label}</div>
++                <div className="text-[#050505] font-medium text-[15px] truncate">
++                    {value || <span className="text-[#bcc0c4] italic">Not provided</span>}
++                </div>
++            </div>
++        </div>
++    );
++}
++
++function DocumentRow({ label, type, status }: { label: string, type: string, status: any }) {
++    const IconComponent = status.icon;
++    const colorMap: Record<string, string> = {
++        emerald: "text-emerald-600 bg-emerald-50 border-emerald-200",
++        red: "text-red-600 bg-red-50 border-red-200",
++        amber: "text-amber-600 bg-amber-50 border-amber-200",
++        blue: "text-blue-600 bg-blue-50 border-blue-200",
++        slate: "text-slate-400 bg-slate-50 border-slate-200",
++    };
++    const badgeMap: Record<string, string> = {
++        emerald: "bg-emerald-100 text-emerald-700",
++        red: "bg-red-100 text-red-700",
++        amber: "bg-amber-100 text-amber-700",
++        blue: "bg-blue-100 text-blue-700",
++        slate: "bg-slate-100 text-slate-500",
++    };
++
++    return (
++        <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${colorMap[status.color]}`}>
++            <div className="flex items-center gap-3">
++                <div className="w-10 h-10 rounded-lg bg-white border border-current/10 flex items-center justify-center">
++                    <FileText size={20} />
++                </div>
++                <div>
++                    <h4 className="font-semibold text-[#050505] text-sm">{label}</h4>
++                    <p className="text-xs text-[#65676b]">{type.replace(/_/g, ' ')}</p>
++                </div>
++            </div>
++            <div className="flex items-center gap-2">
++                <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-md ${badgeMap[status.color]}`}>
++                    {status.label}
++                </span>
++                <IconComponent size={18} className={status.color === 'amber' ? 'animate-spin' : ''} />
++            </div>
++        </div>
++    );
++}
