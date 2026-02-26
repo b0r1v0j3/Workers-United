@@ -65,6 +65,14 @@ export async function GET(request: Request) {
                 continue;
             }
 
+            // Lookup phone for WhatsApp dual-send
+            const { data: candidate } = await supabase
+                .from("candidates")
+                .select("phone")
+                .eq("profile_id", profile.id)
+                .maybeSingle();
+            const phone = candidate?.phone || undefined;
+
             // Send email via queue helper (which tries SMTP immediately)
             await queueEmail(
                 supabase,
@@ -76,7 +84,9 @@ export async function GET(request: Request) {
                     documentType: (doc.document_type || "Document").toUpperCase(),
                     expirationDate: new Date(doc.expires_at).toLocaleDateString("en-GB"),
                     offerLink: "https://workersunited.eu/profile/worker/documents"
-                }
+                },
+                undefined,
+                phone
             );
             // Mark as notified so we don't send for another doc of the same user in this batch
             recentlyNotified.add(profile.id);
