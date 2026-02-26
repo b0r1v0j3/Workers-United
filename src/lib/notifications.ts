@@ -1,9 +1,12 @@
-// Notification utilities for email and dashboard alerts
+// Notification utilities for email, dashboard alerts, and WhatsApp
 import { sendEmail } from "@/lib/mailer";
+import { sendJobOffer as sendWhatsAppJobOffer, sendOfferExpiring as sendWhatsAppOfferExpiring } from "@/lib/whatsapp";
 
 interface OfferNotificationData {
   candidateEmail: string;
   candidateName: string;
+  candidatePhone?: string;
+  candidateUserId?: string;
   jobTitle: string;
   companyName: string;
   country: string;
@@ -98,6 +101,23 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
     }
   } catch (err) {
     console.error("Offer notification error:", err);
+  }
+
+  // Also send WhatsApp if phone number available
+  if (data.candidatePhone) {
+    try {
+      await sendWhatsAppJobOffer(
+        data.candidatePhone,
+        data.candidateName,
+        data.jobTitle,
+        data.companyName,
+        data.country,
+        data.offerId,
+        data.candidateUserId
+      );
+    } catch (err) {
+      console.error("WhatsApp offer notification error:", err);
+    }
   }
 }
 

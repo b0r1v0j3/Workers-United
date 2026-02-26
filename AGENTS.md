@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 25.02.2026 (Google OAuth login added)
+> **Poslednje ažuriranje:** 26.02.2026 (WhatsApp Business API integration)
 
 ---
 
@@ -19,6 +19,14 @@ Ovaj fajl je **jedini izvor istine** za ceo projekat. Svaki novi chat MORA da pr
 8. **PREDLAŽI UNAPREĐENJA** — na kraju svakog task-a, pogledaj šta se može poboljšati i predloži. Ti si partner u razvoju.
 9. **AŽURIRAJ DOKUMENTACIJU** — posle svake značajne promene u arhitekturi (novi fajlovi, nove rute, novi env vars, promena tech stack-a), ažuriraj `AGENTS.md` i `.agent/workflows/project-architecture.md` da odražavaju trenutno stanje projekta.
 10. **ZAVRŠI ŠTO POČNEŠ** — NIKAD ne implementiraj feature polovično. Ako dodaješ PWA, dodaj i service worker — ne samo manifest. Ako dodaješ notifikacije, dodaj i read tracking — ne hardkodiraj `read: false`. Ako nešto ne može da se završi u jednom chatu, RECI to korisniku ODMAH na početku. Polovičan feature je gori od nula feature-a jer stvara lažnu sliku da nešto radi.
+11. **⚠️ PROVERI NOTIFIKACIJE PRI SVAKOJ PROMENI** — kad menjaš bilo šta na platformi (URL-ove, cene, naziv polja, flow korisnika, novu stranicu), OBAVEZNO proveri da li to utiče na:
+    - **Email šablone** (`src/lib/email-templates.ts`) — linkovi, tekstovi, nazivi
+    - **WhatsApp šablone** (`src/lib/whatsapp.ts`) — body tekst, URL-ovi dugmadi, nazivi template-a
+    - **WhatsApp šablone u Meta Business Manager-u** — ako menjaš URL ili tekst, moraš submitovati NOVI šablon jer se odobreni šabloni NE MOGU menjati
+    - **Notifikacije** (`src/lib/notifications.ts`) — ponude, statusi, linkovi
+    - **Cron jobove** (`src/app/api/cron/`) — koji šalju automatske mejlove i WhatsApp poruke
+    
+    **Pravilo:** Svaka promena koja menja ono što korisnik vidi na sajtu MORA da se reflektuje i u svim kanalima komunikacije (email + WhatsApp). Ako zaboraviš — korisnik dobija poruku sa pogrešnim linkom ili zastarelim informacijama.
 
 ### Pravila za ažuriranje ovog fajla:
 1. **NIKAD ne briši Sekcije 1-4** — one su trajne i menjaju se samo kad vlasnik projekta to eksplicitno traži
@@ -50,7 +58,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
 - **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
-- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. n8n + AI obrađuje svu komunikaciju (email, WhatsApp). Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI.
+- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. n8n + AI obrađuje svu komunikaciju (email, WhatsApp). Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI. WhatsApp bot se dopisuje sa korisnicima — prepoznaje ih po broju telefona, zna njihov status, i daje personalizovane odgovore.
 
 ---
 
@@ -152,8 +160,14 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Plaćanja:** Stripe (Checkout Sessions + Webhooks)
 - **AI:** Gemini 2.0 Flash (verifikacija dokumenata, auto-reply na kontakt formu)
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
-- **Hosting:** Vercel (sa cron jobovima)
+- **Hosting:** Vercel Pro (sa cron jobovima)
 - **Icons:** Lucide React
+
+### Planovi i pretplate:
+| Servis | Plan | Cena | Napomena |
+|---|---|---|---|
+| Supabase | **Pro** | $25/mesec | Leaked Password Protection, Custom SMTP, daily backup, veći limiti |
+| Vercel | **Pro** | $20/mesec | Preview deploys, analytics, veći bandwidth |
 
 ### Setup i pokretanje:
 ```bash
@@ -186,6 +200,11 @@ SMTP_PASS=your-app-password
 # Vercel Cron
 CRON_SECRET=your-cron-secret
 
+# WhatsApp Business API (Meta Cloud API)
+WHATSAPP_TOKEN=your-permanent-system-user-access-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
+WHATSAPP_VERIFY_TOKEN=your-webhook-verify-token
+
 # App
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
@@ -216,6 +235,24 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**WhatsApp Business API Integration (26.02.2026)**
+- Kreiran `src/lib/whatsapp.ts` — Meta Cloud API helper sa `sendWhatsAppTemplate()`, `sendWhatsAppText()`, i 10 convenience wrapper-a za svaki template tip
+- Prepisan `src/app/api/whatsapp/webhook/route.ts` za Meta Cloud API format (GET verifikacija + POST inbound/status)
+- `queueEmail()` u `email-templates.ts` sada prima opcionalni `recipientPhone` i automatski šalje WhatsApp template
+- `notifications.ts` — `sendOfferNotification()` šalje i email i WhatsApp za job ponude
+- Admin settings check ažuriran da proverava `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID`
+- SQL migracija `012_whatsapp_template_columns.sql` — dodaje `template_name`, `wamid`, `error_message` kolone
+- ⚠️ **PREDUSLOVI:** Meta Business Manager → WhatsApp Manager → šabloni moraju biti approved pre korišćenja
+- ⚠️ **ENV VARS:** `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN` (za webhook verifikaciju)
+- ⚠️ **NAPOMENA:** Trenutni webhook bot je BASIC keyword matching. Pravi AI konverzacijski bot (Gemini + n8n) tek treba da se napravi.
+
+**Supabase Pro + Password Strength (26.02.2026)**
+- Unapređen na **Supabase Pro** ($25/mo) — omogućen Leaked Password Protection (HaveIBeenPwned provjera)
+- Dodana **klijentska validacija jačine šifre** na signup formu (`signup-form.tsx`): min 8 karaktera, uppercase, lowercase, broj, specijalni karakter
+- Real-time checklist sa zelenim ✓ za svaki ispunjen zahtev
+- Submit dugme disablovano dok svi zahtevi nisu ispunjeni
+- ⚠️ **Vercel Pro** ($20/mo) takođe aktivan
 
 **Google OAuth Login (25.02.2026)**
 - Dodat "Sign in with Google" dugme na login i signup stranice
@@ -415,7 +452,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 ### ⏸️ ČEKA SE (blokirano)
 - [ ] **Stripe plaćanja** — bankovni račun se otvara 17.02. → Stripe kreiranje ~21.02.
-- [ ] **WhatsApp integracija** — čeka bankovni račun → broj telefona na firmu
+- [x] ~~**WhatsApp integracija** — čeka bankovni račun → broj telefona na firmu~~ → ✅ ZAVRŠENO 26.02.2026
 
 ---
 
@@ -465,6 +502,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 |---|---|
 | `src/lib/profile-completion.ts` | Shared profile completion — **single source of truth** za worker i employer |
 | `src/lib/email-templates.ts` | Svi email templateovi + strict `TemplateData` (bez `[key: string]: any`) |
+| `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging, 10 convenience wrappers |
 | `src/lib/docx-generator.ts` | DOCX generisanje iz šablona (docxtemplater + nationality mapping) |
 
 ### Cron Jobs (vercel.json):
@@ -475,8 +513,9 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | `/api/cron/check-expiring-docs` | Daily 8 AM UTC | Alert za pasoš koji ističe za <6 meseci (max 1 email/30 dana) |
 | `/api/cron/match-jobs` | Svaki sat | Auto-matching radnika i poslova |
 
-### ⚠️ Email Common Gotchas:
-- **DVA email sistema** — `email-templates.ts` (wrapModernTemplate) i `profile-reminders/route.ts` (sopstveni builderi). Kad menjaš dizajn/footer/logo — moraš menjati OBA.
+### ⚠️ Email & WhatsApp Common Gotchas:
+- **Email + WhatsApp dual-send** — `queueEmail()` prima opcionalni `recipientPhone` parametar. Kad ga prosledite, automatski šalje i WhatsApp template. WhatsApp failure NIKAD ne blokira email.
+- **WhatsApp šabloni se NE MOGU menjati posle odobrenja** — ako menjaš tekst ili URL, moraš kreirati NOV šablon u Meta Business Manager-u i ažurirati ime u `whatsapp.ts`.
 - **Gmail ne podržava:** `display: flex`, CSS `filter`, `backdrop-filter`, `box-shadow`, SVG u `<img>`. Koristiti `<table>` layout i PNG slike.
 - **Logo:** uvek `https://workersunited.eu/logo-white.png` (ne CSS filter na `logo.png`)
 - **Social ikonice:** koristiti icons8 PNG slike, ne text karaktere (f, 📷, ♪)
@@ -499,7 +538,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
 - [x] ~~**Konsolidacija email sistema** — spojen `check-incomplete-profiles` u `profile-reminders`, shared `profile-completion.ts` lib, strict TemplateData, admin email preview~~
 - [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
-- [ ] **n8n WhatsApp bot** — automatski status update-ovi, FAQ odgovori
+- [ ] **WhatsApp AI Chatbot (n8n + Gemini)** — pravi konverzacijski bot koji se dopisuje sa korisnicima. Prepoznaje ih po broju telefona, čita njihov profil/status iz baze, i daje personalizovane odgovore putem Gemini AI. Trenutni webhook bot je samo basic keyword matching — treba zameniti AI-powered konverzacijom. Flow: korisnik piše → webhook prima → n8n procesira → Gemini generiše odgovor na osnovu user context-a → šalje nazad.
 - [ ] **Live Visa Process Tracker** — "Currently processing: X applications", "Documents verified today: Y". ⏳ **USLOV: 100+ korisnika u sistemu**
 - [ ] **"Work in [Country]" Pages** — SEO stranice (npr. /work-in-germany) sa pravnim koracima, platama, troškovima. ⏳ **USLOV: bar 2 aktivne zemlje**
 
@@ -666,6 +705,10 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 36. **Auto-deletion u `profile-reminders` MORA da obriše SVE tabele** — samo brisanje auth usera (`deleteUser`) ostavlja siročiće u `candidates`, `profiles`, `candidate_documents`, `payments`, `email_queue`, `employers`. UVEK brisati SVE povezane tabele + storage pre brisanja auth usera. Isti pattern kao `account/delete` i `admin/delete-user`.
 37. **Google OAuth korisnici NEMAJU `user_type` pri prvom login-u** — ako korisnik klikne "Sign in with Google" na login stranici (ne signup), biće preusmeren na `/auth/select-role`. Auth callback proverava `user_metadata.user_type` i ako ga nema, šalje tamo. Signup stranica automatski šalje `user_type` kroz URL param.
 38. **Google OAuth — Supabase Provider MORA biti konfigurisan** — potreban Google Cloud OAuth Client ID + Secret u Supabase Dashboard → Authentication → Providers → Google. Redirect URL iz Supabase mora biti dodat kao Authorized Redirect URI u Google Cloud Console.
+39. **WhatsApp šabloni MORAJU biti odobreni u Meta Business Manager-u pre korišćenja** — `sendWhatsAppTemplate()` će vratiti error ako template nije approved. Imena šablona su lowercase sa underscores (npr. `document_reminder`). Maximum 550 karaktera za body. Utility šabloni ne smeju imati promotivni sadržaj — Meta ih automatski re-kategoriše u Marketing.
+40. **WhatsApp webhook MORA koristiti `createAdminClient()`** — Meta šalje webhook bez auth cookies. Sve DB operacije moraju koristiti service role client. Webhook ruta ima i GET (verifikacija) i POST (poruke + status update-ovi).
+41. **`queueEmail()` podržava opcionalni `recipientPhone` parametar** — kad se prosledi, automatski šalje i WhatsApp template uz email. WhatsApp failure NIKAD ne blokira email slanje. Dodati phone kao poslednji argument: `queueEmail(supabase, userId, type, email, name, data, scheduledFor, phone)`.
+42. **RLS policy MORA koristiti `(select auth.uid())` a NE `auth.uid()` direktno** — `auth.uid()` se re-evaluira za SVAKI red u tabeli, što drastično usporava query-je. Zamotan u subquery `(select auth.uid())` se poziva samo jednom. Ovo važi za sve `auth.<function>()` pozive u RLS policy-ima (uid, jwt, role). Supabase Advisor detektuje ovo kao performance warning.
 
 
 ---
@@ -718,10 +761,11 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 3. ✅ Worker profil + dokumenta + AI verifikacija
 4. ✅ Admin panel + manual approval
 5. ✅ Email sistem (welcome, reminders, admin updates)
-6. ⬜ Stripe plaćanja ($9 entry fee)
-7. ⬜ Cron jobovi aktivni
-8. ⬜ n8n email automation
-9. ⬜ Smoke test passed
+6. ✅ Supabase Pro + password strength
+7. ⬜ Stripe plaćanja ($9 entry fee)
+8. ⬜ Cron jobovi aktivni
+9. ⬜ n8n email automation
+10. ⬜ Smoke test passed
 
 ---
 
@@ -758,10 +802,3 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 3. Consider adding a PDF preview feature in the admin panel before generating final documents.
 4. **Payment/Stripe integration** — kad se bude pravio payment flow, profil gate je već na mestu na API nivou (`contracts/prepare/route.ts`). Samo treba dodati frontend poruku na worker dashboard-u tipa "Complete your profile to proceed to payment" i disable-ovati payment dugme dok `profileCompletion < 100`.
 
-
-## ✅ Najnovija ažuriranja: Admin Panel Upgrade ()
-- Implementiran globalni search bar (Ctrl+K)
-- Action Center na dashboardu
-- Napredna tabela radnika sa filtriranjem i sortiranjem
-- Smart Match UI za pametno povezivanje
-- Supply vs Demand analitika
