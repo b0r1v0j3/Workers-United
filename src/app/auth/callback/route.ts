@@ -85,7 +85,18 @@ export async function GET(request: Request) {
 
                     return NextResponse.redirect(`${origin}/profile/employer`);
                 } else {
-                    // Workers go to /profile/worker
+                    // Check if worker profile is incomplete (new signup → go to edit)
+                    const { data: candidateCheck } = await supabase
+                        .from("candidates")
+                        .select("phone, nationality")
+                        .eq("profile_id", user.id)
+                        .maybeSingle();
+
+                    // If no candidate record or missing basic fields, send to edit
+                    if (!candidateCheck || !candidateCheck.phone || !candidateCheck.nationality) {
+                        return NextResponse.redirect(`${origin}/profile/worker/edit`);
+                    }
+
                     return NextResponse.redirect(`${origin}/profile/worker`);
                 }
             }
