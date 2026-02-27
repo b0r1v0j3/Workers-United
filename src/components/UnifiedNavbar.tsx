@@ -18,7 +18,17 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [clientUser, setClientUser] = useState<any>(userProp || null);
     const [clientProfileName, setClientProfileName] = useState(profileNameProp || "");
+    const [scrolled, setScrolled] = useState(false);
     const pathname = usePathname();
+
+    // Scroll listener for glassmorphism
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 20);
+        };
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
 
     // Client-side auth fetch for public variant (allows homepage to be statically cached)
     useEffect(() => {
@@ -46,7 +56,10 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const profileName = profileNameProp || clientProfileName;
 
     return (
-        <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
+        <nav className={`sticky top-0 z-50 transition-all duration-300 border-b ${scrolled
+                ? "bg-white/80 backdrop-blur-md shadow-sm border-[#dddfe2]/50 h-[56px]"
+                : "bg-white border-transparent h-[72px]"
+            }`}>
             <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
@@ -56,7 +69,8 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United Logo"
                             width={80}
                             height={80}
-                            className="h-16 w-16 object-contain shrink-0"
+                            className={`object-contain shrink-0 transition-all duration-300 ${scrolled ? "h-10 w-10" : "h-14 w-14"
+                                }`}
                             priority
                         />
                         <Image
@@ -64,7 +78,8 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United"
                             width={200}
                             height={50}
-                            className="w-[140px] h-auto object-contain"
+                            className={`h-auto object-contain transition-all duration-300 ${scrolled ? "w-[120px]" : "w-[150px]"
+                                }`}
                             priority
                         />
                     </Link>
