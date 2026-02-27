@@ -57,8 +57,8 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
 
     return (
         <nav className={`sticky top-0 z-50 transition-all duration-300 border-b ${scrolled
-                ? "bg-white/80 backdrop-blur-md shadow-sm border-[#dddfe2]/50 h-[56px]"
-                : "bg-white border-transparent h-[72px]"
+            ? "bg-white/80 backdrop-blur-md shadow-sm border-[#dddfe2]/50 h-[56px]"
+            : "bg-white border-transparent h-[72px]"
             }`}>
             <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
                 {/* Left: Logo */}
@@ -69,8 +69,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United Logo"
                             width={80}
                             height={80}
-                            className={`object-contain shrink-0 transition-all duration-300 ${scrolled ? "h-10 w-10" : "h-14 w-14"
-                                }`}
+                            className="h-16 w-16 object-contain shrink-0 transition-opacity"
                             priority
                         />
                         <Image
@@ -78,8 +77,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United"
                             width={200}
                             height={50}
-                            className={`h-auto object-contain transition-all duration-300 ${scrolled ? "w-[120px]" : "w-[150px]"
-                                }`}
+                            className="w-[140px] h-auto object-contain transition-opacity"
                             priority
                         />
                     </Link>
