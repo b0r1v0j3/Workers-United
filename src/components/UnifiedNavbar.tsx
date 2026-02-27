@@ -56,7 +56,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United Logo"
                             width={80}
                             height={80}
-                            className="h-10 w-10 object-contain shrink-0"
+                            className="h-16 w-16 object-contain shrink-0"
                             priority
                         />
                         <Image
