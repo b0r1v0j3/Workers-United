@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 26.02.2026 (WhatsApp Business API integration)
+> **Poslednje ažuriranje:** 27.02.2026 (Novi logo pristup + Unified Navbar Tweak)
 
 ---
 
@@ -130,14 +130,12 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Mobile-first** — većina korisnika će koristiti mobilne telefone
 - **Format datuma: DD/MM/YYYY** — uvek koristiti `toLocaleDateString('en-GB')` ili `toLocaleString('en-GB')`. NIKAD američki format MM/DD/YYYY.
 
-### Logo:
-- **Fajl:** `public/logo.png` — plavi heksagon sa belim rukovanjem na BELOJ pozadini (NE plava pozadina). Veličina fajla ~26KB.
-- **NIKAD NE MENJAJ logo.png** — ne generiši novi, ne kopiraj screenshot, ne zamenjuj drugim fajlom. Ako korisnik traži promenu loga, koristi samo fajl koji korisnik eksplicitno pruži.
-- **Veličina u navbar-u:** `h-[60px]` (h-15) — NE MENJAJ OVU VREDNOST. Korisnik je eksplicitno tražio h-15.
-- **Layout u navbar-u:** ikona levo + tekst "Workers United" desno (`flex items-center gap-2`)
-- **`logo-full.jpg`** — full logo sa plavom pozadinom, koristi se za OG/meta slike, NE za navbar
-
-### URL Struktura:
+### Logo & Navbar dizajn:
+- **Pristup logotipu se prmenio** — više ne koristimo jedan spojen fajl. Sada koristimo dvokomponentni logo.
+- **Ikona (ruke):** `public/logo-icon.png` — tamno plave ruke bez pozadine i bez teksta. Veličina u navbar-u: fiksna `h-16 w-16`.
+- **Tekst (wordmark):** `public/logo-wordmark.png` — tekst "WORKERS UNITED" bez pozadine, horizontalno trimovan. Veličina u navbar-u: fiksna `w-[140px]`.
+- **Navbar dizajn:** Navigacija (`UnifiedNavbar.tsx`) je tanka (`h-[64px]`), sa trajnim glassmorphism efektom (`bg-white/90 backdrop-blur-md`). Dinamički scroll (bubrenje/skupljanje) je **ukinut** po zahtevu vlasnika u korist čistije linije. 
+- **`logo-full.jpg`** — full logo sa plavom pozadinom, koristi se za OG/meta slike, NE za navbar.
 - `/profile` — auto-redirect na worker ili employer
 - `/profile/worker` — profil radnika (3 taba: Profile Info, Documents, Status)
 - `/profile/worker/edit` — editovanje profila (single-page form, ne wizard)
@@ -235,6 +233,13 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 ## 5. 📋 STANJE PROJEKTA
 
 ### ✅ Završeno
+
+**Redizajn logotipa i Navigacije (27.02.2026)**
+- Prebačeno sa starog FB-heksagon logotipa na novi minimalistički flat dizajn (samo linijske ruke).
+- Implementiran dvokomponentni sistem logotipa: `logo-icon.png` (ruke, h-16 w-16) + `logo-wordmark.png` (tekst, w-[140px]).
+- Wordmark trimovan od viška transparentnih piksela za bolju kontrolu CSS veličine (sa 859px širine sa tonom praznog prostora, na kompaktnu veličinu).
+- `UnifiedNavbar.tsx` modifikovan da ima permanentni tanki profil (`h-64px`) sa `bg-white/90 backdrop-blur-md` (odbačeno dinamično bubrenje/sužavanje pri skrolu, kao i FB plava boja iz prvobitnih verzija).
+- Promenjen hover state i boje interakcija u navigaciji na crno/bele (neutralne) tonove, udaljavajući se od primarno Facebook-blue estetike.
 
 **WhatsApp Business API Integration (26.02.2026)**
 - Kreiran `src/lib/whatsapp.ts` — Meta Cloud API helper sa `sendWhatsAppTemplate()`, `sendWhatsAppText()`, i 10 convenience wrapper-a za svaki template tip
