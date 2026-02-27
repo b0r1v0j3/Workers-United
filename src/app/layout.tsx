@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Workers United" }],
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/logo-hands.png",
+    apple: "/logo-hands.png",
   },
   openGraph: {
     title: "Workers United – Legal International Hiring & Visa Support",
