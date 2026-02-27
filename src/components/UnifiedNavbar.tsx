@@ -50,17 +50,23 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
             <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
-                    <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+                    <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
                         <Image
-                            src="/logo.png"
+                            src="/logo-icon.png"
+                            alt="Workers United Logo"
+                            width={80}
+                            height={80}
+                            className="h-16 w-16 object-contain shrink-0"
+                            priority
+                        />
+                        <Image
+                            src="/logo-wordmark.png"
                             alt="Workers United"
                             width={200}
-                            height={60}
-                            className="h-[60px] w-auto object-contain"
+                            height={50}
+                            className="h-12 w-auto object-contain"
+                            priority
                         />
-                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline tracking-tight">
-                            Workers United
-                        </span>
                     </Link>
 
                     {/* Context Badge (Admin/Employer) */}
@@ -92,7 +98,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             {variant === "public" && (
                                 <Link
                                     href="/profile"
-                                    className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-[#e7f3ff] text-[#1877f2] rounded-md font-semibold text-sm hover:bg-[#dbe7f2] transition-colors"
+                                    className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-[#F4F4F5] text-[#111111] rounded-md font-medium text-sm hover:bg-[#EAEAEA] transition-colors"
                                 >
                                     My Profile
                                 </Link>
@@ -122,14 +128,13 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                         <div className="flex items-center gap-2">
                             <Link
                                 href="/login"
-                                className="px-5 py-1.5 text-[#1877f2] font-semibold text-sm hover:bg-[#f0f2f5] rounded-md transition-colors"
+                                className="px-5 py-1.5 text-[#111111] font-medium text-sm hover:bg-[#F4F4F5] rounded-md transition-colors"
                             >
                                 Sign In
                             </Link>
                             <Link
                                 href="/signup"
-                                className="px-5 py-1.5 bg-[#1877f2] text-white font-bold text-sm rounded-md shadow-sm hover:bg-[#166fe5] transition-colors"
-                                style={{ color: '#ffffff' }}
+                                className="px-5 py-1.5 bg-[#111111] text-white font-medium text-sm rounded-md shadow-sm hover:bg-[#333333] transition-colors"
                             >
                                 Sign Up
                             </Link>
@@ -166,7 +171,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
     return (
         <Link
             href={href}
-            className="relative h-full flex items-center px-1 text-[#65676b] font-semibold text-[15px] hover:text-[#1877f2] transition-colors border-b-[3px] border-transparent hover:border-[#1877f2]"
+            className="relative h-full flex items-center px-1 text-[#666666] font-medium text-[15px] hover:text-[#111111] transition-colors border-b-[2px] border-transparent hover:border-[#111111]"
         >
             {label}
         </Link>
