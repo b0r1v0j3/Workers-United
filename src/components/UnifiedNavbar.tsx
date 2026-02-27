@@ -18,17 +18,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [clientUser, setClientUser] = useState<any>(userProp || null);
     const [clientProfileName, setClientProfileName] = useState(profileNameProp || "");
-    const [scrolled, setScrolled] = useState(false);
     const pathname = usePathname();
-
-    // Scroll listener for glassmorphism
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
-        };
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
 
     // Client-side auth fetch for public variant (allows homepage to be statically cached)
     useEffect(() => {
@@ -56,10 +46,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const profileName = profileNameProp || clientProfileName;
 
     return (
-        <nav className={`sticky top-0 z-50 transition-all duration-300 border-b ${scrolled
-            ? "bg-white/80 backdrop-blur-md shadow-sm border-[#dddfe2]/50 h-[56px]"
-            : "bg-white border-transparent h-[72px]"
-            }`}>
+        <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-[#dddfe2]/50 h-[64px]">
             <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
