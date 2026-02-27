@@ -27,10 +27,7 @@ export const metadata: Metadata = {
     "international recruitment",
   ],
   authors: [{ name: "Workers United" }],
-  icons: {
-    icon: "/logo-hands.png",
-    apple: "/logo-hands.png",
-  },
+
   openGraph: {
     title: "Workers United – Legal International Hiring & Visa Support",
     description:
