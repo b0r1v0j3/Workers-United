@@ -21,10 +21,12 @@ description: Full project architecture reference — tech stack, folder structur
 | Storage | **Supabase Storage** | Documents (passport, diploma, biometric photo) |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **Gemini 2.0 Flash** (`@google/generative-ai`) | Document verification, contact form auto-reply |
+| AI (Chatbot) | **GPT-4** via n8n | WhatsApp AI chatbot |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
+| Automation | **n8n Cloud** | WhatsApp AI chatbot workflow |
 | Icons | **Lucide React** | — |
-| WhatsApp | **Meta Cloud API v21.0** | Template messages, inbound bot, delivery tracking |
+| WhatsApp | **Meta Cloud API v21.0** | Template messages, AI chatbot, delivery tracking |
 
 ---
 
@@ -79,7 +81,7 @@ Workers-United/
 │   │   │   ├── profile/       # Profile API
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   └── whatsapp/      # WhatsApp webhook (pending)
+│   │   │   └── whatsapp/      # WhatsApp webhook (AI chatbot via n8n)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth/email callback handler
 │   │   │   └── select-role/  # Role picker for Google OAuth first-time users
@@ -119,6 +121,7 @@ Workers-United/
 ├── tsconfig.json              # TypeScript config
 ├── package.json               # Dependencies & scripts
 ├── AGENTS.md                  # 🔑 THE source of truth (business + tech, env vars, rules, TODO)
+├── CHANGELOG.md               # 📋 Full history of completed changes
 └── IMPROVEMENTS.md            # UI/UX improvement ideas
 ```
 
@@ -289,6 +292,7 @@ When adding a new feature, follow this order:
 | `WHATSAPP_TOKEN` | Meta WhatsApp Cloud API | For sending |
 | `WHATSAPP_PHONE_NUMBER_ID` | Meta WhatsApp | For sending |
 | `WHATSAPP_VERIFY_TOKEN` | Webhook verification | For webhook |
+| `N8N_WHATSAPP_WEBHOOK_URL` | n8n Cloud | For AI chatbot |
 
 ---
 
