@@ -114,18 +114,23 @@ export async function POST(request: NextRequest) {
                     status: "delivered",
                 });
 
-                // ─── Forward to n8n AI Chatbot ──────────────────────────
+                // ─── Forward to n8n AI Chatbot & send reply from Vercel ─
+                let aiResponse: string | null = null;
+
                 if (N8N_WEBHOOK_URL) {
                     try {
-                        await fetch(N8N_WEBHOOK_URL, {
+                        const controller = new AbortController();
+                        const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+                        const n8nRes = await fetch(N8N_WEBHOOK_URL, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
+                            signal: controller.signal,
                             body: JSON.stringify({
                                 phoneNumber: normalizedPhone,
                                 messageText: content,
                                 messageType,
                                 wamid,
-                                // User context for AI
                                 userProfile: candidate ? {
                                     name: profile?.full_name || "Unknown",
                                     email: profile?.email || null,
@@ -139,21 +144,22 @@ export async function POST(request: NextRequest) {
                                 isRegistered: !!candidate,
                             }),
                         });
-                        // n8n handles the AI response and sends WhatsApp reply
-                    } catch (n8nError) {
-                        console.error("[WhatsApp Webhook] n8n forwarding failed, using fallback:", n8nError);
-                        // Fallback: send a simple response directly
-                        const fallbackResponse = getFallbackResponse(content, candidate, profile);
-                        if (fallbackResponse) {
-                            await sendWhatsAppText(normalizedPhone, fallbackResponse, candidate?.profile_id);
+                        clearTimeout(timeout);
+
+                        if (n8nRes.ok) {
+                            const n8nData = await n8nRes.json();
+                            // n8n returns the AI response text via "Respond to Webhook" node
+                            aiResponse = n8nData?.output || n8nData?.text || n8nData?.message || (typeof n8nData === "string" ? n8nData : null);
                         }
+                    } catch (n8nError) {
+                        console.error("[WhatsApp Webhook] n8n AI failed:", n8nError);
                     }
-                } else {
-                    // n8n not configured — use basic fallback responses
-                    const fallbackResponse = getFallbackResponse(content, candidate, profile);
-                    if (fallbackResponse) {
-                        await sendWhatsAppText(normalizedPhone, fallbackResponse, candidate?.profile_id);
-                    }
+                }
+
+                // Send reply via Vercel (using our existing WhatsApp token)
+                const replyText = aiResponse || getFallbackResponse(content, candidate, profile);
+                if (replyText) {
+                    await sendWhatsAppText(normalizedPhone, replyText, candidate?.profile_id);
                 }
             }
         }
