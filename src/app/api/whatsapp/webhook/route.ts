@@ -5,9 +5,10 @@ import { sendWhatsAppText } from "@/lib/whatsapp";
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
 // Handles:
 // 1. GET  — Webhook verification (hub.challenge)
-// 2. POST — Inbound messages + delivery status updates
+// 2. POST — Inbound messages + delivery status updates → forwards to n8n AI
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "workers-united-whatsapp-verify";
+const N8N_WEBHOOK_URL = process.env.N8N_WHATSAPP_WEBHOOK_URL; // e.g. https://b0r1v0j3.app.n8n.cloud/webhook/whatsapp-webhook
 
 // ─── GET: Webhook Verification ──────────────────────────────────────────────
 
@@ -42,17 +43,15 @@ export async function POST(request: NextRequest) {
 
         const supabase = createAdminClient();
 
-        // ─── Handle delivery status updates ─────────────────────────────
+        // ─── Handle delivery status updates (keep locally) ──────────────
         if (value.statuses && value.statuses.length > 0) {
             for (const status of value.statuses) {
                 const wamid = status.id;
                 const statusValue = status.status; // sent, delivered, read, failed
 
                 if (wamid && statusValue) {
-                    // Update message status in DB if we have this wamid
                     const updateData: Record<string, string> = { status: statusValue };
 
-                    // If failed, capture error info
                     if (statusValue === "failed" && status.errors?.[0]) {
                         updateData.error_message = `${status.errors[0].code}: ${status.errors[0].title}`;
                     }
@@ -69,9 +68,8 @@ export async function POST(request: NextRequest) {
         if (value.messages && value.messages.length > 0) {
             for (const message of value.messages) {
                 const phoneNumber = message.from; // sender's phone (digits only)
-                const messageType = message.type; // text, image, document, etc.
+                const messageType = message.type;
                 const wamid = message.id;
-                const timestamp = message.timestamp;
 
                 // Extract text content
                 let content = "";
@@ -93,7 +91,7 @@ export async function POST(request: NextRequest) {
                 // Find user by phone number
                 const { data: candidate } = await supabase
                     .from("candidates")
-                    .select("id, profile_id, status, queue_position, refund_deadline, refund_eligible")
+                    .select("id, profile_id, status, queue_position, preferred_job, desired_countries, refund_deadline, refund_eligible")
                     .or(`phone.eq.${normalizedPhone},phone.eq.${phoneNumber}`)
                     .maybeSingle();
 
@@ -116,15 +114,46 @@ export async function POST(request: NextRequest) {
                     status: "delivered",
                 });
 
-                // Generate and send bot response (within 24h window, free-form is allowed)
-                const response = generateBotResponse(
-                    content.toLowerCase().trim(),
-                    candidate,
-                    profile
-                );
-
-                if (response) {
-                    await sendWhatsAppText(normalizedPhone, response, candidate?.profile_id);
+                // ─── Forward to n8n AI Chatbot ──────────────────────────
+                if (N8N_WEBHOOK_URL) {
+                    try {
+                        await fetch(N8N_WEBHOOK_URL, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                phoneNumber: normalizedPhone,
+                                messageText: content,
+                                messageType,
+                                wamid,
+                                // User context for AI
+                                userProfile: candidate ? {
+                                    name: profile?.full_name || "Unknown",
+                                    email: profile?.email || null,
+                                    status: candidate.status,
+                                    queuePosition: candidate.queue_position,
+                                    preferredJob: candidate.preferred_job,
+                                    desiredCountries: candidate.desired_countries,
+                                    refundEligible: candidate.refund_eligible,
+                                    refundDeadline: candidate.refund_deadline,
+                                } : null,
+                                isRegistered: !!candidate,
+                            }),
+                        });
+                        // n8n handles the AI response and sends WhatsApp reply
+                    } catch (n8nError) {
+                        console.error("[WhatsApp Webhook] n8n forwarding failed, using fallback:", n8nError);
+                        // Fallback: send a simple response directly
+                        const fallbackResponse = getFallbackResponse(content, candidate, profile);
+                        if (fallbackResponse) {
+                            await sendWhatsAppText(normalizedPhone, fallbackResponse, candidate?.profile_id);
+                        }
+                    }
+                } else {
+                    // n8n not configured — use basic fallback responses
+                    const fallbackResponse = getFallbackResponse(content, candidate, profile);
+                    if (fallbackResponse) {
+                        await sendWhatsAppText(normalizedPhone, fallbackResponse, candidate?.profile_id);
+                    }
                 }
             }
         }
@@ -138,81 +167,24 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// ─── Bot Response Generator ─────────────────────────────────────────────────
+// ─── Fallback Bot (used when n8n is unavailable) ─────────────────────────────
 
-function generateBotResponse(
-    message: string,
-    candidate: any,
-    profile: any
-): string {
-    // If user not found
-    if (!candidate) {
-        return "Welcome to Workers United! We couldn't find your profile. Please register at our website first, then message us again from the phone number you registered with.";
-    }
-
+function getFallbackResponse(message: string, candidate: any, profile: any): string {
+    const msg = message.toLowerCase().trim();
     const name = profile?.full_name?.split(" ")[0] || "there";
 
-    // Status check
-    if (message.includes("status") || message.includes("my status") || message.includes("profile")) {
-        const statusMessages: Record<string, string> = {
-            "NEW": `Hi ${name}! Your profile is registered. Please complete your documents to proceed.`,
-            "PROFILE_COMPLETE": `Hi ${name}! Your profile is complete. Please wait for admin verification.`,
-            "PENDING_APPROVAL": `Hi ${name}! Your profile is under review. We'll notify you once approved.`,
-            "VERIFIED": `Hi ${name}! Great news — your profile is verified! Pay $9 to enter the job queue.`,
-            "APPROVED": `Hi ${name}! You're approved! Pay $9 to activate your job search.`,
-            "IN_QUEUE": `Hi ${name}! You're active in our job search queue. We'll notify you when we find a match!`,
-            "OFFER_PENDING": `Hi ${name}! You have an active job offer! Check your email and respond within 24 hours.`,
-            "OFFER_ACCEPTED": `Hi ${name}! Congratulations! Your job is confirmed. We're processing your visa application.`,
-            "VISA_PROCESS_STARTED": `Hi ${name}! Your visa application is being processed. We'll keep you updated.`,
-            "VISA_APPROVED": `Hi ${name}! Amazing news — your visa has been approved! We'll be in touch with next steps.`,
-            "PLACED": `Hi ${name}! You've been successfully placed. Welcome to your new career!`,
-            "REJECTED": `Hi ${name}. Unfortunately your profile was not approved. Please check your email for details.`,
-            "REFUND_FLAGGED": `Hi ${name}. Your account has been flagged for a refund. Our team will process it shortly.`,
-        };
-        return statusMessages[candidate.status] || `Hi ${name}! Your current status is: ${candidate.status}`;
+    if (!candidate) {
+        return "Welcome to Workers United! 🌍 We help workers find jobs abroad and handle all visa paperwork. Register at workersunited.eu/signup to get started!";
     }
 
-    // Job search status
-    if (message.includes("job") || message.includes("work") || message.includes("find")) {
-        if (candidate.status === "IN_QUEUE") {
-            return `Hi ${name}! We're actively searching for the right job for you. You'll receive a notification as soon as we find a match. Stay ready!`;
-        } else if (candidate.status === "OFFER_PENDING") {
-            return `You have an active job offer waiting! Check your email and accept within 24 hours or it will expire.`;
-        } else if (candidate.status === "OFFER_ACCEPTED") {
-            return `Your job is confirmed! We're processing your work permit application. We'll keep you updated on the progress.`;
-        }
-        return `Please complete your profile verification and payment first to start the job search.`;
+    if (msg.includes("status") || msg.includes("profile")) {
+        return `Hi ${name}! Your current status is: ${candidate.status}. Visit workersunited.eu/profile/worker for details.`;
     }
 
-    // Refund inquiry
-    if (message.includes("refund") || message.includes("money back") || message.includes("guarantee")) {
-        if (!candidate.refund_eligible) {
-            return `Hi ${name}. As per our policy, refund eligibility is lost after declining a job offer.`;
-        }
-        if (candidate.refund_deadline) {
-            const deadline = new Date(candidate.refund_deadline);
-            const now = new Date();
-            const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-            if (daysLeft > 0) {
-                return `Hi ${name}! You have ${daysLeft} days remaining in your 90-day guarantee. If we don't find you a job by then, you'll receive a full refund.`;
-            } else {
-                return `Hi ${name}. Your 90-day period has ended. Please contact support if you haven't received your refund.`;
-            }
-        }
-        return `The 90-day guarantee starts when you pay the $9 job search fee.`;
+    if (msg.includes("help")) {
+        return `Hi ${name}! Type "status" to check your application, or visit workersunited.eu for full details. For complex questions, email support@workersunited.eu`;
     }
 
-    // Documents help
-    if (message.includes("document") || message.includes("upload") || message.includes("passport")) {
-        return `To upload or manage your documents, please visit your dashboard at workersunited.eu. You'll need:\n• Passport\n• Biometric photo\n• Diploma`;
-    }
-
-    // Help/commands
-    if (message.includes("help") || message.includes("command") || message.includes("menu")) {
-        return `Hi ${name}! Here's how I can help:\n\n• "status" — Check your profile status\n• "job" — Job search updates\n• "refund" — Refund eligibility info\n• "documents" — Document upload help\n\nJust type any of these keywords!`;
-    }
-
-    // Default response
-    return `Hi ${name}! I'm the Workers United assistant. Type "help" to see what I can do, or type "status" to check your application status.`;
+    return `Hi ${name}! I'm the Workers United assistant. Our AI chatbot is temporarily offline — please try again shortly or email support@workersunited.eu`;
 }
+
