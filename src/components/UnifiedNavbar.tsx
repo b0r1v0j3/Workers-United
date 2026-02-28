@@ -46,7 +46,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const profileName = profileNameProp || clientProfileName;
 
     return (
-        <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-[#dddfe2]/50 h-[64px]">
+        <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-[#dddfe2]/50 h-[56px] md:h-[64px]">
             <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
@@ -56,7 +56,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United Logo"
                             width={80}
                             height={80}
-                            className="h-16 w-16 object-contain shrink-0 transition-opacity"
+                            className="h-12 w-12 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
                             priority
                         />
                         <Image
@@ -64,7 +64,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United"
                             width={200}
                             height={50}
-                            className="w-[100px] sm:w-[140px] h-auto object-contain transition-opacity"
+                            className="w-[140px] md:w-[160px] h-auto object-contain transition-opacity"
                             priority
                         />
                     </Link>
