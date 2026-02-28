@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 28.02.2026 (AGENTS.md restrukturisan, WhatsApp AI chatbot live, Stripe live, cron re-enabled)
+> **Poslednje ažuriranje:** 28.02.2026 (WhatsApp chatbot upgraded: GPT-4o + memorija + enriched data)
 
 ---
 
@@ -240,13 +240,17 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 > Za kompletnu istoriju promena pogledaj `CHANGELOG.md`
 
 ### 🔲 TODO
+- [ ] **n8n Email AI Auto-Responder** — novi workflow: AI odgovara na emailove (contact@workersunited.eu)
+- [ ] **n8n AI Agent sa tools** — bot dobija mogućnost da radi akcije (provera otvorenih pozicija, ažuriranje statusa, slanje emaila)
 - [ ] **n8n email automation** — retry failed emails, auto-responder za inbox
 - [ ] Multi-country pricing za placement fee — **odloženo** dok se ne proširimo na druge zemlje
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
-- [x] WhatsApp AI chatbot (n8n + GPT-4o-mini) — 28.02.2026
+- [x] WhatsApp chatbot upgrade: GPT-4o + 100-message memorija + enriched data — 28.02.2026
+- [x] WhatsApp AI chatbot (n8n + GPT-4o) — 28.02.2026
+- [x] AGENTS.md restrukturisan + CHANGELOG.md izveden — 28.02.2026
 - [x] Stripe $9 Entry Fee live — 28.02.2026
 - [x] Cron jobovi re-enabled — 28.02.2026
 - [x] Analytics dashboard (Recharts) — 28.02.2026
@@ -338,7 +342,9 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
 - [x] ~~**Konsolidacija email sistema** — spojen `check-incomplete-profiles` u `profile-reminders`, shared `profile-completion.ts` lib, strict TemplateData, admin email preview~~
 - [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
-- [x] ~~**WhatsApp AI Chatbot (n8n + GPT-4o-mini)** — konverzacijski bot koji se dopisuje sa korisnicima. Prepoznaje ih po broju telefona, čita profil/status iz baze, daje personalizovane odgovore. Flow: korisnik piše → Meta webhook → Vercel → n8n AI → Vercel → WhatsApp reply~~ ✅ 28.02.2026
+- [x] ~~**WhatsApp AI Chatbot (n8n + GPT-4o)** — konverzacijski bot sa memorijom (100 poruka), enriched profilom, dokumentima i plaćanjima~~ ✅ 28.02.2026
+- [ ] **n8n Email AI Auto-Responder** — novi workflow za automatske odgovore na emailove
+- [ ] **n8n AI Agent sa Tools** — bot dobija tools za aktivne akcije (pretraživanje poslova, ažuriranje statusa). Dugoročno: self-improving agent koji uči iz interakcija.
 - [ ] **Live Visa Process Tracker** — "Currently processing: X applications", "Documents verified today: Y". ⏳ **USLOV: 100+ korisnika u sistemu**
 - [ ] **"Work in [Country]" Pages** — SEO stranice (npr. /work-in-germany) sa pravnim koracima, platama, troškovima. ⏳ **USLOV: bar 2 aktivne zemlje**
 
