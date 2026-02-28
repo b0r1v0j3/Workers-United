@@ -169,7 +169,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                                 <Link
                                     href="/signup"
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="block text-center px-5 py-2.5 bg-[#111111] text-white font-medium text-[15px] rounded-md shadow-sm hover:bg-[#333333] transition-colors"
+                                    className="block text-center px-5 py-2.5 bg-[#F4F4F5] text-[#111111] font-medium text-[15px] rounded-md hover:bg-[#EAEAEA] transition-colors"
                                 >
                                     Sign Up
                                 </Link>
