@@ -64,7 +64,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United"
                             width={200}
                             height={50}
-                            className="w-[140px] h-auto object-contain transition-opacity"
+                            className="w-[100px] sm:w-[140px] h-auto object-contain transition-opacity"
                             priority
                         />
                     </Link>
@@ -125,7 +125,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             </div>
                         </>
                     ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="hidden sm:flex items-center gap-2">
                             <Link
                                 href="/login"
                                 className="px-5 py-1.5 text-[#111111] font-medium text-sm hover:bg-[#F4F4F5] rounded-md transition-colors"
@@ -161,6 +161,21 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                     <MobileNavLink href="#how-it-works" label="How it works" onClick={() => setIsMenuOpen(false)} />
                     <MobileNavLink href="#workers" label="For Workers" onClick={() => setIsMenuOpen(false)} />
                     <MobileNavLink href="#employers" label="For Employers" onClick={() => setIsMenuOpen(false)} />
+                    {!user && (
+                        <>
+                            <div className="border-t border-[#dddfe2] my-2" />
+                            <MobileNavLink href="/login" label="Sign In" onClick={() => setIsMenuOpen(false)} />
+                            <div className="px-4 py-2">
+                                <Link
+                                    href="/signup"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="block text-center px-5 py-3 bg-[#1877f2] text-white font-bold text-sm rounded-lg hover:bg-[#166fe5] transition-colors"
+                                >
+                                    Create Free Account
+                                </Link>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
         </nav>
