@@ -18,6 +18,23 @@ export async function GET(request: Request) {
     try {
         const supabase = createAdminClient();
 
+        // BUG-002 fix: Distributed lock — skip if last job_match email was sent < 5 min ago
+        // This prevents duplicate emails from concurrent Vercel cron retries
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data: recentRun } = await supabase
+            .from("email_queue")
+            .select("id")
+            .eq("email_type", "job_match")
+            .gte("created_at", fiveMinAgo)
+            .limit(1);
+
+        if (recentRun && recentRun.length > 0) {
+            return NextResponse.json({
+                message: "Skipped — match-jobs ran recently (< 5 min ago)",
+                matched_count: 0
+            });
+        }
+
         // 1. Fetch Open Jobs
         const { data: openJobs, error: jobsError } = await supabase
             .from('job_requests')

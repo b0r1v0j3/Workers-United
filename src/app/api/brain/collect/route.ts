@@ -20,11 +20,32 @@ export async function GET(request: NextRequest) {
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // ─── 1. User Statistics ─────────────────────────────────────────────
-    const { data: allProfiles } = await supabase
-        .from("profiles")
-        .select("id, user_type, full_name, created_at");
+    // ─── PERF-001 fix: All queries run in parallel via Promise.all ──────
+    const [
+        { data: allProfiles },
+        { data: candidates },
+        { data: documents },
+        { data: payments },
+        { data: emails },
+        { data: whatsappMsgs },
+        { data: employerData },
+        { data: jobRequests },
+        { data: matches },
+        { data: offers },
+    ] = await Promise.all([
+        supabase.from("profiles").select("id, user_type, full_name, created_at"),
+        supabase.from("candidates").select("id, profile_id, status, admin_approved, entry_fee_paid, queue_joined_at, created_at"),
+        supabase.from("candidate_documents").select("document_type, status, created_at, verified_at"),
+        supabase.from("payments").select("fee_type, status, amount, paid_at, created_at"),
+        supabase.from("email_queue").select("type, sent, error, created_at").gte("created_at", monthAgo.toISOString()),
+        supabase.from("whatsapp_messages").select("direction, status, content, created_at, phone_number").gte("created_at", monthAgo.toISOString()).order("created_at", { ascending: false }),
+        supabase.from("employers").select("id, status, country, industry, created_at"),
+        supabase.from("job_requests").select("id, status, industry, country, positions_available, created_at"),
+        supabase.from("matches").select("id, status, created_at"),
+        supabase.from("offers").select("id, status, created_at"),
+    ]);
 
+    // ─── 1. User Statistics ─────────────────────────────────────────────
     const workers = (allProfiles || []).filter(p => p.user_type === "worker");
     const employers = (allProfiles || []).filter(p => p.user_type === "employer");
     const newUsersThisWeek = (allProfiles || []).filter(p =>
@@ -32,10 +53,6 @@ export async function GET(request: NextRequest) {
     );
 
     // ─── 2. Candidate Statuses ──────────────────────────────────────────
-    const { data: candidates } = await supabase
-        .from("candidates")
-        .select("id, profile_id, status, admin_approved, entry_fee_paid, queue_joined_at, created_at");
-
     const statusBreakdown: Record<string, number> = {};
     (candidates || []).forEach(c => {
         statusBreakdown[c.status] = (statusBreakdown[c.status] || 0) + 1;
@@ -46,10 +63,6 @@ export async function GET(request: NextRequest) {
     const inQueueCount = (candidates || []).filter(c => c.status === "IN_QUEUE").length;
 
     // ─── 3. Document Verification Stats ─────────────────────────────────
-    const { data: documents } = await supabase
-        .from("candidate_documents")
-        .select("document_type, status, created_at, verified_at");
-
     const docStats = {
         total: (documents || []).length,
         verified: (documents || []).filter(d => d.status === "verified").length,
@@ -67,10 +80,6 @@ export async function GET(request: NextRequest) {
     });
 
     // ─── 4. Payment Stats ───────────────────────────────────────────────
-    const { data: payments } = await supabase
-        .from("payments")
-        .select("fee_type, status, amount, paid_at, created_at");
-
     const paymentStats = {
         total: (payments || []).length,
         successful: (payments || []).filter(p => p.status === "completed" || p.status === "paid").length,
@@ -82,11 +91,6 @@ export async function GET(request: NextRequest) {
     };
 
     // ─── 5. Email Queue Stats ───────────────────────────────────────────
-    const { data: emails } = await supabase
-        .from("email_queue")
-        .select("type, sent, error, created_at")
-        .gte("created_at", monthAgo.toISOString());
-
     const emailStats = {
         totalThisMonth: (emails || []).length,
         sent: (emails || []).filter(e => e.sent).length,
@@ -99,12 +103,6 @@ export async function GET(request: NextRequest) {
     });
 
     // ─── 6. WhatsApp Chatbot Stats ──────────────────────────────────────
-    const { data: whatsappMsgs } = await supabase
-        .from("whatsapp_messages")
-        .select("direction, status, content, created_at, phone_number")
-        .gte("created_at", monthAgo.toISOString())
-        .order("created_at", { ascending: false });
-
     const chatbotStats = {
         totalMessages: (whatsappMsgs || []).length,
         inbound: (whatsappMsgs || []).filter(m => m.direction === "inbound").length,
@@ -112,19 +110,14 @@ export async function GET(request: NextRequest) {
         failed: (whatsappMsgs || []).filter(m => m.status === "failed").length,
         uniqueUsers: new Set((whatsappMsgs || []).map(m => m.phone_number)).size,
         thisWeek: (whatsappMsgs || []).filter(m => new Date(m.created_at) >= weekAgo).length,
-        // Last 20 conversations for quality review
         recentConversations: (whatsappMsgs || []).slice(0, 50).map(m => ({
             direction: m.direction,
-            content: m.content?.substring(0, 500), // Truncate long messages
+            content: m.content?.substring(0, 500),
             timestamp: m.created_at,
         })),
     };
 
     // ─── 7. Employer Stats ──────────────────────────────────────────────
-    const { data: employerData } = await supabase
-        .from("employers")
-        .select("id, status, country, industry, created_at");
-
     const employerStats = {
         total: (employerData || []).length,
         verified: (employerData || []).filter(e => e.status === "VERIFIED").length,
@@ -136,19 +129,6 @@ export async function GET(request: NextRequest) {
         if (e.country) employerStats.byCountry[e.country] = (employerStats.byCountry[e.country] || 0) + 1;
         if (e.industry) employerStats.byIndustry[e.industry] = (employerStats.byIndustry[e.industry] || 0) + 1;
     });
-
-    // ─── 8. Job Requests & Matches ──────────────────────────────────────
-    const { data: jobRequests } = await supabase
-        .from("job_requests")
-        .select("id, status, industry, country, positions_available, created_at");
-
-    const { data: matches } = await supabase
-        .from("matches")
-        .select("id, status, created_at");
-
-    const { data: offers } = await supabase
-        .from("offers")
-        .select("id, status, created_at");
 
     // ─── 9. Conversion Funnel ───────────────────────────────────────────
     const funnel = {

@@ -80,7 +80,9 @@ export async function POST(req: NextRequest) {
             // Handle post-payment actions based on type
             if (paymentType === "entry_fee") {
                 // Mark candidate as having paid entry fee and activate queue
-                // Idempotency: only update if not already paid (prevents double webhook from resetting queue_joined_at)
+                // Idempotency: double guard prevents race conditions from concurrent webhooks
+                // - .eq("entry_fee_paid", false) prevents double payment processing
+                // - .eq("status", "VERIFIED") ensures only VERIFIED → IN_QUEUE transition
                 await supabase
                     .from("candidates")
                     .update({
@@ -91,7 +93,8 @@ export async function POST(req: NextRequest) {
                         job_search_activated_at: new Date().toISOString(),
                     })
                     .eq("profile_id", userId)
-                    .eq("entry_fee_paid", false);
+                    .eq("entry_fee_paid", false)
+                    .eq("status", "VERIFIED");
 
                 // Send payment confirmation email
                 try {
