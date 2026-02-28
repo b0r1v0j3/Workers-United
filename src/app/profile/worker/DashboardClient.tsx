@@ -91,7 +91,8 @@ export default function DashboardClient({
 
                 {/* Employer Matching CTA */}
                 <div className="mb-8 bg-white rounded-3xl p-1 shadow-sm border border-slate-100">
-                    <div className="bg-gradient-to-r from-[#1877f2] to-[#0d5bbd] rounded-[20px] p-6 text-white relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+                    <div className={`rounded-[20px] p-6 text-white relative overflow-hidden group hover:shadow-lg transition-all duration-300 ${inQueue ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-[#1877f2] to-[#0d5bbd]'
+                        }`}>
                         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/15 transition-colors" />
                         <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
@@ -99,13 +100,32 @@ export default function DashboardClient({
                                     <Rocket className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-xl">Get Matched with Employers</h3>
-                                    <p className="text-blue-100 text-sm opacity-90">We're building a fast-track job matching system. Stay tuned!</p>
+                                    <h3 className="font-bold text-xl">
+                                        {inQueue ? "You're in the Queue!" : "Get Matched with Employers"}
+                                    </h3>
+                                    <p className="text-blue-100 text-sm opacity-90">
+                                        {inQueue
+                                            ? "We're looking for the best job match for you."
+                                            : adminApproved
+                                                ? "Your profile is approved! Pay $9 to join the active queue."
+                                                : "Complete your profile and get approved to start the process."
+                                        }
+                                    </p>
                                 </div>
                             </div>
-                            <span className="bg-white text-blue-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg whitespace-nowrap inline-block">
-                                Coming Soon
-                            </span>
+                            {inQueue ? (
+                                <Link href="/profile/worker/queue" className="bg-white text-emerald-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg whitespace-nowrap inline-block hover:bg-emerald-50 transition-colors">
+                                    View Queue Status
+                                </Link>
+                            ) : adminApproved && !candidate?.entry_fee_paid ? (
+                                <Link href="/profile/worker/queue" className="bg-white text-blue-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg whitespace-nowrap inline-block hover:bg-blue-50 transition-colors animate-pulse">
+                                    Pay $9 — Join Queue →
+                                </Link>
+                            ) : (
+                                <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-sm px-6 py-3 rounded-full whitespace-nowrap inline-block border border-white/30">
+                                    {adminApproved ? "Profile Approved ✓" : "Under Review"}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function QueuePage() {
                 </div>
             </nav>
 
+            <QueueClientEffects />
             <main className="max-w-[900px] mx-auto px-4 py-6">
                 <h1 className="text-2xl font-bold text-[#050505] mb-6">Your Queue Status</h1>
 
@@ -169,19 +171,6 @@ export default async function QueuePage() {
     );
 }
 
-function PayToJoinButton() {
-    return (
-        <form action="/api/stripe/create-checkout" method="POST">
-            <input type="hidden" name="type" value="entry_fee" />
-            <button
-                type="submit"
-                className="bg-[#1877f2] text-white font-bold py-3 px-8 rounded-lg hover:bg-[#166fe5] transition-colors shadow-sm"
-            >
-                Pay $9 to Join Queue
-            </button>
-        </form>
-    );
-}
 
 function OfferCard({ offer }: {
     offer: {
