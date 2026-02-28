@@ -181,6 +181,10 @@ export default async function AdminDashboard() {
                                 <p className="text-2xl font-bold">{totalEmployers}</p>
                                 <p className="text-xs text-blue-200 uppercase tracking-wide">Employers</p>
                             </div>
+                            <Link href="/admin/analytics" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 rounded-xl border border-blue-400 text-center flex flex-col items-center justify-center transition-colors min-w-[100px] group">
+                                <BarChart3 size={24} className="mb-1 group-hover:scale-110 transition-transform" />
+                                <span className="text-xs uppercase tracking-wide font-bold">Analytics</span>
+                            </Link>
                         </div>
                     </div>
                 </div>

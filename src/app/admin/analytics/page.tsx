@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, Users, FileCheck, Briefcase, Shield, Calendar } from "lucide-react";
+import { RegistrationsChart, RevenueChart } from "@/components/admin/AnalyticsCharts";
 
 interface FunnelData {
     total_users: number;
@@ -10,6 +11,7 @@ interface FunnelData {
     verified: number;
     job_matched: number;
     supply_demand?: { industry: string; supply: number; demand: number }[];
+    time_series?: { date: string; workers: number; employers: number; revenue: number }[];
 }
 
 type Period = "all" | "7d" | "30d" | "this_month" | "last_month";
@@ -209,6 +211,26 @@ export default function AnalyticsPage() {
                     })}
                 </div>
             </div>
+
+            {/* Charts Section */}
+            {data.time_series && data.time_series.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-white rounded-xl border border-[#dddfe2] p-6 shadow-sm">
+                        <div className="mb-6">
+                            <h2 className="text-lg font-bold text-[#050505]">User Growth</h2>
+                            <p className="text-sm text-[#65676b]">New worker and employer signups over time</p>
+                        </div>
+                        <RegistrationsChart data={data.time_series} />
+                    </div>
+                    <div className="bg-white rounded-xl border border-[#dddfe2] p-6 shadow-sm">
+                        <div className="mb-6">
+                            <h2 className="text-lg font-bold text-[#050505]">Revenue</h2>
+                            <p className="text-sm text-[#65676b]">Gross entry and placement fees</p>
+                        </div>
+                        <RevenueChart data={data.time_series} />
+                    </div>
+                </div>
+            )}
 
             {/* Drop-off Summary */}
             <div className="bg-white rounded-xl border border-[#dddfe2] p-6 shadow-sm">
