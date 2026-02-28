@@ -21,7 +21,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Storage | **Supabase Storage** | Documents (passport, diploma, biometric photo) |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **Gemini 2.0 Flash** (`@google/generative-ai`) | Document verification, contact form auto-reply |
-| AI (Chatbot) | **GPT-4** via n8n | WhatsApp AI chatbot |
+| AI (Chatbot) | **GPT-4o-mini** via n8n | WhatsApp AI chatbot |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Automation | **n8n Cloud** | WhatsApp AI chatbot workflow |

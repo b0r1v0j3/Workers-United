@@ -5,7 +5,7 @@
 ---
 
 **WhatsApp AI Chatbot LIVE (28.02.2026)**
-- Implementiran AI chatbot: `Vercel webhook → n8n AI (GPT-4) → Vercel → WhatsApp reply`
+- Implementiran AI chatbot: `Vercel webhook → n8n AI (GPT-4o-mini) → Vercel → WhatsApp reply`
 - n8n workflow: WhatsApp Webhook → AI Response Generator → Respond to Webhook (3 čvora)
 - Vercel šalje odgovor korisniku koristeći sopstveni `WHATSAPP_TOKEN` (ne n8n)
 - Kritičan fix: `POST /{WABA-ID}/subscribed_apps` API poziv — bez njega Meta ne isporučuje webhook event-ove

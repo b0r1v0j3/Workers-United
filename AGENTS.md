@@ -59,7 +59,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
 - **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
-- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. n8n + GPT-4 obrađuje WhatsApp komunikaciju, Gemini obrađuje email i verifikaciju dokumenata. Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI. WhatsApp bot se dopisuje sa korisnicima — prepoznaje ih po broju telefona, zna njihov status, i daje personalizovane odgovore.
+- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. n8n + GPT-4o-mini obrađuje WhatsApp komunikaciju, Gemini obrađuje email i verifikaciju dokumenata. Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI. WhatsApp bot se dopisuje sa korisnicima — prepoznaje ih po broju telefona, zna njihov status, i daje personalizovane odgovore.
 
 ---
 
@@ -157,7 +157,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Styling:** Tailwind CSS v4, Montserrat font
 - **Backend:** Supabase (Auth + PostgreSQL + Storage)
 - **Plaćanja:** Stripe (Checkout Sessions + Webhooks)
-- **AI:** Gemini 2.0 Flash (verifikacija dokumenata, auto-reply na kontakt formu) + GPT-4 via n8n (WhatsApp chatbot)
+- **AI:** Gemini 2.0 Flash (verifikacija dokumenata, auto-reply na kontakt formu) + GPT-4o-mini via n8n (WhatsApp chatbot)
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
 - **Hosting:** Vercel Pro (sa cron jobovima)
 - **Automation:** n8n Cloud (WhatsApp AI chatbot workflow)
@@ -246,7 +246,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
-- [x] WhatsApp AI chatbot (n8n + GPT-4) — 28.02.2026
+- [x] WhatsApp AI chatbot (n8n + GPT-4o-mini) — 28.02.2026
 - [x] Stripe $9 Entry Fee live — 28.02.2026
 - [x] Cron jobovi re-enabled — 28.02.2026
 - [x] Analytics dashboard (Recharts) — 28.02.2026
@@ -338,7 +338,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
 - [x] ~~**Konsolidacija email sistema** — spojen `check-incomplete-profiles` u `profile-reminders`, shared `profile-completion.ts` lib, strict TemplateData, admin email preview~~
 - [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
-- [x] ~~**WhatsApp AI Chatbot (n8n + GPT-4)** — konverzacijski bot koji se dopisuje sa korisnicima. Prepoznaje ih po broju telefona, čita profil/status iz baze, daje personalizovane odgovore. Flow: korisnik piše → Meta webhook → Vercel → n8n AI → Vercel → WhatsApp reply~~ ✅ 28.02.2026
+- [x] ~~**WhatsApp AI Chatbot (n8n + GPT-4o-mini)** — konverzacijski bot koji se dopisuje sa korisnicima. Prepoznaje ih po broju telefona, čita profil/status iz baze, daje personalizovane odgovore. Flow: korisnik piše → Meta webhook → Vercel → n8n AI → Vercel → WhatsApp reply~~ ✅ 28.02.2026
 - [ ] **Live Visa Process Tracker** — "Currently processing: X applications", "Documents verified today: Y". ⏳ **USLOV: 100+ korisnika u sistemu**
 - [ ] **"Work in [Country]" Pages** — SEO stranice (npr. /work-in-germany) sa pravnim koracima, platama, troškovima. ⏳ **USLOV: bar 2 aktivne zemlje**
 
