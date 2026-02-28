@@ -127,6 +127,55 @@ export async function GET(request: Request) {
 
         const supplyDemand = Array.from(sdMap.values()).sort((a, b) => (b.demand + b.supply) - (a.demand + a.supply));
 
+        // 7. Time-series data for charts (last 30 days by default, or based on date range)
+        const timeSeriesMap = new Map<string, { date: string, workers: number, employers: number, revenue: number }>();
+
+        // Helper to get past N days
+        const generateDates = (days: number) => {
+            const arr = [];
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                arr.push(d.toISOString().split('T')[0]);
+            }
+            return arr;
+        };
+
+        const dateKeys = generateDates(30);
+        dateKeys.forEach(date => {
+            timeSeriesMap.set(date, { date, workers: 0, employers: 0, revenue: 0 });
+        });
+
+        // Populate worker signups
+        allAuthUsers.forEach((u: any) => {
+            if (u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin') {
+                const dateKey = new Date(u.created_at).toISOString().split('T')[0];
+                if (timeSeriesMap.has(dateKey)) {
+                    timeSeriesMap.get(dateKey)!.workers += 1;
+                }
+            }
+        });
+
+        // Populate employer signups (need to fetch employers)
+        const { data: allEmployers } = await supabase.from('employers').select('created_at');
+        allEmployers?.forEach((e: any) => {
+            const dateKey = new Date(e.created_at).toISOString().split('T')[0];
+            if (timeSeriesMap.has(dateKey)) {
+                timeSeriesMap.get(dateKey)!.employers += 1;
+            }
+        });
+
+        // Populate revenue (need to fetch payments)
+        const { data: allPayments } = await supabase.from('payments').select('amount, created_at, status').in('status', ['paid', 'completed']);
+        allPayments?.forEach((p: any) => {
+            const dateKey = new Date(p.created_at).toISOString().split('T')[0];
+            if (timeSeriesMap.has(dateKey)) {
+                timeSeriesMap.get(dateKey)!.revenue += Number(p.amount) || 0;
+            }
+        });
+
+        const timeSeriesData = Array.from(timeSeriesMap.values());
+
         return NextResponse.json({
             success: true,
             data: {
@@ -135,7 +184,8 @@ export async function GET(request: Request) {
                 uploaded_documents: distinctUploaded,
                 verified: distinctVerified,
                 job_matched: distinctMatched,
-                supply_demand: supplyDemand
+                supply_demand: supplyDemand,
+                time_series: timeSeriesData
             }
         });
 
