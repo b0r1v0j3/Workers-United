@@ -69,6 +69,15 @@ export async function POST(request: NextRequest) {
 
         const admin = createAdminClient();
 
+        // Fetch old value for audit trail
+        const { data: oldRecord } = await admin
+            .from(table)
+            .select(field)
+            .eq("id", recordId)
+            .single();
+
+        const oldValue = oldRecord ? String(oldRecord[field] ?? "") : "";
+
         const { error } = await admin
             .from(table)
             .update({ [field]: value, updated_at: new Date().toISOString() })
@@ -78,6 +87,19 @@ export async function POST(request: NextRequest) {
             console.error("[Edit Data] Update error:", error);
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
+
+        // Audit log: record who changed what
+        await admin.from("admin_audit_log").insert({
+            admin_id: user.id,
+            action: "edit",
+            table_name: table,
+            record_id: recordId,
+            field,
+            old_value: oldValue,
+            new_value: String(value ?? ""),
+        });
+
+        console.log(`[Audit] ${user.email} changed ${table}.${field} on ${recordId}: "${oldValue}" → "${value}"`);
 
         return NextResponse.json({ success: true, field, value });
 
