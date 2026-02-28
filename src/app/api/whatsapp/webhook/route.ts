@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
+import { getWorkerCompletion } from "@/lib/profile-completion";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
 // Handles:
 // 1. GET  — Webhook verification (hub.challenge)
 // 2. POST — Inbound messages + delivery status updates → forwards to n8n AI
+//
+// Architecture: User → WhatsApp → Meta → Vercel → n8n (GPT-4o) → Vercel → WhatsApp
+// Vercel enriches the message with: user profile, documents, payments, 
+// conversation history (100 messages), and profile completion %
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "workers-united-whatsapp-verify";
-const N8N_WEBHOOK_URL = process.env.N8N_WHATSAPP_WEBHOOK_URL; // e.g. https://b0r1v0j3.app.n8n.cloud/webhook/whatsapp-webhook
+const N8N_WEBHOOK_URL = process.env.N8N_WHATSAPP_WEBHOOK_URL;
+const CONVERSATION_HISTORY_LIMIT = 100; // Number of past messages to send for context
 
 // ─── GET: Webhook Verification ──────────────────────────────────────────────
 
@@ -37,7 +43,6 @@ export async function POST(request: NextRequest) {
         const value = changes?.value;
 
         if (!value) {
-            // Acknowledge but skip (Meta sometimes sends empty pings)
             return NextResponse.json({ status: "ok" });
         }
 
@@ -47,7 +52,7 @@ export async function POST(request: NextRequest) {
         if (value.statuses && value.statuses.length > 0) {
             for (const status of value.statuses) {
                 const wamid = status.id;
-                const statusValue = status.status; // sent, delivered, read, failed
+                const statusValue = status.status;
 
                 if (wamid && statusValue) {
                     const updateData: Record<string, string> = { status: statusValue };
@@ -67,7 +72,7 @@ export async function POST(request: NextRequest) {
         // ─── Handle incoming messages ───────────────────────────────────
         if (value.messages && value.messages.length > 0) {
             for (const message of value.messages) {
-                const phoneNumber = message.from; // sender's phone (digits only)
+                const phoneNumber = message.from;
                 const messageType = message.type;
                 const wamid = message.id;
 
@@ -88,22 +93,77 @@ export async function POST(request: NextRequest) {
                 // Normalize phone for DB lookup (add + prefix)
                 const normalizedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+${phoneNumber}`;
 
-                // Find user by phone number
+                // ─── Fetch user profile ─────────────────────────────────
                 const { data: candidate } = await supabase
                     .from("candidates")
-                    .select("id, profile_id, status, queue_position, preferred_job, desired_countries, refund_deadline, refund_eligible")
+                    .select(`
+                        id, profile_id, status, queue_position, preferred_job, 
+                        desired_countries, refund_deadline, refund_eligible,
+                        entry_fee_paid, admin_approved, queue_joined_at,
+                        nationality, current_country, gender, experience_years,
+                        phone, marital_status
+                    `)
                     .or(`phone.eq.${normalizedPhone},phone.eq.${phoneNumber}`)
                     .maybeSingle();
 
                 const { data: profile } = candidate?.profile_id
                     ? await supabase
                         .from("profiles")
-                        .select("full_name, email")
+                        .select("full_name, email, user_type, created_at")
                         .eq("id", candidate.profile_id)
                         .single()
                     : { data: null };
 
-                // Log inbound message
+                // ─── Fetch document statuses ────────────────────────────
+                let documents: any[] = [];
+                if (candidate?.profile_id) {
+                    const { data: docs } = await supabase
+                        .from("candidate_documents")
+                        .select("document_type, status, created_at, verified_at")
+                        .eq("user_id", candidate.profile_id);
+                    documents = docs || [];
+                }
+
+                // ─── Fetch payment info ─────────────────────────────────
+                let payments: any[] = [];
+                if (candidate?.profile_id) {
+                    const { data: paymentData } = await supabase
+                        .from("payments")
+                        .select("fee_type, status, amount, paid_at")
+                        .eq("user_id", candidate.profile_id)
+                        .order("created_at", { ascending: false });
+                    payments = paymentData || [];
+                }
+
+                // ─── Calculate profile completion ───────────────────────
+                let profileCompletion = 0;
+                let missingFields: string[] = [];
+                if (candidate && profile) {
+                    const completionResult = getWorkerCompletion({
+                        profile,
+                        candidate,
+                        documents,
+                    });
+                    profileCompletion = completionResult.completion;
+                    missingFields = completionResult.missingFields;
+                }
+
+                // ─── Fetch conversation history (100 messages) ──────────
+                const { data: history } = await supabase
+                    .from("whatsapp_messages")
+                    .select("direction, content, created_at")
+                    .eq("phone_number", normalizedPhone)
+                    .order("created_at", { ascending: false })
+                    .limit(CONVERSATION_HISTORY_LIMIT);
+
+                // Reverse to chronological order (oldest first)
+                const conversationHistory = (history || []).reverse().map(msg => ({
+                    role: msg.direction === "inbound" ? "user" : "assistant",
+                    content: msg.content,
+                    timestamp: msg.created_at,
+                }));
+
+                // ─── Log inbound message ────────────────────────────────
                 await supabase.from("whatsapp_messages").insert({
                     user_id: candidate?.profile_id || null,
                     phone_number: normalizedPhone,
@@ -114,41 +174,67 @@ export async function POST(request: NextRequest) {
                     status: "delivered",
                 });
 
-                // ─── Forward to n8n AI Chatbot & send reply from Vercel ─
+                // ─── Forward enriched data to n8n AI ────────────────────
                 let aiResponse: string | null = null;
 
                 if (N8N_WEBHOOK_URL) {
                     try {
                         const controller = new AbortController();
-                        const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+                        const timeout = setTimeout(() => controller.abort(), 25000); // 25s for GPT-4o
+
+                        const n8nPayload = {
+                            phoneNumber: normalizedPhone,
+                            messageText: content,
+                            messageType,
+                            wamid,
+                            isRegistered: !!candidate,
+                            // Full user profile
+                            userProfile: candidate ? {
+                                name: profile?.full_name || "Unknown",
+                                email: profile?.email || null,
+                                registeredAt: profile?.created_at || null,
+                                status: candidate.status,
+                                adminApproved: candidate.admin_approved,
+                                entryFeePaid: candidate.entry_fee_paid,
+                                queuePosition: candidate.queue_position,
+                                queueJoinedAt: candidate.queue_joined_at,
+                                preferredJob: candidate.preferred_job,
+                                desiredCountries: candidate.desired_countries,
+                                nationality: candidate.nationality,
+                                currentCountry: candidate.current_country,
+                                experienceYears: candidate.experience_years,
+                                refundEligible: candidate.refund_eligible,
+                                refundDeadline: candidate.refund_deadline,
+                                profileCompletion,
+                                missingFields,
+                            } : null,
+                            // Document statuses
+                            documents: documents.map(d => ({
+                                type: d.document_type,
+                                status: d.status,
+                                verifiedAt: d.verified_at,
+                            })),
+                            // Payment history
+                            payments: payments.map(p => ({
+                                type: p.fee_type,
+                                status: p.status,
+                                amount: p.amount,
+                                paidAt: p.paid_at,
+                            })),
+                            // Conversation history (100 messages)
+                            conversationHistory,
+                        };
 
                         const n8nRes = await fetch(N8N_WEBHOOK_URL, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             signal: controller.signal,
-                            body: JSON.stringify({
-                                phoneNumber: normalizedPhone,
-                                messageText: content,
-                                messageType,
-                                wamid,
-                                userProfile: candidate ? {
-                                    name: profile?.full_name || "Unknown",
-                                    email: profile?.email || null,
-                                    status: candidate.status,
-                                    queuePosition: candidate.queue_position,
-                                    preferredJob: candidate.preferred_job,
-                                    desiredCountries: candidate.desired_countries,
-                                    refundEligible: candidate.refund_eligible,
-                                    refundDeadline: candidate.refund_deadline,
-                                } : null,
-                                isRegistered: !!candidate,
-                            }),
+                            body: JSON.stringify(n8nPayload),
                         });
                         clearTimeout(timeout);
 
                         if (n8nRes.ok) {
                             const n8nData = await n8nRes.json();
-                            // n8n returns the AI response text via "Respond to Webhook" node
                             aiResponse = n8nData?.output || n8nData?.text || n8nData?.message || (typeof n8nData === "string" ? n8nData : null);
                         }
                     } catch (n8nError) {
@@ -168,7 +254,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ status: "ok" });
     } catch (error) {
         console.error("[WhatsApp Webhook] Error:", error);
-        // Return 200 even on error to prevent Meta from retrying bad payloads
         return NextResponse.json({ status: "error" });
     }
 }
@@ -188,9 +273,9 @@ function getFallbackResponse(message: string, candidate: any, profile: any): str
     }
 
     if (msg.includes("help")) {
-        return `Hi ${name}! Type "status" to check your application, or visit workersunited.eu for full details. For complex questions, email support@workersunited.eu`;
+        return `Hi ${name}! Type "status" to check your application, or visit workersunited.eu for full details. For complex questions, email contact@workersunited.eu`;
     }
 
-    return `Hi ${name}! I'm the Workers United assistant. Our AI chatbot is temporarily offline — please try again shortly or email support@workersunited.eu`;
+    return `Hi ${name}! I'm the Workers United assistant. Our AI chatbot is temporarily offline — please try again shortly or email contact@workersunited.eu`;
 }
 
