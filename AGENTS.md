@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 28.02.2026 (Stripe live, cron re-enabled, analytics dashboard, business rules update)
+> **Poslednje ažuriranje:** 28.02.2026 (WhatsApp AI chatbot live via n8n, Stripe live, cron re-enabled, analytics dashboard, business rules update)
 
 ---
 
@@ -805,6 +805,10 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 10. **Body background is DARK NAVY (#0F172A)** — The `body` background in `globals.css` is set to dark navy to match all page footers. Each page component sets its own light background on its outer `min-h-screen` div (e.g., `bg-[#F8FAFC]`). Do NOT change the body background back to a light color — it will cause visible white/gray space below all page footers.
 
 11. **All admin API routes MUST include `isGodModeUser()` check** — The owner account's `profile.user_type` is "worker", not "admin". Any admin API route checking `profile?.user_type !== "admin"` must also check `!isGodModeUser(user.email)`. Pattern: `if (profile?.user_type !== "admin" && !isGodModeUser(user.email))`. Import from `@/lib/godmode`.
+
+12. **WhatsApp webhook requires WABA `subscribed_apps` API call** — After setting up the webhook in Meta Developer Portal, you MUST also call `POST /{WABA-ID}/subscribed_apps` via Graph API Explorer. Without this, Meta's "Test" button works but REAL incoming messages do NOT trigger the webhook. This is the #1 cause of "webhook configured but no events delivered" issues.
+
+13. **WhatsApp AI Chatbot architecture** — The flow is: `User → WhatsApp → Meta → Vercel webhook (route.ts) → n8n AI → Vercel → WhatsApp reply`. Vercel handles sending the reply using its own `WHATSAPP_TOKEN`, NOT n8n. n8n only does AI processing and returns the text via "Respond to Webhook" node. Key env vars: `N8N_WHATSAPP_WEBHOOK_URL`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`/`CRON_SECRET` (for webhook verification).
 
 ---
 
