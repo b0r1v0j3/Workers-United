@@ -123,7 +123,7 @@ export default function DashboardClient({
                                 </Link>
                             ) : (
                                 <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-sm px-6 py-3 rounded-full whitespace-nowrap inline-block border border-white/30">
-                                    {adminApproved ? "Profile Approved ✓" : "Under Review"}
+                                    {adminApproved ? "Profile Approved ✓" : `${profileCompletion}% Complete`}
                                 </span>
                             )}
                         </div>
