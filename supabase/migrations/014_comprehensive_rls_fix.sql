@@ -9,7 +9,7 @@
 -- ================================================================
 -- 1. Create helper functions (SECURITY DEFINER = bypass RLS)
 -- ================================================================
-DROP FUNCTION IF EXISTS public.is_admin();
+DROP FUNCTION IF EXISTS public.is_admin() CASCADE;
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
@@ -24,7 +24,7 @@ AS $$
     );
 $$;
 
-DROP FUNCTION IF EXISTS public.is_employer();
+DROP FUNCTION IF EXISTS public.is_employer() CASCADE;
 CREATE OR REPLACE FUNCTION public.is_employer()
 RETURNS boolean
 LANGUAGE sql
@@ -39,7 +39,7 @@ AS $$
     );
 $$;
 
-DROP FUNCTION IF EXISTS public.get_user_type();
+DROP FUNCTION IF EXISTS public.get_user_type() CASCADE;
 CREATE OR REPLACE FUNCTION public.get_user_type()
 RETURNS text
 LANGUAGE sql
