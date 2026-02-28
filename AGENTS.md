@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 28.02.2026 (WhatsApp AI chatbot live via n8n, Stripe live, cron re-enabled, analytics dashboard, business rules update)
+> **Poslednje ažuriranje:** 28.02.2026 (AGENTS.md restrukturisan, WhatsApp AI chatbot live, Stripe live, cron re-enabled)
 
 ---
 
@@ -59,7 +59,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
 - **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
-- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. n8n + AI obrađuje svu komunikaciju (email, WhatsApp). Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI. WhatsApp bot se dopisuje sa korisnicima — prepoznaje ih po broju telefona, zna njihov status, i daje personalizovane odgovore.
+- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. n8n + GPT-4 obrađuje WhatsApp komunikaciju, Gemini obrađuje email i verifikaciju dokumenata. Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI. WhatsApp bot se dopisuje sa korisnicima — prepoznaje ih po broju telefona, zna njihov status, i daje personalizovane odgovore.
 
 ---
 
@@ -157,9 +157,10 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Styling:** Tailwind CSS v4, Montserrat font
 - **Backend:** Supabase (Auth + PostgreSQL + Storage)
 - **Plaćanja:** Stripe (Checkout Sessions + Webhooks)
-- **AI:** Gemini 2.0 Flash (verifikacija dokumenata, auto-reply na kontakt formu)
+- **AI:** Gemini 2.0 Flash (verifikacija dokumenata, auto-reply na kontakt formu) + GPT-4 via n8n (WhatsApp chatbot)
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
 - **Hosting:** Vercel Pro (sa cron jobovima)
+- **Automation:** n8n Cloud (WhatsApp AI chatbot workflow)
 - **Icons:** Lucide React
 
 ### Planovi i pretplate:
@@ -204,6 +205,9 @@ WHATSAPP_TOKEN=your-permanent-system-user-access-token
 WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
 WHATSAPP_VERIFY_TOKEN=your-webhook-verify-token
 
+# n8n AI Chatbot
+N8N_WHATSAPP_WEBHOOK_URL=https://your-n8n.app.n8n.cloud/webhook/whatsapp-webhook
+
 # App
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
@@ -233,238 +237,22 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 ## 5. 📋 STANJE PROJEKTA
 
-### ✅ Završeno
+> Za kompletnu istoriju promena pogledaj `CHANGELOG.md`
 
-**Redizajn logotipa i Navigacije (27.02.2026)**
-- Prebačeno sa starog FB-heksagon logotipa na novi minimalistički flat dizajn (samo linijske ruke).
-- Implementiran dvokomponentni sistem logotipa: `logo-icon.png` (ruke, h-16 w-16) + `logo-wordmark.png` (tekst, w-[140px]).
-- Wordmark trimovan od viška transparentnih piksela za bolju kontrolu CSS veličine (sa 859px širine sa tonom praznog prostora, na kompaktnu veličinu).
-- `UnifiedNavbar.tsx` modifikovan da ima permanentni tanki profil (`h-64px`) sa `bg-white/90 backdrop-blur-md` (odbačeno dinamično bubrenje/sužavanje pri skrolu, kao i FB plava boja iz prvobitnih verzija).
-- Promenjen hover state i boje interakcija u navigaciji na crno/bele (neutralne) tonove, udaljavajući se od primarno Facebook-blue estetike.
-
-**WhatsApp Business API Integration (26.02.2026)**
-- Kreiran `src/lib/whatsapp.ts` — Meta Cloud API helper sa `sendWhatsAppTemplate()`, `sendWhatsAppText()`, i 10 convenience wrapper-a za svaki template tip
-- Prepisan `src/app/api/whatsapp/webhook/route.ts` za Meta Cloud API format (GET verifikacija + POST inbound/status)
-- `queueEmail()` u `email-templates.ts` sada prima opcionalni `recipientPhone` i automatski šalje WhatsApp template
-- `notifications.ts` — `sendOfferNotification()` šalje i email i WhatsApp za job ponude
-- Admin settings check ažuriran da proverava `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID`
-- SQL migracija `012_whatsapp_template_columns.sql` — dodaje `template_name`, `wamid`, `error_message` kolone
-- ⚠️ **PREDUSLOVI:** Meta Business Manager → WhatsApp Manager → šabloni moraju biti approved pre korišćenja
-- ⚠️ **ENV VARS:** `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN` (za webhook verifikaciju)
-- ⚠️ **NAPOMENA:** Trenutni webhook bot je BASIC keyword matching. Pravi AI konverzacijski bot (Gemini + n8n) tek treba da se napravi.
-
-**Supabase Pro + Password Strength (26.02.2026)**
-- Unapređen na **Supabase Pro** ($25/mo) — omogućen Leaked Password Protection (HaveIBeenPwned provjera)
-- Dodana **klijentska validacija jačine šifre** na signup formu (`signup-form.tsx`): min 8 karaktera, uppercase, lowercase, broj, specijalni karakter
-- Real-time checklist sa zelenim ✓ za svaki ispunjen zahtev
-- Submit dugme disablovano dok svi zahtevi nisu ispunjeni
-- ⚠️ **Vercel Pro** ($20/mo) takođe aktivan
-
-**Google OAuth Login (25.02.2026)**
-- Dodat "Sign in with Google" dugme na login i signup stranice
-- OAuth korisnici bez `user_type` se šalju na `/auth/select-role` stranicu za izbor role (Worker/Employer)
-- Signup stranica automatski prenosi izabranu rolu kroz URL param, pa OAuth korisnici nemaju prekid
-- Auth callback (`/auth/callback`) ažuriran da handluje OAuth korisnike
-- `next.config.ts` — dodat `lh3.googleusercontent.com` za Google profile slike
-- ⚠️ **PREDUSLOVI:** Supabase Dashboard → Providers → Google mora biti uključen sa Google Cloud OAuth Client ID/Secret
-
-**Document Preview + Favicon Fix (14.02.2026)**
-- **Admin Document Preview** — nova komponenta `DocumentPreview.tsx` na worker detail stranici prikazuje SVE placeholder vrednosti koje idu u DOCX dokumenta (radnik, pasoš, nacionalnost, poslodavac, posao, datumi, kontakt). Nedostajuća polja su crveno označena.
-- **API endpoint** — `GET /api/contracts/preview?profileId=...` koristi postojeću `buildPlaceholderData()` iz `docx-generator.ts` za potpuno tačan preview.
-- **Favicon fix** — obrisan stari `src/app/favicon.ico` (Vercel default). `layout.tsx` metadata `icons: { icon: '/logo.png' }` sada radi jer ga `favicon.ico` više ne override-uje.
-
-**Performance Optimization (11.02.2026)**
-- Homepage sad statički keširan (uklonjen `force-dynamic`, auth prebačen na klijentsku stranu u `UnifiedNavbar.tsx`)
-- Obrisano svih ~35 `console.log` iz produkcijskog koda (10 fajlova), ostali samo `console.error`/`console.warn`
-- Uklonjen `playwright` iz production dependencies
-
-**Site Audit Cleanup (11.02.2026)**
-- Obrisan dupli `public/robots.txt` — koristimo dinamički `src/app/robots.ts`
-- Obrisan zastareli `public/sitemap.xml` (pogrešni .html URL-ovi, nepostojeće sekcije) — koristimo `src/app/sitemap.ts`
-- Obrisan `openai` paket iz dependencies (zamenjen Gemini-jem)
-- Obrisano 9 nekorišćenih fajlova iz `public/` (Next.js template SVG-ovi, backup logo, duplikat logo-email.jpg, stari PDF-ovi, humans.txt)
-- Obrisan ceo `legacy/` folder (stari statički HTML sajt, 22 fajla)
-
-**Konsolidacija dokumentacije (10.02.2026)**
-- Spojeni `PROJECT_PLAN.md` + `README.md` u jedan `AGENTS.md` fajl
-- Kreiran `.agent/workflows/project-architecture.md` (tehnička arhitektura)
-- Obrisan `README.md` i `PROJECT_PLAN.md`
-
-**Email Template Fixes v2 — Gmail Compatibility (12.02.2026)**
-- **Logo fix** — kreiran `logo-white.png` (beli logo sa prozirnom pozadinom). Gmail ne podržava CSS `filter`, pa je stari pristup (CSS filter na `logo.png`) zamenjen direktnim korišćenjem `logo-white.png`
-- **Flexbox → Table** — svi `display: flex` u `email-templates.ts` zamenjeni `<table>` layoutom (Gmail ne podržava flexbox)
-- **Profile-reminders fix** — dodan logo + zamenjene text-character social ikonice (f, 📷, ♪) sa pravim icons8 slikama
-- **HTML wrapper** — `profile-reminders` mejlovi nisu imali `<!DOCTYPE html>` / `<meta charset>` — sad imaju
-- **Broken linkovi** — `profile_complete` → `/profile/worker`, `profile_incomplete` → `/profile/worker/edit`
-- **document_expiring** — koristio pogrešna polja (`jobTitle`/`startDate` umesto `documentType`/`expirationDate`), popravljeno i u šablonu i u `check-expiring-docs` cron jobu
-- **Parenthetical explanations** — uklonjeni iz field labela u `check-incomplete-profiles` ("Passport Number (Crucial for...)" → "Passport Number")
-- **Preheader text** — dodat skriveni preheader u `wrapModernTemplate` za bolji inbox preview
-
-**Email konsolidacija u jedan sistem (12.02.2026)**
-- Sva email renderinga prebačena u `email-templates.ts` — `profile-reminders/route.ts` više NEMA sopstvene buildere
-- ⚠️ **Kad dodaješ novi `EmailType`, ažuriraj ČETIRI mesta:**
-  1. `EmailType` union u `email-templates.ts`
-  2. `getEmailTemplate()` case u `email-templates.ts`
-  3. `VALID_TYPES` niz u `admin/email-preview/route.ts`
-  4. Title/icon mape u `notifications/route.ts`
-- **Funnel metrics bug** — `uploaded_documents` i `verified` brojali SVE korisnike a `total_users` samo workere → inflatirani analytics. Sad filtrirano na worker ID-ove
-
-**Auto-rotacija i crop dokumenata + PDF konverzija (12.02.2026)**
-- Dokumenti se sada automatski rotiraju na ispravan položaj pomoću AI detekcije (0°/90°/180°/270°)
-- PDF-ovi se automatski konvertuju u JPEG na serveru pre obrade
-- Auto-crop radi za SVE tipove dokumenata (pasoš, diploma, biometrijska foto), ne samo za pasoš/diplomu
-- Pipeline: PDF→JPEG → AI detekcija rotacije/granica → sharp rotira → sharp crop-uje → zameni u storage
-
-**Diploma verifikacija — AI previše popustljiv (12.02.2026)**
-- ⚠️ **AI prompt za verifikaciju dokumenata MORA biti striktan** — prethodni prompt je govorio "Be very lenient" i prihvatao bilo koji sertifikat. Sada zahteva formalni školski diploma (srednja škola, fakultet, zanat). Profesionalni sertifikati, kursevi i trening dokumenti se odbijaju.
-- ⚠️ **Error handler u verifikaciji MORA biti fail-closed** — `catch` blok u `verifyDiploma()` je ranije vraćao `success: true` (auto-approve na grešku). Sada vraća `success: false`.
-- ⚠️ **Pogrešan tip dokumenta = rejected (ne manual_review)** — kad radnik upload-uje pogrešan dokument, status mora biti `rejected` da bi bio primoran da upload-uje ispravno
-
-**filter(Boolean) bug popravljen (12.02.2026)**
-- ⚠️ **NIKAD ne koristi `filter(Boolean)` za prover polja u profile completion** — `false` je validan odgovor za `lives_abroad` i `previous_visas` (korisnik je odgovorio "Ne"). Koristi `isFieldFilled()` helper iz `profile-completion.ts` koji razlikuje boolean odgovore od computed polja.
-- Isti fix primenjen u `funnel-metrics/route.ts`
-
-**email_queue tabela (12.02.2026)**
-- ⚠️ **Tabela `email_queue` MORA postojati u Supabase** — SQL migracija u `supabase/migrations/001_create_email_queue.sql`. Bez nje ne rade: notifikacije, email preview, cron reminderi, analytics funnel.
-
-**Email Template Fixes + Social Links (09.02.2026)**
-- **Social Media Links** — dodati pravi linkovi (Facebook, Instagram, LinkedIn, X, TikTok, Threads, Reddit) sa Icons8 ikonicama umesto lažnih placeholder-a
-- **Missing Field Descriptions** — cron job za nepotpune profile sada šalje objašnjenja zašto je svako polje potrebno (npr. "Passport Number — Crucial for all travel documents")
-
-**Bulk Email & Admin Notifications + Incomplete Profile Reminders (09.02.2026)**
-- **Admin Announcements** — nova stranica (`/admin/announcements`) za masovno slanje obaveštenja (Workers / Employers / Everyone)
-- **Admin Update Emails** — automatsko slanje emaila kandidatima pri promeni statusa (Verified/Rejected) ili dokumenta (Approve/Reject/Request New)
-- **Incomplete Profile Reminders** — novi cron job (`/api/cron/check-incomplete-profiles`) šalje email sa listom nedostajućih polja (daily 10 AM UTC)
-- **Developer Workflow** — dokumentovan proces za dodavanje novih polja (`.agent/workflows/add-profile-field.md`)
-- **AppShell Sidebar** — dodat link za Announcements
-
-**Admin worker 404 fix + Cron reminder fix + email_queue fix (09.02.2026)**
-- **Admin worker detail 404** — profili bez `profiles` reda davali 404. Sada koristi auth user data kao fallback + amber banner "profile not completed"
-- **Profile reminder cron** — proveravao samo 3 dokumenta, sada proverava **svih 15 polja profila** (ista logika kao worker profil stranica)
-- **email_queue CHECK constraint** — cron koristio `profile_reminder` type koji ne postoji u bazi → insert tiho padao. Zamenjeno sa `document_reminder`
-
-**Mobilna responsivnost + Dizajn konzistencija + Cleanup (08.02.2026)**
-- Kompletna **mobilna responsivnost** — login, signup, homepage, worker profil, employer profil, admin stranice
-- Dodat **bottom navigation** za mobilne uređaje (AppShell) — worker i admin varijante
-- **Facebook-style dizajn konzistencija** — sve stranice koriste iste boje, navbar, kartice
-- Queue stranica potpuno redizajnirana (branded navbar, bg-[#f0f2f5], inline button styles)
-- Employer profil — popravljene minor boje (border, text)
-- Login/signup logo — bio sakriven u tamnom kontejneru, sada vidljiv sa drop-shadow
-- **Naming standardizacija** — svi user-facing "candidate" → "worker", svi "Log In" → "Sign In"
-- **Admin ruta preimenovana** — `/admin/candidates` → `/admin/workers` (URL, linkovi, tekst)
-- **Bug fix**: Queue page linkovao sa `candidate.id` umesto `candidate.profile_id` → 404 na detail stranici
-- **Dead code obrisan** — application page, ApplicationDataForm, application types, 2 API rute (931 linija)
-- Obrisan nekorišćeni onboarding page
-- Terms page — uklonjeno "(candidates)" iz teksta
-- **Admin workers lista** — filtrira samo korisnike sa profilom (uklanjeni stale auth-only useri)
-- **Admin Delete dugme** — dodato na svaku worker karticu, briše kompletno (storage, dokumenta, potpise, kandidata, profil, auth)
-- **Login/signup gradient** — zamenjen `#183b56` (zelenkasto-plav) sa čistim plavim gradijentom koji odgovara signup stranici
-- **Homepage footer** — isti gradient fix (`#0F172A → #1E3A5F`)
-- **Brand text boja** — "Workers United" tekst standardizovan na `#1E3A5F` (tamno plava koja odgovara logu) na svih 10 stranica
-- **Logo na login/signup** — beli filter samo na desktop-u (`lg:brightness-0 lg:invert`), normalan na mobilnom
-
-**GDPR Usklađenost — Kompletna implementacija (08.02.2026)**
-- Potpuno prepisana **Privacy Policy** stranica — 13 GDPR-compliant sekcija (data controller, legal basis, prava korisnika, cookies, data retention, security, itd.)
-- Potpuno prepisana **Terms & Conditions** stranica — relevantne sekcije za viznu platformu (fees, documents, GDPR prava, zabranjene aktivnosti)
-- Dodat **aktivan GDPR consent checkbox** na signup formu — checkbox mora biti čekiran, consent se snima u user metadata sa timestamp-om
-- Dodat **consent checkbox na kontakt formu** — blokira slanje ako nije čekiran
-- Kreiran **Cookie Consent banner** (`CookieConsent.tsx`) — informativni banner za essential cookies, localStorage persistence
-- Kreiran **self-service Delete Account** (`/api/account/delete` + `/profile/settings`) — korisnik može sam da obriše nalog i sve podatke (GDPR Article 17)
-- Kreiran **Data Export** (`/api/account/export`) — download svih ličnih podataka kao JSON (GDPR Article 20)
-- Dodata **Account Settings** stranica sa Download Data, Delete Account i Privacy linkovima
-- Dodat **Settings link u sidebar** za sve korisnike
-- Stara privacy policy imala faktičke greške ("ne koristimo SSL", "ne tražimo lične podatke") — sve ispravljeno
-
-**Email infrastruktura + AI upgrade + Codebase audit (07-08.02.2026)**
-- Zamenjeno Web3Forms → **Nodemailer + Google Workspace SMTP** za direktan slanje emailova
-- Kreiran `src/lib/mailer.ts` sa `sendEmail()` utility funkcijom
-- Zamenjeno OpenAI → **Gemini 2.0 Flash** za verifikaciju dokumenata (10x jeftinije, brže)
-- Kreiran `src/lib/gemini.ts` sa svim AI funkcijama (passport, diploma, foto, text)
-- Dodat **AI auto-reply na kontakt formu** — Gemini čita poruku i automatski šalje profesionalan odgovor
-- Dodat **cron za podsetnik profila** (`/api/cron/profile-reminders`) — daily 9am UTC, max 1 nedeljno po korisniku
-- Popravljen **kritični bug u Stripe webhook** — `userId` → `user_id` metadata key mismatch
-- Stripe webhook sada obrađuje i entry_fee ($9) i confirmation_fee ($190) sa post-payment akcijama
-- `notifications.ts` popravljen — slao samo console.log, sada šalje prave emailove
-- `metadataBase` dodat u `layout.tsx` za SEO
-- Migriran `middleware.ts` → `proxy.ts` (Next.js 16 deprecation)
-- Uklonjen `eslint` iz `next.config.ts` (deprecated)
-- Uklonjen ghost cron `/api/cron-email` (ruta nije postojala → 404 svakih 5 min)
-- Uklonjen invalid `config` export iz Stripe webhook (Pages Router leftover)
-- Očišćeni Vercel env vars: uklonjeni `OPENAI_API_KEY`, `BREVO_API_KEY`; dodati `SMTP_USER`, `SMTP_PASS`, `GEMINI_API_KEY`
-
-**Education polje uklonjeno + Dropdown sync + Employer Country (07.02.2026)**
-- Uklonjeno `education_level` polje sa worker profila i edit forme — kandidati već šalju diplomu, polje je bilo redundantno
-- Worker preferred_job promenjen iz TEXT INPUT → DROPDOWN sa istim opcijama kao employer industry (13 industrija)
-- Onboarding dropdown bio lowercase (`construction`) dok je employer koristio uppercase (`Construction`) — usklađeno na uppercase svuda
-- Dodat **Country dropdown** na employer profil — 46 evropskih država (samo Evropa)
-- Work Location preimenovan u "City / Region" pored country dropdown-a
-- ⚠️ NAPOMENA: Potrebno dodati `country` kolonu u `employers` tabelu u Supabase!
-
-**Kritični bug fix + Forgot Password + Coming Soon (07.02.2026)**
-- Popravljen KRITIČNI bug: save na worker edit stranici nije radio jer je kod slao `years_experience` umesto `experience_years` (ime kolone u bazi). Takođe slao `address` i `education_level` koje NE POSTOJE u candidates tabeli — Supabase tiho odbijao ceo update
-- Dodat error handling za profile update (pre se greške gutale)
-- Implementiran **Forgot Password** flow na login stranici (Supabase `resetPasswordForEmail`)
-- Dodat **Coming Soon** placeholder na worker dashboard (plavi gradient banner) — kad plaćanje bude spremno, samo se promeni u Stripe checkout
-
-**UI Čišćenje (07.02.2026)**
-- Uklonjen redundantni "Overview" dugme sa employer profila (linkao na istu stranicu)
-- Cancel dugme na employer edit sad vodi na home stranicu umesto iste stranice
-- Uklonjen nefunkcionalni search input i filter dugme sa admin candidates stranice
-- Uklonjen beskorisni three-dots (MoreHorizontal) meni sa candidate kartica
-- Date picker na worker edit zamenjen sa 3 dropdown-a (Dan/Mesec/Godina)
-- Years of experience promenjen iz number input u dropdown select
-- Dodati filter tabovi na admin candidates (All / Pending / Verified)
-
-**Čišćenje lažnih elemenata (07.02.2026)**
-- Uklonjeni "Sponsored", "Ad", "Contacts" iz AppShell desnog sidebara — ništa lažno
-
-**Admin Panel Upgrade (07.02.2026)**
-- Sve admin stranice upakovane u AppShell (konzistentan stil)
-- Dodat Queue i Refunds u sidebar
-- Kreirana nova Settings stranica (platforma info, integracije, cene)
-- Svi admin linkovi verifikovani — 0 mrtvih linkova
-
-**Uklanjanje svih "Dashboard" tekstova (07.02.2026)**
-- Svi vidljivi "Dashboard" nazivi zamenjeni sa "Profile"/"Admin"/"Overview"
-- Popravljen dupli header na admin stranici
-
-**URL Restrukturisanje (07.02.2026)**
-- `/dashboard` → `/profile/worker`, `/employer` → `/profile/employer`, 39 fajlova, 50+ referenci
-
-**Fix Profile Completion i Single-Page Edit (07.02.2026)**
-- Popravljen bug gde se signature_url brisao pri otvaranju edit forme
-- Onboarding konvertovan iz multi-step wizard u single-page formu
-
-**Dashboard Redesign (07.02.2026)**
-- Uklonjen kompletan socijalni sistem, kreiran čist 3-tab profil tracker
-
-**Facebook-Style Layout (Feb 2026)**
-- AppShell, UnifiedNavbar, kartice, tabovi — ceo sajt u FB stilu
-
-### 🔲 TODO — Pre-Launch (do 01.03.2026)
-- [x] ~~**Stripe integracija** — $9 Entry Fee live, webhook, confirmation email~~ ✅ 28.02.2026
-- [x] ~~**Payment webhook testiranje** — entry fee + placement fee flow~~ ✅ 28.02.2026
+### 🔲 TODO
 - [ ] **n8n email automation** — retry failed emails, auto-responder za inbox
-- [x] ~~**Upaliti cron jobove** — profile-reminders, check-expiring-docs, match-jobs, check-expiry~~ ✅ 28.02.2026
 - [ ] Multi-country pricing za placement fee — **odloženo** dok se ne proširimo na druge zemlje
-- [x] ~~Admin dashboard statistike (registracije, completion, prihod)~~ ✅ 28.02.2026
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
-### ✅ TODO — Završeno
-- [x] ~~GDPR, Forgot Password, Coming Soon, Mobilna responsivnost~~
-- [x] ~~Admin panel (manual match, edit data, re-verify, bulk docs, ZIP download)~~
-- [x] ~~Email notifikacije, template sistem, profile reminders~~
-- [x] ~~Automatsko generisanje dokumenata za vize~~
-- [x] ~~Employer profil verifikacija + Admin approval flow~~
-- [x] ~~Stripe $9 Entry Fee — PayToJoinButton, webhook, dashboard CTA~~ 28.02.2026
-- [x] ~~Cron jobovi re-enabled sa safe schedules~~ 28.02.2026
-- [x] ~~Analytics dashboard sa Recharts (User Growth, Revenue)~~ 28.02.2026
-- [x] ~~Mobile navbar fix + profile completion % badge~~ 28.02.2026
-
-### ⏸️ ČEKA SE (blokirano)
-- [x] ~~**Stripe plaćanja** — bankovni račun otvoren, Stripe aktivan~~ → ✅ ZAVRŠENO 28.02.2026
-- [x] ~~**WhatsApp integracija** — čeka bankovni račun → broj telefona na firmu~~ → ✅ ZAVRŠENO 26.02.2026
+### ✅ Završeno (poslednje)
+- [x] WhatsApp AI chatbot (n8n + GPT-4) — 28.02.2026
+- [x] Stripe $9 Entry Fee live — 28.02.2026
+- [x] Cron jobovi re-enabled — 28.02.2026
+- [x] Analytics dashboard (Recharts) — 28.02.2026
+- [x] WhatsApp Business API — 26.02.2026
+- [x] Google OAuth — 25.02.2026
+- [x] GDPR, email sistem, mobilna responsivnost — Feb 2026
 
 ---
 
@@ -546,11 +334,11 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~**Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza~~
 
 ### Prioritet: Srednji
-- [ ] **Per-Country Landing Pages ZA POSLODAVCE** — `/hire-workers-serbia`, `/hire-workers-germany` sa info za poslodavce kako da nađu radnike preko nas (SEO). Radnici traže posao, ne landing page.
+- [ ] **Per-Country Landing Pages ZA POSLODAVCE** — `/hire-workers-serbia`, `/hire-workers-germany` sa info za poslodavce kako da nađu radnike preko nas (SEO)
 - [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
 - [x] ~~**Konsolidacija email sistema** — spojen `check-incomplete-profiles` u `profile-reminders`, shared `profile-completion.ts` lib, strict TemplateData, admin email preview~~
 - [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
-- [ ] **WhatsApp AI Chatbot (n8n + Gemini)** — pravi konverzacijski bot koji se dopisuje sa korisnicima. Prepoznaje ih po broju telefona, čita njihov profil/status iz baze, i daje personalizovane odgovore putem Gemini AI. Trenutni webhook bot je samo basic keyword matching — treba zameniti AI-powered konverzacijom. Flow: korisnik piše → webhook prima → n8n procesira → Gemini generiše odgovor na osnovu user context-a → šalje nazad.
+- [x] ~~**WhatsApp AI Chatbot (n8n + GPT-4)** — konverzacijski bot koji se dopisuje sa korisnicima. Prepoznaje ih po broju telefona, čita profil/status iz baze, daje personalizovane odgovore. Flow: korisnik piše → Meta webhook → Vercel → n8n AI → Vercel → WhatsApp reply~~ ✅ 28.02.2026
 - [ ] **Live Visa Process Tracker** — "Currently processing: X applications", "Documents verified today: Y". ⏳ **USLOV: 100+ korisnika u sistemu**
 - [ ] **"Work in [Country]" Pages** — SEO stranice (npr. /work-in-germany) sa pravnim koracima, platama, troškovima. ⏳ **USLOV: bar 2 aktivne zemlje**
 
@@ -726,59 +514,22 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 ---
 
-## 9. 🚀 LAUNCH ROADMAP — 01.03.2026 GO-LIVE
+## 9. 🚀 LAUNCH STATUS — 01.03.2026
 
-> **Cilj:** 1. marta sajt počinje da zarađuje. Radnici mogu da plate $9 entry fee, automatski mejlovi rade, cron jobovi aktivni.
-
-### Nedelja 1: Infrastruktura (17.02 – 21.02)
-| Dan | Task | Ko |
-|---|---|---|
-| Pon 17.02 | Otvaranje bankovnog računa | Borivoje |
-| Uto-Pet | Čekanje na Stripe odobrenje | Borivoje |
-| Uto-Pet | Priprema koda za Stripe (mock testiranje) | AI |
-
-**AI tasks tokom čekanja:**
-- [ ] Pripremiti Stripe integraciju sa test API ključevima
-- [ ] Implementirati `create-checkout-session` API ruta (test mode)
-- [ ] Implementirati webhook handler za `checkout.session.completed`
-- [ ] Testirati ceo flow sa Stripe test karticama
-- [ ] Pripremiti admin dashboard statistike (registracije ovog meseca, prihod, completion rate)
-
-### Nedelja 2: Integracija (22.02 – 28.02)
-| Dan | Task | Ko |
-|---|---|---|
-| Kad Stripe bude odobren | Prebaciti sa test → live API ključevi | Zajedno |
-| +1 dan | Coming Soon → Stripe Checkout ($9) | AI |
-| +2 dana | Payment flow end-to-end test (pravi $1 test charge) | Borivoje |
-| +3 dana | n8n setup — email retry, auto-responder, WhatsApp (ako dostupno) | AI |
-| +4 dana | Upaliti cron jobove u `vercel.json` | AI |
-| +5 dana | Finalni smoke test — signup → profil → admin approve → plati → queue | Zajedno |
-
-**AI tasks:**
-- [ ] Coming Soon dugme → pravi Stripe Checkout Session
-- [ ] Webhook: `payment_success` email, update `payments` tabela, set kandidat status `IN_QUEUE`
-- [ ] n8n: konfigurisati email retry za failed emails iz `email_queue`
-- [ ] Aktivirati crons: `profile-reminders`, `check-expiring-docs`, `match-jobs`, `check-expiry`
-- [ ] Admin dashboard: broj registracija, prihod, konverzija
-- [ ] Smoke test: ceo flow od A do Ž
-
-### 01.03.2026 — 🟢 GO LIVE
-- [ ] Prebaciti Stripe u live mode
-- [ ] Verifikovati da mejlovi stižu (welcome, profile reminder, payment success)
-- [ ] Verifikovati cron jobove
-- [ ] Monitoring: Vercel logs, Stripe dashboard, email delivery rate
+> **Cilj:** 1. marta sajt počinje da zarađuje.
 
 ### ⚠️ Preduslovi za launch
 1. ✅ Sajt radi (Vercel deploy)
-2. ✅ Auth (signup/login/logout)
+2. ✅ Auth (signup/login/logout + Google OAuth)
 3. ✅ Worker profil + dokumenta + AI verifikacija
 4. ✅ Admin panel + manual approval
 5. ✅ Email sistem (welcome, reminders, admin updates)
 6. ✅ Supabase Pro + password strength
-7. ⬜ Stripe plaćanja ($9 entry fee)
-8. ⬜ Cron jobovi aktivni
-9. ⬜ n8n email automation
-10. ⬜ Smoke test passed
+7. ✅ Stripe plaćanja ($9 entry fee) — LIVE 28.02.2026
+8. ✅ Cron jobovi aktivni — 28.02.2026
+9. ✅ WhatsApp AI chatbot (n8n + GPT-4) — 28.02.2026
+10. ⬜ Final smoke test
+11. ⬜ n8n email automation (retry failed emails)
 
 ---
 
