@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 27.02.2026 (Novi logo pristup + Unified Navbar Tweak)
+> **Poslednje ažuriranje:** 28.02.2026 (Stripe live, cron re-enabled, analytics dashboard, business rules update)
 
 ---
 
@@ -55,6 +55,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 ### Ključni principi:
 - **Zatvoreni sistem** — radnici i poslodavci se NE kontaktiraju međusobno. Tek kad viza bude odobrena, mi sprovedemo radnika do poslodavca.
 - **NIKAD ne pominjemo odakle radnici dolaze** — nema "Afrika", "Azija", ništa. Samo "international workers" ili "workers".
+- **⚠️ NIKAD NE REĆI DA JE SRBIJA JEDINA ZEMLJA** — na sajtu, u kodu, u komentarima, u komunikaciji sa korisnicima — NIKAD ne otkriti da trenutno operišemo samo u Srbiji. Platforma se prezentuje kao multi-country. Kad se proširimo na druge zemlje, dodaćemo multi-country pricing. Do tada — nikakva naznaka da je Srbija jedina destinacija.
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
 - **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
