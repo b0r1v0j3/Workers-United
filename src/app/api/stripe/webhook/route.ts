@@ -92,6 +92,36 @@ export async function POST(req: NextRequest) {
                     })
                     .eq("profile_id", userId)
                     .eq("entry_fee_paid", false);
+
+                // Send payment confirmation email
+                try {
+                    const { data: profile } = await supabase
+                        .from("profiles")
+                        .select("full_name")
+                        .eq("id", userId)
+                        .single();
+
+                    const { data: candidate } = await supabase
+                        .from("candidates")
+                        .select("phone")
+                        .eq("profile_id", userId)
+                        .single();
+
+                    const { queueEmail } = await import("@/lib/email-templates");
+                    await queueEmail(
+                        supabase,
+                        userId,
+                        "payment_success",
+                        session.customer_email || "",
+                        profile?.full_name || "Worker",
+                        { amount: "$9" },
+                        undefined,
+                        candidate?.phone || undefined
+                    );
+                } catch (emailErr) {
+                    console.error("Failed to send payment confirmation email:", emailErr);
+                    // Don't fail the webhook for email errors
+                }
             } else if (paymentType === "confirmation_fee" && offerId) {
                 // Accept the offer
                 await supabase
