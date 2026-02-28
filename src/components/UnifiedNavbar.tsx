@@ -165,13 +165,13 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                         <>
                             <div className="border-t border-[#dddfe2] my-2" />
                             <MobileNavLink href="/login" label="Sign In" onClick={() => setIsMenuOpen(false)} />
-                            <div className="px-4 py-2">
+                            <div className="px-4 py-3">
                                 <Link
                                     href="/signup"
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="block text-center px-5 py-3 bg-[#1877f2] text-white font-bold text-sm rounded-lg hover:bg-[#166fe5] transition-colors"
+                                    className="block text-center px-5 py-2.5 bg-[#111111] text-white font-medium text-[15px] rounded-md shadow-sm hover:bg-[#333333] transition-colors"
                                 >
-                                    Create Free Account
+                                    Sign Up
                                 </Link>
                             </div>
                         </>
