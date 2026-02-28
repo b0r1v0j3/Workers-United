@@ -442,12 +442,14 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - AppShell, UnifiedNavbar, kartice, tabovi — ceo sajt u FB stilu
 
 ### 🔲 TODO — Pre-Launch (do 01.03.2026)
-- [ ] **Stripe integracija** — Coming Soon → pravi $9 Checkout Session (Sekcija 9)
-- [ ] **Payment webhook testiranje** — entry fee + placement fee flow
+- [x] ~~**Stripe integracija** — $9 Entry Fee live, webhook, confirmation email~~ ✅ 28.02.2026
+- [x] ~~**Payment webhook testiranje** — entry fee + placement fee flow~~ ✅ 28.02.2026
 - [ ] **n8n email automation** — retry failed emails, auto-responder za inbox
-- [ ] **Upaliti cron jobove** — `profile-reminders`, `check-expiring-docs`, `match-jobs`, `check-expiry` nazad u `vercel.json`
-- [ ] Multi-country pricing za placement fee
-- [ ] Admin dashboard statistike (registracije, completion, prihod)
+- [x] ~~**Upaliti cron jobove** — profile-reminders, check-expiring-docs, match-jobs, check-expiry~~ ✅ 28.02.2026
+- [ ] Multi-country pricing za placement fee — **odloženo** dok se ne proširimo na druge zemlje
+- [x] ~~Admin dashboard statistike (registracije, completion, prihod)~~ ✅ 28.02.2026
+- [ ] **Final smoke test** — end-to-end test celokupnog flow-a
+- [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ TODO — Završeno
 - [x] ~~GDPR, Forgot Password, Coming Soon, Mobilna responsivnost~~
@@ -455,9 +457,13 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~Email notifikacije, template sistem, profile reminders~~
 - [x] ~~Automatsko generisanje dokumenata za vize~~
 - [x] ~~Employer profil verifikacija + Admin approval flow~~
+- [x] ~~Stripe $9 Entry Fee — PayToJoinButton, webhook, dashboard CTA~~ 28.02.2026
+- [x] ~~Cron jobovi re-enabled sa safe schedules~~ 28.02.2026
+- [x] ~~Analytics dashboard sa Recharts (User Growth, Revenue)~~ 28.02.2026
+- [x] ~~Mobile navbar fix + profile completion % badge~~ 28.02.2026
 
 ### ⏸️ ČEKA SE (blokirano)
-- [ ] **Stripe plaćanja** — bankovni račun se otvara 17.02. → Stripe kreiranje ~21.02.
+- [x] ~~**Stripe plaćanja** — bankovni račun otvoren, Stripe aktivan~~ → ✅ ZAVRŠENO 28.02.2026
 - [x] ~~**WhatsApp integracija** — čeka bankovni račun → broj telefona na firmu~~ → ✅ ZAVRŠENO 26.02.2026
 
 ---
