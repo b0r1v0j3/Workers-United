@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logServerActivity } from "@/lib/activityLoggerServer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
     apiVersion: "2024-04-10" as any,
@@ -108,6 +109,8 @@ export async function POST(req: NextRequest) {
                     .eq("entry_fee_paid", false)
                     .eq("status", "VERIFIED");
 
+                await logServerActivity(userId, "payment_completed", "payment", { type: "entry_fee", amount: 9, currency: session.currency?.toUpperCase() || "USD" });
+
                 // Send payment confirmation email
                 try {
                     const { data: profile } = await supabase
@@ -149,10 +152,13 @@ export async function POST(req: NextRequest) {
                     .from("candidates")
                     .update({ status: "OFFER_ACCEPTED" })
                     .eq("profile_id", userId);
+
+                await logServerActivity(userId, "payment_completed", "payment", { type: "confirmation_fee", amount: 190, offer_id: offerId });
             }
 
         } catch (err: any) {
             console.error(`Database error: ${err.message}`);
+            await logServerActivity(userId, "payment_failed", "payment", { type: paymentType, error: err.message }, "error");
             return NextResponse.json({ error: "Database error" }, { status: 500 });
         }
     }

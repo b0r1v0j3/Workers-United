@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { queueEmail } from '@/lib/email-templates';
+import { logServerActivity } from '@/lib/activityLoggerServer';
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
@@ -43,6 +44,7 @@ export async function GET(request: Request) {
                 // If STILL no user_type (direct Google sign-in without going through signup),
                 // redirect to role selection
                 if (!userType) {
+                    await logServerActivity(user.id, "auth_no_role", "auth", { redirect: "/auth/select-role" });
                     return NextResponse.redirect(`${origin}/auth/select-role`);
                 }
 
@@ -66,6 +68,7 @@ export async function GET(request: Request) {
                 }
 
                 if (userType === 'admin') {
+                    await logServerActivity(user.id, "auth_login", "auth", { role: "admin" });
                     return NextResponse.redirect(`${origin}/admin`);
                 } else if (userType === 'employer') {
                     // Create employer record if needed
@@ -83,6 +86,7 @@ export async function GET(request: Request) {
                         });
                     }
 
+                    await logServerActivity(user.id, "auth_login", "auth", { role: "employer", is_new: !employer });
                     return NextResponse.redirect(`${origin}/profile/employer`);
                 } else {
                     // Check if worker profile is incomplete (new signup → go to edit)
@@ -94,9 +98,11 @@ export async function GET(request: Request) {
 
                     // If no candidate record or missing basic fields, send to edit
                     if (!candidateCheck || !candidateCheck.phone || !candidateCheck.nationality) {
+                        await logServerActivity(user.id, "auth_login", "auth", { role: "worker", is_new: true, redirect: "/profile/worker/edit" });
                         return NextResponse.redirect(`${origin}/profile/worker/edit`);
                     }
 
+                    await logServerActivity(user.id, "auth_login", "auth", { role: "worker", is_new: false });
                     return NextResponse.redirect(`${origin}/profile/worker`);
                 }
             }

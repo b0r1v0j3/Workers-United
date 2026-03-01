@@ -266,6 +266,60 @@ export async function GET(request: NextRequest) {
                 return { total: 0, errors: [], warnings: [], summary: "Activity table not yet created" };
             }
         })(),
+        // ─── WhatsApp Conversations (last 24h for GPT quality review) ────
+        whatsappConversations: await (async () => {
+            try {
+                const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+                const { data: messages } = await supabase
+                    .from("whatsapp_messages")
+                    .select("phone_number, direction, content, message_type, status, created_at")
+                    .gte("created_at", dayAgo)
+                    .order("created_at", { ascending: true })
+                    .limit(200);
+
+                if (!messages || messages.length === 0) {
+                    return { total: 0, conversations: [], summary: "No WhatsApp messages in last 24h" };
+                }
+
+                interface WaMsg {
+                    phone_number: string;
+                    direction: string;
+                    content: string;
+                    message_type: string;
+                    status: string;
+                    created_at: string;
+                }
+
+                const msgs = messages as WaMsg[];
+
+                // Group by phone number for conversation view
+                const convos: Record<string, { role: string; content: string; time: string }[]> = {};
+                msgs.forEach((m: WaMsg) => {
+                    if (!convos[m.phone_number]) convos[m.phone_number] = [];
+                    convos[m.phone_number].push({
+                        role: m.direction === "inbound" ? "user" : "bot",
+                        content: m.content?.substring(0, 300) || "",
+                        time: m.created_at,
+                    });
+                });
+
+                const failed = msgs.filter((m: WaMsg) => m.status === "failed");
+
+                return {
+                    total: msgs.length,
+                    uniquePhones: Object.keys(convos).length,
+                    failedMessages: failed.length,
+                    conversations: Object.entries(convos).slice(0, 30).map(([phone, msgs]) => ({
+                        phone,
+                        messageCount: msgs.length,
+                        messages: msgs,
+                    })),
+                };
+            } catch {
+                return { total: 0, conversations: [], summary: "whatsapp_messages table not available" };
+            }
+        })(),
         // Platform info for context
         platform: {
             name: "Workers United",
