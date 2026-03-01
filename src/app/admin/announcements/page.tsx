@@ -62,7 +62,8 @@ export default async function AnnouncementsPage() {
             recipients = allUsers;
         }
 
-        // 2. Queue Emails
+        // 2. Queue Emails with throttling to avoid Gmail SMTP rate limits
+        const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
         let count = 0;
         for (const recipient of recipients) {
             if (recipient.email) {
@@ -81,6 +82,10 @@ export default async function AnnouncementsPage() {
                     }
                 );
                 count++;
+                // Throttle: 1.5s between sends to avoid Gmail SMTP rate limits
+                if (count < recipients.length) {
+                    await delay(1500);
+                }
             }
         }
 

@@ -116,18 +116,52 @@ export async function POST(request: NextRequest) {
                 // Normalize phone for DB lookup (add + prefix)
                 const normalizedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+${phoneNumber}`;
 
-                // ─── Fetch user profile ─────────────────────────────────
-                const { data: candidate } = await supabase
+                // ─── Fetch user profile (multi-layer phone lookup) ────────
+                const candidateSelect = `
+                    id, profile_id, status, queue_position, preferred_job, 
+                    desired_countries, refund_deadline, refund_eligible,
+                    entry_fee_paid, admin_approved, queue_joined_at,
+                    nationality, current_country, gender, experience_years,
+                    phone, marital_status
+                `;
+
+                // Layer 1: Direct phone match in candidates table
+                let { data: candidate } = await supabase
                     .from("candidates")
-                    .select(`
-                        id, profile_id, status, queue_position, preferred_job, 
-                        desired_countries, refund_deadline, refund_eligible,
-                        entry_fee_paid, admin_approved, queue_joined_at,
-                        nationality, current_country, gender, experience_years,
-                        phone, marital_status
-                    `)
+                    .select(candidateSelect)
                     .or(`phone.eq.${normalizedPhone},phone.eq.${phoneNumber}`)
                     .maybeSingle();
+
+                // Layer 2: If not found, search auth users by phone in metadata
+                // (covers Google OAuth users who have phone in user_metadata but not in candidates)
+                if (!candidate) {
+                    const phoneDigits = phoneNumber.replace(/\D/g, "");
+                    const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+                    const matchedUser = authData?.users?.find(u => {
+                        const metaPhone = (u.user_metadata?.phone || "").replace(/\D/g, "");
+                        const userPhone = (u.phone || "").replace(/\D/g, "");
+                        return (metaPhone && metaPhone === phoneDigits) ||
+                            (userPhone && userPhone === phoneDigits);
+                    });
+
+                    if (matchedUser) {
+                        // Found auth user — look up their candidate record by profile_id
+                        const { data: linkedCandidate } = await supabase
+                            .from("candidates")
+                            .select(candidateSelect)
+                            .eq("profile_id", matchedUser.id)
+                            .maybeSingle();
+
+                        if (linkedCandidate) {
+                            candidate = linkedCandidate;
+                            // Backfill phone in candidates table so future lookups are instant
+                            await supabase
+                                .from("candidates")
+                                .update({ phone: normalizedPhone })
+                                .eq("id", linkedCandidate.id);
+                        }
+                    }
+                }
 
                 const { data: profile } = candidate?.profile_id
                     ? await supabase
