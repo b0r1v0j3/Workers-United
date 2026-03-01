@@ -310,8 +310,39 @@ export async function POST(request: NextRequest) {
                         clearTimeout(timeout);
 
                         if (n8nRes.ok) {
-                            const n8nData = await n8nRes.json();
-                            aiResponse = n8nData?.output || n8nData?.text || n8nData?.message || (typeof n8nData === "string" ? n8nData : null);
+                            const n8nRaw = await n8nRes.text();
+                            console.log("[WhatsApp Webhook] n8n raw response:", n8nRaw.substring(0, 500));
+
+                            try {
+                                const n8nData = JSON.parse(n8nRaw);
+
+                                // Handle all possible n8n response formats:
+                                // 1. { "output": "text" }
+                                // 2. [{ "output": "text" }]   (array of items)
+                                // 3. { "text": "text" }
+                                // 4. { "message": "text" }
+                                // 5. "plain text string"
+                                // 6. [{ "json": { "output": "text" } }]  (n8n internal format)
+
+                                const item = Array.isArray(n8nData) ? n8nData[0] : n8nData;
+                                const inner = item?.json || item; // unwrap n8n { json: {...} } wrapper
+
+                                aiResponse = inner?.output
+                                    || inner?.text
+                                    || inner?.message
+                                    || inner?.response
+                                    || (typeof inner === "string" ? inner : null)
+                                    || (typeof n8nRaw === "string" && !n8nRaw.startsWith("{") && !n8nRaw.startsWith("[") ? n8nRaw : null);
+
+                                console.log("[WhatsApp Webhook] Parsed AI response:", aiResponse?.substring(0, 200) || "NULL");
+                            } catch {
+                                // n8n returned non-JSON text — use as-is
+                                if (n8nRaw && n8nRaw.length > 0) {
+                                    aiResponse = n8nRaw;
+                                }
+                            }
+                        } else {
+                            console.error("[WhatsApp Webhook] n8n returned status:", n8nRes.status);
                         }
                     } catch (n8nError) {
                         console.error("[WhatsApp Webhook] n8n AI failed:", n8nError);
