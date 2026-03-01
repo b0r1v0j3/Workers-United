@@ -114,25 +114,51 @@ export async function POST(request: NextRequest) {
                         .single()
                     : { data: null };
 
-                // ─── Fetch document statuses ────────────────────────────
+                // ─── Fetch docs, payments, and history in parallel ────
                 let documents: any[] = [];
-                if (candidate?.profile_id) {
-                    const { data: docs } = await supabase
-                        .from("candidate_documents")
-                        .select("document_type, status, created_at, verified_at")
-                        .eq("user_id", candidate.profile_id);
-                    documents = docs || [];
-                }
-
-                // ─── Fetch payment info ─────────────────────────────────
                 let payments: any[] = [];
+                let conversationHistory: any[] = [];
+
                 if (candidate?.profile_id) {
-                    const { data: paymentData } = await supabase
-                        .from("payments")
-                        .select("payment_type, status, amount, paid_at")
-                        .eq("user_id", candidate.profile_id)
-                        .order("created_at", { ascending: false });
-                    payments = paymentData || [];
+                    const [docsResult, paymentsResult, historyResult] = await Promise.all([
+                        supabase
+                            .from("candidate_documents")
+                            .select("document_type, status, created_at, verified_at")
+                            .eq("user_id", candidate.profile_id),
+                        supabase
+                            .from("payments")
+                            .select("payment_type, status, amount, paid_at")
+                            .eq("user_id", candidate.profile_id)
+                            .order("created_at", { ascending: false }),
+                        supabase
+                            .from("whatsapp_messages")
+                            .select("direction, content, created_at")
+                            .eq("phone_number", normalizedPhone)
+                            .order("created_at", { ascending: false })
+                            .limit(CONVERSATION_HISTORY_LIMIT),
+                    ]);
+
+                    documents = docsResult.data || [];
+                    payments = paymentsResult.data || [];
+                    conversationHistory = (historyResult.data || []).reverse().map(msg => ({
+                        role: msg.direction === "inbound" ? "user" : "assistant",
+                        content: msg.content,
+                        timestamp: msg.created_at,
+                    }));
+                } else {
+                    // Unregistered user — only fetch history
+                    const { data: history } = await supabase
+                        .from("whatsapp_messages")
+                        .select("direction, content, created_at")
+                        .eq("phone_number", normalizedPhone)
+                        .order("created_at", { ascending: false })
+                        .limit(CONVERSATION_HISTORY_LIMIT);
+
+                    conversationHistory = (history || []).reverse().map(msg => ({
+                        role: msg.direction === "inbound" ? "user" : "assistant",
+                        content: msg.content,
+                        timestamp: msg.created_at,
+                    }));
                 }
 
                 // ─── Calculate profile completion ───────────────────────
@@ -147,21 +173,6 @@ export async function POST(request: NextRequest) {
                     profileCompletion = completionResult.completion;
                     missingFields = completionResult.missingFields;
                 }
-
-                // ─── Fetch conversation history (100 messages) ──────────
-                const { data: history } = await supabase
-                    .from("whatsapp_messages")
-                    .select("direction, content, created_at")
-                    .eq("phone_number", normalizedPhone)
-                    .order("created_at", { ascending: false })
-                    .limit(CONVERSATION_HISTORY_LIMIT);
-
-                // Reverse to chronological order (oldest first)
-                const conversationHistory = (history || []).reverse().map(msg => ({
-                    role: msg.direction === "inbound" ? "user" : "assistant",
-                    content: msg.content,
-                    timestamp: msg.created_at,
-                }));
 
                 // ─── Log inbound message ────────────────────────────────
                 await supabase.from("whatsapp_messages").insert({
