@@ -4,17 +4,15 @@
 -- Offers
 CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
 CREATE INDEX IF NOT EXISTS idx_offers_candidate_id ON offers(candidate_id);
-CREATE INDEX IF NOT EXISTS idx_offers_expires_at ON offers(expires_at);
 
 -- Candidate documents
 CREATE INDEX IF NOT EXISTS idx_candidate_docs_user_id ON candidate_documents(user_id);
 CREATE INDEX IF NOT EXISTS idx_candidate_docs_status ON candidate_documents(status);
 CREATE INDEX IF NOT EXISTS idx_candidate_docs_type_status ON candidate_documents(document_type, status);
 
--- Email queue
+-- Email queue (columns: email_type, status, error_message, created_at)
 CREATE INDEX IF NOT EXISTS idx_email_queue_user_id ON email_queue(user_id);
 CREATE INDEX IF NOT EXISTS idx_email_queue_type ON email_queue(email_type);
-CREATE INDEX IF NOT EXISTS idx_email_queue_sent ON email_queue(sent);
 CREATE INDEX IF NOT EXISTS idx_email_queue_created ON email_queue(created_at DESC);
 
 -- Payments
