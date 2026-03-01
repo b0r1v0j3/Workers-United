@@ -19,12 +19,12 @@ export async function GET(request: Request) {
     try {
         const supabase = createAdminClient();
 
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
 
         // Get ALL auth users with pagination (listUsers defaults to 50/page)
         const allUsers = await getAllAuthUsers(supabase);
 
-        const eligibleUsers = allUsers.filter((u: any) => {
+        const eligibleUsers = allUsers.filter((u: { user_metadata?: { user_type?: string }; created_at: string }) => {
             const ut = u.user_metadata?.user_type;
             if (ut === "admin") return false;
             return new Date(u.created_at) < new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
         const recentReminders = new Set<string>(); // emails sent <24h ago
         const warningSubjects = new Set<string>();  // "email|subject" combos already sent
         for (const e of allEmails || []) {
-            if (e.email_type === "profile_reminder" && e.created_at > oneDayAgo) {
+            if (e.email_type === "profile_reminder" && e.created_at > threeDaysAgo) {
                 recentReminders.add(e.recipient_email);
             }
             if (e.email_type === "profile_warning") {
@@ -156,7 +156,7 @@ export async function GET(request: Request) {
                         .from("candidate-docs")
                         .list(`${userId}/${docType}`);
                     if (files && files.length > 0) {
-                        const filePaths = files.map((f: any) => `${userId}/${docType}/${f.name}`);
+                        const filePaths = files.map((f: { name: string }) => `${userId}/${docType}/${f.name}`);
                         await supabase.storage.from("candidate-docs").remove(filePaths);
                     }
                 }
@@ -240,8 +240,9 @@ export async function GET(request: Request) {
         }
 
         return NextResponse.json({ sent, warned, deleted, skipped, total_checked: eligibleUsers.length });
-    } catch (err: any) {
-        console.error("[Reminders] Error:", err);
-        return NextResponse.json({ error: "Internal error", details: err.message }, { status: 500 });
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        console.error("[Reminders] Error:", message);
+        return NextResponse.json({ error: "Internal error", details: message }, { status: 500 });
     }
 }
