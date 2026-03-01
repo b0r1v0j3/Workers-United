@@ -327,6 +327,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - **TemplateData:** Striktni tipovi — dodaj novo polje eksplicitno u `TemplateData` interface, nema više `[key: string]: any`
 - **Profile completion:** UVEK koristi `getWorkerCompletion()` / `getEmployerCompletion()` iz `src/lib/profile-completion.ts`. NIKAD ne dodavaj novu inline kalkulaciju.
 - **check-expiring-docs:** Ima 30-dnevnu zaštitu od spam-a — ne šalje dupli email istom korisniku unutar 30 dana
+- **⚠️ candidates.id ≠ auth.uid()**: `candidates.id` je auto-generisan UUID (uuid_generate_v4). `auth.uid()` = `profiles.id`. Za sve operacije nad `candidate_documents` koristiti `user.id` (auth UID), NIKAD `candidates.id`. Inače RLS tiho blokira insert/update.
+- **User Activity Tracking:** Svi ključni koraci korisnika se loguju u `user_activity` tabelu. Client: `logActivity()` / `logError()` iz `src/lib/activityLogger.ts`. Server: `logServerActivity()` iz `src/lib/activityLoggerServer.ts`. Nikad ne treba da blokira main flow — fire-and-forget.
 
 ---
 

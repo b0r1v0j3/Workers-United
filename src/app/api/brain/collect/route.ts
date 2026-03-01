@@ -198,6 +198,74 @@ export async function GET(request: NextRequest) {
         },
         funnel,
         health,
+        // ─── User Activity (last 24h) ───────────────────────────────
+        userActivity: await (async () => {
+            try {
+                const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+                // Get all activity in the last 24 hours
+                const { data: recentActivity } = await supabase
+                    .from("user_activity")
+                    .select("action, category, status, details, user_id, created_at")
+                    .gte("created_at", dayAgo)
+                    .order("created_at", { ascending: false })
+                    .limit(500);
+
+                if (!recentActivity || recentActivity.length === 0) {
+                    return { total: 0, errors: [], warnings: [], summary: "No activity in last 24h" };
+                }
+
+                interface ActivityRow {
+                    action: string;
+                    category: string;
+                    status: string;
+                    details: Record<string, unknown>;
+                    user_id: string;
+                    created_at: string;
+                }
+
+                const rows = recentActivity as ActivityRow[];
+                const errors = rows.filter((a: ActivityRow) => a.status === "error");
+                const warnings = rows.filter((a: ActivityRow) => a.status === "warning" || a.status === "blocked");
+                const uniqueUsers = new Set(rows.map((a: ActivityRow) => a.user_id)).size;
+
+                // Group actions by type for summary
+                const actionCounts: Record<string, number> = {};
+                rows.forEach((a: ActivityRow) => {
+                    actionCounts[a.action] = (actionCounts[a.action] || 0) + 1;
+                });
+
+                // User journey summaries (per unique user)
+                const userJourneys: Record<string, string[]> = {};
+                rows.forEach((a: ActivityRow) => {
+                    if (!userJourneys[a.user_id]) userJourneys[a.user_id] = [];
+                    userJourneys[a.user_id].push(`${a.action}(${a.status})`);
+                });
+
+                return {
+                    total: rows.length,
+                    uniqueUsers,
+                    actionCounts,
+                    errors: errors.slice(0, 20).map((e: ActivityRow) => ({
+                        action: e.action,
+                        details: e.details,
+                        user_id: e.user_id,
+                        created_at: e.created_at,
+                    })),
+                    warnings: warnings.slice(0, 20).map((w: ActivityRow) => ({
+                        action: w.action,
+                        details: w.details,
+                        user_id: w.user_id,
+                        created_at: w.created_at,
+                    })),
+                    userJourneys: Object.fromEntries(
+                        Object.entries(userJourneys).slice(0, 20)
+                    ),
+                };
+            } catch {
+                return { total: 0, errors: [], warnings: [], summary: "Activity table not yet created" };
+            }
+        })(),
         // Platform info for context
         platform: {
             name: "Workers United",
