@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/mailer";
+import { escapeHtml } from "@/lib/sanitize";
 
 export async function POST(request: NextRequest) {
     try {
@@ -34,16 +35,24 @@ export async function POST(request: NextRequest) {
 
         const roleLabel = role === "employer" ? "Employer" : "Worker";
 
+        // Sanitize all user input to prevent HTML injection
+        const safeName = escapeHtml(name);
+        const safeEmail = escapeHtml(email);
+        const safePhone = escapeHtml(phone);
+        const safeCountry = country ? escapeHtml(country) : "";
+        const safeJobPref = job_preference ? escapeHtml(job_preference) : "";
+        const safeMessage = message ? escapeHtml(message) : "";
+
         const htmlContent = `
             <h2>New Contact Form Submission</h2>
             <table style="border-collapse: collapse; width: 100%;">
-                <tr><td style="padding: 8px; font-weight: bold;">Name:</td><td style="padding: 8px;">${name}</td></tr>
-                <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td style="padding: 8px;">${email}</td></tr>
-                <tr><td style="padding: 8px; font-weight: bold;">Phone:</td><td style="padding: 8px;">${phone}</td></tr>
-                ${country ? `<tr><td style="padding: 8px; font-weight: bold;">Country:</td><td style="padding: 8px;">${country}</td></tr>` : ""}
+                <tr><td style="padding: 8px; font-weight: bold;">Name:</td><td style="padding: 8px;">${safeName}</td></tr>
+                <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td style="padding: 8px;">${safeEmail}</td></tr>
+                <tr><td style="padding: 8px; font-weight: bold;">Phone:</td><td style="padding: 8px;">${safePhone}</td></tr>
+                ${safeCountry ? `<tr><td style="padding: 8px; font-weight: bold;">Country:</td><td style="padding: 8px;">${safeCountry}</td></tr>` : ""}
                 <tr><td style="padding: 8px; font-weight: bold;">Role:</td><td style="padding: 8px;">${roleLabel}</td></tr>
-                ${job_preference ? `<tr><td style="padding: 8px; font-weight: bold;">Job Preference:</td><td style="padding: 8px;">${job_preference}</td></tr>` : ""}
-                ${message ? `<tr><td style="padding: 8px; font-weight: bold;">Message:</td><td style="padding: 8px;">${message}</td></tr>` : ""}
+                ${safeJobPref ? `<tr><td style="padding: 8px; font-weight: bold;">Job Preference:</td><td style="padding: 8px;">${safeJobPref}</td></tr>` : ""}
+                ${safeMessage ? `<tr><td style="padding: 8px; font-weight: bold;">Message:</td><td style="padding: 8px;">${safeMessage}</td></tr>` : ""}
             </table>
         `;
 
