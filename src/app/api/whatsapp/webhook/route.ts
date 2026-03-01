@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import { logServerActivity } from "@/lib/activityLoggerServer";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -207,6 +208,14 @@ export async function POST(request: NextRequest) {
                     status: "delivered",
                 });
 
+                // Log to activity tracking
+                await logServerActivity(
+                    candidate?.profile_id || "anonymous",
+                    "whatsapp_message_received",
+                    "documents",
+                    { phone: normalizedPhone, message_type: messageType, content_preview: content.substring(0, 100), is_registered: !!candidate }
+                );
+
                 // ─── Forward enriched data to n8n AI ────────────────────
                 let aiResponse: string | null = null;
 
@@ -272,6 +281,13 @@ export async function POST(request: NextRequest) {
                         }
                     } catch (n8nError) {
                         console.error("[WhatsApp Webhook] n8n AI failed:", n8nError);
+                        await logServerActivity(
+                            candidate?.profile_id || "anonymous",
+                            "whatsapp_n8n_failed",
+                            "error",
+                            { phone: normalizedPhone, error: n8nError instanceof Error ? n8nError.message : "timeout" },
+                            "error"
+                        );
                     }
                 }
 
@@ -279,6 +295,18 @@ export async function POST(request: NextRequest) {
                 const replyText = aiResponse || getFallbackResponse(content, candidate, profile);
                 if (replyText) {
                     await sendWhatsAppText(normalizedPhone, replyText, candidate?.profile_id);
+                    // Log GPT response for quality review
+                    await logServerActivity(
+                        candidate?.profile_id || "anonymous",
+                        aiResponse ? "whatsapp_gpt_response" : "whatsapp_fallback_response",
+                        "documents",
+                        {
+                            phone: normalizedPhone,
+                            user_message: content.substring(0, 200),
+                            bot_response: replyText.substring(0, 500),
+                            response_type: aiResponse ? "gpt" : "fallback",
+                        }
+                    );
                 }
             }
         }
