@@ -4,6 +4,7 @@ import "./globals.css";
 import { GodModeWrapper } from "@/components/GodModeWrapper";
 import CookieConsent from "@/components/CookieConsent";
 import ToastProvider from "@/components/ToastProvider";
+import WhatsAppButton from "@/components/WhatsAppButton";
 
 
 const montserrat = Montserrat({
@@ -65,6 +66,7 @@ export default function RootLayout({
         <GodModeWrapper />
         <CookieConsent />
         <ToastProvider />
+        <WhatsAppButton />
         <script
           dangerouslySetInnerHTML={{
             __html: `
