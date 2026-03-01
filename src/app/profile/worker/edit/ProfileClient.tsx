@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
+import { logActivity, logError } from "@/lib/activityLogger";
 
 interface Profile {
     id: string;
@@ -366,9 +367,11 @@ export default function ProfilePage() {
                 });
             }
 
+            logActivity("profile_saved", "profile", { is_new: !candidate, fields_filled: Object.keys(candidateUpdates).filter(k => (candidateUpdates as Record<string, unknown>)[k] != null).length });
             toast.success("Profile saved successfully!");
             await fetchProfile();
         } catch (err) {
+            logError("profile_save_failed", "profile", err);
             toast.error(err instanceof Error ? err.message : "Failed to save");
         } finally {
             setSaving(false);

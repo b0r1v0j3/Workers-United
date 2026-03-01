@@ -6,6 +6,7 @@ import { processBiometricPhoto, fixImageOrientation, stitchImages, compressImage
 import { toast } from "sonner";
 import { MAX_FILE_SIZE_MB, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
 import { FileText, BookUser, Camera, GraduationCap } from "lucide-react";
+import { logActivity, logError } from "@/lib/activityLogger";
 
 interface FileUpload {
     file: File | null;
@@ -93,6 +94,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
 
         for (let i = 0; i < files.length; i++) {
             if (files[i].size > MAX_FILE_SIZE_BYTES) {
+                logActivity("document_file_too_large", "documents", { doc_type: type, file_size: files[i].size }, "warning");
                 updateStatus(type, "error", `File too large. Max ${MAX_FILE_SIZE_MB}MB.`);
                 return;
             }
@@ -124,6 +126,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             return;
         }
 
+        logActivity("document_upload_start", "documents", { doc_type: type, file_name: file.name, file_size: file.size });
         updateStatus(type, "uploaded", "Compressing & Processing...", file);
 
         try {
@@ -168,6 +171,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             }, { onConflict: 'user_id,document_type' });
 
             // Set to verifying
+            logActivity("document_uploaded_to_storage", "documents", { doc_type: type, storage_path: storagePath });
             updateStatus(type, "verifying", "Verifying with AI...");
 
             await supabase.from("candidate_documents").update({
@@ -185,6 +189,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             const result = await response.json();
 
             if (result.success) {
+                logActivity("document_verified", "documents", { doc_type: type, status: result.status });
                 toast.success(`${type.replace('_', ' ')} verified successfully!`);
                 setUploads(prev => {
                     const newUploads = {
@@ -207,10 +212,12 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                     return newUploads;
                 });
             } else {
+                logActivity("document_rejected", "documents", { doc_type: type, reason: result.error, quality_issues: result.qualityIssues }, "warning");
                 throw new Error(result.error || "Verification failed");
             }
 
         } catch (err) {
+            logError("document_upload_failed", "documents", err, { doc_type: type });
             console.error("Document upload error:", err);
             const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
 

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumentBounds, fetchImageAsBase64 } from "@/lib/gemini";
 import sharp from "sharp";
+import { logServerActivity } from "@/lib/activityLoggerServer";
 
 export async function POST(request: Request) {
     try {
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
 
         if (fetchError || !document) {
             console.error("[Verify] Document not found:", fetchError);
+            await logServerActivity(safeCandidateId, "verify_document_not_found", "documents", { doc_type: docType, error: fetchError?.message }, "error");
             return NextResponse.json({ success: false, error: "Document not found" }, { status: 404 });
         }
 
@@ -279,6 +281,7 @@ export async function POST(request: Request) {
 
         } catch (aiError) {
             console.error("[Verify] AI processing error:", aiError);
+            await logServerActivity(safeCandidateId, "verify_ai_error", "documents", { doc_type: docType, error: aiError instanceof Error ? aiError.message : "Unknown" }, "error");
             // If AI fails, mark for manual review rather than outright rejection
             status = 'manual_review';
             rejectReason = "AI verification temporarily unavailable";
@@ -300,6 +303,8 @@ export async function POST(request: Request) {
                 .delete()
                 .eq("user_id", safeCandidateId)
                 .eq("document_type", docType);
+
+            await logServerActivity(safeCandidateId, "document_rejected_server", "documents", { doc_type: docType, reason: rejectReason, quality_issues: qualityIssues }, "warning");
 
             return NextResponse.json({
                 success: false,
@@ -345,6 +350,8 @@ export async function POST(request: Request) {
             console.error("[Verify] Database update error:", updateError);
             throw updateError;
         }
+
+        await logServerActivity(safeCandidateId, "document_verified_server", "documents", { doc_type: docType, status, has_quality_issues: qualityIssues.length > 0 });
 
         return NextResponse.json({
             success: true,

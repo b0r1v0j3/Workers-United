@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import DocumentWizard from "@/components/DocumentWizard";
+import { logActivity } from "@/lib/activityLogger";
 
 export default function DocumentsPage() {
     const supabase = createClient();
@@ -17,6 +18,7 @@ export default function DocumentsPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setUserEmail(user.email || "");
+                // Check that user has completed their profile (candidate row exists)
                 const { data: candidate } = await supabase
                     .from("candidates")
                     .select("id")
@@ -24,7 +26,12 @@ export default function DocumentsPage() {
                     .single();
 
                 if (candidate) {
-                    setCandidateId(candidate.id);
+                    // Use auth UID (= profiles.id), NOT candidates.id
+                    // candidate_documents RLS checks user_id = auth.uid()
+                    setCandidateId(user.id);
+                    logActivity("documents_page_visit", "documents", { has_profile: true });
+                } else {
+                    logActivity("documents_page_blocked", "documents", { has_profile: false, reason: "no_candidate_row" }, "blocked");
                 }
             }
             setLoading(false);
