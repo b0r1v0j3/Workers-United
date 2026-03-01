@@ -79,7 +79,7 @@ export async function GET(request: Request) {
                         await supabase.from('employers').insert({
                             profile_id: user.id,
                             company_name: user.user_metadata?.company_name || null,
-                            status: 'pending'
+                            status: 'PENDING'
                         });
                     }
 
