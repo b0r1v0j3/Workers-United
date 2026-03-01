@@ -152,7 +152,24 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                             <tr key={worker.id} className="hover:bg-slate-50/80 transition-colors group">
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
-                                        <img src={worker.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full border border-slate-200 overflow-hidden bg-slate-100 flex items-center justify-center">
+                                            {worker.avatar_url ? (
+                                                <img
+                                                    src={worker.avatar_url}
+                                                    alt=""
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display = 'none';
+                                                        if (e.currentTarget.nextElementSibling) {
+                                                            e.currentTarget.nextElementSibling.classList.remove('hidden');
+                                                        }
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <span className={`text-[10px] font-bold text-slate-500 uppercase ${worker.avatar_url ? 'hidden' : ''}`}>
+                                                {worker.name?.charAt(0) || '?'}
+                                            </span>
+                                        </div>
                                         <div>
                                             <p className="font-semibold text-slate-900 text-sm group-hover:text-blue-700 transition-colors">
                                                 {worker.name}
