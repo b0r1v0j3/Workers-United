@@ -48,17 +48,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Document not found" }, { status: 404 });
         }
 
-        // 2. Get the public URL for the uploaded document
-        const { data: urlData } = supabase.storage
+        // 2. Get a signed URL for the uploaded document (short TTL for security)
+        const { data: urlData } = await supabase.storage
             .from("candidate-docs")
-            .getPublicUrl(document.storage_path);
+            .createSignedUrl(document.storage_path, 600);
 
-        if (!urlData?.publicUrl) {
-            console.error("[Verify] Could not get public URL");
+        if (!urlData?.signedUrl) {
+            console.error("[Verify] Could not get signed URL");
             return NextResponse.json({ success: false, error: "Could not get document URL" }, { status: 500 });
         }
 
-        let imageUrl = urlData.publicUrl;
+        let imageUrl = urlData.signedUrl;
 
         // 2.5. Convert PDF to image if needed
         try {
@@ -90,10 +90,10 @@ export async function POST(request: Request) {
                     .eq("document_type", docType);
 
                 // Refresh URL
-                const { data: jpegUrlData } = supabase.storage
+                const { data: jpegUrlData } = await supabase.storage
                     .from("candidate-docs")
-                    .getPublicUrl(jpegPath);
-                imageUrl = jpegUrlData?.publicUrl || imageUrl;
+                    .createSignedUrl(jpegPath, 600);
+                imageUrl = jpegUrlData?.signedUrl || imageUrl;
             }
         } catch (pdfErr) {
             console.warn("[Verify] PDF conversion failed, continuing with original:", pdfErr);
@@ -160,10 +160,10 @@ export async function POST(request: Request) {
                     });
 
                 // Refresh URL
-                const { data: newUrlData } = supabase.storage
+                const { data: newUrlData } = await supabase.storage
                     .from("candidate-docs")
-                    .getPublicUrl(storagePath);
-                imageUrl = newUrlData?.publicUrl || imageUrl;
+                    .createSignedUrl(storagePath, 600);
+                imageUrl = newUrlData?.signedUrl || imageUrl;
             }
         } catch (cropErr) {
             console.warn("[Verify] Auto-crop/rotate failed, continuing with original:", cropErr);
