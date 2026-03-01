@@ -34,6 +34,7 @@ export default function Home() {
               "https://www.instagram.com/workersunited.eu",
               "https://www.linkedin.com/company/workers-united-eu",
               "https://www.tiktok.com/@workersunited.eu",
+              "https://wa.me/15557839521",
             ],
           }),
         }}
@@ -275,8 +276,8 @@ export default function Home() {
             <a href="https://www.threads.com/@workersunited.eu" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="Threads">
               <Image src="/threads-logo.svg" alt="Threads" width={20} height={20} className="w-5 h-5 invert" />
             </a>
-            <a href="https://www.reddit.com/r/WorkersUnitedEU/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="Reddit">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.498 1.199-.498a1.7 1.7 0 0 1 1.698 1.698c0 .648-.37 1.2-.91 1.48.024.19.039.38.039.57 0 2.899-3.376 5.253-7.544 5.253-4.168 0-7.544-2.354-7.544-5.253 0-.19.014-.38.04-.57a1.7 1.7 0 0 1-.91-1.48 1.7 1.7 0 0 1 1.698-1.698c.47 0 .891.19 1.198.498 1.195-.856 2.85-1.417 4.674-1.488l.8-3.747 2.597.547a1.25 1.25 0 0 1 1.136-.739zM8.5 12.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-6.74 4.26c-.19.19-.19.51 0 .7 1.07 1.07 3.41 1.16 3.24 1.16s2.17-.09 3.24-1.16a.49.49 0 0 0 0-.7.49.49 0 0 0-.7 0c-.67.68-2.06.93-2.54.93s-1.87-.25-2.54-.93a.49.49 0 0 0-.7 0z" /></svg>
+            <a href="https://wa.me/15557839521" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-[#25D366]/60" aria-label="WhatsApp">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12.004 0h-.008C5.478 0 0 5.382 0 12.004c0 2.625.846 5.058 2.284 7.034L.79 23.468l4.59-1.468A11.94 11.94 0 0 0 12.004 24C18.621 24 24 18.621 24 12.004 24 5.382 18.621 0 12.004 0zm7 16.956c-.293.825-1.449 1.509-2.373 1.709-.633.135-1.46.241-4.244-.912-3.564-1.476-5.854-5.082-6.03-5.319-.17-.237-1.412-1.881-1.412-3.588s.891-2.547 1.209-2.897c.293-.321.638-.402.85-.402.213 0 .426.002.612.011.197.009.46-.075.72.549.267.642.909 2.216.988 2.376.081.162.135.351.027.563-.107.213-.16.347-.321.534-.16.186-.337.417-.483.56-.16.16-.328.334-.141.657.188.321.833 1.377 1.788 2.231 1.229 1.098 2.262 1.438 2.584 1.599.321.16.51.135.697-.081.188-.218.804-.936 1.018-1.257.214-.321.427-.267.72-.16.293.107 1.863.879 2.184 1.04.321.16.535.241.615.375.081.133.081.771-.212 1.516z" /></svg>
             </a>
             <a href="https://x.com/WorkersUnitedEU" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full bg-white/10 hover:bg-white/20" aria-label="X">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M18.7 2H21l-6.7 7.6L22 22h-6.1l-4.8-6.2L5.6 22H3.3l7.2-8.2L2 2h6.2l4.3 5.6L18.7 2zm-1.1 18h1.2L6.3 3.9H5.1L17.6 20z" /></svg>
