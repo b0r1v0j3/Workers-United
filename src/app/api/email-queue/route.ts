@@ -105,7 +105,7 @@ export async function PATCH(request: NextRequest) {
         const body = await request.json();
         const { emailId, status, errorMessage } = body;
 
-        const updateData: any = {
+        const updateData: Record<string, string | null> = {
             status: status,
             sent_at: status === "sent" ? new Date().toISOString() : null
         };
