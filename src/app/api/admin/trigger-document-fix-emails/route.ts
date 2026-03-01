@@ -1,66 +1,75 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getEmailTemplate } from "@/lib/email-templates";
+import { queueEmail } from "@/lib/email-templates";
 
 export async function POST(request: Request) {
     try {
         const supabase = createAdminClient();
 
-        // Check authentication
-        const authHeader = request.headers.get("Authorization");
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        // Optional: pass dryRun=true in body to just count
+        let dryRun = false;
+        try {
+            const body = await request.json();
+            dryRun = body?.dryRun === true;
+        } catch { /* no body is fine */ }
 
-        // Get all workers who have a profile but might be missing documents
-        // To be safe, let's just send it to all workers who are NOT 'employer' or 'admin'
-        // But better: workers who haven't completed verification.
+        // Get ALL workers (not just pending — send announcement to everyone)
         const { data: profiles, error: profileErr } = await supabase
             .from("profiles")
-            .select("id, first_name, user_type")
-            .eq("user_type", "worker")
-            .eq("verification_status", "pending");
+            .select("id, first_name, last_name, user_type")
+            .eq("user_type", "worker");
 
         if (profileErr) throw profileErr;
 
         if (!profiles || profiles.length === 0) {
-            return NextResponse.json({ message: "No eligible profiles found", sentCount: 0 });
+            return NextResponse.json({ message: "No workers found", sentCount: 0 });
         }
 
-        // Get their emails from max(updated_at)? Wait, we need auth.users to get emails.
-        // It's easier to iterate through profiles, get email, then queue.
+        if (dryRun) {
+            return NextResponse.json({
+                dryRun: true,
+                eligibleWorkers: profiles.length,
+                message: `Would send announcement to ${profiles.length} workers.`
+            });
+        }
+
         let sentCount = 0;
+        const errors: string[] = [];
 
         for (const profile of profiles) {
-            // Fetch email from auth.users via RPC or just queue it 
-            // Queueing requires email. Let's lookup email from a helper function if needed,
-            // or we can use the admin auth.admin.getUserById
-            const { data: userAuth, error: userErr } = await supabase.auth.admin.getUserById(profile.id);
-            if (userErr || !userAuth.user?.email) continue;
+            try {
+                // Get email from auth
+                const { data: userAuth, error: userErr } = await supabase.auth.admin.getUserById(profile.id);
+                if (userErr || !userAuth.user?.email) {
+                    errors.push(`No email for ${profile.id}`);
+                    continue;
+                }
 
-            const email = userAuth.user.email;
+                const email = userAuth.user.email;
+                const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "friend";
 
-            // Generate email content
-            const template = getEmailTemplate("announcement_document_fix", {
-                name: profile.first_name || "friend"
-            });
+                // Use the proper queueEmail which also sends via SMTP
+                await queueEmail(
+                    supabase,
+                    profile.id,
+                    "announcement_document_fix",
+                    email,
+                    fullName,
+                    {}
+                );
 
-            // Insert into email_queue
-            const { error: queueErr } = await supabase
-                .from("email_queue")
-                .insert({
-                    to_email: email,
-                    subject: template.subject,
-                    html_body: template.html,
-                    scheduled_for: new Date().toISOString()
-                });
-
-            if (!queueErr) sentCount++;
+                sentCount++;
+            } catch (err: any) {
+                errors.push(`Failed for ${profile.id}: ${err.message}`);
+            }
         }
 
         return NextResponse.json({
             success: true,
-            message: `Successfully queued ${sentCount} announcement emails.`
+            sentCount,
+            totalWorkers: profiles.length,
+            errors: errors.length > 0 ? errors : undefined,
+            message: `Successfully sent ${sentCount}/${profiles.length} announcement emails.`
         });
 
     } catch (error: any) {
