@@ -37,8 +37,20 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-            // Determine amount from payment type
+            // Validate payment was actually completed and amount matches expected
+            if (session.payment_status !== "paid") {
+                console.warn(`[Stripe] Session ${session.id} not paid (status: ${session.payment_status})`);
+                return NextResponse.json({ received: true, message: "Payment not completed" });
+            }
+
+            // Determine expected amount (in cents) and validate against Stripe
+            const expectedAmountCents = paymentType === "confirmation_fee" ? 19000 : 900;
             const amount = paymentType === "confirmation_fee" ? 190 : 9;
+
+            if (session.amount_total && session.amount_total !== expectedAmountCents) {
+                console.error(`[Stripe] Amount mismatch: expected ${expectedAmountCents}, got ${session.amount_total}`);
+                return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
+            }
 
             if (paymentId) {
                 // Update existing payment record (created during checkout)

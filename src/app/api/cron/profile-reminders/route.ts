@@ -127,6 +127,13 @@ export async function GET(request: Request) {
 
             // ========== DAY 30+: DELETE ACCOUNT ==========
             if (accountAgeDays >= DELETE_AFTER_DAYS) {
+                // Safety flag: auto-deletion must be explicitly enabled
+                if (process.env.ALLOW_AUTO_DELETION !== "true") {
+                    console.warn(`[Reminders] Auto-deletion SKIPPED for ${email} (ALLOW_AUTO_DELETION not set)`);
+                    skipped++;
+                    continue;
+                }
+
                 const { subject, html } = getEmailTemplate("profile_deletion", {
                     name: firstName,
                     isEmployer,

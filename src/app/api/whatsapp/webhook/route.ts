@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
 // Handles:
@@ -14,7 +15,19 @@ import { getWorkerCompletion } from "@/lib/profile-completion";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "workers-united-whatsapp-verify";
 const N8N_WEBHOOK_URL = process.env.N8N_WHATSAPP_WEBHOOK_URL;
+const APP_SECRET = process.env.META_APP_SECRET || "";
 const CONVERSATION_HISTORY_LIMIT = 100; // Number of past messages to send for context
+
+// ─── Meta signature verification ─────────────────────────────────────────────
+function verifyMetaSignature(rawBody: string, signature: string | null): boolean {
+    if (!APP_SECRET) {
+        console.warn("[Webhook] META_APP_SECRET not set — skipping signature verification");
+        return true; // Allow in dev, but log warning
+    }
+    if (!signature) return false;
+    const expectedSig = "sha256=" + crypto.createHmac("sha256", APP_SECRET).update(rawBody).digest("hex");
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig));
+}
 
 // ─── GET: Webhook Verification ──────────────────────────────────────────────
 
@@ -35,7 +48,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
+        // ─── Verify Meta signature ──────────────────────────────────
+        const rawBody = await request.text();
+        const signature = request.headers.get("x-hub-signature-256");
+
+        if (!verifyMetaSignature(rawBody, signature)) {
+            console.error("[Webhook] Invalid Meta signature — rejecting request");
+            return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+        }
+
+        const body = JSON.parse(rawBody);
 
         // Meta sends webhook events wrapped in entry[].changes[].value
         const entry = body?.entry?.[0];
