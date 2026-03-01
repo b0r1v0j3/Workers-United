@@ -101,7 +101,15 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
             
             <!-- Clean White Header "Integrated" into the window -->
             <div style="background: #FFFFFF; padding: 40px 40px 30px; text-align: center; border-bottom: 1px solid #E5E5EA;">
-                 <img src="https://www.workersunited.eu/logo-wordmark.png" alt="Workers United" width="160" height="auto" style="vertical-align: middle; display: block; margin: 0 auto;">
+                 <!-- Flex container equivalent for email clients -->
+                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                     <tr>
+                         <td align="center" style="padding: 0;">
+                             <img src="https://www.workersunited.eu/logo-icon.png" alt="Workers United Icon" width="48" height="48" style="vertical-align: middle; display: inline-block; margin-right: 12px;">
+                             <img src="https://www.workersunited.eu/logo-wordmark.png" alt="Workers United" width="130" height="auto" style="vertical-align: middle; display: inline-block; margin-top: 4px;">
+                         </td>
+                     </tr>
+                 </table>
             </div>
 
             <!-- Content Area -->
