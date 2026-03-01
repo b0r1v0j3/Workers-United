@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 01.03.2026 (System audit, Brain API, database.types.ts type safety, column fixes)
+> **Poslednje ažuriranje:** 01.03.2026 (Improvement audit: CSRF middleware, console.log cleanup, doc sync, db:types script)
 
 ---
 
@@ -314,8 +314,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 |---|---|---|
 | `/api/cron/check-expiry` | Svaki sat | Provera isteklih sesija |
 | `/api/cron/profile-reminders` | Daily 9 AM UTC | Podsetnik za nepotpune profile (reminder + warning + deletion) |
-| `/api/cron/check-expiring-docs` | Daily 8 AM UTC | Alert za pasoš koji ističe za <6 meseci (max 1 email/30 dana) |
-| `/api/cron/match-jobs` | Svaki sat | Auto-matching radnika i poslova |
+| `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert za pasoš koji ističe za <6 meseci (max 1 email/30 dana) |
+| `/api/cron/match-jobs` | Svakih 6 sati | Auto-matching radnika i poslova |
 
 ### ⚠️ Email & WhatsApp Common Gotchas:
 - **Email + WhatsApp dual-send** — `queueEmail()` prima opcionalni `recipientPhone` parametar. Kad ga prosledite, automatski šalje i WhatsApp template. WhatsApp failure NIKAD ne blokira email.
@@ -532,7 +532,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 5. ✅ Email sistem (welcome, reminders, admin updates)
 6. ✅ Supabase Pro + password strength
 7. ✅ Stripe plaćanja ($9 entry fee) — LIVE 28.02.2026
-8. ✅ Cron jobovi aktivni — 28.02.2026
+8. ✅ Cron jobovi aktivni (4 joba u `vercel.json`) — 28.02.2026
 9. ✅ WhatsApp AI chatbot (n8n + GPT-4) — 28.02.2026
 10. ⬜ Final smoke test
 11. ⬜ n8n email automation (retry failed emails)
@@ -588,6 +588,12 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 21. **Stripe amount validacija** — Webhook proverava `session.payment_status === "paid"` i `session.amount_total` pre nego što dodeli entitlemente. Entry fee = 900 cents ($9), confirmation fee = 19000 cents ($190).
 
+22. **Brain report mora da se sačuva u bazu** — n8n šalje nedeljni izveštaj mejlom, ali MORA i da pozove `POST /api/brain/report` sa `Authorization: Bearer CRON_SECRET` da bi sačuvao izveštaj u `brain_reports` tabelu. Bez toga, nema baseline za poređenje sledeće nedelje. Body: `{ "report": "...", "model": "gpt-5.3-codex", "findings_count": N }`.
+
+23. **Brain code coverage — `KEY_PATHS` mora da pokriva celu bazu** — `brain/code/route.ts` čita fajlove sa GitHub-a za AI analizu. `KEY_PATHS` niz MORA da uključuje `database.types.ts`, SVE API rute, SVE lib fajlove i `middleware.ts`. GPT 5.3 report je flagovao da ne može da validira kolone jer mu `database.types.ts` nije bio poslat. FIXED 01.03.2026: prošireno sa 28 na 70+ fajlova.
+
+24. **Brain collect — `totalEmployers` mora da koristi `employers` tabelu** — `users.totalEmployers` je koristio `profiles.user_type === "employer"` filter, dok je `employers.total` brojao `employers` tabelu. Ovo stvara nekonzistentnost (3 vs 5). FIXED: obe metrike sada koriste `employers` tabelu.
+
 ---
 
 ## 💡 Suggestions
@@ -596,8 +602,12 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 2. The POZIVNO PISMO has a hardcoded "1 ЈЕДНА (ONE)" for number of visits — this could be made configurable.
 3. Consider adding a PDF preview feature in the admin panel before generating final documents.
 4. **Payment/Stripe integration** — kad se bude pravio payment flow, profil gate je već na mestu na API nivou (`contracts/prepare/route.ts`). Samo treba dodati frontend poruku na worker dashboard-u tipa "Complete your profile to proceed to payment" i disable-ovati payment dugme dok `profileCompletion < 100`.
-5. **Middleware proširenje** — Middleware trenutno pokriva samo `/profile` i `/admin` rute. Treba proširiti na sve `/api/*` rute sa auth provjerom.
+5. ~~**Middleware proširenje**~~ ✅ DONE — `src/middleware.ts` kreiran sa CSRF + auth guardom za `/profile`, `/admin`, i `/api/*` rute.
 6. **Rate limiting** — Dodati Upstash rate limit na API rute, pogotovo `verify-document` i `offers`.
-7. **Regenerisati database.types.ts** nakon svake promene šeme baze — može se automatizovati kao post-migration hook.
-8. **CSRF zaštita** — Dodati Origin/Referer validaciju ili X-CSRF-Token na admin mutating endpointe.
+7. ~~**Regenerisati database.types.ts**~~ ✅ DONE — `npm run db:types` script dodat u `package.json`.
+8. ~~**CSRF zaštita**~~ ✅ DONE — Origin/Referer validacija u `src/middleware.ts`. Webhook/cron/brain rute izuzete.
 9. **Brain multi-model debata** — Proširiti n8n workflow da koristi 3 modela (GPT, Claude, Gemini) u 4 runde kako je opisano u brain_system_design.md.
+10. **Error monitoring (Sentry)** — Sentry free tier za hvatanje tihih API grešaka pre nego što korisnici prijave.
+11. **Health check dashboard** — Proširiti `/api/health` da proverava Supabase, Stripe, SMTP, WhatsApp konekciju.
+12. **Automated DB backup verification** — Supabase Pro radi daily backup, ali treba bar jednom testirati restore.
+13. **OpenGraph dynamic slike** — Generisati OG slike sa brojem radnika / zemljama za social sharing.

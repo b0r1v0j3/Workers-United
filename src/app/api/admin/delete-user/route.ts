@@ -36,16 +36,14 @@ export async function DELETE(request: NextRequest) {
 
         const adminClient = createAdminClient();
 
-        // Audit log
-        console.log(`[Admin Delete] Admin ${user.email} deleting user ${userId}`);
-
         // Delete all user data using shared function
         await deleteUserData(adminClient, userId);
 
         return NextResponse.json({ success: true, message: "User deleted completely" });
 
-    } catch (error: any) {
-        console.error("Delete user error:", error);
-        return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Internal server error";
+        console.error("Delete user error:", message);
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

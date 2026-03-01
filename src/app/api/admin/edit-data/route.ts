@@ -99,8 +99,6 @@ export async function POST(request: NextRequest) {
             new_value: String(value ?? ""),
         });
 
-        console.log(`[Audit] ${user.email} changed ${table}.${field} on ${recordId}: "${oldValue}" → "${value}"`);
-
         return NextResponse.json({ success: true, field, value });
 
     } catch (error) {

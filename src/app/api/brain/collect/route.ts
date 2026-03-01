@@ -47,10 +47,12 @@ export async function GET(request: NextRequest) {
 
     // ─── 1. User Statistics ─────────────────────────────────────────────
     const workers = (allProfiles || []).filter(p => p.user_type === "worker");
-    const employers = (allProfiles || []).filter(p => p.user_type === "employer");
+    const employerProfiles = (allProfiles || []).filter(p => p.user_type === "employer");
     const newUsersThisWeek = (allProfiles || []).filter(p =>
         new Date(p.created_at) >= weekAgo
     );
+    // NOTE: totalEmployers uses employers table (not profiles) to match employers.total
+    // This prevents the metric inconsistency flagged in Brain report (SEC-001)
 
     // ─── 2. Candidate Statuses ──────────────────────────────────────────
     const statusBreakdown: Record<string, number> = {};
@@ -173,7 +175,7 @@ export async function GET(request: NextRequest) {
         },
         users: {
             totalWorkers: workers.length,
-            totalEmployers: employers.length,
+            totalEmployers: (employerData || []).length,
             newThisWeek: newUsersThisWeek.length,
             statusBreakdown,
         },
