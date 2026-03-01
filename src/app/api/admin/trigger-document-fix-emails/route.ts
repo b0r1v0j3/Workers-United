@@ -36,6 +36,9 @@ export async function POST(request: Request) {
         let sentCount = 0;
         const errors: string[] = [];
 
+        // Helper: delay to avoid Google SMTP rate limiting
+        const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
         for (const profile of profiles) {
             try {
                 // Get email from auth
@@ -59,6 +62,11 @@ export async function POST(request: Request) {
                 );
 
                 sentCount++;
+
+                // Throttle: 1.5s between sends to avoid Gmail SMTP rate limits
+                if (sentCount < profiles.length) {
+                    await delay(1500);
+                }
             } catch (err: any) {
                 errors.push(`Failed for ${profile.id}: ${err.message}`);
             }
