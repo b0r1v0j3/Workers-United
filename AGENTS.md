@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 28.02.2026 (WhatsApp chatbot upgraded: GPT-4o + memorija + enriched data)
+> **Poslednje ažuriranje:** 01.03.2026 (System audit, Brain API, database.types.ts type safety, column fixes)
 
 ---
 
@@ -567,6 +567,17 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 13. **WhatsApp AI Chatbot architecture** — The flow is: `User → WhatsApp → Meta → Vercel webhook (route.ts) → n8n AI → Vercel → WhatsApp reply`. Vercel handles sending the reply using its own `WHATSAPP_TOKEN`, NOT n8n. n8n only does AI processing and returns the text via "Respond to Webhook" node. Key env vars: `N8N_WHATSAPP_WEBHOOK_URL`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`/`CRON_SECRET` (for webhook verification).
 
+14. **UVEK koristi `database.types.ts` za kolone** — Fajl `src/lib/database.types.ts` je generisan iz Supabase šeme i sadrži tačna imena kolona za sve tabele. Pre nego što napišeš `.select()` upit, pogledaj šta tip za tu tabelu kaže. Komanda za regenerisanje: `npx supabase gen types typescript --project-id qdwhwlusxjjtlinmpwms > src/lib/database.types.ts`. Pokreni ovo kad dodaš novu kolonu u bazu.
+
+15. **Ne popravljaj SQL da sakrije bug — popravi kod** — Kad SQL indeks ili migracija pukne jer kolona ne postoji, to znači da KOD koristi pogrešno ime kolone. Pravi fix je popraviti kod, ne brisati SQL. Ovo je uhvatilo 5 kolona koje su bile pogrešne u produkciji.
+
+16. **Brain API endpointi** — System ima tri API endpointa za AI Brain analizu:
+    - `GET /api/brain/collect` — statistika iz baze (korisnici, dokumenti, plaćanja, emailovi)
+    - `GET /api/brain/code` — čita source kod sa GitHub-a  
+    - `GET/POST /api/brain/report` — čuva/čita nedeljne AI izveštaje
+    - Svi zaštićeni sa `Authorization: Bearer CRON_SECRET` headerom
+    - Env var: `GITHUB_TOKEN` (classic, repo scope) za `/api/brain/code`
+
 ---
 
 ## 💡 Suggestions
@@ -575,4 +586,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 2. The POZIVNO PISMO has a hardcoded "1 ЈЕДНА (ONE)" for number of visits — this could be made configurable.
 3. Consider adding a PDF preview feature in the admin panel before generating final documents.
 4. **Payment/Stripe integration** — kad se bude pravio payment flow, profil gate je već na mestu na API nivou (`contracts/prepare/route.ts`). Samo treba dodati frontend poruku na worker dashboard-u tipa "Complete your profile to proceed to payment" i disable-ovati payment dugme dok `profileCompletion < 100`.
+5. **Middleware proširenje** — Middleware trenutno pokriva samo `/profile` i `/admin` rute. Treba proširiti na sve `/api/*` rute sa auth provjerom.
+6. **Rate limiting** — Dodati Upstash rate limit na API rute, pogotovo `verify-document` i `offers`.
+7. **Regenerisati database.types.ts** nakon svake promene šeme baze — može se automatizovati kao post-migration hook.
 
