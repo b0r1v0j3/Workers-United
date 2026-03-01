@@ -1,4 +1,5 @@
 // Email templates for Workers United
+import { escapeHtml } from "@/lib/sanitize";
 
 export type EmailType =
     | "welcome"
@@ -137,8 +138,8 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
 `;
 
 export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemplate {
-    const name = data.name || "friend";
-    const firstName = name.split(" ")[0];
+    const name = escapeHtml(data.name || "friend");
+    const firstName = escapeHtml((data.name || "friend").split(" ")[0]);
 
     switch (type) {
         case "welcome":

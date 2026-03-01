@@ -29,12 +29,12 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json().catch(() => ({}));
-        const workerIds: string[] = body.workerIds || []; // Optional: specific worker IDs
+        const workerIds: string[] = body.workerIds || [];
 
         const admin = createAdminClient();
 
         // Fetch all matches with contract_data that have generated documents
-        let matchQuery = admin
+        const matchQuery = admin
             .from("contract_data")
             .select("*, matches!inner(id, candidate_id, employer_id)")
             .not("generated_documents", "is", null);
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
             const folder = zip.folder(folderName);
             if (!folder) continue;
 
-            // 1. Add generated PDF documents
+            // 1. Fetch all generated PDF documents in parallel
             const generatedDocs = contract.generated_documents || {};
             const docFileNames: Record<string, string> = {
                 UGOVOR: "UGOVOR_O_RADU.pdf",
@@ -117,54 +117,45 @@ export async function POST(request: NextRequest) {
                 POZIVNO_PISMO: "POZIVNO_PISMO.pdf",
             };
 
-            for (const [docType, url] of Object.entries(generatedDocs)) {
-                if (!url) continue;
-                try {
-                    const response = await fetch(url as string);
-                    if (response.ok) {
-                        const buffer = await response.arrayBuffer();
-                        folder.file(
-                            docFileNames[docType] || `${docType}.pdf`,
-                            buffer
-                        );
-                    }
-                } catch (err) {
-                    console.warn(`[Download All] Failed to fetch ${docType} for ${folderName}:`, err);
-                }
-            }
-
-            // 2. Add uploaded documents (passport, photo, diploma)
-            const userDocs = docsByUser.get(candidate.profile_id) || [];
-            const docTypeFileNames: Record<string, string> = {
-                passport: "Passport.pdf",
-                biometric_photo: "Photo.jpg",
-                diploma: "Diploma.pdf",
-            };
-
-            for (const doc of userDocs) {
-                if (!doc.storage_path) continue;
-                try {
-                    const fileUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`;
-                    const response = await fetch(fileUrl);
-                    if (response.ok) {
-                        const buffer = await response.arrayBuffer();
-                        const ext = doc.storage_path.split(".").pop()?.toLowerCase() || "pdf";
-                        let fileName = docTypeFileNames[doc.document_type] ||
-                            `${doc.document_type}.${ext}`;
-                        // Use actual extension from storage
-                        if (doc.document_type === "biometric_photo") {
-                            fileName = `Photo.${ext}`;
-                        } else if (doc.document_type === "passport") {
-                            fileName = `Passport.${ext}`;
-                        } else if (doc.document_type === "diploma") {
-                            fileName = `Diploma.${ext}`;
+            const generatedFetches = Object.entries(generatedDocs)
+                .filter(([, url]) => url)
+                .map(async ([docType, url]) => {
+                    try {
+                        const response = await fetch(url as string);
+                        if (response.ok) {
+                            const buffer = await response.arrayBuffer();
+                            folder.file(docFileNames[docType] || `${docType}.pdf`, buffer);
                         }
-                        folder.file(fileName, buffer);
+                    } catch (err) {
+                        console.warn(`[Download All] Failed to fetch ${docType} for ${folderName}:`, err);
                     }
-                } catch (err) {
-                    console.warn(`[Download All] Failed to fetch ${doc.document_type} for ${folderName}:`, err);
-                }
-            }
+                });
+
+            // 2. Fetch all uploaded documents in parallel
+            const userDocs = docsByUser.get(candidate.profile_id) || [];
+
+            const uploadedFetches = userDocs
+                .filter(doc => doc.storage_path)
+                .map(async (doc) => {
+                    try {
+                        const fileUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`;
+                        const response = await fetch(fileUrl);
+                        if (response.ok) {
+                            const buffer = await response.arrayBuffer();
+                            const ext = doc.storage_path.split(".").pop()?.toLowerCase() || "pdf";
+                            let fileName = `${doc.document_type}.${ext}`;
+                            if (doc.document_type === "biometric_photo") fileName = `Photo.${ext}`;
+                            else if (doc.document_type === "passport") fileName = `Passport.${ext}`;
+                            else if (doc.document_type === "diploma") fileName = `Diploma.${ext}`;
+                            folder.file(fileName, buffer);
+                        }
+                    } catch (err) {
+                        console.warn(`[Download All] Failed to fetch ${doc.document_type} for ${folderName}:`, err);
+                    }
+                });
+
+            // Fetch all files for this worker in parallel
+            await Promise.all([...generatedFetches, ...uploadedFetches]);
         }
 
         // Generate ZIP buffer

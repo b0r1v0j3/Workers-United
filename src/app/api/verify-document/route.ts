@@ -16,21 +16,20 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
 
-        // Authorization: must be document owner or admin
-        const isOwner = user.id === candidateId;
+        // IDOR fix: check if user is admin; if not, force candidateId to authenticated user
         let isAdmin = false;
-        if (!isOwner) {
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("user_type")
-                .eq("id", user.id)
-                .single();
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
 
-            if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
-                return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-            }
+        if (profile?.user_type === "admin" || isGodModeUser(user.email)) {
             isAdmin = true;
         }
+
+        // Non-admin users can ONLY verify their own documents
+        const safeCandidateId = isAdmin ? candidateId : user.id;
 
         // Use admin client for storage/DB ops when admin is acting on another user's docs
         // This bypasses RLS which would block cross-user storage operations
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
         const { data: document, error: fetchError } = await supabase
             .from("candidate_documents")
             .select("*")
-            .eq("user_id", candidateId)
+            .eq("user_id", safeCandidateId)
             .eq("document_type", docType)
             .single();
 
@@ -87,7 +86,7 @@ export async function POST(request: Request) {
                 // Update DB with new path
                 await storageClient.from("candidate_documents")
                     .update({ storage_path: jpegPath, updated_at: new Date().toISOString() })
-                    .eq("user_id", candidateId)
+                    .eq("user_id", safeCandidateId)
                     .eq("document_type", docType);
 
                 // Refresh URL
@@ -146,7 +145,7 @@ export async function POST(request: Request) {
                 const { data: currentDoc } = await supabase
                     .from("candidate_documents")
                     .select("storage_path")
-                    .eq("user_id", candidateId)
+                    .eq("user_id", safeCandidateId)
                     .eq("document_type", docType)
                     .single();
 
@@ -208,7 +207,7 @@ export async function POST(request: Request) {
                             const { data: candidate } = await supabase
                                 .from("candidates")
                                 .select("passport_number")
-                                .eq("user_id", candidateId)
+                                .eq("user_id", safeCandidateId)
                                 .single();
 
                             if (candidate?.passport_number && result.data.passport_number) {
@@ -299,7 +298,7 @@ export async function POST(request: Request) {
             await storageClient
                 .from("candidate_documents")
                 .delete()
-                .eq("user_id", candidateId)
+                .eq("user_id", safeCandidateId)
                 .eq("document_type", docType);
 
             return NextResponse.json({
@@ -339,7 +338,7 @@ export async function POST(request: Request) {
         const { error: updateError } = await storageClient
             .from("candidate_documents")
             .update(updateData)
-            .eq("user_id", candidateId)
+            .eq("user_id", safeCandidateId)
             .eq("document_type", docType);
 
         if (updateError) {
