@@ -44,7 +44,7 @@ const MOCK_DATA: Record<string, Record<string, string>> = {
         name: "Marko Petrović",
         subject: "New Feature: Job Matching is Live!",
         title: "Job Matching is Now Live",
-        message: "We are excited to announce that our AI-powered job matching system is now live. Your profile will be automatically matched with suitable employers across Europe.",
+        message: "We are excited to announce that our job matching system is now live. Your profile will be automatically matched with suitable employers across Europe.",
         actionLink: "https://workersunited.eu/profile/worker",
         actionText: "View Your Matches",
     },
