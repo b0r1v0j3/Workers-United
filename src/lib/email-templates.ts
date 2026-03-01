@@ -96,13 +96,13 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
     <!-- Main Email Container -->
     <div style="max-width:600px; margin: 40px auto; padding: 0 15px;">
         
-        <!-- Logo Outside Header -->
-        <div style="text-align: center; margin-bottom: 30px;">
-             <img src="https://www.workersunited.eu/logo-transparent.png" alt="Workers United" width="100" height="auto" style="display: inline-block;">
-        </div>
-
         <!-- The "Window" (Card) -->
-        <div style="background:white; border-radius:24px; overflow: hidden; border: 1px solid #E5E5EA; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);">
+        <div style="background:white; border-radius:24px; overflow: hidden; border: 1px solid #E5E5EA;">
+            
+            <!-- Clean White Header "Integrated" into the window -->
+            <div style="background: #FFFFFF; padding: 40px 40px 30px; text-align: center; border-bottom: 1px solid #E5E5EA;">
+                 <img src="https://www.workersunited.eu/logo-wordmark.png" alt="Workers United" width="160" height="auto" style="vertical-align: middle; display: block; margin: 0 auto;">
+            </div>
 
             <!-- Content Area -->
             <div style="padding: 40px;">
