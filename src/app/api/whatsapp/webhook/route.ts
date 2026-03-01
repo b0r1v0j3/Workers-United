@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
                 if (candidate?.profile_id) {
                     const { data: paymentData } = await supabase
                         .from("payments")
-                        .select("fee_type, status, amount, paid_at")
+                        .select("payment_type, status, amount, paid_at")
                         .eq("user_id", candidate.profile_id)
                         .order("created_at", { ascending: false });
                     payments = paymentData || [];
@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
                             })),
                             // Payment history
                             payments: payments.map(p => ({
-                                type: p.fee_type,
+                                type: p.payment_type,
                                 status: p.status,
                                 amount: p.amount,
                                 paidAt: p.paid_at,

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         supabase.from("profiles").select("id, user_type, full_name, created_at"),
         supabase.from("candidates").select("id, profile_id, status, admin_approved, entry_fee_paid, queue_joined_at, created_at"),
         supabase.from("candidate_documents").select("document_type, status, created_at, verified_at"),
-        supabase.from("payments").select("fee_type, status, amount, paid_at, created_at"),
+        supabase.from("payments").select("payment_type, status, amount, paid_at, created_at"),
         supabase.from("email_queue").select("email_type, status, error_message, created_at").gte("created_at", monthAgo.toISOString()),
         supabase.from("whatsapp_messages").select("direction, status, content, created_at, phone_number").gte("created_at", monthAgo.toISOString()).order("created_at", { ascending: false }),
         supabase.from("employers").select("id, status, country, industry, created_at"),
