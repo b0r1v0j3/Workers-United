@@ -328,6 +328,15 @@ export async function GET(request: NextRequest) {
             placementFee: "$190 (Serbia)",
             guarantee: "90-day money-back on entry fee",
         },
+        // n8n automation health
+        n8n: await (async () => {
+            try {
+                const { getN8nHealth } = await import("@/lib/n8n");
+                return await getN8nHealth();
+            } catch {
+                return { error: "n8n API unavailable" };
+            }
+        })(),
     };
 
     return NextResponse.json(report);
