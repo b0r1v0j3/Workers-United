@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         supabase.from("candidates").select("id, profile_id, status, admin_approved, entry_fee_paid, queue_joined_at, created_at"),
         supabase.from("candidate_documents").select("document_type, status, created_at, verified_at"),
         supabase.from("payments").select("fee_type, status, amount, paid_at, created_at"),
-        supabase.from("email_queue").select("type, sent, error, created_at").gte("created_at", monthAgo.toISOString()),
+        supabase.from("email_queue").select("email_type, status, error_message, created_at").gte("created_at", monthAgo.toISOString()),
         supabase.from("whatsapp_messages").select("direction, status, content, created_at, phone_number").gte("created_at", monthAgo.toISOString()).order("created_at", { ascending: false }),
         supabase.from("employers").select("id, status, country, industry, created_at"),
         supabase.from("job_requests").select("id, status, industry, country, positions_available, created_at"),
@@ -93,13 +93,13 @@ export async function GET(request: NextRequest) {
     // ─── 5. Email Queue Stats ───────────────────────────────────────────
     const emailStats = {
         totalThisMonth: (emails || []).length,
-        sent: (emails || []).filter(e => e.sent).length,
-        failed: (emails || []).filter(e => e.error).length,
-        pending: (emails || []).filter(e => !e.sent && !e.error).length,
+        sent: (emails || []).filter(e => e.status === "sent").length,
+        failed: (emails || []).filter(e => e.error_message).length,
+        pending: (emails || []).filter(e => e.status === "pending").length,
         byType: {} as Record<string, number>,
     };
     (emails || []).forEach(e => {
-        emailStats.byType[e.type] = (emailStats.byType[e.type] || 0) + 1;
+        emailStats.byType[e.email_type] = (emailStats.byType[e.email_type] || 0) + 1;
     });
 
     // ─── 6. WhatsApp Chatbot Stats ──────────────────────────────────────
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
     };
 
     // ─── 10. System Health Indicators ───────────────────────────────────
-    const failedEmails = (emails || []).filter(e => e.error);
+    const failedEmails = (emails || []).filter(e => e.error_message);
     const failedWhatsApp = (whatsappMsgs || []).filter(m => m.status === "failed");
 
     const health = {
@@ -158,8 +158,8 @@ export async function GET(request: NextRequest) {
         failedEmailCount: failedEmails.length,
         failedWhatsAppCount: failedWhatsApp.length,
         recentFailedEmails: failedEmails.slice(0, 5).map(e => ({
-            type: e.type,
-            error: e.error,
+            type: e.email_type,
+            error: e.error_message,
             date: e.created_at,
         })),
     };
