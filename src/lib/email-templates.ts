@@ -15,7 +15,8 @@ export type EmailType =
     | "profile_incomplete"
     | "profile_reminder"
     | "profile_warning"
-    | "profile_deletion";
+    | "profile_deletion"
+    | "announcement_document_fix";
 
 interface EmailTemplate {
     subject: string;
@@ -64,19 +65,19 @@ const baseStyles = `
 
 const buttonStyle = `
     display: inline-block;
-    background-color: #2563eb;
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
     color: #ffffff !important;
     padding: 14px 32px;
-    border-radius: 8px;
+    border-radius: 9999px;
     text-decoration: none;
     font-weight: 600;
     font-size: 16px;
-    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-    transition: all 0.2s;
+    box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.3);
+    transition: all 0.3s ease;
     text-align: center;
 `;
 
-// Helper to wrap content in the Contained Blue Header design
+// Helper to wrap content in the Contained Navy Header design
 const wrapModernTemplate = (content: string, title: string = "Workers United", subtitle: string = ""): string => `
 <!DOCTYPE html>
 <html>
@@ -89,7 +90,7 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
     </style>
 </head>
-<body style="margin:0; padding:0; background-color:#f1f5f9; ${baseStyles}">
+<body style="margin:0; padding:0; background-color:#F8FAFC; ${baseStyles}">
     <!-- Preheader text for inbox preview -->
     <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${subtitle}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
     
@@ -97,11 +98,11 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
     <div style="max-width:600px; margin: 40px auto; padding: 0 15px;">
         
         <!-- The "Window" (Card) -->
-        <div style="background:white; border-radius:16px; box-shadow:0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+        <div style="background:white; border-radius:24px; box-shadow:0 10px 40px -10px rgba(0, 0, 0, 0.08); overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.6);">
             
-            <!-- Blue Header "Integrated" into the window -->
-            <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 40px 40px 30px; text-align: center;">
-                 <img src="https://workersunited.eu/logo-white.png" alt="Workers United" width="80" height="auto" style="vertical-align: middle; display: block; margin: 0 auto 15px auto;">
+            <!-- Navy Header "Integrated" into the window -->
+            <div style="background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%); padding: 40px 40px 30px; text-align: center;">
+                 <img src="https://www.workersunited.eu/logo-white.png" alt="Workers United" width="80" height="auto" style="vertical-align: middle; display: block; margin: 0 auto 15px auto;">
                  <div style="color: white; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Workers United</div>
             </div>
 
@@ -156,7 +157,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Workers United is your bridge to great job opportunities in Europe. We handle the paperwork, so you can focus on building your future.
                     </p>
                     
-                    <div style="background:#f8fafc; border-radius:12px; padding:25px; margin:30px 0; border: 1px solid #e2e8f0;">
+                    <div style="background:#F8FAFC; border-radius:20px; padding:25px; margin:30px 0; border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                         <h3 style="margin:0 0 20px; font-size:12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">Your Journey</h3>
                         
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -213,7 +214,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Great news, ${firstName}! Your profile is now 100% verified. You are officially ready to enter our job matching queue.
                     </p>
                     
-                    <div style="background:linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);">
+                    <div style="background:linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); border-radius:20px; padding:35px; margin:35px 0; color:white; text-align:center; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);">
                         <h3 style="margin:0 0 10px; font-size:22px; color: white;">Activate Job Search</h3>
                         <p style="margin:0 0 25px; opacity:0.9; font-size: 16px; color: #dbeafe;">One-time entry fee</p>
                         <div style="font-size:56px; font-weight:800; margin-bottom: 15px; letter-spacing: -2px; color: white;">$9</div>
@@ -272,9 +273,9 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">A company wants to hire you.</p>
                     </div>
 
-                    <div style="background:#fff; border: 1px solid #e2e8f0; border-radius:16px; margin:30px 0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                        <div style="background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">
-                             <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Official Offer</div>
+                    <div style="background:#fff; border: 1px solid rgba(226, 232, 240, 0.8); border-radius:20px; margin:30px 0; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);">
+                        <div style="background: #F8FAFC; padding: 15px; border-bottom: 1px solid rgba(226, 232, 240, 0.8); text-align: center;">
+                             <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">Official Offer</div>
                         </div>
                         <div style="padding: 30px; text-align: center;">
                             <h2 style="margin:0 0 10px; font-size: 22px; color: #1e293b; font-weight: 700;">${data.jobTitle}</h2>
@@ -333,7 +334,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Hi ${firstName}, as per our 90-day guarantee, we have processed your refund of <strong>${data.amount || "$9"}</strong>.
                     </p>
                     
-                    <div style="background:#f8fafc; border-radius:12px; padding:20px; text-align: center; color: #64748b; font-size: 14px; border: 1px solid #e2e8f0;">
+                    <div style="background:#F8FAFC; border-radius:20px; padding:20px; text-align: center; color: #64748b; font-size: 14px; border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                         The funds should appear in your account within 5-10 business days.
                     </div>
                     
@@ -378,7 +379,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">We found a job for you.</p>
                     </div>
 
-                    <div style="background:white; border: 1px solid #e2e8f0; border-radius:16px; overflow:hidden; margin: 30px 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <div style="background:white; border: 1px solid rgba(226, 232, 240, 0.8); border-radius:20px; overflow:hidden; margin: 30px 0; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);">
                         <div style="padding: 25px; text-align: center;">
                             <h3 style="margin:0 0 5px; color:#1e293b; font-size: 20px; font-weight: 700;">${data.jobTitle}</h3>
                             <div style="color: #64748b; font-size: 16px; margin-bottom: 20px;">${data.industry}</div>
@@ -411,7 +412,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <h1 style="color:#1e293b; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Profile Update</h1>
                     </div>
 
-                    <div style="background:#f8fafc; border: 1px solid #e2e8f0; border-radius:16px; padding:25px; margin:30px 0;">
+                    <div style="background:#F8FAFC; border: 1px solid rgba(226, 232, 240, 0.8); border-radius:20px; padding:25px; margin:30px 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                         <h3 style="margin-top:0; color: #1e293b; font-size: 18px;">${data.title}</h3>
                         <p style="margin-bottom:0; color: #64748b; font-size: 16px;">${data.message}</p>
                     </div>
@@ -492,7 +493,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <p style="font-size: 16px; color: #64748b; margin-top: 5px;">${text}</p>
                     </div>
 
-                   <div style="background:#f8fafc; border-radius:16px; padding:25px; margin:30px 0; border: 1px solid #e2e8f0;">
+                   <div style="background:#F8FAFC; border-radius:20px; padding:25px; margin:30px 0; border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                         <strong style="display:block; margin-bottom:15px; color:#1e293b; font-size: 16px;">What's missing:</strong>
                         <ul style="padding-left: 20px; margin: 0; color: #64748b; font-size: 15px;">
                             ${data.todoList}
@@ -555,6 +556,32 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </a>
                     </div>
                 `, "Account Deleted", "See you later")
+            };
+
+        case "announcement_document_fix":
+            return {
+                subject: "Important: Document Upload System Fixed",
+                html: wrapModernTemplate(`
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <img src="https://img.icons8.com/ios-filled/100/2563eb/settings.png" width="80" height="80" alt="System Update" style="margin-bottom: 20px;">
+                        <h1 style="margin:0; color:#1e293b; font-size: 26px; font-weight: 700;">Hi ${firstName},</h1>
+                        <p style="font-size: 16px; color: #64748b; margin-top: 10px;">We've fixed the document upload issue!</p>
+                    </div>
+
+                    <p style="font-size: 16px; color: #334155; margin-bottom: 20px;">
+                        If you recently tried to upload your passport or diploma and experienced errors, we sincerely apologize. We have completely resolved this technical issue.
+                    </p>
+                    
+                    <p style="font-size: 16px; color: #334155; margin-bottom: 30px;">
+                        Your profile is waiting for you. You can now securely upload your documents and complete your AI verification to join the hiring queue.
+                    </p>
+                    
+                    <div style="text-align:center; margin-top:40px;">
+                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">
+                            Upload Documents Now
+                        </a>
+                    </div>
+                `, "Document Upload System Update", "We've fixed the technical issues. You can now complete your profile.")
             };
 
         default:
