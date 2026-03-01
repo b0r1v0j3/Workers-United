@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
             .from("brain_reports")
             .insert({
                 report,
-                model: model || "gpt-5.2",
+                model: model || "gpt-5.3-codex",
                 findings_count: findings_count || 0,
                 created_at: new Date().toISOString(),
             })
@@ -43,9 +43,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, reportId: data.id });
 
-    } catch (error: any) {
-        console.error("[Brain Report] Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error("[Brain Report] Error:", message);
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }
 

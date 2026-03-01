@@ -49,3 +49,16 @@ LOG
 LOCK
 MANIFEST-*
 .~lock.*
+
+# Loose utility scripts (one-off, not needed in repo)
+crop.js
+split-logo.js
+fix-templates.mjs
+fix-ugovor-final.mjs
+
+# Debug artifacts
+old.tsx
+dashboard_history.txt
+template-audit.txt
+AGENT_VIEW_PROOOF.png
+DOC_WIZARD_RESTORATION.png

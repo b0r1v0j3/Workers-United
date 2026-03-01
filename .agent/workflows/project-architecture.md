@@ -87,6 +87,7 @@ Workers-United/
 │   │   │   └── select-role/  # Role picker for Google OAuth first-time users
 │   │   ├── privacy-policy/    # GDPR privacy policy page
 │   │   └── terms/             # Terms & conditions page
+│   ├── middleware.ts           # ← CSRF + auth guard (profile, admin, API routes)
 │   ├── components/
 │   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content)
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar
@@ -114,9 +115,13 @@ Workers-United/
 │   │   ├── constants.ts       # Shared constants
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
+│   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging)
+│   │   ├── sanitize.ts        # Input sanitization
+│   │   ├── user-management.ts # Shared user deletion logic
+│   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types)
 │   │   └── imageUtils.ts      # Image processing helpers
 │   └── types/                 # TypeScript types (currently empty)
-├── vercel.json                # Vercel config: security headers + 5 cron jobs
+├── vercel.json                # Vercel config: security headers + 4 cron jobs
 ├── next.config.ts             # Next.js config
 ├── tsconfig.json              # TypeScript config
 ├── package.json               # Dependencies & scripts
@@ -135,9 +140,8 @@ Configured in `vercel.json`:
 |---|---|---|
 | `/api/cron/check-expiry` | Every hour | Check for expired sessions/tokens |
 | `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles |
-| `/api/cron/check-expiring-docs` | Daily 8 AM UTC | Alert when passport expires within 6 months |
-| `/api/cron/match-jobs` | Every hour | Auto-match workers to employer job requests |
-| `/api/cron/check-incomplete-profiles` | Daily 10 AM UTC | Send email listing missing profile fields |
+| `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months |
+| `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
 
 ---
 
