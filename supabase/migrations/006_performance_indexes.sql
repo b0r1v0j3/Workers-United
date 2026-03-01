@@ -2,8 +2,10 @@
 -- Based on system audit — adds missing indexes for faster API responses
 
 -- Offers
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
 CREATE INDEX IF NOT EXISTS idx_offers_candidate_id ON offers(candidate_id);
+CREATE INDEX IF NOT EXISTS idx_offers_expires_at ON offers(expires_at);
 
 -- Candidate documents
 CREATE INDEX IF NOT EXISTS idx_candidate_docs_user_id ON candidate_documents(user_id);
