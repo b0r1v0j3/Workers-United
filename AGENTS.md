@@ -578,6 +578,16 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
     - Svi zaštićeni sa `Authorization: Bearer CRON_SECRET` headerom
     - Env var: `GITHUB_TOKEN` (classic, repo scope) za `/api/brain/code`
 
+17. **Meta signature verification za webhook** — WhatsApp webhook POST sada proverava `X-Hub-Signature-256` HMAC potpis. Env var: `META_APP_SECRET` (iz Meta Developer Portal → App Settings → Basic → App Secret). Bez ove env varijable, webhook loguje warning ali propušta sve — sa njom odbija lažne zahteve.
+
+18. **Signed URLs za osetljive dokumente** — `verify-document/route.ts` koristi `createSignedUrl(path, 600)` umesto `getPublicUrl()`. URL važi 10 minuta. NIKADA ne koristiti `getPublicUrl()` za lične dokumente (pasoš, diploma, slika).
+
+19. **God mode env varijable** — God mode je podrazumevano ISKLJUČEN. Zahteva dve env varijable: `GODMODE_ENABLED=true` i `OWNER_EMAIL`. Bez oba, `isGodModeUser()` uvek vraća `false`. Nema hardkodovanog fallback email-a.
+
+20. **Auto-deletion safety flag** — Cron `profile-reminders` neće brisati korisnike bez `ALLOW_AUTO_DELETION=true` env varijable. Ovo sprečava slučajno masovno brisanje u produkciji.
+
+21. **Stripe amount validacija** — Webhook proverava `session.payment_status === "paid"` i `session.amount_total` pre nego što dodeli entitlemente. Entry fee = 900 cents ($9), confirmation fee = 19000 cents ($190).
+
 ---
 
 ## 💡 Suggestions
@@ -589,4 +599,5 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 5. **Middleware proširenje** — Middleware trenutno pokriva samo `/profile` i `/admin` rute. Treba proširiti na sve `/api/*` rute sa auth provjerom.
 6. **Rate limiting** — Dodati Upstash rate limit na API rute, pogotovo `verify-document` i `offers`.
 7. **Regenerisati database.types.ts** nakon svake promene šeme baze — može se automatizovati kao post-migration hook.
-
+8. **CSRF zaštita** — Dodati Origin/Referer validaciju ili X-CSRF-Token na admin mutating endpointe.
+9. **Brain multi-model debata** — Proširiti n8n workflow da koristi 3 modela (GPT, Claude, Gemini) u 4 runde kako je opisano u brain_system_design.md.
