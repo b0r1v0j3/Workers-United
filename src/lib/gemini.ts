@@ -45,7 +45,7 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<{ data: stri
 
 // Helper: call Gemini with image and prompt, parse JSON response
 async function callGeminiVision(imageUrl: string, prompt: string): Promise<string> {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const image = await fetchImageAsBase64(imageUrl);
 
     const result = await model.generateContent([
@@ -65,7 +65,7 @@ async function callGeminiVision(imageUrl: string, prompt: string): Promise<strin
 
 // Helper: call Gemini text-only
 export async function callGeminiText(prompt: string): Promise<string> {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
     return result.response.text();
 }
