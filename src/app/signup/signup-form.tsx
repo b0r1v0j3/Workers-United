@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
+import { toast } from "sonner";
 
 interface SignupFormProps {
     userType: "worker" | "employer";
@@ -45,7 +46,7 @@ export function SignupForm({ userType }: SignupFormProps) {
             },
         });
         if (error) {
-            setError(error.message);
+            toast.error(error.message);
             setGoogleLoading(false);
         }
     };
@@ -56,19 +57,19 @@ export function SignupForm({ userType }: SignupFormProps) {
 
         // Check GDPR consent
         if (!gdprConsent) {
-            setError("You must agree to the Terms of Service and Privacy Policy to create an account.");
+            toast.error("You must agree to the Terms of Service and Privacy Policy to create an account.");
             return;
         }
 
         // Check password strength
         if (!allChecksPassed) {
-            setError("Password does not meet all requirements.");
+            toast.error("Password does not meet all requirements.");
             return;
         }
 
         // Check password match
         if (!passwordsMatch) {
-            setError("Passwords do not match");
+            toast.error("Passwords do not match");
             return;
         }
 
@@ -93,7 +94,7 @@ export function SignupForm({ userType }: SignupFormProps) {
             });
 
             if (signUpError) {
-                setError(signUpError.message);
+                toast.error(signUpError.message);
                 return;
             }
 
@@ -118,12 +119,12 @@ export function SignupForm({ userType }: SignupFormProps) {
             // Show more specific error message
             if (err instanceof Error) {
                 if (err.message.includes("already registered") || err.message.includes("already exists")) {
-                    setError("This email is already registered. Please sign in instead.");
+                    toast.error("This email is already registered. Please sign in instead.");
                 } else {
-                    setError(err.message);
+                    toast.error(err.message);
                 }
             } else {
-                setError("An unexpected error occurred. Please try again.");
+                toast.error("An unexpected error occurred. Please try again.");
             }
         } finally {
             setLoading(false);
@@ -149,12 +150,6 @@ export function SignupForm({ userType }: SignupFormProps) {
 
     return (
         <div className="space-y-5">
-            {error && (
-                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium">
-                    {error}
-                </div>
-            )}
-
             {/* Google Sign Up */}
             <button
                 type="button"

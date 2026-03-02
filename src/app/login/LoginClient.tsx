@@ -6,6 +6,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export default function LoginPage() {
     const supabase = createClient();
@@ -28,9 +29,10 @@ export default function LoginPage() {
         });
 
         if (error) {
-            setError(error.message);
+            toast.error(error.message);
             setLoading(false);
         } else {
+            toast.success("Welcome back!");
             window.location.href = "/profile";
         }
     };
@@ -49,9 +51,10 @@ export default function LoginPage() {
         });
 
         if (error) {
-            setError(error.message);
+            toast.error(error.message);
         } else {
             setResetSent(true);
+            toast.success("Password reset link sent! Check your email inbox.");
         }
         setLoading(false);
     };
@@ -66,7 +69,7 @@ export default function LoginPage() {
             },
         });
         if (error) {
-            setError(error.message);
+            toast.error(error.message);
             setGoogleLoading(false);
         }
     };
@@ -121,18 +124,6 @@ export default function LoginPage() {
                             }
                         </p>
                     </div>
-
-                    {error && (
-                        <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm mb-8 font-medium animate-shake">
-                            {error}
-                        </div>
-                    )}
-
-                    {resetSent && (
-                        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm mb-8 font-medium">
-                            ✓ Password reset link sent! Check your email inbox.
-                        </div>
-                    )}
 
                     {resetMode ? (
                         <form onSubmit={handleResetPassword} className="space-y-6">

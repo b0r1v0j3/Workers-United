@@ -3,17 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export function LoginForm() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null);
         setLoading(true);
 
         try {
@@ -24,14 +23,15 @@ export function LoginForm() {
             });
 
             if (error) {
-                setError(error.message);
+                toast.error(error.message);
                 return;
             }
 
+            toast.success("Welcome back!");
             router.push("/profile");
             router.refresh();
         } catch {
-            setError("An unexpected error occurred. Please try again.");
+            toast.error("An unexpected error occurred. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -39,11 +39,6 @@ export function LoginForm() {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                    {error}
-                </div>
-            )}
 
             <div>
                 <label htmlFor="email" className="label">
