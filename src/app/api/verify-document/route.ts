@@ -5,8 +5,13 @@ import { isGodModeUser } from "@/lib/godmode";
 import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumentBounds, fetchImageAsBase64 } from "@/lib/gemini";
 import sharp from "sharp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import { checkRateLimit, strictLimiter } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+    // Rate limit: 10 requests per minute per IP (AI verification is expensive)
+    const blocked = checkRateLimit(request, strictLimiter);
+    if (blocked) return blocked;
+
     try {
         const supabase = await createClient();
         const { candidateId, docType } = await request.json();

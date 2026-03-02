@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import { checkRateLimit, relaxedLimiter } from "@/lib/rate-limit";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
