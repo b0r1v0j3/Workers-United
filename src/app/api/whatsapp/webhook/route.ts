@@ -385,23 +385,43 @@ export async function POST(request: NextRequest) {
 }
 
 // ─── Fallback Bot (used when n8n is unavailable) ─────────────────────────────
+// Contains accurate platform constants so users never get wrong information
 
 function getFallbackResponse(message: string, candidate: any, profile: any): string {
     const msg = message.toLowerCase().trim();
     const name = profile?.full_name?.split(" ")[0] || "there";
 
+    // Platform constants (must stay accurate)
+    const ENTRY_FEE = "$9 (€9)";
+    const REFUND_GUARANTEE = "100% refund guarantee within 30 days";
+    const WEBSITE = "workersunited.eu";
+
     if (!candidate) {
-        return "Welcome to Workers United! 🌍 We help workers find jobs abroad and handle all visa paperwork. Register at workersunited.eu/signup to get started!";
+        // Detect language
+        const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|posao|rad|plata/.test(msg);
+        if (isSerboCroatian) {
+            return `Dobrodošli u Workers United! 🌍 Pomažemo radnicima da nađu posao u Evropi. Registracija: ${ENTRY_FEE} sa ${REFUND_GUARANTEE}. Registrujte se na ${WEBSITE}/signup`;
+        }
+        return `Welcome to Workers United! 🌍 We help workers find jobs in Europe and handle all visa paperwork. Entry fee: ${ENTRY_FEE} with ${REFUND_GUARANTEE}. Register at ${WEBSITE}/signup to get started!`;
     }
 
-    if (msg.includes("status") || msg.includes("profile")) {
-        return `Hi ${name}! Your current status is: ${candidate.status}. Visit workersunited.eu/profile/worker for details.`;
+    if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil")) {
+        const statusInfo = candidate.status === "REGISTERED" ? "registered ✅" : candidate.status;
+        const queueInfo = candidate.queue_position ? ` Queue position: #${candidate.queue_position}.` : "";
+        return `Hi ${name}! Status: ${statusInfo}.${queueInfo} Visit ${WEBSITE}/profile/worker for full details.`;
     }
 
-    if (msg.includes("help")) {
-        return `Hi ${name}! Type "status" to check your application, or visit workersunited.eu for full details. For complex questions, email contact@workersunited.eu`;
+    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko")) {
+        return `Hi ${name}! The entry fee is ${ENTRY_FEE} with ${REFUND_GUARANTEE}. This covers registration and job matching. Visit ${WEBSITE} for details.`;
     }
 
-    return `Hi ${name}! I'm the Workers United assistant. Our AI chatbot is temporarily offline — please try again shortly or email contact@workersunited.eu`;
+    if (msg.includes("help") || msg.includes("pomoc") || msg.includes("pomoć")) {
+        return `Hi ${name}! I can help with:\n• "status" — check your application\n• "price" — see fees\n• Or visit ${WEBSITE}\n\nFor complex questions: contact@workersunited.eu`;
+    }
+
+    if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos")) {
+        return `Hi ${name}! Upload documents at ${WEBSITE}/profile/worker. We need: passport, diploma, and biometric photo. Our AI verifies them automatically!`;
+    }
+
+    return `Hi ${name}! Our AI assistant is processing your request. If you don't get a response within a minute, please try again or email contact@workersunited.eu`;
 }
-
