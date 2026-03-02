@@ -108,15 +108,16 @@ export default function DashboardClient({
     };
 
     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
-    const docsUploaded = documents.filter(d => d.status === 'verified').length >= 2;
+    const hasUploadedDocs = documents && documents.length > 0;
+    const docsVerified = documents.filter(d => d.status === 'verified').length >= 3;
 
     // Application stages
     const stages = [
-        { label: "Profile Created", done: true },
-        { label: "Documents Uploaded", done: docsUploaded },
-        { label: "Admin Approved", done: adminApproved },
-        { label: "Payment & Queue", done: inQueue },
-        { label: "Matched", done: false },
+        { label: "Profile Created", done: true, description: "Your basic information is saved securely." },
+        { label: "Documents Uploaded", done: hasUploadedDocs, description: "Provide passport, photo, and diploma." },
+        { label: "Payment", done: candidate?.entry_fee_paid || inQueue, description: "Join the active candidate queue." },
+        { label: "Documents Verified", done: docsVerified, description: "Admin reviewed and approved documents." },
+        { label: "Matched", done: false, description: "Employer sends a job offer." },
     ];
 
     const hasPendingOffer = pendingOffers && pendingOffers.length > 0;
@@ -257,19 +258,19 @@ export default function DashboardClient({
                             <div className="space-y-6">
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                                     <h3 className="font-semibold text-gray-900 text-xl mb-8">Application Timeline</h3>
-                                    <div className="relative pl-4">
-                                        <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-gray-200" />
+                                    <div className="relative">
+                                        <div className="absolute left-4 top-4 bottom-4 w-px bg-gray-200" />
                                         {stages.map((stage, index) => (
-                                            <div key={stage.label} className="relative flex items-center gap-6 mb-8 last:mb-0">
-                                                <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-[3px] transition-colors ${stage.done
-                                                    ? 'bg-gray-900 border-white shadow-sm text-white'
-                                                    : 'bg-white border-gray-200 text-gray-400'
+                                            <div key={stage.label} className="relative flex gap-5 mb-8 last:mb-0">
+                                                <div className={`relative z-10 shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${stage.done
+                                                    ? 'bg-gray-900 text-white shadow-sm ring-4 ring-white'
+                                                    : 'bg-white border border-gray-200 text-gray-400 ring-4 ring-white'
                                                     }`}>
-                                                    {stage.done ? <CheckCircle2 size={18} /> : <span className="text-xs font-bold">{index + 1}</span>}
+                                                    {stage.done ? <CheckCircle2 size={16} /> : index + 1}
                                                 </div>
-                                                <div>
-                                                    <h4 className={`font-semibold text-lg ${stage.done ? 'text-gray-900' : 'text-gray-400'}`}>{stage.label}</h4>
-                                                    {stage.done && index === stages.length - 1 && <p className="text-sm text-gray-500 font-medium mt-0.5">Completed</p>}
+                                                <div className="pt-1.5 flex flex-col justify-center">
+                                                    <h4 className={`font-semibold text-[15px] leading-tight mb-1 transition-colors ${stage.done ? 'text-gray-900' : 'text-gray-500'}`}>{stage.label}</h4>
+                                                    <p className={`text-[13px] leading-normal transition-colors ${stage.done ? 'text-gray-500' : 'text-gray-400'}`}>{stage.description}</p>
                                                 </div>
                                             </div>
                                         ))}
