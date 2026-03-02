@@ -7,7 +7,7 @@ import { sendEmail } from "@/lib/mailer";
 // and sends email reports. Runs every 6 hours via Vercel Cron.
 //
 // Replaces n8n Brain workflow — simpler, more reliable, no middleman.
-// Uses: OpenAI API (GPT-4o), GitHub API, Supabase, SMTP
+// Uses: OpenAI API (o4-mini), GitHub API, Supabase, SMTP
 //
 // Auth: CRON_SECRET bearer token
 
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
                 Authorization: `Bearer ${OPENAI_API_KEY}`,
             },
             body: JSON.stringify({
-                model: "gpt-5.3-codex",
+                model: "o4-mini",
                 messages: [
                     { role: "system", content: getSystemPrompt() },
                     { role: "user", content: prompt },
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
         // ─── Step 5: Save Report to Database ─────────────────────────────
         await supabase.from("brain_reports").insert({
             report_type: "automated_6h",
-            model: "gpt-4o",
+            model: "o4-mini",
             content: JSON.stringify({
                 emailSummary: analysis.summary,
                 structuredReport: analysis,
@@ -400,6 +400,6 @@ function buildEmailReport(
         </table>
         ` : ""}
         <hr style="margin:20px 0;border:1px solid #e2e8f0">
-        <p style="font-size:12px;color:#94a3b8">Brain Monitor v2 — GPT-5.3 Codex — Vercel Cron — ${new Date().toISOString()}</p>
+        <p style="font-size:12px;color:#94a3b8">Brain Monitor v2 — o4-mini — Vercel Cron — ${new Date().toISOString()}</p>
     </div>`;
 }
