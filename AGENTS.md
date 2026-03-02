@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 01.03.2026 (Improvement audit: CSRF middleware, console.log cleanup, doc sync, db:types script)
+> **Poslednje ažuriranje:** 02.03.2026 (AI Brain autonomous system, Gemini 3.0-flash fallback chain, all brain-identified issues fixed)
 
 ---
 
@@ -157,7 +157,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Styling:** Tailwind CSS v4, Montserrat font
 - **Backend:** Supabase (Auth + PostgreSQL + Storage)
 - **Plaćanja:** Stripe (Checkout Sessions + Webhooks)
-- **AI:** Gemini 2.0 Flash (verifikacija dokumenata, auto-reply na kontakt formu) + GPT-4o-mini via n8n (WhatsApp chatbot)
+- **AI:** Gemini 3.0 Flash (verifikacija dokumenata, sa fallback chain: 3.0-flash → 2.5-pro → 2.5-flash) + GPT-4o-mini via n8n (WhatsApp chatbot) + GPT 5.3 Codex via n8n (AI Brain)
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
 - **Hosting:** Vercel Pro (sa cron jobovima)
 - **Automation:** n8n Cloud (WhatsApp AI chatbot workflow)
@@ -248,6 +248,10 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] AI Brain autonomous — platform monitoring, GitHub Issues, Supabase action logging — 02.03.2026
+- [x] Gemini 3.0-flash + model fallback chain (3 modela) + AI error reclassification — 02.03.2026
+- [x] WhatsApp n8n retry (2 pokušaja), smart fallback sa tačnim cenama — 02.03.2026
+- [x] Email ID tracking za brain retry (`recentFailedEmails[]`) — 02.03.2026
 - [x] WhatsApp chatbot upgrade: GPT-4o + 100-message memorija + enriched data — 28.02.2026
 - [x] WhatsApp AI chatbot (n8n + GPT-4o) — 28.02.2026
 - [x] AGENTS.md restrukturisan + CHANGELOG.md izveden — 28.02.2026
@@ -595,6 +599,14 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 23. **Brain code coverage — `KEY_PATHS` mora da pokriva celu bazu** — `brain/code/route.ts` čita fajlove sa GitHub-a za AI analizu. `KEY_PATHS` niz MORA da uključuje `database.types.ts`, SVE API rute, SVE lib fajlove i `middleware.ts`. GPT 5.3 report je flagovao da ne može da validira kolone jer mu `database.types.ts` nije bio poslat. FIXED 01.03.2026: prošireno sa 28 na 70+ fajlova.
 
 24. **Brain collect — `totalEmployers` mora da koristi `employers` tabelu** — `users.totalEmployers` je koristio `profiles.user_type === "employer"` filter, dok je `employers.total` brojao `employers` tabelu. Ovo stvara nekonzistentnost (3 vs 5). FIXED: obe metrike sada koriste `employers` tabelu.
+
+25. **Gemini model fallback chain** — `src/lib/gemini.ts` koristi chain: `gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`. Ako primarni model padne (404, rate limit), automatski se probava sledeći. Custom `AIInfraError` klasa razlikuje AI infra greške od pravih document issues. Kad AI padne, dokumenti idu na `pending_manual_review` umesto da se odbiju korisniku.
+
+26. **n8n Tool čvorovi sa `$fromAI()` — body mora biti "Using Fields Below"** — Nikad ne mešati `{{ $fromAI() }}` expression-e unutar raw JSON stringa. n8n ne može da parsira `{"action": {{ $fromAI('action') }}}` kao validan JSON. Umesto toga koristiti "Specify Body: Using Fields Below" i dodati svako polje pojedinačno. `$fromAI()` expressions prikazuju "undefined" u editoru — to je normalno, popunjavaju se u runtime-u.
+
+27. **Brain Action API Tool nepotreban kad postoji Supabase Tool** — Umesto da brain šalje HTTP request na Vercel API koji onda piše u Supabase (n8n → HTTP → Vercel → Supabase), koristiti Supabase Tool čvor direktno (n8n → Supabase). Manje koda, manje tačaka pucanja, isti rezultat.
+
+28. **n8n AI builder je nesiguran za kompleksne konfiguracije** — Za jednostavne promene OK, ali za JSON body formatting, expression syntax, i credential setup bolje davati korisniku ručna uputstva korak-po-korak nego prompt za n8n AI.
 
 ---
 
