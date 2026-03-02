@@ -59,6 +59,10 @@ export async function GET(request: Request) {
             throw new Error("OPENAI_API_KEY not set");
         }
 
+        // Load business facts from centralized config
+        const { getBusinessFactsForAI } = await import("@/lib/platform-config");
+        const businessFacts = await getBusinessFactsForAI();
+
         const today = new Date().toISOString().split("T")[0];
         const prompt = buildAnalysisPrompt(platformData, today, allResolvedTitles);
 
@@ -71,7 +75,7 @@ export async function GET(request: Request) {
             },
             body: JSON.stringify({
                 model: "gpt-5.3-codex",
-                instructions: getSystemPrompt(),
+                instructions: getSystemPrompt(businessFacts),
                 input: prompt,
                 text: {
                     format: { type: "json_object" },
@@ -210,12 +214,11 @@ interface BrainAnalysis {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getSystemPrompt(): string {
+function getSystemPrompt(businessFacts: string): string {
     return `You are the Workers United Platform Brain — an autonomous AI system that runs 5 organized operations every morning.
 
-Platform context:
-- Workers United connects international workers with European employers for work visas
-- Entry fee: $9 application fee. If a worker does not receive a job offer within 90 days, the fee is fully refunded.
+Platform context (from live database — ALWAYS use these exact values):
+${businessFacts}
 - Flow: Signup → Profile → Documents (passport, diploma, photo) → AI Verification → Admin Approval → Payment → Queue → Job Match
 - AI: Gemini 3.0 Flash for document verification (with fallback chain)
 - WhatsApp: n8n + GPT-4o chatbot

@@ -294,6 +294,13 @@ export async function POST(request: NextRequest) {
                             paidAt: p.paid_at,
                         })),
                         conversationHistory,
+                        // Business facts from DB — n8n AI uses these for accurate responses
+                        platformConfig: await (async () => {
+                            try {
+                                const { getPlatformConfig } = await import("@/lib/platform-config");
+                                return await getPlatformConfig();
+                            } catch { return null; }
+                        })(),
                     };
 
                     for (let attempt = 1; attempt <= MAX_N8N_RETRIES; attempt++) {
@@ -353,7 +360,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Send reply via Vercel (using our existing WhatsApp token)
-                const replyText = aiResponse || getFallbackResponse(content, candidate, profile);
+                const replyText = aiResponse || await getFallbackResponse(content, candidate, profile);
                 if (replyText) {
                     await sendWhatsAppText(normalizedPhone, replyText, candidate?.profile_id);
                     // Log GPT response for quality review
@@ -381,24 +388,30 @@ export async function POST(request: NextRequest) {
 }
 
 // ─── Fallback Bot (used when n8n is unavailable) ─────────────────────────────
-// Contains accurate platform constants so users never get wrong information
+// Reads business facts from platform_config DB table (cached 5 min)
 
-function getFallbackResponse(message: string, candidate: any, profile: any): string {
+async function getFallbackResponse(message: string, candidate: any, profile: any): Promise<string> {
     const msg = message.toLowerCase().trim();
     const name = profile?.full_name?.split(" ")[0] || "there";
 
-    // Platform constants (must stay accurate)
-    const ENTRY_FEE = "$9 (€9)";
-    const REFUND_GUARANTEE = "90-day guarantee — if you don't receive a job offer within 90 days, your fee is fully refunded";
-    const WEBSITE = "workersunited.eu";
+    // Read from centralized config (cached 5 min, fallback to defaults if DB down)
+    const { getPlatformConfig } = await import("@/lib/platform-config");
+    const config = await getPlatformConfig();
+
+    const ENTRY_FEE = config.entry_fee || "$9";
+    const REFUND_POLICY = config.refund_policy_en || "90-day guarantee";
+    const REFUND_POLICY_SR = config.refund_policy_sr || "90-dnevna garancija";
+    const WEBSITE = config.website_url || "workersunited.eu";
+    const GREETING_EN = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers find jobs in Europe and handle all visa paperwork.";
+    const GREETING_SR = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima da nađu posao u Evropi.";
 
     if (!candidate) {
         // Detect language
         const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|posao|rad|plata/.test(msg);
         if (isSerboCroatian) {
-            return `Dobrodošli u Workers United! 🌍 Pomažemo radnicima da nađu posao u Evropi. Registracija: ${ENTRY_FEE} sa ${REFUND_GUARANTEE}. Registrujte se na ${WEBSITE}/signup`;
+            return `${GREETING_SR} Registracija: ${ENTRY_FEE}. ${REFUND_POLICY_SR} Registrujte se na ${WEBSITE}/signup`;
         }
-        return `Welcome to Workers United! 🌍 We help workers find jobs in Europe and handle all visa paperwork. Entry fee: ${ENTRY_FEE} with ${REFUND_GUARANTEE}. Register at ${WEBSITE}/signup to get started!`;
+        return `${GREETING_EN} Entry fee: ${ENTRY_FEE}. ${REFUND_POLICY} Register at ${WEBSITE}/signup to get started!`;
     }
 
     if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil")) {
@@ -408,16 +421,17 @@ function getFallbackResponse(message: string, candidate: any, profile: any): str
     }
 
     if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko")) {
-        return `Hi ${name}! The entry fee is ${ENTRY_FEE} with ${REFUND_GUARANTEE}. This covers registration and job matching. Visit ${WEBSITE} for details.`;
+        return `Hi ${name}! The entry fee is ${ENTRY_FEE}. ${REFUND_POLICY} This covers registration and job matching. Visit ${WEBSITE} for details.`;
     }
 
     if (msg.includes("help") || msg.includes("pomoc") || msg.includes("pomoć")) {
-        return `Hi ${name}! I can help with:\n• "status" — check your application\n• "price" — see fees\n• Or visit ${WEBSITE}\n\nFor complex questions: contact@workersunited.eu`;
+        return `Hi ${name}! I can help with:\n• "status" — check your application\n• "price" — see fees\n• Or visit ${WEBSITE}\n\nFor complex questions: ${config.contact_email || "contact@workersunited.eu"}`;
     }
 
     if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos")) {
-        return `Hi ${name}! Upload documents at ${WEBSITE}/profile/worker. We need: passport, diploma, and biometric photo. Our AI verifies them automatically!`;
+        return `Hi ${name}! Upload documents at ${WEBSITE}/profile/worker. We need: ${config.supported_documents || "passport, diploma, and biometric photo"}. Our AI verifies them automatically!`;
     }
 
-    return `Hi ${name}! Our AI assistant is processing your request. If you don't get a response within a minute, please try again or email contact@workersunited.eu`;
+    return `Hi ${name}! Our AI assistant is processing your request. If you don't get a response within a minute, please try again or email ${config.contact_email || "contact@workersunited.eu"}`;
 }
+

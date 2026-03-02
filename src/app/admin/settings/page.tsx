@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
+import PlatformConfigEditor from "@/components/admin/PlatformConfigEditor";
 
 type ServiceCheck = {
     name: string;
@@ -163,16 +164,8 @@ export default async function AdminSettingsPage() {
                     </div>
                 </div>
 
-                {/* Pricing */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h2 className="text-lg font-bold text-slate-900 mb-4">Pricing Configuration</h2>
-                    <div className="space-y-3">
-                        <InfoRow label="Entry Fee" value="$9 (universal)" />
-                        <InfoRow label="Placement Fee (Serbia)" value="$190" />
-                        <InfoRow label="Refund Policy" value="90 days, auto-flagged" />
-                        <InfoRow label="Employer Cost" value="FREE (always)" />
-                    </div>
-                </div>
+                {/* Platform Config — live from DB */}
+                <PlatformConfigEditor />
             </div>
         </AppShell>
     );
