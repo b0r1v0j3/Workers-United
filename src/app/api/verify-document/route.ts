@@ -203,10 +203,27 @@ export async function POST(request: Request) {
 
                             if (expiryDate < new Date()) {
                                 status = 'rejected';
-                                rejectReason = "Passport has expired";
+                                rejectReason = "Your passport has expired. Please upload a valid, non-expired passport.";
                             } else if (expiryDate < sixMonthsFromNow) {
-                                qualityIssues.push("Passport expires within 6 months");
+                                qualityIssues.push("Your passport expires within 6 months — this may cause issues with visa processing.");
                             }
+                        }
+
+                        // Age check: must be 18 or older
+                        if (status !== 'rejected' && result.data.date_of_birth) {
+                            try {
+                                const dob = new Date(result.data.date_of_birth);
+                                const today = new Date();
+                                let age = today.getFullYear() - dob.getFullYear();
+                                const monthDiff = today.getMonth() - dob.getMonth();
+                                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                                    age--;
+                                }
+                                if (age < 18) {
+                                    status = 'rejected';
+                                    rejectReason = "You must be at least 18 years old to apply.";
+                                }
+                            } catch { /* skip age check if date parse fails */ }
                         }
 
                         // Cross-check passport number: OCR vs manually entered
@@ -231,7 +248,15 @@ export async function POST(request: Request) {
                         }
                     } else {
                         status = 'rejected';
-                        rejectReason = result.issues?.join(", ") || "Could not read passport";
+                        // Provide helpful guidance instead of raw error
+                        const issues = result.issues || [];
+                        if (issues.some((i: string) => i.toLowerCase().includes('not a passport'))) {
+                            rejectReason = "This doesn't appear to be a passport photo page. Please upload a clear photo of the page with your name, photo, and passport number.";
+                        } else if (issues.some((i: string) => i.toLowerCase().includes('blurry') || i.toLowerCase().includes('unclear'))) {
+                            rejectReason = "The image is too blurry. Please take a clear, well-lit photo of your passport flat on a surface.";
+                        } else {
+                            rejectReason = "We couldn't read your passport. Tips: place it flat on a surface, ensure good lighting, and capture the full page with your photo and details.";
+                        }
                         ocrJson = { issues: result.issues, confidence: result.confidence };
                     }
                     break;
@@ -249,8 +274,18 @@ export async function POST(request: Request) {
                         };
                     } else {
                         status = 'rejected';
-                        rejectReason = result.qualityIssues?.join(", ") || "Photo does not meet requirements";
-                        qualityIssues = result.qualityIssues || [];
+                        // Provide helpful guidance for biometric photo
+                        const issues = result.qualityIssues || [];
+                        if (issues.some((i: string) => i.toLowerCase().includes('no face'))) {
+                            rejectReason = "We couldn't detect a face in your photo. Please take a clear front-facing selfie or passport-style photo with your face clearly visible.";
+                        } else if (issues.some((i: string) => i.toLowerCase().includes('multiple'))) {
+                            rejectReason = "Multiple people detected. Please upload a photo of only yourself.";
+                        } else if (issues.some((i: string) => i.toLowerCase().includes('blurry') || i.toLowerCase().includes('dark'))) {
+                            rejectReason = "Photo is too blurry or dark. Please take it in good lighting and hold your phone steady.";
+                        } else {
+                            rejectReason = "Photo doesn't meet requirements. Please take a clear front-facing photo with good lighting and a plain background.";
+                        }
+                        qualityIssues = issues;
                         ocrJson = { issues: result.qualityIssues, confidence: result.confidence };
                     }
                     break;
@@ -295,17 +330,16 @@ export async function POST(request: Request) {
 
         // 4. Handle verification result
         if (status === 'rejected') {
-            // Delete failed documents to avoid clutter
-
-            // Delete from storage
-            await storageClient.storage
-                .from("candidate-docs")
-                .remove([document.storage_path]);
-
-            // Delete from database
+            // Keep the file in storage for admin review — do NOT delete
+            // Update DB record to rejected so user can re-upload (upsert will overwrite)
             await storageClient
                 .from("candidate_documents")
-                .delete()
+                .update({
+                    status: 'rejected',
+                    reject_reason: rejectReason,
+                    ocr_json: ocrJson,
+                    updated_at: new Date().toISOString()
+                })
                 .eq("user_id", safeCandidateId)
                 .eq("document_type", docType);
 
@@ -314,7 +348,7 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: false,
                 status: 'rejected',
-                message: `Document rejected: ${rejectReason}. Please upload a new document.`,
+                message: rejectReason || "Document could not be verified.",
                 qualityIssues,
                 extractedData: ocrJson
             });
@@ -358,11 +392,56 @@ export async function POST(request: Request) {
 
         await logServerActivity(safeCandidateId, "document_verified_server", "documents", { doc_type: docType, status, has_quality_issues: qualityIssues.length > 0 });
 
+        // Auto-check: if all 3 docs are verified, update candidate status to VERIFIED
+        if (status === 'verified') {
+            try {
+                const { data: allDocs } = await supabase
+                    .from("candidate_documents")
+                    .select("document_type, status")
+                    .eq("user_id", safeCandidateId);
+
+                const verifiedTypes = new Set((allDocs || []).filter(d => d.status === 'verified').map(d => d.document_type));
+                const allThreeVerified = verifiedTypes.has('passport') && verifiedTypes.has('biometric_photo') && verifiedTypes.has('diploma');
+
+                if (allThreeVerified) {
+                    // Update candidate status
+                    await storageClient.from("candidates").update({
+                        status: 'VERIFIED',
+                    }).eq('profile_id', safeCandidateId);
+
+                    await logServerActivity(safeCandidateId, "all_documents_verified", "documents", { message: "All 3 documents verified — candidate status updated to VERIFIED" });
+
+                    // Notify admin via email
+                    try {
+                        const { data: userProfile } = await supabase.from("profiles").select("full_name, email").eq("id", safeCandidateId).single();
+                        const { queueEmail } = await import("@/lib/email-templates");
+                        await queueEmail(
+                            storageClient,
+                            safeCandidateId,
+                            "admin_update",
+                            process.env.ADMIN_EMAIL || "contact@workersunited.eu",
+                            "Workers United Admin",
+                            {
+                                subject: `New candidate ready: ${userProfile?.full_name || userProfile?.email || "Unknown"}`,
+                                message: `${userProfile?.full_name || "A candidate"} (${userProfile?.email}) has completed all 3 document verifications and is ready for admin approval.`,
+                                actionLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://workersunited.eu'}/admin/workers`,
+                                actionText: "Review in Admin Panel"
+                            }
+                        );
+                    } catch (emailErr) {
+                        console.warn("[Verify] Could not notify admin:", emailErr);
+                    }
+                }
+            } catch (checkErr) {
+                console.warn("[Verify] All-docs check failed:", checkErr);
+            }
+        }
+
         return NextResponse.json({
             success: true,
             status,
             message: status === 'verified'
-                ? 'Document verified successfully'
+                ? 'Document verified successfully! ✓'
                 : 'Document needs manual review',
             qualityIssues,
             extractedData: ocrJson

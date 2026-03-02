@@ -212,8 +212,11 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                     return newUploads;
                 });
             } else {
-                logActivity("document_rejected", "documents", { doc_type: type, reason: result.error, quality_issues: result.qualityIssues }, "warning");
-                throw new Error(result.error || "Verification failed");
+                // Show specific AI feedback to the user
+                const rejectionMessage = result.message || result.error || "Verification failed";
+                logActivity("document_rejected", "documents", { doc_type: type, reason: rejectionMessage, quality_issues: result.qualityIssues }, "warning");
+                toast.error(rejectionMessage);
+                updateStatus(type, "rejected", rejectionMessage);
             }
 
         } catch (err) {
@@ -222,13 +225,13 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
 
             // Provide more specific error messages
-            let displayMessage = "Upload failed. Try again.";
+            let displayMessage = "Upload failed. Please try again.";
             if (errorMessage.includes("storage")) {
-                displayMessage = "Storage error. Check bucket permissions.";
+                displayMessage = "Storage error. Please try again in a moment.";
             } else if (errorMessage.includes("row-level security") || errorMessage.includes("RLS")) {
-                displayMessage = "Permission denied. Please refresh.";
-            } else if (errorMessage.includes("verification") || errorMessage.includes("AI")) {
-                displayMessage = "Verification failed. Try again.";
+                displayMessage = "Permission error. Please refresh the page and try again.";
+            } else if (errorMessage.includes("too large") || errorMessage.includes("size")) {
+                displayMessage = `File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`;
             }
 
             toast.error(displayMessage);
@@ -288,7 +291,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                 {/* Passport */}
                 <div
                     className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.01] duration-200 ${getStatusColor(uploads.passport.status)}`}
-                    onClick={() => uploads.passport.status === 'missing' && passportInputRef.current?.click()}
+                    onClick={() => (uploads.passport.status === 'missing' || uploads.passport.status === 'rejected' || uploads.passport.status === 'error') && passportInputRef.current?.click()}
                 >
                     <input
                         type="file"
@@ -319,6 +322,11 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                                     Upload
                                 </button>
                             )}
+                            {(uploads.passport.status === 'rejected' || uploads.passport.status === 'error') && (
+                                <button className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors">
+                                    Retry
+                                </button>
+                            )}
                             {uploads.passport.status !== 'missing' && uploads.passport.status !== 'verifying' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); removeFile('passport'); }}
@@ -330,12 +338,17 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         </div>
                     </div>
                     <ProgressBar status={uploads.passport.status} />
+                    {(uploads.passport.status === 'rejected' || uploads.passport.status === 'error') && uploads.passport.message && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-xs text-red-700">{uploads.passport.message}</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Photo */}
                 <div
                     className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.01] duration-200 ${getStatusColor(uploads.biometric_photo.status)}`}
-                    onClick={() => uploads.biometric_photo.status === 'missing' && photoInputRef.current?.click()}
+                    onClick={() => (uploads.biometric_photo.status === 'missing' || uploads.biometric_photo.status === 'rejected' || uploads.biometric_photo.status === 'error') && photoInputRef.current?.click()}
                 >
                     <input
                         type="file"
@@ -365,6 +378,11 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                                     Upload
                                 </button>
                             )}
+                            {(uploads.biometric_photo.status === 'rejected' || uploads.biometric_photo.status === 'error') && (
+                                <button className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors">
+                                    Retry
+                                </button>
+                            )}
                             {uploads.biometric_photo.status !== 'missing' && uploads.biometric_photo.status !== 'verifying' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); removeFile('biometric_photo'); }}
@@ -376,12 +394,17 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         </div>
                     </div>
                     <ProgressBar status={uploads.biometric_photo.status} />
+                    {(uploads.biometric_photo.status === 'rejected' || uploads.biometric_photo.status === 'error') && uploads.biometric_photo.message && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-xs text-red-700">{uploads.biometric_photo.message}</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Diploma */}
                 <div
                     className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.01] duration-200 ${getStatusColor(uploads.diploma.status)}`}
-                    onClick={() => uploads.diploma.status === 'missing' && diplomaInputRef.current?.click()}
+                    onClick={() => (uploads.diploma.status === 'missing' || uploads.diploma.status === 'rejected' || uploads.diploma.status === 'error') && diplomaInputRef.current?.click()}
                 >
                     <input
                         type="file"
@@ -412,6 +435,11 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                                     Upload
                                 </button>
                             )}
+                            {(uploads.diploma.status === 'rejected' || uploads.diploma.status === 'error') && (
+                                <button className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors">
+                                    Retry
+                                </button>
+                            )}
                             {uploads.diploma.status !== 'missing' && uploads.diploma.status !== 'verifying' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); removeFile('diploma'); }}
@@ -423,6 +451,11 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         </div>
                     </div>
                     <ProgressBar status={uploads.diploma.status} />
+                    {(uploads.diploma.status === 'rejected' || uploads.diploma.status === 'error') && uploads.diploma.message && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-xs text-red-700">{uploads.diploma.message}</p>
+                        </div>
+                    )}
                 </div>
             </div>
 

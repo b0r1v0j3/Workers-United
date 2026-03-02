@@ -106,7 +106,11 @@ export async function callGeminiText(prompt: string): Promise<string> {
 
 export async function extractPassportData(imageUrl: string): Promise<VerificationResult> {
     try {
-        const prompt = `You are a passport document analyzer. Extract information from this passport image accurately.
+        const prompt = `You are a passport document analyzer. Extract information from this passport image.
+Be VERY LENIENT — accept photos even if slightly blurry, dark, or taken at an angle.
+Only set readable to false if the image is clearly NOT a passport at all (e.g., a selfie, a random document, a blank page).
+If the image shows ANY passport-like document, set readable to true and try your best to extract data.
+
 Return a JSON object with EXACTLY these fields (use null if not readable):
 {
   "full_name": "SURNAME GIVEN_NAMES",
@@ -123,9 +127,7 @@ Return a JSON object with EXACTLY these fields (use null if not readable):
   "issues": ["list of problems if any"]
 }
 
-For date_of_issue: Look for "Date of Issue" or similar field on the passport.
-For issuing_authority: Look for "Authority" or "Issuing Authority" field. For Nepalese passports this is typically "MOFA, DEPARTMENT OF PASSPORTS".
-If the image is blurry, too dark, or not a passport, set readable to false and list issues.
+IMPORTANT: Be generous. If it looks like a passport, accept it. We will manually verify later.
 Return ONLY the JSON object, no other text.`;
 
         const content = await callGeminiVision(imageUrl, prompt);
@@ -200,21 +202,19 @@ export function compareNames(aiName: string, signupName: string): boolean {
 
 export async function verifyDiploma(imageUrl: string): Promise<DocumentQualityResult> {
     try {
-        const prompt = `You are a strict document verification system. Your job is to determine whether the uploaded image is a FORMAL SCHOOL DIPLOMA or DEGREE CERTIFICATE.
+        const prompt = `You are a document verification helper. Determine if this is an educational document.
 
-ACCEPTABLE documents (is_school_diploma = true):
-- High school diploma / secondary school leaving certificate
-- University degree certificate (Bachelor, Master, PhD)
-- Vocational school diploma / trade school certificate
-- Formal educational institution graduation document
-
-NOT ACCEPTABLE (is_school_diploma = false):
-- Professional certificates (IT certs, safety training, language courses)
+Be VERY LENIENT. Accept ANY educational or training document:
+- School diplomas, university degrees
+- Vocational certificates, trade school certificates
+- Professional certificates, training certificates
 - Course completion certificates
-- Workshop or seminar certificates
-- Training completion documents
-- Awards or recognition certificates
-- Random documents, IDs, receipts, or anything else
+- Language certificates
+- Any document from an educational institution
+
+Only set is_school_diploma to false if:
+- The image is clearly NOT any kind of certificate/diploma (e.g., a selfie, passport, receipt, blank page)
+- The image is completely unreadable
 
 Return JSON:
 {
@@ -228,7 +228,7 @@ Return JSON:
   "graduation_year": "year if readable"
 }
 
-Be STRICT. If unsure, set is_school_diploma to false.
+IMPORTANT: If it looks like ANY kind of certificate or educational document, accept it. We verify manually later.
 Return ONLY the JSON object, no other text.`;
 
         const content = await callGeminiVision(imageUrl, prompt);
@@ -268,12 +268,18 @@ Return ONLY the JSON object, no other text.`;
 
 export async function verifyBiometricPhoto(imageUrl: string): Promise<DocumentQualityResult> {
     try {
-        const prompt = `You are a biometric photo quality analyzer for visa applications.
-Check if the photo shows a person's face clearly. Be lenient - accept photos that are reasonably good.
-Only reject if:
-- No face visible at all
-- Photo is extremely blurry or dark
-- Multiple people in photo
+        const prompt = `You are a biometric photo analyzer.
+Be EXTREMELY LENIENT. Accept almost ANY photo that shows a person.
+Only set is_valid_photo to false if:
+- The image contains NO person at all (e.g., a landscape, a document, a blank image)
+- The image is completely black or blank
+
+Accept even if:
+- Photo is slightly blurry or dark
+- Person is not looking at camera
+- Background is not plain
+- Photo has poor quality
+- Multiple people (just note it as an issue but still accept)
 
 Return JSON:
 {
@@ -282,7 +288,7 @@ Return JSON:
   "confidence": 0.0-1.0
 }
 
-Be generous - if a face is visible and photo is usable, set is_valid_photo to true.
+IMPORTANT: If you can see ANY person in the photo, set is_valid_photo to true. We will verify manually later.
 Return ONLY the JSON object, no other text.`;
 
         const content = await callGeminiVision(imageUrl, prompt);
