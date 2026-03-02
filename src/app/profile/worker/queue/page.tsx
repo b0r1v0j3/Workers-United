@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
@@ -52,9 +53,23 @@ export default async function QueuePage() {
                     <Link href="/profile/worker" className="text-[#65676b] hover:text-[#050505] text-sm font-semibold flex items-center gap-2">
                         ← Back to Profile
                     </Link>
-                    <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline tracking-tight">Workers United</span>
+                    <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+                        <Image
+                            src="/logo-icon.png"
+                            alt="Workers United Logo"
+                            width={80}
+                            height={80}
+                            className="h-10 w-10 md:h-12 md:w-12 object-contain shrink-0"
+                            priority
+                        />
+                        <Image
+                            src="/logo-wordmark.png"
+                            alt="Workers United"
+                            width={200}
+                            height={50}
+                            className="w-[120px] md:w-[140px] h-auto object-contain"
+                            priority
+                        />
                     </Link>
                     <div className="w-[120px]" />
                 </div>
