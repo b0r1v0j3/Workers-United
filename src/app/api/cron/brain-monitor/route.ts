@@ -50,13 +50,17 @@ export async function GET(request: Request) {
         const platformData = await collectRes.json();
         results.dataCollected = true;
 
+        // Pre-fetch existing issues for dedup (both open and closed)
+        const existingIssues = await getExistingIssueTitles();
+        const allResolvedTitles = existingIssues.closed;
+
         // ─── Step 2: AI Analysis (OpenAI Responses API for Codex) ────────
         if (!OPENAI_API_KEY) {
             throw new Error("OPENAI_API_KEY not set");
         }
 
         const today = new Date().toISOString().split("T")[0];
-        const prompt = buildAnalysisPrompt(platformData, today);
+        const prompt = buildAnalysisPrompt(platformData, today, allResolvedTitles);
 
         // Codex models use /v1/responses (not /v1/chat/completions)
         const aiRes = await fetch("https://api.openai.com/v1/responses", {
@@ -100,12 +104,12 @@ export async function GET(request: Request) {
 
         // ─── Step 3: Create GitHub Issues ────────────────────────────────
         if (GITHUB_TOKEN && analysis.issues && analysis.issues.length > 0) {
-            // Fetch existing open issues to avoid duplicates
-            const existingTitles = await getExistingIssueTitles();
+            // Combine open + closed titles for dedup check
+            const allExistingTitles = [...existingIssues.open, ...existingIssues.closed];
 
             for (const issue of analysis.issues.slice(0, 5)) { // Max 5 issues per run
-                // Skip if similar issue already exists
-                const isDuplicate = existingTitles.some(t =>
+                // Skip if similar issue already exists (open OR closed)
+                const isDuplicate = allExistingTitles.some((t: string) =>
                     t.toLowerCase().includes(issue.title.toLowerCase().split(" ").slice(0, 3).join(" "))
                 );
                 if (isDuplicate) continue;
@@ -211,7 +215,7 @@ function getSystemPrompt(): string {
 
 Platform context:
 - Workers United connects international workers with European employers for work visas
-- Entry fee: $9 with 100% refund guarantee within 30 days
+- Entry fee: $9 application fee. If a worker does not receive a job offer within 90 days, the fee is fully refunded.
 - Flow: Signup → Profile → Documents (passport, diploma, photo) → AI Verification → Admin Approval → Payment → Queue → Job Match
 - AI: Gemini 3.0 Flash for document verification (with fallback chain)
 - WhatsApp: n8n + GPT-4o chatbot
@@ -258,6 +262,8 @@ Rules:
 4. Issues: specific, actionable, with fix suggestions
 5. De-duplicate across operations
 6. healthScore 0-100 weighted: System Health 30%, Funnel 25%, Email/WA 20%, Code 15%, Growth 10%
+7. Do NOT create issues for problems listed in RECENTLY_RESOLVED — those are already fixed
+8. 0 admin approvals / 0 payments / 0 queued is EXPECTED for an early-stage platform — it is NOT a bug
 
 Respond in JSON:
 {
@@ -279,28 +285,36 @@ Respond in JSON:
 }`;
 }
 
-function buildAnalysisPrompt(data: Record<string, unknown>, date: string): string {
+function buildAnalysisPrompt(data: Record<string, unknown>, date: string, resolvedTitles: string[]): string {
+    const resolvedSection = resolvedTitles.length > 0
+        ? `\n\nRECENTLY_RESOLVED (do NOT re-report these):\n${resolvedTitles.map(t => `- ${t}`).join("\n")}`
+        : "";
     return `Morning Brain Report — ${date}
 
 Run your 5 operations on this platform data:
 
-${JSON.stringify(data, null, 2)}
+${JSON.stringify(data, null, 2)}${resolvedSection}
 
 Execute each operation (System Health, Funnel, Email/WhatsApp, Code Quality, Growth) and report findings.`;
 }
 
-async function getExistingIssueTitles(): Promise<string[]> {
-    if (!GITHUB_TOKEN) return [];
+async function getExistingIssueTitles(): Promise<{ open: string[]; closed: string[] }> {
+    if (!GITHUB_TOKEN) return { open: [], closed: [] };
+    const headers = { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github.v3+json" };
     try {
-        const res = await fetch(
-            `https://api.github.com/repos/${GITHUB_REPO}/issues?state=open&per_page=30`,
-            { headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github.v3+json" } }
-        );
-        if (!res.ok) return [];
-        const issues = await res.json();
-        return issues.map((i: { title: string }) => i.title);
+        // Fetch both open AND recently closed issues to prevent duplicates
+        const [openRes, closedRes] = await Promise.all([
+            fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues?state=open&per_page=50&labels=brain-auto`, { headers }),
+            fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues?state=closed&per_page=50&labels=brain-auto&sort=updated&direction=desc`, { headers }),
+        ]);
+        const openIssues = openRes.ok ? await openRes.json() : [];
+        const closedIssues = closedRes.ok ? await closedRes.json() : [];
+        return {
+            open: openIssues.map((i: { title: string }) => i.title),
+            closed: closedIssues.map((i: { title: string }) => i.title),
+        };
     } catch {
-        return [];
+        return { open: [], closed: [] };
     }
 }
 
