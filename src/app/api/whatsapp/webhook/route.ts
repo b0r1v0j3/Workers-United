@@ -254,105 +254,100 @@ export async function POST(request: NextRequest) {
                 let aiResponse: string | null = null;
 
                 if (N8N_WEBHOOK_URL) {
-                    try {
-                        const controller = new AbortController();
-                        const timeout = setTimeout(() => controller.abort(), 25000); // 25s for GPT-4o
+                    // Brain Fix #9/#15: n8n retry with backoff (2 attempts)
+                    const MAX_N8N_RETRIES = 2;
+                    const n8nPayload = {
+                        phoneNumber: normalizedPhone,
+                        messageText: content,
+                        messageType,
+                        wamid,
+                        isRegistered: !!candidate,
+                        userProfile: candidate ? {
+                            name: profile?.full_name || "Unknown",
+                            email: profile?.email || null,
+                            registeredAt: profile?.created_at || null,
+                            status: candidate.status,
+                            adminApproved: candidate.admin_approved,
+                            entryFeePaid: candidate.entry_fee_paid,
+                            queuePosition: candidate.queue_position,
+                            queueJoinedAt: candidate.queue_joined_at,
+                            preferredJob: candidate.preferred_job,
+                            desiredCountries: candidate.desired_countries,
+                            nationality: candidate.nationality,
+                            currentCountry: candidate.current_country,
+                            experienceYears: candidate.experience_years,
+                            refundEligible: candidate.refund_eligible,
+                            refundDeadline: candidate.refund_deadline,
+                            profileCompletion,
+                            missingFields,
+                        } : null,
+                        documents: documents.map(d => ({
+                            type: d.document_type,
+                            status: d.status,
+                            verifiedAt: d.verified_at,
+                        })),
+                        payments: payments.map(p => ({
+                            type: p.payment_type,
+                            status: p.status,
+                            amount: p.amount,
+                            paidAt: p.paid_at,
+                        })),
+                        conversationHistory,
+                    };
 
-                        const n8nPayload = {
-                            phoneNumber: normalizedPhone,
-                            messageText: content,
-                            messageType,
-                            wamid,
-                            isRegistered: !!candidate,
-                            // Full user profile
-                            userProfile: candidate ? {
-                                name: profile?.full_name || "Unknown",
-                                email: profile?.email || null,
-                                registeredAt: profile?.created_at || null,
-                                status: candidate.status,
-                                adminApproved: candidate.admin_approved,
-                                entryFeePaid: candidate.entry_fee_paid,
-                                queuePosition: candidate.queue_position,
-                                queueJoinedAt: candidate.queue_joined_at,
-                                preferredJob: candidate.preferred_job,
-                                desiredCountries: candidate.desired_countries,
-                                nationality: candidate.nationality,
-                                currentCountry: candidate.current_country,
-                                experienceYears: candidate.experience_years,
-                                refundEligible: candidate.refund_eligible,
-                                refundDeadline: candidate.refund_deadline,
-                                profileCompletion,
-                                missingFields,
-                            } : null,
-                            // Document statuses
-                            documents: documents.map(d => ({
-                                type: d.document_type,
-                                status: d.status,
-                                verifiedAt: d.verified_at,
-                            })),
-                            // Payment history
-                            payments: payments.map(p => ({
-                                type: p.payment_type,
-                                status: p.status,
-                                amount: p.amount,
-                                paidAt: p.paid_at,
-                            })),
-                            // Conversation history (100 messages)
-                            conversationHistory,
-                        };
+                    for (let attempt = 1; attempt <= MAX_N8N_RETRIES; attempt++) {
+                        try {
+                            const controller = new AbortController();
+                            const timeout = setTimeout(() => controller.abort(), 25000);
 
-                        const n8nRes = await fetch(N8N_WEBHOOK_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            signal: controller.signal,
-                            body: JSON.stringify(n8nPayload),
-                        });
-                        clearTimeout(timeout);
+                            const n8nRes = await fetch(N8N_WEBHOOK_URL, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                signal: controller.signal,
+                                body: JSON.stringify(n8nPayload),
+                            });
+                            clearTimeout(timeout);
 
-                        if (n8nRes.ok) {
-                            const n8nRaw = await n8nRes.text();
-                            console.log("[WhatsApp Webhook] n8n raw response:", n8nRaw.substring(0, 500));
+                            if (n8nRes.ok) {
+                                const n8nRaw = await n8nRes.text();
+                                console.log(`[WhatsApp] n8n attempt ${attempt} raw:`, n8nRaw.substring(0, 500));
 
-                            try {
-                                const n8nData = JSON.parse(n8nRaw);
+                                try {
+                                    const n8nData = JSON.parse(n8nRaw);
+                                    const item = Array.isArray(n8nData) ? n8nData[0] : n8nData;
+                                    const inner = item?.json || item;
 
-                                // Handle all possible n8n response formats:
-                                // 1. { "output": "text" }
-                                // 2. [{ "output": "text" }]   (array of items)
-                                // 3. { "text": "text" }
-                                // 4. { "message": "text" }
-                                // 5. "plain text string"
-                                // 6. [{ "json": { "output": "text" } }]  (n8n internal format)
-
-                                const item = Array.isArray(n8nData) ? n8nData[0] : n8nData;
-                                const inner = item?.json || item; // unwrap n8n { json: {...} } wrapper
-
-                                aiResponse = inner?.output
-                                    || inner?.text
-                                    || inner?.message
-                                    || inner?.response
-                                    || (typeof inner === "string" ? inner : null)
-                                    || (typeof n8nRaw === "string" && !n8nRaw.startsWith("{") && !n8nRaw.startsWith("[") ? n8nRaw : null);
-
-                                console.log("[WhatsApp Webhook] Parsed AI response:", aiResponse?.substring(0, 200) || "NULL");
-                            } catch {
-                                // n8n returned non-JSON text — use as-is
-                                if (n8nRaw && n8nRaw.length > 0) {
-                                    aiResponse = n8nRaw;
+                                    aiResponse = inner?.output
+                                        || inner?.text
+                                        || inner?.message
+                                        || inner?.response
+                                        || (typeof inner === "string" ? inner : null)
+                                        || (typeof n8nRaw === "string" && !n8nRaw.startsWith("{") && !n8nRaw.startsWith("[") ? n8nRaw : null);
+                                } catch {
+                                    if (n8nRaw && n8nRaw.length > 0) aiResponse = n8nRaw;
                                 }
+                                if (aiResponse) break; // Success — stop retrying
                             }
-                        } else {
-                            console.error("[WhatsApp Webhook] n8n returned status:", n8nRes.status);
+
+                            // n8n returned error — retry if we have attempts left
+                            if (attempt < MAX_N8N_RETRIES) {
+                                console.warn(`[WhatsApp] n8n attempt ${attempt} failed (status ${n8nRes.status}), retrying in 2s...`);
+                                await new Promise(r => setTimeout(r, 2000));
+                            }
+                        } catch (n8nError) {
+                            console.error(`[WhatsApp] n8n attempt ${attempt} error:`, n8nError);
+                            if (attempt >= MAX_N8N_RETRIES) {
+                                await logServerActivity(
+                                    candidate?.profile_id || "anonymous",
+                                    "whatsapp_n8n_failed",
+                                    "error",
+                                    { phone: normalizedPhone, error: n8nError instanceof Error ? n8nError.message : "timeout", attempts: attempt },
+                                    "error"
+                                );
+                            } else {
+                                await new Promise(r => setTimeout(r, 2000));
+                            }
                         }
-                    } catch (n8nError) {
-                        console.error("[WhatsApp Webhook] n8n AI failed:", n8nError);
-                        await logServerActivity(
-                            candidate?.profile_id || "anonymous",
-                            "whatsapp_n8n_failed",
-                            "error",
-                            { phone: normalizedPhone, error: n8nError instanceof Error ? n8nError.message : "timeout" },
-                            "error"
-                        );
                     }
                 }
 
