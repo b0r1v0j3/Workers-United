@@ -7,7 +7,7 @@ import { sendEmail } from "@/lib/mailer";
 // and sends email reports. Runs every 6 hours via Vercel Cron.
 //
 // Replaces n8n Brain workflow — simpler, more reliable, no middleman.
-// Uses: OpenAI API (o4-mini), GitHub API, Supabase, SMTP
+// Uses: OpenAI Responses API (gpt-5.3-codex), GitHub API, Supabase, SMTP
 //
 // Auth: CRON_SECRET bearer token
 
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
         const platformData = await collectRes.json();
         results.dataCollected = true;
 
-        // ─── Step 2: AI Analysis ─────────────────────────────────────────
+        // ─── Step 2: AI Analysis (OpenAI Responses API for Codex) ────────
         if (!OPENAI_API_KEY) {
             throw new Error("OPENAI_API_KEY not set");
         }
@@ -58,30 +58,33 @@ export async function GET(request: Request) {
         const today = new Date().toISOString().split("T")[0];
         const prompt = buildAnalysisPrompt(platformData, today);
 
-        const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        // Codex models use /v1/responses (not /v1/chat/completions)
+        const aiRes = await fetch("https://api.openai.com/v1/responses", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${OPENAI_API_KEY}`,
             },
             body: JSON.stringify({
-                model: "o4-mini",
-                messages: [
-                    { role: "system", content: getSystemPrompt() },
-                    { role: "user", content: prompt },
-                ],
-                temperature: 0.3,
-                response_format: { type: "json_object" },
+                model: "gpt-5.3-codex",
+                instructions: getSystemPrompt(),
+                input: prompt,
+                text: {
+                    format: { type: "json_object" },
+                },
             }),
         });
 
         if (!aiRes.ok) {
             const errText = await aiRes.text();
-            throw new Error(`OpenAI API failed: ${aiRes.status} - ${errText.substring(0, 200)}`);
+            throw new Error(`OpenAI API failed: ${aiRes.status} - ${errText.substring(0, 300)}`);
         }
 
         const aiData = await aiRes.json();
-        const aiContent = aiData.choices?.[0]?.message?.content;
+        // Responses API returns output_text (not choices[0].message.content)
+        const aiContent = aiData.output_text
+            || aiData.output?.[0]?.content?.[0]?.text
+            || JSON.stringify(aiData.output);
 
         if (!aiContent) {
             throw new Error("Empty AI response");
@@ -91,7 +94,7 @@ export async function GET(request: Request) {
         try {
             analysis = JSON.parse(aiContent);
         } catch {
-            throw new Error(`Failed to parse AI response: ${aiContent.substring(0, 200)}`);
+            throw new Error(`Failed to parse AI response: ${aiContent.substring(0, 300)}`);
         }
         results.aiAnalyzed = true;
 
@@ -124,7 +127,7 @@ export async function GET(request: Request) {
         // ─── Step 5: Save Report to Database ─────────────────────────────
         await supabase.from("brain_reports").insert({
             report_type: "automated_6h",
-            model: "o4-mini",
+            model: "gpt-5.3-codex",
             content: JSON.stringify({
                 emailSummary: analysis.summary,
                 structuredReport: analysis,
@@ -400,6 +403,6 @@ function buildEmailReport(
         </table>
         ` : ""}
         <hr style="margin:20px 0;border:1px solid #e2e8f0">
-        <p style="font-size:12px;color:#94a3b8">Brain Monitor v2 — o4-mini — Vercel Cron — ${new Date().toISOString()}</p>
+        <p style="font-size:12px;color:#94a3b8">Brain Monitor v2 — GPT-5.3 Codex — Vercel Cron — ${new Date().toISOString()}</p>
     </div>`;
 }
