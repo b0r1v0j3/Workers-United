@@ -74,7 +74,7 @@ export default function DashboardClient({
             <button
                 onClick={handlePay}
                 disabled={payLoading}
-                className="bg-white text-blue-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg whitespace-nowrap inline-flex items-center gap-2 hover:bg-blue-50 transition-colors animate-pulse disabled:opacity-50 disabled:animate-none"
+                className="shrink-0 bg-gray-900 text-white font-medium text-sm px-6 py-2.5 rounded-lg shadow-sm whitespace-nowrap inline-flex items-center gap-2 hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
                 {payLoading ? (
                     <><Loader2 size={16} className="animate-spin" /> Processing...</>
@@ -99,7 +99,7 @@ export default function DashboardClient({
 
     const getDocStatus = (type: string) => {
         const doc = documents.find(d => d.document_type === type);
-        if (!doc) return { status: "missing", label: "Not uploaded", color: "slate", icon: Upload };
+        if (!doc) return { status: "missing", label: "Not uploaded", color: "gray", icon: Upload };
         if (doc.status === "verified") return { status: "verified", label: "Verified", color: "emerald", icon: CheckCircle2 };
         if (doc.status === "rejected") return { status: "rejected", label: "Rejected", color: "red", icon: AlertCircle };
         if (doc.status === "verifying") return { status: "verifying", label: "Verifying...", color: "amber", icon: Loader2 };
@@ -121,7 +121,7 @@ export default function DashboardClient({
     const hasPendingOffer = pendingOffers && pendingOffers.length > 0;
 
     return (
-        <div className="min-h-screen bg-[#F0F4F8]">
+        <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
             <UnifiedNavbar variant="dashboard" user={user} profileName={displayName} />
 
             {/* MAIN CONTENT */}
@@ -129,26 +129,22 @@ export default function DashboardClient({
 
 
                 {/* Start Searching / Queue CTA */}
-                <div className="mb-8 bg-white rounded-3xl p-1 shadow-sm border border-slate-100">
-                    <div className={`rounded-[20px] p-6 text-white relative overflow-hidden group hover:shadow-lg transition-all duration-300 ${inQueue ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                        : candidate?.entry_fee_paid ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                            : 'bg-gradient-to-r from-[#1877f2] to-[#0d5bbd]'
-                        }`}>
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/15 transition-colors" />
+                <div className="mb-8 bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-gray-200 overflow-hidden">
+                    <div className="p-6 relative transition-all duration-300">
 
                         {/* Top Content (Rocket + Text + Button) */}
-                        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                                <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
-                                    <Rocket className="w-6 h-6 text-white" />
+                        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-5">
+                                <div className={`p-3 rounded-lg flex items-center justify-center shrink-0 ${inQueue || candidate?.entry_fee_paid ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 border border-gray-200 text-gray-700'}`}>
+                                    <Rocket className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-xl">
+                                    <h3 className="font-semibold text-gray-900 text-lg tracking-tight">
                                         {inQueue ? "You're in the Queue!"
                                             : candidate?.entry_fee_paid ? "You're in the Queue!"
                                                 : "Start Searching for Jobs"}
                                     </h3>
-                                    <p className="text-blue-100 text-sm opacity-90 leading-relaxed">
+                                    <p className="text-gray-500 text-sm mt-1 leading-relaxed max-w-xl">
                                         {inQueue
                                             ? "We're actively looking for the best job match for you."
                                             : candidate?.entry_fee_paid
@@ -159,7 +155,7 @@ export default function DashboardClient({
                                 </div>
                             </div>
                             {inQueue || candidate?.entry_fee_paid ? (
-                                <Link href="/profile/worker/queue" className="bg-white text-emerald-600 font-bold text-sm px-6 py-3 rounded-full shadow-lg whitespace-nowrap inline-block hover:bg-emerald-50 transition-colors">
+                                <Link href="/profile/worker/queue" className="shrink-0 bg-white text-gray-900 font-medium text-sm px-5 py-2.5 rounded-lg border border-gray-200 shadow-sm whitespace-nowrap inline-block hover:bg-gray-50 transition-colors">
                                     View Queue Status
                                 </Link>
                             ) : (
@@ -169,8 +165,8 @@ export default function DashboardClient({
 
                         {/* Bottom Content (Guarantee) */}
                         {!candidate?.entry_fee_paid && !inQueue && (
-                            <div className="relative z-10 mt-5 pt-3 border-t border-white/20 flex items-center justify-center gap-2 text-white/90 text-xs font-semibold uppercase tracking-wide">
-                                <Shield size={14} className="opacity-80" />
+                            <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-center gap-2 text-gray-500 text-xs font-medium">
+                                <Shield size={14} className="text-gray-400" />
                                 <span>100% money-back guarantee if no job offer in 90 days</span>
                             </div>
                         )}
@@ -180,14 +176,14 @@ export default function DashboardClient({
                 <div className="flex flex-col md:flex-row gap-6">
                     {/* Sidebar Tabs (Desktop) / Top Tabs (Mobile) */}
                     <div className="md:w-64 flex-shrink-0 space-y-2">
-                        <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 sticky top-24">
+                        <div className="bg-white rounded-xl p-2 shadow-sm border border-gray-200 sticky top-24">
                             <TabButton label="Profile Info" icon={<User size={18} />} active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
                             <TabButton label="Documents" icon={<FileText size={18} />} active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
                             <TabButton label="Application Status" icon={<Rocket size={18} />} active={activeTab === 'status'} onClick={() => setActiveTab('status')} />
 
-                            <div className="my-2 border-t border-slate-100"></div>
+                            <div className="my-2 border-t border-gray-100"></div>
 
-                            <Link href="/profile/worker/edit" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 font-medium hover:bg-slate-50 transition-colors w-full text-left">
+                            <Link href="/profile/worker/edit" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition-colors w-full text-left">
                                 <Pencil size={18} /> Edit Profile
                             </Link>
                         </div>
@@ -198,9 +194,9 @@ export default function DashboardClient({
                         {/* ====================== PROFILE INFO TAB ====================== */}
                         {activeTab === 'profile' && (
                             <div className="space-y-6">
-                                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-                                    <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
-                                        <User className="text-blue-500" /> Personal Information
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                                    <h3 className="font-semibold text-gray-900 text-xl mb-6 flex items-center gap-2">
+                                        <User className="text-gray-400" /> Personal Information
                                     </h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <InfoRow icon={<User size={18} />} label="Full Name" value={profile?.full_name || candidate?.profiles?.full_name} />
@@ -218,9 +214,9 @@ export default function DashboardClient({
 
                                 {/* Passport Information */}
                                 {candidate?.passport_number && (
-                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-                                        <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
-                                            <Shield className="text-emerald-500" /> Passport & Travel
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                                        <h3 className="font-semibold text-gray-900 text-xl mb-6 flex items-center gap-2">
+                                            <Shield className="text-gray-400" /> Passport & Travel
                                         </h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <InfoRow icon={<FileText size={18} />} label="Passport Number" value={candidate.passport_number ? `***${candidate.passport_number.slice(-4)}` : null} />
@@ -237,17 +233,17 @@ export default function DashboardClient({
                         {activeTab === 'documents' && (
                             <div className="space-y-6">
                                 {!isReady && (
-                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                                         <div className="mb-6">
-                                            <h3 className="font-bold text-slate-900 text-xl">Upload Documents</h3>
-                                            <p className="text-slate-500 mt-1">Please ensure all documents are clear and readable.</p>
+                                            <h3 className="font-semibold text-gray-900 text-xl">Upload Documents</h3>
+                                            <p className="text-gray-500 mt-1">Please ensure all documents are clear and readable.</p>
                                         </div>
                                         <DocumentWizard candidateId={user.id} email={user.email || ""} />
                                     </div>
                                 )}
 
-                                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-                                    <h3 className="font-bold text-slate-900 text-xl mb-6">Document Status</h3>
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                                    <h3 className="font-semibold text-gray-900 text-xl mb-6">Document Status</h3>
                                     <div className="space-y-4">
                                         <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
                                         <DocumentRow label="Biometric Photo" type="biometric_photo" status={getDocStatus("biometric_photo")} />
@@ -260,21 +256,21 @@ export default function DashboardClient({
                         {/* ====================== STATUS TAB ====================== */}
                         {activeTab === 'status' && (
                             <div className="space-y-6">
-                                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-                                    <h3 className="font-bold text-slate-900 text-xl mb-8">Application Timeline</h3>
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                                    <h3 className="font-semibold text-gray-900 text-xl mb-8">Application Timeline</h3>
                                     <div className="relative pl-4">
-                                        <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-slate-100" />
+                                        <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-gray-200" />
                                         {stages.map((stage, index) => (
                                             <div key={stage.label} className="relative flex items-center gap-6 mb-8 last:mb-0">
-                                                <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-4 transition-colors ${stage.done
-                                                    ? 'bg-emerald-500 border-white shadow-lg shadow-emerald-200 text-white'
-                                                    : 'bg-white border-slate-100 text-slate-300'
+                                                <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-[3px] transition-colors ${stage.done
+                                                    ? 'bg-gray-900 border-white shadow-sm text-white'
+                                                    : 'bg-white border-gray-200 text-gray-400'
                                                     }`}>
                                                     {stage.done ? <CheckCircle2 size={18} /> : <span className="text-xs font-bold">{index + 1}</span>}
                                                 </div>
                                                 <div>
-                                                    <h4 className={`font-bold text-lg ${stage.done ? 'text-slate-900' : 'text-slate-400'}`}>{stage.label}</h4>
-                                                    {stage.done && index === stages.length - 1 && <p className="text-sm text-emerald-600 font-medium">Completed</p>}
+                                                    <h4 className={`font-semibold text-lg ${stage.done ? 'text-gray-900' : 'text-gray-400'}`}>{stage.label}</h4>
+                                                    {stage.done && index === stages.length - 1 && <p className="text-sm text-gray-500 font-medium mt-0.5">Completed</p>}
                                                 </div>
                                             </div>
                                         ))}
@@ -282,28 +278,28 @@ export default function DashboardClient({
                                 </div>
 
                                 {hasPendingOffer && (
-                                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl border border-emerald-100 p-8">
+                                    <div className="bg-gray-50 rounded-xl border border-gray-200 p-8 mt-6">
                                         <div className="flex items-center gap-3 mb-6">
-                                            <div className="bg-white p-2.5 rounded-xl shadow-sm text-emerald-600">
-                                                <PartyPopper size={24} />
+                                            <div className="bg-white p-2.5 rounded-lg shadow-sm text-gray-700 border border-gray-100">
+                                                <Briefcase size={20} />
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-slate-900 text-xl">Job Offers</h3>
-                                                <p className="text-slate-500">Congratulations! You have pending offers.</p>
+                                                <h3 className="font-semibold text-gray-900 text-xl">Job Offers</h3>
+                                                <p className="text-gray-500">Congratulations! You have pending offers.</p>
                                             </div>
                                         </div>
                                         {pendingOffers.map((offer: any) => (
                                             <Link
                                                 key={offer.id}
                                                 href={`/profile/worker/offers/${offer.id}`}
-                                                className="block bg-white rounded-xl p-5 border border-emerald-100 hover:shadow-md hover:border-emerald-300 transition-all group"
+                                                className="block bg-white rounded-lg p-5 border border-gray-200 hover:shadow-sm hover:border-gray-300 transition-all group"
                                             >
                                                 <div className="flex justify-between items-center">
                                                     <div>
-                                                        <h4 className="font-bold text-lg text-slate-900 group-hover:text-emerald-600 transition-colors">
+                                                        <h4 className="font-semibold text-lg text-gray-900 group-hover:text-gray-600 transition-colors">
                                                             {offer.job_request?.employer?.company_name || "Confidential Employer"}
                                                         </h4>
-                                                        <p className="text-slate-500">{offer.job_request?.title} • {offer.job_request?.destination_country}</p>
+                                                        <p className="text-gray-500">{offer.job_request?.title} • {offer.job_request?.destination_country}</p>
                                                     </div>
                                                     <ChevronRight className="text-slate-300 group-hover:text-emerald-500" />
                                                 </div>
@@ -326,12 +322,12 @@ function TabButton({ active, onClick, label, icon }: { active: boolean, onClick:
     return (
         <button
             onClick={onClick}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${active
-                ? 'bg-blue-50 text-blue-700 shadow-sm'
-                : 'text-slate-600 hover:bg-slate-50'
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5 ${active
+                ? 'bg-gray-100/80 text-gray-900 border border-gray-200/50'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
                 }`}
         >
-            <span className={active ? 'text-blue-600' : 'text-slate-400'}>{icon}</span>
+            <span className={active ? 'text-gray-900' : 'text-gray-400'}>{icon}</span>
             {label}
         </button>
     );
@@ -341,11 +337,11 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string,
     return (
         <div className="group">
             <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-slate-400 group-hover:text-blue-500 transition-colors">{icon}</span>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+                <span className="text-gray-400">{icon}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">{label}</span>
             </div>
-            <div className="pl-7 font-medium text-slate-900 text-base border-b border-transparent group-hover:border-slate-100 pb-1 transition-colors">
-                {value || <span className="text-slate-300 italic">Not provided</span>}
+            <div className="pl-7 font-medium text-gray-900 text-sm border-b border-transparent group-hover:border-gray-100 pb-1 transition-colors">
+                {value || <span className="text-gray-400 italic font-normal">Not provided</span>}
             </div>
         </div>
     );
@@ -354,29 +350,29 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string,
 function DocumentRow({ label, type, status }: { label: string, type: string, status: any }) {
     const IconComponent = status.icon;
     const colorMap: Record<string, string> = {
-        emerald: "text-emerald-600 bg-emerald-50 border-emerald-100",
-        red: "text-red-600 bg-red-50 border-red-100",
-        amber: "text-amber-600 bg-amber-50 border-amber-100",
-        blue: "text-blue-600 bg-blue-50 border-blue-100",
-        slate: "text-slate-400 bg-slate-50 border-slate-100",
+        emerald: "text-emerald-700 bg-emerald-50 border-emerald-100",
+        red: "text-red-700 bg-red-50 border-red-100",
+        amber: "text-amber-700 bg-amber-50 border-amber-100",
+        blue: "text-blue-700 bg-blue-50 border-blue-100",
+        gray: "text-gray-600 bg-gray-50 border-gray-200",
     };
 
     return (
-        <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all hover:shadow-sm ${colorMap[status.color]}`}>
+        <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${colorMap[status.color] || colorMap.gray}`}>
             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                    <FileText size={22} className="opacity-80" />
+                <div className="w-10 h-10 rounded-lg bg-white/60 flex items-center justify-center border border-current/10">
+                    <FileText size={18} className="opacity-80" />
                 </div>
                 <div>
-                    <h4 className="font-bold text-slate-900">{label}</h4>
-                    <p className="text-xs opacity-70 font-medium">{type.replace(/_/g, ' ')}</p>
+                    <h4 className="font-semibold text-sm">{label}</h4>
+                    <p className="text-xs opacity-70 font-medium mt-0.5">{type.replace(/_/g, ' ')}</p>
                 </div>
             </div>
             <div className="flex items-center gap-3">
-                <span className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-full bg-white/50 border border-current/10`}>
+                <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-white/60 border border-current/10`}>
                     {status.label}
                 </span>
-                <IconComponent size={20} className={status.color === 'amber' ? 'animate-spin' : ''} />
+                <IconComponent size={18} className={status.color === 'amber' ? 'animate-spin' : ''} />
             </div>
         </div>
     );
