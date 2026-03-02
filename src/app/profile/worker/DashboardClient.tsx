@@ -154,6 +154,12 @@ export default function DashboardClient({
                                                 : "Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe."
                                         }
                                     </p>
+                                    {!candidate?.entry_fee_paid && !inQueue && (
+                                        <div className="mt-2 flex items-center gap-1.5 text-blue-100 text-xs font-medium opacity-80">
+                                            <Shield size={14} />
+                                            <span>90-day money-back guarantee if no job offer</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             {inQueue || candidate?.entry_fee_paid ? (
@@ -164,12 +170,6 @@ export default function DashboardClient({
                                 <PayButton />
                             )}
                         </div>
-                        {!candidate?.entry_fee_paid && !inQueue && (
-                            <div className="relative z-10 mt-3 flex items-center gap-2 text-blue-100 text-xs opacity-75">
-                                <Shield size={12} />
-                                <span>90-day money-back guarantee if no job offer</span>
-                            </div>
-                        )}
                     </div>
                 </div>
                 {/* TABS Navigation */}
