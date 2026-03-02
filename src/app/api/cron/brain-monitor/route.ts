@@ -17,7 +17,7 @@ export const maxDuration = 300; // 5 minutes max (Vercel Pro)
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = "b0r1v0j3/Workers-United";
-const ADMIN_EMAIL = "contact@workersunited.eu";
+const ADMIN_EMAIL = "cvetkovicborivoje@gmail.com";
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
