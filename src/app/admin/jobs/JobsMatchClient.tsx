@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, Briefcase, Globe, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
+import { toast } from "sonner";
 
 export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: any[] }) {
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -67,14 +68,14 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                 })
             });
             if (res.ok) {
-                alert("Match created successfully!");
-                window.location.reload();
+                toast.success("Match created successfully!");
+                setTimeout(() => window.location.reload(), 1000);
             } else {
-                alert("Failed to create match.");
+                toast.error("Failed to create match.");
             }
         } catch (e) {
             console.error(e);
-            alert("Error creating match.");
+            toast.error("Error creating match.");
         } finally {
             setIsMatching(false);
         }

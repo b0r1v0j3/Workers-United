@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Briefcase, HardHat } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SelectRolePage() {
     const [loading, setLoading] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export default function SelectRolePage() {
             });
 
             if (updateError) {
-                setError(updateError.message);
+                toast.error(updateError.message);
                 setLoading(null);
                 return;
             }
@@ -35,7 +36,7 @@ export default function SelectRolePage() {
             // Create profile record
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                setError("Session expired. Please sign in again.");
+                toast.error("Session expired. Please sign in again.");
                 setLoading(null);
                 return;
             }
@@ -77,7 +78,7 @@ export default function SelectRolePage() {
             }
             router.refresh();
         } catch {
-            setError("Something went wrong. Please try again.");
+            toast.error("Something went wrong. Please try again.");
             setLoading(null);
         }
     };
@@ -90,13 +91,6 @@ export default function SelectRolePage() {
                 <h1 className="text-3xl font-bold text-[#1e293b] mb-2 tracking-tight">Welcome to Workers United</h1>
                 <p className="text-[#64748b] text-lg font-medium">How would you like to use the platform?</p>
             </div>
-
-            {/* Error */}
-            {error && (
-                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium mb-6 max-w-md w-full text-center">
-                    {error}
-                </div>
-            )}
 
             {/* Role Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl w-full">
