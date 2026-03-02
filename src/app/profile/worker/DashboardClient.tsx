@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import DocumentWizard from "@/components/DocumentWizard";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 import confetti from "canvas-confetti";
@@ -135,8 +136,8 @@ export default function DashboardClient({
                         {/* Top Content (Rocket + Text + Button) */}
                         <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
                             <div className="flex items-center gap-5">
-                                <div className={`p-3 rounded-lg flex items-center justify-center shrink-0 ${inQueue || candidate?.entry_fee_paid ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 border border-gray-200 text-gray-700'}`}>
-                                    <Rocket className="w-5 h-5" />
+                                <div className={`p-2 rounded-lg flex items-center justify-center shrink-0 ${inQueue || candidate?.entry_fee_paid ? 'bg-emerald-50 border border-emerald-100' : 'bg-gray-50 border border-gray-200'}`}>
+                                    <Image src="/rocket-icon.png" alt="Rocket" width={32} height={32} className="object-contain" />
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-gray-900 text-lg tracking-tight">
