@@ -43,31 +43,65 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<{ data: stri
     return { data: base64, mimeType: contentType };
 }
 
-// Helper: call Gemini with image and prompt, parse JSON response
-async function callGeminiVision(imageUrl: string, prompt: string): Promise<string> {
-    const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash" });
-    const image = await fetchImageAsBase64(imageUrl);
+// ─── Model Fallback Chain ───────────────────────────────────────────────────
+// If primary model fails (404, 5xx, rate limit), try next model automatically.
+// Brain Issue #7/#10/#13/#16: prevents false user rejections from AI infra errors.
+const MODEL_CHAIN = ["gemini-3.0-flash", "gemini-2.5-pro", "gemini-2.5-flash"];
 
-    const result = await model.generateContent([
-        { text: prompt },
-        {
-            inlineData: {
-                data: image.data,
-                mimeType: image.mimeType,
-            },
-        },
-    ]);
-
-    const text = result.response.text();
-    // Strip markdown code fences if present
-    return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+// Custom error to distinguish AI infra failures from real document issues
+export class AIInfraError extends Error {
+    constructor(message: string, public modelsTried: string[]) {
+        super(message);
+        this.name = "AIInfraError";
+    }
 }
 
-// Helper: call Gemini text-only
+// Helper: call Gemini with image and prompt, with model fallback chain
+async function callGeminiVision(imageUrl: string, prompt: string): Promise<string> {
+    const image = await fetchImageAsBase64(imageUrl);
+    const errors: string[] = [];
+
+    for (const modelName of MODEL_CHAIN) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent([
+                { text: prompt },
+                { inlineData: { data: image.data, mimeType: image.mimeType } },
+            ]);
+            const text = result.response.text();
+            return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        } catch (err: any) {
+            const msg = err?.message || String(err);
+            console.warn(`[Gemini] Model ${modelName} failed: ${msg.substring(0, 200)}`);
+            errors.push(`${modelName}: ${msg.substring(0, 100)}`);
+            // Only retry on infra errors (404, 5xx, rate limit), not on content errors
+            if (msg.includes("SAFETY") || msg.includes("blocked")) throw err;
+            continue;
+        }
+    }
+    throw new AIInfraError(
+        `All models failed: ${errors.join(" | ")}`,
+        MODEL_CHAIN
+    );
+}
+
+// Helper: call Gemini text-only, with model fallback chain
 export async function callGeminiText(prompt: string): Promise<string> {
-    const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash" });
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    const errors: string[] = [];
+    for (const modelName of MODEL_CHAIN) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(prompt);
+            return result.response.text();
+        } catch (err: any) {
+            const msg = err?.message || String(err);
+            console.warn(`[Gemini Text] Model ${modelName} failed: ${msg.substring(0, 200)}`);
+            errors.push(`${modelName}: ${msg.substring(0, 100)}`);
+            if (msg.includes("SAFETY") || msg.includes("blocked")) throw err;
+            continue;
+        }
+    }
+    throw new AIInfraError(`All text models failed: ${errors.join(" | ")}`, MODEL_CHAIN);
 }
 
 export async function extractPassportData(imageUrl: string): Promise<VerificationResult> {
@@ -125,6 +159,15 @@ Return ONLY the JSON object, no other text.`;
         };
     } catch (error) {
         console.error("Passport extraction error:", error);
+        // Brain Fix: Distinguish AI infra failures from real document issues
+        if (error instanceof AIInfraError) {
+            return {
+                success: false,
+                confidence: 0,
+                issues: ["system_error: AI verification temporarily unavailable — queued for manual review"],
+                rawResponse: `INFRA_ERROR: ${error.message}`,
+            };
+        }
         return {
             success: false,
             confidence: 0,
@@ -205,6 +248,15 @@ Return ONLY the JSON object, no other text.`;
         };
     } catch (error) {
         console.error("Diploma verification error:", error);
+        // Brain Fix: AI infra failure → accept for manual review, don't reject
+        if (error instanceof AIInfraError) {
+            return {
+                success: true, // Accept it — manual review will verify
+                isCorrectType: true,
+                qualityIssues: ["system_error: AI verification unavailable — accepted for manual review"],
+                confidence: 0.3,
+            };
+        }
         return {
             success: false,
             isCorrectType: false,
