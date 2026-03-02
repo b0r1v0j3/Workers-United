@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
             .from("payments")
             .insert({
                 user_id: user.id,
-                amount: type === "entry_fee" ? 9.00 : 190.00,
+                amount_cents: type === "entry_fee" ? 900 : 19000,
                 payment_type: type,
                 status: "pending",
                 metadata: offer ? { offer_id: offerId } : {},
