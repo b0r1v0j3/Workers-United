@@ -389,7 +389,7 @@ function getFallbackResponse(message: string, candidate: any, profile: any): str
 
     // Platform constants (must stay accurate)
     const ENTRY_FEE = "$9 (€9)";
-    const REFUND_GUARANTEE = "100% refund guarantee within 30 days";
+    const REFUND_GUARANTEE = "90-day guarantee — if you don't receive a job offer within 90 days, your fee is fully refunded";
     const WEBSITE = "workersunited.eu";
 
     if (!candidate) {
