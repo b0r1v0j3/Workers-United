@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 02.03.2026 (AI Brain autonomous system, Gemini 3.0-flash fallback chain, all brain-identified issues fixed)
+> **Poslednje ažuriranje:** 02.03.2026 (platform_config centralizovani business facts, brain monitor dedup fix, WhatsApp refund policy fix)
 
 ---
 
@@ -248,6 +248,9 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] Platform Config — centralized business facts DB, admin UI editor, WhatsApp + Brain + n8n integration — 02.03.2026
+- [x] Brain Monitor dedup fix — checks open + closed issues, feeds resolved titles to AI — 02.03.2026
+- [x] WhatsApp refund policy fix — 30 days → 90 days in fallback bot — 02.03.2026
 - [x] AI Brain autonomous — platform monitoring, GitHub Issues, Supabase action logging — 02.03.2026
 - [x] Gemini 3.0-flash + model fallback chain (3 modela) + AI error reclassification — 02.03.2026
 - [x] WhatsApp n8n retry (2 pokušaja), smart fallback sa tačnim cenama — 02.03.2026
@@ -311,6 +314,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | `src/lib/profile-completion.ts` | Shared profile completion — **single source of truth** za worker i employer |
 | `src/lib/email-templates.ts` | Svi email templateovi + strict `TemplateData` (bez `[key: string]: any`) |
 | `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging, 10 convenience wrappers |
+| `src/lib/platform-config.ts` | Centralized business facts (cene, garancija, kontakt). Kešira 5 min. Čitaju: WhatsApp bot, Brain Monitor, n8n AI |
 | `src/lib/docx-generator.ts` | DOCX generisanje iz šablona (docxtemplater + nationality mapping) |
 
 ### Cron Jobs (vercel.json):
@@ -522,6 +526,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 41. **`queueEmail()` podržava opcionalni `recipientPhone` parametar** — kad se prosledi, automatski šalje i WhatsApp template uz email. WhatsApp failure NIKAD ne blokira email slanje. Dodati phone kao poslednji argument: `queueEmail(supabase, userId, type, email, name, data, scheduledFor, phone)`.
 42. **RLS policy MORA koristiti `(select auth.uid())` a NE `auth.uid()` direktno** — `auth.uid()` se re-evaluira za SVAKI red u tabeli, što drastično usporava query-je. Zamotan u subquery `(select auth.uid())` se poziva samo jednom. Ovo važi za sve `auth.<function>()` pozive u RLS policy-ima (uid, jwt, role). Supabase Advisor detektuje ovo kao performance warning.
 43. **Telefon se čuva u `candidates.phone`, NE u Supabase Auth** — Auth `phone` polje je za SMS login. Naš phone se čuva u candidates tabeli. `ProfileClient.tsx` sinhronizuje phone u `auth.user_metadata` na save da bude vidljiv u Auth dashboardu. WhatsApp webhook traži korisnika po `candidates.phone`.
+44. **Business facts MORAJU ići u `platform_config` tabelu** — NIKAD ne hardkodovati cene, garanciju, kontakt email ili politiku u kod. Koristiti `getPlatformConfig()` iz `src/lib/platform-config.ts`. Admin menja u Settings → Platform Config. WhatsApp bot, Brain Monitor, n8n AI — svi čitaju iz iste baze. Cache: 5 min. Fallback: hardkodovane default vrednosti ako DB pukne.
 
 
 ---
