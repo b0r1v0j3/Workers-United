@@ -135,6 +135,8 @@ export default function DashboardClient({
                             : 'bg-gradient-to-r from-[#1877f2] to-[#0d5bbd]'
                         }`}>
                         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-white/15 transition-colors" />
+
+                        {/* Top Content (Rocket + Text + Button) */}
                         <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
                                 <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
@@ -146,7 +148,7 @@ export default function DashboardClient({
                                             : candidate?.entry_fee_paid ? "You're in the Queue!"
                                                 : "Start Searching for Jobs"}
                                     </h3>
-                                    <p className="text-blue-100 text-sm opacity-90">
+                                    <p className="text-blue-100 text-sm opacity-90 leading-relaxed">
                                         {inQueue
                                             ? "We're actively looking for the best job match for you."
                                             : candidate?.entry_fee_paid
@@ -154,12 +156,6 @@ export default function DashboardClient({
                                                 : "Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe."
                                         }
                                     </p>
-                                    {!candidate?.entry_fee_paid && !inQueue && (
-                                        <div className="mt-2 flex items-center gap-1.5 text-blue-100 text-xs font-medium opacity-80">
-                                            <Shield size={14} />
-                                            <span>90-day money-back guarantee if no job offer</span>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                             {inQueue || candidate?.entry_fee_paid ? (
@@ -170,6 +166,14 @@ export default function DashboardClient({
                                 <PayButton />
                             )}
                         </div>
+
+                        {/* Bottom Content (Guarantee) */}
+                        {!candidate?.entry_fee_paid && !inQueue && (
+                            <div className="relative z-10 mt-5 pt-3 border-t border-white/20 flex items-center justify-center gap-2 text-white/90 text-xs font-semibold uppercase tracking-wide">
+                                <Shield size={14} className="opacity-80" />
+                                <span>100% money-back guarantee if no job offer in 90 days</span>
+                            </div>
+                        )}
                     </div>
                 </div>
                 {/* TABS Navigation */}
