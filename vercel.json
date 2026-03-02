@@ -46,6 +46,10 @@
     {
       "path": "/api/cron/check-expiry",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/brain-monitor",
+      "schedule": "30 */6 * * *"
     }
   ]
 }
