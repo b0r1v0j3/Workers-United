@@ -14,12 +14,33 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { action, params } = body;
+    const rawBody = await request.text();
+    console.log("[Brain Act] Raw request body:", rawBody.substring(0, 500));
 
-    if (!action) {
-        return NextResponse.json({ error: "action required" }, { status: 400 });
+    let body: any;
+    try {
+        body = JSON.parse(rawBody);
+    } catch {
+        // If JSON parsing fails, treat entire body as an observation
+        const supabase = createAdminClient();
+        await supabase.from("brain_actions").insert({
+            action_type: "observation",
+            description: rawBody.substring(0, 1000) || "Brain sent non-JSON data",
+            metadata: { raw: rawBody.substring(0, 500) },
+            result: "completed",
+        });
+        return NextResponse.json({ success: true, note: "Logged as observation" });
     }
+
+    // Flexible parsing: try many possible formats n8n might send
+    // Could be: { action, params }, { action, phone, message }, [{ action, params }], etc.
+    const item = Array.isArray(body) ? body[0] : body;
+    const inner = item?.json || item; // unwrap n8n { json: {} } wrapper
+
+    const action = inner?.action || inner?.type || inner?.command || "log_observation";
+    const params = inner?.params || inner?.parameters || inner || {};
+
+    console.log("[Brain Act] Parsed action:", action, "params keys:", Object.keys(params));
 
     const supabase = createAdminClient();
 
