@@ -135,10 +135,8 @@ export default function DashboardClient({
 
                         {/* Top Content (Rocket + Text + Button) */}
                         <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-                            <div className="flex items-center gap-5">
-                                <div className={`p-2 rounded-lg flex items-center justify-center shrink-0 ${inQueue || candidate?.entry_fee_paid ? 'bg-emerald-50 border border-emerald-100' : 'bg-gray-50 border border-gray-200'}`}>
-                                    <Image src="/rocket-icon.png" alt="Rocket" width={32} height={32} className="object-contain" />
-                                </div>
+                            <div className="flex items-center gap-5 sm:gap-6">
+                                <Image src="/rocket-icon.png" alt="Rocket" width={72} height={72} className="object-contain shrink-0 drop-shadow-sm hover:-translate-y-1 transition-transform duration-300" />
                                 <div>
                                     <h3 className="font-semibold text-gray-900 text-lg tracking-tight">
                                         {inQueue ? "You're in the Queue!"
