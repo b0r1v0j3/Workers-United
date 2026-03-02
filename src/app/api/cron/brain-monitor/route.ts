@@ -188,7 +188,9 @@ interface BrainAction {
 interface BrainAnalysis {
     summary: string;
     healthScore: number;
+    operations: { name: string; emoji: string; status: string; findings: string[]; score: number }[];
     issues: BrainIssue[];
+    improvements: { title: string; description: string; impact: string; effort: string }[];
     actions: BrainAction[];
     metrics: {
         totalWorkers: number;
@@ -202,44 +204,86 @@ interface BrainAnalysis {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getSystemPrompt(): string {
-    return `You are the Workers United Platform Brain — an autonomous AI monitoring system.
-
-Your job: Analyze platform telemetry data and identify ACTIONABLE issues, bugs, and improvements.
+    return `You are the Workers United Platform Brain — an autonomous AI system that runs 5 organized operations every morning.
 
 Platform context:
 - Workers United connects international workers with European employers for work visas
-- Entry fee: $9 (€9) with 100% refund guarantee within 30 days
+- Entry fee: $9 with 100% refund guarantee within 30 days
 - Flow: Signup → Profile → Documents (passport, diploma, photo) → AI Verification → Admin Approval → Payment → Queue → Job Match
-- AI: Gemini 3.0 Flash for document verification (with fallback chain: 3.0-flash → 2.5-pro → 2.5-flash)
+- AI: Gemini 3.0 Flash for document verification (with fallback chain)
 - WhatsApp: n8n + GPT-4o chatbot
 - Email: Nodemailer + Google Workspace SMTP
 
+You run 5 OPERATIONS. Analyze each separately:
+
+## Operation 1: 🔧 SYSTEM HEALTH
+- API errors, 5xx rates, failed endpoints
+- Document verification success rate (Gemini)
+- Database connection issues
+- Cron job failures
+- Status: OK / WARNING / CRITICAL
+
+## Operation 2: 📊 FUNNEL ANALYSIS
+- Where are users dropping off? (signup → profile → docs → verification → payment → queue)
+- Conversion rates between stages
+- Bottlenecks (e.g. 80% stop at document upload)
+- Status: OK / WARNING / CRITICAL
+
+## Operation 3: 📨 EMAIL & WHATSAPP
+- Email delivery rate (sent vs failed)
+- Failed emails that need retry (with email_id)
+- WhatsApp response quality
+- Status: OK / WARNING / CRITICAL
+
+## Operation 4: 🛡️ CODE QUALITY
+- Deprecated APIs still in use
+- Security concerns in the data
+- Missing or broken features visible from data
+- Status: OK / WARNING / CRITICAL
+
+## Operation 5: 💡 GROWTH & REVENUE
+- What features/improvements would increase signups?
+- What's causing users to NOT pay $9?
+- Competitive advantages to build
+- Revenue optimization ideas
+- Status: SUGGESTIONS
+
 Rules:
 1. Only report REAL issues backed by data evidence
-2. Don't create issues for things that are obviously just "no users yet"
-3. Prioritize: P0 (blocks revenue), P1 (degraded experience), P2 (improvement)
-4. Each issue must have specific, actionable fix suggestions
-5. Include specific data points as evidence
-6. De-duplicate: don't report the same issue multiple ways
-7. Keep healthScore between 0-100 (100 = perfect)
+2. Don't report "no users yet" as a bug — it's just early stage
+3. Each operation MUST have a status and findings
+4. Issues: specific, actionable, with fix suggestions
+5. De-duplicate across operations
+6. healthScore 0-100 weighted: System Health 30%, Funnel 25%, Email/WA 20%, Code 15%, Growth 10%
 
-Respond in JSON format matching the BrainAnalysis schema:
+Respond in JSON:
 {
   "summary": "2-3 sentence executive summary",
   "healthScore": 0-100,
-  "issues": [{ "title": "...", "body": "...", "priority": "P0|P1|P2", "labels": ["bug"|"enhancement"|"critical"] }],
+  "operations": [
+    {
+      "name": "System Health",
+      "emoji": "🔧",
+      "status": "OK|WARNING|CRITICAL",
+      "findings": ["finding 1", "finding 2"],
+      "score": 0-100
+    }
+  ],
+  "issues": [{ "title": "...", "body": "...", "priority": "P0|P1|P2", "labels": ["bug"|"enhancement"|"critical"], "operation": "System Health|Funnel|Email|Code|Growth" }],
+  "improvements": [{ "title": "...", "description": "...", "impact": "high|medium|low", "effort": "easy|medium|hard" }],
   "actions": [{ "type": "retry_email|send_alert|log_observation", "description": "...", "params": {} }],
   "metrics": { "totalWorkers": N, "totalEmployers": N, "documentsVerified": N, "emailDeliveryRate": "X%", "funnelProgression": "description" }
 }`;
 }
 
 function buildAnalysisPrompt(data: Record<string, unknown>, date: string): string {
-    return `Analyze this platform telemetry data from ${date}:
+    return `Morning Brain Report — ${date}
+
+Run your 5 operations on this platform data:
 
 ${JSON.stringify(data, null, 2)}
 
-Identify critical issues, bugs, performance problems, and improvement opportunities.
-Focus on what's BROKEN or DEGRADED, not what's missing because we're in early stage.`;
+Execute each operation (System Health, Funnel, Email/WhatsApp, Code Quality, Growth) and report findings.`;
 }
 
 async function getExistingIssueTitles(): Promise<string[]> {
@@ -299,36 +343,63 @@ function buildEmailReport(
 ): string {
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     const scoreColor = analysis.healthScore >= 80 ? "#22c55e" : analysis.healthScore >= 50 ? "#f59e0b" : "#ef4444";
+
+    const statusBadge = (s: string) => {
+        const color = s === "OK" ? "#22c55e" : s === "WARNING" ? "#f59e0b" : s === "CRITICAL" ? "#ef4444" : "#3b82f6";
+        return `<span style="background:${color};color:white;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:bold">${s}</span>`;
+    };
+
+    const operationsHtml = (analysis.operations || []).map(op => `
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:8px 0">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <h3 style="margin:0;color:#1e3a5f">${op.emoji} ${op.name}</h3>
+                ${statusBadge(op.status)}
+            </div>
+            <ul style="margin:8px 0;padding-left:20px;color:#475569">
+                ${op.findings.map(f => `<li style="padding:2px 0">${f}</li>`).join("")}
+            </ul>
+        </div>
+    `).join("");
+
     const issueRows = (analysis.issues || [])
         .map(i => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${i.priority}</td><td style="padding:8px;border-bottom:1px solid #eee">${i.title}</td></tr>`)
         .join("");
 
     return `
     <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h1 style="color:#1e3a5f">🧠 Brain Report</h1>
-        <div style="display:flex;gap:20px;margin:20px 0">
-            <div style="background:${scoreColor};color:white;padding:20px;border-radius:12px;text-align:center;min-width:100px">
+        <h1 style="color:#1e3a5f">🧠 Morning Brain Report</h1>
+        <table style="width:100%;margin:20px 0"><tr>
+            <td style="background:${scoreColor};color:white;padding:20px;border-radius:12px;text-align:center;width:120px">
                 <div style="font-size:36px;font-weight:bold">${analysis.healthScore}</div>
                 <div style="font-size:12px;opacity:0.8">Health Score</div>
-            </div>
-            <div style="padding:10px">
+            </td>
+            <td style="padding:10px 20px;vertical-align:top">
                 <p style="margin:5px 0"><strong>Workers:</strong> ${analysis.metrics?.totalWorkers || "N/A"}</p>
                 <p style="margin:5px 0"><strong>Employers:</strong> ${analysis.metrics?.totalEmployers || "N/A"}</p>
-                <p style="margin:5px 0"><strong>Email Delivery:</strong> ${analysis.metrics?.emailDeliveryRate || "N/A"}</p>
+                <p style="margin:5px 0"><strong>Email Rate:</strong> ${analysis.metrics?.emailDeliveryRate || "N/A"}</p>
                 <p style="margin:5px 0"><strong>Duration:</strong> ${duration}s</p>
-            </div>
-        </div>
-        <h2 style="color:#1e3a5f">Summary</h2>
-        <p>${analysis.summary}</p>
+            </td>
+        </tr></table>
+        <p style="background:#f0f9ff;padding:12px;border-radius:8px;border-left:4px solid #3b82f6">${analysis.summary}</p>
+
+        <h2 style="color:#1e3a5f;margin-top:24px">📋 Operations</h2>
+        ${operationsHtml}
+
         ${analysis.issues?.length ? `
-        <h2 style="color:#1e3a5f">Issues Found (${analysis.issues.length})</h2>
-        <p>${issuesCreated} new GitHub Issues created</p>
+        <h2 style="color:#1e3a5f">🚨 Issues (${analysis.issues.length}) — ${issuesCreated} GitHub Issues created</h2>
         <table style="width:100%;border-collapse:collapse">
-            <tr style="background:#f1f5f9"><th style="padding:8px;text-align:left">Priority</th><th style="padding:8px;text-align:left">Title</th></tr>
+            <tr style="background:#fef2f2"><th style="padding:8px;text-align:left">Priority</th><th style="padding:8px;text-align:left">Title</th></tr>
             ${issueRows}
         </table>
         ` : "<p>✅ No issues found</p>"}
+        ${analysis.improvements?.length ? `
+        <h2 style="color:#1e3a5f">💡 Suggestions (${analysis.improvements.length})</h2>
+        <table style="width:100%;border-collapse:collapse">
+            <tr style="background:#f0fdf4"><th style="padding:8px;text-align:left">Idea</th><th style="padding:8px;text-align:left">Impact</th><th style="padding:8px;text-align:left">Effort</th></tr>
+            ${analysis.improvements.map(i => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${i.title}</td><td style="padding:8px;border-bottom:1px solid #eee">${i.impact}</td><td style="padding:8px;border-bottom:1px solid #eee">${i.effort}</td></tr>`).join("")}
+        </table>
+        ` : ""}
         <hr style="margin:20px 0;border:1px solid #e2e8f0">
-        <p style="font-size:12px;color:#94a3b8">Brain Monitor v2 — Vercel Cron — ${new Date().toISOString()}</p>
+        <p style="font-size:12px;color:#94a3b8">Brain Monitor v2 — GPT-5.3 Codex — Vercel Cron — ${new Date().toISOString()}</p>
     </div>`;
 }
