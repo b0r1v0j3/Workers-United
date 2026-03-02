@@ -65,7 +65,7 @@ export async function GET(request: Request) {
                 Authorization: `Bearer ${OPENAI_API_KEY}`,
             },
             body: JSON.stringify({
-                model: "gpt-4o",
+                model: "gpt-5.3-codex",
                 messages: [
                     { role: "system", content: getSystemPrompt() },
                     { role: "user", content: prompt },

@@ -49,7 +49,7 @@
     },
     {
       "path": "/api/cron/brain-monitor",
-      "schedule": "30 */6 * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
