@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
                     for (let attempt = 1; attempt <= MAX_N8N_RETRIES; attempt++) {
                         try {
                             const controller = new AbortController();
-                            const timeout = setTimeout(() => controller.abort(), 25000);
+                            const timeout = setTimeout(() => controller.abort(), 55000);
 
                             const n8nRes = await fetch(N8N_WEBHOOK_URL, {
                                 method: "POST",
