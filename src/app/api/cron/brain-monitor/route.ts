@@ -411,64 +411,147 @@ function buildEmailReport(
     startTime: number
 ): string {
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-    const scoreColor = analysis.healthScore >= 80 ? "#22c55e" : analysis.healthScore >= 50 ? "#f59e0b" : "#ef4444";
+
+    // Apple/Notion color palette
+    const colors = {
+        bg: "#FAFAFA",
+        surface: "#FFFFFF",
+        text: "#111827",
+        textMuted: "#6B7280",
+        border: "#E5E7EB",
+        success: { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
+        warning: { bg: "#FFFBEB", text: "#D97706", border: "#FDE68A" },
+        error: { bg: "#FEF2F2", text: "#DC2626", border: "#FECACA" },
+        brand: { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE" }
+    };
+
+    const getStatusTheme = (s: string | number) => {
+        if (s === "OK" || (typeof s === "number" && s >= 80)) return colors.success;
+        if (s === "WARNING" || (typeof s === "number" && s >= 50)) return colors.warning;
+        if (s === "CRITICAL" || (typeof s === "number" && s < 50)) return colors.error;
+        return colors.brand;
+    };
+
+    const scoreTheme = getStatusTheme(analysis.healthScore);
 
     const statusBadge = (s: string) => {
-        const color = s === "OK" ? "#22c55e" : s === "WARNING" ? "#f59e0b" : s === "CRITICAL" ? "#ef4444" : "#3b82f6";
-        return `<span style="background:${color};color:white;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:bold">${s}</span>`;
+        const t = getStatusTheme(s);
+        return `<span style="background:${t.bg};color:${t.text};border:1px solid ${t.border};padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;">${s}</span>`;
     };
 
     const operationsHtml = (analysis.operations || []).map(op => `
-        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:8px 0">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-                <h3 style="margin:0;color:#1e3a5f">${op.emoji} ${op.name}</h3>
+        <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="margin:0;color:${colors.text};font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:20px;">${op.emoji}</span> ${op.name}
+                </h3>
                 ${statusBadge(op.status)}
             </div>
-            <ul style="margin:8px 0;padding-left:20px;color:#475569">
-                ${op.findings.map(f => `<li style="padding:2px 0">${f}</li>`).join("")}
+            <ul style="margin:0;padding-left:0;list-style:none;">
+                ${op.findings.map(f => `
+                    <li style="color:${colors.textMuted};font-size:14px;line-height:1.6;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;">
+                        <span style="color:${colors.border};margin-top:2px;">•</span>
+                        <span>${f}</span>
+                    </li>
+                `).join("")}
             </ul>
         </div>
     `).join("");
 
-    const issueRows = (analysis.issues || [])
-        .map(i => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${i.priority}</td><td style="padding:8px;border-bottom:1px solid #eee">${i.title}</td></tr>`)
-        .join("");
-
     return `
-    <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h1 style="color:#1e3a5f">🧠 Morning Brain Report</h1>
-        <table style="width:100%;margin:20px 0"><tr>
-            <td style="background:${scoreColor};color:white;padding:20px;border-radius:12px;text-align:center;width:120px">
-                <div style="font-size:36px;font-weight:bold">${analysis.healthScore}</div>
-                <div style="font-size:12px;opacity:0.8">Health Score</div>
-            </td>
-            <td style="padding:10px 20px;vertical-align:top">
-                <p style="margin:5px 0"><strong>Workers:</strong> ${analysis.metrics?.totalWorkers || "N/A"}</p>
-                <p style="margin:5px 0"><strong>Employers:</strong> ${analysis.metrics?.totalEmployers || "N/A"}</p>
-                <p style="margin:5px 0"><strong>Email Rate:</strong> ${analysis.metrics?.emailDeliveryRate || "N/A"}</p>
-                <p style="margin:5px 0"><strong>Duration:</strong> ${duration}s</p>
-            </td>
-        </tr></table>
-        <p style="background:#f0f9ff;padding:12px;border-radius:8px;border-left:4px solid #3b82f6">${analysis.summary}</p>
+    <div style="background-color:${colors.bg};margin:0;padding:40px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${colors.text};">
+        <div style="max-width:600px;margin:0 auto;">
+            
+            <!-- Header -->
+            <div style="text-align:center;margin-bottom:32px;">
+                <div style="width:48px;height:48px;background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px;box-shadow:0 2px 4px rgba(0,0,0,0.04);">
+                    🧠
+                </div>
+                <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;letter-spacing:-0.02em;color:${colors.text};">Daily Brain Report</h1>
+                <p style="margin:0;font-size:14px;color:${colors.textMuted};">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            </div>
 
-        <h2 style="color:#1e3a5f;margin-top:24px">📋 Operations</h2>
-        ${operationsHtml}
+            <!-- Health Score Card -->
+            <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:16px;padding:32px;margin-bottom:24px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                <div style="display:inline-flex;align-items:center;justify-content:center;width:120px;height:120px;border-radius:50%;background:${scoreTheme.bg};border:4px solid ${scoreTheme.border};margin-bottom:16px;">
+                    <span style="font-size:48px;font-weight:700;letter-spacing:-0.04em;color:${scoreTheme.text};">${analysis.healthScore}</span>
+                </div>
+                <p style="margin:0;font-size:16px;font-weight:600;color:${colors.text};">System Health Score</p>
+                <p style="margin:8px 0 0;font-size:14px;color:${colors.textMuted};max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5;">${analysis.summary}</p>
+            </div>
 
-        ${analysis.issues?.length ? `
-        <h2 style="color:#1e3a5f">🚨 Issues (${analysis.issues.length}) — ${issuesCreated} GitHub Issues created</h2>
-        <table style="width:100%;border-collapse:collapse">
-            <tr style="background:#fef2f2"><th style="padding:8px;text-align:left">Priority</th><th style="padding:8px;text-align:left">Title</th></tr>
-            ${issueRows}
-        </table>
-        ` : "<p>✅ No issues found</p>"}
-        ${analysis.improvements?.length ? `
-        <h2 style="color:#1e3a5f">💡 Suggestions (${analysis.improvements.length})</h2>
-        <table style="width:100%;border-collapse:collapse">
-            <tr style="background:#f0fdf4"><th style="padding:8px;text-align:left">Idea</th><th style="padding:8px;text-align:left">Impact</th><th style="padding:8px;text-align:left">Effort</th></tr>
-            ${analysis.improvements.map(i => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${i.title}</td><td style="padding:8px;border-bottom:1px solid #eee">${i.impact}</td><td style="padding:8px;border-bottom:1px solid #eee">${i.effort}</td></tr>`).join("")}
-        </table>
-        ` : ""}
-        <hr style="margin:20px 0;border:1px solid #e2e8f0">
-        <p style="font-size:12px;color:#94a3b8">Brain Monitor v2 — GPT-5.3 Codex — Vercel Cron — ${new Date().toISOString()}</p>
+            <!-- Metrics Grid -->
+            <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:16px;margin-bottom:32px;">
+                <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                    <div style="font-size:12px;font-weight:600;color:${colors.textMuted};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Total Workers</div>
+                    <div style="font-size:24px;font-weight:700;color:${colors.text};letter-spacing:-0.02em;">${analysis.metrics?.totalWorkers || "N/A"}</div>
+                </div>
+                <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                    <div style="font-size:12px;font-weight:600;color:${colors.textMuted};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Employers</div>
+                    <div style="font-size:24px;font-weight:700;color:${colors.text};letter-spacing:-0.02em;">${analysis.metrics?.totalEmployers || "N/A"}</div>
+                </div>
+                <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                    <div style="font-size:12px;font-weight:600;color:${colors.textMuted};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Email Delivery</div>
+                    <div style="font-size:24px;font-weight:700;color:${colors.text};letter-spacing:-0.02em;">${analysis.metrics?.emailDeliveryRate || "N/A"}</div>
+                </div>
+                <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                    <div style="font-size:12px;font-weight:600;color:${colors.textMuted};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Analysis Time</div>
+                    <div style="font-size:24px;font-weight:700;color:${colors.text};letter-spacing:-0.02em;">${duration}s</div>
+                </div>
+            </div>
+
+            <!-- Operations -->
+            <h2 style="font-size:18px;font-weight:600;color:${colors.text};margin:0 0 16px;letter-spacing:-0.01em;">Operations Analysis</h2>
+            ${operationsHtml}
+
+            <!-- Issues & Suggestions -->
+            ${analysis.issues?.length ? `
+                <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;padding:24px;margin-top:24px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                    <h3 style="margin:0 0 16px;color:${colors.text};font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                        🚨 Identified Issues <span style="background:${colors.bg};color:${colors.textMuted};padding:2px 8px;border-radius:99px;font-size:12px;">${issuesCreated} auto-logged</span>
+                    </h3>
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+                        ${analysis.issues.map(i => `
+                            <div style="display:flex;align-items:flex-start;gap:12px;padding-bottom:12px;border-bottom:1px solid ${colors.border};">
+                                <span style="margin-top:2px;font-size:12px;font-weight:600;color:${i.priority.includes('0') ? colors.error.text : colors.warning.text};background:${i.priority.includes('0') ? colors.error.bg : colors.warning.bg};padding:2px 6px;border-radius:4px;">${i.priority}</span>
+                                <span style="font-size:14px;color:${colors.text};line-height:1.5;">${i.title}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+            ` : `
+                <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;padding:24px;margin-top:24px;text-align:center;">
+                    <span style="font-size:24px;display:block;margin-bottom:8px;">✨</span>
+                    <h3 style="margin:0 0 4px;color:${colors.text};font-size:16px;font-weight:600;">All Systems Normal</h3>
+                    <p style="margin:0;color:${colors.textMuted};font-size:14px;">No critical issues detected during analysis.</p>
+                </div>
+            `}
+
+            ${analysis.improvements?.length ? `
+                <div style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;padding:24px;margin-top:24px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                    <h3 style="margin:0 0 16px;color:${colors.text};font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                        💡 Strategic Suggestions
+                    </h3>
+                    <div style="display:flex;flex-direction:column;gap:16px;">
+                        ${analysis.improvements.map(i => `
+                            <div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                                    <span style="font-size:14px;font-weight:500;color:${colors.text};">${i.title}</span>
+                                    <span style="font-size:11px;font-weight:600;color:${colors.brand.text};background:${colors.brand.bg};padding:2px 6px;border-radius:4px;">${i.impact} impact</span>
+                                </div>
+                                <div style="font-size:13px;color:${colors.textMuted};line-height:1.5;">${i.description}</div>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+            ` : ""}
+
+            <!-- Footer -->
+            <div style="text-align:center;margin-top:40px;padding-top:24px;border-top:1px solid ${colors.border};">
+                <p style="margin:0;font-size:12px;color:${colors.textMuted};">Generated autonomously by Codex 5.3 Brain Monitor</p>
+                <p style="margin:4px 0 0;font-size:12px;color:${colors.border};">Workers United Platform</p>
+            </div>
+
+        </div>
     </div>`;
 }
