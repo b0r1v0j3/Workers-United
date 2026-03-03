@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
@@ -22,6 +22,15 @@ export function SignupForm({ userType }: SignupFormProps) {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const router = useRouter();
+
+    // Track signup page views for conversion analytics
+    useEffect(() => {
+        fetch("/api/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "signup_page_view", category: "funnel", details: { userType } }),
+        }).catch(() => { }); // fire-and-forget
+    }, [userType]);
 
     // Password strength checks
     const passwordChecks = {
@@ -275,10 +284,10 @@ export function SignupForm({ userType }: SignupFormProps) {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all ${emailValidation.error
-                                ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
-                                : emailValidation.suggestion
-                                    ? 'border-amber-300 focus:ring-amber-100 focus:border-amber-400'
-                                    : 'border-[#e2e8f0] focus:ring-blue-100 focus:border-[#2f6fed]'
+                            ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
+                            : emailValidation.suggestion
+                                ? 'border-amber-300 focus:ring-amber-100 focus:border-amber-400'
+                                : 'border-[#e2e8f0] focus:ring-blue-100 focus:border-[#2f6fed]'
                             }`}
                         placeholder={userType === "employer" ? "hr@company.com" : "you@example.com"}
                         required
