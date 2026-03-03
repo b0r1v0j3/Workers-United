@@ -189,47 +189,63 @@ export async function POST(request: NextRequest) {
                     { phone: normalizedPhone, message_type: messageType, content_preview: content.substring(0, 100), is_registered: !!candidate }
                 );
 
-                // ─── Forward enriched data to n8n AI ────────────────────
+                // ─── Direct OpenAI AI Brain ──────────────────────────────
                 let aiResponse: string | null = null;
+                const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-                if (N8N_WEBHOOK_URL) {
-                    // Brain Fix #9/#15: n8n retry with backoff (2 attempts)
-                    const MAX_N8N_RETRIES = 2;
-                    // Build conversation history string for the AI
-                    const historyMessages = await (async () => {
-                        try {
-                            const { data } = await supabase
-                                .from("whatsapp_messages")
-                                .select("direction, content, created_at")
-                                .eq("phone_number", normalizedPhone)
-                                .order("created_at", { ascending: false })
-                                .limit(10);
-                            return (data || []).reverse();
-                        } catch { return []; }
-                    })();
+                if (OPENAI_API_KEY) {
+                    try {
+                        // 1. Fetch conversation history (last 10 messages)
+                        const historyMessages = await (async () => {
+                            try {
+                                const { data } = await supabase
+                                    .from("whatsapp_messages")
+                                    .select("direction, content, created_at")
+                                    .eq("phone_number", normalizedPhone)
+                                    .order("created_at", { ascending: false })
+                                    .limit(10);
+                                return (data || []).reverse();
+                            } catch { return []; }
+                        })();
 
-                    const conversationHistoryText = historyMessages.length > 0
-                        ? historyMessages.map(m => `${m.direction === "inbound" ? "User" : "You"}: ${m.content}`).join("\n")
-                        : "(No previous messages — this is a new conversation)";
+                        const conversationHistoryText = historyMessages.length > 0
+                            ? historyMessages.map(m => `${m.direction === "inbound" ? "User" : "You"}: ${m.content}`).join("\n")
+                            : "(No previous messages — this is a new conversation)";
 
-                    // Get platform config for business facts
-                    const platformConfig = await (async () => {
-                        try {
-                            const { getPlatformConfig } = await import("@/lib/platform-config");
-                            return await getPlatformConfig();
-                        } catch { return null; }
-                    })();
+                        // 2. Fetch brain memory (learned facts)
+                        const brainMemory = await (async () => {
+                            try {
+                                const { data } = await supabase
+                                    .from("brain_memory")
+                                    .select("category, content, confidence")
+                                    .order("confidence", { ascending: false })
+                                    .limit(20);
+                                return data || [];
+                            } catch { return []; }
+                        })();
 
-                    const userName = profile?.full_name?.split(" ")[0] || "there";
+                        const brainMemoryText = brainMemory.length > 0
+                            ? brainMemory.map(m => `- [${m.category}] ${m.content} (confidence: ${m.confidence})`).join("\n")
+                            : "(No learned facts yet)";
 
-                    // Build the FULL system prompt — n8n just relays this to OpenAI
-                    const systemPrompt = `You are the official WhatsApp AI assistant for Workers United — a legal international hiring and visa support company that helps workers from Serbia, Bosnia, India, Philippines and other countries find jobs in Europe (Germany, Austria, Czech Republic, etc.).
+                        // 3. Fetch platform config for business facts
+                        const platformConfig = await (async () => {
+                            try {
+                                const { getPlatformConfig } = await import("@/lib/platform-config");
+                                return await getPlatformConfig();
+                            } catch { return null; }
+                        })();
+
+                        const userName = profile?.full_name?.split(" ")[0] || "there";
+
+                        // 4. Build system prompt with ALL context
+                        const systemPrompt = `You are the official WhatsApp AI assistant for Workers United — a legal international hiring and visa support company that helps workers from Serbia, Bosnia, India, Philippines and other countries find jobs in Europe (Germany, Austria, Czech Republic, etc.).
 
 COMPANY INFO:
 - Website: workers-united.eu
 - Services: job placement, visa processing, document verification, employer matching
 - Contact email: contact@workersunited.eu
-${platformConfig ? `- Platform config: ${JSON.stringify(platformConfig)}` : ""}
+${platformConfig ? `- Business config: ${JSON.stringify(platformConfig)}` : ""}
 
 YOUR PERSONALITY:
 - Professional but warm and friendly
@@ -242,96 +258,52 @@ USER INFO:
 - Phone: ${normalizedPhone}
 - Name: ${userName}
 - Registered: ${candidate ? "Yes" : "No"}
-${candidate ? `- Status: ${candidate.status}
-- Email: ${profile?.email || "N/A"}
-- Registered at: ${profile?.created_at || "N/A"}` : "- Not yet registered on the platform"}
+${candidate ? `- Status: ${candidate.status}\n- Email: ${profile?.email || "N/A"}\n- Registered at: ${profile?.created_at || "N/A"}` : "- Not yet registered on the platform"}
 
-CONVERSATION HISTORY (previous messages in this chat):
+CONVERSATION HISTORY (previous messages):
 ${conversationHistoryText}
 
+BRAIN MEMORY (facts learned from past conversations):
+${brainMemoryText}
+
 RULES:
-1. Use the conversation history above to understand context — do NOT repeat yourself or ask questions the user already answered
-2. If you don't know something specific, say so honestly and suggest contacting support
-3. Never make up information about prices, timelines, or legal requirements
-4. If this is a new user (not registered), gently encourage them to visit workers-united.eu to register
+1. Use conversation history — do NOT repeat yourself or ask questions already answered
+2. If you don't know something, say so honestly and suggest contacting support
+3. Never make up prices, timelines, or legal info
+4. If user is not registered, gently encourage them to visit workers-united.eu
 
 LEARNING RULES:
-When you discover a genuinely new and useful fact during conversation, add it at the END of your response in this exact format:
+When you discover a genuinely new and useful fact, add at the END of your response:
 [LEARN: category | fact]
 Categories: pricing, process, documents, eligibility, faq, company_info, legal
-Only learn from VERIFIED information (e.g., admin corrections, confirmed business facts). Do NOT learn from greetings or small talk. The tags are automatically removed before the user sees your message.`;
+Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-removed before the user sees your message.`;
 
-                    const n8nPayload = {
-                        phoneNumber: normalizedPhone,
-                        messageText: content,
-                        messageType,
-                        wamid,
-                        isRegistered: !!candidate,
-                        userProfile: candidate ? {
-                            name: profile?.full_name || "Unknown",
-                            email: profile?.email || null,
-                            registeredAt: profile?.created_at || null,
-                            status: candidate.status,
-                        } : null,
-                        conversationHistory: conversationHistoryText,
-                        platformConfig: platformConfig ? JSON.stringify(platformConfig) : null,
-                        // THE KEY: full system prompt built in code, so n8n just uses it
-                        systemPrompt,
-                    };
+                        // 5. Call OpenAI directly
+                        const { default: OpenAI } = await import("openai");
+                        const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
-                    for (let attempt = 1; attempt <= MAX_N8N_RETRIES; attempt++) {
-                        try {
-                            const controller = new AbortController();
-                            const timeout = setTimeout(() => controller.abort(), 55000);
+                        const completion = await openai.chat.completions.create({
+                            model: "gpt-4o",
+                            messages: [
+                                { role: "system", content: systemPrompt },
+                                { role: "user", content: content },
+                            ],
+                            max_tokens: 500,
+                            temperature: 0.7,
+                        });
 
-                            const n8nRes = await fetch(N8N_WEBHOOK_URL, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                signal: controller.signal,
-                                body: JSON.stringify(n8nPayload),
-                            });
-                            clearTimeout(timeout);
+                        aiResponse = completion.choices[0]?.message?.content || null;
+                        console.log("[WhatsApp] 🧠 GPT-4o response:", aiResponse?.substring(0, 200));
 
-                            if (n8nRes.ok) {
-                                const n8nRaw = await n8nRes.text();
-                                console.log(`[WhatsApp] n8n attempt ${attempt} raw:`, n8nRaw.substring(0, 500));
-
-                                try {
-                                    const n8nData = JSON.parse(n8nRaw);
-                                    const item = Array.isArray(n8nData) ? n8nData[0] : n8nData;
-                                    const inner = item?.json || item;
-
-                                    aiResponse = inner?.output
-                                        || inner?.text
-                                        || inner?.message
-                                        || inner?.response
-                                        || (typeof inner === "string" ? inner : null)
-                                        || (typeof n8nRaw === "string" && !n8nRaw.startsWith("{") && !n8nRaw.startsWith("[") ? n8nRaw : null);
-                                } catch {
-                                    if (n8nRaw && n8nRaw.length > 0) aiResponse = n8nRaw;
-                                }
-                                if (aiResponse) break; // Success — stop retrying
-                            }
-
-                            // n8n returned error — retry if we have attempts left
-                            if (attempt < MAX_N8N_RETRIES) {
-                                console.warn(`[WhatsApp] n8n attempt ${attempt} failed (status ${n8nRes.status}), retrying in 2s...`);
-                                await new Promise(r => setTimeout(r, 2000));
-                            }
-                        } catch (n8nError) {
-                            console.error(`[WhatsApp] n8n attempt ${attempt} error:`, n8nError);
-                            if (attempt >= MAX_N8N_RETRIES) {
-                                await logServerActivity(
-                                    candidate?.profile_id || "anonymous",
-                                    "whatsapp_n8n_failed",
-                                    "error",
-                                    { phone: normalizedPhone, error: n8nError instanceof Error ? n8nError.message : "timeout", attempts: attempt },
-                                    "error"
-                                );
-                            } else {
-                                await new Promise(r => setTimeout(r, 2000));
-                            }
-                        }
+                    } catch (aiError) {
+                        console.error("[WhatsApp] OpenAI error:", aiError);
+                        await logServerActivity(
+                            candidate?.profile_id || "anonymous",
+                            "whatsapp_openai_failed",
+                            "error",
+                            { phone: normalizedPhone, error: aiError instanceof Error ? aiError.message : "unknown" },
+                            "error"
+                        );
                     }
                 }
 

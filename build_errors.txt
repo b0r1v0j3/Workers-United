@@ -1,0 +1,600 @@
+
+> workers-united-app@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+
+ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 25 errors:
+./src/lib/gemini.ts:1:1
+Module not found: Can't resolve '@google/generative-ai'
+> 1 | import { GoogleGenerativeAI } from "@google/generative-ai";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | if (!process.env.GEMINI_API_KEY) {
+  4 |     console.warn("Missing GEMINI_API_KEY - AI features will not work");
+
+
+
+Import trace:
+  App Route:
+    ./src/lib/gemini.ts
+    ./src/app/api/documents/verify/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/pdf-generator.ts:2:1
+Module not found: Can't resolve '@react-pdf/renderer'
+  1 | import React from "react";
+> 2 | import { renderToBuffer } from "@react-pdf/renderer";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+  4 |
+  5 | // Re-export styles registration (must be imported so fonts are registered)
+
+
+
+Import trace:
+  App Route:
+    ./src/lib/pdf-generator.ts
+    ./src/app/api/contracts/generate/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/pdf-templates/IzjavaOSaglasnosti.tsx:2:1
+Module not found: Can't resolve '@react-pdf/renderer'
+  1 | import React from "react";
+> 2 | import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { colors } from "./styles";
+  4 |
+  5 | // ΓöÇΓöÇΓöÇ IZJAVA O SAGLASNOSTI (Statement of Consent) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+
+
+Import trace:
+  App Route:
+    ./src/lib/pdf-templates/IzjavaOSaglasnosti.tsx
+    ./src/lib/pdf-generator.ts
+    ./src/app/api/contracts/generate/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/pdf-templates/Ovlascenje.tsx:2:1
+Module not found: Can't resolve '@react-pdf/renderer'
+  1 | import React from "react";
+> 2 | import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { colors } from "./styles";
+  4 |
+  5 | // ΓöÇΓöÇΓöÇ OVLA┼á─åENJE (Power of Attorney / Authorization) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+
+
+Import trace:
+  App Route:
+    ./src/lib/pdf-templates/Ovlascenje.tsx
+    ./src/lib/pdf-generator.ts
+    ./src/app/api/contracts/generate/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/pdf-templates/PozivnoPismo.tsx:2:1
+Module not found: Can't resolve '@react-pdf/renderer'
+  1 | import React from "react";
+> 2 | import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { colors } from "./styles";
+  4 |
+  5 | // ΓöÇΓöÇΓöÇ ╨ƒ╨₧╨ù╨ÿ╨Æ╨¥╨₧ ╨ƒ╨ÿ╨í╨£╨₧ (Invitation Letter) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+
+
+Import trace:
+  App Route:
+    ./src/lib/pdf-templates/PozivnoPismo.tsx
+    ./src/lib/pdf-generator.ts
+    ./src/app/api/contracts/generate/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/pdf-templates/UgovorORadu.tsx:2:1
+Module not found: Can't resolve '@react-pdf/renderer'
+  1 | import React from "react";
+> 2 | import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { colors } from "./styles";
+  4 |
+  5 | // ΓöÇΓöÇΓöÇ UGOVOR O RADU (Employment Contract) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+
+
+Import trace:
+  App Route:
+    ./src/lib/pdf-templates/UgovorORadu.tsx
+    ./src/lib/pdf-generator.ts
+    ./src/app/api/contracts/generate/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/pdf-templates/styles.ts:1:1
+Module not found: Can't resolve '@react-pdf/renderer'
+> 1 | import { Font, StyleSheet } from "@react-pdf/renderer";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import path from "path";
+  3 |
+  4 | // ΓöÇΓöÇΓöÇ Font Registration ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+
+
+Import trace:
+  App Route:
+    ./src/lib/pdf-templates/styles.ts
+    ./src/lib/pdf-generator.ts
+    ./src/app/api/contracts/generate/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/profile/worker/DashboardClient.tsx:8:1
+Module not found: Can't resolve 'canvas-confetti'
+   6 | import DocumentWizard from "@/components/DocumentWizard";
+   7 | import UnifiedNavbar from "@/components/UnifiedNavbar";
+>  8 | import confetti from "canvas-confetti";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 | import { toast } from "sonner";
+  10 | import {
+  11 |     FileText,
+
+
+
+Import trace:
+  Server Component:
+    ./src/app/profile/worker/DashboardClient.tsx
+    ./src/app/profile/worker/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/profile/worker/queue/QueueClientEffects.tsx:6:1
+Module not found: Can't resolve 'canvas-confetti'
+  4 | import { useSearchParams } from "next/navigation";
+  5 | import { useEffect } from "react";
+> 6 | import confetti from "canvas-confetti";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | import { toast } from "sonner";
+  8 |
+  9 | export default function QueueClientEffects() {
+
+
+
+Import trace:
+  Server Component:
+    ./src/app/profile/worker/queue/QueueClientEffects.tsx
+    ./src/app/profile/worker/queue/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/utils.ts:1:1
+Module not found: Can't resolve 'clsx'
+> 1 | import { clsx, type ClassValue } from "clsx"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import { twMerge } from "tailwind-merge"
+  3 |
+  4 | export function cn(...inputs: ClassValue[]) {
+
+
+
+Import traces:
+  Server Component:
+    ./src/lib/utils.ts
+    ./src/components/ui/skeleton.tsx
+    ./src/app/admin/loading.tsx
+
+  Client Component Browser:
+    ./src/lib/utils.ts [Client Component Browser]
+    ./src/components/ui/skeleton.tsx [Client Component Browser]
+    ./src/app/profile/worker/edit/ProfileClient.tsx [Client Component Browser]
+    ./src/app/profile/worker/edit/ProfileClient.tsx [Server Component]
+    ./src/app/profile/worker/edit/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/lib/utils.ts [Client Component SSR]
+    ./src/components/ui/skeleton.tsx [Client Component SSR]
+    ./src/app/profile/worker/edit/ProfileClient.tsx [Client Component SSR]
+    ./src/app/profile/worker/edit/ProfileClient.tsx [Server Component]
+    ./src/app/profile/worker/edit/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/api/contracts/download-all/route.ts:5:1
+Module not found: Can't resolve 'jszip'
+  3 | import { isGodModeUser } from "@/lib/godmode";
+  4 | import { createAdminClient } from "@/lib/supabase/admin";
+> 5 | import JSZip from "jszip";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 |
+  7 | export const dynamic = "force-dynamic";
+  8 | export const maxDuration = 120;
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/mailer.ts:1:1
+Module not found: Can't resolve 'nodemailer'
+> 1 | import nodemailer from "nodemailer";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | const transporter = nodemailer.createTransport({
+  4 |     host: "smtp.gmail.com",
+
+
+
+Import traces:
+  App Route:
+    ./src/lib/mailer.ts
+    ./src/app/api/cron/brain-monitor/route.ts
+
+  Server Component:
+    ./src/lib/mailer.ts
+    ./src/lib/email-templates.ts
+    ./src/app/admin/announcements/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/pdf-generator.ts:3:1
+Module not found: Can't resolve 'pdf-lib'
+  1 | import React from "react";
+  2 | import { renderToBuffer } from "@react-pdf/renderer";
+> 3 | import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  4 |
+  5 | // Re-export styles registration (must be imported so fonts are registered)
+  6 | import "./pdf-templates/styles";
+
+
+
+Import trace:
+  App Route:
+    ./src/lib/pdf-generator.ts
+    ./src/app/api/contracts/generate/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/admin/AnalyticsCharts.tsx:4:1
+Module not found: Can't resolve 'recharts'
+  2 |
+  3 | import { useMemo } from "react";
+> 4 | import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | interface TimeSeriesData {
+  7 |     date: string;
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/components/admin/AnalyticsCharts.tsx [Client Component Browser]
+    ./src/app/admin/analytics/page.tsx [Client Component Browser]
+    ./src/app/admin/analytics/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/admin/AnalyticsCharts.tsx [Client Component SSR]
+    ./src/app/admin/analytics/page.tsx [Client Component SSR]
+    ./src/app/admin/analytics/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/admin/jobs/JobsMatchClient.tsx:7:1
+Module not found: Can't resolve 'sonner'
+   5 | import Link from "next/link";
+   6 | import { createBrowserClient } from "@supabase/ssr";
+>  7 | import { toast } from "sonner";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   8 |
+   9 | export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: any[] }) {
+  10 |     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+
+
+Import trace:
+  Server Component:
+    ./src/app/admin/jobs/JobsMatchClient.tsx
+    ./src/app/admin/jobs/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/auth/select-role/page.tsx:8:1
+Module not found: Can't resolve 'sonner'
+   6 | import Image from "next/image";
+   7 | import { Briefcase, HardHat } from "lucide-react";
+>  8 | import { toast } from "sonner";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | export default function SelectRolePage() {
+  11 |     const [loading, setLoading] = useState<string | null>(null);
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/auth/select-role/page.tsx [Client Component Browser]
+    ./src/app/auth/select-role/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/auth/select-role/page.tsx [Client Component SSR]
+    ./src/app/auth/select-role/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/login/LoginClient.tsx:9:1
+Module not found: Can't resolve 'sonner'
+   7 | import Link from "next/link";
+   8 | import Image from "next/image";
+>  9 | import { toast } from "sonner";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  10 |
+  11 | export default function LoginPage() {
+  12 |     const supabase = createClient();
+
+
+
+Import trace:
+  Server Component:
+    ./src/app/login/LoginClient.tsx
+    ./src/app/login/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/profile/worker/DashboardClient.tsx:9:1
+Module not found: Can't resolve 'sonner'
+   7 | import UnifiedNavbar from "@/components/UnifiedNavbar";
+   8 | import confetti from "canvas-confetti";
+>  9 | import { toast } from "sonner";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  10 | import {
+  11 |     FileText,
+  12 |     Briefcase,
+
+
+
+Import trace:
+  Server Component:
+    ./src/app/profile/worker/DashboardClient.tsx
+    ./src/app/profile/worker/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/profile/worker/edit/ProfileClient.tsx:6:1
+Module not found: Can't resolve 'sonner'
+  4 | import Link from "next/link";
+  5 | import { createClient } from "@/lib/supabase/client";
+> 6 | import { toast } from "sonner";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | import { Skeleton } from "@/components/ui/skeleton";
+  8 | import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
+  9 | import { logActivity, logError } from "@/lib/activityLogger";
+
+
+
+Import trace:
+  Server Component:
+    ./src/app/profile/worker/edit/ProfileClient.tsx
+    ./src/app/profile/worker/edit/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/profile/worker/queue/QueueClientEffects.tsx:7:1
+Module not found: Can't resolve 'sonner'
+   5 | import { useEffect } from "react";
+   6 | import confetti from "canvas-confetti";
+>  7 | import { toast } from "sonner";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   8 |
+   9 | export default function QueueClientEffects() {
+  10 |     const searchParams = useSearchParams();
+
+
+
+Import trace:
+  Server Component:
+    ./src/app/profile/worker/queue/QueueClientEffects.tsx
+    ./src/app/profile/worker/queue/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/signup/signup-form.tsx:7:1
+Module not found: Can't resolve 'sonner'
+   5 | import { createClient } from "@/lib/supabase/client";
+   6 | import Image from "next/image";
+>  7 | import { toast } from "sonner";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   8 |
+   9 | interface SignupFormProps {
+  10 |     userType: "worker" | "employer";
+
+
+
+Import trace:
+  Server Component:
+    ./src/app/signup/signup-form.tsx
+    ./src/app/signup/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/DocumentWizard.tsx:6:1
+Module not found: Can't resolve 'sonner'
+  4 | import { createClient } from "@/lib/supabase/client";
+  5 | import { processBiometricPhoto, fixImageOrientation, stitchImages, compressImage } from "@/lib/imageUtils";
+> 6 | import { toast } from "sonner";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | import { MAX_FILE_SIZE_MB, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
+  8 | import { FileText, BookUser, Camera, GraduationCap } from "lucide-react";
+  9 | import { logActivity, logError } from "@/lib/activityLogger";
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DocumentWizard.tsx [Client Component Browser]
+    ./src/app/profile/worker/DashboardClient.tsx [Client Component Browser]
+    ./src/app/profile/worker/DashboardClient.tsx [Server Component]
+    ./src/app/profile/worker/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DocumentWizard.tsx [Client Component SSR]
+    ./src/app/profile/worker/DashboardClient.tsx [Client Component SSR]
+    ./src/app/profile/worker/DashboardClient.tsx [Server Component]
+    ./src/app/profile/worker/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/ToastProvider.tsx:3:1
+Module not found: Can't resolve 'sonner'
+  1 | "use client";
+  2 |
+> 3 | import { Toaster } from "sonner";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  4 |
+  5 | export default function ToastProvider() {
+  6 |     return (
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/ToastProvider.tsx
+    ./src/app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/components/admin/PlatformConfigEditor.tsx:4:1
+Module not found: Can't resolve 'sonner'
+  2 |
+  3 | import { useEffect, useState } from "react";
+> 4 | import { toast } from "sonner";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { Save, RefreshCw, Database } from "lucide-react";
+  6 |
+  7 | interface ConfigItem {
+
+
+
+Import trace:
+  Server Component:
+    ./src/components/admin/PlatformConfigEditor.tsx
+    ./src/app/admin/settings/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/lib/utils.ts:2:1
+Module not found: Can't resolve 'tailwind-merge'
+  1 | import { clsx, type ClassValue } from "clsx"
+> 2 | import { twMerge } from "tailwind-merge"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 |
+  4 | export function cn(...inputs: ClassValue[]) {
+  5 |     return twMerge(clsx(inputs))
+
+
+
+Import traces:
+  Server Component:
+    ./src/lib/utils.ts
+    ./src/components/ui/skeleton.tsx
+    ./src/app/admin/loading.tsx
+
+  Client Component Browser:
+    ./src/lib/utils.ts [Client Component Browser]
+    ./src/components/ui/skeleton.tsx [Client Component Browser]
+    ./src/app/profile/worker/edit/ProfileClient.tsx [Client Component Browser]
+    ./src/app/profile/worker/edit/ProfileClient.tsx [Server Component]
+    ./src/app/profile/worker/edit/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/lib/utils.ts [Client Component SSR]
+    ./src/components/ui/skeleton.tsx [Client Component SSR]
+    ./src/app/profile/worker/edit/ProfileClient.tsx [Client Component SSR]
+    ./src/app/profile/worker/edit/ProfileClient.tsx [Server Component]
+    ./src/app/profile/worker/edit/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./src/lib/gemini.ts:1:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/pdf-generator.ts:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/pdf-templates/IzjavaOSaglasnosti.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/pdf-templates/Ovlascenje.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/pdf-templates/PozivnoPismo.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/pdf-templates/UgovorORadu.tsx:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/pdf-templates/styles.ts:1:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/profile/worker/DashboardClient.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/profile/worker/queue/QueueClientEffects.tsx:6:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/utils.ts:1:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/api/contracts/download-all/route.ts:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/mailer.ts:1:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/pdf-generator.ts:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/admin/AnalyticsCharts.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/admin/jobs/JobsMatchClient.tsx:7:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/auth/select-role/page.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/login/LoginClient.tsx:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/profile/worker/DashboardClient.tsx:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/profile/worker/edit/ProfileClient.tsx:6:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/profile/worker/queue/QueueClientEffects.tsx:7:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/signup/signup-form.tsx:7:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/DocumentWizard.tsx:6:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/ToastProvider.tsx:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/components/admin/PlatformConfigEditor.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/lib/utils.ts:2:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
