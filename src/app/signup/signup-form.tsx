@@ -33,7 +33,59 @@ export function SignupForm({ userType }: SignupFormProps) {
     };
     const allChecksPassed = Object.values(passwordChecks).every(Boolean);
     const passwordsMatch = password === confirmPassword;
-    const canSubmit = allChecksPassed && passwordsMatch && gdprConsent && !loading;
+
+    // Email validation — catch typos in common domains
+    const COMMON_DOMAINS: Record<string, string> = {
+        "gmai.com": "gmail.com", "gmial.com": "gmail.com", "gmaill.com": "gmail.com",
+        "gamil.com": "gmail.com", "gnail.com": "gmail.com", "gmal.com": "gmail.com",
+        "gmail.co": "gmail.com", "gmail.con": "gmail.com", "gmail.om": "gmail.com",
+        "yahoo.coms": "yahoo.com", "yahooo.com": "yahoo.com", "yaho.com": "yahoo.com",
+        "yahoo.co": "yahoo.com", "yahoo.con": "yahoo.com",
+        "hotmai.com": "hotmail.com", "hotmal.com": "hotmail.com", "hotmial.com": "hotmail.com",
+        "hotmail.con": "hotmail.com", "hotmail.co": "hotmail.com",
+        "outloo.com": "outlook.com", "outlok.com": "outlook.com", "outllok.com": "outlook.com",
+        "outlook.con": "outlook.com",
+        "1yahoo.com": "yahoo.com", "1gmail.com": "gmail.com", "1hotmail.com": "hotmail.com",
+    };
+
+    const getEmailError = (): { error: string | null; suggestion: string | null } => {
+        if (!email) return { error: null, suggestion: null };
+        const trimmed = email.trim().toLowerCase();
+        // Basic format check
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+            return { error: "Please enter a valid email address", suggestion: null };
+        }
+        // Trailing dot (e.g., user@gmail.com.)
+        if (trimmed.endsWith(".")) {
+            return { error: "Email cannot end with a dot", suggestion: trimmed.slice(0, -1) };
+        }
+        // Double dots (e.g., user@gmail..com)
+        if (trimmed.includes("..")) {
+            return { error: "Email contains double dots", suggestion: null };
+        }
+        const domain = trimmed.split("@")[1];
+        if (!domain || domain.length < 3) {
+            return { error: "Invalid email domain", suggestion: null };
+        }
+        // TLD must be at least 2 chars (no .c, .o, etc.)
+        const tld = domain.split(".").pop() || "";
+        if (tld.length < 2) {
+            return { error: "Invalid domain extension", suggestion: null };
+        }
+        // Check for common domain typos
+        if (COMMON_DOMAINS[domain]) {
+            const corrected = `${trimmed.split("@")[0]}@${COMMON_DOMAINS[domain]}`;
+            return {
+                error: null,
+                suggestion: corrected,
+            };
+        }
+        return { error: null, suggestion: null };
+    };
+
+    const emailValidation = getEmailError();
+    const emailIsValid = !emailValidation.error && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    const canSubmit = allChecksPassed && passwordsMatch && gdprConsent && emailIsValid && !loading;
 
     const handleGoogleSignup = async () => {
         setGoogleLoading(true);
@@ -222,10 +274,27 @@ export function SignupForm({ userType }: SignupFormProps) {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
+                        className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all ${emailValidation.error
+                                ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
+                                : emailValidation.suggestion
+                                    ? 'border-amber-300 focus:ring-amber-100 focus:border-amber-400'
+                                    : 'border-[#e2e8f0] focus:ring-blue-100 focus:border-[#2f6fed]'
+                            }`}
                         placeholder={userType === "employer" ? "hr@company.com" : "you@example.com"}
                         required
                     />
+                    {emailValidation.error && email && (
+                        <p className="text-xs text-red-500 ml-1 mt-1">{emailValidation.error}</p>
+                    )}
+                    {emailValidation.suggestion && !emailValidation.error && (
+                        <button
+                            type="button"
+                            onClick={() => setEmail(emailValidation.suggestion!)}
+                            className="text-xs text-amber-600 hover:text-amber-800 ml-1 mt-1 underline underline-offset-2"
+                        >
+                            Did you mean {emailValidation.suggestion}?
+                        </button>
+                    )}
                 </div>
 
                 <div className="space-y-2">
