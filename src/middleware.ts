@@ -11,6 +11,7 @@ const CSRF_EXEMPT_PATHS = [
     "/api/cron/",
     "/api/brain/",
     "/api/health",
+    "/api/admin/fix-unconfirmed",
 ];
 
 function isCsrfExempt(pathname: string): boolean {
