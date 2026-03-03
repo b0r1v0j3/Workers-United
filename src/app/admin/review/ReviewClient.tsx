@@ -34,7 +34,7 @@ export default function ReviewClient() {
         const { data } = await supabase
             .from("candidate_documents")
             .select("user_id, document_type, status, reject_reason, storage_path, updated_at")
-            .in("status", ["manual_review", "rejected"])
+            .eq("status", "manual_review")
             .order("updated_at", { ascending: false });
 
         if (data && data.length > 0) {
