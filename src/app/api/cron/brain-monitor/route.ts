@@ -144,17 +144,55 @@ export async function GET(request: Request) {
         });
         results.reportSaved = true;
 
-        // ─── Step 6: Log Brain Actions ───────────────────────────────────
+        // ─── Step 6: Execute Brain Actions (auto-healing) ─────────────────
         if (analysis.actions && analysis.actions.length > 0) {
             for (const action of analysis.actions) {
+                let actionStatus = "logged";
+
+                // Auto-heal: retry failed emails
+                if (action.type === "retry_email" && action.params?.email_id) {
+                    try {
+                        await supabase.from("email_queue")
+                            .update({ status: "pending", error_message: null })
+                            .eq("id", action.params.email_id);
+                        actionStatus = "executed";
+                    } catch { actionStatus = "failed"; }
+                }
+
+                // Auto-heal: clean stale data
+                if (action.type === "clean_stale_data" && action.params?.table) {
+                    actionStatus = "logged"; // Log only for safety
+                }
+
                 await supabase.from("brain_actions").insert({
                     action_type: action.type,
                     description: action.description,
                     params: action.params || {},
-                    status: "logged",
+                    status: actionStatus,
                     source: "vercel-cron",
                 });
             }
+        }
+
+        // ─── Step 7: Write learned facts to brain_memory ─────────────────
+        if (analysis.brainFacts && analysis.brainFacts.length > 0) {
+            for (const fact of analysis.brainFacts) {
+                // Check if similar fact already exists
+                const { data: existing } = await supabase
+                    .from("brain_memory")
+                    .select("id")
+                    .eq("content", fact.content)
+                    .limit(1);
+
+                if (!existing || existing.length === 0) {
+                    await supabase.from("brain_memory").insert({
+                        category: fact.category,
+                        content: fact.content,
+                        confidence: 0.95, // System-analyzed = high confidence
+                    });
+                }
+            }
+            console.log(`[Brain] 🧠 Codex learned ${analysis.brainFacts.length} new facts`);
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -203,6 +241,8 @@ interface BrainAnalysis {
     issues: BrainIssue[];
     improvements: { title: string; description: string; impact: string; effort: string }[];
     actions: BrainAction[];
+    brainFacts: { category: string; content: string }[];
+    selfImprovements: string[];
     metrics: {
         totalWorkers: number;
         totalEmployers: number;
@@ -221,7 +261,7 @@ Platform context (from live database — ALWAYS use these exact values):
 ${businessFacts}
 - Flow: Signup → Profile → Documents (passport, diploma, photo) → AI Verification → Admin Approval → Payment → Queue → Job Match
 - AI: Gemini 3.0 Flash for document verification (with fallback chain)
-- WhatsApp: n8n + GPT-4o chatbot
+- WhatsApp: Direct OpenAI GPT-4o chatbot with memory + self-learning (brain_memory table)
 - Email: Nodemailer + Google Workspace SMTP
 
 You run 5 OPERATIONS. Analyze each separately:
@@ -268,6 +308,13 @@ Rules:
 7. Do NOT create issues for problems listed in RECENTLY_RESOLVED — those are already fixed
 8. 0 admin approvals / 0 payments / 0 queued is EXPECTED for an early-stage platform — it is NOT a bug
 
+## Operation 6: 🧠 SELF-IMPROVEMENT
+- What capabilities are you MISSING that would make you more effective?
+- What data do you WISH you had access to?
+- What actions should you be able to EXECUTE (not just report)?
+- What facts should the WhatsApp bot know? Generate them as brainFacts.
+- Status: SUGGESTIONS
+
 Respond in JSON:
 {
   "summary": "2-3 sentence executive summary",
@@ -283,7 +330,9 @@ Respond in JSON:
   ],
   "issues": [{ "title": "...", "body": "...", "priority": "P0|P1|P2", "labels": ["bug"|"enhancement"|"critical"], "operation": "System Health|Funnel|Email|Code|Growth" }],
   "improvements": [{ "title": "...", "description": "...", "impact": "high|medium|low", "effort": "easy|medium|hard" }],
-  "actions": [{ "type": "retry_email|send_alert|log_observation", "description": "...", "params": {} }],
+  "actions": [{ "type": "retry_email|send_alert|clean_stale_data|log_observation", "description": "...", "params": {} }],
+  "brainFacts": [{ "category": "pricing|process|documents|eligibility|faq|system_stats", "content": "Verified fact for WhatsApp bot to use" }],
+  "selfImprovements": ["Capability I wish I had", "Data I need access to"],
   "metrics": { "totalWorkers": N, "totalEmployers": N, "documentsVerified": N, "emailDeliveryRate": "X%", "funnelProgression": "description" }
 }`;
 }
