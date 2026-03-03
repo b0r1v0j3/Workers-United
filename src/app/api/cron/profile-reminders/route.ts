@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     try {
         const supabase = createAdminClient();
 
-        const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
         // Get ALL auth users with pagination (listUsers defaults to 50/page)
         const allUsers = await getAllAuthUsers(supabase);
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
         const recentReminders = new Set<string>(); // emails sent <24h ago
         const warningSubjects = new Set<string>();  // "email|subject" combos already sent
         for (const e of allEmails || []) {
-            if (e.email_type === "profile_reminder" && e.created_at > threeDaysAgo) {
+            if (e.email_type === "profile_reminder" && e.created_at > oneDayAgo) {
                 recentReminders.add(e.recipient_email);
             }
             if (e.email_type === "profile_warning") {
