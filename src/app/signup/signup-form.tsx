@@ -83,6 +83,7 @@ export function SignupForm({ userType }: SignupFormProps) {
                 email,
                 password,
                 options: {
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
                     data: {
                         full_name: fullName,
                         company_name: userType === "employer" ? companyName : null,
