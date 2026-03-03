@@ -209,6 +209,22 @@ export async function POST(request: NextRequest) {
                             registeredAt: profile?.created_at || null,
                             status: candidate.status,
                         } : null,
+                        // Conversation history — last 10 messages for context
+                        conversationHistory: await (async () => {
+                            try {
+                                const { data } = await supabase
+                                    .from("whatsapp_messages")
+                                    .select("direction, content, created_at")
+                                    .eq("phone_number", normalizedPhone)
+                                    .order("created_at", { ascending: false })
+                                    .limit(10);
+                                return (data || []).reverse().map(m => ({
+                                    role: m.direction === "inbound" ? "user" : "assistant",
+                                    text: m.content,
+                                    time: m.created_at,
+                                }));
+                            } catch { return []; }
+                        })(),
                         // Business facts from DB — n8n AI uses these for accurate responses
                         platformConfig: await (async () => {
                             try {
