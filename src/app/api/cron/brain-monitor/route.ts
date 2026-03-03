@@ -433,12 +433,18 @@ Rules:
 - Status: SUGGESTIONS
 
 ## Operation 7: 🔐 AUTH HEALTH
-- Check authHealth data for unconfirmed email users (CRITICAL if >5, P0 issue)
-- Check for workers without profile or candidate records (they can't use the platform)
-- Check for users with missing user_type metadata
-- Check recentStuckSignups — users who registered but never progressed
-- If unconfirmed users exist >48h, use confirm_stuck_users action to auto-fix
-- If workers have no candidate record, use create_missing_records action to auto-fix
+- You MUST check authHealth data EVERY run. It contains unconfirmed emails, missing records, and stuck signups.
+- CRITICAL: If unconfirmed users exist, your #1 priority is finding the ROOT CAUSE:
+  - Is the signup emailRedirectTo URL correct? Check if callback route exists.
+  - Is the Supabase Site URL misconfigured?
+  - Are users entering invalid emails (typos like gmai.com, yahoo.coms)?
+  - Are confirmation links expiring before users click?
+  - Is there a code bug preventing session exchange?
+- CREATE A P0 ISSUE explaining the root cause and fix, with label "auth-health"
+- Auto-confirm (confirm_stuck_users) is a TEMPORARY band-aid — NEVER use it without ALSO creating an issue for the root cause
+- If workers have no candidate record, use create_missing_records to fix silently
+- Check for users with missing user_type metadata (they fall through the cracks)
+- Flag invalid email patterns (typos, disposable domains) — these users can never confirm
 - Status: OK / WARNING / CRITICAL
 
 Respond in JSON:
