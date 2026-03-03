@@ -10,7 +10,7 @@ import { logActivity, logError } from "@/lib/activityLogger";
 
 interface FileUpload {
     file: File | null;
-    status: "missing" | "uploaded" | "verifying" | "verified" | "rejected" | "error";
+    status: "missing" | "uploaded" | "verifying" | "verified" | "rejected" | "manual_review" | "error";
     message: string;
 }
 
@@ -52,6 +52,13 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                             status: 'verified',
                             message: '✓ Verified'
                         };
+                    } else if (doc.status === 'manual_review') {
+                        updates[doc.document_type] = {
+                            file: null,
+                            status: 'manual_review',
+                            message: 'Sent for admin review'
+                        };
+                        allVerified = false;
                     } else if (doc.status === 'uploaded' || doc.status === 'verifying') {
                         updates[doc.document_type] = {
                             file: null,
@@ -248,6 +255,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             case 'verified': return 'border-green-400 bg-green-50';
             case 'verifying': return 'border-blue-400 bg-blue-50';
             case 'uploaded': return 'border-blue-400 bg-blue-50';
+            case 'manual_review': return 'border-amber-400 bg-amber-50';
             case 'error':
             case 'rejected': return 'border-red-400 bg-red-50';
             default: return 'border-[#dde3ec] bg-white';
@@ -259,9 +267,28 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             case 'verified': return '✓';
             case 'verifying': return '⏳';
             case 'uploaded': return '📤';
+            case 'manual_review': return '👁';
             case 'error':
             case 'rejected': return '✗';
             default: return '';
+        }
+    }
+
+    async function requestManualReview(type: string) {
+        try {
+            const res = await fetch('/api/documents/request-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ docType: type }),
+            });
+            if (res.ok) {
+                toast.success('Sent for admin review! We\'ll notify you by email.');
+                updateStatus(type, 'manual_review' as FileUpload['status'], 'Sent for admin review');
+            } else {
+                toast.error('Could not request review. Please try again.');
+            }
+        } catch {
+            toast.error('Error requesting review.');
         }
     }
 
@@ -338,9 +365,23 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         </div>
                     </div>
                     <ProgressBar status={uploads.passport.status} />
+                    {uploads.passport.status === 'manual_review' && (
+                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-xs text-amber-700">👁 Sent for admin review — we&apos;ll email you when done</p>
+                        </div>
+                    )}
                     {(uploads.passport.status === 'rejected' || uploads.passport.status === 'error') && uploads.passport.message && (
                         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
                             <p className="text-xs text-red-700">{uploads.passport.message}</p>
+                            {uploads.passport.status === 'rejected' && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); requestManualReview('passport'); }}
+                                    className="mt-2 text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-amber-600 transition-colors"
+                                >
+                                    I sent the correct document — Request Review
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -394,9 +435,23 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         </div>
                     </div>
                     <ProgressBar status={uploads.biometric_photo.status} />
+                    {uploads.biometric_photo.status === 'manual_review' && (
+                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-xs text-amber-700">👁 Sent for admin review — we&apos;ll email you when done</p>
+                        </div>
+                    )}
                     {(uploads.biometric_photo.status === 'rejected' || uploads.biometric_photo.status === 'error') && uploads.biometric_photo.message && (
                         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
                             <p className="text-xs text-red-700">{uploads.biometric_photo.message}</p>
+                            {uploads.biometric_photo.status === 'rejected' && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); requestManualReview('biometric_photo'); }}
+                                    className="mt-2 text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-amber-600 transition-colors"
+                                >
+                                    I sent the correct document — Request Review
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -451,9 +506,23 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                         </div>
                     </div>
                     <ProgressBar status={uploads.diploma.status} />
+                    {uploads.diploma.status === 'manual_review' && (
+                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-xs text-amber-700">👁 Sent for admin review — we&apos;ll email you when done</p>
+                        </div>
+                    )}
                     {(uploads.diploma.status === 'rejected' || uploads.diploma.status === 'error') && uploads.diploma.message && (
                         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
                             <p className="text-xs text-red-700">{uploads.diploma.message}</p>
+                            {uploads.diploma.status === 'rejected' && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); requestManualReview('diploma'); }}
+                                    className="mt-2 text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-amber-600 transition-colors"
+                                >
+                                    I sent the correct document — Request Review
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

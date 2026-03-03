@@ -16,7 +16,8 @@ export type EmailType =
     | "profile_reminder"
     | "profile_warning"
     | "profile_deletion"
-    | "announcement_document_fix";
+    | "announcement_document_fix"
+    | "document_review_result";
 
 interface EmailTemplate {
     subject: string;
@@ -54,6 +55,10 @@ export interface TemplateData {
     todoList?: string;
     daysLeft?: number;
     isEmployer?: boolean;
+    // Document review
+    approved?: boolean;
+    docType?: string;
+    feedback?: string | null;
 }
 
 const baseStyles = `
@@ -422,6 +427,45 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                 `, "Account Update", "Notification")
             };
+
+        case "document_review_result": {
+            const isApproved = data.approved;
+            const docName = data.docType || "document";
+            return {
+                subject: isApproved
+                    ? `✅ Your ${docName} has been approved!`
+                    : `⚠️ Your ${docName} needs attention`,
+                html: wrapModernTemplate(isApproved ? `
+                    <div style="text-align: center;">
+                        <div style="width:80px;height:80px;background:#d1fae5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                            <span style="font-size:40px;">✅</span>
+                        </div>
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Document Approved</h1>
+                    </div>
+                    <div style="background:#d1fae5; border: 1px solid #a7f3d0; border-radius:12px; padding:25px; margin:30px 0;">
+                        <p style="margin:0; color: #065f46; font-size: 16px;">Great news! Your <strong>${escapeHtml(docName)}</strong> has been verified and approved by our team.</p>
+                    </div>
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Continue Registration</a>
+                    </div>
+                ` : `
+                    <div style="text-align: center;">
+                        <div style="width:80px;height:80px;background:#fef3c7;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                            <span style="font-size:40px;">⚠️</span>
+                        </div>
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Document Needs Attention</h1>
+                    </div>
+                    <div style="background:#fef3c7; border: 1px solid #fde68a; border-radius:12px; padding:25px; margin:30px 0;">
+                        <p style="margin:0 0 10px; color: #92400e; font-size: 14px; font-weight:600;">Issue with your ${escapeHtml(docName)}:</p>
+                        <p style="margin:0; color: #78350f; font-size: 16px;">${escapeHtml(data.feedback || "Document does not meet requirements.")}</p>
+                    </div>
+                    <p style="color:#515154; font-size:15px; text-align:center;">Please upload a new version of your ${escapeHtml(docName)} to continue.</p>
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Upload New Document</a>
+                    </div>
+                `, isApproved ? "Good News" : "Action Needed", isApproved ? "Document Approved" : "Document Review")
+            };
+        }
 
         case "announcement":
             return {
