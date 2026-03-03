@@ -50,6 +50,32 @@ export async function GET(request: Request) {
         const platformData = await collectRes.json();
         results.dataCollected = true;
 
+        // ─── Step 1b: Self-Test Critical Routes ──────────────────────────
+        const criticalRoutes = ["/login", "/signup", "/auth/callback", "/api/health"];
+        const routeHealth: Record<string, { status: number | string; ok: boolean; latencyMs: number }> = {};
+        for (const route of criticalRoutes) {
+            const start = Date.now();
+            try {
+                const res = await fetch(`${baseUrl}${route}`, {
+                    method: "GET",
+                    redirect: "manual", // don't follow redirects — just check if route exists
+                    signal: AbortSignal.timeout(10000),
+                });
+                routeHealth[route] = {
+                    status: res.status,
+                    ok: res.status < 500, // 200, 302 (redirects) are fine, 5xx is bad
+                    latencyMs: Date.now() - start,
+                };
+            } catch (err) {
+                routeHealth[route] = {
+                    status: err instanceof Error ? err.message : "timeout",
+                    ok: false,
+                    latencyMs: Date.now() - start,
+                };
+            }
+        }
+        platformData.routeHealth = routeHealth;
+
         // Pre-fetch existing issues for dedup (both open and closed)
         const existingIssues = await getExistingIssueTitles();
         const allResolvedTitles = existingIssues.closed;
@@ -373,20 +399,22 @@ You run 5 OPERATIONS. Analyze each separately:
 
 ## Operation 1: 🔧 SYSTEM HEALTH
 - API errors, 5xx rates, failed endpoints
+- ⚠️ CHECK routeHealth data: critical routes (/login, /signup, /auth/callback) are self-tested. If ANY route has ok:false, this is P0 CRITICAL
 - Document verification success rate (Gemini)
-- Database connection issues
-- Cron job failures
+- Database connection issues, cron job failures
 - Status: OK / WARNING / CRITICAL
 
 ## Operation 2: 📊 FUNNEL ANALYSIS
 - Where are users dropping off? (signup → profile → docs → verification → payment → queue)
+- ⚠️ CHECK stalls data: shows exact bottleneck counts (no_candidate_record, no_docs_uploaded, docs_pending_verification, approved_not_paid)
+- ⚠️ CHECK signup_page_view events in userActivity: compare page views vs actual signups to measure ad conversion
 - Conversion rates between stages
-- Bottlenecks (e.g. 80% stop at document upload)
 - Status: OK / WARNING / CRITICAL
 
 ## Operation 3: 📨 EMAIL & WHATSAPP
 - Email delivery rate (sent vs failed)
-- Failed emails that need retry (with email_id)
+- ⚠️ CHECK bouncePatterns data: domains with high bounce rates may indicate typos that should be added to the signup email validation
+- If you find repeated bounce domains, use brainFacts to record them and create an issue to add them to email typo detection
 - WhatsApp response quality
 - Status: OK / WARNING / CRITICAL
 

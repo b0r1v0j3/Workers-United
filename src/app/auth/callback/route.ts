@@ -109,6 +109,15 @@ export async function GET(request: Request) {
 
                 // If no candidate record or missing basic fields, send to edit
                 if (!candidateCheck || !candidateCheck.phone || !candidateCheck.nationality) {
+                    // Proactive WhatsApp onboarding for new workers with a phone
+                    if (candidateCheck?.phone) {
+                        try {
+                            const { sendWelcome } = await import('@/lib/whatsapp');
+                            const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'there';
+                            await sendWelcome(candidateCheck.phone, firstName, user.id);
+                        } catch { /* WA is best-effort */ }
+                    }
+
                     await logServerActivity(user.id, "auth_login", "auth", { role: "worker", is_new: true, redirect: "/profile/worker/edit" });
                     return NextResponse.redirect(`${origin}/profile/worker/edit`);
                 }

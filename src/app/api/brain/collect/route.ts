@@ -201,6 +201,31 @@ export async function GET(request: NextRequest) {
         })),
     };
 
+    // ─── 9d. User Stall Detection — WHERE is each user stuck? ────────────
+    const candidateProfileIds = new Set((candidates || []).map(c => c.profile_id));
+    const stalls = {
+        no_candidate_record: workers.filter(w => !candidateProfileIds.has(w.id)).length,
+        no_docs_uploaded: (candidates || []).filter(c => {
+            const userDocs = (documents || []).filter(d => d.created_at && c.created_at);
+            return c.status === "NEW" && userDocs.length === 0;
+        }).length,
+        docs_pending_verification: (documents || []).filter(d => d.status === "pending" || d.status === "verifying").length,
+        not_admin_approved: (candidates || []).filter(c => c.status !== "NEW" && !c.admin_approved && !c.entry_fee_paid).length,
+        approved_not_paid: (candidates || []).filter(c => c.admin_approved && !c.entry_fee_paid).length,
+        summary: "",
+    };
+    const topBottleneck = Object.entries(stalls)
+        .filter(([k]) => k !== "summary")
+        .sort((a, b) => (b[1] as number) - (a[1] as number))[0];
+    stalls.summary = topBottleneck ? `Biggest bottleneck: ${topBottleneck[0]} (${topBottleneck[1]} users)` : "No stalls detected";
+
+    // ─── 9e. Email Bounce Patterns — learn from delivery failures ────────
+    const bouncePatterns: Record<string, number> = {};
+    (emails || []).filter(e => e.status === "failed" && e.error_message).forEach(e => {
+        const domain = (e.recipient || "")?.split("@")[1]?.toLowerCase();
+        if (domain) bouncePatterns[domain] = (bouncePatterns[domain] || 0) + 1;
+    });
+
     // ─── 10. System Health Indicators ───────────────────────────────────
     const failedWhatsApp = (whatsappMsgs || []).filter(m => m.status === "failed");
 
@@ -253,6 +278,8 @@ export async function GET(request: NextRequest) {
         funnel,
         funnelTimestamps,
         paymentTelemetry,
+        stalls,
+        bouncePatterns,
         health,
         // ─── User Activity (last 24h) ───────────────────────────────
         userActivity: await (async () => {
