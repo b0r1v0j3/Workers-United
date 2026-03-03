@@ -51,6 +51,13 @@ export default function DashboardClient({
 
     async function handlePay() {
         setPayLoading(true);
+        // Track the click
+        fetch("/api/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "payment_click", category: "funnel", details: { type: "entry_fee" } }),
+        }).catch(() => { });
+
         try {
             const res = await fetch('/api/stripe/create-checkout', {
                 method: 'POST',
@@ -61,6 +68,11 @@ export default function DashboardClient({
             if (data.checkoutUrl) {
                 window.location.href = data.checkoutUrl;
             } else {
+                fetch("/api/track", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "payment_error", category: "funnel", details: { error: data.error } }),
+                }).catch(() => { });
                 toast.error(data.error || 'Payment failed. Please try again.');
             }
         } catch {

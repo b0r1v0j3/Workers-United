@@ -12,6 +12,7 @@ import {
     LogOut,
     BarChart3,
     ListOrdered,
+    FileSearch,
 } from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
@@ -111,6 +112,7 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
                     <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" />
                     <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" />
                     <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" />
+                    <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" />
                     <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" />
                     <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" />
@@ -194,6 +196,7 @@ function AdminBreadcrumbs() {
         employers: 'Employers',
         jobs: 'Jobs',
         queue: 'Queue',
+        review: 'Document Review',
         analytics: 'Analytics',
         'email-preview': 'Email Preview',
         settings: 'Settings',
