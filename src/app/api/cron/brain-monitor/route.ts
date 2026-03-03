@@ -217,6 +217,58 @@ export async function GET(request: Request) {
                     } catch { actionStatus = "failed"; }
                 }
 
+                // Auto-heal: confirm stuck unconfirmed users (>48h)
+                if (action.type === "confirm_stuck_users" && action.params?.user_ids) {
+                    try {
+                        const userIds = action.params.user_ids as string[];
+                        let confirmed = 0;
+                        for (const userId of userIds.slice(0, 50)) {
+                            const { error } = await supabase.auth.admin.updateUserById(userId, {
+                                email_confirm: true,
+                            });
+                            if (!error) confirmed++;
+                        }
+                        actionStatus = confirmed > 0 ? "executed" : "failed";
+                        console.log(`[Brain] ✅ Auto-confirmed ${confirmed}/${userIds.length} stuck users`);
+                    } catch { actionStatus = "failed"; }
+                }
+
+                // Auto-heal: create missing profile + candidate records
+                if (action.type === "create_missing_records" && action.params?.user_ids) {
+                    try {
+                        const userIds = action.params.user_ids as string[];
+                        let created = 0;
+                        for (const userId of userIds.slice(0, 50)) {
+                            const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+                            if (!authUser?.user) continue;
+
+                            // Ensure profile exists
+                            const { data: existingProfile } = await supabase
+                                .from("profiles").select("id").eq("id", userId).maybeSingle();
+                            if (!existingProfile) {
+                                await supabase.from("profiles").upsert({
+                                    id: userId,
+                                    full_name: authUser.user.user_metadata?.full_name || authUser.user.email?.split("@")[0] || "User",
+                                    user_type: "worker",
+                                });
+                            }
+
+                            // Ensure candidate exists
+                            const { data: existingCandidate } = await supabase
+                                .from("candidates").select("id").eq("profile_id", userId).maybeSingle();
+                            if (!existingCandidate) {
+                                await supabase.from("candidates").insert({
+                                    profile_id: userId,
+                                    status: "NEW",
+                                });
+                                created++;
+                            }
+                        }
+                        actionStatus = created > 0 ? "executed" : "skipped";
+                        console.log(`[Brain] 📋 Created ${created} missing candidate records`);
+                    } catch { actionStatus = "failed"; }
+                }
+
                 await supabase.from("brain_actions").insert({
                     action_type: action.type,
                     description: action.description,
@@ -369,6 +421,8 @@ Rules:
 - send_employer_nudge: Flag a pending employer for verification nudge. Params: { employer_id: "..." }
 - update_memory: Correct an outdated brain_memory fact. Params: { old_content: "...", new_content: "..." }
 - delete_memory: Remove an incorrect brain_memory fact. Params: { content: "..." }
+- confirm_stuck_users: Auto-confirm emails for users stuck unconfirmed >48h. Params: { user_ids: ["..."] }
+- create_missing_records: Create profile+candidate for auth users missing them. Params: { user_ids: ["..."] }
 - log_observation: Log an observation for admin review
 
 ## Operation 6: 🧠 SELF-IMPROVEMENT
@@ -377,6 +431,15 @@ Rules:
 - What actions should you be able to EXECUTE (not just report)?
 - What facts should the WhatsApp bot know? Generate them as brainFacts.
 - Status: SUGGESTIONS
+
+## Operation 7: 🔐 AUTH HEALTH
+- Check authHealth data for unconfirmed email users (CRITICAL if >5, P0 issue)
+- Check for workers without profile or candidate records (they can't use the platform)
+- Check for users with missing user_type metadata
+- Check recentStuckSignups — users who registered but never progressed
+- If unconfirmed users exist >48h, use confirm_stuck_users action to auto-fix
+- If workers have no candidate record, use create_missing_records action to auto-fix
+- Status: OK / WARNING / CRITICAL
 
 Respond in JSON:
 {
@@ -391,9 +454,9 @@ Respond in JSON:
       "score": 0-100
     }
   ],
-  "issues": [{ "title": "...", "body": "...", "priority": "P0|P1|P2", "labels": ["bug"|"enhancement"|"critical"], "operation": "System Health|Funnel|Email|Code|Growth" }],
+  "issues": [{ "title": "...", "body": "...", "priority": "P0|P1|P2", "labels": ["bug"|"enhancement"|"critical"], "operation": "System Health|Funnel|Email|Code|Growth|Auth Health" }],
   "improvements": [{ "title": "...", "description": "...", "impact": "high|medium|low", "effort": "easy|medium|hard" }],
-   "actions": [{ "type": "retry_email|send_alert|clean_stale_data|update_config|send_employer_nudge|update_memory|delete_memory|log_observation", "description": "...", "params": {} }],
+   "actions": [{ "type": "retry_email|send_alert|clean_stale_data|update_config|send_employer_nudge|update_memory|delete_memory|confirm_stuck_users|create_missing_records|log_observation", "description": "...", "params": {} }],
   "brainFacts": [{ "category": "pricing|process|documents|eligibility|faq|system_stats", "content": "Verified fact for WhatsApp bot to use" }],
   "selfImprovements": ["Capability I wish I had", "Data I need access to"],
   "metrics": { "totalWorkers": N, "totalEmployers": N, "documentsVerified": N, "emailDeliveryRate": "X%", "funnelProgression": "description" }

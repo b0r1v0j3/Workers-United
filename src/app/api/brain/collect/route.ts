@@ -376,6 +376,72 @@ export async function GET(request: NextRequest) {
                 return { total: 0, conversations: [], summary: "whatsapp_messages table not available" };
             }
         })(),
+        // ─── 11. Auth Health (detect email confirmation / record issues) ────
+        authHealth: await (async () => {
+            try {
+                const { getAllAuthUsers } = await import("@/lib/supabase/admin");
+                const allAuthUsers = await getAllAuthUsers(supabase);
+                const profileIds = new Set((allProfiles || []).map(p => p.id));
+                const candidateProfileIds = new Set((candidates || []).map(c => c.profile_id));
+
+                const unconfirmedUsers = allAuthUsers.filter((u: any) => !u.email_confirmed_at);
+                const noUserType = allAuthUsers.filter((u: any) => !u.user_metadata?.user_type);
+                const workersWithoutProfile = allAuthUsers.filter((u: any) =>
+                    u.user_metadata?.user_type === "worker" && !profileIds.has(u.id)
+                );
+                const workersWithoutCandidate = allAuthUsers.filter((u: any) =>
+                    u.user_metadata?.user_type === "worker" && !candidateProfileIds.has(u.id)
+                );
+
+                // Users registered in last 7 days who never completed profile
+                const recentStuckUsers = allAuthUsers.filter((u: any) => {
+                    const createdAt = new Date(u.created_at);
+                    const isRecent = createdAt >= weekAgo;
+                    const isWorker = u.user_metadata?.user_type === "worker";
+                    const hasNoCandidate = !candidateProfileIds.has(u.id);
+                    return isRecent && isWorker && hasNoCandidate;
+                });
+
+                return {
+                    totalAuthUsers: allAuthUsers.length,
+                    unconfirmedEmails: {
+                        count: unconfirmedUsers.length,
+                        users: unconfirmedUsers.slice(0, 20).map((u: any) => ({
+                            id: u.id,
+                            email: u.email,
+                            created_at: u.created_at,
+                            days_unconfirmed: Math.floor((now.getTime() - new Date(u.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+                        })),
+                    },
+                    missingUserType: {
+                        count: noUserType.length,
+                        users: noUserType.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
+                    },
+                    workersWithoutProfile: {
+                        count: workersWithoutProfile.length,
+                        users: workersWithoutProfile.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
+                    },
+                    workersWithoutCandidate: {
+                        count: workersWithoutCandidate.length,
+                        users: workersWithoutCandidate.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
+                    },
+                    recentStuckSignups: {
+                        count: recentStuckUsers.length,
+                        users: recentStuckUsers.slice(0, 10).map((u: any) => ({
+                            id: u.id,
+                            email: u.email,
+                            created_at: u.created_at,
+                        })),
+                    },
+                    status: unconfirmedUsers.length > 5 ? "CRITICAL"
+                        : unconfirmedUsers.length > 0 ? "WARNING"
+                            : workersWithoutCandidate.length > 3 ? "WARNING"
+                                : "OK",
+                };
+            } catch (err) {
+                return { status: "ERROR", error: String(err) };
+            }
+        })(),
         // Platform info for context
         platform: {
             name: "Workers United",
