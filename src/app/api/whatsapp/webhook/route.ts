@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
                                     .select("direction, content, created_at")
                                     .eq("phone_number", normalizedPhone)
                                     .order("created_at", { ascending: false })
-                                    .limit(10);
+                                    .limit(100);
                                 return (data || []).reverse();
                             } catch { return []; }
                         })();
