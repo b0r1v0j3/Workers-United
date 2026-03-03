@@ -632,7 +632,7 @@ export async function queueEmail(
                 }).eq("id", data.id);
             }
         } catch (err) {
-            console.error("Direct SMTP send failed, n8n will retry:", err);
+            console.error("Direct SMTP send failed:", err);
         }
     }
 

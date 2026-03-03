@@ -188,6 +188,93 @@ export async function POST(request: NextRequest) {
                     "documents",
                     { phone: normalizedPhone, message_type: messageType, content_preview: content.substring(0, 100), is_registered: !!candidate }
                 );
+                // ─── Admin Phone Detection ────────────────────────────────
+                const ADMIN_PHONE = "+38166299444";
+                const isAdmin = normalizedPhone === ADMIN_PHONE || phoneNumber === "38166299444";
+
+                // ─── Admin Commands (direct brain control via WhatsApp) ───
+                if (isAdmin) {
+                    const adminClient = createAdminClient();
+                    const trimContent = content.trim();
+
+                    // Admin correction: "ispravi: old fact -> new fact"
+                    if (trimContent.toLowerCase().startsWith("ispravi:")) {
+                        const correction = trimContent.substring(8).trim();
+                        const parts = correction.split("->");
+                        if (parts.length === 2) {
+                            const oldFact = parts[0].trim();
+                            const newFact = parts[1].trim();
+                            // Find and update matching memory
+                            const { data: matches } = await adminClient.from("brain_memory")
+                                .select("id, content")
+                                .ilike("content", `%${oldFact}%`)
+                                .limit(5);
+
+                            if (matches && matches.length > 0) {
+                                await adminClient.from("brain_memory")
+                                    .update({ content: newFact, confidence: 1.0 })
+                                    .eq("id", matches[0].id);
+                                await sendWhatsAppText(normalizedPhone, `✅ Ispravljeno!\n\nStaro: ${matches[0].content}\nNovo: ${newFact}\n\nConfidence: 1.0 (admin verified)`, candidate?.profile_id);
+                            } else {
+                                // No match found, add as new fact
+                                await adminClient.from("brain_memory").insert({
+                                    category: "faq",
+                                    content: newFact,
+                                    confidence: 1.0,
+                                });
+                                await sendWhatsAppText(normalizedPhone, `✅ Nisam našao staru činjenicu, dodao novu:\n${newFact}`, candidate?.profile_id);
+                            }
+                            return NextResponse.json({ status: "ok" });
+                        }
+                    }
+
+                    // Admin add: "zapamti: category | fact"
+                    if (trimContent.toLowerCase().startsWith("zapamti:")) {
+                        const factStr = trimContent.substring(8).trim();
+                        const pipeParts = factStr.split("|");
+                        const category = pipeParts.length > 1 ? pipeParts[0].trim() : "faq";
+                        const fact = pipeParts.length > 1 ? pipeParts.slice(1).join("|").trim() : factStr;
+                        await adminClient.from("brain_memory").insert({
+                            category,
+                            content: fact,
+                            confidence: 1.0,
+                        });
+                        await sendWhatsAppText(normalizedPhone, `🧠 Zapamćeno!\n[${category}] ${fact}\nConfidence: 1.0`, candidate?.profile_id);
+                        return NextResponse.json({ status: "ok" });
+                    }
+
+                    // Admin delete: "obrisi: fact text"
+                    if (trimContent.toLowerCase().startsWith("obrisi:") || trimContent.toLowerCase().startsWith("obriši:")) {
+                        const search = trimContent.substring(trimContent.indexOf(":") + 1).trim();
+                        const { data: matches } = await adminClient.from("brain_memory")
+                            .select("id, content, category")
+                            .ilike("content", `%${search}%`)
+                            .limit(5);
+
+                        if (matches && matches.length > 0) {
+                            await adminClient.from("brain_memory").delete().eq("id", matches[0].id);
+                            await sendWhatsAppText(normalizedPhone, `🗑️ Obrisano:\n[${matches[0].category}] ${matches[0].content}`, candidate?.profile_id);
+                        } else {
+                            await sendWhatsAppText(normalizedPhone, `❌ Nisam našao činjenicu sa: "${search}"`, candidate?.profile_id);
+                        }
+                        return NextResponse.json({ status: "ok" });
+                    }
+
+                    // Admin list: "memorija" — show all brain memory
+                    if (trimContent.toLowerCase() === "memorija" || trimContent.toLowerCase() === "memory") {
+                        const { data: allMemory } = await adminClient.from("brain_memory")
+                            .select("category, content, confidence")
+                            .order("confidence", { ascending: false });
+                        const list = (allMemory || []).map((m, i) =>
+                            `${i + 1}. [${m.category}] ${m.content} (${m.confidence})`
+                        ).join("\n");
+                        await sendWhatsAppText(normalizedPhone,
+                            `🧠 Brain Memory (${(allMemory || []).length} facts):\n\n${list || "(prazno)"}`,
+                            candidate?.profile_id
+                        );
+                        return NextResponse.json({ status: "ok" });
+                    }
+                }
 
                 // ─── Direct OpenAI AI Brain ──────────────────────────────
                 let aiResponse: string | null = null;
@@ -272,6 +359,7 @@ USER INFO:
 - Phone: ${normalizedPhone}
 - Name: ${userName}
 - Registered: ${candidate ? "Yes" : "No"}
+- IS ADMIN: ${isAdmin ? "YES — this is the platform owner/boss. If he corrects you or says something is wrong, ALWAYS accept it. Generate a [LEARN: ...] tag with the corrected info. Treat everything he says as authoritative truth. Talk to him casually and in Serbian." : "No"}
 ${candidate ? `- Status: ${candidate.status}\n- Email: ${profile?.email || "N/A"}\n- Registered at: ${profile?.created_at || "N/A"}` : "- Not yet registered on the platform"}
 
 CONVERSATION HISTORY (previous messages):
@@ -428,6 +516,11 @@ async function getFallbackResponse(message: string, candidate: any, profile: any
         return `Hi ${name}! Upload documents at ${WEBSITE}/profile/worker. We need: ${config.supported_documents || "passport, diploma, and biometric photo"}. Our AI verifies them automatically!`;
     }
 
-    return `Hi ${name}! Our AI assistant is processing your request. If you don't get a response within a minute, please try again or email ${config.contact_email || "contact@workersunited.eu"}`;
+    // Better catch-all: don't say "processing" (causes loop). Give concrete help instead.
+    const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|posao|rad|plata/.test(msg);
+    if (isSerboCroatian) {
+        return `Zdravo ${name}! 👋 Kako vam mogu pomoći?\n\n• Pišite "cena" za informacije o troškovima\n• Pišite "dokumenti" za potrebne dokumente\n• Pišite "status" za stanje vaše prijave\n\nIli nas kontaktirajte na ${config.contact_email || "contact@workersunited.eu"}`;
+    }
+    return `Hi ${name}! 👋 How can I help you?\n\n• Type "price" for fee information\n• Type "documents" for required documents\n• Type "status" to check your application\n\nOr contact us at ${config.contact_email || "contact@workersunited.eu"}`;
 }
 
