@@ -21,10 +21,9 @@ description: Full project architecture reference — tech stack, folder structur
 | Storage | **Supabase Storage** | Documents (passport, diploma, biometric photo) |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **Gemini 2.0 Flash** (`@google/generative-ai`) | Document verification, contact form auto-reply |
-| AI (Chatbot) | **GPT-4o-mini** via n8n | WhatsApp AI chatbot |
+| AI (Chatbot) | **GPT-4o** (direct OpenAI API) | WhatsApp AI chatbot with memory + self-learning |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
-| Automation | **n8n Cloud** | WhatsApp AI chatbot workflow |
 | Icons | **Lucide React** | — |
 | WhatsApp | **Meta Cloud API v21.0** | Template messages, AI chatbot, delivery tracking |
 
@@ -81,7 +80,8 @@ Workers-United/
 │   │   │   ├── profile/       # Profile API
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   └── whatsapp/      # WhatsApp webhook (AI chatbot via n8n)
+│   │   │   ├── whatsapp/      # WhatsApp webhook (direct OpenAI AI chatbot)
+│   │   │   └── brain/         # AI brain (collect data, self-improve cron)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth/email callback handler
 │   │   │   └── select-role/  # Role picker for Google OAuth first-time users
@@ -142,6 +142,8 @@ Configured in `vercel.json`:
 | `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles |
 | `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months |
 | `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
+| `/api/cron/brain-monitor` | Daily 8 AM UTC | System health monitoring |
+| `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, generates new brain_memory facts |
 
 ---
 
@@ -296,7 +298,7 @@ When adding a new feature, follow this order:
 | `WHATSAPP_TOKEN` | Meta WhatsApp Cloud API | For sending |
 | `WHATSAPP_PHONE_NUMBER_ID` | Meta WhatsApp | For sending |
 | `WHATSAPP_VERIFY_TOKEN` | Webhook verification | For webhook |
-| `N8N_WHATSAPP_WEBHOOK_URL` | n8n Cloud | For AI chatbot |
+| `OPENAI_API_KEY` | OpenAI | For WhatsApp AI chatbot |
 
 ---
 

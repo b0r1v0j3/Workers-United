@@ -228,12 +228,12 @@ export async function POST(request: NextRequest) {
                             ? brainMemory.map(m => `- [${m.category}] ${m.content} (confidence: ${m.confidence})`).join("\n")
                             : "(No learned facts yet)";
 
-                        // 3. Fetch platform config for business facts
-                        const platformConfig = await (async () => {
+                        // 3. Fetch business facts (formatted for AI)
+                        const businessFacts = await (async () => {
                             try {
-                                const { getPlatformConfig } = await import("@/lib/platform-config");
-                                return await getPlatformConfig();
-                            } catch { return null; }
+                                const { getBusinessFactsForAI } = await import("@/lib/platform-config");
+                                return await getBusinessFactsForAI();
+                            } catch { return ""; }
                         })();
 
                         const userName = profile?.full_name?.split(" ")[0] || "there";
@@ -241,11 +241,10 @@ export async function POST(request: NextRequest) {
                         // 4. Build system prompt with ALL context
                         const systemPrompt = `You are the official WhatsApp AI assistant for Workers United — a legal international hiring and visa support company that helps workers from Serbia, Bosnia, India, Philippines and other countries find jobs in Europe (Germany, Austria, Czech Republic, etc.).
 
-COMPANY INFO:
-- Website: workers-united.eu
-- Services: job placement, visa processing, document verification, employer matching
-- Contact email: contact@workersunited.eu
-${platformConfig ? `- Business config: ${JSON.stringify(platformConfig)}` : ""}
+BUSINESS FACTS (verified, use these for accurate answers):
+${businessFacts || "No config available"}
+- Industries we cover: Construction, Manufacturing, Agriculture, Hospitality, Transportation, Retail, Food Processing, Warehousing & Logistics, Cleaning Services, Driving
+- Target countries: Germany, Austria, Czech Republic, and other EU countries
 
 YOUR PERSONALITY:
 - Professional but warm and friendly
