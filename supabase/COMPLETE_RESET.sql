@@ -11,6 +11,7 @@ DROP POLICY IF EXISTS "allow_all_job_requests" ON job_requests;
 DROP POLICY IF EXISTS "allow_all_offers" ON offers;
 DROP POLICY IF EXISTS "allow_all_documents" ON documents;
 DROP POLICY IF EXISTS "allow_all_contract_data" ON contract_data;
+DROP POLICY IF EXISTS "allow_all_brain_memory" ON brain_memory;
 DROP POLICY IF EXISTS "profiles_select" ON profiles;
 DROP POLICY IF EXISTS "profiles_update" ON profiles;
 DROP POLICY IF EXISTS "profiles_insert" ON profiles;
@@ -29,6 +30,7 @@ DROP POLICY IF EXISTS "offers_select" ON offers;
 DROP POLICY IF EXISTS "documents_select" ON documents;
 DROP POLICY IF EXISTS "documents_insert" ON documents;
 DROP POLICY IF EXISTS "contract_data_select" ON contract_data;
+DROP POLICY IF EXISTS "brain_memory_select" ON brain_memory;
 
 -- Step 2: Drop all triggers
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -44,6 +46,7 @@ DROP TRIGGER IF EXISTS update_documents_updated_at ON documents;
 DROP TRIGGER IF EXISTS update_contract_data_updated_at ON contract_data;
 
 -- Step 3: Drop all tables (in reverse order of dependencies)
+DROP TABLE IF EXISTS brain_memory CASCADE;
 DROP TABLE IF EXISTS contract_data CASCADE;
 DROP TABLE IF EXISTS documents CASCADE;
 DROP TABLE IF EXISTS offers CASCADE;
@@ -252,6 +255,15 @@ CREATE TABLE contract_data (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE brain_memory (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    category TEXT NOT NULL CHECK (category IN ('USER_PREFERENCE', 'SYSTEM_RULE', 'OBSERVATION', 'BOT_INSTRUCTION', 'SUMMARY')),
+    content TEXT NOT NULL,
+    confidence NUMERIC(3,2) DEFAULT 1.00 CHECK (confidence >= 0.0 AND confidence <= 1.0),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Step 7: Enable RLS and create simple policies
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE candidates ENABLE ROW LEVEL SECURITY;
@@ -262,6 +274,7 @@ ALTER TABLE job_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brain_memory ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "allow_all_profiles" ON profiles FOR ALL USING (true);
 CREATE POLICY "allow_all_candidates" ON candidates FOR ALL USING (true);
@@ -272,6 +285,7 @@ CREATE POLICY "allow_all_job_requests" ON job_requests FOR ALL USING (true);
 CREATE POLICY "allow_all_offers" ON offers FOR ALL USING (true);
 CREATE POLICY "allow_all_documents" ON documents FOR ALL USING (true);
 CREATE POLICY "allow_all_contract_data" ON contract_data FOR ALL USING (true);
+CREATE POLICY "allow_all_brain_memory" ON brain_memory FOR ALL USING (true);
 
 -- Step 8: Create signup function
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger AS $$

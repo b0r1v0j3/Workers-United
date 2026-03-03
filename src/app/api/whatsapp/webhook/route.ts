@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
-import { getWorkerCompletion } from "@/lib/profile-completion";
 import { logServerActivity } from "@/lib/activityLoggerServer";
-import { checkRateLimit, relaxedLimiter } from "@/lib/rate-limit";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -12,8 +10,8 @@ import crypto from "crypto";
 // 2. POST — Inbound messages + delivery status updates → forwards to n8n AI
 //
 // Architecture: User → WhatsApp → Meta → Vercel → n8n (GPT-4o) → Vercel → WhatsApp
-// Vercel enriches the message with: user profile, documents, payments, 
-// conversation history (100 messages), and profile completion %
+// Vercel only sends lightweight identification data.
+// n8n uses AI Tools to pull documents, payments, and history on-demand.
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "workers-united-whatsapp-verify";
 const N8N_WEBHOOK_URL = process.env.N8N_WHATSAPP_WEBHOOK_URL;
@@ -172,66 +170,6 @@ export async function POST(request: NextRequest) {
                         .single()
                     : { data: null };
 
-                // ─── Fetch docs, payments, and history in parallel ────
-                let documents: any[] = [];
-                let payments: any[] = [];
-                let conversationHistory: any[] = [];
-
-                if (candidate?.profile_id) {
-                    const [docsResult, paymentsResult, historyResult] = await Promise.all([
-                        supabase
-                            .from("candidate_documents")
-                            .select("document_type, status, created_at, verified_at")
-                            .eq("user_id", candidate.profile_id),
-                        supabase
-                            .from("payments")
-                            .select("payment_type, status, amount, paid_at")
-                            .eq("user_id", candidate.profile_id)
-                            .order("created_at", { ascending: false }),
-                        supabase
-                            .from("whatsapp_messages")
-                            .select("direction, content, created_at")
-                            .eq("phone_number", normalizedPhone)
-                            .order("created_at", { ascending: false })
-                            .limit(CONVERSATION_HISTORY_LIMIT),
-                    ]);
-
-                    documents = docsResult.data || [];
-                    payments = paymentsResult.data || [];
-                    conversationHistory = (historyResult.data || []).reverse().map(msg => ({
-                        role: msg.direction === "inbound" ? "user" : "assistant",
-                        content: msg.content,
-                        timestamp: msg.created_at,
-                    }));
-                } else {
-                    // Unregistered user — only fetch history
-                    const { data: history } = await supabase
-                        .from("whatsapp_messages")
-                        .select("direction, content, created_at")
-                        .eq("phone_number", normalizedPhone)
-                        .order("created_at", { ascending: false })
-                        .limit(CONVERSATION_HISTORY_LIMIT);
-
-                    conversationHistory = (history || []).reverse().map(msg => ({
-                        role: msg.direction === "inbound" ? "user" : "assistant",
-                        content: msg.content,
-                        timestamp: msg.created_at,
-                    }));
-                }
-
-                // ─── Calculate profile completion ───────────────────────
-                let profileCompletion = 0;
-                let missingFields: string[] = [];
-                if (candidate && profile) {
-                    const completionResult = getWorkerCompletion({
-                        profile,
-                        candidate,
-                        documents,
-                    });
-                    profileCompletion = completionResult.completion;
-                    missingFields = completionResult.missingFields;
-                }
-
                 // ─── Log inbound message ────────────────────────────────
                 await supabase.from("whatsapp_messages").insert({
                     user_id: candidate?.profile_id || null,
@@ -263,37 +201,14 @@ export async function POST(request: NextRequest) {
                         messageType,
                         wamid,
                         isRegistered: !!candidate,
+                        // Provide ONLY basic profile data to identify the user.
+                        // The n8n AI Agent will use Tools to fetch documents, payments, and history on demand.
                         userProfile: candidate ? {
                             name: profile?.full_name || "Unknown",
                             email: profile?.email || null,
                             registeredAt: profile?.created_at || null,
                             status: candidate.status,
-                            adminApproved: candidate.admin_approved,
-                            entryFeePaid: candidate.entry_fee_paid,
-                            queuePosition: candidate.queue_position,
-                            queueJoinedAt: candidate.queue_joined_at,
-                            preferredJob: candidate.preferred_job,
-                            desiredCountries: candidate.desired_countries,
-                            nationality: candidate.nationality,
-                            currentCountry: candidate.current_country,
-                            experienceYears: candidate.experience_years,
-                            refundEligible: candidate.refund_eligible,
-                            refundDeadline: candidate.refund_deadline,
-                            profileCompletion,
-                            missingFields,
                         } : null,
-                        documents: documents.map(d => ({
-                            type: d.document_type,
-                            status: d.status,
-                            verifiedAt: d.verified_at,
-                        })),
-                        payments: payments.map(p => ({
-                            type: p.payment_type,
-                            status: p.status,
-                            amount: p.amount,
-                            paidAt: p.paid_at,
-                        })),
-                        conversationHistory,
                         // Business facts from DB — n8n AI uses these for accurate responses
                         platformConfig: await (async () => {
                             try {
