@@ -144,7 +144,7 @@ export async function GET(request: Request) {
         });
         results.reportSaved = true;
 
-        // ─── Step 6: Execute Brain Actions (auto-healing) ─────────────────
+        // ─── Step 6: Execute Brain Actions (auto-healing + auto-remediation) ───
         if (analysis.actions && analysis.actions.length > 0) {
             for (const action of analysis.actions) {
                 let actionStatus = "logged";
@@ -162,6 +162,59 @@ export async function GET(request: Request) {
                 // Auto-heal: clean stale data
                 if (action.type === "clean_stale_data" && action.params?.table) {
                     actionStatus = "logged"; // Log only for safety
+                }
+
+                // Self-Improvement #2: Update platform config (bot prompt hotfix)
+                if (action.type === "update_config" && action.params?.key && action.params?.value) {
+                    try {
+                        const { error } = await supabase.from("platform_config")
+                            .update({ value: String(action.params.value) })
+                            .eq("key", String(action.params.key));
+                        actionStatus = error ? "failed" : "executed";
+                        if (!error) console.log(`[Brain] ⚙️ Config updated: ${action.params.key}`);
+                    } catch { actionStatus = "failed"; }
+                }
+
+                // Self-Improvement #2: Send employer verification nudge
+                if (action.type === "send_employer_nudge" && action.params?.employer_id) {
+                    try {
+                        const { data: employer } = await supabase
+                            .from("employers")
+                            .select("id, status")
+                            .eq("id", action.params.employer_id)
+                            .single();
+                        if (employer && employer.status === "PENDING") {
+                            // Log the nudge — admin will see it in brain_actions
+                            actionStatus = "executed";
+                            console.log(`[Brain] 📧 Employer nudge logged for ${action.params.employer_id}`);
+                        } else {
+                            actionStatus = "skipped";
+                        }
+                    } catch { actionStatus = "failed"; }
+                }
+
+                // Self-Improvement #2: Update/correct brain_memory facts
+                if (action.type === "update_memory" && action.params?.old_content && action.params?.new_content) {
+                    try {
+                        const { error } = await supabase.from("brain_memory")
+                            .update({
+                                content: String(action.params.new_content),
+                                confidence: 0.95,
+                            })
+                            .eq("content", String(action.params.old_content));
+                        actionStatus = error ? "failed" : "executed";
+                        if (!error) console.log(`[Brain] 🧠 Memory corrected: ${String(action.params.old_content).substring(0, 50)}...`);
+                    } catch { actionStatus = "failed"; }
+                }
+
+                // Self-Improvement #2: Delete outdated brain_memory facts
+                if (action.type === "delete_memory" && action.params?.content) {
+                    try {
+                        const { error } = await supabase.from("brain_memory")
+                            .delete()
+                            .eq("content", String(action.params.content));
+                        actionStatus = error ? "failed" : "executed";
+                    } catch { actionStatus = "failed"; }
                 }
 
                 await supabase.from("brain_actions").insert({
@@ -307,6 +360,16 @@ Rules:
 6. healthScore 0-100 weighted: System Health 30%, Funnel 25%, Email/WA 20%, Code 15%, Growth 10%
 7. Do NOT create issues for problems listed in RECENTLY_RESOLVED — those are already fixed
 8. 0 admin approvals / 0 payments / 0 queued is EXPECTED for an early-stage platform — it is NOT a bug
+9. You now have funnelTimestamps data showing per-user stage timing — use it to find WHERE users stall
+10. You now have paymentTelemetry showing failed/abandoned checkout attempts — analyze drop-off
+
+## Auto-Remediation powers (actions you can EXECUTE):
+- retry_email: Retry a failed email by ID
+- update_config: Update platform_config values (e.g., fix bot greeting). Params: { key: "...", value: "..." }
+- send_employer_nudge: Flag a pending employer for verification nudge. Params: { employer_id: "..." }
+- update_memory: Correct an outdated brain_memory fact. Params: { old_content: "...", new_content: "..." }
+- delete_memory: Remove an incorrect brain_memory fact. Params: { content: "..." }
+- log_observation: Log an observation for admin review
 
 ## Operation 6: 🧠 SELF-IMPROVEMENT
 - What capabilities are you MISSING that would make you more effective?
@@ -330,7 +393,7 @@ Respond in JSON:
   ],
   "issues": [{ "title": "...", "body": "...", "priority": "P0|P1|P2", "labels": ["bug"|"enhancement"|"critical"], "operation": "System Health|Funnel|Email|Code|Growth" }],
   "improvements": [{ "title": "...", "description": "...", "impact": "high|medium|low", "effort": "easy|medium|hard" }],
-  "actions": [{ "type": "retry_email|send_alert|clean_stale_data|log_observation", "description": "...", "params": {} }],
+   "actions": [{ "type": "retry_email|send_alert|clean_stale_data|update_config|send_employer_nudge|update_memory|delete_memory|log_observation", "description": "...", "params": {} }],
   "brainFacts": [{ "category": "pricing|process|documents|eligibility|faq|system_stats", "content": "Verified fact for WhatsApp bot to use" }],
   "selfImprovements": ["Capability I wish I had", "Data I need access to"],
   "metrics": { "totalWorkers": N, "totalEmployers": N, "documentsVerified": N, "emailDeliveryRate": "X%", "funnelProgression": "description" }

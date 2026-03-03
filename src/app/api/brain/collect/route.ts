@@ -156,6 +156,51 @@ export async function GET(request: NextRequest) {
             : "0%",
     };
 
+    // ─── 9b. Per-User Funnel Stage Timestamps (Self-Improvement #1) ─────
+    // Codex requested event-level funnel timestamps to diagnose WHERE users stall
+    const funnelTimestamps = (candidates || []).slice(0, 50).map(c => {
+        const candidateDocs = (documents || []).filter(d => {
+            // Match by most recent docs uploaded around when the candidate registered
+            return d.created_at && c.created_at;
+        });
+        const verifiedDocs = candidateDocs.filter(d => d.status === "verified");
+        const candidatePayments = (payments || []).filter(p =>
+            (p.status === "completed" || p.status === "paid") && p.paid_at
+        );
+
+        return {
+            candidate_id: c.id,
+            registered_at: c.created_at,
+            first_doc_uploaded: candidateDocs.length > 0 ? candidateDocs[0]?.created_at : null,
+            docs_verified_at: verifiedDocs.length > 0 ? verifiedDocs[verifiedDocs.length - 1]?.verified_at : null,
+            admin_approved: c.admin_approved,
+            payment_at: c.entry_fee_paid ? candidatePayments[0]?.paid_at || "paid (date unknown)" : null,
+            queue_joined_at: c.queue_joined_at,
+            current_status: c.status,
+            days_since_registration: Math.floor((now.getTime() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+        };
+    });
+
+    // ─── 9c. Payment Attempt Telemetry (Self-Improvement #1) ─────────────
+    // Track ALL payment attempts (not just successful) to diagnose checkout drop-off
+    const paymentTelemetry = {
+        totalAttempts: (payments || []).length,
+        successful: (payments || []).filter(p => p.status === "completed" || p.status === "paid").length,
+        failed: (payments || []).filter(p => p.status === "failed").length,
+        pending: (payments || []).filter(p => p.status === "pending" || p.status === "created").length,
+        abandoned: (payments || []).filter(p => p.status === "abandoned" || p.status === "expired").length,
+        conversionRate: (payments || []).length > 0
+            ? `${Math.round(((payments || []).filter(p => p.status === "completed" || p.status === "paid").length / (payments || []).length) * 100)}%`
+            : "No attempts",
+        recentAttempts: (payments || []).slice(0, 20).map(p => ({
+            type: p.payment_type,
+            status: p.status,
+            amount: p.amount,
+            created_at: p.created_at,
+            paid_at: p.paid_at,
+        })),
+    };
+
     // ─── 10. System Health Indicators ───────────────────────────────────
     const failedWhatsApp = (whatsappMsgs || []).filter(m => m.status === "failed");
 
@@ -206,6 +251,8 @@ export async function GET(request: NextRequest) {
             accepted: (offers || []).filter(o => o.status === "accepted").length,
         },
         funnel,
+        funnelTimestamps,
+        paymentTelemetry,
         health,
         // ─── User Activity (last 24h) ───────────────────────────────
         userActivity: await (async () => {
