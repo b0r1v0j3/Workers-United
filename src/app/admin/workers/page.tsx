@@ -184,7 +184,11 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                             docsCount: userDocs.length,
                             verifiedDocs: verifiedDocs,
                             adminApproved: !!candidate?.admin_approved,
-                            isCurrentUser: authUser.id === user.id
+                            isCurrentUser: authUser.id === user.id,
+                            entryFeePaid: !!candidate?.entry_fee_paid,
+                            daysUntilDeletion: profileCompletion < 100
+                                ? Math.max(0, 30 - Math.floor((Date.now() - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
+                                : null,
                         } satisfies WorkerTableRow;
                     })}
                     currentFilter={filter}
