@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/mailer";
 
-// This endpoint is called by n8n to get pending emails
+// This endpoint is called to get pending emails
 export async function GET(request: NextRequest) {
     try {
-        // Verify API key for n8n access
+        // Accept both N8N_API_KEY and CRON_SECRET for backwards compatibility
         const apiKey = request.headers.get("x-api-key");
-        if (apiKey !== process.env.N8N_API_KEY) {
+        const authHeader = request.headers.get("authorization");
+        const isAuthorized = apiKey === process.env.N8N_API_KEY || authHeader === `Bearer ${process.env.CRON_SECRET}`;
+        if (!isAuthorized) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -34,7 +36,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const apiKey = request.headers.get("x-api-key");
-        if (apiKey !== process.env.N8N_API_KEY) {
+        const authHeader = request.headers.get("authorization");
+        const isAuthorized = apiKey === process.env.N8N_API_KEY || authHeader === `Bearer ${process.env.CRON_SECRET}`;
+        if (!isAuthorized) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -93,11 +97,13 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// n8n calls this to mark emails as sent (still used for WhatsApp flow)
+// Called to mark emails as sent
 export async function PATCH(request: NextRequest) {
     try {
         const apiKey = request.headers.get("x-api-key");
-        if (apiKey !== process.env.N8N_API_KEY) {
+        const authHeader = request.headers.get("authorization");
+        const isAuthorized = apiKey === process.env.N8N_API_KEY || authHeader === `Bearer ${process.env.CRON_SECRET}`;
+        if (!isAuthorized) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

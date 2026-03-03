@@ -384,15 +384,8 @@ export async function GET(request: NextRequest) {
             placementFee: "$190 (Serbia)",
             guarantee: "90-day money-back on entry fee",
         },
-        // n8n automation health
-        n8n: await (async () => {
-            try {
-                const { getN8nHealth } = await import("@/lib/n8n");
-                return await getN8nHealth();
-            } catch {
-                return { error: "n8n API unavailable" };
-            }
-        })(),
+        // n8n replaced by Vercel cron — no external dependency needed
+        n8n: { status: "replaced_by_vercel_cron", note: "All automations run via Vercel Cron (brain-monitor, brain-improve, whatsapp-nudge, profile-reminders)" },
     };
 
     return NextResponse.json(report);
