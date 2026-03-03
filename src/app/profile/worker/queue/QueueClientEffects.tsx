@@ -33,6 +33,13 @@ export function PayToJoinButton() {
         setLoading(true);
         setError("");
 
+        // Track the payment click
+        fetch("/api/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "payment_click", category: "funnel", details: { type: "entry_fee", source: "queue_page" } }),
+        }).catch(() => { });
+
         try {
             const res = await fetch("/api/stripe/create-checkout", {
                 method: "POST",
