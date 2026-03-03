@@ -274,8 +274,40 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
+                // ─── AI Learning Loop ─────────────────────────────────────
+                // GPT tags new learnings as [LEARN: category | fact]
+                // We parse them, save to brain_memory, and strip from reply
+                let cleanResponse = aiResponse;
+                if (aiResponse) {
+                    const learnRegex = /\[LEARN:\s*([^|]+?)\s*\|\s*(.+?)\s*\]/g;
+                    const learnings: { category: string; content: string }[] = [];
+                    let match;
+                    while ((match = learnRegex.exec(aiResponse)) !== null) {
+                        learnings.push({ category: match[1].trim(), content: match[2].trim() });
+                    }
+                    // Strip [LEARN: ...] tags from the message sent to WhatsApp
+                    cleanResponse = aiResponse.replace(learnRegex, "").replace(/\n{3,}/g, "\n\n").trim();
+
+                    // Save learnings to brain_memory in Supabase
+                    if (learnings.length > 0) {
+                        try {
+                            const admin = createAdminClient();
+                            for (const learning of learnings) {
+                                await admin.from("brain_memory").insert({
+                                    category: learning.category,
+                                    content: learning.content,
+                                    confidence: 0.8,
+                                });
+                            }
+                            console.log(`[WhatsApp] 🧠 Brain learned ${learnings.length} new fact(s):`, learnings.map(l => l.content));
+                        } catch (learnError) {
+                            console.error("[WhatsApp] Failed to save learnings:", learnError);
+                        }
+                    }
+                }
+
                 // Send reply via Vercel (using our existing WhatsApp token)
-                const replyText = aiResponse || await getFallbackResponse(content, candidate, profile);
+                const replyText = cleanResponse || await getFallbackResponse(content, candidate, profile);
                 if (replyText) {
                     await sendWhatsAppText(normalizedPhone, replyText, candidate?.profile_id);
                     // Log GPT response for quality review
