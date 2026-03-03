@@ -124,10 +124,8 @@ Available positions: ${(jobRequests || []).reduce((sum, j) => sum + (j.positions
             `[${m.category}] ${m.content}`
         ).join("\n") || "(Empty brain)";
 
-        // ─── 5. Ask GPT to analyze system + conversations and learn ──────
-        const { default: OpenAI } = await import("openai");
-        const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-
+        // ─── 5. Ask Codex to analyze system + conversations and learn ─────
+        // Uses GPT-5.3 Codex (Responses API) — same model as Brain Monitor
         const analysisPrompt = `You are the Brain Improvement Engine for Workers United, a legal international hiring platform.
 
 Your job is to analyze the FULL SYSTEM DATA and recent conversations, then generate NEW facts to remember. The system data contains the TRUTH — use it to generate accurate facts.
@@ -167,24 +165,36 @@ RULES:
 - Output NO_NEW_LEARNINGS if nothing is new
 - Maximum 15 learnings per analysis`;
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                { role: "system", content: analysisPrompt },
-                { role: "user", content: "Analyze the data above and generate new learnings." },
-            ],
-            max_tokens: 1000,
-            temperature: 0.3,
+        // Call Codex via Responses API (not chat/completions)
+        const aiRes = await fetch("https://api.openai.com/v1/responses", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+                model: "gpt-5.3-codex",
+                instructions: analysisPrompt,
+                input: "Analyze the data above and generate new learnings.",
+            }),
         });
 
-        const response = completion.choices[0]?.message?.content || "";
-        console.log("[Brain] 🧠 Self-improvement analysis:", response);
+        if (!aiRes.ok) {
+            const errText = await aiRes.text();
+            throw new Error(`Codex API failed: ${aiRes.status} - ${errText.substring(0, 300)}`);
+        }
+
+        const aiData = await aiRes.json();
+        const response = aiData.output_text
+            || aiData.output?.[0]?.content?.[0]?.text
+            || "";
+        console.log("[Brain] 🧠 Codex self-improvement analysis:", response);
 
         // ─── 6. Parse and save learnings ─────────────────────────────────
         const newLearnings: { category: string; content: string }[] = [];
 
         if (!response.includes("NO_NEW_LEARNINGS")) {
-            const lines = response.split("\n").filter(l => l.startsWith("LEARN|"));
+            const lines = response.split("\n").filter((l: string) => l.startsWith("LEARN|"));
             for (const line of lines) {
                 const parts = line.split("|");
                 if (parts.length >= 3) {

@@ -282,7 +282,7 @@ Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-
                         const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
                         const completion = await openai.chat.completions.create({
-                            model: "gpt-4o",
+                            model: "gpt-4o-mini",
                             messages: [
                                 { role: "system", content: systemPrompt },
                                 { role: "user", content: content },
@@ -292,7 +292,7 @@ Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-
                         });
 
                         aiResponse = completion.choices[0]?.message?.content || null;
-                        console.log("[WhatsApp] 🧠 GPT-4o response:", aiResponse?.substring(0, 200));
+                        console.log("[WhatsApp] 🧠 GPT-4o-mini response:", aiResponse?.substring(0, 200));
 
                     } catch (aiError) {
                         console.error("[WhatsApp] OpenAI error:", aiError);
