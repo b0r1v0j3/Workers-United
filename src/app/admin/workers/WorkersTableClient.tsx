@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Search, ChevronRight, Globe, Phone, FileText, CheckCircle2, Clock, Hourglass } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, ChevronRight, Globe, Phone, FileText, CheckCircle2, Clock, Hourglass, Trash2 } from "lucide-react";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 
 export type WorkerTableRow = {
@@ -21,6 +21,8 @@ export type WorkerTableRow = {
     verifiedDocs: number;
     adminApproved: boolean;
     isCurrentUser: boolean;
+    daysUntilDeletion: number | null;
+    entryFeePaid: boolean;
 };
 
 export default function WorkersTableClient({ data, currentFilter }: { data: WorkerTableRow[], currentFilter: string }) {
@@ -69,8 +71,8 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
 
         // Sort
         result = [...result].sort((a, b) => {
-            let valA = a[sortField];
-            let valB = b[sortField];
+            let valA: string | number | boolean = a[sortField] ?? "";
+            let valB: string | number | boolean = b[sortField] ?? "";
 
             // Handle string comparisons
             if (typeof valA === 'string' && typeof valB === 'string') {
@@ -226,7 +228,14 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                     </div>
                                 </td>
                                 <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-                                    {new Date(worker.created_at).toLocaleDateString('en-GB')}
+                                    <div>{new Date(worker.created_at).toLocaleDateString('en-GB')}</div>
+                                    {worker.daysUntilDeletion !== null && !worker.entryFeePaid && (
+                                        <div className={`mt-1 flex items-center gap-1 text-[10px] font-bold ${worker.daysUntilDeletion <= 3 ? 'text-red-600' : worker.daysUntilDeletion <= 7 ? 'text-amber-600' : 'text-slate-400'
+                                            }`}>
+                                            <Trash2 size={10} />
+                                            {worker.daysUntilDeletion <= 0 ? 'Deleting...' : `${worker.daysUntilDeletion}d left`}
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
