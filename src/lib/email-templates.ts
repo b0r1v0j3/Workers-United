@@ -449,11 +449,9 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Continue Registration</a>
                     </div>
                 ` : `
-                    <div style="text-align: center;">
-                        <div style="width:80px;height:80px;background:#fef3c7;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
-                            <span style="font-size:40px;">⚠️</span>
-                        </div>
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Document Needs Attention</h1>
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <span style="font-size:48px; line-height:1; display:inline-block;">⚠️</span>
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 15px 0 10px;">Document Needs Attention</h1>
                     </div>
                     <div style="background:#fef3c7; border: 1px solid #fde68a; border-radius:12px; padding:25px; margin:30px 0;">
                         <p style="margin:0 0 10px; color: #92400e; font-size: 14px; font-weight:600;">Issue with your ${escapeHtml(docName)}:</p>
