@@ -189,6 +189,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                             daysUntilDeletion: profileCompletion < 100
                                 ? Math.max(0, 30 - Math.floor((Date.now() - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
                                 : null,
+                            authProvider: authUser.app_metadata?.provider || 'email',
                         } satisfies WorkerTableRow;
                     })}
                     currentFilter={filter}
