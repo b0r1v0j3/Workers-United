@@ -42,7 +42,7 @@ export default function Footer() {
         {
             href: "mailto:contact@workersunited.eu",
             label: "Email",
-            src: "https://img.icons8.com/color/48/mail.png"
+            src: "https://img.icons8.com/fluency/48/mail.png"
         }
     ];
 
