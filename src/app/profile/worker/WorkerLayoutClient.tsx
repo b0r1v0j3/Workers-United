@@ -25,15 +25,14 @@ export default function WorkerLayoutClient({
                 variant="dashboard"
                 user={user}
                 profileName={displayName}
-                onMenuToggle={() => setIsOpen(!isOpen)}
             />
-            <div className="max-w-5xl mx-auto w-full px-2 sm:px-4 py-8 flex-1">
-                <div className="flex flex-col md:flex-row gap-4 md:gap-6 relative">
-                    <WorkerSidebar isOpen={isOpen} setIsOpen={setIsOpen} />
-                    <div className="flex-1 min-w-0 pl-[72px] md:pl-0 transition-all duration-300">
+            <div className="flex-1 relative w-full flex">
+                <WorkerSidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+                <main className={`flex-1 transition-all duration-300 w-full min-w-0 pl-[72px] ${isOpen ? 'md:pl-[296px]' : 'md:pl-[112px]'}`}>
+                    <div className="max-w-5xl mx-auto w-full px-2 sm:px-4 py-8">
                         {children}
                     </div>
-                </div>
+                </main>
             </div>
         </div>
     );
