@@ -94,7 +94,8 @@ export default function ProfilePage() {
 
     // Form state
     const [formData, setFormData] = useState({
-        full_name: "",
+        first_name: "",
+        last_name: "",
         nationality: "",
         dobDay: "",
         dobMonth: "",
@@ -159,7 +160,10 @@ export default function ProfilePage() {
 
             if (profileData) {
                 setProfile(profileData);
-                setFormData(prev => ({ ...prev, full_name: profileData.full_name || "" }));
+                const nameParts = (profileData.full_name || "").trim().split(" ");
+                const first_name = nameParts[0] || "";
+                const last_name = nameParts.slice(1).join(" ") || "";
+                setFormData(prev => ({ ...prev, first_name, last_name }));
             }
 
             const { data: candidateData } = await supabase
@@ -267,9 +271,10 @@ export default function ProfilePage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
+            const full_name = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim();
             const { error: profileErr } = await supabase
                 .from("profiles")
-                .update({ full_name: formData.full_name })
+                .update({ full_name })
                 .eq("id", user.id);
             if (profileErr) throw new Error(profileErr.message);
 
@@ -461,22 +466,8 @@ export default function ProfilePage() {
     const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5]">
-            {/* Navbar */}
-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
-                <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
-                    <Link href="/profile/worker" className="flex items-center gap-2 text-[#65676b] hover:text-[#050505] text-sm font-semibold">
-                        ← Back to Profile
-                    </Link>
-                    <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline">Workers United</span>
-                    </Link>
-                    <div className="w-[120px]" /> {/* Spacer */}
-                </div>
-            </nav>
-
-            <div className="max-w-[900px] mx-auto px-4 py-6">
+        <div className="w-full">
+            <div className="w-full">
                 {/* Page Header */}
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-gray-900">Edit Profile</h1>
@@ -503,16 +494,20 @@ export default function ProfilePage() {
                                     </div>
                                     <div>
                                         <label className={labelClass}>
-                                            Full Name <span className="text-red-500">*</span>
+                                            Phone Number (WhatsApp) <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            name="full_name"
-                                            value={formData.full_name}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                            placeholder="Your full name"
+                                        <PhoneInput
+                                            country={"rs"}
+                                            value={formData.phone}
+                                            onChange={(phone) => setFormData(prev => ({ ...prev, phone: '+' + phone }))}
+                                            inputClass={`${inputClass} !pl-12 !w-full`}
+                                            buttonClass="!border-gray-300 !bg-gray-50 !rounded-l-md"
+                                            enableSearch={true}
+                                            searchPlaceholder="Search country..."
                                         />
+                                        <p className="text-[11px] text-gray-500 mt-1">
+                                            Do not type '0' before your number. If your number is 0601234567, just type 601234567.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -524,6 +519,36 @@ export default function ProfilePage() {
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Personal Information</h2>
                             </div>
                             <div className="p-4 space-y-4">
+                                {/* Row: First and Last Name */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className={labelClass}>
+                                            First Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="first_name"
+                                            value={formData.first_name}
+                                            onChange={handleChange}
+                                            className={inputClass}
+                                            placeholder="Your first name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>
+                                            Last Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="last_name"
+                                            value={formData.last_name}
+                                            onChange={handleChange}
+                                            className={inputClass}
+                                            placeholder="Your last name"
+                                        />
+                                    </div>
+                                </div>
+
                                 {/* Row: Gender + Marital Status */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -707,25 +732,8 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
 
-                                {/* Row: Phone + Current Country */}
+                                {/* Row: Current Country */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>
-                                            Phone Number (WhatsApp) <span className="text-red-500">*</span>
-                                        </label>
-                                        <PhoneInput
-                                            country={"rs"}
-                                            value={formData.phone}
-                                            onChange={(phone) => setFormData(prev => ({ ...prev, phone: '+' + phone }))}
-                                            inputClass={`${inputClass} !pl-12 !w-full`}
-                                            buttonClass="!border-gray-300 !bg-gray-50 !rounded-l-md"
-                                            enableSearch={true}
-                                            searchPlaceholder="Search country..."
-                                        />
-                                        <p className="text-[11px] text-gray-500 mt-1">
-                                            Do not type '0' before your number. If your number is 0641234567, just type 641234567.
-                                        </p>
-                                    </div>
                                     <div>
                                         <label className={labelClass}>
                                             Current Country <span className="text-red-500">*</span>

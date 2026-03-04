@@ -1,82 +1,80 @@
 "use client";
 
-
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import DocumentWizard from "@/components/DocumentWizard";
-import { logActivity } from "@/lib/activityLogger";
+import { CheckCircle2, AlertCircle, Loader2, Upload, Clock, FileText } from "lucide-react";
 
-export default function DocumentsPage() {
-    const supabase = createClient();
-    const [candidateId, setCandidateId] = useState<string | null>(null);
-    const [userEmail, setUserEmail] = useState<string>("");
-    const [loading, setLoading] = useState(true);
+interface DocumentsClientProps {
+    candidateId: string;
+    email: string;
+    documents: any[];
+}
 
-    useEffect(() => {
-        async function getCandidate() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setUserEmail(user.email || "");
-                // Check that user has completed their profile (candidate row exists)
-                const { data: candidate } = await supabase
-                    .from("candidates")
-                    .select("id")
-                    .eq("profile_id", user.id)
-                    .single();
+export default function DocumentsClient({ candidateId, email, documents }: DocumentsClientProps) {
 
-                if (candidate) {
-                    // Use auth UID (= profiles.id), NOT candidates.id
-                    // candidate_documents RLS checks user_id = auth.uid()
-                    setCandidateId(user.id);
-                    logActivity("documents_page_visit", "documents", { has_profile: true });
-                } else {
-                    logActivity("documents_page_blocked", "documents", { has_profile: false, reason: "no_candidate_row" }, "blocked");
-                }
-            }
-            setLoading(false);
-        }
-        getCandidate();
-    }, []);
+    const getDocStatus = (type: string) => {
+        const doc = documents.find(d => d.document_type === type);
+        if (!doc) return { status: "missing", label: "Not uploaded", color: "gray", icon: Upload };
+        if (doc.status === "verified") return { status: "verified", label: "Verified", color: "emerald", icon: CheckCircle2 };
+        if (doc.status === "rejected") return { status: "rejected", label: "Rejected", color: "red", icon: AlertCircle };
+        if (doc.status === "verifying") return { status: "verifying", label: "Verifying...", color: "amber", icon: Loader2 };
+        return { status: "uploaded", label: "Uploaded", color: "blue", icon: Clock };
+    };
 
-    if (loading) {
-        return (
-            <div className="wizard-page-bg">
-                <div className="text-white font-bold">Loading...</div>
-            </div>
-        );
-    }
-
-    if (!candidateId) {
-        return (
-            <div className="wizard-page-bg">
-                <div className="bg-white p-10 rounded-3xl shadow-2xl text-center max-w-md">
-                    <h2 className="text-2xl font-bold text-navy mb-4">Profile Required</h2>
-                    <p className="text-gray-600 mb-6">You need to complete your profile before uploading documents.</p>
-                    <Link href="/profile/worker/edit" className="btn btn-primary">Go to Profile</Link>
-                </div>
-            </div>
-        );
-    }
+    const hasAllDocs = documents.length >= 3;
 
     return (
-        <div className="wizard-page-bg">
-            <div className="fixed top-6 left-6 z-50">
-                <Link href="/profile/worker" className="flex items-center gap-2 text-white hover:opacity-80 font-semibold bg-black/20 px-4 py-2 rounded-full backdrop-blur-sm">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M19 12H5M12 19l-7-7 7-7" />
-                    </svg>
-                    Back to Profile
-                </Link>
-            </div>
+        <div className="w-full space-y-6">
+            <h1 className="text-2xl font-bold text-[#050505] mb-6">Your Documents</h1>
 
-            <DocumentWizard
-                candidateId={candidateId}
-                email={userEmail}
-                onComplete={() => {
-                    // Could redirect back to dashboard or show success
-                }}
-            />
+            {!hasAllDocs && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                    <div className="mb-6">
+                        <h3 className="font-semibold text-gray-900 text-xl">Upload Documents</h3>
+                        <p className="text-gray-500 mt-1">Please ensure all documents are clear and readable.</p>
+                    </div>
+                    <DocumentWizard candidateId={candidateId} email={email} />
+                </div>
+            )}
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                <h3 className="font-semibold text-gray-900 text-xl mb-6">Document Status</h3>
+                <div className="space-y-4">
+                    <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
+                    <DocumentRow label="Biometric Photo" type="biometric_photo" status={getDocStatus("biometric_photo")} />
+                    <DocumentRow label="Diploma / Certificate" type="diploma" status={getDocStatus("diploma")} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DocumentRow({ label, type, status }: { label: string, type: string, status: any }) {
+    const IconComponent = status.icon;
+    const colorMap: Record<string, string> = {
+        emerald: "text-emerald-700 bg-emerald-50 border-emerald-100",
+        red: "text-red-700 bg-red-50 border-red-100",
+        amber: "text-amber-700 bg-amber-50 border-amber-100",
+        blue: "text-blue-700 bg-blue-50 border-blue-100",
+        gray: "text-gray-600 bg-gray-50 border-gray-200",
+    };
+
+    return (
+        <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${colorMap[status.color] || colorMap.gray}`}>
+            <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-white/60 flex items-center justify-center border border-current/10">
+                    <FileText size={18} className="opacity-80" />
+                </div>
+                <div>
+                    <h4 className="font-semibold text-sm">{label}</h4>
+                    <p className="text-xs opacity-70 font-medium mt-0.5">{type.replace(/_/g, ' ')}</p>
+                </div>
+            </div>
+            <div className="flex items-center gap-3">
+                <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-white/60 border border-current/10`}>
+                    {status.label}
+                </span>
+                <IconComponent size={18} className={status.color === 'amber' ? 'animate-spin' : ''} />
+            </div>
         </div>
     );
 }

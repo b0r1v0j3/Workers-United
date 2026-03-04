@@ -46,37 +46,9 @@ export default async function QueuePage() {
         .order("expires_at", { ascending: true });
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5]">
-            {/* Navbar — Facebook-style */}
-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
-                <div className="max-w-[900px] mx-auto px-4 h-full flex items-center justify-between">
-                    <Link href="/profile/worker" className="text-[#65676b] hover:text-[#050505] text-sm font-semibold flex items-center gap-2">
-                        ← Back to Profile
-                    </Link>
-                    <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-                        <Image
-                            src="/logo-icon.png"
-                            alt="Workers United Logo"
-                            width={80}
-                            height={80}
-                            className="h-10 w-10 md:h-12 md:w-12 object-contain shrink-0"
-                            priority
-                        />
-                        <Image
-                            src="/logo-wordmark.png"
-                            alt="Workers United"
-                            width={200}
-                            height={50}
-                            className="w-[120px] md:w-[140px] h-auto object-contain"
-                            priority
-                        />
-                    </Link>
-                    <div className="w-[120px]" />
-                </div>
-            </nav>
-
+        <div className="w-full">
             <QueueClientEffects />
-            <main className="max-w-[900px] mx-auto px-4 py-6">
+            <main className="w-full">
                 <h1 className="text-2xl font-bold text-[#050505] mb-6">Your Queue Status</h1>
 
                 {/* Queue Status Card */}
