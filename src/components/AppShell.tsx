@@ -142,7 +142,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: an
             {onMenuToggle && (
                 <button
                     onClick={onMenuToggle}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group w-full mb-1.5 ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent`}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent`}
                     aria-label="Toggle Menu"
                 >
                     <div className="w-6 h-6 flex items-center justify-center shrink-0 transition-colors text-slate-400 group-hover:text-slate-600">
