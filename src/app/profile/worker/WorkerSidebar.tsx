@@ -57,7 +57,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
             <div className={`
                 fixed inset-y-0 left-0 z-40 bg-transparent transform transition-all duration-300 ease-in-out border-none
                 md:relative md:w-64 md:translate-x-0 md:flex-shrink-0 md:bg-transparent md:border-none md:z-0 md:pt-0 pt-[64px]
-                ${isOpen ? "w-72 translate-x-0 shadow-2xl md:shadow-none" : "w-[68px] translate-x-0 shadow-sm md:shadow-none"}
+                ${isOpen ? "w-72 translate-x-0" : "w-[68px] translate-x-0"}
             `}>
                 <div className="h-full overflow-y-auto px-2 md:px-0 py-6 md:py-0 flex flex-col items-center md:items-stretch">
                     <div className="bg-white rounded-xl p-2 shadow-sm border border-gray-200 md:sticky md:top-24 w-full">
