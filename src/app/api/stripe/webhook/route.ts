@@ -58,8 +58,11 @@ export async function POST(req: NextRequest) {
                 const { error } = await supabase
                     .from("payments")
                     .update({
+                        amount,
+                        amount_cents: expectedAmountCents,
                         status: "completed",
                         stripe_payment_intent_id: session.payment_intent as string,
+                        stripe_checkout_session_id: session.id,
                         paid_at: new Date().toISOString(),
                     })
                     .eq("id", paymentId);
@@ -73,6 +76,7 @@ export async function POST(req: NextRequest) {
                 const { error } = await supabase.from("payments").insert({
                     user_id: userId,
                     amount,
+                    amount_cents: expectedAmountCents,
                     currency: session.currency?.toUpperCase() || "USD",
                     status: "completed",
                     stripe_payment_intent_id: session.payment_intent as string,
@@ -107,7 +111,8 @@ export async function POST(req: NextRequest) {
                     })
                     .eq("profile_id", userId)
                     .eq("entry_fee_paid", false)
-                    .eq("status", "VERIFIED");
+                    .eq("admin_approved", true)
+                    .in("status", ["VERIFIED", "APPROVED", "PENDING_APPROVAL"]);
 
                 await logServerActivity(userId, "payment_completed", "payment", { type: "entry_fee", amount: 9, currency: session.currency?.toUpperCase() || "USD" });
 

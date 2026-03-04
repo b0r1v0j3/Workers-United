@@ -18,7 +18,7 @@ export default function CreateJobClient() {
     const [formData, setFormData] = useState({
         title: "",
         description: "",
-        destination_country: "Serbia",
+        destination_country: "",
         industry: "",
         positions_count: 1,
         salary_rsd: 70000,
@@ -55,12 +55,13 @@ export default function CreateJobClient() {
 
             const { data: employer } = await supabase
                 .from("employers")
-                .select("id, tax_id")
+                .select("id, tax_id, country")
                 .eq("profile_id", user.id)
                 .single();
 
             if (!employer) throw new Error("Employer profile not found");
             if (!employer.tax_id) throw new Error("Please complete your company profile with Tax ID (PIB) first");
+            if (!employer.country) throw new Error("Please complete your company profile with country first");
 
             const { error: insertError } = await supabase
                 .from("job_requests")
@@ -68,7 +69,7 @@ export default function CreateJobClient() {
                     employer_id: employer.id,
                     title: formData.title,
                     description: formData.description,
-                    destination_country: formData.destination_country,
+                    destination_country: employer.country || formData.destination_country || "Europe",
                     industry: formData.industry,
                     positions_count: formData.positions_count,
                     salary_rsd: formData.salary_rsd,
@@ -398,7 +399,7 @@ export default function CreateJobClient() {
                                     <div>
                                         <p className="text-sm text-blue-900 font-medium">Important</p>
                                         <p className="text-sm text-blue-800">
-                                            Serbian law requires employers to provide accommodation for international workers.
+                                            Employers must provide accommodation according to local labor and visa requirements.
                                         </p>
                                     </div>
                                 </div>
@@ -467,7 +468,7 @@ export default function CreateJobClient() {
                     </div>
 
                     <p className="text-xs text-center text-[#94a3b8] mt-4">
-                        By creating a job request, you agree to provide legal employment under Serbian labor laws.
+                        By creating a job request, you agree to provide legal employment in line with local labor regulations.
                     </p>
                 </form>
             </main>

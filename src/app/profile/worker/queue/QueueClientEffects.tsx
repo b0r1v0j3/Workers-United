@@ -14,7 +14,7 @@ export default function QueueClientEffects() {
         const payment = searchParams.get("payment");
         if (payment === "success") {
             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-            toast.success("Payment successful! You're now in the active queue.");
+            toast.success("Payment successful! We are activating your queue status.");
             // Clean URL without reload
             window.history.replaceState({}, "", "/profile/worker/queue");
         } else if (payment === "cancelled") {

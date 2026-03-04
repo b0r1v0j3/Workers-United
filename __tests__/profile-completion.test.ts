@@ -9,7 +9,7 @@ describe('getWorkerCompletion', () => {
             documents: [],
         });
         expect(result.completion).toBe(0);
-        expect(result.missingFields.length).toBe(16);
+        expect(result.missingFields.length).toBe(20);
         expect(result.completedFields).toBe(0);
     });
 
@@ -29,20 +29,24 @@ describe('getWorkerCompletion', () => {
                 citizenship: 'Serbian',
                 marital_status: 'Single',
                 passport_number: 'P12345678',
+                passport_issued_by: 'Authority',
+                passport_issue_date: '2019-01-01',
+                passport_expiry_date: '2029-01-01',
                 lives_abroad: false,
                 previous_visas: false,
             },
             documents: [
                 { document_type: 'passport' },
                 { document_type: 'biometric_photo' },
+                { document_type: 'diploma' },
             ],
         });
         expect(result.completion).toBe(100);
         expect(result.missingFields).toHaveLength(0);
-        expect(result.completedFields).toBe(16);
+        expect(result.completedFields).toBe(20);
     });
 
-    it('returns ~50% for half-complete profile', () => {
+    it('returns expected completion for partially complete profile', () => {
         const result = getWorkerCompletion({
             profile: { full_name: 'Test User' },
             candidate: {
@@ -53,13 +57,13 @@ describe('getWorkerCompletion', () => {
                 gender: 'Male',
                 date_of_birth: '1990-01-01',
                 birth_country: 'Serbia',
-                // Missing: birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas
+                // Missing other required fields + all documents
             },
             documents: [],
         });
-        // 8 out of 16 fields completed
-        expect(result.completion).toBe(50);
-        expect(result.missingFields.length).toBe(8);
+        // 8 out of 20 fields completed
+        expect(result.completion).toBe(40);
+        expect(result.missingFields.length).toBe(12);
     });
 
     it('missing fields use human-readable labels', () => {
@@ -79,20 +83,16 @@ describe('getEmployerCompletion', () => {
     it('returns 0% for empty employer', () => {
         const result = getEmployerCompletion({ employer: null });
         expect(result.completion).toBe(0);
-        expect(result.missingFields.length).toBe(8);
+        expect(result.missingFields.length).toBe(4);
     });
 
     it('returns 100% for fully completed employer', () => {
         const result = getEmployerCompletion({
             employer: {
                 company_name: 'TechCorp',
-                company_registration_number: 'REG123',
-                company_address: '123 Main St',
                 contact_phone: '+49123456',
                 country: 'Germany',
-                city: 'Berlin',
                 industry: 'Technology',
-                description: 'A tech company',
             },
         });
         expect(result.completion).toBe(100);
@@ -102,7 +102,7 @@ describe('getEmployerCompletion', () => {
     it('missing fields use human-readable labels', () => {
         const result = getEmployerCompletion({ employer: null });
         expect(result.missingFields).toContain('Company Name');
-        expect(result.missingFields).toContain('Registration Number');
+        expect(result.missingFields).toContain('Country');
         expect(result.missingFields).toContain('Contact Phone');
     });
 });

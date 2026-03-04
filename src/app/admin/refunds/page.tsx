@@ -1,26 +1,25 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
+import { isGodModeUser } from "@/lib/godmode";
 
 export default async function AdminRefundsPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
-    const adminClient = createAdminClient();
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single();
 
-    // Get flagged refunds
-    const { data: flaggedPayments } = await adminClient
-        .from("payments")
-        .select(`
-            *,
-            profiles(email, full_name)
-        `)
-        .eq("status", "flagged_for_refund")
-        .order("created_at", { ascending: false })
-        .limit(50);
+    if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
+        redirect("/profile");
+    }
+
+    const adminClient = createAdminClient();
 
     // Get candidates marked for refund
     const { data: refundCandidates } = await adminClient
@@ -113,6 +112,20 @@ function ProcessRefundButton({ candidateId, paymentId }: { candidateId: string; 
     async function processRefund() {
         "use server";
 
+        const auth = await createClient();
+        const { data: { user } } = await auth.auth.getUser();
+        if (!user) throw new Error("Unauthorized");
+
+        const { data: profile } = await auth
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
+            throw new Error("Forbidden");
+        }
+
         const supabase = createAdminClient();
 
         if (paymentId) {
@@ -145,6 +158,20 @@ function ProcessRefundButton({ candidateId, paymentId }: { candidateId: string; 
 function DenyRefundButton({ candidateId }: { candidateId: string }) {
     async function denyRefund() {
         "use server";
+
+        const auth = await createClient();
+        const { data: { user } } = await auth.auth.getUser();
+        if (!user) throw new Error("Unauthorized");
+
+        const { data: profile } = await auth
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
+            throw new Error("Forbidden");
+        }
 
         const supabase = createAdminClient();
 

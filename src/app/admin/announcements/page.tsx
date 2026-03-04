@@ -151,7 +151,7 @@ export default async function AnnouncementsPage() {
                                 <input
                                     type="text"
                                     name="action_link"
-                                    placeholder="e.g., https://workersunited.eu/profile"
+                                        placeholder="e.g., https://workersunited.eu/profile/worker"
                                     className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
                             </div>

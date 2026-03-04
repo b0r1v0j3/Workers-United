@@ -474,7 +474,7 @@ export async function GET(request: NextRequest) {
             name: "Workers United",
             url: "https://workersunited.eu",
             entryFee: "$9",
-            placementFee: "$190 (Serbia)",
+            placementFee: "$190 (current market)",
             guarantee: "90-day money-back on entry fee",
         },
         // WhatsApp → $9 conversion tracking

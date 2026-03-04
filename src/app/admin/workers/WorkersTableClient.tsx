@@ -302,6 +302,7 @@ function StatusBadge({ status }: { status: string }) {
         PROFILE_COMPLETE: "bg-blue-100 text-blue-700",
         PENDING_APPROVAL: "bg-indigo-100 text-indigo-700",
         VERIFIED: "bg-emerald-100 text-emerald-700",
+        APPROVED: "bg-emerald-100 text-emerald-700",
         IN_QUEUE: "bg-amber-100 text-amber-700",
         OFFER_PENDING: "bg-orange-100 text-orange-700",
         OFFER_ACCEPTED: "bg-orange-100 text-orange-700",

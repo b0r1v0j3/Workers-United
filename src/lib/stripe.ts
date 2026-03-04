@@ -21,27 +21,31 @@ export const PRICES = {
 
 export type PaymentType = "entry_fee" | "confirmation_fee";
 
-export function getCheckoutSuccessUrl(type: PaymentType): string {
+export function getCheckoutSuccessUrl(type: PaymentType, offerId?: string): string {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     switch (type) {
         case "entry_fee":
             return `${baseUrl}/profile/worker/queue?payment=success`;
         case "confirmation_fee":
-            return `${baseUrl}/profile/offers?payment=success`;
+            return offerId
+                ? `${baseUrl}/profile/worker/offers/${offerId}?payment=success`
+                : `${baseUrl}/profile/worker/queue?payment=success`;
         default:
             return `${baseUrl}/profile/worker`;
     }
 }
 
-export function getCheckoutCancelUrl(type: PaymentType): string {
+export function getCheckoutCancelUrl(type: PaymentType, offerId?: string): string {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     switch (type) {
         case "entry_fee":
             return `${baseUrl}/profile/worker/queue?payment=cancelled`;
         case "confirmation_fee":
-            return `${baseUrl}/profile/offers?payment=cancelled`;
+            return offerId
+                ? `${baseUrl}/profile/worker/offers/${offerId}?payment=cancelled`
+                : `${baseUrl}/profile/worker/queue?payment=cancelled`;
         default:
             return `${baseUrl}/profile/worker`;
     }

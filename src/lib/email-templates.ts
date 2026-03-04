@@ -259,7 +259,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
 
                     <div style="text-align:center; margin-top:40px;">
-                        <a href="https://workersunited.eu/profile" style="${buttonStyle}">
+                        <a href="https://workersunited.eu/profile/worker/queue" style="${buttonStyle}">
                             View My Status
                         </a>
                     </div>
@@ -295,7 +295,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                     
                     <div style="text-align:center; margin-top:40px;">
-                        <a href="${data.offerLink || "https://workersunited.eu/profile"}" style="${buttonStyle}">
+                        <a href="${data.offerLink || "https://workersunited.eu/profile/worker/queue"}" style="${buttonStyle}">
                             View & Accept Offer
                         </a>
                     </div>
@@ -317,7 +317,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </p>
                     
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="${data.offerLink || "https://workersunited.eu/profile"}" style="${buttonStyle}">
+                        <a href="${data.offerLink || "https://workersunited.eu/profile/worker/queue"}" style="${buttonStyle}">
                             Respond Now
                         </a>
                     </div>
@@ -421,7 +421,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                     
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="https://workersunited.eu/profile" style="${buttonStyle}">
+                        <a href="https://workersunited.eu/profile/worker" style="${buttonStyle}">
                             Check Profile
                         </a>
                     </div>
@@ -523,9 +523,10 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 ? "Complete your company profile to find great workers."
                 : "Complete your profile to get matched with jobs.";
             const btnLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
+            const subject = isEmp ? "Don't forget your company profile!" : "Don't forget your profile!";
 
             return {
-                subject: "Don't forget your profile!",
+                subject,
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/ios/100/000000/todo-list.png" width="80" height="80" alt="Todo" style="margin-bottom: 20px;">
@@ -551,7 +552,11 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "profile_warning": {
             const daysLeft = data.daysLeft || 0;
-            const color = "#1D1D1F";
+            const isEmp = data.isEmployer || false;
+            const saveLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
+            const warningText = isEmp
+                ? "Your company profile is incomplete and scheduled for cleanup."
+                : "Your profile is incomplete and scheduled for cleanup.";
 
             return {
                 subject: `Last chance: ${daysLeft} days left`,
@@ -565,11 +570,11 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
-                        We delete incomplete profiles to keep our platform valid. Please finish your signup to stay with us!
+                        ${warningText} Please finish your signup to stay with us.
                     </p>
 
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle}">
+                        <a href="${saveLink}" style="${buttonStyle}">
                             Save My Account
                         </a>
                     </div>
