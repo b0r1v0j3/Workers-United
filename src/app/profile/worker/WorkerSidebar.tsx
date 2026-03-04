@@ -60,6 +60,16 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                 ${isOpen ? "w-72 translate-x-0 shadow-2xl" : "w-[68px] translate-x-0 shadow-sm"}
             `}>
                 <div className="h-full overflow-y-auto px-2 md:px-0 py-6 md:py-0 flex flex-col items-center md:items-stretch">
+                    {/* Toggle Button in Sidebar */}
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className={`p-2 mb-4 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ${isOpen ? 'self-start ml-2 md:ml-0' : 'mx-auto'}`}
+                        aria-label="Toggle Menu"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
                     {/* Mobile Header with Close Button */}
                     <div className={`flex justify-between items-center mb-6 md:hidden px-2 w-full ${!isOpen && 'hidden'}`}>
                         <h2 className="font-bold text-lg text-gray-900">Menu</h2>
