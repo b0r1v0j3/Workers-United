@@ -55,22 +55,23 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
 
             {/* Sidebar Container */}
             <div className={`
-                fixed inset-y-0 left-0 z-40 bg-[#FAFAFA] transform transition-all duration-300 ease-in-out border-r border-gray-200
+                fixed inset-y-0 left-0 z-40 bg-transparent transform transition-all duration-300 ease-in-out border-none
                 md:relative md:w-64 md:translate-x-0 md:flex-shrink-0 md:bg-transparent md:border-none md:z-0 md:pt-0 pt-[64px]
-                ${isOpen ? "w-72 translate-x-0 shadow-2xl" : "w-[68px] translate-x-0 shadow-sm"}
+                ${isOpen ? "w-72 translate-x-0 shadow-2xl md:shadow-none" : "w-[68px] translate-x-0 shadow-sm md:shadow-none"}
             `}>
                 <div className="h-full overflow-y-auto px-2 md:px-0 py-6 md:py-0 flex flex-col items-center md:items-stretch">
                     <div className="bg-white rounded-xl p-2 shadow-sm border border-gray-200 md:sticky md:top-24 w-full">
                         {/* Toggle Button in Sidebar */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className={`p-2 mb-4 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ${isOpen ? 'self-start ml-2 md:ml-0' : 'mx-auto block'}`}
+                            className={`p-2 mb-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ${isOpen ? 'self-start ml-2 md:ml-0' : 'mx-auto block'}`}
                             aria-label="Toggle Menu"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </button>
+
                         <SidebarLink
                             href="/profile/worker"
                             icon={<User size={18} />}
