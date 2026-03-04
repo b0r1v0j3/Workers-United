@@ -111,17 +111,6 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                                 <span className="text-sm font-semibold text-[#050505] hidden sm:block">
                                     {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}
                                 </span>
-                                <a
-                                    href="/auth/signout"
-                                    className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors"
-                                    title="Logout"
-                                >
-                                    {/* Logout Icon */}
-                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                        <path d="M16 13v-2H7V8l-5 4 5 4v-3z" />
-                                        <path d="M20 3h-9c-1.103 0-2 .897-2 2v4h2V5h9v14h-9v-4H9v4c0 1.103.897 2 2 2h9c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2z" />
-                                    </svg>
-                                </a>
                             </div>
                         </>
                     ) : (
