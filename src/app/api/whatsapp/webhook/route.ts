@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import { saveBrainFactsDedup } from "@/lib/brain-memory";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -12,9 +13,18 @@ import crypto from "crypto";
 // Architecture: User → WhatsApp → Meta → Vercel → GPT-4o-mini → Vercel → WhatsApp
 // All AI processing happens directly via OpenAI API (no middleware).
 
-const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "workers-united-whatsapp-verify";
+const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "";
 const APP_SECRET = process.env.META_APP_SECRET || "";
 const CONVERSATION_HISTORY_LIMIT = 100; // Number of past messages to send for context
+const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+38166299444")
+    .split(",")
+    .map((phone) => normalizePhone(phone))
+    .filter(Boolean);
+
+function normalizePhone(rawPhone: string): string {
+    const digits = rawPhone.replace(/\D/g, "");
+    return digits ? `+${digits}` : "";
+}
 
 // ─── Meta signature verification ─────────────────────────────────────────────
 function verifyMetaSignature(rawBody: string, signature: string | null): boolean {
@@ -22,14 +32,23 @@ function verifyMetaSignature(rawBody: string, signature: string | null): boolean
         console.warn("[Webhook] META_APP_SECRET not set — skipping signature verification");
         return true; // Allow in dev, but log warning
     }
-    if (!signature) return false;
+    if (!signature || !signature.startsWith("sha256=")) return false;
+
     const expectedSig = "sha256=" + crypto.createHmac("sha256", APP_SECRET).update(rawBody).digest("hex");
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig));
+    const provided = Buffer.from(signature, "utf8");
+    const expected = Buffer.from(expectedSig, "utf8");
+
+    if (provided.length !== expected.length) return false;
+    return crypto.timingSafeEqual(provided, expected);
 }
 
 // ─── GET: Webhook Verification ──────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
+    if (!VERIFY_TOKEN) {
+        return NextResponse.json({ error: "Webhook verify token is not configured" }, { status: 500 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const mode = searchParams.get("hub.mode");
     const token = searchParams.get("hub.verify_token");
@@ -111,7 +130,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Normalize phone for DB lookup (add + prefix)
-                const normalizedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+${phoneNumber}`;
+                const normalizedPhone = normalizePhone(phoneNumber);
 
                 // ─── Fetch user profile (multi-layer phone lookup) ────────
                 const candidateSelect = `
@@ -187,8 +206,7 @@ export async function POST(request: NextRequest) {
                     { phone: normalizedPhone, message_type: messageType, content_preview: content.substring(0, 100), is_registered: !!candidate }
                 );
                 // ─── Admin Phone Detection ────────────────────────────────
-                const ADMIN_PHONE = "+38166299444";
-                const isAdmin = normalizedPhone === ADMIN_PHONE || phoneNumber === "38166299444";
+                const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
 
                 // ─── Admin Commands (direct brain control via WhatsApp) ───
                 if (isAdmin) {
@@ -215,11 +233,9 @@ export async function POST(request: NextRequest) {
                                 await sendWhatsAppText(normalizedPhone, `✅ Ispravljeno!\n\nStaro: ${matches[0].content}\nNovo: ${newFact}\n\nConfidence: 1.0 (admin verified)`, candidate?.profile_id);
                             } else {
                                 // No match found, add as new fact
-                                await adminClient.from("brain_memory").insert({
-                                    category: "faq",
-                                    content: newFact,
-                                    confidence: 1.0,
-                                });
+                                await saveBrainFactsDedup(adminClient, [
+                                    { category: "faq", content: newFact, confidence: 1.0 },
+                                ]);
                                 await sendWhatsAppText(normalizedPhone, `✅ Nisam našao staru činjenicu, dodao novu:\n${newFact}`, candidate?.profile_id);
                             }
                             return NextResponse.json({ status: "ok" });
@@ -232,11 +248,9 @@ export async function POST(request: NextRequest) {
                         const pipeParts = factStr.split("|");
                         const category = pipeParts.length > 1 ? pipeParts[0].trim() : "faq";
                         const fact = pipeParts.length > 1 ? pipeParts.slice(1).join("|").trim() : factStr;
-                        await adminClient.from("brain_memory").insert({
-                            category,
-                            content: fact,
-                            confidence: 1.0,
-                        });
+                        await saveBrainFactsDedup(adminClient, [
+                            { category, content: fact, confidence: 1.0 },
+                        ]);
                         await sendWhatsAppText(normalizedPhone, `🧠 Zapamćeno!\n[${category}] ${fact}\nConfidence: 1.0`, candidate?.profile_id);
                         return NextResponse.json({ status: "ok" });
                     }
@@ -288,7 +302,7 @@ export async function POST(request: NextRequest) {
                                     .select("direction, content, created_at")
                                     .eq("phone_number", normalizedPhone)
                                     .order("created_at", { ascending: false })
-                                    .limit(100);
+                                    .limit(CONVERSATION_HISTORY_LIMIT);
                                 return (data || []).reverse();
                             } catch { return []; }
                         })();
@@ -429,14 +443,17 @@ Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-
                     if (learnings.length > 0) {
                         try {
                             const admin = createAdminClient();
-                            for (const learning of learnings) {
-                                await admin.from("brain_memory").insert({
+                            const learningSaveStats = await saveBrainFactsDedup(
+                                admin,
+                                learnings.map((learning) => ({
                                     category: learning.category,
                                     content: learning.content,
                                     confidence: 0.8,
-                                });
-                            }
-                            console.log(`[WhatsApp] 🧠 Brain learned ${learnings.length} new fact(s):`, learnings.map(l => l.content));
+                                }))
+                            );
+                            console.log(
+                                `[WhatsApp] 🧠 Learning save stats — inserted: ${learningSaveStats.inserted}, updated: ${learningSaveStats.updated}, skipped: ${learningSaveStats.skipped}`
+                            );
                         } catch (learnError) {
                             console.error("[WhatsApp] Failed to save learnings:", learnError);
                         }

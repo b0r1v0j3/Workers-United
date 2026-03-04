@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 04.03.2026 (payment/queue hardening, offer link sync, Next.js proxy migration)
+> **Poslednje ažuriranje:** 05.03.2026 (system smoke cron, expanded health checks, payment unlock guardrails)
 
 ---
 
@@ -248,6 +248,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] Brain memory dedup + WhatsApp webhook hardening + system-smoke alert cooldown (6h anti-spam) — 05.03.2026
+- [x] Reliability autopilot v1 — `/api/cron/system-smoke` + expanded `/api/health` (Supabase/Stripe/SMTP/WhatsApp/n8n checks + alerting) — 05.03.2026
 - [x] Hotfix: entry payment unlocked for all worker profiles (uklonjen admin approval gate na checkout + queue UI) — 04.03.2026
 - [x] Payment/queue hardening + real offer links + admin status alignment + notification sync — 04.03.2026
 - [x] Next.js 16 proxy migration (`src/middleware.ts` → `src/proxy.ts`) — 04.03.2026
@@ -316,6 +318,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | Fajl | Namena |
 |---|---|
 | `src/lib/profile-completion.ts` | Shared profile completion — **single source of truth** za worker i employer |
+| `src/lib/smoke-evaluator.ts` | Shared evaluator za system smoke (healthy/degraded/critical) |
+| `src/lib/brain-memory.ts` | Shared deduplikacija + normalizacija za `brain_memory` upise (WhatsApp + Brain improve) |
 | `src/lib/email-templates.ts` | Svi email templateovi + strict `TemplateData` (bez `[key: string]: any`) |
 | `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging, 10 convenience wrappers |
 | `src/lib/platform-config.ts` | Centralized business facts (cene, garancija, kontakt). Kešira 5 min. Čitaju: WhatsApp bot, Brain Monitor, n8n AI |
@@ -328,6 +332,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | `/api/cron/profile-reminders` | Daily 9 AM UTC | Podsetnik za nepotpune profile (reminder + warning + deletion) |
 | `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert za pasoš koji ističe za <6 meseci (max 1 email/30 dana) |
 | `/api/cron/match-jobs` | Svakih 6 sati | Auto-matching radnika i poslova |
+| `/api/cron/system-smoke` | Svaki sat (:30) | Automatizovan smoke monitoring ruta + servisa (Stripe/SMTP/WA/n8n) |
 
 ### ⚠️ Email & WhatsApp Common Gotchas:
 - **Email + WhatsApp dual-send** — `queueEmail()` prima opcionalni `recipientPhone` parametar. Kad ga prosledite, automatski šalje i WhatsApp template. WhatsApp failure NIKAD ne blokira email.
@@ -531,6 +536,8 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 42. **RLS policy MORA koristiti `(select auth.uid())` a NE `auth.uid()` direktno** — `auth.uid()` se re-evaluira za SVAKI red u tabeli, što drastično usporava query-je. Zamotan u subquery `(select auth.uid())` se poziva samo jednom. Ovo važi za sve `auth.<function>()` pozive u RLS policy-ima (uid, jwt, role). Supabase Advisor detektuje ovo kao performance warning.
 43. **Telefon se čuva u `candidates.phone`, NE u Supabase Auth** — Auth `phone` polje je za SMS login. Naš phone se čuva u candidates tabeli. `ProfileClient.tsx` sinhronizuje phone u `auth.user_metadata` na save da bude vidljiv u Auth dashboardu. WhatsApp webhook traži korisnika po `candidates.phone`.
 44. **Business facts MORAJU ići u `platform_config` tabelu** — NIKAD ne hardkodovati cene, garanciju, kontakt email ili politiku u kod. Koristiti `getPlatformConfig()` iz `src/lib/platform-config.ts`. Admin menja u Settings → Platform Config. WhatsApp bot, Brain Monitor, n8n AI — svi čitaju iz iste baze. Cache: 5 min. Fallback: hardkodovane default vrednosti ako DB pukne.
+45. **`brain_memory` upisi MORAJU ići kroz `saveBrainFactsDedup()`** — WhatsApp learning loop i Brain self-improve ne smeju direktno `insert` bez dedupa. Koristiti `src/lib/brain-memory.ts` da se spreče duplikati i prompt-bloat.
+46. **WhatsApp webhook token + admin telefoni su ENV-driven** — `WHATSAPP_VERIFY_TOKEN` (ili fallback na `CRON_SECRET`) mora biti set; hardcoded verify token fallback je uklonjen. Admin telefon za WhatsApp komande ide kroz `OWNER_PHONE` ili `OWNER_PHONES` (comma-separated).
 
 
 ---
