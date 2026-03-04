@@ -11,6 +11,8 @@ import {
     Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp, Banknote,
     LayoutDashboard
 } from "lucide-react";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 // ─── Types ──────────────────────────────────────────────────────
 interface EmployerProfile {
@@ -553,13 +555,18 @@ export default function EmployerProfilePage() {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                 <div>
                                                     <label className={labelClass}>Contact Phone <span className="text-red-500">*</span></label>
-                                                    <input type="tel" name="contact_phone" value={companyForm.contact_phone}
-                                                        onChange={(e) => {
-                                                            let val = e.target.value;
-                                                            if (val.length === 1 && val !== '+') val = '+' + val;
-                                                            setCompanyForm(prev => ({ ...prev, contact_phone: val }));
-                                                        }}
-                                                        className={inputClass} placeholder="+381111234567" />
+                                                    <PhoneInput
+                                                        country={"rs"}
+                                                        value={companyForm.contact_phone}
+                                                        onChange={(phone) => setCompanyForm(prev => ({ ...prev, contact_phone: '+' + phone }))}
+                                                        inputClass={`${inputClass} !pl-12 !w-full`}
+                                                        buttonClass="!border-gray-200 !bg-gray-50 !rounded-l-xl"
+                                                        enableSearch={true}
+                                                        searchPlaceholder="Search country..."
+                                                    />
+                                                    <p className="text-[11px] text-gray-500 mt-1">
+                                                        Do not type '0' before your number. If your number is 0641234567, just type 641234567.
+                                                    </p>
                                                 </div>
                                                 <div>
                                                     <label className={labelClass}>Website (Optional)</label>

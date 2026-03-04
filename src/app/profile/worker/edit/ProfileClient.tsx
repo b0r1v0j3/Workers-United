@@ -5,6 +5,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import { logActivity, logError } from "@/lib/activityLogger";
 
@@ -711,19 +713,18 @@ export default function ProfilePage() {
                                         <label className={labelClass}>
                                             Phone Number (WhatsApp) <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="tel"
-                                            name="phone"
+                                        <PhoneInput
+                                            country={"rs"}
                                             value={formData.phone}
-                                            onChange={(e) => {
-                                                let val = e.target.value;
-                                                if (val.length === 1 && val !== '+') val = '+' + val;
-                                                setFormData(prev => ({ ...prev, phone: val }));
-                                            }}
-                                            className={inputClass}
-                                            placeholder="+381641234567"
+                                            onChange={(phone) => setFormData(prev => ({ ...prev, phone: '+' + phone }))}
+                                            inputClass={`${inputClass} !pl-12 !w-full`}
+                                            buttonClass="!border-gray-300 !bg-gray-50 !rounded-l-md"
+                                            enableSearch={true}
+                                            searchPlaceholder="Search country..."
                                         />
-                                        <p className="text-[11px] text-gray-500 mt-1">Must include country code, e.g. +381 for Serbia, +91 for India</p>
+                                        <p className="text-[11px] text-gray-500 mt-1">
+                                            Do not type '0' before your number. If your number is 0641234567, just type 641234567.
+                                        </p>
                                     </div>
                                     <div>
                                         <label className={labelClass}>
