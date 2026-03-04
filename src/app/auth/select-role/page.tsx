@@ -68,12 +68,26 @@ export default function SelectRolePage() {
                     await supabase.from("employers").insert({
                         profile_id: user.id,
                         company_name: null,
-                        status: "pending",
+                        status: "PENDING",
                     });
                 }
 
                 router.push("/profile/employer");
             } else {
+                // Create candidate record for workers
+                const { data: existingCandidate } = await supabase
+                    .from("candidates")
+                    .select("id")
+                    .eq("profile_id", user.id)
+                    .maybeSingle();
+
+                if (!existingCandidate) {
+                    await supabase.from("candidates").insert({
+                        profile_id: user.id,
+                        status: "NEW",
+                    });
+                }
+
                 router.push("/profile/worker");
             }
             router.refresh();
