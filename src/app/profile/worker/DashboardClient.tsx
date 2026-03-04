@@ -164,23 +164,20 @@ export default function DashboardClient({
                 <div className="p-6 relative transition-all duration-300">
                     {/* Top Content (Rocket + Text + Button) */}
                     <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-5 sm:gap-6">
-                            <Image src="/rocket-icon.png" alt="Rocket" width={72} height={72} className="object-contain shrink-0 drop-shadow-sm hover:-translate-y-1 transition-transform duration-300" />
-                            <div>
-                                <h3 className="font-semibold text-gray-900 text-lg tracking-tight">
-                                    {inQueue ? "You're in the Queue!"
-                                        : candidate?.entry_fee_paid ? "You're in the Queue!"
-                                            : "Start Searching for Jobs"}
-                                </h3>
-                                <p className="text-gray-500 text-sm mt-1 leading-relaxed max-w-xl">
-                                    {inQueue
+                        <div>
+                            <h3 className="font-semibold text-gray-900 text-lg tracking-tight">
+                                {inQueue ? "You're in the Queue!"
+                                    : candidate?.entry_fee_paid ? "You're in the Queue!"
+                                        : "Start Searching for Jobs"}
+                            </h3>
+                            <p className="text-gray-500 text-sm mt-1 leading-relaxed max-w-xl">
+                                {inQueue
+                                    ? "We're actively looking for the best job match for you."
+                                    : candidate?.entry_fee_paid
                                         ? "We're actively looking for the best job match for you."
-                                        : candidate?.entry_fee_paid
-                                            ? "We're actively looking for the best job match for you."
-                                            : "Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe."
-                                    }
-                                </p>
-                            </div>
+                                        : "Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe."
+                                }
+                            </p>
                         </div>
                         {inQueue || candidate?.entry_fee_paid ? (
                             <Link href="/profile/worker/queue" className="shrink-0 bg-white text-gray-900 font-medium text-sm px-5 py-2.5 rounded-lg border border-gray-200 shadow-sm whitespace-nowrap inline-block hover:bg-gray-50 transition-colors">
