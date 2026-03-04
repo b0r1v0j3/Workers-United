@@ -60,8 +60,8 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                 transition-all duration-300 ease-in-out border-none bg-transparent pl-3 pt-3 md:pl-4 md:pt-4 pb-6 md:pb-8
                 ${isOpen ? "w-[272px] md:w-[280px]" : "w-[76px] md:w-[84px]"} translate-x-0
             `}>
-                <div className="h-full w-full">
-                    <div className="bg-white rounded-r-xl lg:rounded-xl p-2 md:p-3 shadow-sm border border-gray-200 w-full h-full flex flex-col">
+                <div className="h-full w-full overflow-y-auto pr-3 md:pr-0 pb-3 md:pb-0">
+                    <div className="bg-white rounded-xl p-2 md:p-3 shadow-sm border border-gray-200 w-full min-h-full flex flex-col">
                         {/* Toggle Button in Sidebar */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
