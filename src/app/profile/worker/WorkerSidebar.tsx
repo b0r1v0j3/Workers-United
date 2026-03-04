@@ -113,7 +113,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                                     e.preventDefault();
                                 }
                             }}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${!isOpen ? 'justify-center md:justify-start' : 'justify-start'} text-gray-500 hover:bg-red-50 hover:text-red-600 border border-transparent`}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${!isOpen ? 'justify-center' : 'justify-start'} text-gray-500 hover:bg-red-50 hover:text-red-600 border border-transparent`}
                             title={!isOpen ? "Logout" : undefined}
                         >
                             <span className="shrink-0 text-gray-400 group-hover:text-red-500"><LogOut size={18} /></span>
@@ -131,7 +131,7 @@ function SidebarLink({ href, icon, label, active, isCollapsed }: { href: string;
         <Link
             href={href}
             title={isCollapsed ? label : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5 ${isCollapsed ? 'justify-center md:justify-start' : 'justify-start'} ${active
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5 ${isCollapsed ? 'justify-center' : 'justify-start'} ${active
                 ? 'bg-gray-100/80 text-gray-900 border border-gray-200/50'
                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
                 }`}
