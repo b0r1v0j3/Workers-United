@@ -56,11 +56,11 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
             {/* Sidebar Container */}
             <div className={`
                 fixed inset-y-0 left-0 z-40 bg-transparent transform transition-all duration-300 ease-in-out border-none
-                md:pt-[88px] md:pl-4 md:z-30 pt-[64px]
+                md:top-[80px] md:pt-0 md:pl-4 md:bottom-0 md:pb-4 md:z-0 pt-[64px]
                 ${isOpen ? "w-72 md:w-[272px] translate-x-0" : "w-[68px] md:w-[88px] translate-x-0"}
             `}>
                 <div className="h-full overflow-y-auto px-2 md:px-0 py-6 md:py-0 flex flex-col items-center md:items-stretch">
-                    <div className="bg-white rounded-xl p-2 shadow-sm border border-gray-200 md:sticky md:top-24 w-full">
+                    <div className="bg-white rounded-xl p-2 md:p-3 shadow-sm border border-gray-200 w-full md:h-[calc(100vh-100px)] flex flex-col">
                         {/* Toggle Button in Sidebar */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
@@ -104,21 +104,23 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                             isCollapsed={!isOpen}
                         />
 
-                        <div className="my-2 border-t border-gray-100 w-full" />
+                        <div className="mt-auto w-full flex flex-col pt-2">
+                            <div className="my-2 border-t border-gray-100 w-full" />
 
-                        <a
-                            href="/auth/signout"
-                            onClick={(e) => {
-                                if (!window.confirm("Are you sure you want to log out?")) {
-                                    e.preventDefault();
-                                }
-                            }}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${!isOpen ? 'justify-center' : 'justify-start'} text-gray-500 hover:bg-red-50 hover:text-red-600 border border-transparent`}
-                            title={!isOpen ? "Logout" : undefined}
-                        >
-                            <span className="shrink-0 text-gray-400 group-hover:text-red-500"><LogOut size={18} /></span>
-                            <span className={`whitespace-nowrap transition-all duration-300 ${!isOpen ? "hidden" : "block"}`}>Logout</span>
-                        </a>
+                            <a
+                                href="/auth/signout"
+                                onClick={(e) => {
+                                    if (!window.confirm("Are you sure you want to log out?")) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${!isOpen ? 'justify-center' : 'justify-start'} text-gray-500 hover:bg-red-50 hover:text-red-600 border border-transparent`}
+                                title={!isOpen ? "Logout" : undefined}
+                            >
+                                <span className="shrink-0 text-gray-400 group-hover:text-red-500"><LogOut size={18} /></span>
+                                <span className={`whitespace-nowrap transition-all duration-300 ${!isOpen ? "hidden" : "block"}`}>Logout</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
