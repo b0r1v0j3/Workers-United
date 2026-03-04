@@ -13,10 +13,13 @@ import {
     BarChart3,
     ListOrdered,
     FileSearch,
+    ChevronRight,
+    X,
 } from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 interface AppShellProps {
     children: React.ReactNode;
@@ -26,6 +29,43 @@ interface AppShellProps {
 
 export default function AppShell({ children, user, variant = "dashboard" }: AppShellProps) {
     const userType = user?.user_metadata?.user_type;
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const pathname = usePathname();
+
+    // Close sidebar when route changes
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [pathname]);
+
+    // Swipe to open/close logic
+    useEffect(() => {
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        const handleTouchStart = (e: TouchEvent) => {
+            touchStartX = e.targetTouches[0].clientX;
+        };
+
+        const handleTouchEnd = (e: TouchEvent) => {
+            touchEndX = e.changedTouches[0].clientX;
+            // Swipe right from the left edge (open)
+            if (touchStartX < 50 && touchEndX - touchStartX > 50) {
+                setIsMobileMenuOpen(true);
+            }
+            // Swipe left (close)
+            if (touchStartX > 50 && touchStartX - touchEndX > 50) {
+                setIsMobileMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('touchstart', handleTouchStart);
+        document.addEventListener('touchend', handleTouchEnd);
+
+        return () => {
+            document.removeEventListener('touchstart', handleTouchStart);
+            document.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, []);
 
     // Determine navigation links based on variant
     const homeHref = variant === 'admin' ? '/admin'
@@ -40,43 +80,48 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
             <UnifiedNavbar variant={variant} user={user} />
 
             <div className="flex-1 flex max-w-[1920px] mx-auto w-full pt-6">
-                {/* LEFT SIDEBAR (Desktop) - Enhanced aesthetics */}
-                <aside className="hidden lg:block w-[280px] fixed top-[80px] left-0 bottom-0 overflow-y-auto px-4 pb-4">
-                    <div className="bg-white/50 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl h-[calc(100vh-100px)] p-4">
+                {/* Mobile Toggle Button (Floating on left edge) */}
+                <button
+                    onClick={() => setIsMobileMenuOpen(true)}
+                    className={`lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-40 bg-white shadow-md border border-gray-200 px-1 py-4 rounded-r-xl transition-transform duration-300 ${isMobileMenuOpen ? '-translate-x-full' : 'translate-x-0'}`}
+                    aria-label="Open Menu"
+                >
+                    <ChevronRight size={24} className="text-gray-500" />
+                </button>
+
+                {/* Mobile Backdrop */}
+                {isMobileMenuOpen && (
+                    <div
+                        className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-opacity delay-75"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    />
+                )}
+
+                {/* SIDEBAR (Desktop + Mobile Drawer) - Enhanced aesthetics */}
+                <aside className={`
+                    fixed inset-y-0 left-0 z-50 w-72 bg-[#F8FAFC] transform transition-transform duration-300 ease-in-out
+                    lg:block lg:w-[280px] lg:fixed lg:top-[80px] lg:bottom-0 lg:overflow-y-auto lg:px-4 lg:pb-4 lg:bg-transparent lg:translate-x-0 lg:z-0
+                    ${isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full shadow-none"}
+                `}>
+                    <div className="h-full overflow-y-auto p-4 lg:bg-white/50 lg:backdrop-blur-sm lg:border lg:border-white/60 lg:shadow-sm lg:rounded-2xl lg:h-[calc(100vh-100px)]">
+                        {/* Mobile Header with Close Button */}
+                        <div className="flex justify-between items-center mb-6 lg:hidden px-2 pt-4">
+                            <h2 className="font-bold text-lg text-gray-900">Menu</h2>
+                            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-gray-200 rounded-full text-gray-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+
                         <SidebarContent user={user} variant={variant} />
                     </div>
                 </aside>
 
-                {/* MAIN CONTENT — pb-20 for mobile bottom nav clearance */}
-                <main className="flex-1 lg:ml-[280px] px-3 sm:px-6 max-w-[1000px] mx-auto w-full pb-24 lg:pb-10 animate-fade-in-up">
+                {/* MAIN CONTENT */}
+                <main className="flex-1 lg:ml-[280px] px-3 sm:px-6 max-w-[1000px] mx-auto w-full pb-10 animate-fade-in-up">
                     {variant === 'admin' && <AdminBreadcrumbs />}
                     {children}
                 </main>
             </div>
-
-            {/* MOBILE BOTTOM NAV — visible only on mobile */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 z-50 safe-area-bottom shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
-                <div className="flex items-center justify-around h-16">
-                    {variant === 'admin' ? (
-                        <>
-                            <BottomNavLink href="/admin" icon={<LayoutDashboard size={22} />} label="Home" />
-                            <BottomNavLink href="/admin/workers" icon={<Users size={22} />} label="Workers" />
-                            <BottomNavLink href="/admin/employers" icon={<Building2 size={22} />} label="Employers" />
-                            <BottomNavLink href="/admin/email-preview" icon={<Mail size={22} />} label="Emails" />
-                            <BottomNavLink href="/admin/settings" icon={<Settings size={22} />} label="Settings" />
-                        </>
-                    ) : (
-                        <>
-                            <BottomNavLink href={homeHref} icon={<Home size={22} />} label="Home" />
-                            <BottomNavLink href={profileHref} icon={<User size={22} />} label="Profile" />
-                            {userType === 'employer' && (
-                                <BottomNavLink href="/profile/employer/jobs" icon={<Briefcase size={22} />} label="Jobs" />
-                            )}
-                            <BottomNavLink href="/profile/settings" icon={<Settings size={22} />} label="Settings" />
-                        </>
-                    )}
-                </div>
-            </nav>
         </div>
     );
 }
