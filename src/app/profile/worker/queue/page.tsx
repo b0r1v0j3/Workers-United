@@ -50,8 +50,6 @@ export default async function QueuePage() {
         <div className="w-full">
             <QueueClientEffects />
             <main className="w-full">
-                <h1 className="text-2xl font-bold text-[#050505] mb-6">Your Queue Status</h1>
-
                 {/* Queue Status Card */}
                 <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-6">
                     {!candidate.entry_fee_paid ? (
