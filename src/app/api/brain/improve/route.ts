@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { saveBrainFactsDedup } from "@/lib/brain-memory";
 
 // ─── Brain Self-Improvement Engine ──────────────────────────────────────────
 // Runs daily via Vercel Cron. Analyzes recent conversations and errors,
@@ -192,6 +193,7 @@ RULES:
 
         // ─── 6. Parse and save learnings ─────────────────────────────────
         const newLearnings: { category: string; content: string }[] = [];
+        let saveStats = { inserted: 0, updated: 0, skipped: 0 };
 
         if (!response.includes("NO_NEW_LEARNINGS")) {
             const lines = response.split("\n").filter((l: string) => l.startsWith("LEARN|"));
@@ -205,16 +207,18 @@ RULES:
                 }
             }
 
-            // Save to brain_memory
             if (newLearnings.length > 0) {
-                for (const learning of newLearnings) {
-                    await supabase.from("brain_memory").insert({
+                saveStats = await saveBrainFactsDedup(
+                    supabase,
+                    newLearnings.map((learning) => ({
                         category: learning.category,
                         content: learning.content,
-                        confidence: 0.7, // Auto-learned = slightly lower confidence
-                    });
-                }
-                console.log(`[Brain] 🧠 Saved ${newLearnings.length} new learnings`);
+                        confidence: 0.7, // Auto-learned facts start with lower confidence
+                    }))
+                );
+                console.log(
+                    `[Brain] 🧠 Learning save stats — inserted: ${saveStats.inserted}, updated: ${saveStats.updated}, skipped: ${saveStats.skipped}`
+                );
             }
         }
 
@@ -229,6 +233,7 @@ RULES:
                 messages_analyzed: recentMessages?.length || 0,
                 errors_analyzed: recentErrors?.length || 0,
                 new_learnings: newLearnings.length,
+                learning_save_stats: saveStats,
                 learnings: newLearnings,
             },
         });
@@ -241,6 +246,7 @@ RULES:
                 errors: recentErrors?.length || 0,
             },
             newLearnings: newLearnings.length,
+            saved: saveStats,
             learnings: newLearnings,
         });
 

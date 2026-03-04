@@ -69,7 +69,7 @@ Workers-United/
 │   │   ├── api/               # API routes (25 total)
 │   │   │   ├── account/       # delete, export (GDPR)
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics
-│   │   │   ├── cron/          # 5 cron jobs (see below)
+│   │   │   ├── cron/          # 8 cron jobs (see below)
 │   │   │   ├── documents/     # verify, verify-passport
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
 │   │   │   ├── stripe/        # create-checkout, webhook
@@ -111,6 +111,7 @@ Workers-United/
 │   │   ├── gemini.ts          # Gemini AI functions (verify docs, auto-reply)
 │   │   ├── stripe.ts          # Stripe client initialization
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
+│   │   ├── brain-memory.ts    # Brain memory dedup + normalization helpers
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
 │   │   ├── constants.ts       # Shared constants
@@ -122,7 +123,7 @@ Workers-United/
 │   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types)
 │   │   └── imageUtils.ts      # Image processing helpers
 │   └── types/                 # TypeScript types (currently empty)
-├── vercel.json                # Vercel config: security headers + 7 cron jobs
+├── vercel.json                # Vercel config: security headers + 8 cron jobs
 ├── next.config.ts             # Next.js config
 ├── tsconfig.json              # TypeScript config
 ├── package.json               # Dependencies & scripts
@@ -146,6 +147,7 @@ Configured in `vercel.json`:
 | `/api/cron/brain-monitor` | Daily 8 AM UTC | System health monitoring |
 | `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, generates new brain_memory facts |
 | `/api/cron/whatsapp-nudge` | Daily 11 AM UTC | WhatsApp nudges for users who need a profile/doc action |
+| `/api/cron/system-smoke` | Every hour at :30 | Route + service smoke monitor (`/`, auth pages, `/api/health`) with critical alert cooldown |
 
 ---
 
@@ -231,6 +233,8 @@ User (Browser)
 | `src/lib/supabase/admin.ts` | Service-role client (bypasses RLS) |
 | `src/lib/mailer.ts` | `sendEmail()` — Nodemailer wrapper |
 | `src/lib/email-templates.ts` | All HTML email templates |
+| `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
+| `src/lib/smoke-evaluator.ts` | Shared health evaluator (`healthy/degraded/critical`) for smoke checks |
 | `src/lib/gemini.ts` | All Gemini AI functions |
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API |
@@ -301,6 +305,8 @@ When adding a new feature, follow this order:
 | `WHATSAPP_TOKEN` | Meta WhatsApp Cloud API | For sending |
 | `WHATSAPP_PHONE_NUMBER_ID` | Meta WhatsApp | For sending |
 | `WHATSAPP_VERIFY_TOKEN` | Webhook verification | For webhook |
+| `META_APP_SECRET` | Meta App Secret | Enables webhook signature verification (`X-Hub-Signature-256`) |
+| `OWNER_PHONE` / `OWNER_PHONES` | Admin WhatsApp command auth | Optional, comma-separated phone list |
 | `OPENAI_API_KEY` | OpenAI | For WhatsApp AI chatbot |
 
 ---
@@ -359,6 +365,8 @@ When adding a new feature, follow this order:
 
 ### Cron Job Batch Patterns
 - **Pre-fetch dedup data in bulk, not per-record.** Use the same pattern as `profile-reminders` and `match-jobs`: fetch all relevant emails into a Set, then do O(1) lookups in the loop. Never query inside a nested loop.
+- **Critical alert cooldown matters.** `system-smoke` sends critical emails with a 6-hour cooldown to avoid alert spam loops. Keep the cooldown check when editing alerting logic.
+- **Do not write to `brain_memory` with raw inserts in automations.** Use `saveBrainFactsDedup()` from `src/lib/brain-memory.ts` so repeated learnings do not bloat prompts.
 
 ---
 
