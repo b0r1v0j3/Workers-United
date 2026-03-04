@@ -234,7 +234,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: an
                                 href="/auth/signout"
                                 className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors text-center w-full sm:w-auto shadow-sm shadow-red-200"
                             >
-                                Yes, log out
+                                Log Out
                             </a>
                         </div>
                     </div>
