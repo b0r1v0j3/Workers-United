@@ -190,9 +190,9 @@ export default function DashboardClient({
 
                     {/* Bottom Content (Guarantee) */}
                     {!candidate?.entry_fee_paid && !inQueue && (
-                        <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-center gap-2 text-gray-500 text-xs font-medium">
-                            <Shield size={14} className="text-gray-400" />
-                            <span>100% money-back guarantee if no job offer in 90 days</span>
+                        <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-center gap-1.5 text-gray-500 text-[11px] sm:text-xs font-medium text-center px-1">
+                            <Shield size={14} className="shrink-0 text-gray-400" />
+                            <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer in 90 days</span>
                         </div>
                     )}
                 </div>
