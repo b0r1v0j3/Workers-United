@@ -10,6 +10,7 @@ import ManualMatchButton from "@/components/admin/ManualMatchButton";
 import ReVerifyButton from "@/components/admin/ReVerifyButton";
 import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
 import DocumentPreview from "@/components/admin/DocumentPreview";
+import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, Check, Clock, Trash2, Mail, Paperclip, Brain, StickyNote, X } from "lucide-react";
 
 interface PageProps {
@@ -649,120 +650,134 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                 </span>
                                             </div>
 
-                                            {/* Document Preview */}
+                                            {/* Document Preview & Actions Modal */}
                                             {doc.storage_path && (
-                                                <div className="mb-4 bg-[#f8fafc] rounded-lg p-4 border border-[#dde3ec]">
-                                                    <a
-                                                        href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-[#2f6fed] font-semibold hover:underline"
-                                                    >
-                                                        <span className="flex items-center gap-1"><Paperclip size={14} /> View Document</span>
-                                                    </a>
-                                                </div>
-                                            )}
-
-                                            {/* AI Verification Result */}
-                                            {doc.verification_result && (
-                                                <div className="mb-4 bg-[#f0f9ff] rounded-lg p-4 border border-[#bae6fd]">
-                                                    <h4 className="font-bold text-[#0369a1] text-sm mb-2 flex items-center gap-2"><Brain size={14} /> AI Verification Result</h4>
-                                                    <pre className="text-[12px] text-[#0c4a6e] whitespace-pre-wrap">
-                                                        {typeof doc.verification_result === 'object'
-                                                            ? JSON.stringify(doc.verification_result, null, 2)
-                                                            : doc.verification_result}
-                                                    </pre>
-                                                </div>
-                                            )}
-
-                                            {/* Admin Notes */}
-                                            {doc.admin_notes && (
-                                                <div className="mb-4 bg-[#fef3c7] rounded-lg p-4 border border-[#fde68a]">
-                                                    <h4 className="font-bold text-[#92400e] text-sm mb-1 flex items-center gap-2"><StickyNote size={14} /> Admin Notes</h4>
-                                                    <p className="text-[#78350f] text-sm">{doc.admin_notes}</p>
-                                                </div>
-                                            )}
-
-                                            {/* Verification Form */}
-                                            <form action={updateDocumentStatus} className="bg-[#f8fafc] rounded-lg p-4 border border-[#dde3ec] mb-3">
-                                                <input type="hidden" name="doc_id" value={doc.id} />
-                                                <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                                    <div>
-                                                        <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Set Status</label>
-                                                        <select name="status" defaultValue={doc.status} className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm bg-white">
-                                                            <option value="pending">Pending</option>
-                                                            <option value="verifying">Verifying</option>
-                                                            <option value="verified">Verified</option>
-                                                            <option value="rejected">Rejected</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Admin Notes</label>
-                                                        <input
-                                                            type="text"
-                                                            name="admin_notes"
-                                                            defaultValue={doc.admin_notes || ""}
-                                                            placeholder="Add notes..."
-                                                            className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    type="submit"
-                                                    className="bg-[#2f6fed] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#1e5cd6] transition-colors"
+                                                <DocumentViewerModal
+                                                    url={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`}
+                                                    documentType={doc.document_type}
+                                                    status={doc.status}
                                                 >
-                                                    Save Changes
-                                                </button>
-                                            </form>
+                                                    {/* AI Verification Result */}
+                                                    {doc.verification_result && (
+                                                        <div className="bg-[#f0f9ff] rounded-lg p-4 border border-[#bae6fd]">
+                                                            <h4 className="font-bold text-[#0369a1] text-sm mb-2 flex items-center gap-2"><Brain size={14} /> AI Verification Result</h4>
+                                                            <pre className="text-[12px] text-[#0c4a6e] whitespace-pre-wrap">
+                                                                {typeof doc.verification_result === 'object'
+                                                                    ? JSON.stringify(doc.verification_result, null, 2)
+                                                                    : doc.verification_result}
+                                                            </pre>
+                                                        </div>
+                                                    )}
 
-                                            {/* Admin Actions */}
-                                            <div className="flex flex-wrap gap-2 mt-3">
-                                                {/* Re-Verify Document */}
-                                                <ReVerifyButton documentId={doc.id} />
+                                                    {/* Admin Notes */}
+                                                    {doc.admin_notes && (
+                                                        <div className="bg-[#fef3c7] rounded-lg p-4 border border-[#fde68a]">
+                                                            <h4 className="font-bold text-[#92400e] text-sm mb-1 flex items-center gap-2"><StickyNote size={14} /> Admin Notes</h4>
+                                                            <p className="text-[#78350f] text-sm">{doc.admin_notes}</p>
+                                                        </div>
+                                                    )}
 
-                                                {/* Delete Document */}
-                                                <form action={deleteDocument}>
-                                                    <input type="hidden" name="doc_id" value={doc.id} />
-                                                    <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
-                                                    <button
-                                                        type="submit"
-                                                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-red-600 transition-colors"
-                                                    >
-                                                        <span className="flex items-center gap-1"><Trash2 size={12} /> Delete Document</span>
-                                                    </button>
-                                                </form>
-
-                                                {/* Request New Document */}
-                                                <details className="group">
-                                                    <summary className="bg-orange-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-orange-600 transition-colors cursor-pointer list-none">
-                                                        <span className="flex items-center gap-1"><Mail size={12} /> Request New Document</span>
-                                                    </summary>
-                                                    <form action={requestNewDocument} className="mt-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                                    {/* Verification Form */}
+                                                    <form action={updateDocumentStatus} className="bg-[#f8fafc] rounded-lg p-4 border border-[#dde3ec]">
                                                         <input type="hidden" name="doc_id" value={doc.id} />
-                                                        <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
                                                         <input type="hidden" name="doc_type" value={doc.document_type} />
                                                         <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
-                                                        <label className="text-[11px] text-orange-700 uppercase font-bold block mb-1">
-                                                            Reason for requesting new document:
-                                                        </label>
-                                                        <textarea
-                                                            name="reason"
-                                                            required
-                                                            placeholder="e.g., Image is too blurry, document is cropped, wrong document type..."
-                                                            className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm mb-2"
-                                                            rows={2}
-                                                        />
+                                                        <div className="space-y-4 mb-4">
+                                                            <div>
+                                                                <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Set Status</label>
+                                                                <select name="status" defaultValue={doc.status} className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm bg-white">
+                                                                    <option value="pending">Pending</option>
+                                                                    <option value="verifying">Verifying</option>
+                                                                    <option value="verified">Verified</option>
+                                                                    <option value="rejected">Rejected</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Admin Notes</label>
+                                                                <input
+                                                                    type="text"
+                                                                    name="admin_notes"
+                                                                    defaultValue={doc.admin_notes || ""}
+                                                                    placeholder="Add internal notes..."
+                                                                    className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm"
+                                                                />
+                                                            </div>
+                                                        </div>
                                                         <button
                                                             type="submit"
-                                                            className="bg-orange-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-orange-700 transition-colors"
+                                                            className="w-full bg-[#2f6fed] text-white px-4 py-3 rounded-lg font-bold text-sm hover:bg-[#1e5cd6] transition-colors"
                                                         >
-                                                            Delete & Request New
+                                                            Save Status Changes
                                                         </button>
                                                     </form>
-                                                </details>
-                                            </div>
+
+                                                    {/* Admin Actions */}
+                                                    <div className="space-y-3 mt-2">
+                                                        <h4 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Additional Actions</h4>
+
+                                                        {/* Re-Verify Document */}
+                                                        <div>
+                                                            <ReVerifyButton documentId={doc.id} />
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {/* Request New Document */}
+                                                            <details className="group col-span-2">
+                                                                <summary className="w-full bg-orange-100/50 text-orange-600 border border-orange-200 px-3 py-2 rounded-lg font-bold text-sm hover:bg-orange-100 transition-colors cursor-pointer list-none flex items-center justify-center gap-2">
+                                                                    <Mail size={16} /> Request New Document
+                                                                </summary>
+                                                                <form action={requestNewDocument} className="mt-2 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                                                                    <input type="hidden" name="doc_id" value={doc.id} />
+                                                                    <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
+                                                                    <input type="hidden" name="doc_type" value={doc.document_type} />
+                                                                    <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
+
+                                                                    <p className="text-xs text-orange-800 mb-3 leading-relaxed">
+                                                                        This will <strong>delete</strong> the current document and send an email to the worker asking them to upload a new one.
+                                                                    </p>
+
+                                                                    <label className="text-[11px] text-orange-700 uppercase font-bold block mb-1">
+                                                                        Message to Worker:
+                                                                    </label>
+                                                                    <textarea
+                                                                        name="reason"
+                                                                        required
+                                                                        placeholder="e.g., The passport image is too blurry, please take a clearer photo..."
+                                                                        className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-orange-200 focus:outline-none"
+                                                                        rows={3}
+                                                                    />
+                                                                    <button
+                                                                        type="submit"
+                                                                        className="w-full bg-orange-600 text-white px-3 py-2.5 rounded-lg font-bold text-sm hover:bg-orange-700 transition-colors"
+                                                                    >
+                                                                        Delete & Send Request
+                                                                    </button>
+                                                                </form>
+                                                            </details>
+
+                                                            {/* Delete Document */}
+                                                            <details className="group col-span-2">
+                                                                <summary className="w-full bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-lg font-bold text-sm hover:bg-red-100 transition-colors cursor-pointer list-none flex items-center justify-center gap-2">
+                                                                    <Trash2 size={16} /> Delete Silently
+                                                                </summary>
+                                                                <form action={deleteDocument} className="mt-2 p-4 bg-red-50 rounded-lg border border-red-200">
+                                                                    <input type="hidden" name="doc_id" value={doc.id} />
+                                                                    <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
+                                                                    <p className="text-xs text-red-800 mb-3 leading-relaxed">
+                                                                        Are you sure you want to delete this document <strong>without</strong> notifying the worker?
+                                                                    </p>
+                                                                    <button
+                                                                        type="submit"
+                                                                        className="w-full bg-red-600 text-white px-3 py-2.5 rounded-lg font-bold text-sm hover:bg-red-700 transition-colors"
+                                                                    >
+                                                                        Yes, Delete Silently
+                                                                    </button>
+                                                                </form>
+                                                            </details>
+                                                        </div>
+                                                    </div>
+                                                </DocumentViewerModal>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
