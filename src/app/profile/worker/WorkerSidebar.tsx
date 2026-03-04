@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, FileText, Rocket, Pencil, ChevronRight, X } from "lucide-react";
+import { User, FileText, Rocket, Pencil, ChevronRight, X, LogOut } from "lucide-react";
 import { useEffect } from "react";
 
 export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v: boolean) => void }) {
@@ -103,6 +103,17 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                             active={pathname === "/profile/worker/edit"}
                             isCollapsed={!isOpen}
                         />
+
+                        <div className="my-2 border-t border-gray-100 w-full" />
+
+                        <a
+                            href="/auth/signout"
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${!isOpen ? 'justify-center md:justify-start' : 'justify-start'} text-red-600 hover:bg-red-50`}
+                            title={!isOpen ? "Logout" : undefined}
+                        >
+                            <span className="shrink-0"><LogOut size={18} /></span>
+                            <span className={`whitespace-nowrap ${!isOpen ? "hidden md:block" : "block"}`}>Logout</span>
+                        </a>
                     </div>
                 </div>
             </div>

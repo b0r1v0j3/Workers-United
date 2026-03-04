@@ -197,6 +197,22 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: an
                     <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} />
                 </div>
             )}
+
+            <div className={`mt-auto w-full flex flex-col ${variant === 'admin' ? 'pt-4' : 'pt-2'}`}>
+                <div className="my-2 border-t border-slate-100/80 w-full" />
+                <a
+                    href="/auth/signout"
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-red-50 hover:text-red-600 font-medium`}
+                    title={isCollapsed ? "Logout" : undefined}
+                >
+                    <div className="w-6 h-6 flex items-center justify-center shrink-0 transition-colors text-slate-400 group-hover:text-red-500">
+                        <LogOut size={20} />
+                    </div>
+                    <span className={`whitespace-nowrap transition-all duration-300 font-medium ${isCollapsed ? 'hidden' : 'block'}`}>
+                        Logout
+                    </span>
+                </a>
+            </div>
         </div>
     );
 }
