@@ -108,10 +108,15 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
 
                         <a
                             href="/auth/signout"
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${!isOpen ? 'justify-center md:justify-start' : 'justify-start'} text-red-600 hover:bg-red-50`}
+                            onClick={(e) => {
+                                if (!window.confirm("Are you sure you want to log out?")) {
+                                    e.preventDefault();
+                                }
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${!isOpen ? 'justify-center md:justify-start' : 'justify-start'} text-gray-500 hover:bg-red-50 hover:text-red-600 border border-transparent`}
                             title={!isOpen ? "Logout" : undefined}
                         >
-                            <span className="shrink-0"><LogOut size={18} /></span>
+                            <span className="shrink-0 text-gray-400 group-hover:text-red-500"><LogOut size={18} /></span>
                             <span className={`whitespace-nowrap ${!isOpen ? "hidden md:block" : "block"}`}>Logout</span>
                         </a>
                     </div>
