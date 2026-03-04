@@ -55,13 +55,13 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
             )}
 
             {/* Sidebar Container */}
-            <div className={`
-                fixed inset-y-0 left-0 z-40 bg-transparent transform transition-all duration-300 ease-in-out border-none
-                top-[72px] md:top-[80px] pt-0 pl-2 md:pl-4 bottom-0 pb-4 md:z-0
-                ${isOpen ? "w-[264px] md:w-[264px] translate-x-0" : "w-[68px] md:w-[68px] translate-x-0"}
+            <aside className={`
+                fixed top-[56px] md:top-[64px] left-0 z-40 h-[calc(100vh-56px)] md:h-[calc(100vh-64px)] 
+                transition-all duration-300 ease-in-out border-none bg-transparent pl-3 pt-3 md:pl-4 md:pt-4 pb-6 md:pb-8
+                ${isOpen ? "w-[272px] md:w-[280px]" : "w-[76px] md:w-[84px]"} translate-x-0
             `}>
-                <div className="h-full overflow-y-auto px-2 md:px-0 py-6 md:py-0 flex flex-col items-center md:items-stretch">
-                    <div className="bg-white rounded-xl p-2 md:p-3 shadow-sm border border-gray-200 w-full md:h-[calc(100vh-100px)] flex flex-col">
+                <div className="h-full w-full">
+                    <div className="bg-white rounded-r-xl lg:rounded-xl p-2 md:p-3 shadow-sm border border-gray-200 w-full h-full flex flex-col">
                         {/* Toggle Button in Sidebar */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
@@ -122,7 +122,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                         </div>
                     </div>
                 </div>
-            </div>
+            </aside>
 
             {/* Logout Confirmation Modal */}
             {showLogoutConfirm && (
