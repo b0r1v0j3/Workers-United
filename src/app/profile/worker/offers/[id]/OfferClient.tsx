@@ -204,7 +204,7 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
                         </button>
 
                         <p className="text-xs text-[#65676b] text-center mt-3">
-                            Payment is processed securely via Stripe. After payment you'll sign to finalize.
+                            Payment is processed securely via Stripe. After payment you&apos;ll sign to finalize.
                         </p>
                     </div>
                 )}
@@ -251,7 +251,7 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
                         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <span className="text-3xl">🎉</span>
                         </div>
-                        <h3 className="text-xl font-bold text-[#050505] mb-2">You're all set!</h3>
+                        <h3 className="text-xl font-bold text-[#050505] mb-2">You&apos;re all set!</h3>
                         <p className="text-[#65676b] mb-6">
                             Your visa application process has started. We will contact you with next steps.
                         </p>

@@ -238,7 +238,7 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                                 </div>
                                 <h4 className="text-slate-800 font-bold mb-1">No Matches Found</h4>
                                 <p className="text-sm text-slate-500 max-w-[250px]">
-                                    There are currently no workers in the queue matching the industry "{selectedJob?.industry}".
+                                    There are currently no workers in the queue matching the industry &quot;{selectedJob?.industry}&quot;.
                                 </p>
                             </div>
                         )}

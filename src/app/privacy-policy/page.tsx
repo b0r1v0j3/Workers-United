@@ -39,7 +39,7 @@ export default async function PrivacyPolicyPage() {
                         Your privacy is important to us. This policy explains how Workers United collects, uses, stores, and protects your personal data in accordance with the GDPR.
                     </p>
                     <p className="text-[#86868B] text-sm mt-8 pb-8 border-b border-slate-100">
-                        Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        Last updated: {new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                     </p>
                 </div>
             </div>

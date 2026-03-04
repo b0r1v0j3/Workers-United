@@ -25,10 +25,6 @@ export default function ReviewClient() {
     const [feedback, setFeedback] = useState<Record<string, string>>({});
     const [actioning, setActioning] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadDocs();
-    }, []);
-
     async function loadDocs() {
         setLoading(true);
         const { data } = await supabase
@@ -55,6 +51,14 @@ export default function ReviewClient() {
         }
         setLoading(false);
     }
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            void loadDocs();
+        }, 0);
+
+        return () => window.clearTimeout(timeoutId);
+    }, []);
 
     async function previewDoc(doc: ReviewDoc) {
         const key = `${doc.user_id}_${doc.document_type}`;

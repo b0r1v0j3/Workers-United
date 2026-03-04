@@ -500,7 +500,7 @@ export default function ProfilePage() {
                                             searchPlaceholder="Search country..."
                                         />
                                         <p className="text-[11px] text-gray-500 mt-1">
-                                            Do not type '0' before your number. If your number is 0601234567, just type 601234567.
+                                            Do not type &apos;0&apos; before your number. If your number is 0601234567, just type 601234567.
                                         </p>
                                     </div>
                                 </div>

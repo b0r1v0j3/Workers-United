@@ -637,7 +637,7 @@ function buildEmailReport(
                     🧠
                 </div>
                 <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;letter-spacing:-0.02em;color:${colors.text};">Daily Brain Report</h1>
-                <p style="margin:0;font-size:14px;color:${colors.textMuted};">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                <p style="margin:0;font-size:14px;color:${colors.textMuted};">${new Date().toLocaleDateString('en-GB', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
             </div>
 
             <!-- Health Score Card -->

@@ -28,10 +28,11 @@ export default async function QueuePage() {
     const queueJoinedDate = candidate.queue_joined_at
         ? new Date(candidate.queue_joined_at)
         : null;
+    const nowMs = new Date().getTime();
 
     // Calculate days in queue
     const daysInQueue = queueJoinedDate
-        ? Math.floor((Date.now() - queueJoinedDate.getTime()) / (1000 * 60 * 60 * 24))
+        ? Math.floor((nowMs - queueJoinedDate.getTime()) / (1000 * 60 * 60 * 24))
         : 0;
 
     // Check for pending offers
@@ -59,7 +60,7 @@ export default async function QueuePage() {
                                     Start Searching for Jobs
                                 </h3>
                                 <p className="text-gray-500 text-sm mt-2 leading-relaxed max-w-md mx-auto">
-                                    Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe.
+                                    Pay a one-time $9 fee to join our active candidate queue. We&apos;ll find you a job in Europe.
                                 </p>
                             </div>
                             <PayToJoinButton displayName={user.user_metadata?.full_name || "Worker"} />

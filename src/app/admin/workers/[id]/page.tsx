@@ -557,7 +557,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                         {contractData && (
                             <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
                                 <h2 className="font-bold text-[#1e293b] text-xl mb-4">Contract Data (PDF)</h2>
-                                <p className="text-xs text-slate-500 mb-4">Values used when generating this worker's contract and visa docs.</p>
+                                <p className="text-xs text-slate-500 mb-4">Values used when generating this worker&apos;s contract and visa docs.</p>
 
                                 {/* A grid for displaying current config and a hint to use Edit API if needed */}
                                 <div className="space-y-4">

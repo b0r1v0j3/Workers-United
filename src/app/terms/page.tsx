@@ -39,7 +39,7 @@ export default async function TermsPage() {
                         Please read these terms carefully. By using Workers United, you agree to be bound by the following terms and conditions.
                     </p>
                     <p className="text-[#86868B] text-sm mt-8 pb-8 border-b border-slate-100">
-                        Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        Last updated: {new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                     </p>
                 </div>
             </div>

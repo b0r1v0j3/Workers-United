@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 05.03.2026 (system smoke cron, expanded health checks, payment unlock guardrails)
+> **Poslednje ažuriranje:** 05.03.2026 (lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
 
 ---
 
@@ -248,6 +248,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] Lint stabilization + React hook purity fixes + date locale cleanup (`en-US` → `en-GB`) — 05.03.2026
 - [x] Brain memory dedup + WhatsApp webhook hardening + system-smoke alert cooldown (6h anti-spam) — 05.03.2026
 - [x] Reliability autopilot v1 — `/api/cron/system-smoke` + expanded `/api/health` (Supabase/Stripe/SMTP/WhatsApp/n8n checks + alerting) — 05.03.2026
 - [x] Hotfix: entry payment unlocked for all worker profiles (uklonjen admin approval gate na checkout + queue UI) — 04.03.2026
@@ -364,6 +365,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~**WhatsApp AI Chatbot (n8n + GPT-4o)** — konverzacijski bot sa memorijom (100 poruka), enriched profilom, dokumentima i plaćanjima~~ ✅ 28.02.2026
 - [ ] **n8n Email AI Auto-Responder** — novi workflow za automatske odgovore na emailove
 - [ ] **n8n AI Agent sa Tools** — bot dobija tools za aktivne akcije (pretraživanje poslova, ažuriranje statusa). Dugoročno: self-improving agent koji uči iz interakcija.
+- [ ] **Type Safety Sprint (Phase 2 lint cleanup)** — uklanjanje `any` iz admin/API sloja i vraćanje `@typescript-eslint/no-explicit-any` na error
 - [ ] **Live Visa Process Tracker** — "Currently processing: X applications", "Documents verified today: Y". ⏳ **USLOV: 100+ korisnika u sistemu**
 - [ ] **"Work in [Country]" Pages** — SEO stranice (npr. /work-in-germany) sa pravnim koracima, platama, troškovima. ⏳ **USLOV: bar 2 aktivne zemlje**
 
@@ -538,6 +540,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 44. **Business facts MORAJU ići u `platform_config` tabelu** — NIKAD ne hardkodovati cene, garanciju, kontakt email ili politiku u kod. Koristiti `getPlatformConfig()` iz `src/lib/platform-config.ts`. Admin menja u Settings → Platform Config. WhatsApp bot, Brain Monitor, n8n AI — svi čitaju iz iste baze. Cache: 5 min. Fallback: hardkodovane default vrednosti ako DB pukne.
 45. **`brain_memory` upisi MORAJU ići kroz `saveBrainFactsDedup()`** — WhatsApp learning loop i Brain self-improve ne smeju direktno `insert` bez dedupa. Koristiti `src/lib/brain-memory.ts` da se spreče duplikati i prompt-bloat.
 46. **WhatsApp webhook token + admin telefoni su ENV-driven** — `WHATSAPP_VERIFY_TOKEN` (ili fallback na `CRON_SECRET`) mora biti set; hardcoded verify token fallback je uklonjen. Admin telefon za WhatsApp komande ide kroz `OWNER_PHONE` ili `OWNER_PHONES` (comma-separated).
+47. **ESLint gate: no blocking errors, warnings ostaju kao tehnički dug** — `@typescript-eslint/no-explicit-any` je privremeno warning da produkcioni lint ne blokira deploy dok se radi postepena tipizacija. `npm run lint` mora ostati na 0 errors.
 
 
 ---

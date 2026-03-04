@@ -18,7 +18,7 @@ export function RegistrationsChart({ data }: AnalyticsChartsProps) {
     const formattedData = useMemo(() => {
         return data.map(d => ({
             ...d,
-            displayDate: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            displayDate: new Date(d.date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
         })).reverse(); // Recharts renders left-to-right, so early dates first
     }, [data]);
 
@@ -90,7 +90,7 @@ export function RevenueChart({ data }: AnalyticsChartsProps) {
     const formattedData = useMemo(() => {
         return data.map(d => ({
             ...d,
-            displayDate: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            displayDate: new Date(d.date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
         })).reverse();
     }, [data]);
 

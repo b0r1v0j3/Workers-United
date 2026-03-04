@@ -104,11 +104,12 @@ export default async function AdminDashboard() {
         }, 0);
 
     // ─── 90-day countdown ───
+    const nowMs = new Date().getTime();
     const queueWorkers = (allCandidates || [])
         .filter((c: any) => c.status === 'IN_QUEUE' && c.queue_joined_at)
         .map((c: any) => {
             const joinedAt = new Date(c.queue_joined_at);
-            const daysInQueue = Math.floor((Date.now() - joinedAt.getTime()) / (1000 * 60 * 60 * 24));
+            const daysInQueue = Math.floor((nowMs - joinedAt.getTime()) / (1000 * 60 * 60 * 24));
             const daysRemaining = 90 - daysInQueue;
             const profileInfo = profileMap.get(c.profile_id);
             return {

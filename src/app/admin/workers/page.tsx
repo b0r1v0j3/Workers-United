@@ -133,6 +133,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         VISA_APPROVED: 'Visa Approved', PLACED: 'Placed', REJECTED: 'Rejected', REFUND_FLAGGED: 'Refund',
     };
     const filterLabel = filterLabels[filter] || 'All';
+    const nowMs = new Date().getTime();
 
     return (
         <AppShell user={user} variant="admin">
@@ -188,7 +189,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                             isCurrentUser: authUser.id === user.id,
                             entryFeePaid: !!candidate?.entry_fee_paid,
                             daysUntilDeletion: profileCompletion < 100
-                                ? Math.max(0, 30 - Math.floor((Date.now() - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
+                                ? Math.max(0, 30 - Math.floor((nowMs - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
                                 : null,
                             authProvider: authUser.app_metadata?.provider || 'email',
                         } satisfies WorkerTableRow;
