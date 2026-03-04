@@ -110,6 +110,7 @@ Workers-United/
 │   │   ├── email-templates.ts # HTML email templates
 │   │   ├── gemini.ts          # Gemini AI functions (verify docs, auto-reply)
 │   │   ├── stripe.ts          # Stripe client initialization
+│   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
 │   │   ├── constants.ts       # Shared constants
@@ -232,6 +233,7 @@ User (Browser)
 | `src/lib/email-templates.ts` | All HTML email templates |
 | `src/lib/gemini.ts` | All Gemini AI functions |
 | `src/lib/stripe.ts` | Stripe client init |
+| `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API |
 | `src/lib/notifications.ts` | Email notification dispatch helpers |
 | `src/lib/docx-generator.ts` | DOCX generation from templates (docxtemplater + pizzip) |
 | `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging |

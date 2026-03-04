@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, PRICES, getCheckoutSuccessUrl, getCheckoutCancelUrl, PaymentType } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
 
 export async function POST(request: NextRequest) {
     try {
@@ -67,12 +68,12 @@ export async function POST(request: NextRequest) {
                 .eq("profile_id", user.id)
                 .single();
 
-            if (!candidate) {
-                return NextResponse.json({ error: "Candidate profile not found" }, { status: 404 });
-            }
-
-            if (candidate?.entry_fee_paid) {
-                return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
+            const eligibility = getEntryFeeEligibility(candidate);
+            if (!eligibility.allowed) {
+                return NextResponse.json(
+                    { error: eligibility.error || "Entry fee is not available" },
+                    { status: eligibility.status || 400 }
+                );
             }
         }
 
