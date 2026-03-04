@@ -3,16 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User, FileText, Rocket, Pencil, ChevronRight, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
-export default function WorkerSidebar() {
+export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v: boolean) => void }) {
     const pathname = usePathname();
-    const [isOpen, setIsOpen] = useState(false);
 
     // Close sidebar when route changes
     useEffect(() => {
         setIsOpen(false);
-    }, [pathname]);
+    }, [pathname, setIsOpen]);
 
     // Swipe to open/close logic
     useEffect(() => {
@@ -46,15 +45,6 @@ export default function WorkerSidebar() {
 
     return (
         <>
-            {/* Mobile Toggle Button (Floating on left edge) */}
-            <button
-                onClick={() => setIsOpen(true)}
-                className={`md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-40 bg-white shadow-md border border-gray-200 px-1 py-4 rounded-r-xl transition-transform duration-300 ${isOpen ? '-translate-x-full' : 'translate-x-0'}`}
-                aria-label="Open Menu"
-            >
-                <ChevronRight size={24} className="text-gray-500" />
-            </button>
-
             {/* Mobile Backdrop */}
             {isOpen && (
                 <div
@@ -65,46 +55,50 @@ export default function WorkerSidebar() {
 
             {/* Sidebar Container */}
             <div className={`
-                fixed inset-y-0 left-0 z-50 w-72 bg-[#FAFAFA] transform transition-transform duration-300 ease-in-out
-                md:relative md:w-64 md:translate-x-0 md:flex-shrink-0 md:bg-transparent md:z-0
-                ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full shadow-none"}
+                fixed inset-y-0 left-0 z-40 bg-[#FAFAFA] transform transition-all duration-300 ease-in-out border-r border-gray-200
+                md:relative md:w-64 md:translate-x-0 md:flex-shrink-0 md:bg-transparent md:border-none md:z-0 md:pt-0 pt-[64px]
+                ${isOpen ? "w-72 translate-x-0 shadow-2xl" : "w-[68px] translate-x-0 shadow-sm"}
             `}>
-                <div className="h-full overflow-y-auto px-4 py-8 md:p-0">
+                <div className="h-full overflow-y-auto px-2 md:px-0 py-6 md:py-0 flex flex-col items-center md:items-stretch">
                     {/* Mobile Header with Close Button */}
-                    <div className="flex justify-between items-center mb-6 md:hidden px-2">
+                    <div className={`flex justify-between items-center mb-6 md:hidden px-2 w-full ${!isOpen && 'hidden'}`}>
                         <h2 className="font-bold text-lg text-gray-900">Menu</h2>
-                        <button onClick={() => setIsOpen(false)} className="p-2 bg-gray-100 rounded-full text-gray-600">
+                        <button onClick={() => setIsOpen(false)} className="p-2 bg-gray-200 rounded-full text-gray-600">
                             <X size={20} />
                         </button>
                     </div>
 
-                    <div className="bg-white rounded-xl p-2 shadow-sm border border-gray-200 md:sticky md:top-24">
+                    <div className="bg-white rounded-xl p-2 shadow-sm border border-gray-200 md:sticky md:top-24 w-full">
                         <SidebarLink
                             href="/profile/worker"
                             icon={<User size={18} />}
                             label="Profile Info"
                             active={pathname === "/profile/worker"}
+                            isCollapsed={!isOpen}
                         />
                         <SidebarLink
                             href="/profile/worker/documents"
                             icon={<FileText size={18} />}
                             label="Documents"
                             active={pathname === "/profile/worker/documents"}
+                            isCollapsed={!isOpen}
                         />
                         <SidebarLink
                             href="/profile/worker/queue"
                             icon={<Rocket size={18} />}
                             label="Application Status"
                             active={pathname === "/profile/worker/queue"}
+                            isCollapsed={!isOpen}
                         />
 
-                        <div className="my-2 border-t border-gray-100"></div>
+                        <div className="my-2 border-t border-gray-100 w-full max-w-[30px] mx-auto md:max-w-none"></div>
 
                         <SidebarLink
                             href="/profile/worker/edit"
                             icon={<Pencil size={18} />}
                             label="Edit Profile"
                             active={pathname === "/profile/worker/edit"}
+                            isCollapsed={!isOpen}
                         />
                     </div>
                 </div>
@@ -113,17 +107,18 @@ export default function WorkerSidebar() {
     );
 }
 
-function SidebarLink({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active: boolean }) {
+function SidebarLink({ href, icon, label, active, isCollapsed }: { href: string; icon: React.ReactNode; label: string; active: boolean; isCollapsed: boolean }) {
     return (
         <Link
             href={href}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5 ${active
+            title={isCollapsed ? label : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5 ${isCollapsed ? 'justify-center md:justify-start' : 'justify-start'} ${active
                 ? 'bg-gray-100/80 text-gray-900 border border-gray-200/50'
                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
                 }`}
         >
-            <span className={active ? 'text-gray-900' : 'text-gray-400'}>{icon}</span>
-            {label}
+            <span className={`shrink-0 ${active ? 'text-gray-900' : 'text-gray-400'}`}>{icon}</span>
+            <span className={`whitespace-nowrap ${isCollapsed ? "hidden md:block" : "block"}`}>{label}</span>
         </Link>
     );
 }
