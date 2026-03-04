@@ -130,6 +130,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
 
 function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: any, variant: string, isCollapsed: boolean, onMenuToggle?: () => void }) {
     const userType = user?.user_metadata?.user_type;
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     // Determine Home link based on context
     const homeHref = variant === 'admin' ? '/admin'
@@ -200,12 +201,10 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: an
 
             <div className={`mt-auto w-full flex flex-col ${variant === 'admin' ? 'pt-4' : 'pt-2'}`}>
                 <div className="my-2 border-t border-slate-100/80 w-full" />
-                <a
-                    href="/auth/signout"
+                <button
                     onClick={(e) => {
-                        if (!window.confirm("Are you sure you want to log out?")) {
-                            e.preventDefault();
-                        }
+                        e.preventDefault();
+                        setShowLogoutConfirm(true);
                     }}
                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-red-50 hover:text-red-600 font-medium`}
                     title={isCollapsed ? "Logout" : undefined}
@@ -216,8 +215,31 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: an
                     <span className={`whitespace-nowrap transition-all duration-300 font-medium ${isCollapsed ? 'hidden' : 'block'}`}>
                         Logout
                     </span>
-                </a>
+                </button>
             </div>
+            {/* Logout Confirmation Modal */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in zoom-in-95 duration-200">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Log Out</h3>
+                        <p className="text-gray-600 mb-6 font-medium">Are you sure you want to log out from your account?</p>
+                        <div className="flex justify-end gap-3 flex-col sm:flex-row">
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors w-full sm:w-auto"
+                            >
+                                Cancel
+                            </button>
+                            <a
+                                href="/auth/signout"
+                                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors text-center w-full sm:w-auto shadow-sm shadow-red-200"
+                            >
+                                Yes, log out
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
