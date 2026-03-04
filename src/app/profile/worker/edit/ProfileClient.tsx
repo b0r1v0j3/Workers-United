@@ -732,7 +732,7 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
 
-                                {/* Row: Current Country */}
+                                {/* Row: Current Country + Address */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className={labelClass}>
@@ -747,19 +747,17 @@ export default function ProfilePage() {
                                             placeholder="Where you live now"
                                         />
                                     </div>
-                                </div>
-
-                                {/* Address */}
-                                <div>
-                                    <label className={labelClass}>Address</label>
-                                    <input
-                                        type="text"
-                                        name="address"
-                                        value={formData.address}
-                                        onChange={handleChange}
-                                        className={inputClass}
-                                        placeholder="Your full address"
-                                    />
+                                    <div>
+                                        <label className={labelClass}>Address</label>
+                                        <input
+                                            type="text"
+                                            name="address"
+                                            value={formData.address}
+                                            onChange={handleChange}
+                                            className={inputClass}
+                                            placeholder="Your full address"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
