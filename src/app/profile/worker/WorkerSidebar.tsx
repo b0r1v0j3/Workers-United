@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, FileText, Rocket, Pencil, ChevronRight, X, LogOut } from "lucide-react";
+import { User, FileText, Search, Pencil, ChevronRight, X, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v: boolean) => void }) {
@@ -91,7 +91,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                         />
                         <SidebarLink
                             href="/profile/worker/queue"
-                            icon={<Rocket size={18} />}
+                            icon={<Search size={18} />}
                             label="Application Status"
                             active={pathname === "/profile/worker/queue"}
                             isCollapsed={!isOpen}
