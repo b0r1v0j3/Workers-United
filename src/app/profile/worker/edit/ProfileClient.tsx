@@ -1127,7 +1127,7 @@ export default function ProfilePage() {
 
 
                         {/* Save / Cancel Buttons */}
-                        <div className="flex justify-end gap-3 pt-2">
+                        <div className="flex justify-end gap-3 pt-2 pb-24 md:pb-8">
                             <Link
                                 href="/profile/worker"
                                 className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[15px]"
