@@ -306,8 +306,17 @@ export async function GET(request: Request) {
         }
 
         // ─── Step 7: Write learned facts to brain_memory ─────────────────
+        // IMPORTANT: system_stats are NEVER stored — they go stale and mislead the bot.
+        // Live stats are served fresh via /api/brain/collect in the system prompt.
         if (analysis.brainFacts && analysis.brainFacts.length > 0) {
-            for (const fact of analysis.brainFacts) {
+            const BLOCKED_CATEGORIES = ["system_stats", "stats"];
+            const safeFacts = analysis.brainFacts.filter(
+                (f: { category: string }) => !BLOCKED_CATEGORIES.includes(f.category)
+            );
+            const skipped = analysis.brainFacts.length - safeFacts.length;
+            if (skipped > 0) console.log(`[Brain] ⏭️ Skipped ${skipped} system_stats facts (live data only)`);
+
+            for (const fact of safeFacts) {
                 // Check if similar fact already exists
                 const { data: existing } = await supabase
                     .from("brain_memory")
@@ -323,7 +332,7 @@ export async function GET(request: Request) {
                     });
                 }
             }
-            console.log(`[Brain] 🧠 Codex learned ${analysis.brainFacts.length} new facts`);
+            console.log(`[Brain] 🧠 Codex learned ${safeFacts.length} new facts`);
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -491,7 +500,7 @@ Respond in JSON:
   "issues": [{ "title": "...", "body": "...", "priority": "P0|P1|P2", "labels": ["bug"|"enhancement"|"critical"], "operation": "System Health|Funnel|Email|Code|Growth|Auth Health" }],
   "improvements": [{ "title": "...", "description": "...", "impact": "high|medium|low", "effort": "easy|medium|hard" }],
    "actions": [{ "type": "retry_email|send_alert|clean_stale_data|update_config|send_employer_nudge|update_memory|delete_memory|confirm_stuck_users|create_missing_records|log_observation", "description": "...", "params": {} }],
-  "brainFacts": [{ "category": "pricing|process|documents|eligibility|faq|system_stats", "content": "Verified fact for WhatsApp bot to use" }],
+  "brainFacts": [{ "category": "pricing|process|documents|eligibility|faq", "content": "Verified fact for WhatsApp bot to use (NEVER use system_stats — live stats come from /api/brain/collect)" }],
   "selfImprovements": ["Capability I wish I had", "Data I need access to"],
   "metrics": { "totalWorkers": N, "totalEmployers": N, "documentsVerified": N, "emailDeliveryRate": "X%", "funnelProgression": "description" }
 }`;
