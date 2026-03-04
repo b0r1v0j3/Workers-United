@@ -29,15 +29,22 @@ interface AppShellProps {
 
 export default function AppShell({ children, user, variant = "dashboard" }: AppShellProps) {
     const userType = user?.user_metadata?.user_type;
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
 
-    // Close sidebar when route changes
+    // Initialize sidebar state based on screen size
     useEffect(() => {
-        setIsMobileMenuOpen(false);
+        setIsOpen(window.innerWidth >= 1024);
+    }, []);
+
+    // Close sidebar on mobile when route changes
+    useEffect(() => {
+        if (window.innerWidth < 1024) {
+            setIsOpen(false);
+        }
     }, [pathname]);
 
-    // Swipe to open/close logic
+    // Swipe to open/close logic (mostly for mobile)
     useEffect(() => {
         let touchStartX = 0;
         let touchEndX = 0;
@@ -50,11 +57,11 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
             touchEndX = e.changedTouches[0].clientX;
             // Swipe right from the left edge (open)
             if (touchStartX < 50 && touchEndX - touchStartX > 50) {
-                setIsMobileMenuOpen(true);
+                setIsOpen(true);
             }
             // Swipe left (close)
             if (touchStartX > 50 && touchStartX - touchEndX > 50) {
-                setIsMobileMenuOpen(false);
+                setIsOpen(false);
             }
         };
 
@@ -77,47 +84,42 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-montserrat">
             {/* Fixed Navbar */}
-            <UnifiedNavbar variant={variant} user={user} />
+            <UnifiedNavbar
+                variant={variant}
+                user={user}
+                onMenuToggle={() => setIsOpen(!isOpen)}
+            />
 
-            <div className="flex-1 flex max-w-[1920px] mx-auto w-full pt-6">
-                {/* Mobile Toggle Button (Floating on left edge) */}
-                <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className={`lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-40 bg-white shadow-md border border-gray-200 px-1 py-4 rounded-r-xl transition-transform duration-300 ${isMobileMenuOpen ? '-translate-x-full' : 'translate-x-0'}`}
-                    aria-label="Open Menu"
-                >
-                    <ChevronRight size={24} className="text-gray-500" />
-                </button>
-
+            <div className="flex-1 flex max-w-[1920px] mx-auto w-full pt-6 relative">
                 {/* Mobile Backdrop */}
-                {isMobileMenuOpen && (
+                {isOpen && (
                     <div
                         className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-opacity delay-75"
-                        onClick={() => setIsMobileMenuOpen(false)}
+                        onClick={() => setIsOpen(false)}
                     />
                 )}
 
-                {/* SIDEBAR (Desktop + Mobile Drawer) - Enhanced aesthetics */}
+                {/* SIDEBAR (Desktop + Mobile Drawer/Thin Sidebar) */}
                 <aside className={`
-                    fixed inset-y-0 left-0 z-50 w-72 bg-[#F8FAFC] transform transition-transform duration-300 ease-in-out
-                    lg:block lg:w-[280px] lg:fixed lg:top-[80px] lg:bottom-0 lg:overflow-y-auto lg:px-4 lg:pb-4 lg:bg-transparent lg:translate-x-0 lg:z-0
-                    ${isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full shadow-none"}
+                    fixed inset-y-0 left-0 z-50 bg-[#F8FAFC] transform transition-all duration-300 ease-in-out border-r border-[#E2E8F0] shadow-sm
+                    lg:top-[80px] lg:bottom-0 lg:overflow-y-auto lg:px-4 lg:pb-4 lg:bg-transparent lg:border-none lg:shadow-none lg:z-0
+                    ${isOpen ? "w-72 lg:w-[280px] translate-x-0 shadow-2xl lg:shadow-none" : "w-[68px] translate-x-0"}
                 `}>
-                    <div className="h-full overflow-y-auto p-4 lg:bg-white/50 lg:backdrop-blur-sm lg:border lg:border-white/60 lg:shadow-sm lg:rounded-2xl lg:h-[calc(100vh-100px)]">
-                        {/* Mobile Header with Close Button */}
-                        <div className="flex justify-between items-center mb-6 lg:hidden px-2 pt-4">
+                    <div className="h-full overflow-y-auto lg:p-4 lg:bg-white/50 lg:backdrop-blur-sm lg:border lg:border-white/60 lg:shadow-sm lg:rounded-2xl lg:h-[calc(100vh-100px)] flex flex-col items-center lg:items-stretch py-4">
+                        {/* Mobile Header with Close Button (only when open) */}
+                        <div className={`flex justify-between items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
                             <h2 className="font-bold text-lg text-gray-900">Menu</h2>
-                            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-gray-200 rounded-full text-gray-600">
+                            <button onClick={() => setIsOpen(false)} className="p-2 bg-gray-200 rounded-full text-gray-600">
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <SidebarContent user={user} variant={variant} />
+                        <SidebarContent user={user} variant={variant} isCollapsed={!isOpen} />
                     </div>
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className="flex-1 lg:ml-[280px] px-3 sm:px-6 max-w-[1000px] mx-auto w-full pb-10 animate-fade-in-up">
+                <main className={`flex-1 max-w-[1000px] mx-auto w-full pb-10 animate-fade-in-up transition-all duration-300 px-3 sm:px-6 ${isOpen ? 'pl-[84px] lg:pl-3 lg:ml-[280px]' : 'pl-[84px] lg:pl-3 lg:ml-[68px]'}`}>
                     {variant === 'admin' && <AdminBreadcrumbs />}
                     {children}
                 </main>
@@ -126,7 +128,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
     );
 }
 
-function SidebarContent({ user, variant }: { user: any, variant: string }) {
+function SidebarContent({ user, variant, isCollapsed }: { user: any, variant: string, isCollapsed: boolean }) {
     const userType = user?.user_metadata?.user_type;
 
     // Determine Home link based on context
@@ -135,8 +137,8 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
             : '/profile/worker';
 
     return (
-        <div className="space-y-1.5">
-            <SidebarLink href={homeHref} icon={<LayoutDashboard size={20} />} label="Dashboard" />
+        <div className="space-y-1.5 w-full flex flex-col items-center lg:items-stretch">
+            <SidebarLink href={homeHref} icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} />
 
             {/* Only show profile link outside admin mode */}
             {variant !== 'admin' && (
@@ -144,57 +146,59 @@ function SidebarContent({ user, variant }: { user: any, variant: string }) {
                     href={userType === 'employer' ? '/profile/employer' : '/profile/worker'}
                     icon={<img src={user?.user_metadata?.avatar_url || "/logo.png"} className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />}
                     label={user?.user_metadata?.full_name || "My Profile"}
+                    isCollapsed={isCollapsed}
                 />
             )}
 
-            <hr className="border-slate-100 my-4 mx-2" />
+            <hr className="border-slate-100 my-4 lg:mx-2 w-full max-w-[40px] lg:max-w-none" />
 
-            <div className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Menu</div>
+            <div className={`px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Menu</div>
 
             {variant === 'admin' && (
                 <>
-                    <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" />
-                    <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" />
-                    <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" />
-                    <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" />
-                    <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" />
-                    <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" />
-                    <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" />
-                    <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" />
+                    <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} />
 
-                    <hr className="border-slate-100 my-4 mx-2" />
-                    <div className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">View As</div>
-                    <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Worker Profile" />
-                    <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Employer Profile" />
+                    <hr className="border-slate-100 my-4 lg:mx-2 w-full max-w-[40px] lg:max-w-none" />
+                    <div className={`px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>View As</div>
+                    <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Worker Profile" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Employer Profile" isCollapsed={isCollapsed} />
                 </>
             )}
 
             {/* Employer shortcuts only outside admin mode */}
             {variant !== 'admin' && userType === 'employer' && (
                 <>
-                    <SidebarLink href="/profile/employer/jobs" icon={<Briefcase size={20} />} label="Job Postings" />
+                    <SidebarLink href="/profile/employer/jobs" icon={<Briefcase size={20} />} label="Job Postings" isCollapsed={isCollapsed} />
                 </>
             )}
 
             {/* Account settings for all non-admin users */}
             {variant !== 'admin' && (
                 <>
-                    <hr className="border-slate-100 my-4 mx-2" />
-                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" />
+                    <hr className="border-slate-100 my-4 lg:mx-2 w-full max-w-[40px] lg:max-w-none" />
+                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} />
                 </>
             )}
         </div>
     );
 }
 
-function SidebarLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+function SidebarLink({ href, icon, label, isCollapsed }: { href: string; icon: React.ReactNode; label: string; isCollapsed: boolean }) {
     const pathname = usePathname();
     const isActive = pathname === href || (href !== '/admin' && href !== '/profile/employer' && href !== '/profile/worker' && pathname.startsWith(href));
 
     return (
         <Link
             href={href}
-            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group relative overflow-hidden ${isActive
+            title={isCollapsed ? label : undefined}
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group relative overflow-hidden w-full ${isCollapsed ? 'justify-center' : 'justify-start'} ${isActive
                 ? "bg-blue-50 text-blue-700 shadow-sm"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
@@ -202,11 +206,11 @@ function SidebarLink({ href, icon, label }: { href: string; icon: React.ReactNod
             {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 bg-blue-500 rounded-r-md" />
             )}
-            <div className={`w-6 h-6 flex items-center justify-center transition-colors ${isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+            <div className={`w-6 h-6 flex items-center justify-center shrink-0 transition-colors ${isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
                 }`}>
                 {icon}
             </div>
-            <span className={`font-medium text-[14px] ${isActive ? "font-semibold" : ""}`}>{label}</span>
+            <span className={`font-medium text-[14px] whitespace-nowrap ${isActive ? "font-semibold" : ""} ${isCollapsed ? "hidden" : "block"}`}>{label}</span>
         </Link>
     );
 }
