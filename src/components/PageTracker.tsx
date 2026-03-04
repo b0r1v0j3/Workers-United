@@ -11,7 +11,7 @@ import { logActivity } from "@/lib/activityLogger";
 export default function PageTracker() {
     const pathname = usePathname();
     const lastPath = useRef<string>("");
-    const startTime = useRef<number>(Date.now());
+    const startTime = useRef<number>(0);
 
     useEffect(() => {
         // Skip admin pages and static assets
@@ -20,7 +20,7 @@ export default function PageTracker() {
 
         // Log time spent on previous page
         if (lastPath.current) {
-            const timeSpent = Math.round((Date.now() - startTime.current) / 1000);
+            const timeSpent = Math.round((new Date().getTime() - startTime.current) / 1000);
             if (timeSpent > 1) {
                 logActivity("page_exit", "navigation", {
                     page: lastPath.current,
@@ -36,7 +36,7 @@ export default function PageTracker() {
         });
 
         lastPath.current = pathname || "";
-        startTime.current = Date.now();
+        startTime.current = new Date().getTime();
     }, [pathname]);
 
     return null; // Invisible tracking component

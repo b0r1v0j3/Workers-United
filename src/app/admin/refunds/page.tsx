@@ -31,6 +31,8 @@ export default async function AdminRefundsPage() {
         .eq("status", "REFUND_FLAGGED")
         .order("queue_joined_at", { ascending: true });
 
+    const nowMs = new Date().getTime();
+
     return (
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
@@ -62,7 +64,7 @@ export default async function AdminRefundsPage() {
                         <tbody className="bg-white divide-y divide-slate-100">
                             {refundCandidates?.map((candidate: any) => {
                                 const joinedAt = new Date(candidate.queue_joined_at);
-                                const daysWaited = Math.floor((Date.now() - joinedAt.getTime()) / (1000 * 60 * 60 * 24));
+                                const daysWaited = Math.floor((nowMs - joinedAt.getTime()) / (1000 * 60 * 60 * 24));
 
                                 return (
                                     <tr key={candidate.id} className="hover:bg-slate-50 transition-colors">

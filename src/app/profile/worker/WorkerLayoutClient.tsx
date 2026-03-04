@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 import WorkerSidebar from "./WorkerSidebar";
 
@@ -13,11 +13,10 @@ export default function WorkerLayoutClient({
     user: any;
     displayName: string;
 }) {
-    const [isOpen, setIsOpen] = useState(false);
-
-    useEffect(() => {
-        setIsOpen(window.innerWidth >= 768);
-    }, []);
+    const [isOpen, setIsOpen] = useState(() => {
+        if (typeof window === "undefined") return true;
+        return window.innerWidth >= 768;
+    });
 
     return (
         <div className="min-h-screen bg-[#FAFAFA] text-gray-900 flex flex-col">

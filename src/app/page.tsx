@@ -145,7 +145,7 @@ export default function Home() {
                   <ul className="space-y-3 text-[#1b2430]">
                     <li className="flex items-start gap-2">
                       <ArrowRight className="w-5 h-5 text-[#1dbf73] shrink-0 mt-0.5" />
-                      <span>Already have an offer but not sure if it's safe or fair</span>
+                      <span>Already have an offer but not sure if it&apos;s safe or fair</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <ArrowRight className="w-5 h-5 text-[#1dbf73] shrink-0 mt-0.5" />
@@ -191,10 +191,10 @@ export default function Home() {
                     For employers
                   </div>
                   <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-5">
-                    Stability, not just "cheap labour"
+                    Stability, not just &quot;cheap labour&quot;
                   </h2>
                   <p className="text-[#6c7a89] mb-6 text-lg leading-relaxed">
-                    We focus on realistic offers and transparent communication, so you don't have to constantly replace staff.
+                    We focus on realistic offers and transparent communication, so you don&apos;t have to constantly replace staff.
                   </p>
                   <ul className="space-y-4 text-[#1b2430]">
                     <li className="flex items-start gap-3">

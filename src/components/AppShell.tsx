@@ -29,18 +29,18 @@ interface AppShellProps {
 
 export default function AppShell({ children, user, variant = "dashboard" }: AppShellProps) {
     const userType = user?.user_metadata?.user_type;
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(() => {
+        if (typeof window === "undefined") return true;
+        return window.innerWidth >= 1024;
+    });
     const pathname = usePathname();
-
-    // Initialize sidebar state based on screen size
-    useEffect(() => {
-        setIsOpen(window.innerWidth >= 1024);
-    }, []);
 
     // Close sidebar on mobile when route changes
     useEffect(() => {
+        if (typeof window === "undefined") return;
         if (window.innerWidth < 1024) {
-            setIsOpen(false);
+            const timeoutId = window.setTimeout(() => setIsOpen(false), 0);
+            return () => window.clearTimeout(timeoutId);
         }
     }, [pathname]);
 

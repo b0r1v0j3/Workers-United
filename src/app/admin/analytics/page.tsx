@@ -70,7 +70,13 @@ export default function AnalyticsPage() {
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { loadData(period); }, [period]);
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            loadData(period);
+        }, 0);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [period]);
 
     if (loading) {
         return (
