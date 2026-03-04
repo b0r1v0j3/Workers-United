@@ -5,7 +5,7 @@ import { sendEmail } from "@/lib/mailer";
 // This endpoint is called to get pending emails
 export async function GET(request: NextRequest) {
     try {
-        // Accept both N8N_API_KEY and CRON_SECRET for backwards compatibility
+        // Accept CRON_SECRET for authentication
         const apiKey = request.headers.get("x-api-key");
         const authHeader = request.headers.get("authorization");
         const isAuthorized = apiKey === process.env.N8N_API_KEY || authHeader === `Bearer ${process.env.CRON_SECRET}`;

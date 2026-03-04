@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 // ─── Brain Data Collector ───────────────────────────────────────────────────
 // Collects ALL system data for AI brain analysis (o1-pro / Claude / Gemini)
-// Called by n8n weekly workflow to generate system health & improvement reports
+// Called by Brain Monitor cron to generate system health & improvement reports
 //
 // Auth: Requires CRON_SECRET bearer token (same as cron jobs)
 
@@ -477,8 +477,49 @@ export async function GET(request: NextRequest) {
             placementFee: "$190 (Serbia)",
             guarantee: "90-day money-back on entry fee",
         },
-        // n8n replaced by Vercel cron — no external dependency needed
-        n8n: { status: "replaced_by_vercel_cron", note: "All automations run via Vercel Cron (brain-monitor, brain-improve, whatsapp-nudge, profile-reminders)" },
+        // WhatsApp → $9 conversion tracking
+        whatsappConversion: await (async () => {
+            try {
+                // Unique phone numbers that have chatted with us
+                const { data: waPhones } = await supabase
+                    .from("whatsapp_messages")
+                    .select("phone_number")
+                    .eq("direction", "inbound");
+                const uniqueWaPhones = new Set((waPhones || []).map(p => p.phone_number));
+
+                // Candidates who paid (have profiles with phone numbers)
+                const { data: paidCandidates } = await supabase
+                    .from("candidates")
+                    .select("profile_id")
+                    .eq("entry_fee_paid", true);
+
+                // Get phone numbers of paid users
+                const paidIds = (paidCandidates || []).map(c => c.profile_id);
+                let paidPhones: string[] = [];
+                if (paidIds.length > 0) {
+                    const { data: profiles } = await supabase
+                        .from("profiles")
+                        .select("phone")
+                        .in("id", paidIds)
+                        .not("phone", "is", null);
+                    paidPhones = (profiles || []).map(p => p.phone).filter(Boolean);
+                }
+
+                // How many WhatsApp users converted to paying
+                const convertedFromWa = paidPhones.filter(phone =>
+                    uniqueWaPhones.has(phone) || uniqueWaPhones.has(phone?.replace("+", ""))
+                ).length;
+
+                return {
+                    totalWhatsAppContacts: uniqueWaPhones.size,
+                    totalPaidUsers: paidIds.length,
+                    convertedFromWhatsApp: convertedFromWa,
+                    conversionRate: uniqueWaPhones.size > 0
+                        ? `${((convertedFromWa / uniqueWaPhones.size) * 100).toFixed(1)}%`
+                        : "N/A",
+                };
+            } catch { return { error: "Failed to calculate" }; }
+        })(),
     };
 
     return NextResponse.json(report);

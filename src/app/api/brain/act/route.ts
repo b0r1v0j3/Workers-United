@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 // ─── Brain Action Executor ──────────────────────────────────────────────────
 // POST: Execute a specific action (send WhatsApp, retry email, etc.)
-// Called by n8n Brain workflow when it decides to take action
+// Called by Brain Monitor when it decides to take action
 //
 // Auth: CRON_SECRET bearer token
 
@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, note: "Logged as observation" });
     }
 
-    // Flexible parsing: try many possible formats n8n might send
+    // Flexible parsing: try many possible formats the caller might send
     // Could be: { action, params }, { action, phone, message }, [{ action, params }], etc.
     const item = Array.isArray(body) ? body[0] : body;
-    const inner = item?.json || item; // unwrap n8n { json: {} } wrapper
+    const inner = item?.json || item; // unwrap potential { json: {} } wrapper
 
     const action = inner?.action || inner?.type || inner?.command || "log_observation";
     const params = inner?.params || inner?.parameters || inner || {};

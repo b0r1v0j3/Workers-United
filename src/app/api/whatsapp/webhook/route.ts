@@ -7,14 +7,12 @@ import crypto from "crypto";
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
 // Handles:
 // 1. GET  — Webhook verification (hub.challenge)
-// 2. POST — Inbound messages + delivery status updates → forwards to n8n AI
+// 2. POST — Inbound messages + delivery status updates → GPT-4o-mini AI
 //
-// Architecture: User → WhatsApp → Meta → Vercel → n8n (GPT-4o) → Vercel → WhatsApp
-// Vercel only sends lightweight identification data.
-// n8n uses AI Tools to pull documents, payments, and history on-demand.
+// Architecture: User → WhatsApp → Meta → Vercel → GPT-4o-mini → Vercel → WhatsApp
+// All AI processing happens directly via OpenAI API (no middleware).
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "workers-united-whatsapp-verify";
-const N8N_WEBHOOK_URL = process.env.N8N_WHATSAPP_WEBHOOK_URL;
 const APP_SECRET = process.env.META_APP_SECRET || "";
 const CONVERSATION_HISTORY_LIMIT = 100; // Number of past messages to send for context
 
@@ -473,7 +471,7 @@ Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-
     }
 }
 
-// ─── Fallback Bot (used when n8n is unavailable) ─────────────────────────────
+// ─── Fallback Bot (used when OpenAI is unavailable) ──────────────────────────
 // Reads business facts from platform_config DB table (cached 5 min)
 
 async function getFallbackResponse(message: string, candidate: any, profile: any): Promise<string> {

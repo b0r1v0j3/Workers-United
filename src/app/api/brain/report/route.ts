@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 // ─── Brain Report Storage ───────────────────────────────────────────────────
 // Stores weekly brain analysis reports in Supabase
-// Called by n8n after GPT generates the report
+// Called by Brain Monitor after GPT generates the report
 //
 // Auth: Requires CRON_SECRET bearer token
 
