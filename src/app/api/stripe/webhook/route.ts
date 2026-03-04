@@ -4,22 +4,28 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-    apiVersion: "2024-04-10" as any,
+    apiVersion: "2024-04-10",
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const getErrorMessage = (error: unknown): string => {
+    return error instanceof Error ? error.message : "Unknown error";
+};
 
 export async function POST(req: NextRequest) {
     const body = await req.text();
-    const signature = req.headers.get("stripe-signature") as string;
+    const signature = req.headers.get("stripe-signature");
+    if (!signature) {
+        return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
+    }
 
     let event: Stripe.Event;
 
     try {
         if (!webhookSecret) throw new Error("Missing STRIPE_WEBHOOK_SECRET");
         event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    } catch (err: any) {
-        console.error(`Webhook signature verification failed: ${err.message}`);
+    } catch (err: unknown) {
+        console.error(`Webhook signature verification failed: ${getErrorMessage(err)}`);
         return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
@@ -159,9 +165,10 @@ export async function POST(req: NextRequest) {
                 await logServerActivity(userId, "payment_completed", "payment", { type: "confirmation_fee", amount: 190, offer_id: offerId });
             }
 
-        } catch (err: any) {
-            console.error(`Database error: ${err.message}`);
-            await logServerActivity(userId, "payment_failed", "payment", { type: paymentType, error: err.message }, "error");
+        } catch (err: unknown) {
+            const message = getErrorMessage(err);
+            console.error(`Database error: ${message}`);
+            await logServerActivity(userId, "payment_failed", "payment", { type: paymentType, error: message }, "error");
             return NextResponse.json({ error: "Database error" }, { status: 500 });
         }
     }

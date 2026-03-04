@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
@@ -6,7 +6,7 @@ import { isGodModeUser } from "@/lib/godmode";
 export const dynamic = "force-dynamic";
 
 // GET: List all workers with their document generation status
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const supabase = await createClient();
 

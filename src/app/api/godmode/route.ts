@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
     try {
@@ -151,7 +152,11 @@ export async function POST(request: NextRequest) {
     }
 }
 
-async function getNextQueuePosition(supabase: any): Promise<number> {
+const getErrorMessage = (error: unknown): string => {
+    return error instanceof Error ? error.message : "Unknown error";
+};
+
+async function getNextQueuePosition(supabase: SupabaseClient): Promise<number> {
     const { data } = await supabase
         .from("candidates")
         .select("queue_position")
@@ -163,7 +168,7 @@ async function getNextQueuePosition(supabase: any): Promise<number> {
 }
 
 // GET: Check god mode status
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const supabase = await createClient();
 
@@ -181,8 +186,8 @@ export async function GET(request: NextRequest) {
             email: user.email
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("God mode GET error:", error);
-        return NextResponse.json({ godMode: false, error: error.message });
+        return NextResponse.json({ godMode: false, error: getErrorMessage(error) });
     }
 }

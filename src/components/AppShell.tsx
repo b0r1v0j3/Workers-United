@@ -7,28 +7,28 @@ import {
     Settings,
     Mail,
     Briefcase,
-    Home,
     User,
     LogOut,
     BarChart3,
     ListOrdered,
     FileSearch,
-    ChevronRight,
     X,
 } from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+type AppShellVariant = "public" | "dashboard" | "admin";
 
 interface AppShellProps {
     children: React.ReactNode;
-    user: any;
-    variant?: "public" | "dashboard" | "admin";
+    user: SupabaseUser | null;
+    variant?: AppShellVariant;
 }
 
 export default function AppShell({ children, user, variant = "dashboard" }: AppShellProps) {
-    const userType = user?.user_metadata?.user_type;
     const [isOpen, setIsOpen] = useState(() => {
         if (typeof window === "undefined") return true;
         return window.innerWidth >= 1024;
@@ -73,13 +73,6 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
             document.removeEventListener('touchend', handleTouchEnd);
         };
     }, []);
-
-    // Determine navigation links based on variant
-    const homeHref = variant === 'admin' ? '/admin'
-        : userType === 'employer' ? '/profile/employer'
-            : '/profile/worker';
-
-    const profileHref = userType === 'employer' ? '/profile/employer' : '/profile/worker';
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-montserrat">
@@ -128,7 +121,14 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
     );
 }
 
-function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: any, variant: string, isCollapsed: boolean, onMenuToggle?: () => void }) {
+interface SidebarContentProps {
+    user: SupabaseUser | null;
+    variant: AppShellVariant;
+    isCollapsed: boolean;
+    onMenuToggle?: () => void;
+}
+
+function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarContentProps) {
     const userType = user?.user_metadata?.user_type;
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -160,7 +160,14 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: an
             {variant !== 'admin' && (
                 <SidebarLink
                     href={userType === 'employer' ? '/profile/employer' : '/profile/worker'}
-                    icon={<img src={user?.user_metadata?.avatar_url || "/logo.png"} className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />}
+                    icon={
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={user?.user_metadata?.avatar_url || "/logo.png"}
+                            alt="Profile avatar"
+                            className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm"
+                        />
+                    }
                     label={user?.user_metadata?.full_name || "My Profile"}
                     isCollapsed={isCollapsed}
                 />
@@ -265,24 +272,6 @@ function SidebarLink({ href, icon, label, isCollapsed }: { href: string; icon: R
                 {icon}
             </div>
             <span className={`font-medium text-[14px] whitespace-nowrap ${isActive ? "font-semibold" : ""} ${isCollapsed ? "hidden" : "block"}`}>{label}</span>
-        </Link>
-    );
-}
-
-function BottomNavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
-    const pathname = usePathname();
-    const isActive = pathname === href;
-
-    return (
-        <Link href={href} className={`flex flex-col items-center justify-center gap-1 px-2 py-1 transition-colors w-full h-full relative ${isActive ? "text-blue-600" : "text-slate-400 hover:text-slate-600"
-            }`}>
-            {isActive && (
-                <span className="absolute top-0 w-8 h-[2px] bg-blue-600 rounded-b-md shadow-sm shadow-blue-200"></span>
-            )}
-            <div className={`transition-transform duration-200 ${isActive ? "-translate-y-0.5" : ""}`}>
-                {icon}
-            </div>
-            <span className="text-[10px] font-semibold tracking-tight">{label}</span>
         </Link>
     );
 }

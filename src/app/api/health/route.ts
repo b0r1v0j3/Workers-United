@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     if (process.env.STRIPE_SECRET_KEY) {
         try {
             const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-                apiVersion: "2024-04-10" as any,
+                apiVersion: "2024-04-10",
             });
             await stripe.balance.retrieve();
             checks.stripe = { state: "ok", details: "API credentials valid" };
@@ -157,4 +157,3 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ status, checks }, { status: code });
 }
-
