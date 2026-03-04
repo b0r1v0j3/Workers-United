@@ -38,55 +38,48 @@ export default function Footer() {
             href: "https://www.linkedin.com/company/workersunited-eu/",
             label: "LinkedIn",
             src: "https://img.icons8.com/fluency/48/linkedin.png"
-        },
-        {
-            href: "mailto:contact@workersunited.eu",
-            label: "Email",
-            src: "https://img.icons8.com/fluency/48/mail.png"
         }
     ];
 
     return (
-        <footer className="bg-[#fafafa] border-t border-gray-200 mt-20 relative z-10 w-full">
-            <div className="max-w-[1120px] mx-auto px-5 lg:px-8 py-10">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+        <footer className="bg-[#fafafa] border-t border-gray-200 mt-20 relative z-10 w-full py-12">
+            <div className="max-w-[1120px] mx-auto px-5 lg:px-8 flex flex-col items-center gap-10">
 
-                    {/* Left: Copyright & Legal */}
-                    <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 text-sm text-gray-500 font-medium">
+                {/* Centered Large Social Icons */}
+                <div className="flex items-center justify-center gap-6 flex-wrap">
+                    {socials.map((social) => (
+                        <a
+                            key={social.label}
+                            href={social.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="opacity-70 hover:opacity-100 hover:-translate-y-1 hover:scale-110 transition-all duration-300"
+                            aria-label={social.label}
+                        >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={social.src}
+                                alt={social.label}
+                                className="w-8 h-8 object-contain"
+                            />
+                        </a>
+                    ))}
+                </div>
+
+                {/* Bottom Bar: Copyright, Address, Legal */}
+                <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 border-t border-gray-200 pt-8 text-sm text-gray-500 font-medium">
+                    <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-center md:text-left">
                         <span>&copy; {year} Workers United LLC</span>
                         <span className="hidden md:inline text-gray-300">•</span>
-                        <div className="flex gap-4">
-                            <Link href="/privacy-policy" className="hover:text-black transition-colors">Privacy</Link>
-                            <Link href="/terms" className="hover:text-black transition-colors">Terms</Link>
-                        </div>
+                        <span className="text-gray-400">75 E 3rd St., Sheridan, WY 82801, USA</span>
                     </div>
 
-                    {/* Right: Address & Socials */}
-                    <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
-                        <span className="text-sm text-gray-400">75 E 3rd St., Sheridan, WY 82801, USA</span>
-
-                        <div className="flex items-center gap-3">
-                            {socials.map((social) => (
-                                <a
-                                    key={social.label}
-                                    href={social.href}
-                                    target={social.label === "Email" ? undefined : "_blank"}
-                                    rel={social.label === "Email" ? undefined : "noopener noreferrer"}
-                                    className="opacity-70 hover:opacity-100 hover:-translate-y-0.5 hover:scale-110 transition-all duration-200"
-                                    aria-label={social.label}
-                                >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={social.src}
-                                        alt={social.label}
-                                        className="w-[22px] h-[22px] object-contain"
-                                    />
-                                </a>
-                            ))}
-                        </div>
+                    <div className="flex items-center gap-6">
+                        <Link href="/privacy-policy" className="hover:text-black transition-colors">Privacy Policy</Link>
+                        <Link href="/terms" className="hover:text-black transition-colors">Terms of Service</Link>
                     </div>
-
                 </div>
+
             </div>
         </footer>
     );
