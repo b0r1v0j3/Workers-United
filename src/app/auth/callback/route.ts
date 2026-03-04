@@ -100,6 +100,37 @@ export async function GET(request: Request) {
                 await logServerActivity(user.id, "auth_login", "auth", { role: "employer", is_new: !employer });
                 return NextResponse.redirect(`${origin}/profile/employer`);
             } else {
+                // Ensure profile exists (DB trigger may have failed)
+                const workerAdmin = createAdminClient();
+                const { data: profileCheck } = await workerAdmin
+                    .from('profiles')
+                    .select('id')
+                    .eq('id', user.id)
+                    .maybeSingle();
+                if (!profileCheck) {
+                    await workerAdmin.from('profiles').upsert({
+                        id: user.id,
+                        email: user.email,
+                        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+                        user_type: 'worker',
+                    });
+                    console.log(`[Auth Callback] Created missing profile for ${user.id}`);
+                }
+
+                // Ensure candidate exists
+                const { data: candidateExists } = await workerAdmin
+                    .from('candidates')
+                    .select('id')
+                    .eq('profile_id', user.id)
+                    .maybeSingle();
+                if (!candidateExists) {
+                    await workerAdmin.from('candidates').insert({
+                        profile_id: user.id,
+                        status: 'NEW',
+                    });
+                    console.log(`[Auth Callback] Created missing candidate for ${user.id}`);
+                }
+
                 // Check if worker profile is incomplete (new signup → go to edit)
                 const { data: candidateCheck } = await supabase
                     .from("candidates")
@@ -118,8 +149,8 @@ export async function GET(request: Request) {
                         } catch { /* WA is best-effort */ }
                     }
 
-                    await logServerActivity(user.id, "auth_login", "auth", { role: "worker", is_new: true, redirect: "/profile/worker/edit" });
-                    return NextResponse.redirect(`${origin}/profile/worker/edit`);
+                    await logServerActivity(user.id, "auth_login", "auth", { role: "worker", is_new: true, redirect: "/profile/worker" });
+                    return NextResponse.redirect(`${origin}/profile/worker`);
                 }
 
                 await logServerActivity(user.id, "auth_login", "auth", { role: "worker", is_new: false });

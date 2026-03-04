@@ -291,11 +291,19 @@ CREATE POLICY "allow_all_brain_memory" ON brain_memory FOR ALL USING (true);
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger AS $$
 BEGIN
     INSERT INTO public.profiles (id, email, full_name, user_type)
-    VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'full_name', ''), COALESCE(NEW.raw_user_meta_data->>'user_type', 'candidate'));
-    IF COALESCE(NEW.raw_user_meta_data->>'user_type', 'candidate') = 'candidate' THEN
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+        COALESCE(NEW.raw_user_meta_data->>'user_type', 'worker')
+    );
+
+    -- Create candidates row for workers (user_type = 'worker' or 'candidate' or NULL)
+    IF COALESCE(NEW.raw_user_meta_data->>'user_type', 'worker') IN ('worker', 'candidate') THEN
         INSERT INTO public.candidates (profile_id) VALUES (NEW.id);
     ELSIF NEW.raw_user_meta_data->>'user_type' = 'employer' THEN
-        INSERT INTO public.employers (profile_id, company_name) VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'company_name', 'My Company'));
+        INSERT INTO public.employers (profile_id, company_name, status)
+        VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'company_name', 'My Company'), 'PENDING');
     END IF;
     RETURN NEW;
 END;
