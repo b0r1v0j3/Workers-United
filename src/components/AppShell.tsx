@@ -202,6 +202,11 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: an
                 <div className="my-2 border-t border-slate-100/80 w-full" />
                 <a
                     href="/auth/signout"
+                    onClick={(e) => {
+                        if (!window.confirm("Are you sure you want to log out?")) {
+                            e.preventDefault();
+                        }
+                    }}
                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-red-50 hover:text-red-600 font-medium`}
                     title={isCollapsed ? "Logout" : undefined}
                 >
