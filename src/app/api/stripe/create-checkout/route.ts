@@ -59,11 +59,11 @@ export async function POST(request: NextRequest) {
             offer = offerData;
         }
 
-        // For entry fee, enforce approval + verification gate before payment
+        // For entry fee, allow payment for all candidate profiles
         if (type === "entry_fee") {
             const { data: candidate } = await supabase
                 .from("candidates")
-                .select("entry_fee_paid, admin_approved, status")
+                .select("entry_fee_paid")
                 .eq("profile_id", user.id)
                 .single();
 
@@ -73,21 +73,6 @@ export async function POST(request: NextRequest) {
 
             if (candidate?.entry_fee_paid) {
                 return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
-            }
-
-            if (!candidate?.admin_approved) {
-                return NextResponse.json(
-                    { error: "Your profile is pending admin approval. Payment unlocks after approval." },
-                    { status: 403 }
-                );
-            }
-
-            const payableStatuses = new Set(["VERIFIED", "APPROVED", "PENDING_APPROVAL"]);
-            if (!payableStatuses.has(candidate.status || "")) {
-                return NextResponse.json(
-                    { error: "Your profile must be verified before payment." },
-                    { status: 400 }
-                );
             }
         }
 

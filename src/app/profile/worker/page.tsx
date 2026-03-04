@@ -68,7 +68,6 @@ export default async function WorkerProfilePage() {
             profileCompletion={profileCompletion}
             isReady={isReady}
             inQueue={inQueue}
-            adminApproved={!!candidate?.admin_approved}
         />
     );
 }

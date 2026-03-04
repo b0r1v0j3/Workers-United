@@ -36,13 +36,12 @@ interface DashboardClientProps {
     profileCompletion: number;
     isReady: boolean;
     inQueue: boolean;
-    adminApproved: boolean;
 }
 
 type TabType = "profile" | "documents" | "status";
 
 export default function DashboardClient({
-    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue, adminApproved
+    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue
 }: DashboardClientProps) {
     const [activeTab, setActiveTab] = useState<TabType>("profile");
     const [payLoading, setPayLoading] = useState(false);
@@ -155,8 +154,7 @@ export default function DashboardClient({
 
     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
     const hasPaidEntryFee = !!candidate?.entry_fee_paid;
-    const canStartPayment = adminApproved && !hasPaidEntryFee && !inQueue;
-    const awaitingApproval = !adminApproved && !hasPaidEntryFee;
+    const canStartPayment = !hasPaidEntryFee && !inQueue;
     const paymentPendingActivation = hasPaidEntryFee && !inQueue;
     const hasUploadedDocs = documents && documents.length > 0;
     const docsVerified = documents.filter(d => d.status === 'verified').length >= 3;
@@ -174,17 +172,13 @@ export default function DashboardClient({
                                     ? "You're in the Queue!"
                                     : paymentPendingActivation
                                         ? "Payment Received"
-                                        : awaitingApproval
-                                            ? "Waiting for Approval"
-                                            : "Start Searching for Jobs"}
+                                        : "Start Searching for Jobs"}
                             </h3>
                             <p className="text-gray-500 text-sm mt-2 leading-relaxed max-w-md mx-auto">
                                 {inQueue
                                     ? "We're actively looking for the best job match for you."
                                     : paymentPendingActivation
                                         ? "Your payment is confirmed. We're activating your queue status now."
-                                        : awaitingApproval
-                                            ? "Your profile is ready. Our team is reviewing it before payment is unlocked."
                                         : "Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe."
                                 }
                             </p>
@@ -193,14 +187,6 @@ export default function DashboardClient({
                             <Link href="/profile/worker/queue" className="shrink-0 bg-white text-gray-900 font-medium text-sm px-5 py-2.5 rounded-lg border border-gray-200 shadow-sm whitespace-nowrap inline-block hover:bg-gray-50 transition-colors">
                                 View Queue Status
                             </Link>
-                        ) : awaitingApproval ? (
-                            <button
-                                type="button"
-                                disabled
-                                className="shrink-0 bg-gray-100 text-gray-500 font-medium text-sm px-5 py-2.5 rounded-lg border border-gray-200 cursor-not-allowed"
-                            >
-                                Pending Admin Approval
-                            </button>
                         ) : (
                             <PayButton />
                         )}
