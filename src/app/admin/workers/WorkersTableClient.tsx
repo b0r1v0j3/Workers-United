@@ -217,7 +217,7 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                         )}
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 w-48">
+                                <td className="px-4 py-3 w-36">
                                     <div className="flex items-center gap-2">
                                         <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                             <div
@@ -267,7 +267,7 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                     <div className="flex items-center justify-end gap-2">
                                         <Link
                                             href={`/admin/workers/${worker.id}`}
-                                            className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                            className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors border border-transparent hover:border-blue-100"
                                         >
                                             View
                                         </Link>
