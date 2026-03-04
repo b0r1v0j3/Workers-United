@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 02.03.2026 (platform_config centralizovani business facts, brain monitor dedup fix, WhatsApp refund policy fix)
+> **Poslednje ažuriranje:** 04.03.2026 (payment/queue hardening, offer link sync, Next.js proxy migration)
 
 ---
 
@@ -248,6 +248,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] Payment/queue hardening + real offer links + admin status alignment + notification sync — 04.03.2026
+- [x] Next.js 16 proxy migration (`src/middleware.ts` → `src/proxy.ts`) — 04.03.2026
 - [x] Platform Config — centralized business facts DB, admin UI editor, WhatsApp + Brain + n8n integration — 02.03.2026
 - [x] Brain Monitor dedup fix — checks open + closed issues, feeds resolved titles to AI — 02.03.2026
 - [x] WhatsApp refund policy fix — 30 days → 90 days in fallback bot — 02.03.2026
@@ -275,6 +277,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 |---|---|---|
 | AppShell | `src/components/AppShell.tsx` | Layout wrapper (Sidebar + Navbar + Content) |
 | UnifiedNavbar | `src/components/UnifiedNavbar.tsx` | Top navigacija |
+| Proxy Guard | `src/proxy.ts` | CSRF + auth guard za `/profile`, `/admin`, `/api/*` |
 | Profile Redirector | `src/app/profile/page.tsx` | Auto-redirect worker/employer |
 | Worker Profile | `src/app/profile/worker/page.tsx` | Profil radnika (3 taba) |
 | Worker DashboardClient | `src/app/profile/worker/DashboardClient.tsx` | Klijentska komponenta profila |
@@ -601,7 +604,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 22. **Brain report mora da se sačuva u bazu** — n8n šalje nedeljni izveštaj mejlom, ali MORA i da pozove `POST /api/brain/report` sa `Authorization: Bearer CRON_SECRET` da bi sačuvao izveštaj u `brain_reports` tabelu. Bez toga, nema baseline za poređenje sledeće nedelje. Body: `{ "report": "...", "model": "gpt-5.3-codex", "findings_count": N }`.
 
-23. **Brain code coverage — `KEY_PATHS` mora da pokriva celu bazu** — `brain/code/route.ts` čita fajlove sa GitHub-a za AI analizu. `KEY_PATHS` niz MORA da uključuje `database.types.ts`, SVE API rute, SVE lib fajlove i `middleware.ts`. GPT 5.3 report je flagovao da ne može da validira kolone jer mu `database.types.ts` nije bio poslat. FIXED 01.03.2026: prošireno sa 28 na 70+ fajlova.
+23. **Brain code coverage — `KEY_PATHS` mora da pokriva celu bazu** — `brain/code/route.ts` čita fajlove sa GitHub-a za AI analizu. `KEY_PATHS` niz MORA da uključuje `database.types.ts`, SVE API rute, SVE lib fajlove i `proxy.ts` (ranije `middleware.ts`). GPT 5.3 report je flagovao da ne može da validira kolone jer mu `database.types.ts` nije bio poslat. FIXED 01.03.2026: prošireno sa 28 na 70+ fajlova.
 
 24. **Brain collect — `totalEmployers` mora da koristi `employers` tabelu** — `users.totalEmployers` je koristio `profiles.user_type === "employer"` filter, dok je `employers.total` brojao `employers` tabelu. Ovo stvara nekonzistentnost (3 vs 5). FIXED: obe metrike sada koriste `employers` tabelu.
 
@@ -621,10 +624,10 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 2. The POZIVNO PISMO has a hardcoded "1 ЈЕДНА (ONE)" for number of visits — this could be made configurable.
 3. Consider adding a PDF preview feature in the admin panel before generating final documents.
 4. **Payment/Stripe integration** — kad se bude pravio payment flow, profil gate je već na mestu na API nivou (`contracts/prepare/route.ts`). Samo treba dodati frontend poruku na worker dashboard-u tipa "Complete your profile to proceed to payment" i disable-ovati payment dugme dok `profileCompletion < 100`.
-5. ~~**Middleware proširenje**~~ ✅ DONE — `src/middleware.ts` kreiran sa CSRF + auth guardom za `/profile`, `/admin`, i `/api/*` rute.
+5. ~~**Middleware proširenje**~~ ✅ DONE — `src/proxy.ts` (ranije `src/middleware.ts`) implementira CSRF + auth guard za `/profile`, `/admin`, i `/api/*` rute.
 6. **Rate limiting** — Dodati Upstash rate limit na API rute, pogotovo `verify-document` i `offers`.
 7. ~~**Regenerisati database.types.ts**~~ ✅ DONE — `npm run db:types` script dodat u `package.json`.
-8. ~~**CSRF zaštita**~~ ✅ DONE — Origin/Referer validacija u `src/middleware.ts`. Webhook/cron/brain rute izuzete.
+8. ~~**CSRF zaštita**~~ ✅ DONE — Origin/Referer validacija u `src/proxy.ts`. Webhook/cron/brain rute izuzete.
 9. **Brain multi-model debata** — Proširiti n8n workflow da koristi 3 modela (GPT, Claude, Gemini) u 4 runde kako je opisano u brain_system_design.md.
 10. **Error monitoring (Sentry)** — Sentry free tier za hvatanje tihih API grešaka pre nego što korisnici prijave.
 11. **Health check dashboard** — Proširiti `/api/health` da proverava Supabase, Stripe, SMTP, WhatsApp konekciju.

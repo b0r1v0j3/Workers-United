@@ -48,8 +48,8 @@ function validateOrigin(request: NextRequest): boolean {
     return false;
 }
 
-// ─── Main Middleware ─────────────────────────────────────────────────────────
-export async function middleware(request: NextRequest) {
+// ─── Main Proxy ──────────────────────────────────────────────────────────────
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const method = request.method;
 

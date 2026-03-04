@@ -98,7 +98,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
 
     // Apply filter
     let filteredUsers = activeAuthUsers;
-    const statusFilters = ['NEW', 'PROFILE_COMPLETE', 'PENDING_APPROVAL', 'VERIFIED', 'IN_QUEUE', 'OFFER_PENDING', 'OFFER_ACCEPTED', 'VISA_PROCESS_STARTED', 'VISA_APPROVED', 'PLACED', 'REJECTED', 'REFUND_FLAGGED'];
+    const statusFilters = ['NEW', 'PROFILE_COMPLETE', 'PENDING_APPROVAL', 'VERIFIED', 'APPROVED', 'IN_QUEUE', 'OFFER_PENDING', 'OFFER_ACCEPTED', 'VISA_PROCESS_STARTED', 'VISA_APPROVED', 'PLACED', 'REJECTED', 'REFUND_FLAGGED'];
 
     if (filter === 'pending') {
         filteredUsers = activeAuthUsers.filter((u: any) => {
@@ -128,7 +128,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     const filterLabels: Record<string, string> = {
         all: 'All', pending: 'Pending Docs', verified: 'Verified Docs', needs_approval: 'Needs Approval',
         NEW: 'New', PROFILE_COMPLETE: 'Profile Complete', PENDING_APPROVAL: 'Pending Approval',
-        VERIFIED: 'Verified', IN_QUEUE: 'In Queue', OFFER_PENDING: 'Offer Pending',
+        VERIFIED: 'Verified', APPROVED: 'Approved', IN_QUEUE: 'In Queue', OFFER_PENDING: 'Offer Pending',
         OFFER_ACCEPTED: 'Offer Accepted', VISA_PROCESS_STARTED: 'Visa Started',
         VISA_APPROVED: 'Visa Approved', PLACED: 'Placed', REJECTED: 'Rejected', REFUND_FLAGGED: 'Refund',
     };
@@ -153,6 +153,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                         <FilterTab href="/admin/workers" label="All" active={filter === 'all'} color="slate" />
                         <FilterTab href="/admin/workers?filter=NEW" label="New" active={filter === 'NEW'} color="slate" />
                         <FilterTab href="/admin/workers?filter=VERIFIED" label="Verified" active={filter === 'VERIFIED'} color="emerald" />
+                        <FilterTab href="/admin/workers?filter=APPROVED" label="Approved" active={filter === 'APPROVED'} color="indigo" />
                         <FilterTab href="/admin/workers?filter=IN_QUEUE" label="In Queue" active={filter === 'IN_QUEUE'} color="amber" />
                         <FilterTab href="/admin/workers?filter=OFFER_PENDING" label="Offer" active={filter === 'OFFER_PENDING' || filter === 'OFFER_ACCEPTED'} color="orange" />
                         <FilterTab href="/admin/workers?filter=VISA_PROCESS_STARTED" label="Visa" active={filter === 'VISA_PROCESS_STARTED' || filter === 'VISA_APPROVED'} color="green" />
@@ -233,6 +234,7 @@ function StatusBadge({ status }: { status: string }) {
         PROFILE_COMPLETE: "bg-blue-100 text-blue-700",
         PENDING_APPROVAL: "bg-indigo-100 text-indigo-700",
         VERIFIED: "bg-emerald-100 text-emerald-700",
+        APPROVED: "bg-emerald-100 text-emerald-700",
         IN_QUEUE: "bg-amber-100 text-amber-700",
         OFFER_PENDING: "bg-orange-100 text-orange-700",
         OFFER_ACCEPTED: "bg-orange-100 text-orange-700",

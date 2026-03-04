@@ -166,11 +166,15 @@ export async function GET(request: Request) {
         });
 
         // Populate revenue (need to fetch payments)
-        const { data: allPayments } = await supabase.from('payments').select('amount, created_at, status').in('status', ['paid', 'completed']);
+        const { data: allPayments } = await supabase
+            .from('payments')
+            .select('amount, amount_cents, created_at, status')
+            .in('status', ['paid', 'completed']);
         allPayments?.forEach((p: any) => {
             const dateKey = new Date(p.created_at).toISOString().split('T')[0];
             if (timeSeriesMap.has(dateKey)) {
-                timeSeriesMap.get(dateKey)!.revenue += Number(p.amount) || 0;
+                const value = p.amount != null ? Number(p.amount) : Number(p.amount_cents || 0) / 100;
+                timeSeriesMap.get(dateKey)!.revenue += Number.isFinite(value) ? value : 0;
             }
         });
 

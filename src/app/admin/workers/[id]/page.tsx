@@ -279,7 +279,8 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     admin_approved: true,
                     admin_approved_at: new Date().toISOString(),
                     admin_approved_by: user.id,
-                    status: 'PENDING_APPROVAL', // Mark as ready to pay
+                    // APPROVED is explicit "ready to pay" state after admin approval
+                    status: 'APPROVED',
                     updated_at: new Date().toISOString()
                 })
                 .eq("profile_id", id);
@@ -290,6 +291,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     admin_approved: false,
                     admin_approved_at: null,
                     admin_approved_by: null,
+                    status: 'PENDING_APPROVAL',
                     updated_at: new Date().toISOString()
                 })
                 .eq("profile_id", id);
@@ -347,11 +349,27 @@ export default async function CandidateDetailPage({ params }: PageProps) {
     }
 
     const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'verified': return 'bg-green-100 text-green-700 border-green-200';
-            case 'rejected': return 'bg-red-100 text-red-700 border-red-200';
-            case 'verifying': return 'bg-blue-100 text-blue-700 border-blue-200';
-            default: return 'bg-gray-100 text-gray-600 border-gray-200';
+        const normalized = (status || "").toUpperCase();
+        switch (normalized) {
+            case 'VERIFIED':
+            case 'APPROVED':
+                return 'bg-green-100 text-green-700 border-green-200';
+            case 'REJECTED':
+                return 'bg-red-100 text-red-700 border-red-200';
+            case 'VERIFYING':
+            case 'PENDING_APPROVAL':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'IN_QUEUE':
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'OFFER_PENDING':
+            case 'OFFER_ACCEPTED':
+                return 'bg-orange-100 text-orange-700 border-orange-200';
+            case 'VISA_PROCESS_STARTED':
+            case 'VISA_APPROVED':
+            case 'PLACED':
+                return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            default:
+                return 'bg-gray-100 text-gray-600 border-gray-200';
         }
     };
 
@@ -518,6 +536,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                         <option value="PROFILE_COMPLETE">Profile Complete</option>
                                         <option value="PENDING_APPROVAL">Pending Approval</option>
                                         <option value="VERIFIED">Verified</option>
+                                        <option value="APPROVED">Approved</option>
                                         <option value="IN_QUEUE">In Queue</option>
                                         <option value="OFFER_PENDING">Offer Pending</option>
                                         <option value="OFFER_ACCEPTED">Offer Accepted</option>
@@ -567,7 +586,9 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                         <div key={payment.id} className="border border-[#f1f5f9] rounded-lg p-3">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <div className="font-bold text-[#1e293b]">${payment.amount / 100}</div>
+                                                    <div className="font-bold text-[#1e293b]">
+                                                        ${Number(payment.amount ?? (Number(payment.amount_cents || 0) / 100)).toFixed(2)}
+                                                    </div>
                                                     <div className="text-[12px] text-[#64748b]">
                                                         {new Date(payment.created_at).toLocaleDateString('en-GB')}
                                                     </div>

@@ -154,6 +154,10 @@ export default function DashboardClient({
     };
 
     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
+    const hasPaidEntryFee = !!candidate?.entry_fee_paid;
+    const canStartPayment = adminApproved && !hasPaidEntryFee && !inQueue;
+    const awaitingApproval = !adminApproved && !hasPaidEntryFee;
+    const paymentPendingActivation = hasPaidEntryFee && !inQueue;
     const hasUploadedDocs = documents && documents.length > 0;
     const docsVerified = documents.filter(d => d.status === 'verified').length >= 3;
 
@@ -166,30 +170,44 @@ export default function DashboardClient({
                     <div className="relative z-10 flex flex-col items-center justify-center gap-6 text-center">
                         <div className="flex flex-col items-center">
                             <h3 className="font-semibold text-gray-900 text-xl tracking-tight">
-                                {inQueue ? "You're in the Queue!"
-                                    : candidate?.entry_fee_paid ? "You're in the Queue!"
-                                        : "Start Searching for Jobs"}
+                                {inQueue
+                                    ? "You're in the Queue!"
+                                    : paymentPendingActivation
+                                        ? "Payment Received"
+                                        : awaitingApproval
+                                            ? "Waiting for Approval"
+                                            : "Start Searching for Jobs"}
                             </h3>
                             <p className="text-gray-500 text-sm mt-2 leading-relaxed max-w-md mx-auto">
                                 {inQueue
                                     ? "We're actively looking for the best job match for you."
-                                    : candidate?.entry_fee_paid
-                                        ? "We're actively looking for the best job match for you."
+                                    : paymentPendingActivation
+                                        ? "Your payment is confirmed. We're activating your queue status now."
+                                        : awaitingApproval
+                                            ? "Your profile is ready. Our team is reviewing it before payment is unlocked."
                                         : "Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe."
                                 }
                             </p>
                         </div>
-                        {inQueue || candidate?.entry_fee_paid ? (
+                        {inQueue || paymentPendingActivation ? (
                             <Link href="/profile/worker/queue" className="shrink-0 bg-white text-gray-900 font-medium text-sm px-5 py-2.5 rounded-lg border border-gray-200 shadow-sm whitespace-nowrap inline-block hover:bg-gray-50 transition-colors">
                                 View Queue Status
                             </Link>
+                        ) : awaitingApproval ? (
+                            <button
+                                type="button"
+                                disabled
+                                className="shrink-0 bg-gray-100 text-gray-500 font-medium text-sm px-5 py-2.5 rounded-lg border border-gray-200 cursor-not-allowed"
+                            >
+                                Pending Admin Approval
+                            </button>
                         ) : (
                             <PayButton />
                         )}
                     </div>
 
                     {/* Bottom Content (Guarantee) */}
-                    {!candidate?.entry_fee_paid && !inQueue && (
+                    {canStartPayment && (
                         <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-center gap-1.5 text-gray-500 text-[11px] sm:text-xs font-medium text-center px-1">
                             <Shield size={14} className="shrink-0 text-gray-400" />
                             <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer in 90 days</span>

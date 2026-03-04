@@ -404,7 +404,7 @@ export async function sendStatusUpdate(phone: string, name: string, message: str
         to: phone,
         templateName: "status_update",
         bodyParams: [name, message],
-        buttonParams: [{ type: "url", url: "/profile" }],
+        buttonParams: [{ type: "url", url: "/profile/worker" }],
         userId,
     });
 }

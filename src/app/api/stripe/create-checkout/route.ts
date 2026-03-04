@@ -59,25 +59,47 @@ export async function POST(request: NextRequest) {
             offer = offerData;
         }
 
-        // For entry fee, check if already paid (no longer require admin approval — users can pay anytime)
+        // For entry fee, enforce approval + verification gate before payment
         if (type === "entry_fee") {
             const { data: candidate } = await supabase
                 .from("candidates")
-                .select("entry_fee_paid")
+                .select("entry_fee_paid, admin_approved, status")
                 .eq("profile_id", user.id)
                 .single();
+
+            if (!candidate) {
+                return NextResponse.json({ error: "Candidate profile not found" }, { status: 404 });
+            }
 
             if (candidate?.entry_fee_paid) {
                 return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
             }
+
+            if (!candidate?.admin_approved) {
+                return NextResponse.json(
+                    { error: "Your profile is pending admin approval. Payment unlocks after approval." },
+                    { status: 403 }
+                );
+            }
+
+            const payableStatuses = new Set(["VERIFIED", "APPROVED", "PENDING_APPROVAL"]);
+            if (!payableStatuses.has(candidate.status || "")) {
+                return NextResponse.json(
+                    { error: "Your profile must be verified before payment." },
+                    { status: 400 }
+                );
+            }
         }
 
         // Create payment record
+        const amount = type === "entry_fee" ? 9 : 190;
+        const amountCents = type === "entry_fee" ? 900 : 19000;
         const { data: payment, error: paymentError } = await supabase
             .from("payments")
             .insert({
                 user_id: user.id,
-                amount_cents: type === "entry_fee" ? 900 : 19000,
+                amount,
+                amount_cents: amountCents,
                 payment_type: type,
                 status: "pending",
                 metadata: offer ? { offer_id: offerId } : {},
@@ -114,8 +136,8 @@ export async function POST(request: NextRequest) {
                     quantity: 1,
                 },
             ],
-            success_url: getCheckoutSuccessUrl(type),
-            cancel_url: getCheckoutCancelUrl(type),
+            success_url: getCheckoutSuccessUrl(type, offerId),
+            cancel_url: getCheckoutCancelUrl(type, offerId),
             metadata: {
                 payment_id: payment.id,
                 user_id: user.id,

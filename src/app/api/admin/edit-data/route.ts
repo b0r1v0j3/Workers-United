@@ -38,10 +38,11 @@ export async function POST(request: NextRequest) {
                 "full_name", "email",
             ],
             employers: [
-                "company_name", "pib",
-                "company_address", "contact_phone", "country",
-                "company_website", "industry", "employees_count",
-                "accommodation_address", "min_salary_rsd", "status",
+                "company_name", "tax_id", "company_registration_number",
+                "company_address", "contact_phone", "country", "city", "postal_code",
+                "website", "industry", "company_size", "description",
+                "business_registry_number", "founded_year", "founding_date",
+                "status",
             ],
             contract_data: [
                 "candidate_full_name", "candidate_passport_number",

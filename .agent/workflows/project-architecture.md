@@ -20,8 +20,8 @@ description: Full project architecture reference — tech stack, folder structur
 | Database | **Supabase (PostgreSQL)** | RLS policies, cron-triggered functions |
 | Storage | **Supabase Storage** | Documents (passport, diploma, biometric photo) |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
-| AI | **Gemini 2.0 Flash** (`@google/generative-ai`) | Document verification, contact form auto-reply |
-| AI (Chatbot) | **GPT-4o** (direct OpenAI API) | WhatsApp AI chatbot with memory + self-learning |
+| AI | **Gemini 3.0 Flash** (`@google/generative-ai`) | Document verification + fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
+| AI (Chatbot) | **GPT-4o-mini via n8n** | WhatsApp AI chatbot with memory + enriched user context |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
@@ -80,14 +80,14 @@ Workers-United/
 │   │   │   ├── profile/       # Profile API
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   ├── whatsapp/      # WhatsApp webhook (direct OpenAI AI chatbot)
+│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → n8n AI bridge)
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth/email callback handler
 │   │   │   └── select-role/  # Role picker for Google OAuth first-time users
 │   │   ├── privacy-policy/    # GDPR privacy policy page
 │   │   └── terms/             # Terms & conditions page
-│   ├── middleware.ts           # ← CSRF + auth guard (profile, admin, API routes)
+│   ├── proxy.ts                # ← CSRF + auth guard (profile, admin, API routes)
 │   ├── components/
 │   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content)
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar
@@ -121,7 +121,7 @@ Workers-United/
 │   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types)
 │   │   └── imageUtils.ts      # Image processing helpers
 │   └── types/                 # TypeScript types (currently empty)
-├── vercel.json                # Vercel config: security headers + 4 cron jobs
+├── vercel.json                # Vercel config: security headers + 7 cron jobs
 ├── next.config.ts             # Next.js config
 ├── tsconfig.json              # TypeScript config
 ├── package.json               # Dependencies & scripts
@@ -144,6 +144,7 @@ Configured in `vercel.json`:
 | `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
 | `/api/cron/brain-monitor` | Daily 8 AM UTC | System health monitoring |
 | `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, generates new brain_memory facts |
+| `/api/cron/whatsapp-nudge` | Daily 11 AM UTC | WhatsApp nudges for users who need a profile/doc action |
 
 ---
 
@@ -175,7 +176,7 @@ User (Browser)
 3. For Google OAuth from login page (first time): user is redirected to `/auth/select-role` to choose worker/employer
 4. On first login → user creates profile in `candidates` or `employers` table
 5. `profiles` table links auth user to their role
-6. Middleware checks auth state on protected routes
+6. Proxy (`src/proxy.ts`) checks auth state on protected routes
 
 ### Payment Flow
 1. Worker completes profile to 100% → gets verified
@@ -320,7 +321,7 @@ When adding a new feature, follow this order:
 - The webhook handles both `entry_fee` ($9) and `confirmation_fee` ($190) — check the metadata `fee_type` field.
 
 ### Next.js 16 Specifics
-- `middleware.ts` is deprecated → use `proxy.ts` instead (`src/lib/supabase/middleware.ts`)
+- `src/middleware.ts` is deprecated in Next.js 16 → use `src/proxy.ts` (helper remains `src/lib/supabase/middleware.ts`)
 - No `config` export in API routes (Pages Router leftover — remove if found)
 
 ### Naming Conventions

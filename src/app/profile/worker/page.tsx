@@ -56,7 +56,7 @@ export default async function WorkerProfilePage() {
     const { completion: profileCompletion } = getWorkerCompletion({
         profile, candidate, documents: documents || []
     });
-    const isReady = profileCompletion === 100 && verifiedCount >= 2;
+    const isReady = profileCompletion === 100 && verifiedCount >= 3;
 
     return (
         <DashboardClient

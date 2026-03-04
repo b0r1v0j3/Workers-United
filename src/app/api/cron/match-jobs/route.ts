@@ -87,24 +87,31 @@ export async function GET(request: Request) {
         let totalMatches = 0;
         let emailsSent = 0;
 
-        // Pre-fetch ALL existing job_match emails to avoid N+1 queries in the loop
-        const { data: existingMatchEmails } = await supabase
-            .from('email_queue')
-            .select('recipient_email, template_data')
-            .eq('email_type', 'job_match');
+        // Pre-fetch active offers for dedup (candidateId|jobId)
+        const jobIds = openJobs.map(j => j.id);
+        const { data: activeOffers } = await supabase
+            .from("offers")
+            .select("candidate_id, job_request_id, status")
+            .in("job_request_id", jobIds)
+            .in("status", ["pending", "accepted"]);
 
-        // Build a Set of "email|jobId" keys for O(1) dedup lookups
-        const sentMatchKeys = new Set<string>();
-        for (const e of existingMatchEmails || []) {
-            const jobId = (e.template_data as any)?.jobId;
-            if (jobId && e.recipient_email) {
-                sentMatchKeys.add(`${e.recipient_email}|${jobId}`);
+        const activeOfferKeys = new Set<string>();
+        const matchedCandidateIds = new Set<string>();
+        for (const o of activeOffers || []) {
+            if (o.candidate_id && o.job_request_id) {
+                activeOfferKeys.add(`${o.candidate_id}|${o.job_request_id}`);
+                matchedCandidateIds.add(o.candidate_id);
             }
         }
 
         // 3. Matching Logic
         for (const job of openJobs) {
             for (const candidate of candidates || []) {
+                // One active offer at a time per candidate
+                if (matchedCandidateIds.has(candidate.id)) {
+                    continue;
+                }
+
                 // Skip if no profile (should rely on inner join but safety check)
                 if (!candidate.profiles) continue;
 
@@ -120,7 +127,7 @@ export async function GET(request: Request) {
                 if (!industryMatch) continue;
 
                 // B. Location Match
-                const jobLocation = job.destination_country || "Serbia";
+                const jobLocation = job.destination_country || "Europe";
                 const candidateLocations = candidate.desired_countries || [];
 
                 const locationMatch =
@@ -129,13 +136,38 @@ export async function GET(request: Request) {
 
                 if (!locationMatch) continue;
 
-                // C. Match Found! Check if already notified (O(1) lookup from pre-fetched data)
-                const dedupKey = `${candidate.profiles.email}|${job.id}`;
-                if (sentMatchKeys.has(dedupKey)) {
+                // C. Match Found! Skip if active offer already exists for this candidate/job
+                const offerKey = `${candidate.id}|${job.id}`;
+                if (activeOfferKeys.has(offerKey)) {
                     continue;
                 }
 
-                // D. Send Notification
+                // D. Create offer (24h expiry) and move candidate to OFFER_PENDING
+                const expiresAt = new Date();
+                expiresAt.setHours(expiresAt.getHours() + 24);
+
+                const { data: offer, error: offerError } = await supabase
+                    .from("offers")
+                    .insert({
+                        job_request_id: job.id,
+                        candidate_id: candidate.id,
+                        queue_position_at_offer: candidate.queue_position,
+                        expires_at: expiresAt.toISOString(),
+                    })
+                    .select("id")
+                    .single();
+
+                if (offerError || !offer) {
+                    console.error("[Job Match] Failed to create offer:", offerError);
+                    continue;
+                }
+
+                await supabase
+                    .from("candidates")
+                    .update({ status: "OFFER_PENDING" })
+                    .eq("id", candidate.id);
+
+                // E. Send notification with real offer link
                 await queueEmail(
                     supabase,
                     candidate.profiles.id,
@@ -145,15 +177,16 @@ export async function GET(request: Request) {
                     {
                         jobId: job.id,
                         jobTitle: job.title,
-                        location: job.destination_country || "Serbia",
+                        location: job.destination_country || "Europe",
                         salary: `${Number(job.salary_rsd || 0).toLocaleString('de-DE')} RSD`,
                         industry: job.industry,
-                        offerLink: `https://workersunited.eu/jobs/${job.id}`
+                        offerLink: `https://workersunited.eu/profile/worker/offers/${offer.id}`
                     }
                 );
 
-                // Mark as sent so we don't send again in this batch
-                sentMatchKeys.add(dedupKey);
+                // Mark as active so we don't create duplicate offers in this run
+                activeOfferKeys.add(offerKey);
+                matchedCandidateIds.add(candidate.id);
                 totalMatches++;
                 emailsSent++;
             }

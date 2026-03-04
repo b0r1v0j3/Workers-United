@@ -83,15 +83,15 @@ function calculateCompletion(form: CompanyForm) {
     const baseRequired: (keyof CompanyForm)[] = [
         "company_name", "contact_phone", "country", "industry"
     ];
-    // Serbia: additional fields required for contracts
-    const serbiaExtra: (keyof CompanyForm)[] = [
+    // Additional fields required in the primary operating market
+    const primaryMarketExtra: (keyof CompanyForm)[] = [
         "company_registration_number", "company_address",
         "city", "postal_code", "description",
         "business_registry_number", "founding_date"
     ];
 
-    const isSerbia = form.country.toLowerCase() === 'serbia';
-    const required = isSerbia ? [...baseRequired, ...serbiaExtra] : baseRequired;
+    const isPrimaryMarket = form.country.toLowerCase() === 'serbia';
+    const required = isPrimaryMarket ? [...baseRequired, ...primaryMarketExtra] : baseRequired;
 
     const filled = required.filter(key => {
         const val = form[key];
@@ -200,10 +200,10 @@ export default function EmployerProfilePage() {
             if (!companyForm.company_name.trim()) throw new Error("Company name is required");
             if (!companyForm.country.trim()) throw new Error("Country is required");
 
-            const isSerbia = companyForm.country.toLowerCase() === 'serbia';
+            const isPrimaryMarket = companyForm.country.toLowerCase() === 'serbia';
 
-            // Serbia-specific validation
-            if (isSerbia) {
+            // Primary-market validation
+            if (isPrimaryMarket) {
                 if (companyForm.company_registration_number && !/^\d{8}$/.test(companyForm.company_registration_number))
                     throw new Error("Registration Number must be exactly 8 digits");
             }
@@ -220,16 +220,16 @@ export default function EmployerProfilePage() {
                 website: companyForm.website || null,
                 industry: companyForm.industry || null,
 
-                // Serbia-specific fields (set to null if not Serbia)
-                tax_id: isSerbia ? (companyForm.tax_id || null) : null,
-                company_registration_number: isSerbia ? (companyForm.company_registration_number || null) : null,
-                company_address: isSerbia ? (companyForm.company_address || null) : null,
-                city: isSerbia ? (companyForm.city || null) : null,
-                postal_code: isSerbia ? (companyForm.postal_code || null) : null,
-                company_size: isSerbia ? (companyForm.company_size || null) : null,
-                founded_year: isSerbia ? (companyForm.founded_year || null) : null,
-                business_registry_number: isSerbia ? (companyForm.business_registry_number || null) : null,
-                founding_date: isSerbia ? (companyForm.founding_date || null) : null,
+                // Primary-market fields (set to null when not applicable)
+                tax_id: isPrimaryMarket ? (companyForm.tax_id || null) : null,
+                company_registration_number: isPrimaryMarket ? (companyForm.company_registration_number || null) : null,
+                company_address: isPrimaryMarket ? (companyForm.company_address || null) : null,
+                city: isPrimaryMarket ? (companyForm.city || null) : null,
+                postal_code: isPrimaryMarket ? (companyForm.postal_code || null) : null,
+                company_size: isPrimaryMarket ? (companyForm.company_size || null) : null,
+                founded_year: isPrimaryMarket ? (companyForm.founded_year || null) : null,
+                business_registry_number: isPrimaryMarket ? (companyForm.business_registry_number || null) : null,
+                founding_date: isPrimaryMarket ? (companyForm.founding_date || null) : null,
 
                 description: companyForm.description || null,
             };
@@ -313,7 +313,7 @@ export default function EmployerProfilePage() {
                 work_schedule: jobForm.work_schedule,
                 contract_duration_months: parseInt(jobForm.contract_duration_months) || 12,
                 experience_required_years: parseInt(jobForm.experience_required_years) || 0,
-                destination_country: companyForm.country || "Serbia",
+                destination_country: companyForm.country || "Europe",
                 status: "open",
             });
             if (error) throw error;
@@ -386,8 +386,8 @@ export default function EmployerProfilePage() {
         </div>
     );
 
-    // Country gate: full features only available for Serbia
-    const isSerbia = companyForm.country.toLowerCase() === 'serbia';
+    // Country gate: full features currently available in selected markets
+    const isPrimaryMarket = companyForm.country.toLowerCase() === 'serbia';
     const hasCountry = companyForm.country.trim().length > 0;
 
     return (
@@ -432,8 +432,8 @@ export default function EmployerProfilePage() {
                     <div className="md:w-64 flex-shrink-0 space-y-2">
                         <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 sticky top-24">
                             <TabButton label="Company Info" icon={<LayoutDashboard size={18} />} active={activeTab === 'company'} onClick={() => setActiveTab('company')} />
-                            {employer && isSerbia && <TabButton label="Post a Job" icon={<Plus size={18} />} active={activeTab === 'post-job'} onClick={() => setActiveTab('post-job')} />}
-                            {employer && isSerbia && <TabButton label={`Active Jobs (${jobs.length})`} icon={<Briefcase size={18} />} active={activeTab === 'jobs'} onClick={() => setActiveTab('jobs')} />}
+                            {employer && isPrimaryMarket && <TabButton label="Post a Job" icon={<Plus size={18} />} active={activeTab === 'post-job'} onClick={() => setActiveTab('post-job')} />}
+                            {employer && isPrimaryMarket && <TabButton label={`Active Jobs (${jobs.length})`} icon={<Briefcase size={18} />} active={activeTab === 'jobs'} onClick={() => setActiveTab('jobs')} />}
 
                             {employer && !editing && activeTab === 'company' && (
                                 <>
@@ -451,8 +451,8 @@ export default function EmployerProfilePage() {
 
                     {/* Tab Content */}
                     <div className="flex-1 min-w-0">
-                        {/* Coming soon banner for non-Serbian employers */}
-                        {employer && hasCountry && !isSerbia && !editing && (
+                        {/* Coming soon banner for markets not enabled yet */}
+                        {employer && hasCountry && !isPrimaryMarket && !editing && (
                             <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
                                 <div className="flex items-start gap-4">
                                     <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -461,8 +461,8 @@ export default function EmployerProfilePage() {
                                     <div>
                                         <h3 className="font-bold text-amber-900 text-lg mb-1">We&apos;re expanding to {companyForm.country} soon!</h3>
                                         <p className="text-amber-800 text-sm leading-relaxed">
-                                            Workers United is currently available for employers registered in <strong>Serbia</strong>.
-                                            We&apos;re actively working on expanding to other countries. Your registration helps us
+                                            Workers United is currently onboarding employers in selected markets.
+                                            We&apos;re actively expanding coverage. Your registration helps us
                                             prioritize — we&apos;ll notify you as soon as we&apos;re ready in {companyForm.country}.
                                         </p>
                                         <p className="text-amber-700 text-xs mt-3 font-medium">
@@ -507,13 +507,13 @@ export default function EmployerProfilePage() {
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                {isSerbia && (
+                                                {isPrimaryMarket && (
                                                     <div>
                                                         <label className={labelClass}>Tax ID (PIB)</label>
                                                         <input type="text" name="tax_id" value={companyForm.tax_id} onChange={handleCompanyChange} className={inputClass} placeholder="123456789" maxLength={9} />
                                                     </div>
                                                 )}
-                                                {isSerbia && (
+                                                {isPrimaryMarket && (
                                                     <div>
                                                         <label className={labelClass}>Registration Number <span className="text-red-500">*</span></label>
                                                         <input type="text" name="company_registration_number" value={companyForm.company_registration_number} onChange={handleCompanyChange} className={inputClass} placeholder="12345678" maxLength={8} />
@@ -529,19 +529,19 @@ export default function EmployerProfilePage() {
                                                         {EUROPEAN_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
                                                     </select>
                                                 </div>
-                                                {isSerbia && (
+                                                {isPrimaryMarket && (
                                                     <div>
                                                         <label className={labelClass}>City <span className="text-red-500">*</span></label>
                                                         <input type="text" name="city" value={companyForm.city} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., Belgrade" />
                                                     </div>
                                                 )}
-                                                {isSerbia && (
+                                                {isPrimaryMarket && (
                                                     <div>
                                                         <label className={labelClass}>Postal Code <span className="text-red-500">*</span></label>
                                                         <input type="text" name="postal_code" value={companyForm.postal_code} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., 11000" maxLength={10} />
                                                     </div>
                                                 )}
-                                                {isSerbia && (
+                                                {isPrimaryMarket && (
                                                     <div>
                                                         <label className={labelClass}>Company Size</label>
                                                         <select name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass}>
@@ -572,7 +572,7 @@ export default function EmployerProfilePage() {
                                                     <label className={labelClass}>Website (Optional)</label>
                                                     <input type="url" name="website" value={companyForm.website} onChange={handleCompanyChange} className={inputClass} placeholder="https://yourcompany.com" />
                                                 </div>
-                                                {isSerbia && (
+                                                {isPrimaryMarket && (
                                                     <div>
                                                         <label className={labelClass}>Founded Year</label>
                                                         <input type="text" name="founded_year" value={companyForm.founded_year} onChange={handleCompanyChange} className={inputClass} placeholder="2010" maxLength={4} />
@@ -580,7 +580,7 @@ export default function EmployerProfilePage() {
                                                 )}
                                             </div>
 
-                                            {isSerbia && (
+                                            {isPrimaryMarket && (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div>
                                                         <label className={labelClass}>Business Registry Number <span className="text-red-500">*</span></label>
@@ -593,14 +593,14 @@ export default function EmployerProfilePage() {
                                                 </div>
                                             )}
 
-                                            {isSerbia && (
+                                            {isPrimaryMarket && (
                                                 <div>
                                                     <label className={labelClass}>Company Address <span className="text-red-500">*</span></label>
                                                     <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Full registered business address..." />
                                                 </div>
                                             )}
 
-                                            {isSerbia && (
+                                            {isPrimaryMarket && (
                                                 <div>
                                                     <label className={labelClass}>Company Description <span className="text-red-500">*</span></label>
                                                     <textarea name="description" value={companyForm.description} onChange={handleCompanyChange} rows={3} className={`${inputClass} resize-none`} placeholder="Brief description of your company and activities..." />
@@ -628,19 +628,19 @@ export default function EmployerProfilePage() {
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <InfoRow icon={<Building2 size={18} />} label="Company Name" value={companyForm.company_name} />
                                             <InfoRow icon={<Briefcase size={18} />} label="Industry" value={companyForm.industry} />
-                                            {isSerbia && <InfoRow icon={<Hash size={18} />} label="Tax ID" value={companyForm.tax_id} />}
-                                            {isSerbia && <InfoRow icon={<FileText size={18} />} label="Registration No." value={companyForm.company_registration_number} />}
+                                            {isPrimaryMarket && <InfoRow icon={<Hash size={18} />} label="Tax ID" value={companyForm.tax_id} />}
+                                            {isPrimaryMarket && <InfoRow icon={<FileText size={18} />} label="Registration No." value={companyForm.company_registration_number} />}
                                             <InfoRow icon={<Globe size={18} />} label="Country" value={companyForm.country} />
-                                            {isSerbia && <InfoRow icon={<MapPin size={18} />} label="City" value={companyForm.city} />}
-                                            {isSerbia && <InfoRow icon={<Users size={18} />} label="Company Size" value={companyForm.company_size} />}
+                                            {isPrimaryMarket && <InfoRow icon={<MapPin size={18} />} label="City" value={companyForm.city} />}
+                                            {isPrimaryMarket && <InfoRow icon={<Users size={18} />} label="Company Size" value={companyForm.company_size} />}
                                             <InfoRow icon={<Phone size={18} />} label="Phone" value={companyForm.contact_phone} />
                                             <InfoRow icon={<Globe size={18} />} label="Website" value={companyForm.website} />
-                                            {isSerbia && <InfoRow icon={<Calendar size={18} />} label="Founded" value={companyForm.founded_year} />}
-                                            {isSerbia && <InfoRow icon={<MapPin size={18} />} label="Postal Code" value={companyForm.postal_code} />}
-                                            {isSerbia && <InfoRow icon={<FileText size={18} />} label="Business Registry No." value={companyForm.business_registry_number} />}
-                                            {isSerbia && <InfoRow icon={<Calendar size={18} />} label="Founding Date" value={companyForm.founding_date} />}
-                                            {isSerbia && <InfoRow icon={<MapPin size={18} />} label="Address" value={companyForm.company_address} />}
-                                            {isSerbia && companyForm.description && <InfoRow icon={<FileText size={18} />} label="Description" value={companyForm.description} />}
+                                            {isPrimaryMarket && <InfoRow icon={<Calendar size={18} />} label="Founded" value={companyForm.founded_year} />}
+                                            {isPrimaryMarket && <InfoRow icon={<MapPin size={18} />} label="Postal Code" value={companyForm.postal_code} />}
+                                            {isPrimaryMarket && <InfoRow icon={<FileText size={18} />} label="Business Registry No." value={companyForm.business_registry_number} />}
+                                            {isPrimaryMarket && <InfoRow icon={<Calendar size={18} />} label="Founding Date" value={companyForm.founding_date} />}
+                                            {isPrimaryMarket && <InfoRow icon={<MapPin size={18} />} label="Address" value={companyForm.company_address} />}
+                                            {isPrimaryMarket && companyForm.description && <InfoRow icon={<FileText size={18} />} label="Description" value={companyForm.description} />}
                                         </div>
                                     </div>
                                 )}

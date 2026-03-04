@@ -39,7 +39,7 @@ export default async function AdminDashboard() {
         adminClient.from("profiles").select("id, full_name, email"),
         adminClient.from("employers").select("id, profile_id, company_name, status, created_at"),
         adminClient.from("candidate_documents").select("user_id, document_type, status"),
-        adminClient.from("payments").select("id, amount, status, payment_type, created_at"),
+        adminClient.from("payments").select("id, amount, amount_cents, status, payment_type, created_at"),
     ]);
 
 
@@ -48,7 +48,7 @@ export default async function AdminDashboard() {
     // ─── Pipeline counts ───
     const statusCounts: Record<string, number> = {};
     const pipelineStatuses = [
-        'NEW', 'PROFILE_COMPLETE', 'PENDING_APPROVAL', 'VERIFIED',
+        'NEW', 'PROFILE_COMPLETE', 'PENDING_APPROVAL', 'VERIFIED', 'APPROVED',
         'IN_QUEUE', 'OFFER_PENDING', 'OFFER_ACCEPTED',
         'VISA_PROCESS_STARTED', 'VISA_APPROVED', 'PLACED',
         'REJECTED', 'REFUND_FLAGGED'
@@ -74,7 +74,7 @@ export default async function AdminDashboard() {
     const employerRegistrationsThisMonth = (employers || []).filter((e: any) => new Date(e.created_at) >= monthStart).length;
 
     const approvedCount = (allCandidates || []).filter((c: any) => c.admin_approved).length;
-    const pendingApproval = (allCandidates || []).filter((c: any) => c.status === 'PENDING_APPROVAL' && !c.admin_approved).length;
+    const pendingApproval = (allCandidates || []).filter((c: any) => !c.admin_approved && (c.status === 'PENDING_APPROVAL' || c.status === 'VERIFIED' || c.status === 'PROFILE_COMPLETE')).length;
 
     // Profile completion average
     let totalCompletion = 0;
@@ -92,10 +92,16 @@ export default async function AdminDashboard() {
 
     // Payment stats
     const successfulPayments = (payments || []).filter((p: any) => p.status === 'completed' || p.status === 'paid');
-    const totalRevenue = successfulPayments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+    const totalRevenue = successfulPayments.reduce((sum: number, p: any) => {
+        const value = p.amount != null ? Number(p.amount) : Number(p.amount_cents || 0) / 100;
+        return sum + (Number.isFinite(value) ? value : 0);
+    }, 0);
     const revenueThisMonth = successfulPayments
         .filter((p: any) => new Date(p.created_at) >= monthStart)
-        .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+        .reduce((sum: number, p: any) => {
+            const value = p.amount != null ? Number(p.amount) : Number(p.amount_cents || 0) / 100;
+            return sum + (Number.isFinite(value) ? value : 0);
+        }, 0);
 
     // ─── 90-day countdown ───
     const queueWorkers = (allCandidates || [])
@@ -285,7 +291,7 @@ export default async function AdminDashboard() {
                         <PipelineArrow />
                         <PipelineBadge label="Profile Done" count={statusCounts['PROFILE_COMPLETE']} color="blue" href="/admin/workers?filter=PROFILE_COMPLETE" />
                         <PipelineArrow />
-                        <PipelineBadge label="Approved" count={statusCounts['PENDING_APPROVAL'] + statusCounts['VERIFIED']} color="indigo" href="/admin/workers?filter=VERIFIED" />
+                        <PipelineBadge label="Approved" count={statusCounts['APPROVED']} color="indigo" href="/admin/workers?filter=APPROVED" />
                         <PipelineArrow />
                         <PipelineBadge label="In Queue" count={statusCounts['IN_QUEUE']} color="amber" href="/admin/workers?filter=IN_QUEUE" />
                         <PipelineArrow />
