@@ -26,10 +26,10 @@ export default function WorkerLayoutClient({
                 user={user}
                 profileName={displayName}
             />
-            <div className="flex-1 relative w-full flex">
+            <div className="flex-1 w-full max-w-[1920px] mx-auto relative flex">
                 <WorkerSidebar isOpen={isOpen} setIsOpen={setIsOpen} />
-                <div className={`flex-1 transition-all duration-300 min-w-0 pl-[84px] md:pl-0 ${isOpen ? 'md:ml-[280px]' : 'md:ml-[68px]'}`}>
-                    <main className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+                <div className={`flex-1 transition-all duration-300 w-full min-w-0 ${isOpen ? 'pl-[272px] md:pl-[280px]' : 'pl-[76px] md:pl-[84px]'}`}>
+                    <main className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-8">
                         {children}
                     </main>
                 </div>
