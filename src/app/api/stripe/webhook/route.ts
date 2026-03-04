@@ -110,9 +110,7 @@ export async function POST(req: NextRequest) {
                         job_search_activated_at: new Date().toISOString(),
                     })
                     .eq("profile_id", userId)
-                    .eq("entry_fee_paid", false)
-                    .eq("admin_approved", true)
-                    .in("status", ["VERIFIED", "APPROVED", "PENDING_APPROVAL"]);
+                    .eq("entry_fee_paid", false);
 
                 await logServerActivity(userId, "payment_completed", "payment", { type: "entry_fee", amount: 9, currency: session.currency?.toUpperCase() || "USD" });
 

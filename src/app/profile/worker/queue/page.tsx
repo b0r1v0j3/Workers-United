@@ -25,7 +25,6 @@ export default async function QueuePage() {
 
     const isInQueue = candidate.entry_fee_paid && candidate.status === "IN_QUEUE";
     const hasPendingOffer = candidate.status === "OFFER_PENDING";
-    const awaitingApproval = !candidate.admin_approved && !candidate.entry_fee_paid;
     const queueJoinedDate = candidate.queue_joined_at
         ? new Date(candidate.queue_joined_at)
         : null;
@@ -52,20 +51,7 @@ export default async function QueuePage() {
             <main className="w-full">
                 {/* Queue Status Card */}
                 <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-6">
-                    {awaitingApproval ? (
-                        // Awaiting admin approval
-                        <div className="relative z-10 flex flex-col items-center justify-center gap-4 text-center py-8">
-                            <h3 className="font-semibold text-gray-900 text-xl tracking-tight">
-                                Waiting for Admin Approval
-                            </h3>
-                            <p className="text-gray-500 text-sm leading-relaxed max-w-md mx-auto">
-                                Your profile is under review. Payment unlocks as soon as approval is completed.
-                            </p>
-                            <div className="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 text-sm font-medium">
-                                Status: Pending approval
-                            </div>
-                        </div>
-                    ) : !candidate.entry_fee_paid ? (
+                    {!candidate.entry_fee_paid ? (
                         // Not paid yet — show payment CTA
                         <div className="relative z-10 flex flex-col items-center justify-center gap-6 text-center py-8">
                             <div className="flex flex-col items-center">
