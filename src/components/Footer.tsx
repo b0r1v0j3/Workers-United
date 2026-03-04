@@ -84,15 +84,9 @@ export default function Footer() {
                         <h4 className="font-semibold text-[#183b56] text-sm uppercase tracking-wider mb-4">
                             Connect
                         </h4>
-                        <a
-                            href="mailto:contact@workersunited.eu"
-                            className="text-sm text-[#2f6fed] hover:text-[#1c4dd6] font-medium transition-colors"
-                        >
-                            contact@workersunited.eu
-                        </a>
 
                         {/* Social Icons */}
-                        <div className="flex gap-2 mt-4 flex-wrap">
+                        <div className="grid grid-cols-4 gap-2">
                             {[
                                 {
                                     href: "https://www.facebook.com/profile.php?id=61585104076725",
@@ -116,9 +110,9 @@ export default function Footer() {
                                     hoverClass: "hover:bg-[#25D366]/10 hover:text-[#25D366]",
                                 },
                                 {
-                                    href: "https://x.com/WorkersUnitedEU",
-                                    label: "X",
-                                    icon: <path d="M18.7 2H21l-6.7 7.6L22 22h-6.1l-4.8-6.2L5.6 22H3.3l7.2-8.2L2 2h6.2l4.3 5.6L18.7 2zm-1.1 18h1.2L6.3 3.9H5.1L17.6 20z" />,
+                                    href: "https://www.linkedin.com/company/workersunited-eu/",
+                                    label: "LinkedIn",
+                                    icon: <path d="M4.5 3.5A2 2 0 1 1 4.5 7.5a2 2 0 0 1 0-4zM3 9h3v12H3V9zm7 0h2.9v1.6h.1c.4-.8 1.6-1.7 3.2-1.7 3.4 0 4 2.2 4 5.1V21h-3v-6.1c0-1.5 0-3.3-2-3.3s-2.3 1.6-2.3 3.2V21h-3V9z" />,
                                 },
                                 {
                                     href: "https://www.tiktok.com/@workersunited.eu",
@@ -126,23 +120,29 @@ export default function Footer() {
                                     icon: <path d="M14 2h2.2c.2 1.8 1.2 3.2 3.8 3.6V8c-1.7 0-3.2-.6-4.1-1.4V14c0 4-2.7 6-6 6-2.5 0-4.9-1.7-4.9-4.9 0-3.1 2.4-5 5.4-5 .5 0 1 .1 1.5.2V13c-.4-.2-.9-.3-1.5-.3-1.3 0-2.6.8-2.6 2.4 0 1.5 1.1 2.4 2.5 2.4 1.7 0 2.6-1.1 2.6-3V2z" />,
                                 },
                                 {
-                                    href: "https://www.linkedin.com/company/workersunited-eu/",
-                                    label: "LinkedIn",
-                                    icon: <path d="M4.5 3.5A2 2 0 1 1 4.5 7.5a2 2 0 0 1 0-4zM3 9h3v12H3V9zm7 0h2.9v1.6h.1c.4-.8 1.6-1.7 3.2-1.7 3.4 0 4 2.2 4 5.1V21h-3v-6.1c0-1.5 0-3.3-2-3.3s-2.3 1.6-2.3 3.2V21h-3V9z" />,
+                                    href: "https://x.com/WorkersUnitedEU",
+                                    label: "X",
+                                    icon: <path d="M18.7 2H21l-6.7 7.6L22 22h-6.1l-4.8-6.2L5.6 22H3.3l7.2-8.2L2 2h6.2l4.3 5.6L18.7 2zm-1.1 18h1.2L6.3 3.9H5.1L17.6 20z" />,
+                                },
+                                {
+                                    href: "mailto:contact@workersunited.eu",
+                                    label: "Email",
+                                    icon: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M22 6l-10 7L2 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></>,
+                                    noFill: true,
                                 },
                             ].map((social) => (
                                 <a
                                     key={social.label}
                                     href={social.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    target={social.label === "Email" ? undefined : "_blank"}
+                                    rel={social.label === "Email" ? undefined : "noopener noreferrer"}
                                     className={`w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-[#6c7a89] ${social.hoverClass || "hover:bg-[#f0f4ff] hover:text-[#2f6fed] hover:border-[#2f6fed]/30"} transition-all duration-200`}
                                     aria-label={social.label}
                                 >
                                     {social.isImage ? (
                                         <Image src="/threads-logo.svg" alt="Threads" width={16} height={16} className="w-4 h-4 opacity-50" />
                                     ) : (
-                                        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">{social.icon}</svg>
+                                        <svg viewBox="0 0 24 24" className={`w-4 h-4 ${social.noFill ? '' : 'fill-current'}`}>{social.icon}</svg>
                                     )}
                                 </a>
                             ))}
