@@ -195,17 +195,29 @@ export function SignupForm({ userType }: SignupFormProps) {
 
     if (success) {
         return (
-            <div className="text-center py-8">
-                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 ring-4 ring-emerald-100">
-                    <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-8">
+                <Image src="/logo.png" alt="Workers United" width={56} height={56} className="mb-6" />
+
+                <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6 ring-4 ring-emerald-100">
+                    <svg className="w-10 h-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h3 className="text-xl font-bold text-[#1e293b] mb-2">Check your email</h3>
-                <p className="text-[#64748b] text-sm leading-relaxed">
-                    We&apos;ve sent a confirmation link to <strong className="text-[#1e293b]">{email}</strong>.
+
+                <h2 className="text-2xl font-bold text-[#1e293b] mb-3 tracking-tight">Check your email</h2>
+                <p className="text-[#64748b] text-center max-w-sm leading-relaxed mb-8">
+                    We&apos;ve sent a confirmation link to{" "}
+                    <strong className="text-[#1e293b]">{email}</strong>.
+                    <br />
                     Please click the link to activate your account.
                 </p>
+
+                <a
+                    href="/login"
+                    className="text-[#1877f2] font-bold text-sm hover:underline"
+                >
+                    Already have an account? Sign in
+                </a>
             </div>
         );
     }
