@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Eye, CheckCircle2, XCircle, Send, Loader2 } from "lucide-react";
+import { Eye, CheckCircle2, Send, Loader2 } from "lucide-react";
 
 interface ReviewDoc {
     user_id: string;
@@ -17,7 +17,7 @@ interface ReviewDoc {
 }
 
 export default function ReviewClient() {
-    const supabase = createClient();
+    const [supabase] = useState(() => createClient());
     const [docs, setDocs] = useState<ReviewDoc[]>([]);
     const [loading, setLoading] = useState(true);
     const [previewing, setPreviewing] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export default function ReviewClient() {
     const [feedback, setFeedback] = useState<Record<string, string>>({});
     const [actioning, setActioning] = useState<string | null>(null);
 
-    async function loadDocs() {
+    const loadDocs = useCallback(async () => {
         setLoading(true);
         const { data } = await supabase
             .from("candidate_documents")
@@ -50,7 +50,7 @@ export default function ReviewClient() {
             setDocs([]);
         }
         setLoading(false);
-    }
+    }, [supabase]);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -58,7 +58,7 @@ export default function ReviewClient() {
         }, 0);
 
         return () => window.clearTimeout(timeoutId);
-    }, []);
+    }, [loadDocs]);
 
     async function previewDoc(doc: ReviewDoc) {
         const key = `${doc.user_id}_${doc.document_type}`;

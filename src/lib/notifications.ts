@@ -1,6 +1,6 @@
 // Notification utilities for email, dashboard alerts, and WhatsApp
 import { sendEmail } from "@/lib/mailer";
-import { sendJobOffer as sendWhatsAppJobOffer, sendOfferExpiring as sendWhatsAppOfferExpiring } from "@/lib/whatsapp";
+import { sendJobOffer as sendWhatsAppJobOffer } from "@/lib/whatsapp";
 
 interface OfferNotificationData {
   candidateEmail: string;

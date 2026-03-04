@@ -2,23 +2,22 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import NotificationBell from "./NotificationBell";
 import GlobalSearch from "./admin/GlobalSearch";
 
 interface UnifiedNavbarProps {
     variant: "public" | "dashboard" | "admin";
-    user?: any; // Supabase user object
+    user?: SupabaseUser | null;
     profileName?: string; // Full name from profiles table (takes priority)
 }
 
 export default function UnifiedNavbar({ variant, user: userProp, profileName: profileNameProp }: UnifiedNavbarProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [clientUser, setClientUser] = useState<any>(userProp || null);
+    const [clientUser, setClientUser] = useState<SupabaseUser | null>(userProp || null);
     const [clientProfileName, setClientProfileName] = useState(profileNameProp || "");
-    const pathname = usePathname();
 
     // Client-side auth fetch for public variant (allows homepage to be statically cached)
     useEffect(() => {

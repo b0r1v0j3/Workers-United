@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, FileText, Search, Pencil, ChevronRight, X, LogOut } from "lucide-react";
+import { User, FileText, Search, Pencil, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v: boolean) => void }) {
@@ -42,7 +42,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
             document.removeEventListener('touchstart', handleTouchStart);
             document.removeEventListener('touchend', handleTouchEnd);
         };
-    }, []);
+    }, [setIsOpen]);
 
     return (
         <>

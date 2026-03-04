@@ -248,6 +248,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] Core lint debt pass 2 — stricter API typing + cleanup (`AppShell`, `UnifiedNavbar`, `WorkerSidebar`, `ReviewClient`, Stripe/Health/GodMode routes); warnings 223 → 193, lint/test/build green — 05.03.2026
 - [x] Lint stabilization + React hook purity fixes + date locale cleanup (`en-US` → `en-GB`) — 05.03.2026
 - [x] Brain memory dedup + WhatsApp webhook hardening + system-smoke alert cooldown (6h anti-spam) — 05.03.2026
 - [x] Reliability autopilot v1 — `/api/cron/system-smoke` + expanded `/api/health` (Supabase/Stripe/SMTP/WhatsApp/n8n checks + alerting) — 05.03.2026
