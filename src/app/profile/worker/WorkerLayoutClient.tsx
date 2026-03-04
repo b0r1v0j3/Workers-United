@@ -28,8 +28,8 @@ export default function WorkerLayoutClient({
             />
             <div className="flex-1 relative w-full flex">
                 <WorkerSidebar isOpen={isOpen} setIsOpen={setIsOpen} />
-                <main className={`flex-1 transition-all duration-300 w-full min-w-0 pl-[84px] ${isOpen ? 'md:pl-[272px]' : 'md:pl-[88px]'}`}>
-                    <div className="max-w-[1400px] mx-auto w-full px-4 sm:px-8 py-8">
+                <main className={`flex-1 transition-all duration-300 min-w-0 pl-[84px] md:pl-0 ${isOpen ? 'md:ml-[272px]' : 'md:ml-[88px]'}`}>
+                    <div className="max-w-[1280px] mx-auto w-full px-4 sm:px-8 py-8">
                         {children}
                     </div>
                 </main>
