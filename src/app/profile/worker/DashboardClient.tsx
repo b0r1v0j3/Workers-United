@@ -162,15 +162,15 @@ export default function DashboardClient({
             {/* Start Searching / Queue CTA */}
             <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-gray-200 overflow-hidden">
                 <div className="p-6 relative transition-all duration-300">
-                    {/* Top Content (Rocket + Text + Button) */}
-                    <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-                        <div>
-                            <h3 className="font-semibold text-gray-900 text-lg tracking-tight">
+                    {/* Top Content (Text + Button) */}
+                    <div className="relative z-10 flex flex-col items-center justify-center gap-6 text-center">
+                        <div className="flex flex-col items-center">
+                            <h3 className="font-semibold text-gray-900 text-xl tracking-tight">
                                 {inQueue ? "You're in the Queue!"
                                     : candidate?.entry_fee_paid ? "You're in the Queue!"
                                         : "Start Searching for Jobs"}
                             </h3>
-                            <p className="text-gray-500 text-sm mt-1 leading-relaxed max-w-xl">
+                            <p className="text-gray-500 text-sm mt-2 leading-relaxed max-w-md mx-auto">
                                 {inQueue
                                     ? "We're actively looking for the best job match for you."
                                     : candidate?.entry_fee_paid
