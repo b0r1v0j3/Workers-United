@@ -120,7 +120,7 @@ export default function PlatformConfigEditor() {
                     </button>
                 </div>
                 <p className="text-sm text-slate-500 mb-4">
-                    Business facts used by WhatsApp bot, Brain Monitor, and n8n AI. Change here → all systems update automatically.
+                    Business facts used by WhatsApp bot and Brain Monitor. Change here → all systems update automatically.
                 </p>
             </div>
 

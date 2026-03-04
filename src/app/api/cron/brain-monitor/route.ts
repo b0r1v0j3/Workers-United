@@ -6,7 +6,7 @@ import { sendEmail } from "@/lib/mailer";
 // Autonomous AI that monitors platform health, creates GitHub Issues for bugs,
 // and sends email reports. Runs every 6 hours via Vercel Cron.
 //
-// Replaces n8n Brain workflow — simpler, more reliable, no middleman.
+// Brain Monitor — runs via Vercel Cron every 6h.
 // Uses: OpenAI Responses API (gpt-5.3-codex), GitHub API, Supabase, SMTP
 //
 // Auth: CRON_SECRET bearer token

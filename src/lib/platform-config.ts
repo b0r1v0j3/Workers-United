@@ -94,7 +94,7 @@ export async function updateConfigValue(key: string, value: string, userId?: str
 
 /**
  * Build a human-readable business facts block for AI system prompts.
- * Used by Brain Monitor and n8n AI agent.
+ * Used by Brain Monitor and WhatsApp AI bot.
  */
 export async function getBusinessFactsForAI(): Promise<string> {
     const c = await getPlatformConfig();

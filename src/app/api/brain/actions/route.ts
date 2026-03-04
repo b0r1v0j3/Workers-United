@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // ─── Brain Actions API ──────────────────────────────────────────────────────
-// POST: Brain logs an action it has taken (called from n8n)
+// POST: Brain logs an action it has taken (called from Brain Monitor)
 // GET:  Admin reads brain action history
 //
-// Auth: CRON_SECRET for POST (n8n), god mode for GET (admin panel)
+// Auth: CRON_SECRET for POST (Brain Monitor), god mode for GET (admin panel)
 
 export async function POST(request: NextRequest) {
-    // Auth: n8n uses CRON_SECRET
+    // Auth: Brain Monitor uses CRON_SECRET
     const authHeader = request.headers.get("authorization");
     const expectedToken = process.env.CRON_SECRET;
     if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-    // Auth: CRON_SECRET (for n8n) or god mode user
+    // Auth: CRON_SECRET (for Brain Monitor) or god mode user
     const authHeader = request.headers.get("authorization");
     const expectedToken = process.env.CRON_SECRET;
 
