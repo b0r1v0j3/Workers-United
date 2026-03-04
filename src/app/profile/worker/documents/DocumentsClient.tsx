@@ -24,8 +24,6 @@ export default function DocumentsClient({ candidateId, email, documents }: Docum
 
     return (
         <div className="w-full space-y-6">
-            <h1 className="text-2xl font-bold text-[#050505] mb-6">Your Documents</h1>
-
             {!hasAllDocs && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                     <div className="mb-6">
