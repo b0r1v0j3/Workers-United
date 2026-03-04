@@ -36,15 +36,15 @@ export const WORLD_COUNTRIES = [
 // ─── EUROPEAN COUNTRIES ──────────────────────────────────────
 // Used for employer country selection
 export const EUROPEAN_COUNTRIES = [
-    "Albania", "Andorra", "Austria", "Belgium",
+    "Albania", "Austria", "Belgium",
     "Bosnia and Herzegovina", "Bulgaria", "Croatia", "Cyprus", "Czech Republic",
     "Denmark", "Estonia", "Finland", "France", "Germany",
     "Greece", "Hungary", "Iceland", "Ireland", "Italy",
-    "Latvia", "Liechtenstein", "Lithuania", "Luxembourg",
-    "Malta", "Moldova", "Monaco", "Montenegro", "Netherlands",
+    "Latvia", "Lithuania", "Luxembourg",
+    "Malta", "Montenegro", "Netherlands",
     "North Macedonia", "Norway", "Poland", "Portugal", "Romania",
     "San Marino", "Serbia", "Slovakia", "Slovenia",
-    "Spain", "Sweden", "Switzerland", "Turkey",
+    "Spain", "Sweden", "Switzerland",
     "United Kingdom"
 ];
 
