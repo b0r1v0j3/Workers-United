@@ -52,17 +52,17 @@ export function DeleteUserButton({ userId, userName }: DeleteUserButtonProps) {
 
     if (showConfirm) {
         return (
-            <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg p-1 animate-in fade-in slide-in-from-right-2 duration-200">
+            <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg p-0.5 animate-in fade-in slide-in-from-right-2 duration-200">
                 <button
                     onClick={handleDelete}
                     disabled={loading}
-                    className="bg-red-600 text-white px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-red-700 disabled:opacity-50 whitespace-nowrap"
+                    className="bg-red-600 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-red-700 disabled:opacity-50 whitespace-nowrap"
                 >
-                    {loading ? "Deleting..." : "Yes, delete"}
+                    {loading ? "..." : "Delete"}
                 </button>
                 <button
                     onClick={() => setShowConfirm(false)}
-                    className="bg-white text-slate-600 px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-slate-100 border border-slate-200 whitespace-nowrap"
+                    className="bg-white text-slate-600 px-2 py-1 rounded text-[10px] font-bold hover:bg-slate-100 border border-slate-200 whitespace-nowrap"
                 >
                     Cancel
                 </button>
