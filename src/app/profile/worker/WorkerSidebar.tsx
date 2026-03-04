@@ -64,12 +64,14 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                         {/* Toggle Button in Sidebar */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className={`p-2 mb-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ${isOpen ? 'self-start ml-2 md:ml-0' : 'mx-auto block'}`}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-2 ${!isOpen ? 'justify-center md:justify-start' : 'justify-start'} text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-transparent`}
                             aria-label="Toggle Menu"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
+                            <span className="shrink-0 text-gray-400">
+                                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </span>
                         </button>
 
                         <SidebarLink
