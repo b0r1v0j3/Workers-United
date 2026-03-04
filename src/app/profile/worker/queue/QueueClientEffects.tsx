@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
+import { Loader2, Gem } from "lucide-react";
 
 export default function QueueClientEffects() {
     const searchParams = useSearchParams();
@@ -25,7 +26,7 @@ export default function QueueClientEffects() {
     return null;
 }
 
-export function PayToJoinButton() {
+export function PayToJoinButton({ displayName }: { displayName: string }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -66,26 +67,56 @@ export function PayToJoinButton() {
     };
 
     return (
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-3 w-full sm:w-[280px] mx-auto">
             <button
                 onClick={handlePay}
                 disabled={loading}
-                className="bg-[#1877f2] text-white font-bold py-3 px-8 rounded-lg hover:bg-[#166fe5] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="group relative overflow-hidden shrink-0 bg-gradient-to-tr from-[#111111] to-[#2a2a2a] text-white w-full h-[160px] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:scale-100 flex flex-col justify-between p-5 text-left border border-[#333333]"
             >
-                {loading ? (
-                    <>
-                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Processing...
-                    </>
-                ) : (
-                    "Pay $9 to Join Queue"
-                )}
+                {/* Glossy overlay effect */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-50 pointer-events-none" />
+
+                {/* Top row: Chip and Label */}
+                <div className="flex justify-between items-start relative z-10">
+                    <div className="w-10 h-7 rounded bg-gradient-to-br from-amber-200 to-yellow-500 opacity-90 flex items-center justify-center shadow-inner">
+                        <div className="w-full h-[1px] bg-black/20 absolute" />
+                        <div className="h-full w-[1px] bg-black/20 absolute" />
+                        <Gem size={12} className="text-yellow-900/40 relative z-10" />
+                    </div>
+                    <span className="text-[10px] uppercase tracking-widest text-white/50 font-semibold">Priority</span>
+                </div>
+
+                {/* Middle: Value & Status */}
+                <div className="relative z-10 space-y-1 mt-2">
+                    {loading ? (
+                        <div className="flex items-center gap-2 text-white"><Loader2 size={16} className="animate-spin" /><span className="text-sm">Processing...</span></div>
+                    ) : (
+                        <div className="flex items-center justify-between">
+                            <span className="font-mono text-xl tracking-tight font-semibold">Pay $9.00</span>
+                            <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-white/90 font-medium group-hover:bg-white/20 transition-colors">Start Search</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Bottom: Name */}
+                <div className="relative z-10 pt-2 border-t border-white/10 flex items-end justify-between">
+                    <div className="flex flex-col">
+                        <span className="text-[8px] text-white/40 uppercase tracking-wider mb-0.5">Cardholder Name</span>
+                        <span className="text-xs font-medium tracking-wide truncate max-w-[150px] text-white/80 uppercase">
+                            {displayName.substring(0, 22)}
+                        </span>
+                    </div>
+                    <div className="flex -space-x-1.5 opacity-80">
+                        <div className="w-5 h-5 rounded-full bg-red-400 mix-blend-multiply" />
+                        <div className="w-5 h-5 rounded-full bg-yellow-400 mix-blend-multiply" />
+                    </div>
+                </div>
+
+                {/* Decorative background circle */}
+                <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors duration-500 pointer-events-none" />
             </button>
             {error && (
-                <p className="text-red-600 text-sm font-medium bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+                <p className="text-red-600 text-sm font-medium bg-red-50 px-4 py-2 rounded-lg border border-red-200 text-center w-full">
                     {error}
                 </p>
             )}

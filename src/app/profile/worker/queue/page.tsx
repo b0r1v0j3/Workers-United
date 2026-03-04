@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Shield } from "lucide-react";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -55,20 +56,20 @@ export default async function QueuePage() {
                 <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-6">
                     {!candidate.entry_fee_paid ? (
                         // Not paid yet — show payment CTA
-                        <div className="text-center py-8">
-                            <div className="w-16 h-16 bg-[#e7f3ff] rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1877f2" strokeWidth="2">
-                                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                                </svg>
+                        <div className="relative z-10 flex flex-col items-center justify-center gap-6 text-center py-8">
+                            <div className="flex flex-col items-center">
+                                <h3 className="font-semibold text-gray-900 text-xl tracking-tight">
+                                    Start Searching for Jobs
+                                </h3>
+                                <p className="text-gray-500 text-sm mt-2 leading-relaxed max-w-md mx-auto">
+                                    Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe.
+                                </p>
                             </div>
-                            <h2 className="text-xl font-semibold text-[#050505] mb-2">Start Searching for Jobs</h2>
-                            <p className="text-[#65676b] mb-6 max-w-md mx-auto">
-                                Pay a one-time $9 fee to join our active candidate queue. We&apos;ll match you with employers across Europe.
-                            </p>
-                            <PayToJoinButton />
-                            <p className="text-xs text-[#65676b] mt-4">
-                                🛡️ 90-day money-back guarantee if no job offer
-                            </p>
+                            <PayToJoinButton displayName={user.user_metadata?.full_name || "Worker"} />
+                            <div className="mt-2 flex items-center justify-center gap-1.5 text-gray-500 text-[11px] sm:text-xs font-medium text-center px-1">
+                                <Shield size={14} className="shrink-0 text-gray-400" />
+                                <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer in 90 days</span>
+                            </div>
                         </div>
                     ) : hasPendingOffer ? (
                         // Has pending offer
