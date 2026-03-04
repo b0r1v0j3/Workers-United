@@ -81,6 +81,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                             label="Profile Info"
                             active={pathname === "/profile/worker"}
                             isCollapsed={!isOpen}
+                            activeColor="text-blue-600"
                         />
                         <SidebarLink
                             href="/profile/worker/documents"
@@ -88,6 +89,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                             label="Documents"
                             active={pathname === "/profile/worker/documents"}
                             isCollapsed={!isOpen}
+                            activeColor="text-emerald-600"
                         />
                         <SidebarLink
                             href="/profile/worker/queue"
@@ -95,6 +97,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                             label="Application Status"
                             active={pathname === "/profile/worker/queue"}
                             isCollapsed={!isOpen}
+                            activeColor="text-purple-600"
                         />
 
                         <SidebarLink
@@ -103,6 +106,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
                             label="Edit Profile"
                             active={pathname === "/profile/worker/edit"}
                             isCollapsed={!isOpen}
+                            activeColor="text-amber-600"
                         />
 
                         <div className="mt-auto w-full flex flex-col pt-2">
@@ -151,7 +155,7 @@ export default function WorkerSidebar({ isOpen, setIsOpen }: { isOpen: boolean, 
     );
 }
 
-function SidebarLink({ href, icon, label, active, isCollapsed }: { href: string; icon: React.ReactNode; label: string; active: boolean; isCollapsed: boolean }) {
+function SidebarLink({ href, icon, label, active, isCollapsed, activeColor }: { href: string; icon: React.ReactNode; label: string; active: boolean; isCollapsed: boolean; activeColor?: string }) {
     return (
         <Link
             href={href}
@@ -161,7 +165,7 @@ function SidebarLink({ href, icon, label, active, isCollapsed }: { href: string;
                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
                 }`}
         >
-            <span className={`shrink-0 ${active ? 'text-gray-900' : 'text-gray-400'}`}>{icon}</span>
+            <span className={`shrink-0 ${active ? (activeColor || 'text-gray-900') : 'text-gray-400'}`}>{icon}</span>
             <span className={`whitespace-nowrap transition-all duration-300 ${isCollapsed ? "hidden" : "block"}`}>{label}</span>
         </Link>
     );
