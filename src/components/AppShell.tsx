@@ -100,22 +100,12 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
 
                 {/* SIDEBAR (Desktop + Mobile Drawer/Thin Sidebar) */}
                 <aside className={`
-                    fixed inset-y-0 left-0 z-50 bg-[#F8FAFC] transform transition-all duration-300 ease-in-out border-r border-[#E2E8F0] shadow-sm
-                    lg:top-[80px] lg:bottom-0 lg:overflow-y-auto lg:px-4 lg:pb-4 lg:bg-transparent lg:border-none lg:shadow-none lg:z-0
+                    fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out px-2 lg:px-0
+                    lg:top-[80px] lg:bottom-0 lg:overflow-y-auto lg:pb-4 lg:z-0
                     pt-[64px] lg:pt-0
-                    ${isOpen ? "w-72 lg:w-[280px] translate-x-0 shadow-2xl lg:shadow-none" : "w-[68px] translate-x-0"}
+                    ${isOpen ? "w-72 lg:w-[280px] translate-x-0" : "w-[68px] translate-x-0"}
                 `}>
-                    <div className="h-full overflow-y-auto lg:p-4 lg:bg-white/50 lg:backdrop-blur-sm lg:border lg:border-white/60 lg:shadow-sm lg:rounded-2xl lg:h-[calc(100vh-100px)] flex flex-col items-center lg:items-stretch py-4">
-                        {/* Toggle Button in Sidebar */}
-                        <button
-                            onClick={() => setIsOpen(!isOpen)}
-                            className={`p-2 mb-4 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ${isOpen ? 'self-start ml-2 lg:ml-0' : 'mx-auto'}`}
-                            aria-label="Toggle Menu"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
+                    <div className="h-full overflow-y-auto p-2 lg:p-4 bg-white lg:bg-white/50 backdrop-blur-sm border border-gray-200 lg:border-white/60 shadow-sm rounded-xl lg:rounded-2xl lg:h-[calc(100vh-100px)] flex flex-col items-center lg:items-stretch">
                         {/* Mobile Header with Close Button (only when open) */}
                         <div className={`flex justify-between items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
                             <h2 className="font-bold text-lg text-gray-900">Menu</h2>
@@ -124,7 +114,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                             </button>
                         </div>
 
-                        <SidebarContent user={user} variant={variant} isCollapsed={!isOpen} />
+                        <SidebarContent user={user} variant={variant} isCollapsed={!isOpen} onMenuToggle={() => setIsOpen(!isOpen)} />
                     </div>
                 </aside>
 
@@ -138,7 +128,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
     );
 }
 
-function SidebarContent({ user, variant, isCollapsed }: { user: any, variant: string, isCollapsed: boolean }) {
+function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: { user: any, variant: string, isCollapsed: boolean, onMenuToggle?: () => void }) {
     const userType = user?.user_metadata?.user_type;
 
     // Determine Home link based on context
@@ -148,6 +138,19 @@ function SidebarContent({ user, variant, isCollapsed }: { user: any, variant: st
 
     return (
         <div className="space-y-1.5 w-full flex flex-col items-center lg:items-stretch">
+            {/* Toggle Button Inside Box */}
+            {onMenuToggle && (
+                <button
+                    onClick={onMenuToggle}
+                    className={`p-2 mb-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ${isCollapsed ? 'mx-auto block' : 'self-start ml-2 lg:ml-0'}`}
+                    aria-label="Toggle Menu"
+                >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            )}
+
             <SidebarLink href={homeHref} icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} />
 
             {/* Only show profile link outside admin mode */}
@@ -160,9 +163,7 @@ function SidebarContent({ user, variant, isCollapsed }: { user: any, variant: st
                 />
             )}
 
-            <hr className="border-slate-100 my-4 lg:mx-2 w-full max-w-[40px] lg:max-w-none" />
-
-            <div className={`px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Menu</div>
+            <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Menu</div>
 
             {variant === 'admin' && (
                 <>
@@ -175,8 +176,7 @@ function SidebarContent({ user, variant, isCollapsed }: { user: any, variant: st
                     <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} />
 
-                    <hr className="border-slate-100 my-4 lg:mx-2 w-full max-w-[40px] lg:max-w-none" />
-                    <div className={`px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>View As</div>
+                    <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>View As</div>
                     <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Worker Profile" isCollapsed={isCollapsed} />
                     <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Employer Profile" isCollapsed={isCollapsed} />
                 </>
@@ -191,10 +191,9 @@ function SidebarContent({ user, variant, isCollapsed }: { user: any, variant: st
 
             {/* Account settings for all non-admin users */}
             {variant !== 'admin' && (
-                <>
-                    <hr className="border-slate-100 my-4 lg:mx-2 w-full max-w-[40px] lg:max-w-none" />
+                <div className="pt-2">
                     <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} />
-                </>
+                </div>
             )}
         </div>
     );
