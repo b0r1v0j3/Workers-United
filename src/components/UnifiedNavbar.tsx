@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -15,7 +15,6 @@ interface UnifiedNavbarProps {
 }
 
 export default function UnifiedNavbar({ variant, user: userProp, profileName: profileNameProp }: UnifiedNavbarProps) {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [clientUser, setClientUser] = useState<SupabaseUser | null>(userProp || null);
     const [clientProfileName, setClientProfileName] = useState(profileNameProp || "");
 
@@ -45,25 +44,25 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const profileName = profileNameProp || clientProfileName;
 
     return (
-        <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-[#dddfe2]/50 h-[56px] md:h-[64px]">
+        <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-[#dddfe2]/50 h-[68px]">
             <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
-                    <Link href="/" className="flex items-center gap-2 md:gap-3 hover:opacity-90 transition-opacity">
+                    <Link href="/" className="flex items-center gap-2.5 md:gap-3 hover:opacity-90 transition-opacity py-1">
                         <Image
-                            src="/logo-hands.png"
+                            src="/logo-icon.png"
                             alt="Workers United Logo Icon"
-                            width={56}
-                            height={56}
-                            className="h-10 w-10 md:h-12 md:w-12 object-contain shrink-0 transition-opacity"
+                            width={48}
+                            height={48}
+                            className="h-9 w-9 md:h-10 md:w-10 object-contain shrink-0 transition-opacity"
                             priority
                         />
                         <Image
                             src="/logo-wordmark.png"
                             alt="Workers United"
-                            width={170}
-                            height={34}
-                            className="h-auto w-[118px] md:w-[146px] object-contain shrink-0 transition-opacity"
+                            width={859}
+                            height={63}
+                            className="h-auto w-[132px] md:w-[158px] object-contain shrink-0 transition-opacity"
                             priority
                         />
                     </Link>
@@ -76,15 +75,6 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                     )}
                 </div>
 
-                {/* Center: Public Navigation (Desktop) */}
-                {variant === "public" && (
-                    <div className="hidden md:flex items-center gap-8 h-full">
-                        <NavLink href="#how-it-works" label="How it works" />
-                        <NavLink href="#workers" label="For Workers" />
-                        <NavLink href="#employers" label="For Employers" />
-                    </div>
-                )}
-
                 {/* Center: Admin Global Search */}
                 {variant === "admin" && (
                     <GlobalSearch />
@@ -92,103 +82,39 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-3">
-                    {user ? (
-                        <>
-                            {variant === "public" && (
+                    {variant === "public" ? (
+                        user ? (
+                            <div className="flex items-center gap-2 md:gap-3">
                                 <Link
                                     href="/profile"
-                                    className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-[#F4F4F5] text-[#111111] rounded-md font-medium text-sm hover:bg-[#EAEAEA] transition-colors"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#F4F4F5] text-[#111111] rounded-md font-medium text-sm hover:bg-[#EAEAEA] transition-colors"
                                 >
                                     My Profile
                                 </Link>
-                            )}
-
+                                <span className="text-sm font-semibold text-[#050505] hidden lg:block">
+                                    {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}
+                                </span>
+                            </div>
+                        ) : (
+                            <Link
+                                href="/login"
+                                className="inline-flex items-center px-4 md:px-5 py-2 text-[#111111] font-medium text-sm hover:bg-[#F4F4F5] rounded-md transition-colors"
+                            >
+                                Sign in
+                            </Link>
+                        )
+                    ) : (
+                        user && (
                             <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-                                {/* Notifications */}
-                                {variant !== "public" && <NotificationBell />}
-                                {/* Profile/Logout */}
+                                <NotificationBell />
                                 <span className="text-sm font-semibold text-[#050505] hidden sm:block">
                                     {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}
                                 </span>
                             </div>
-                        </>
-                    ) : (
-                        <div className="hidden sm:flex items-center gap-2">
-                            <Link
-                                href="/login"
-                                className="px-5 py-1.5 text-[#111111] font-medium text-sm hover:bg-[#F4F4F5] rounded-md transition-colors"
-                            >
-                                Sign In
-                            </Link>
-                            <Link
-                                href="/signup"
-                                className="px-5 py-1.5 bg-[#F4F4F5] text-[#111111] font-medium text-sm rounded-md hover:bg-[#EAEAEA] transition-colors"
-                            >
-                                Sign Up
-                            </Link>
-                        </div>
-                    )}
-
-                    {/* Mobile Menu Button (Public only) */}
-                    {variant === "public" && (
-                        <button
-                            className="md:hidden p-2 text-[#050505]"
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
+                        )
                     )}
                 </div>
             </div>
-
-            {/* Mobile Menu Dropdown */}
-            {isMenuOpen && variant === "public" && (
-                <div className="md:hidden border-t border-[#dddfe2] bg-white absolute w-full left-0 shadow-lg py-2">
-                    <MobileNavLink href="#how-it-works" label="How it works" onClick={() => setIsMenuOpen(false)} />
-                    <MobileNavLink href="#workers" label="For Workers" onClick={() => setIsMenuOpen(false)} />
-                    <MobileNavLink href="#employers" label="For Employers" onClick={() => setIsMenuOpen(false)} />
-                    {!user && (
-                        <>
-                            <div className="border-t border-[#dddfe2] my-2" />
-                            <MobileNavLink href="/login" label="Sign In" onClick={() => setIsMenuOpen(false)} />
-                            <div className="px-4 py-3">
-                                <Link
-                                    href="/signup"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="block text-center px-5 py-2.5 bg-[#F4F4F5] text-[#111111] font-medium text-[15px] rounded-md hover:bg-[#EAEAEA] transition-colors"
-                                >
-                                    Sign Up
-                                </Link>
-                            </div>
-                        </>
-                    )}
-                </div>
-            )}
         </nav>
-    );
-}
-
-function NavLink({ href, label }: { href: string; label: string }) {
-    return (
-        <Link
-            href={href}
-            className="relative h-full flex items-center px-1 text-[#666666] font-medium text-[15px] hover:text-[#111111] transition-colors border-b-[2px] border-transparent hover:border-[#111111]"
-        >
-            {label}
-        </Link>
-    );
-}
-
-function MobileNavLink({ href, label, onClick }: { href: string; label: string; onClick: () => void }) {
-    return (
-        <Link
-            href={href}
-            onClick={onClick}
-            className="block px-4 py-3 text-[#050505] font-medium hover:bg-[#f0f2f5]"
-        >
-            {label}
-        </Link>
     );
 }
