@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SignupForm } from "./signup-form";
 import Image from "next/image";
-import { ArrowUpRight, BriefcaseBusiness, CheckCircle2, FileText, Globe, Sparkles, Zap } from "lucide-react";
+import { BriefcaseBusiness, CheckCircle2, FileText, Globe, Sparkles, Zap } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +24,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     : "border-blue-300/25 bg-[linear-gradient(145deg,#0f172a_0%,#1e3a5f_55%,#1d4ed8_100%)]"
                     }`}
                 >
-                    <Link href="/" className="inline-flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-sm transition hover:bg-white/15">
+                    <Link href="/" className="inline-flex items-center gap-3">
                         <Image src="/logo-icon.png" alt="Workers United" width={44} height={44} className="h-11 w-11 object-contain" />
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">Workers United</p>
-                            <p className="text-base font-semibold tracking-tight">Visa Platform</p>
-                        </div>
-                        <ArrowUpRight className="h-4 w-4 text-white/70" />
+                        <Image src="/logo-wordmark.png" alt="Workers United" width={170} height={40} className="h-auto w-[156px] object-contain" />
                     </Link>
 
                     <div className="mt-8 lg:mt-12">
@@ -77,9 +73,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     <div className="flex w-full items-start justify-center rounded-[28px] border border-[#d9e2ef] bg-white/95 px-5 py-5 shadow-[0_24px_60px_-35px_rgba(15,23,42,0.35)] backdrop-blur-sm sm:px-7 sm:py-7 lg:px-10 lg:py-9">
                         <div className="w-full max-w-[470px]">
                             <div className="mb-8 text-center">
-                                <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-[#dbe5f3] bg-[#f8fafc] px-3 py-1.5">
-                                    <Image src="/logo-icon.png" alt="Workers United logo" width={24} height={24} className="h-6 w-6 object-contain" />
-                                    <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#334155]">Workers United</span>
+                                <div className="mx-auto mb-4 flex items-center justify-center gap-2">
+                                    <Image src="/logo-icon.png" alt="Workers United logo" width={30} height={30} className="h-7 w-7 object-contain" />
+                                    <Image src="/logo-wordmark.png" alt="Workers United" width={150} height={34} className="h-auto w-[148px] object-contain" />
                                 </div>
                                 <h2 className="text-3xl font-semibold tracking-tight text-[#0f172a]">Create your account</h2>
                                 <p className="mt-2 text-[15px] leading-relaxed text-[#64748b]">
