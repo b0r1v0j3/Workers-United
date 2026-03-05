@@ -37,7 +37,7 @@ Workers-United/
 │   ├── add-profile-field.md   # Steps to add a new profile field
 │   └── project-architecture.md  # ← this file
 ├── public/                    # Static assets (logo-icon.png, logo-wordmark.png, logo-full.jpg, etc.)
-├── scripts/                   # Utility scripts (screenshots, SQL setup)
+├── scripts/                   # Utility scripts (screenshots, SQL setup, cloud-doctor.ps1 connectivity checks)
 ├── supabase/                  # SQL migrations & schema files
 │   ├── FULL_SETUP.sql         # Comprehensive DB setup
 │   ├── schema.sql             # Core tables
