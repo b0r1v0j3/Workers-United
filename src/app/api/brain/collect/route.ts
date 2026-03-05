@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
         supabase.from("profiles").select("id, user_type, full_name, created_at"),
         supabase.from("candidates").select("id, profile_id, status, admin_approved, entry_fee_paid, queue_joined_at, created_at"),
-        supabase.from("candidate_documents").select("document_type, status, created_at, verified_at"),
-        supabase.from("payments").select("payment_type, status, amount, paid_at, created_at"),
+        supabase.from("candidate_documents").select("user_id, document_type, status, created_at, verified_at"),
+        supabase.from("payments").select("user_id, payment_type, status, amount, paid_at, created_at"),
         supabase.from("email_queue").select("id, email_type, status, error_message, recipient, created_at").gte("created_at", monthAgo.toISOString()),
         supabase.from("whatsapp_messages").select("direction, status, content, created_at, phone_number").gte("created_at", monthAgo.toISOString()).order("created_at", { ascending: false }),
         supabase.from("employers").select("id, status, country, industry, created_at"),
@@ -159,13 +159,15 @@ export async function GET(request: NextRequest) {
     // ─── 9b. Per-User Funnel Stage Timestamps (Self-Improvement #1) ─────
     // Codex requested event-level funnel timestamps to diagnose WHERE users stall
     const funnelTimestamps = (candidates || []).slice(0, 50).map(c => {
-        const candidateDocs = (documents || []).filter(d => {
-            // Match by most recent docs uploaded around when the candidate registered
-            return d.created_at && c.created_at;
-        });
+        const candidateDocs = (documents || [])
+            .filter(d => d.user_id === c.profile_id)
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         const verifiedDocs = candidateDocs.filter(d => d.status === "verified");
         const candidatePayments = (payments || []).filter(p =>
-            (p.status === "completed" || p.status === "paid") && p.paid_at
+            p.user_id === c.profile_id &&
+            p.payment_type === "entry_fee" &&
+            (p.status === "completed" || p.status === "paid") &&
+            p.paid_at
         );
 
         return {
@@ -206,7 +208,7 @@ export async function GET(request: NextRequest) {
     const stalls = {
         no_candidate_record: workers.filter(w => !candidateProfileIds.has(w.id)).length,
         no_docs_uploaded: (candidates || []).filter(c => {
-            const userDocs = (documents || []).filter(d => d.created_at && c.created_at);
+            const userDocs = (documents || []).filter(d => d.user_id === c.profile_id);
             return c.status === "NEW" && userDocs.length === 0;
         }).length,
         docs_pending_verification: (documents || []).filter(d => d.status === "pending" || d.status === "verifying").length,

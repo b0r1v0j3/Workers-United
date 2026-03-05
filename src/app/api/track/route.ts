@@ -18,13 +18,14 @@ export async function POST(request: NextRequest) {
         // Use admin client to insert since anonymous users won't have RLS access
         const { createAdminClient } = await import("@/lib/supabase/admin");
         const admin = createAdminClient();
+        const anonymous = !user;
 
         await admin.from("user_activity").insert({
-            user_id: user?.id || "anonymous",
+            user_id: user?.id ?? null,
             action,
             category: category || "tracking",
-            status: "success",
-            details: details || {},
+            status: "ok",
+            details: { ...(details || {}), anonymous },
         });
 
         return NextResponse.json({ ok: true });
