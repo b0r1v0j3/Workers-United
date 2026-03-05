@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Mobile hero spacing micro-adjustment: uvodni pasus (`Workers United connects workers...`) blago spušten (`mt-6`, desktop ostaje `md:mt-5`) radi boljeg razmaka od plave kartice — 05.03.2026
 - [x] Mobile hero overlap micro-fix: plava `Operational handover` kartica spuštena blago niže (`bottom-2` → `-bottom-3`) da ostane vidljiviji tekst na zelenoj kartici — 05.03.2026
 - [x] Mobile hero card sizing correction: `Operational handover` kartica vraćena na staru (veću) tipografiju i spacing (`p-5`, `text-xl`, `text-sm`) po vizuelnom feedback-u — 05.03.2026
 - [x] Mobile hero reorder per feedback: stack kartice su premeštene odmah ispod H1 (na mesto gde su ranije bili badge-ovi), a mobilni badge-ovi su spušteni ispod CTA dugmadi radi boljeg isticanja kartica — 05.03.2026
