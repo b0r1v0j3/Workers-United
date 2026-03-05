@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         { data: offers },
     ] = await Promise.all([
         supabase.from("profiles").select("id, user_type, full_name, created_at"),
-        supabase.from("candidates").select("id, profile_id, status, admin_approved, entry_fee_paid, queue_joined_at, created_at"),
+        supabase.from("candidates").select("id, profile_id, status, entry_fee_paid, queue_joined_at, created_at"),
         supabase.from("candidate_documents").select("user_id, document_type, status, created_at, verified_at"),
         supabase.from("payments").select("user_id, payment_type, status, amount, paid_at, created_at"),
         supabase.from("email_queue").select("id, email_type, status, error_message, recipient, created_at").gte("created_at", monthAgo.toISOString()),
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         statusBreakdown[c.status] = (statusBreakdown[c.status] || 0) + 1;
     });
 
-    const approvedCount = (candidates || []).filter(c => c.admin_approved).length;
+    const progressedCount = (candidates || []).filter(c => c.status && c.status !== "NEW").length;
     const paidCount = (candidates || []).filter(c => c.entry_fee_paid).length;
     const inQueueCount = (candidates || []).filter(c => c.status === "IN_QUEUE").length;
 
@@ -145,7 +145,8 @@ export async function GET(request: NextRequest) {
     // ─── 9. Conversion Funnel ───────────────────────────────────────────
     const funnel = {
         registered: workers.length,
-        adminApproved: approvedCount,
+        // Kept field name for backward compatibility in existing AI prompts/reports.
+        adminApproved: progressedCount,
         entryFeePaid: paidCount,
         inQueue: inQueueCount,
         matched: (matches || []).length,
@@ -175,7 +176,7 @@ export async function GET(request: NextRequest) {
             registered_at: c.created_at,
             first_doc_uploaded: candidateDocs.length > 0 ? candidateDocs[0]?.created_at : null,
             docs_verified_at: verifiedDocs.length > 0 ? verifiedDocs[verifiedDocs.length - 1]?.verified_at : null,
-            admin_approved: c.admin_approved,
+            admin_approved: approvedLikeStatuses.has(c.status || ""),
             payment_at: c.entry_fee_paid ? candidatePayments[0]?.paid_at || "paid (date unknown)" : null,
             queue_joined_at: c.queue_joined_at,
             current_status: c.status,
@@ -212,8 +213,8 @@ export async function GET(request: NextRequest) {
             return c.status === "NEW" && userDocs.length === 0;
         }).length,
         docs_pending_verification: (documents || []).filter(d => d.status === "pending" || d.status === "verifying").length,
-        not_admin_approved: (candidates || []).filter(c => c.status !== "NEW" && !c.admin_approved && !c.entry_fee_paid).length,
-        approved_not_paid: (candidates || []).filter(c => c.admin_approved && !c.entry_fee_paid).length,
+        not_admin_approved: (candidates || []).filter(c => c.status !== "NEW" && !approvedLikeStatuses.has(c.status || "") && !c.entry_fee_paid).length,
+        approved_not_paid: (candidates || []).filter(c => approvedLikeStatuses.has(c.status || "") && !c.entry_fee_paid).length,
         summary: "",
     };
     const topBottleneck = Object.entries(stalls)
@@ -526,3 +527,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(report);
 }
+    const approvedLikeStatuses = new Set([
+        "APPROVED",
+        "IN_QUEUE",
+        "OFFER_PENDING",
+        "OFFER_ACCEPTED",
+        "VISA_PROCESS_STARTED",
+        "VISA_APPROVED",
+        "PLACED",
+    ]);
