@@ -98,12 +98,13 @@ export default function Home() {
                     Verified process
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                    <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
-                    90-day guarantee
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
                     <Clock3 className="h-4 w-4 text-[#7a3f8a]" />
                     Fast onboarding
+                  </span>
+                  <span className="basis-full md:hidden" aria-hidden="true" />
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
+                    90-day guarantee
                   </span>
                 </div>
               </div>

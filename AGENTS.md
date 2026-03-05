@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Mobile hero badge ordering fix: u hero “chips” grupi dodat mobilni line-break tako da `90-day guarantee` ide ispod `Fast onboarding` (desktop raspored ostaje netaknut) — 05.03.2026
 - [x] Homepage/footer spacing polish: uklonjen višak praznog “plavkastog” prostora ispod `Start your profile in minutes` uklanjanjem `mt-20` margine sa `Footer` komponente — 05.03.2026
 - [x] Homepage simplification po feedback-u: kompletna sekcija `What we actually do` uklonjena sa landing stranice radi čistijeg, kraćeg toka sadržaja — 05.03.2026
 - [x] Homepage flow-copy tweak: korak #1 u “How the flow works” promenjen u `Create your account and activate Job Finder.` radi jasnijeg funnel CTA jezika — 05.03.2026
