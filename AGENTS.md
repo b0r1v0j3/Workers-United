@@ -694,3 +694,4 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 11. **Health check dashboard** — Proširiti `/api/health` da proverava Supabase, Stripe, SMTP, WhatsApp konekciju.
 12. **Automated DB backup verification** — Supabase Pro radi daily backup, ali treba bar jednom testirati restore.
 13. **OpenGraph dynamic slike** — Generisati OG slike sa brojem radnika / zemljama za social sharing.
+14. **Cloud doctor automation** — Pokretati `npm run cloud:doctor` kroz n8n/Vercel scheduled workflow (npr. na 3h) i slati alert samo kad status pređe u `FAIL`.
