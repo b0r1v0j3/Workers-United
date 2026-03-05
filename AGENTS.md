@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Homepage terminology micro-polish: `Job Finder Access` preimenovan u prirodniji `Job Finder` u pricing sekciji (bez promene flow-a/cena) — 05.03.2026
 - [x] Homepage pricing clarity + CTA contrast fix: uklonjen `Placement fee / After match` iz public pricing bloka, uveden `Job Finder Access $9` + jasan `100% refund if no match in 90 days`; završni CTA dugmići worker/employer usklađeni i čitljivi — 05.03.2026
 - [x] Cookie icon size tweak po feedback-u: ikonica u `CookieConsent` povećana 2x (`28px` → `56px`) bez promene ostatka banner layout-a — 05.03.2026
 - [x] Cookie icon correction po preciznom linku: zamenjena pogrešna ikonica i postavljena tačna Icons8 varijanta sa `https://icons8.com/icon/97693/cookie` (asset `public/cookie-icons8.png`) — 05.03.2026
