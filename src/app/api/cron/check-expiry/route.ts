@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 
                         await sendOfferExpiredNotification({
                             candidateEmail: candidateProfile?.email || "",
-                            candidateName: candidateProfile?.full_name || "Candidate",
+                            candidateName: candidateProfile?.full_name || "Worker",
                             jobTitle: offer.job_requests?.title || "Position",
                             queuePosition: offer.candidates?.queue_position || 0,
                         });
@@ -231,7 +231,7 @@ async function shiftOfferToNextCandidate(
         try {
             await sendOfferNotification({
                 candidateEmail: profile.email,
-                candidateName: profile.full_name || "Candidate",
+                candidateName: profile.full_name || "Worker",
                 jobTitle: jobRequest.title,
                 companyName: "Employer", // Would need employer join
                 country: jobRequest.destination_country,

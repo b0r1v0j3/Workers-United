@@ -38,7 +38,7 @@ export default async function AdminRefundsPage() {
             <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <h1 className="text-2xl font-bold text-slate-900">Refund Management</h1>
-                    <p className="text-slate-500">Process refunds for candidates past the 90-day window.</p>
+                    <p className="text-slate-500">Process refunds for workers past the 90-day window.</p>
                 </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -53,7 +53,7 @@ export default async function AdminRefundsPage() {
                     <table className="min-w-full divide-y divide-slate-200">
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Candidate</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Worker</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Email</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Joined Queue</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase">Days Waited</th>

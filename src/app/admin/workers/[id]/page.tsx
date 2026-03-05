@@ -383,7 +383,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                 </Link>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column: Candidate Info */}
+                    {/* Left Column: Worker Info */}
                     <div className="lg:col-span-1 space-y-6">
                         {/* No Profile Notice */}
                         {!candidateProfile && (
@@ -520,7 +520,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
                         {/* Status Control */}
                         <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
-                            <h2 className="font-bold text-[#1e293b] text-xl mb-4">Candidate Status</h2>
+                            <h2 className="font-bold text-[#1e293b] text-xl mb-4">Worker Status</h2>
                             <form action={updateCandidateStatus}>
                                 <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
                                 <div className="mb-4">

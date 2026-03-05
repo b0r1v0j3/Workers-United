@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         .single();
 
     if (!candidate) {
-        return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
+        return NextResponse.json({ error: "Worker not found" }, { status: 404 });
     }
 
     const { data: match } = await supabase

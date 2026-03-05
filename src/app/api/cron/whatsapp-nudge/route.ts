@@ -32,7 +32,7 @@ export async function GET(request: Request) {
             .not("phone", "is", null);
 
         if (!unpaidCandidates || unpaidCandidates.length === 0) {
-            return NextResponse.json({ status: "no_candidates_to_nudge", ...results });
+            return NextResponse.json({ status: "no_workers_to_nudge", ...results });
         }
 
         results.found = unpaidCandidates.length;

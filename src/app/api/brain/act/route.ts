@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
                 await supabase.from("brain_actions").insert({
                     action_type: "status_update",
-                    description: `Updated candidate ${profile_id} status to ${status}`,
+                        description: `Updated worker ${profile_id} status to ${status}`,
                     target_user_id: profile_id,
                     metadata: { status },
                     result: error ? "failed" : "completed",

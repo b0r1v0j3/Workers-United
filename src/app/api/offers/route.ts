@@ -19,7 +19,7 @@ export async function GET() {
             .single();
 
         if (!candidate) {
-            return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
+            return NextResponse.json({ error: "Worker profile not found" }, { status: 404 });
         }
 
         // Get offers with job details

@@ -71,13 +71,13 @@ export async function POST(request: NextRequest) {
             .limit(positionsToFill);
 
         if (candidatesError) {
-            return NextResponse.json({ error: "Failed to fetch candidates" }, { status: 500 });
+            return NextResponse.json({ error: "Failed to fetch workers" }, { status: 500 });
         }
 
         if (!candidates || candidates.length === 0) {
             return NextResponse.json({
                 success: true,
-                message: "No eligible candidates in queue",
+                message: "No eligible workers in queue",
                 matchedCount: 0
             });
         }
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
                 try {
                     await sendOfferNotification({
                         candidateEmail: candidate.profiles.email,
-                        candidateName: candidate.profiles.full_name || "Candidate",
+                        candidateName: candidate.profiles.full_name || "Worker",
                         jobTitle: jobRequest.title,
                         companyName: jobRequest.employers?.company_name || "Employer",
                         country: jobRequest.destination_country,

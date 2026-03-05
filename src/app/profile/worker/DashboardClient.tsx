@@ -179,7 +179,7 @@ export default function DashboardClient({
                                     ? "We're actively looking for the best job match for you."
                                     : paymentPendingActivation
                                         ? "Your payment is confirmed. We're activating your queue status now."
-                                        : "Pay a one-time $9 fee to join our active candidate queue. We'll find you a job in Europe."
+                                        : "Pay a one-time $9 fee to join our active worker queue. We'll find you a job in Europe."
                                 }
                             </p>
                         </div>

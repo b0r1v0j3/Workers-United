@@ -120,7 +120,7 @@ export default function CreateJobClient() {
                     </div>
                     <h2 className="text-2xl font-bold text-[#183b56] mb-3">Job Request Created!</h2>
                     <p className="text-[#64748b]">
-                        Our system is automatically matching candidates from the queue...
+                        Our system is automatically matching workers from the queue...
                     </p>
                     <div className="mt-6 flex justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2f6fed]"></div>

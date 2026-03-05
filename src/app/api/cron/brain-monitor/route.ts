@@ -265,7 +265,7 @@ export async function GET(request: Request) {
                     } catch { actionStatus = "failed"; }
                 }
 
-                // Auto-heal: create missing profile + candidate records
+                // Auto-heal: create missing profile + worker onboarding records
                 if (action.type === "create_missing_records" && action.params?.user_ids) {
                     try {
                         const userIds = action.params.user_ids as string[];
@@ -285,7 +285,7 @@ export async function GET(request: Request) {
                                 });
                             }
 
-                            // Ensure candidate exists
+                            // Ensure worker onboarding record exists
                             const { data: existingCandidate } = await supabase
                                 .from("candidates").select("id").eq("profile_id", userId).maybeSingle();
                             if (!existingCandidate) {
@@ -297,7 +297,7 @@ export async function GET(request: Request) {
                             }
                         }
                         actionStatus = created > 0 ? "executed" : "skipped";
-                        console.log(`[Brain] 📋 Created ${created} missing candidate records`);
+                        console.log(`[Brain] 📋 Created ${created} missing worker onboarding records`);
                     } catch { actionStatus = "failed"; }
                 }
 
@@ -409,6 +409,7 @@ ${businessFacts}
 - AI: Gemini 3.0 Flash for document verification (with fallback chain)
 - WhatsApp: Direct OpenAI GPT-4o chatbot with memory + self-learning (brain_memory table)
 - Email: Nodemailer + Google Workspace SMTP
+- Terminology rule: In all findings/issues/improvements, use ONLY "worker" and "employer". Never use the word "candidate" in output text.
 
 You run 5 OPERATIONS. Analyze each separately:
 
@@ -421,7 +422,7 @@ You run 5 OPERATIONS. Analyze each separately:
 
 ## Operation 2: 📊 FUNNEL ANALYSIS
 - Where are users dropping off? (signup → profile → docs → verification → payment → queue)
-- ⚠️ CHECK stalls data: shows exact bottleneck counts (no_candidate_record, no_docs_uploaded, docs_pending_verification, approved_not_paid)
+- ⚠️ CHECK stalls data: shows exact bottleneck counts (no_worker_record, no_docs_uploaded, docs_pending_verification, approved_not_paid)
 - ⚠️ CHECK signup_page_view events in userActivity: compare page views vs actual signups to measure ad conversion
 - Conversion rates between stages
 - Status: OK / WARNING / CRITICAL
@@ -465,7 +466,7 @@ Rules:
 - update_memory: Correct an outdated brain_memory fact. Params: { old_content: "...", new_content: "..." }
 - delete_memory: Remove an incorrect brain_memory fact. Params: { content: "..." }
 - confirm_stuck_users: Auto-confirm emails for users stuck unconfirmed >48h. Params: { user_ids: ["..."] }
-- create_missing_records: Create profile+candidate for auth users missing them. Params: { user_ids: ["..."] }
+- create_missing_records: Create missing worker onboarding records for auth users. Params: { user_ids: ["..."] }
 - log_observation: Log an observation for admin review
 
 ## Operation 6: 🧠 SELF-IMPROVEMENT
@@ -485,7 +486,7 @@ Rules:
   - Is there a code bug preventing session exchange?
 - CREATE A P0 ISSUE explaining the root cause and fix, with label "auth-health"
 - Auto-confirm (confirm_stuck_users) is a TEMPORARY band-aid — NEVER use it without ALSO creating an issue for the root cause
-- If workers have no candidate record, use create_missing_records to fix silently
+- If workers have no onboarding record, use create_missing_records to fix silently
 - Check for users with missing user_type metadata (they fall through the cracks)
 - Flag invalid email patterns (typos, disposable domains) — these users can never confirm
 - Status: OK / WARNING / CRITICAL
@@ -512,15 +513,47 @@ Respond in JSON:
 }`;
 }
 
+function getAiInputData(data: Record<string, unknown>): Record<string, unknown> {
+    const aiData = structuredClone(data) as Record<string, unknown>;
+
+    const stalls = aiData.stalls as Record<string, unknown> | undefined;
+    if (stalls && typeof stalls.no_candidate_record === "number") {
+        stalls.no_worker_record = stalls.no_candidate_record;
+        delete stalls.no_candidate_record;
+    }
+
+    const authHealth = aiData.authHealth as Record<string, unknown> | undefined;
+    if (authHealth) {
+        const workersWithoutCandidate = authHealth.workersWithoutCandidate as Record<string, unknown> | undefined;
+        if (workersWithoutCandidate && typeof workersWithoutCandidate.count === "number") {
+            authHealth.workersWithoutWorkerOnboarding = workersWithoutCandidate;
+            delete authHealth.workersWithoutCandidate;
+        }
+    }
+
+    const funnelTimestamps = aiData.funnelTimestamps as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(funnelTimestamps)) {
+        for (const row of funnelTimestamps) {
+            if (row.candidate_id) {
+                row.worker_record_id = row.candidate_id;
+                delete row.candidate_id;
+            }
+        }
+    }
+
+    return aiData;
+}
+
 function buildAnalysisPrompt(data: Record<string, unknown>, date: string, resolvedTitles: string[]): string {
     const resolvedSection = resolvedTitles.length > 0
         ? `\n\nRECENTLY_RESOLVED (do NOT re-report these):\n${resolvedTitles.map(t => `- ${t}`).join("\n")}`
         : "";
+    const aiInputData = getAiInputData(data);
     return `Morning Brain Report — ${date}
 
 Run your 5 operations on this platform data:
 
-${JSON.stringify(data, null, 2)}${resolvedSection}
+${JSON.stringify(aiInputData, null, 2)}${resolvedSection}
 
 Execute each operation (System Health, Funnel, Email/WhatsApp, Code Quality, Growth) and report findings.`;
 }
