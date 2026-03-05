@@ -135,7 +135,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Pristup logotipu je kontekstualan** — za auth/hero može full transparentni logo (`public/logo-complete-transparent.png`), dok navbar koristi split layout radi čitljivosti.
 - **Ikona (ruke):** `public/logo-icon.png` — koristi se za kvadratne kontekste i leva je komponenta split navbar logotipa.
 - **Wordmark-only varijanta:** `public/logo-wordmark.png` — desna komponenta split navbar logotipa i fallback za horizontalne layout-e.
-- **Navbar dizajn:** `UnifiedNavbar.tsx` koristi čist public header (`h-[52px] md:h-[56px]`) sa blagim glass efektom pri skrolu (top: `bg-white/40` + vrlo blag blur, scroll: `bg-white/70` + `backdrop-blur-sm`), bez srednjih public linkova (`How it works / For Workers / For Employers`) i bez mobile hamburger menija. Na desktopu je centriran samo wordmark (`WORKERS UNITED`), dok je ikonica levo; desne akcije su skroz desno. Public variant nema border/shadow liniju i ostaje sticky pri skrolu. Dinamički scroll resize (bubrenje/skupljanje) je **ukinut**. 
+- **Navbar dizajn:** `UnifiedNavbar.tsx` koristi čist public header (`h-[52px] md:h-[56px]`) sa blagim glass efektom pri skrolu (top: `bg-white/40` + vrlo blag blur, scroll: `bg-white/70` + `backdrop-blur-sm`), bez srednjih public linkova (`How it works / For Workers / For Employers`) i bez mobile hamburger menija. U public varijanti je `Workers United` levo, dok su ruke (logo-ikona) centrirane i na desktopu i na mobilnom prikazu; desne akcije su skroz desno. Public variant nema border/shadow liniju i ostaje sticky pri skrolu. Dinamički scroll resize (bubrenje/skupljanje) je **ukinut**. 
 - **`logo-full.jpg`** — full logo sa plavom pozadinom, koristi se za OG/meta slike, NE za navbar.
 - `/profile` — auto-redirect na worker ili employer
 - `/profile/worker` — profil radnika (3 taba: Profile Info, Documents, Status)
@@ -247,6 +247,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Hero spacing follow-up: uvodni pasus (`Workers United connects workers...`) spušten još malo naniže (`mt-9`, `md:mt-8`) radi jasnijeg razmaka od plave kartice — 05.03.2026
+- [x] Public navbar branding alignment fix: vraćena veća veličina ruku (centrirana ikona), a raspored `Workers United` levo + centrirane ruke primenjen i na mobilni prikaz — 05.03.2026
 - [x] Hero + public navbar micro-refine: uvodni pasus dodatno spušten (`mt-8`, `md:mt-7`) radi razmaka od plave kartice; public header na desktopu preuređen tako da je `Workers United` skroz levo, a centralno je logo-ikona — 05.03.2026
 - [x] Homepage hero cleanup: uklonjen `Document-first workflow` bedž iz vrha hero sekcije (desktop + mobile) radi čistijeg uvoda — 05.03.2026
 - [x] Mobile hero cleanup: uklonjeni `Verified process / Fast onboarding / 90-day guarantee` badge-ovi sa telefonskog prikaza po UX feedback-u (ostaju samo na desktopu) — 05.03.2026
