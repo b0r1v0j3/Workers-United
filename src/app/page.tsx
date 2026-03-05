@@ -73,7 +73,33 @@ export default function Home() {
                 <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-[#141414] md:text-6xl">
                   We run hiring like a clean stack of documents, not chaos.
                 </h1>
-                <div className="mt-5 flex flex-col items-start gap-3 text-sm text-[#4f4f48] md:flex-row md:flex-wrap md:items-center">
+                <div className="relative mt-5 h-[300px] w-full md:hidden">
+                  <article className="absolute left-2 top-3 w-[86%] rotate-[-6deg] rounded-3xl border border-[#e2d8cd] bg-[#fff8f1] p-4 shadow-[0_22px_35px_-28px_rgba(80,55,30,0.55)]">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a6a49]">Worker_Profile.md</p>
+                    <h3 className="text-lg font-semibold text-[#2e241a]">Identity + readiness</h3>
+                    <ul className="mt-2 space-y-1.5 text-xs text-[#5d4b3a]">
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-[#2a7f62]" /> Passport verified</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-[#2a7f62]" /> Profile completion tracked</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-[#2a7f62]" /> Queue eligibility clear</li>
+                    </ul>
+                  </article>
+
+                  <article className="absolute right-0 top-[72px] w-[80%] rotate-[5deg] rounded-3xl border border-[#d9e3d8] bg-[#f3fff1] p-4 shadow-[0_20px_35px_-28px_rgba(24,72,42,0.45)]">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#567255]">Employer_Request.doc</p>
+                    <h3 className="text-lg font-semibold text-[#1f3a20]">Role requirements</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-[#446645]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
+                  </article>
+
+                  <article className="absolute bottom-2 left-[9%] w-[84%] rotate-[-1deg] rounded-3xl border border-[#d9dce8] bg-[#f7f8ff] p-4 shadow-[0_18px_30px_-24px_rgba(43,58,120,0.4)]">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f678c]">Visa_File.pdf</p>
+                    <h3 className="text-lg font-semibold text-[#1f2648]">Operational handover</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-[#4b5478]">
+                      Once confirmed, we handle the document workflow to move from match to legal arrival.
+                    </p>
+                  </article>
+                </div>
+
+                <div className="mt-5 hidden flex-row flex-wrap items-center gap-3 text-sm text-[#4f4f48] md:flex">
                   <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
                     <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
                     Verified process
@@ -106,9 +132,23 @@ export default function Home() {
                     How it works
                   </Link>
                 </div>
+                <div className="mt-6 flex flex-col items-start gap-3 text-sm text-[#4f4f48] md:hidden">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
+                    Verified process
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <Clock3 className="h-4 w-4 text-[#7a3f8a]" />
+                    Fast onboarding
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
+                    90-day guarantee
+                  </span>
+                </div>
               </div>
 
-              <div className="relative h-[420px] animate-in fade-in slide-in-from-right-5 duration-700 md:h-[500px]">
+              <div className="relative hidden h-[420px] animate-in fade-in slide-in-from-right-5 duration-700 md:block md:h-[500px]">
                 <article className="absolute left-2 top-4 w-[86%] rotate-[-6deg] rounded-3xl border border-[#e2d8cd] bg-[#fff8f1] p-5 shadow-[0_22px_35px_-28px_rgba(80,55,30,0.55)] md:p-6">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a6a49]">Worker_Profile.md</p>
                   <h3 className="text-xl font-semibold text-[#2e241a]">Identity + readiness</h3>
