@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Homepage flow-copy tweak: korak #1 u “How the flow works” promenjen u `Create your account and activate Job Finder.` radi jasnijeg funnel CTA jezika — 05.03.2026
 - [x] Homepage terminology micro-polish: `Job Finder Access` preimenovan u prirodniji `Job Finder` u pricing sekciji (bez promene flow-a/cena) — 05.03.2026
 - [x] Homepage pricing clarity + CTA contrast fix: uklonjen `Placement fee / After match` iz public pricing bloka, uveden `Job Finder Access $9` + jasan `100% refund if no match in 90 days`; završni CTA dugmići worker/employer usklađeni i čitljivi — 05.03.2026
 - [x] Cookie icon size tweak po feedback-u: ikonica u `CookieConsent` povećana 2x (`28px` → `56px`) bez promene ostatka banner layout-a — 05.03.2026
