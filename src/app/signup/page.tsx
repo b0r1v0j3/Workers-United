@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SignupForm } from "./signup-form";
 import Image from "next/image";
-import { Globe, FileText, CheckCircle2, Zap, Building2, BookUser } from "lucide-react";
+import { ArrowUpRight, BriefcaseBusiness, CheckCircle2, FileText, Globe, Sparkles, Zap } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -14,104 +14,111 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     const userType = params.type === "employer" ? "employer" : "worker";
 
     return (
-        <div className="min-h-screen flex font-montserrat flex-col lg:flex-row">
-            {/* Left Side: Brand Panel */}
-            <div className="hidden lg:flex w-1/2 text-white p-12 flex-col justify-between relative overflow-hidden"
-                style={{
-                    background: userType === "employer"
-                        ? 'linear-gradient(135deg, #0d9488 0%, #059669 100%)'
-                        : 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #2563EB 100%)'
-                }}
-            >
-                <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+        <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(1200px_700px_at_20%_-10%,#dbeafe_0%,transparent_55%),radial-gradient(900px_500px_at_85%_8%,#d1fae5_0%,transparent_50%),#f8fafc] font-montserrat">
+            <div className="pointer-events-none absolute -left-28 top-8 h-64 w-64 rounded-full bg-[#93c5fd]/25 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-[#bfdbfe]/30 blur-3xl" />
 
-                <div className="relative z-10">
-                    <Link href="/" className="flex items-center gap-3 mb-20">
-                        <Image src="/logo.png" alt="Workers United logo" width={48} height={48} className="drop-shadow-lg lg:brightness-0 lg:invert" />
-                        <span className="text-2xl font-bold tracking-tight">Workers United</span>
+            <div className="relative mx-auto flex min-h-screen w-full max-w-[1240px] flex-col gap-5 px-4 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-stretch lg:gap-6 lg:px-8 lg:py-8">
+                <aside className={`order-2 rounded-[28px] border px-6 py-6 text-white shadow-[0_24px_70px_-28px_rgba(15,23,42,0.65)] lg:order-1 lg:w-[46%] lg:px-10 lg:py-10 ${userType === "employer"
+                    ? "border-emerald-300/30 bg-[linear-gradient(145deg,#0f766e_0%,#065f46_52%,#022c22_100%)]"
+                    : "border-blue-300/25 bg-[linear-gradient(145deg,#0f172a_0%,#1e3a5f_55%,#1d4ed8_100%)]"
+                    }`}
+                >
+                    <Link href="/" className="inline-flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-sm transition hover:bg-white/15">
+                        <Image src="/logo-icon.png" alt="Workers United" width={44} height={44} className="h-11 w-11 object-contain" />
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">Workers United</p>
+                            <p className="text-base font-semibold tracking-tight">Visa Platform</p>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-white/70" />
                     </Link>
 
-                    <h1 className="text-5xl font-bold mb-6 leading-tight">
-                        {userType === "employer"
-                            ? "Start hiring globally"
-                            : "Start your journey"}
-                    </h1>
-                    <p className="text-white/70 text-lg max-w-md leading-relaxed mb-12">
-                        {userType === "employer"
-                            ? "Access pre-verified international talent and let us handle the visa process."
-                            : "Get verified quickly and connect with verified employers across Europe."}
-                    </p>
-
-                    <div className="space-y-4">
-                        {userType === "employer" ? (
-                            <>
-                                <Feature icon={<Globe className="text-emerald-200" />} text="Access global talent pool" />
-                                <Feature icon={<FileText className="text-emerald-200" />} text="Automated documentation" />
-                                <Feature icon={<CheckCircle2 className="text-emerald-200" />} text="100% compliance ready" />
-                            </>
-                        ) : (
-                            <>
-                                <Feature icon={<Zap className="text-blue-200" />} text="Instant document verification" />
-                                <Feature icon={<Building2 className="text-blue-200" />} text="Verified employers only" />
-                                <Feature icon={<BookUser className="text-blue-200" />} text="Full visa support included" />
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                <div className="relative z-10 flex gap-6 text-[10px] uppercase font-bold tracking-widest text-white/30">
-                    <span>Clean Process</span>
-                    <span>Safe & Legal</span>
-                    <span>Guaranteed Support</span>
-                </div>
-            </div>
-
-            {/* Right Side: Sign Up Form */}
-            <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center items-center p-8 lg:p-24 relative">
-                {/* Mobile Logo */}
-                <div className="lg:hidden absolute top-6 left-0 right-0 flex justify-center">
-                    <Link href="/" className="flex items-center gap-2">
-                        <Image src="/logo.png" alt="Workers United" width={48} height={48} />
-                        <span className="font-bold text-[#1E3A5F] text-lg tracking-tight">Workers United</span>
-                    </Link>
-                </div>
-
-                <div className="w-full max-w-[420px] mt-16 lg:mt-0">
-                    <div className="mb-8 text-center lg:text-left">
-                        <h2 className="text-3xl font-bold text-[#1e293b] mb-3 tracking-tight">Create your account</h2>
-                        <p className="text-[#64748b] font-medium leading-relaxed">
-                            Join as {userType === "employer" ? "an employer" : "a worker"} to get started.
+                    <div className="mt-8 lg:mt-12">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            End-to-end process
+                        </span>
+                        <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight lg:text-[40px] lg:leading-[1.1]">
+                            {userType === "employer"
+                                ? "Hire international workers, without visa friction."
+                                : "Launch your work journey with a clean, guided flow."}
+                        </h1>
+                        <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-white/75 lg:text-[17px]">
+                            {userType === "employer"
+                                ? "Create your account in minutes. We handle documentation, matching, and visa process operations for your company."
+                                : "Create your profile, upload documents, and move into verification with full operational support from our team."}
                         </p>
                     </div>
 
-                    {/* User type toggle */}
-                    <div className="flex bg-[#f0f2f5] rounded-xl p-1 mb-8">
-                        <Link
-                            href="/signup?type=worker"
-                            className={`flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${userType === "worker"
-                                ? "bg-white shadow-sm text-[#1877f2]"
-                                : "text-[#65676b] hover:text-[#050505]"
-                                }`}
-                        >
-                            I&apos;m a Worker
-                        </Link>
-                        <Link
-                            href="/signup?type=employer"
-                            className={`flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${userType === "employer"
-                                ? "bg-white shadow-sm text-[#1877f2]"
-                                : "text-[#65676b] hover:text-[#050505]"
-                                }`}
-                        >
-                            I&apos;m an Employer
-                        </Link>
+                    <div className="mt-7 space-y-3 lg:mt-10">
+                        {userType === "employer" ? (
+                            <>
+                                <Feature icon={<Globe className="h-5 w-5 text-emerald-100" />} text="Access a verified international talent pipeline" />
+                                <Feature icon={<FileText className="h-5 w-5 text-emerald-100" />} text="Documentation and visa workflow managed by us" />
+                                <Feature icon={<CheckCircle2 className="h-5 w-5 text-emerald-100" />} text="Operationally compliant and ready for scaling" />
+                            </>
+                        ) : (
+                            <>
+                                <Feature icon={<Zap className="h-5 w-5 text-blue-100" />} text="Fast signup and streamlined document verification" />
+                                <Feature icon={<BriefcaseBusiness className="h-5 w-5 text-blue-100" />} text="Only verified employers inside the platform" />
+                                <Feature icon={<CheckCircle2 className="h-5 w-5 text-blue-100" />} text="Clear visa support from profile to placement" />
+                            </>
+                        )}
                     </div>
 
-                    <SignupForm userType={userType} />
+                    <div className="mt-7 flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/55 lg:mt-10">
+                        <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">Safe & legal</span>
+                        <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">No hidden steps</span>
+                        <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">Human support</span>
+                    </div>
+                </aside>
 
-                    <p className="mt-8 text-center text-[#64748b] text-[15px] font-medium">
-                        Already have an account? <Link href="/login" className="text-[#1877f2] font-bold hover:underline">Sign in</Link>
-                    </p>
-                </div>
+                <main className="order-1 flex lg:order-2 lg:w-[54%]">
+                    <div className="flex w-full items-start justify-center rounded-[28px] border border-[#d9e2ef] bg-white/95 px-5 py-5 shadow-[0_24px_60px_-35px_rgba(15,23,42,0.35)] backdrop-blur-sm sm:px-7 sm:py-7 lg:px-10 lg:py-9">
+                        <div className="w-full max-w-[470px]">
+                            <div className="mb-8 text-center">
+                                <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-[#dbe5f3] bg-[#f8fafc] px-3 py-1.5">
+                                    <Image src="/logo-icon.png" alt="Workers United logo" width={24} height={24} className="h-6 w-6 object-contain" />
+                                    <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#334155]">Workers United</span>
+                                </div>
+                                <h2 className="text-3xl font-semibold tracking-tight text-[#0f172a]">Create your account</h2>
+                                <p className="mt-2 text-[15px] leading-relaxed text-[#64748b]">
+                                    Join as {userType === "employer" ? "an employer" : "a worker"} and continue to onboarding.
+                                </p>
+                            </div>
+
+                            <div className="mb-7 grid grid-cols-2 rounded-2xl border border-[#dbe5f3] bg-[#f8fafc] p-1.5">
+                                <Link
+                                    href="/signup?type=worker"
+                                    className={`rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition ${userType === "worker"
+                                        ? "bg-white text-[#0f172a] shadow-[0_8px_24px_-18px_rgba(37,99,235,0.6)]"
+                                        : "text-[#64748b] hover:text-[#0f172a]"
+                                        }`}
+                                >
+                                    I&apos;m a Worker
+                                </Link>
+                                <Link
+                                    href="/signup?type=employer"
+                                    className={`rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition ${userType === "employer"
+                                        ? "bg-white text-[#0f172a] shadow-[0_8px_24px_-18px_rgba(37,99,235,0.6)]"
+                                        : "text-[#64748b] hover:text-[#0f172a]"
+                                        }`}
+                                >
+                                    I&apos;m an Employer
+                                </Link>
+                            </div>
+
+                            <SignupForm userType={userType} />
+
+                            <p className="mt-7 text-center text-sm text-[#64748b]">
+                                Already have an account?{" "}
+                                <Link href="/login" className="font-semibold text-[#0f172a] underline-offset-4 hover:underline">
+                                    Sign in
+                                </Link>
+                            </p>
+                        </div>
+                    </div>
+                </main>
             </div>
         </div>
     );
@@ -119,9 +126,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
 
 function Feature({ icon, text }: { icon: React.ReactNode; text: string }) {
     return (
-        <div className="flex items-center gap-3 bg-white/10 p-3.5 rounded-xl backdrop-blur-sm">
-            <span className="text-xl">{icon}</span>
-            <span className="font-medium">{text}</span>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-3.5 py-3 backdrop-blur-sm">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">{icon}</span>
+            <span className="text-sm font-medium leading-relaxed text-white/90">{text}</span>
         </div>
     );
 }

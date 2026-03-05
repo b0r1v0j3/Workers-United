@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { SignaturePad } from "@/components/SignaturePad";
 import { createClient } from "@/lib/supabase/client";
 
@@ -88,8 +89,8 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
                         ← Back to Profile
                     </Link>
                     <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                        <span className="font-bold text-[#1E3A5F] text-xl hidden sm:inline">Workers United</span>
+                        <Image src="/logo-icon.png" alt="Workers United logo" width={44} height={44} className="h-11 w-11 object-contain" />
+                        <Image src="/logo-wordmark.png" alt="Workers United" width={140} height={32} className="hidden h-auto w-[130px] object-contain sm:block" />
                     </Link>
                     <div className="w-[120px]" />
                 </div>

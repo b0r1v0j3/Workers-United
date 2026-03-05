@@ -1,13 +1,35 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { toast } from "sonner";
+import { Check, Circle, ShieldCheck } from "lucide-react";
 
 interface SignupFormProps {
     userType: "worker" | "employer";
+}
+
+const COMMON_DOMAINS: Record<string, string> = {
+    "gmai.com": "gmail.com", "gmial.com": "gmail.com", "gmaill.com": "gmail.com",
+    "gamil.com": "gmail.com", "gnail.com": "gmail.com", "gmal.com": "gmail.com",
+    "gmail.co": "gmail.com", "gmail.con": "gmail.com", "gmail.om": "gmail.com",
+    "yahoo.coms": "yahoo.com", "yahooo.com": "yahoo.com", "yaho.com": "yahoo.com",
+    "yahoo.co": "yahoo.com", "yahoo.con": "yahoo.com",
+    "hotmai.com": "hotmail.com", "hotmal.com": "hotmail.com", "hotmial.com": "hotmail.com",
+    "hotmail.con": "hotmail.com", "hotmail.co": "hotmail.com",
+    "outloo.com": "outlook.com", "outlok.com": "outlook.com", "outllok.com": "outlook.com",
+    "outlook.con": "outlook.com",
+    "1yahoo.com": "yahoo.com", "1gmail.com": "gmail.com", "1hotmail.com": "hotmail.com",
+};
+
+function trackEvent(action: string, details?: Record<string, unknown>) {
+    fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, category: "funnel", details }),
+    }).catch(() => { }); // best-effort only
 }
 
 export function SignupForm({ userType }: SignupFormProps) {
@@ -17,120 +39,101 @@ export function SignupForm({ userType }: SignupFormProps) {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [gdprConsent, setGdprConsent] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const router = useRouter();
 
-    // Track signup page views for conversion analytics
     useEffect(() => {
-        fetch("/api/track", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "signup_page_view", category: "funnel", details: { userType } }),
-        }).catch(() => { }); // fire-and-forget
+        trackEvent("signup_page_view", { userType });
     }, [userType]);
 
-    // Password strength checks
-    const passwordChecks = {
+    const passwordChecks = useMemo(() => ({
         minLength: password.length >= 8,
         hasUppercase: /[A-Z]/.test(password),
         hasLowercase: /[a-z]/.test(password),
         hasNumber: /[0-9]/.test(password),
         hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
-    };
+    }), [password]);
+
     const allChecksPassed = Object.values(passwordChecks).every(Boolean);
     const passwordsMatch = password === confirmPassword;
 
-    // Email validation — catch typos in common domains
-    const COMMON_DOMAINS: Record<string, string> = {
-        "gmai.com": "gmail.com", "gmial.com": "gmail.com", "gmaill.com": "gmail.com",
-        "gamil.com": "gmail.com", "gnail.com": "gmail.com", "gmal.com": "gmail.com",
-        "gmail.co": "gmail.com", "gmail.con": "gmail.com", "gmail.om": "gmail.com",
-        "yahoo.coms": "yahoo.com", "yahooo.com": "yahoo.com", "yaho.com": "yahoo.com",
-        "yahoo.co": "yahoo.com", "yahoo.con": "yahoo.com",
-        "hotmai.com": "hotmail.com", "hotmal.com": "hotmail.com", "hotmial.com": "hotmail.com",
-        "hotmail.con": "hotmail.com", "hotmail.co": "hotmail.com",
-        "outloo.com": "outlook.com", "outlok.com": "outlook.com", "outllok.com": "outlook.com",
-        "outlook.con": "outlook.com",
-        "1yahoo.com": "yahoo.com", "1gmail.com": "gmail.com", "1hotmail.com": "hotmail.com",
-    };
+    const emailValidation = useMemo(() => {
+        if (!email) return { error: null as string | null, suggestion: null as string | null };
 
-    const getEmailError = (): { error: string | null; suggestion: string | null } => {
-        if (!email) return { error: null, suggestion: null };
         const trimmed = email.trim().toLowerCase();
-        // Basic format check
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
             return { error: "Please enter a valid email address", suggestion: null };
         }
-        // Trailing dot (e.g., user@gmail.com.)
         if (trimmed.endsWith(".")) {
             return { error: "Email cannot end with a dot", suggestion: trimmed.slice(0, -1) };
         }
-        // Double dots (e.g., user@gmail..com)
         if (trimmed.includes("..")) {
             return { error: "Email contains double dots", suggestion: null };
         }
+
         const domain = trimmed.split("@")[1];
         if (!domain || domain.length < 3) {
             return { error: "Invalid email domain", suggestion: null };
         }
-        // TLD must be at least 2 chars (no .c, .o, etc.)
+
         const tld = domain.split(".").pop() || "";
         if (tld.length < 2) {
             return { error: "Invalid domain extension", suggestion: null };
         }
-        // Check for common domain typos
+
         if (COMMON_DOMAINS[domain]) {
-            const corrected = `${trimmed.split("@")[0]}@${COMMON_DOMAINS[domain]}`;
             return {
                 error: null,
-                suggestion: corrected,
+                suggestion: `${trimmed.split("@")[0]}@${COMMON_DOMAINS[domain]}`,
             };
         }
-        return { error: null, suggestion: null };
-    };
 
-    const emailValidation = getEmailError();
+        return { error: null, suggestion: null };
+    }, [email]);
+
     const emailIsValid = !emailValidation.error && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     const canSubmit = allChecksPassed && passwordsMatch && gdprConsent && emailIsValid && !loading;
 
     const handleGoogleSignup = async () => {
         setGoogleLoading(true);
-        setError(null);
+        trackEvent("signup_google_click", { userType });
+
         const supabase = createClient();
         const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
+            provider: "google",
             options: {
                 redirectTo: `${window.location.origin}/auth/callback?user_type=${userType}`,
             },
         });
+
         if (error) {
             toast.error(error.message);
+            trackEvent("signup_google_error", { userType, message: error.message });
             setGoogleLoading(false);
         }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null);
+        trackEvent("signup_submit_attempt", { userType });
 
-        // Check GDPR consent
         if (!gdprConsent) {
             toast.error("You must agree to the Terms of Service and Privacy Policy to create an account.");
+            trackEvent("signup_validation_failed", { userType, reason: "missing_gdpr_consent" });
             return;
         }
 
-        // Check password strength
         if (!allChecksPassed) {
             toast.error("Password does not meet all requirements.");
+            trackEvent("signup_validation_failed", { userType, reason: "weak_password" });
             return;
         }
 
-        // Check password match
         if (!passwordsMatch) {
             toast.error("Passwords do not match");
+            trackEvent("signup_validation_failed", { userType, reason: "password_mismatch" });
             return;
         }
 
@@ -139,15 +142,14 @@ export function SignupForm({ userType }: SignupFormProps) {
         try {
             const supabase = createClient();
 
-            // Sign up the user
             const { data, error: signUpError } = await supabase.auth.signUp({
-                email,
+                email: email.trim().toLowerCase(),
                 password,
                 options: {
                     emailRedirectTo: `${window.location.origin}/auth/callback`,
                     data: {
-                        full_name: fullName,
-                        company_name: userType === "employer" ? companyName : null,
+                        full_name: fullName.trim(),
+                        company_name: userType === "employer" ? companyName.trim() : null,
                         user_type: userType,
                         gdpr_consent: true,
                         gdpr_consent_at: new Date().toISOString(),
@@ -157,36 +159,38 @@ export function SignupForm({ userType }: SignupFormProps) {
 
             if (signUpError) {
                 toast.error(signUpError.message);
+                trackEvent("signup_error", { userType, message: signUpError.message });
                 return;
             }
 
-            // If email confirmation is required
             if (data.user && !data.session) {
                 setSuccess(true);
+                trackEvent("signup_pending_email_confirmation", { userType });
                 return;
             }
 
-            // If auto-confirmed, queue welcome email and redirect
             if (data.session) {
                 fetch("/api/queue-user-email", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ emailType: "welcome" }),
-                }).catch(() => { }); // fire-and-forget
+                }).catch(() => { });
+                trackEvent("signup_success", { userType, authMethod: "email" });
             }
 
             router.push(userType === "employer" ? "/profile/employer" : "/profile/worker");
             router.refresh();
         } catch (err: unknown) {
-            // Show more specific error message
             if (err instanceof Error) {
                 if (err.message.includes("already registered") || err.message.includes("already exists")) {
                     toast.error("This email is already registered. Please sign in instead.");
                 } else {
                     toast.error(err.message);
                 }
+                trackEvent("signup_error", { userType, message: err.message });
             } else {
                 toast.error("An unexpected error occurred. Please try again.");
+                trackEvent("signup_error", { userType, message: "unknown_error" });
             }
         } finally {
             setLoading(false);
@@ -195,236 +199,260 @@ export function SignupForm({ userType }: SignupFormProps) {
 
     if (success) {
         return (
-            <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-8">
-                <Image src="/logo.png" alt="Workers United" width={56} height={56} className="mb-6" />
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white px-6">
+                <div className="w-full max-w-md rounded-[28px] border border-[#dbe5f3] bg-[#f8fafc] p-8 text-center shadow-[0_24px_60px_-35px_rgba(15,23,42,0.55)]">
+                    <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-[#dbe5f3] bg-white px-3 py-1.5">
+                        <Image src="/logo-icon.png" alt="Workers United" width={24} height={24} className="h-6 w-6 object-contain" />
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#334155]">Workers United</span>
+                    </div>
 
-                <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6 ring-4 ring-emerald-100">
-                    <svg className="w-10 h-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50">
+                        <Check className="h-10 w-10 text-emerald-600" />
+                    </div>
+
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#0f172a]">Check your email</h2>
+                    <p className="mt-3 text-sm leading-relaxed text-[#64748b]">
+                        We&apos;ve sent a confirmation link to <strong className="font-semibold text-[#0f172a]">{email}</strong>.
+                        Open your inbox and click the link to activate your account.
+                    </p>
+
+                    <LinkButton href="/login" label="Go to sign in" />
                 </div>
-
-                <h2 className="text-2xl font-bold text-[#1e293b] mb-3 tracking-tight">Check your email</h2>
-                <p className="text-[#64748b] text-center max-w-sm leading-relaxed mb-8">
-                    We&apos;ve sent a confirmation link to{" "}
-                    <strong className="text-[#1e293b]">{email}</strong>.
-                    <br />
-                    Please click the link to activate your account.
-                </p>
-
-                <a
-                    href="/login"
-                    className="text-[#1877f2] font-bold text-sm hover:underline"
-                >
-                    Already have an account? Sign in
-                </a>
             </div>
         );
     }
 
     return (
         <div className="space-y-5">
-            {/* Google Sign Up */}
             <button
                 type="button"
                 onClick={handleGoogleSignup}
                 disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 bg-white border border-[#dadce0] rounded-full py-3.5 px-6 text-[#3c4043] font-semibold text-[15px] hover:bg-[#f8f9fa] hover:border-[#c6c9cc] transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-50"
+                className="group flex w-full items-center justify-center gap-3 rounded-2xl border border-[#dbe5f3] bg-white px-5 py-3.5 text-[15px] font-medium text-[#0f172a] shadow-[0_16px_35px_-26px_rgba(15,23,42,0.4)] transition hover:border-[#c7d6ea] hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-60"
             >
                 {googleLoading ? (
-                    <svg className="animate-spin h-5 w-5 text-gray-400" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
+                    <Spinner className="h-4 w-4 text-[#64748b]" />
                 ) : (
-                    <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} className="w-5 h-5" />
+                    <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={18} height={18} className="h-4.5 w-4.5" />
                 )}
-                {googleLoading ? "Redirecting..." : `Sign up with Google`}
+                {googleLoading ? "Redirecting..." : "Continue with Google"}
             </button>
 
-            {/* Divider */}
-            <div className="relative">
+            <div className="relative py-1">
                 <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#e2e8f0]"></div>
+                    <div className="w-full border-t border-[#e2e8f0]" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase font-bold tracking-widest">
-                    <span className="bg-white px-4 text-[#94a3b8]">Or with email</span>
+                <div className="relative flex justify-center">
+                    <span className="bg-white px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#94a3b8]">Or use email</span>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-
-                <div className="space-y-2">
-                    <label htmlFor="fullName" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                        {userType === "employer" ? "Contact Person Name" : "Full Name"}
-                    </label>
-                    <input
-                        id="fullName"
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
-                        placeholder={userType === "employer" ? "John Smith" : "John Doe"}
-                        required
-                    />
-                </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <InputField
+                    id="fullName"
+                    label={userType === "employer" ? "Contact Person Name" : "Full Name"}
+                    value={fullName}
+                    onChange={setFullName}
+                    placeholder={userType === "employer" ? "John Smith" : "John Doe"}
+                />
 
                 {userType === "employer" && (
-                    <div className="space-y-2">
-                        <label htmlFor="companyName" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                            Company Name
-                        </label>
-                        <input
-                            id="companyName"
-                            type="text"
-                            value={companyName}
-                            onChange={(e) => setCompanyName(e.target.value)}
-                            className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
-                            placeholder="Your Company Ltd."
-                            required
-                        />
-                    </div>
+                    <InputField
+                        id="companyName"
+                        label="Company Name"
+                        value={companyName}
+                        onChange={setCompanyName}
+                        placeholder="Your Company Ltd."
+                    />
                 )}
 
-                <div className="space-y-2">
-                    <label htmlFor="email" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                        Email address
-                    </label>
-                    <input
+                <div className="space-y-1.5">
+                    <InputField
                         id="email"
+                        label="Email Address"
                         type="email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all ${emailValidation.error
-                            ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
-                            : emailValidation.suggestion
-                                ? 'border-amber-300 focus:ring-amber-100 focus:border-amber-400'
-                                : 'border-[#e2e8f0] focus:ring-blue-100 focus:border-[#2f6fed]'
-                            }`}
+                        onChange={setEmail}
                         placeholder={userType === "employer" ? "hr@company.com" : "you@example.com"}
-                        required
+                        invalid={Boolean(emailValidation.error)}
+                        warning={!emailValidation.error && Boolean(emailValidation.suggestion)}
                     />
                     {emailValidation.error && email && (
-                        <p className="text-xs text-red-500 ml-1 mt-1">{emailValidation.error}</p>
+                        <p className="px-1 text-xs font-medium text-red-500">{emailValidation.error}</p>
                     )}
                     {emailValidation.suggestion && !emailValidation.error && (
                         <button
                             type="button"
-                            onClick={() => setEmail(emailValidation.suggestion!)}
-                            className="text-xs text-amber-600 hover:text-amber-800 ml-1 mt-1 underline underline-offset-2"
+                            onClick={() => setEmail(emailValidation.suggestion ?? "")}
+                            className="px-1 text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-800"
                         >
                             Did you mean {emailValidation.suggestion}?
                         </button>
                     )}
                 </div>
 
-                <div className="space-y-2">
-                    <label htmlFor="password" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                        Password
-                    </label>
-                    <input
+                <div className="space-y-1.5">
+                    <InputField
                         id="password"
+                        label="Password"
                         type="password"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full bg-[#f8fbff] border border-[#e2e8f0] px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all"
+                        onChange={setPassword}
                         placeholder="••••••••"
                         minLength={8}
-                        required
                     />
-                    {password.length > 0 && (
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1.5 ml-1">
-                            {[
-                                { check: passwordChecks.minLength, label: "8+ characters" },
-                                { check: passwordChecks.hasUppercase, label: "Uppercase (A-Z)" },
-                                { check: passwordChecks.hasLowercase, label: "Lowercase (a-z)" },
-                                { check: passwordChecks.hasNumber, label: "Number (0-9)" },
-                                { check: passwordChecks.hasSpecial, label: "Special (!@#$)" },
-                            ].map(({ check, label }) => (
-                                <p key={label} className={`text-[11px] font-medium flex items-center gap-1 ${check ? "text-emerald-600" : "text-[#94a3b8]"}`}>
-                                    <span>{check ? "✓" : "○"}</span> {label}
-                                </p>
-                            ))}
+                    {password.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-1 rounded-2xl border border-[#dbe5f3] bg-[#f8fafc] px-3 py-2 sm:grid-cols-2">
+                            <Rule met={passwordChecks.minLength} label="8+ characters" />
+                            <Rule met={passwordChecks.hasUppercase} label="Uppercase (A-Z)" />
+                            <Rule met={passwordChecks.hasLowercase} label="Lowercase (a-z)" />
+                            <Rule met={passwordChecks.hasNumber} label="Number (0-9)" />
+                            <Rule met={passwordChecks.hasSpecial} label="Special (!@#$)" />
                         </div>
-                    )}
-                    {!password && (
-                        <p className="text-[11px] text-[#94a3b8] ml-1 font-medium">Must include uppercase, lowercase, number, and special character</p>
+                    ) : (
+                        <p className="px-1 text-[11px] font-medium text-[#94a3b8]">Use uppercase, lowercase, number, and special character.</p>
                     )}
                 </div>
 
-                <div className="space-y-2">
-                    <label htmlFor="confirmPassword" className="text-[13px] font-bold text-[#183b56] uppercase tracking-wider ml-1">
-                        Confirm Password
-                    </label>
-                    <input
+                <div className="space-y-1.5">
+                    <InputField
                         id="confirmPassword"
+                        label="Confirm Password"
                         type="password"
                         value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className={`w-full bg-[#f8fbff] border px-5 py-3.5 rounded-xl text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2f6fed] transition-all ${password && confirmPassword && !passwordsMatch
-                            ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
-                            : 'border-[#e2e8f0]'
-                            }`}
+                        onChange={setConfirmPassword}
                         placeholder="••••••••"
                         minLength={8}
-                        required
+                        invalid={Boolean(password && confirmPassword && !passwordsMatch)}
                     />
                     {password && confirmPassword && !passwordsMatch && (
-                        <p className="text-xs text-red-500 ml-1 font-medium">Passwords do not match</p>
+                        <p className="px-1 text-xs font-medium text-red-500">Passwords do not match</p>
                     )}
                     {password && confirmPassword && passwordsMatch && (
-                        <p className="text-xs text-emerald-600 ml-1 font-medium">✓ Passwords match</p>
+                        <p className="px-1 text-xs font-medium text-emerald-600">Passwords match</p>
                     )}
                 </div>
 
-                {/* GDPR Consent */}
-                <div className="flex items-start gap-3 bg-[#f8fbff] p-4 rounded-xl border border-[#e2e8f0]">
-                    <input
-                        id="gdprConsent"
-                        type="checkbox"
-                        checked={gdprConsent}
-                        onChange={(e) => setGdprConsent(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-[#1877f2] rounded border-gray-300 focus:ring-[#1877f2] cursor-pointer"
-                    />
-                    <label htmlFor="gdprConsent" className="text-xs text-[#64748b] cursor-pointer leading-relaxed">
-                        I have read and agree to the{" "}
-                        <a href="/terms" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Terms of Service</a>
-                        {" "}and{" "}
-                        <a href="/privacy-policy" target="_blank" className="text-[#1877f2] font-semibold hover:underline">Privacy Policy</a>.
-                        I consent to the processing of my personal data as described in the Privacy Policy.
+                <div className="rounded-2xl border border-[#dbe5f3] bg-[#f8fafc] px-4 py-3">
+                    <label htmlFor="gdprConsent" className="flex cursor-pointer items-start gap-3">
+                        <input
+                            id="gdprConsent"
+                            type="checkbox"
+                            checked={gdprConsent}
+                            onChange={(e) => setGdprConsent(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-[#94a3b8] text-[#1d4ed8] focus:ring-[#1d4ed8]"
+                        />
+                        <span className="text-xs leading-relaxed text-[#475569]">
+                            I have read and agree to the{" "}
+                            <a href="/terms" target="_blank" className="font-semibold text-[#0f172a] underline-offset-2 hover:underline">Terms of Service</a>
+                            {" "}and{" "}
+                            <a href="/privacy-policy" target="_blank" className="font-semibold text-[#0f172a] underline-offset-2 hover:underline">Privacy Policy</a>.
+                            I consent to personal data processing as described there.
+                        </span>
                     </label>
                 </div>
 
                 <button
                     type="submit"
                     disabled={!canSubmit}
-                    className="w-full bg-[#1877f2] text-white font-bold py-4 rounded-full shadow-lg shadow-blue-200/50 hover:bg-[#1665d8] transition-all transform hover:translate-y-[-1px] active:scale-[0.98] disabled:opacity-50 disabled:hover:translate-y-0 mt-2"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0f172a_0%,#1e3a5f_45%,#1d4ed8_100%)] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_20px_45px_-25px_rgba(29,78,216,0.8)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {loading ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                                <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                    fill="none"
-                                />
-                                <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                />
-                            </svg>
+                        <>
+                            <Spinner className="h-4 w-4 text-white" />
                             Creating account...
-                        </span>
+                        </>
                     ) : (
-                        <>Create {userType === "employer" ? "employer" : "worker"} account</>
+                        <>
+                            Create {userType === "employer" ? "employer" : "worker"} account
+                        </>
                     )}
                 </button>
+
+                <div className="rounded-2xl border border-[#dbe5f3] bg-white px-4 py-3">
+                    <p className="flex items-start gap-2 text-xs leading-relaxed text-[#64748b]">
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#1e3a5f]" />
+                        Your data is encrypted and used only for account setup, verification, and service delivery.
+                    </p>
+                </div>
             </form>
         </div>
+    );
+}
+
+interface InputFieldProps {
+    id: string;
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    placeholder: string;
+    type?: "text" | "email" | "password";
+    minLength?: number;
+    invalid?: boolean;
+    warning?: boolean;
+}
+
+function InputField({
+    id,
+    label,
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    minLength,
+    invalid = false,
+    warning = false,
+}: InputFieldProps) {
+    const tone = invalid
+        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+        : warning
+            ? "border-amber-300 focus:border-amber-400 focus:ring-amber-100"
+            : "border-[#dbe5f3] focus:border-[#2563eb] focus:ring-blue-100";
+
+    return (
+        <div className="space-y-1.5">
+            <label htmlFor={id} className="block px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#475569]">
+                {label}
+            </label>
+            <input
+                id={id}
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                minLength={minLength}
+                required
+                placeholder={placeholder}
+                className={`w-full rounded-2xl border bg-[#f8fafc] px-4 py-3 text-[15px] text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:bg-white focus:ring-2 ${tone}`}
+            />
+        </div>
+    );
+}
+
+function Rule({ met, label }: { met: boolean; label: string }) {
+    return (
+        <p className={`flex items-center gap-1.5 text-[11px] font-medium ${met ? "text-emerald-700" : "text-[#94a3b8]"}`}>
+            {met ? <Check className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+            {label}
+        </p>
+    );
+}
+
+function Spinner({ className }: { className: string }) {
+    return (
+        <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" aria-hidden="true">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+    );
+}
+
+function LinkButton({ href, label }: { href: string; label: string }) {
+    return (
+        <a
+            href={href}
+            className="mt-6 inline-flex items-center justify-center rounded-xl border border-[#dbe5f3] bg-white px-4 py-2 text-sm font-semibold text-[#0f172a] transition hover:bg-[#f8fafc]"
+        >
+            {label}
+        </a>
     );
 }
