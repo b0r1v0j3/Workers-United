@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function CookieConsent() {
     const [visible, setVisible] = useState(false);
@@ -27,7 +28,13 @@ export default function CookieConsent() {
         <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 animate-slideUp">
             <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl border border-[#dddfe2] p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex items-start gap-3 flex-1">
-                    <span className="text-2xl mt-0.5">🍪</span>
+                    <Image
+                        src="/cookie-icons8.png"
+                        alt="Cookie icon"
+                        width={28}
+                        height={28}
+                        className="mt-0.5 h-7 w-7 shrink-0"
+                    />
                     <p className="text-sm text-[#475569] leading-relaxed">
                         We use essential cookies for authentication and site functionality. No tracking or advertising cookies are used.
                         See our{" "}

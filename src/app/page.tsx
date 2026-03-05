@@ -82,10 +82,10 @@ export default function Home() {
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <Link
                     href="/signup"
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#151515] px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#252525]"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#151515] px-7 py-4 text-base font-semibold !text-white transition hover:-translate-y-0.5 hover:bg-[#252525] hover:!text-white"
                   >
                     Get started
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-4 w-4 text-white" />
                   </Link>
                   <Link
                     href="#how-it-works"
