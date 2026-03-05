@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 05.03.2026 (onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
+> **Poslednje ažuriranje:** 05.03.2026 (worker/employer terminology alignment u UI/API/Brain report, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
 
 ---
 
@@ -248,6 +248,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] Terminology alignment: user-facing `candidate` → `worker` (checkout/queue/admin/employer copy + API poruke + Brain prompt/input normalization) — 05.03.2026
 - [x] Onboarding resilience + telemetry alignment — checkout auto-heal za missing `profiles/candidates`, brain collect mapiranje po `user_id` (docs/payments), brain report save schema fix (`brain_reports.report`) + anonymous tracking fix — 05.03.2026
 - [x] Brain report email Gmail-safe rendering fix (table-based layout, removed flex/grid, escaped dynamic AI text) — 05.03.2026
 - [x] Core lint debt pass 2 — stricter API typing + cleanup (`AppShell`, `UnifiedNavbar`, `WorkerSidebar`, `ReviewClient`, Stripe/Health/GodMode routes); warnings 223 → 193, lint/test/build green — 05.03.2026

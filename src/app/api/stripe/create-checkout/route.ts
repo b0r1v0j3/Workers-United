@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
             offer = offerData;
         }
 
-        // For entry fee, allow payment for all candidate profiles
+        // For entry fee, allow payment for all worker profiles
         if (type === "entry_fee") {
             const { data: initialCandidate, error: candidateError } = await supabase
                 .from("candidates")
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
             if (candidateError) {
                 console.error("Candidate fetch error:", candidateError);
-                return NextResponse.json({ error: "Failed to check candidate status" }, { status: 500 });
+                return NextResponse.json({ error: "Failed to check worker status" }, { status: 500 });
             }
 
             if (!candidate) {
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
 
                 if (repairedCandidateError) {
                     console.error("Candidate repair fetch error:", repairedCandidateError);
-                    return NextResponse.json({ error: "Failed to initialize candidate profile" }, { status: 500 });
+                    return NextResponse.json({ error: "Failed to initialize worker profile" }, { status: 500 });
                 }
 
                 candidate = repairedCandidate;
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
                                 ? "Workers United - Queue Entry Fee"
                                 : "Workers United - Position Confirmation",
                             description: type === "entry_fee"
-                                ? "Join the active candidate queue"
+                                ? "Join the active worker queue"
                                 : `Confirm your position for: ${offer?.job_requests?.title || "Job Opportunity"}`,
                         },
                         unit_amount: priceConfig.amount,

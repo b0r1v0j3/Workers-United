@@ -10,7 +10,7 @@ export interface EntryFeeEligibility {
 
 export function getEntryFeeEligibility(candidate: EntryFeeCandidateState | null): EntryFeeEligibility {
     if (!candidate) {
-        return { allowed: false, status: 404, error: "Candidate profile not found" };
+        return { allowed: false, status: 404, error: "Worker profile not found" };
     }
 
     if (candidate.entry_fee_paid) {
@@ -19,4 +19,3 @@ export function getEntryFeeEligibility(candidate: EntryFeeCandidateState | null)
 
     return { allowed: true };
 }
-

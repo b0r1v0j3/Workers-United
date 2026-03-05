@@ -48,7 +48,7 @@ export default async function AdminJobsPage() {
                 <div className="bg-white rounded-xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] border border-slate-200 p-6 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Smart Match Hub</h1>
-                        <p className="text-slate-500 text-sm mt-1">Select an open job request to find perfectly matched candidates from the queue.</p>
+                        <p className="text-slate-500 text-sm mt-1">Select an open job request to find perfectly matched workers from the queue.</p>
                     </div>
                     <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
                         <span className="relative flex h-3 w-3">

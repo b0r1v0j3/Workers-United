@@ -409,7 +409,7 @@ export async function POST(request: Request) {
                         status: 'VERIFIED',
                     }).eq('profile_id', safeCandidateId);
 
-                    await logServerActivity(safeCandidateId, "all_documents_verified", "documents", { message: "All 3 documents verified — candidate status updated to VERIFIED" });
+                    await logServerActivity(safeCandidateId, "all_documents_verified", "documents", { message: "All 3 documents verified — worker status updated to VERIFIED" });
 
                     // Notify admin via email
                     try {
@@ -422,8 +422,8 @@ export async function POST(request: Request) {
                             process.env.ADMIN_EMAIL || "contact@workersunited.eu",
                             "Workers United Admin",
                             {
-                                subject: `New candidate ready: ${userProfile?.full_name || userProfile?.email || "Unknown"}`,
-                                message: `${userProfile?.full_name || "A candidate"} (${userProfile?.email}) has completed all 3 document verifications and is ready for admin approval.`,
+                                subject: `New worker ready: ${userProfile?.full_name || userProfile?.email || "Unknown"}`,
+                                message: `${userProfile?.full_name || "A worker"} (${userProfile?.email}) has completed all 3 document verifications and is ready for admin approval.`,
                                 actionLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://workersunited.eu'}/admin/workers`,
                                 actionText: "Review in Admin Panel"
                             }

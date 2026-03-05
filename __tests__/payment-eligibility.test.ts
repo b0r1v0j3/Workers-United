@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
 
 describe("getEntryFeeEligibility", () => {
-    it("blocks when candidate profile is missing", () => {
+    it("blocks when worker profile is missing", () => {
         const result = getEntryFeeEligibility(null);
 
         expect(result.allowed).toBe(false);
         expect(result.status).toBe(404);
-        expect(result.error).toContain("Candidate profile not found");
+        expect(result.error).toContain("Worker profile not found");
     });
 
     it("blocks when entry fee is already paid", () => {

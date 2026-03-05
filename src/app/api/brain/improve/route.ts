@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
             `[${e.action}] ${JSON.stringify(e.details)}`
         ).join("\n") || "(No errors in the last 24 hours)";
 
-        // ─── 3. Scan FULL system data (candidates, docs, payments, config) ─
+        // ─── 3. Scan FULL system data (workers, docs, payments, config) ─
         const [
             { data: candidates },
             { data: documents },
@@ -96,8 +96,8 @@ export async function GET(request: NextRequest) {
         const configFacts = (platformConfig || []).map(c => `${c.key}: ${c.value} (${c.description || "no description"})`).join("\n");
 
         const systemSnapshot = `
-CANDIDATE STATUSES: ${JSON.stringify(statusCounts)}
-Total candidates: ${(candidates || []).length}
+WORKER ONBOARDING STATUSES: ${JSON.stringify(statusCounts)}
+Total worker onboarding records: ${(candidates || []).length}
 Approved: ${(candidates || []).filter(c => c.admin_approved).length}
 Paid entry fee: ${(candidates || []).filter(c => c.entry_fee_paid).length}
 
@@ -128,6 +128,7 @@ Available positions: ${(jobRequests || []).reduce((sum, j) => sum + (j.positions
         // ─── 5. Ask Codex to analyze system + conversations and learn ─────
         // Uses GPT-5.3 Codex (Responses API) — same model as Brain Monitor
         const analysisPrompt = `You are the Brain Improvement Engine for Workers United, a legal international hiring platform.
+Terminology rule: In generated facts, use only "worker" and "employer" (never "candidate").
 
 Your job is to analyze the FULL SYSTEM DATA and recent conversations, then generate NEW facts to remember. The system data contains the TRUTH — use it to generate accurate facts.
 

@@ -55,7 +55,7 @@ export default async function EmployerJobsPage() {
                         </div>
                         <h2 className="text-xl font-bold text-slate-900 mb-2">No Job Requests Yet</h2>
                         <p className="text-slate-500 mb-6 max-w-md mx-auto">
-                            Create your first job request to start matching with candidates from our verified pool.
+                            Create your first job request to start matching with workers from our verified pool.
                         </p>
                         <Link href="/profile/employer/jobs/new" className="text-blue-600 font-semibold hover:underline">
                             Create Job Request →

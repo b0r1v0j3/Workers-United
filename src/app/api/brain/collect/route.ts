@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     // NOTE: totalEmployers uses employers table (not profiles) to match employers.total
     // This prevents the metric inconsistency flagged in Brain report (SEC-001)
 
-    // ─── 2. Candidate Statuses ──────────────────────────────────────────
+    // ─── 2. Worker Onboarding Statuses ──────────────────────────────────
     const statusBreakdown: Record<string, number> = {};
     (candidates || []).forEach(c => {
         statusBreakdown[c.status] = (statusBreakdown[c.status] || 0) + 1;
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
         );
 
         return {
-            candidate_id: c.id,
+            worker_record_id: c.id,
             registered_at: c.created_at,
             first_doc_uploaded: candidateDocs.length > 0 ? candidateDocs[0]?.created_at : null,
             docs_verified_at: verifiedDocs.length > 0 ? verifiedDocs[verifiedDocs.length - 1]?.verified_at : null,
@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
     // ─── 9d. User Stall Detection — WHERE is each user stuck? ────────────
     const candidateProfileIds = new Set((candidates || []).map(c => c.profile_id));
     const stalls = {
-        no_candidate_record: workers.filter(w => !candidateProfileIds.has(w.id)).length,
+        no_worker_record: workers.filter(w => !candidateProfileIds.has(w.id)).length,
         no_docs_uploaded: (candidates || []).filter(c => {
             const userDocs = (documents || []).filter(d => d.user_id === c.profile_id);
             return c.status === "NEW" && userDocs.length === 0;
@@ -419,7 +419,7 @@ export async function GET(request: NextRequest) {
                 const workersWithoutProfile = allAuthUsers.filter((u: any) =>
                     u.user_metadata?.user_type === "worker" && !profileIds.has(u.id)
                 );
-                const workersWithoutCandidate = allAuthUsers.filter((u: any) =>
+                const workersWithoutWorkerOnboarding = allAuthUsers.filter((u: any) =>
                     u.user_metadata?.user_type === "worker" && !candidateProfileIds.has(u.id)
                 );
 
@@ -428,8 +428,8 @@ export async function GET(request: NextRequest) {
                     const createdAt = new Date(u.created_at);
                     const isRecent = createdAt >= weekAgo;
                     const isWorker = u.user_metadata?.user_type === "worker";
-                    const hasNoCandidate = !candidateProfileIds.has(u.id);
-                    return isRecent && isWorker && hasNoCandidate;
+                    const hasNoWorkerOnboarding = !candidateProfileIds.has(u.id);
+                    return isRecent && isWorker && hasNoWorkerOnboarding;
                 });
 
                 return {
@@ -451,9 +451,9 @@ export async function GET(request: NextRequest) {
                         count: workersWithoutProfile.length,
                         users: workersWithoutProfile.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
                     },
-                    workersWithoutCandidate: {
-                        count: workersWithoutCandidate.length,
-                        users: workersWithoutCandidate.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
+                    workersWithoutWorkerOnboarding: {
+                        count: workersWithoutWorkerOnboarding.length,
+                        users: workersWithoutWorkerOnboarding.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
                     },
                     recentStuckSignups: {
                         count: recentStuckUsers.length,
@@ -465,7 +465,7 @@ export async function GET(request: NextRequest) {
                     },
                     status: unconfirmedUsers.length > 5 ? "CRITICAL"
                         : unconfirmedUsers.length > 0 ? "WARNING"
-                            : workersWithoutCandidate.length > 3 ? "WARNING"
+                            : workersWithoutWorkerOnboarding.length > 3 ? "WARNING"
                                 : "OK",
                 };
             } catch (err) {
@@ -490,7 +490,7 @@ export async function GET(request: NextRequest) {
                     .eq("direction", "inbound");
                 const uniqueWaPhones = new Set((waPhones || []).map(p => p.phone_number));
 
-                // Candidates who paid (have profiles with phone numbers)
+                // Workers who paid (have profiles with phone numbers)
                 const { data: paidCandidates } = await supabase
                     .from("candidates")
                     .select("profile_id")

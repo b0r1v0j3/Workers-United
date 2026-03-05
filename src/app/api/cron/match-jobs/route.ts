@@ -65,7 +65,7 @@ export async function GET(request: Request) {
         const verifiedUserIds = verifiedDocs?.map(d => d.user_id) || [];
 
         if (verifiedUserIds.length === 0) {
-            return NextResponse.json({ message: "No verified candidates to match", matched_count: 0 });
+            return NextResponse.json({ message: "No verified workers to match", matched_count: 0 });
         }
 
         // Fetch candidate details for verified user IDs — only those IN_QUEUE and paid
@@ -173,7 +173,7 @@ export async function GET(request: Request) {
                     candidate.profiles.id,
                     "job_match",
                     candidate.profiles.email,
-                    candidate.profiles.full_name || "Candidate",
+                    candidate.profiles.full_name || "Worker",
                     {
                         jobId: job.id,
                         jobTitle: job.title,

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (!candidate || candErr) {
-            return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
+            return NextResponse.json({ error: "Worker not found" }, { status: 404 });
         }
 
         // Verify job exists and has open positions
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
         if (existingOffer && existingOffer.length > 0) {
             return NextResponse.json(
-                { error: "An active offer already exists for this candidate and job" },
+                { error: "An active offer already exists for this worker and job" },
                 { status: 409 }
             );
         }
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
             success: true,
             matchId: match.id,
             offerId: offer.id,
-            message: `Successfully matched candidate to "${job.title}"`,
+            message: `Successfully matched worker to "${job.title}"`,
         });
 
     } catch (error) {
