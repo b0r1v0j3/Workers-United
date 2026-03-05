@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Mobile hero visual emphasis tweak: kartice su podignute u toku skrolovanja tako što su mobilni hero badge-ovi premešteni ispod stack kartica; desktop badge raspored ostaje nepromenjen — 05.03.2026
 - [x] Mobile hero badges layout finalization: na telefonu su badge-ovi složeni jedan ispod drugog redom `Verified process` → `Fast onboarding` → `90-day guarantee` (desktop raspored ostaje horizontalan) — 05.03.2026
 - [x] Mobile hero badge ordering fix: u hero “chips” grupi dodat mobilni line-break tako da `90-day guarantee` ide ispod `Fast onboarding` (desktop raspored ostaje netaknut) — 05.03.2026
 - [x] Homepage/footer spacing polish: uklonjen višak praznog “plavkastog” prostora ispod `Start your profile in minutes` uklanjanjem `mt-20` margine sa `Footer` komponente — 05.03.2026
