@@ -46,7 +46,7 @@ export default function Footer() {
             <div className="max-w-[1120px] mx-auto px-5 lg:px-8 flex flex-col items-center gap-10">
 
                 {/* Centered Large Social Icons */}
-                <div className="flex items-center justify-center gap-6 flex-wrap">
+                <div className="flex items-center justify-center gap-2 sm:gap-6">
                     {socials.map((social) => (
                         <a
                             key={social.label}
@@ -60,7 +60,7 @@ export default function Footer() {
                             <img
                                 src={social.src}
                                 alt={social.label}
-                                className="w-8 h-8 object-contain"
+                                className="h-6 w-6 object-contain sm:h-8 sm:w-8"
                             />
                         </a>
                     ))}
