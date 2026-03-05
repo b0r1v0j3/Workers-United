@@ -68,9 +68,9 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                         <Image
                             src="/logo-icon.png"
                             alt="Workers United Logo Icon"
-                            width={40}
-                            height={40}
-                            className="h-7 w-7 md:h-8 md:w-8 object-contain shrink-0 transition-opacity"
+                            width={80}
+                            height={80}
+                            className="h-14 w-14 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
                             priority
                         />
                         {!isPublic && (
