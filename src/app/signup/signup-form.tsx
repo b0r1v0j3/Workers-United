@@ -200,14 +200,14 @@ export function SignupForm({ userType }: SignupFormProps) {
     if (success) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-white px-6">
-                <div className="w-full max-w-md rounded-[28px] border border-[#dbe5f3] bg-[#f8fafc] p-8 text-center shadow-[0_24px_60px_-35px_rgba(15,23,42,0.55)]">
+                <div className="w-full max-w-md rounded-[28px] border border-[#e6e6e1] bg-[#f7f7f4] p-8 text-center shadow-[0_24px_60px_-35px_rgba(15,23,42,0.35)]">
                     <div className="mx-auto mb-5 flex items-center justify-center">
                         <Image
-                            src="/logo-centered.png"
+                            src="/logo-complete-transparent.png"
                             alt="Workers United logo"
-                            width={112}
-                            height={112}
-                            className="h-auto w-[96px] object-contain"
+                            width={176}
+                            height={176}
+                            className="h-auto w-[138px] object-contain"
                         />
                     </div>
 
@@ -215,9 +215,9 @@ export function SignupForm({ userType }: SignupFormProps) {
                         <Check className="h-10 w-10 text-emerald-600" />
                     </div>
 
-                    <h2 className="text-2xl font-semibold tracking-tight text-[#0f172a]">Check your email</h2>
-                    <p className="mt-3 text-sm leading-relaxed text-[#64748b]">
-                        We&apos;ve sent a confirmation link to <strong className="font-semibold text-[#0f172a]">{email}</strong>.
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#18181b]">Check your email</h2>
+                    <p className="mt-3 text-sm leading-relaxed text-[#52525b]">
+                        We&apos;ve sent a confirmation link to <strong className="font-semibold text-[#18181b]">{email}</strong>.
                         Open your inbox and click the link to activate your account.
                     </p>
 
@@ -233,10 +233,10 @@ export function SignupForm({ userType }: SignupFormProps) {
                 type="button"
                 onClick={handleGoogleSignup}
                 disabled={googleLoading}
-                className="group flex w-full items-center justify-center gap-3 rounded-2xl border border-[#dbe5f3] bg-white px-5 py-3.5 text-[15px] font-medium text-[#0f172a] shadow-[0_16px_35px_-26px_rgba(15,23,42,0.4)] transition hover:border-[#c7d6ea] hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-60"
+                className="group flex w-full items-center justify-center gap-3 rounded-2xl border border-[#e4e4df] bg-white px-5 py-3.5 text-[15px] font-medium text-[#18181b] shadow-[0_16px_35px_-28px_rgba(15,23,42,0.25)] transition hover:border-[#d2d2cc] hover:bg-[#f8f8f6] disabled:cursor-not-allowed disabled:opacity-60"
             >
                 {googleLoading ? (
-                    <Spinner className="h-4 w-4 text-[#64748b]" />
+                    <Spinner className="h-4 w-4 text-[#71717a]" />
                 ) : (
                     <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={18} height={18} className="h-4.5 w-4.5" />
                 )}
@@ -245,10 +245,10 @@ export function SignupForm({ userType }: SignupFormProps) {
 
             <div className="relative py-1">
                 <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#e2e8f0]" />
+                    <div className="w-full border-t border-[#e4e4df]" />
                 </div>
                 <div className="relative flex justify-center">
-                    <span className="bg-white px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#94a3b8]">Or use email</span>
+                    <span className="bg-white px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a1a1aa]">Or use email</span>
                 </div>
             </div>
 
@@ -307,7 +307,7 @@ export function SignupForm({ userType }: SignupFormProps) {
                         minLength={8}
                     />
                     {password.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-1 rounded-2xl border border-[#dbe5f3] bg-[#f8fafc] px-3 py-2 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-1 rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-3 py-2 sm:grid-cols-2">
                             <Rule met={passwordChecks.minLength} label="8+ characters" />
                             <Rule met={passwordChecks.hasUppercase} label="Uppercase (A-Z)" />
                             <Rule met={passwordChecks.hasLowercase} label="Lowercase (a-z)" />
@@ -315,7 +315,7 @@ export function SignupForm({ userType }: SignupFormProps) {
                             <Rule met={passwordChecks.hasSpecial} label="Special (!@#$)" />
                         </div>
                     ) : (
-                        <p className="px-1 text-[11px] font-medium text-[#94a3b8]">Use uppercase, lowercase, number, and special character.</p>
+                        <p className="px-1 text-[11px] font-medium text-[#71717a]">Use uppercase, lowercase, number, and special character.</p>
                     )}
                 </div>
 
@@ -338,20 +338,20 @@ export function SignupForm({ userType }: SignupFormProps) {
                     )}
                 </div>
 
-                <div className="rounded-2xl border border-[#dbe5f3] bg-[#f8fafc] px-4 py-3">
+                <div className="rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-4 py-3">
                     <label htmlFor="gdprConsent" className="flex cursor-pointer items-start gap-3">
                         <input
                             id="gdprConsent"
                             type="checkbox"
                             checked={gdprConsent}
                             onChange={(e) => setGdprConsent(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 rounded border-[#94a3b8] text-[#1d4ed8] focus:ring-[#1d4ed8]"
+                            className="mt-0.5 h-4 w-4 rounded border-[#a1a1aa] text-[#18181b] focus:ring-[#18181b]"
                         />
-                        <span className="text-xs leading-relaxed text-[#475569]">
+                        <span className="text-xs leading-relaxed text-[#52525b]">
                             I have read and agree to the{" "}
-                            <a href="/terms" target="_blank" className="font-semibold text-[#0f172a] underline-offset-2 hover:underline">Terms of Service</a>
+                            <a href="/terms" target="_blank" className="font-semibold text-[#18181b] underline-offset-2 hover:underline">Terms of Service</a>
                             {" "}and{" "}
-                            <a href="/privacy-policy" target="_blank" className="font-semibold text-[#0f172a] underline-offset-2 hover:underline">Privacy Policy</a>.
+                            <a href="/privacy-policy" target="_blank" className="font-semibold text-[#18181b] underline-offset-2 hover:underline">Privacy Policy</a>.
                             I consent to personal data processing as described there.
                         </span>
                     </label>
@@ -360,7 +360,7 @@ export function SignupForm({ userType }: SignupFormProps) {
                 <button
                     type="submit"
                     disabled={!canSubmit}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0f172a_0%,#1e3a5f_45%,#1d4ed8_100%)] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_20px_45px_-25px_rgba(29,78,216,0.8)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#111111_0%,#27272a_100%)] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {loading ? (
                         <>
@@ -374,9 +374,9 @@ export function SignupForm({ userType }: SignupFormProps) {
                     )}
                 </button>
 
-                <div className="rounded-2xl border border-[#dbe5f3] bg-white px-4 py-3">
-                    <p className="flex items-start gap-2 text-xs leading-relaxed text-[#64748b]">
-                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#1e3a5f]" />
+                <div className="rounded-2xl border border-[#e4e4df] bg-white px-4 py-3">
+                    <p className="flex items-start gap-2 text-xs leading-relaxed text-[#71717a]">
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#3f3f46]" />
                         Your data is encrypted and used only for account setup, verification, and service delivery.
                     </p>
                 </div>
@@ -412,11 +412,11 @@ function InputField({
         ? "border-red-300 focus:border-red-400 focus:ring-red-100"
         : warning
             ? "border-amber-300 focus:border-amber-400 focus:ring-amber-100"
-            : "border-[#dbe5f3] focus:border-[#2563eb] focus:ring-blue-100";
+            : "border-[#e4e4df] focus:border-[#27272a] focus:ring-zinc-100";
 
     return (
         <div className="space-y-1.5">
-            <label htmlFor={id} className="block px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#475569]">
+            <label htmlFor={id} className="block px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#52525b]">
                 {label}
             </label>
             <input
@@ -427,7 +427,7 @@ function InputField({
                 minLength={minLength}
                 required
                 placeholder={placeholder}
-                className={`w-full rounded-2xl border bg-[#f8fafc] px-4 py-3 text-[15px] text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:bg-white focus:ring-2 ${tone}`}
+                className={`w-full rounded-2xl border bg-[#f8f8f6] px-4 py-3 text-[15px] text-[#18181b] outline-none transition placeholder:text-[#a1a1aa] focus:bg-white focus:ring-2 ${tone}`}
             />
         </div>
     );
@@ -435,7 +435,7 @@ function InputField({
 
 function Rule({ met, label }: { met: boolean; label: string }) {
     return (
-        <p className={`flex items-center gap-1.5 text-[11px] font-medium ${met ? "text-emerald-700" : "text-[#94a3b8]"}`}>
+        <p className={`flex items-center gap-1.5 text-[11px] font-medium ${met ? "text-emerald-700" : "text-[#a1a1aa]"}`}>
             {met ? <Check className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
             {label}
         </p>
@@ -455,7 +455,7 @@ function LinkButton({ href, label }: { href: string; label: string }) {
     return (
         <a
             href={href}
-            className="mt-6 inline-flex items-center justify-center rounded-xl border border-[#dbe5f3] bg-white px-4 py-2 text-sm font-semibold text-[#0f172a] transition hover:bg-[#f8fafc]"
+            className="mt-6 inline-flex items-center justify-center rounded-xl border border-[#e4e4df] bg-white px-4 py-2 text-sm font-semibold text-[#18181b] transition hover:bg-[#f8f8f6]"
         >
             {label}
         </a>
