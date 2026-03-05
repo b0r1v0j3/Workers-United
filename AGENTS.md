@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 05.03.2026 (global old-logo cleanup: `logo.png` uklonjen iz svih sajt ruta i zamenjen `logo-icon`/`logo-wordmark`, desktop+mobile signup redesign u Apple/Notion stilu + richer signup telemetry, worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
+> **Poslednje ažuriranje:** 05.03.2026 (signup brand header simplification: uklonjen “balon” oko logotipa, global old-logo cleanup: `logo.png` uklonjen iz svih sajt ruta i zamenjen `logo-icon`/`logo-wordmark`, desktop+mobile signup redesign u Apple/Notion stilu + richer signup telemetry, worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
 
 ---
 
@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Signup visual cleanup po feedback-u: uklonjen “balon” oko brand header-a na `/signup` (form header + email-success state), ostavljen čist prikaz celog logotipa (icon + wordmark) — 05.03.2026
 - [x] Global logo migration na sajtu — uklonjene sve `logo.png` reference iz `src/` + PWA/offline asseta (`public/manifest.json`, `public/offline.html`, `public/sw.js`) i prebačeno na novi `logo-icon.png` + `logo-wordmark.png` — 05.03.2026
 - [x] Desktop+mobile signup redesign (`/signup`) u Apple/Notion stilu + Gmail-safe skeleton + dodatni funnel telemetry eventi (`signup_submit_attempt`, `signup_success`, `signup_validation_failed`, Google signup eventi) — 05.03.2026
 - [x] Supabase non-breaking terminology bridge: dodata migracija `20260305143000_worker_alias_views.sql` (`worker_onboarding`, `worker_documents`, `worker_readiness` view aliasi) bez rename postojećih tabela — 05.03.2026
