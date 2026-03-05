@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Hero + public navbar micro-refine: uvodni pasus dodatno spušten (`mt-8`, `md:mt-7`) radi razmaka od plave kartice; public header na desktopu preuređen tako da je `Workers United` skroz levo, a centralno je logo-ikona — 05.03.2026
 - [x] Homepage hero cleanup: uklonjen `Document-first workflow` bedž iz vrha hero sekcije (desktop + mobile) radi čistijeg uvoda — 05.03.2026
 - [x] Mobile hero cleanup: uklonjeni `Verified process / Fast onboarding / 90-day guarantee` badge-ovi sa telefonskog prikaza po UX feedback-u (ostaju samo na desktopu) — 05.03.2026
 - [x] Mobile hero spacing micro-adjustment: uvodni pasus (`Workers United connects workers...`) blago spušten (`mt-6`, desktop ostaje `md:mt-5`) radi boljeg razmaka od plave kartice — 05.03.2026

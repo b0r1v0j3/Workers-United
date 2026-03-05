@@ -65,14 +65,35 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
                     <Link href="/" className="flex items-center gap-2.5 md:gap-3 hover:opacity-90 transition-opacity py-1">
-                        <Image
-                            src="/logo-icon.png"
-                            alt="Workers United Logo Icon"
-                            width={80}
-                            height={80}
-                            className="h-14 w-14 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
-                            priority
-                        />
+                        {isPublic ? (
+                            <>
+                                <Image
+                                    src="/logo-icon.png"
+                                    alt="Workers United Logo Icon"
+                                    width={64}
+                                    height={64}
+                                    className="h-9 w-9 object-contain shrink-0 transition-opacity md:hidden"
+                                    priority
+                                />
+                                <Image
+                                    src="/logo-wordmark.png"
+                                    alt="Workers United"
+                                    width={859}
+                                    height={63}
+                                    className="hidden h-auto w-[170px] object-contain shrink-0 transition-opacity md:block lg:w-[190px]"
+                                    priority
+                                />
+                            </>
+                        ) : (
+                            <Image
+                                src="/logo-icon.png"
+                                alt="Workers United Logo Icon"
+                                width={80}
+                                height={80}
+                                className="h-14 w-14 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
+                                priority
+                            />
+                        )}
                         {!isPublic && (
                             <Image
                                 src="/logo-wordmark.png"
@@ -93,18 +114,18 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                     )}
                 </div>
 
-                {/* Center: Desktop wordmark for public navbar */}
+                {/* Center: Desktop logo icon for public navbar */}
                 {isPublic && (
                     <Link
                         href="/"
                         className="hidden md:block absolute left-1/2 -translate-x-1/2 hover:opacity-90 transition-opacity"
                     >
                         <Image
-                            src="/logo-wordmark.png"
-                            alt="Workers United"
-                            width={859}
-                            height={63}
-                            className="h-auto w-[200px] lg:w-[220px] object-contain"
+                            src="/logo-icon.png"
+                            alt="Workers United Logo"
+                            width={72}
+                            height={72}
+                            className="h-10 w-10 object-contain lg:h-11 lg:w-11"
                             priority
                         />
                     </Link>
