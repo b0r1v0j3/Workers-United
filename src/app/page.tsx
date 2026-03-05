@@ -73,6 +73,20 @@ export default function Home() {
                 <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-[#141414] md:text-6xl">
                   We run hiring like a clean stack of documents, not chaos.
                 </h1>
+                <div className="mt-5 flex flex-col items-start gap-3 text-sm text-[#4f4f48] md:flex-row md:flex-wrap md:items-center">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
+                    Verified process
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <Clock3 className="h-4 w-4 text-[#7a3f8a]" />
+                    Fast onboarding
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
+                    90-day guarantee
+                  </span>
+                </div>
                 <p className="mt-5 max-w-[620px] text-base leading-relaxed text-[#4f4f48] md:text-lg">
                   Workers United connects workers and employers through verified profiles, clear legal steps, and full visa operations.
                   You always know what happens next.
@@ -91,20 +105,6 @@ export default function Home() {
                   >
                     How it works
                   </Link>
-                </div>
-                <div className="mt-8 hidden flex-wrap items-center gap-3 text-sm text-[#4f4f48] md:flex">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                    <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
-                    Verified process
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                    <Clock3 className="h-4 w-4 text-[#7a3f8a]" />
-                    Fast onboarding
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                    <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
-                    90-day guarantee
-                  </span>
                 </div>
               </div>
 
@@ -134,20 +134,6 @@ export default function Home() {
                 </article>
               </div>
 
-              <div className="mt-2 flex flex-col items-start gap-3 text-sm text-[#4f4f48] md:hidden">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                  <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
-                  Verified process
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                  <Clock3 className="h-4 w-4 text-[#7a3f8a]" />
-                  Fast onboarding
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                  <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
-                  90-day guarantee
-                </span>
-              </div>
             </div>
           </section>
 
