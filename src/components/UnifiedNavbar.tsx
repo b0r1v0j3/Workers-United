@@ -42,19 +42,26 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
 
     const user = userProp || clientUser;
     const profileName = profileNameProp || clientProfileName;
+    const isPublic = variant === "public";
 
     return (
-        <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-[#dddfe2]/50 h-[68px]">
-            <div className="max-w-[1920px] mx-auto px-4 h-full flex items-center justify-between">
+        <nav
+            className={`sticky top-0 z-50 backdrop-blur-md ${
+                isPublic
+                    ? "bg-white/95 h-[80px] sm:h-[92px] md:h-[108px]"
+                    : "bg-white/90 shadow-sm border-b border-[#dddfe2]/50 h-[68px]"
+            }`}
+        >
+            <div className="w-full px-4 md:px-8 lg:px-10 h-full flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
                     <Link href="/" className="flex items-center gap-2.5 md:gap-3 hover:opacity-90 transition-opacity py-1">
                         <Image
                             src="/logo-icon.png"
                             alt="Workers United Logo Icon"
-                            width={48}
-                            height={48}
-                            className="h-9 w-9 md:h-10 md:w-10 object-contain shrink-0 transition-opacity"
+                            width={84}
+                            height={84}
+                            className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
                             priority
                         />
                         <Image
@@ -62,7 +69,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United"
                             width={859}
                             height={63}
-                            className="h-auto w-[132px] md:w-[158px] object-contain shrink-0 transition-opacity"
+                            className="h-auto w-[132px] sm:w-[180px] md:w-[300px] object-contain shrink-0 transition-opacity"
                             priority
                         />
                     </Link>
@@ -82,26 +89,34 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-3">
-                    {variant === "public" ? (
+                    {isPublic ? (
                         user ? (
                             <div className="flex items-center gap-2 md:gap-3">
+                                <span className="text-sm md:text-base font-semibold text-[#050505] hidden md:block">
+                                    {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}
+                                </span>
                                 <Link
                                     href="/profile"
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-[#F4F4F5] text-[#111111] rounded-md font-medium text-sm hover:bg-[#EAEAEA] transition-colors"
                                 >
-                                    My Profile
+                                    Profile
                                 </Link>
-                                <span className="text-sm font-semibold text-[#050505] hidden lg:block">
-                                    {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}
-                                </span>
                             </div>
                         ) : (
-                            <Link
-                                href="/login"
-                                className="inline-flex items-center px-4 md:px-5 py-2 text-[#111111] font-medium text-sm hover:bg-[#F4F4F5] rounded-md transition-colors"
-                            >
-                                Sign in
-                            </Link>
+                            <div className="flex items-center gap-2 md:gap-3">
+                                <Link
+                                    href="/login"
+                                    className="inline-flex items-center px-3 md:px-5 py-2 text-[#111111] font-medium text-sm md:text-[15px] hover:bg-[#F4F4F5] rounded-md transition-colors"
+                                >
+                                    Log in
+                                </Link>
+                                <Link
+                                    href="/signup"
+                                    className="inline-flex items-center px-3 md:px-5 py-2 text-[#111111] font-medium text-sm md:text-[15px] hover:bg-[#F4F4F5] rounded-md transition-colors"
+                                >
+                                    Sign up
+                                </Link>
+                            </div>
                         )
                     ) : (
                         user && (
