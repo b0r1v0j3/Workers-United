@@ -1,10 +1,30 @@
 import Link from "next/link";
-import Image from "next/image";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 import Footer from "@/components/Footer";
-import { Check, Shield, Globe, Clock, ArrowRight, UserCheck, FileCheck, Briefcase, HeartHandshake } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  BriefcaseBusiness,
+  CheckCircle2,
+  CircleDollarSign,
+  Clock3,
+  FileText,
+  Files,
+  ShieldCheck,
+  Stamp,
+  UserRound,
+} from "lucide-react";
 
 export default function Home() {
+  const processSteps = [
+    "Create account as worker or employer.",
+    "Complete profile and required documents.",
+    "We verify details and documents.",
+    "We match based on real role needs.",
+    "Worker confirms and enters visa process.",
+    "Arrival support and onboarding continuity.",
+  ];
+
   return (
     <>
       <script
@@ -44,200 +64,221 @@ export default function Home() {
         <UnifiedNavbar variant="public" />
 
         <main>
-          {/* Hero Section - Clean, centered, impactful */}
-          <section className="py-10 md:py-16">
-            <div className="max-w-[900px] mx-auto px-5 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-
-              <h1 className="text-4xl md:text-6xl font-bold text-[#183b56] leading-tight tracking-tight mb-6">
-                International hiring<br />made simple & legal.
-              </h1>
-
-              <p className="text-[#6c7a89] text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
-                Workers United connects serious employers with reliable workers and guides both sides through
-                the full work visa process – without fake promises or hidden conditions.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
-                <Link
-                  href="/signup"
-                  className="px-10 py-5 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] font-bold text-lg shadow-lg shadow-blue-500/40 text-center hover:translate-y-[-2px] hover:shadow-xl transition-all"
-                  style={{ color: '#ffffff' }}
-                >
-                  Create Free Account
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-10 py-5 rounded-full bg-white border-2 border-[#183b56] text-[#183b56] font-bold text-lg shadow-sm text-center hover:bg-[#f0f4ff] hover:border-[#2f6fed] hover:text-[#2f6fed] transition-all"
-                >
-                  Sign In
-                </Link>
-              </div>
-
-              <div className="flex flex-wrap gap-6 justify-center text-sm text-[#6c7a89]">
-                <span className="flex items-center gap-2"><Check className="w-5 h-5 text-[#1dbf73]" /> No hidden fees</span>
-                <span className="flex items-center gap-2"><Shield className="w-5 h-5 text-[#1dbf73]" /> 90-day guarantee</span>
-                <span className="flex items-center gap-2"><Globe className="w-5 h-5 text-[#1dbf73]" /> Real visa support</span>
-              </div>
-            </div>
-          </section>
-
-
-          {/* How It Works - Streamlined */}
-          <section id="how-it-works" className="py-16 md:py-20 bg-white">
-            <div className="max-w-[1120px] mx-auto px-5">
-              <div className="text-center mb-12">
-                <div className="inline-block px-4 py-1.5 bg-[#dbe7ff] rounded-full text-sm font-bold text-[#1a56db] uppercase tracking-wider mb-3">Step by step</div>
-                <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-3">How it works</h2>
-                <p className="text-[#6c7a89] max-w-xl mx-auto text-lg">
-                  Clear steps for both sides – from first contact until the worker arrives.
+          {/* Hero */}
+          <section className="relative overflow-hidden border-b border-[#e7e7e2] bg-[radial-gradient(circle_at_12%_8%,#ffe6d4_0,transparent_38%),radial-gradient(circle_at_90%_18%,#dff4ff_0,transparent_36%),radial-gradient(circle_at_55%_92%,#e7f7ec_0,transparent_42%),#f7f6f2] py-12 md:py-16">
+            <div className="mx-auto grid max-w-[1180px] gap-10 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+              <div className="animate-in fade-in slide-in-from-left-5 duration-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#dadad1] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5b5b54]">
+                  <Files className="h-3.5 w-3.5" />
+                  Document-first workflow
+                </span>
+                <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-[#141414] md:text-6xl">
+                  We run hiring like a clean stack of documents, not chaos.
+                </h1>
+                <p className="mt-5 max-w-[620px] text-base leading-relaxed text-[#4f4f48] md:text-lg">
+                  Workers United connects workers and employers through verified profiles, clear legal steps, and full visa operations.
+                  You always know what happens next.
                 </p>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    href="/signup"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#151515] px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#252525]"
+                  >
+                    Get started
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="#how-it-works"
+                    className="inline-flex items-center justify-center rounded-2xl border border-[#d6d6cf] bg-white px-7 py-4 text-base font-semibold text-[#1c1c1c] transition hover:bg-[#f0efea]"
+                  >
+                    How it works
+                  </Link>
+                </div>
+                <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-[#4f4f48]">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
+                    Verified process
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
+                    90-day guarantee
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                    <Clock3 className="h-4 w-4 text-[#7a3f8a]" />
+                    Fast onboarding
+                  </span>
+                </div>
               </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  { icon: UserCheck, title: "Create your profile", text: "Sign up as a worker or employer. It takes less than 2 minutes." },
-                  { icon: FileCheck, title: "Upload your documents", text: "Add your passport, CV, and basic information so we can verify you." },
-                  { icon: Briefcase, title: "We match you", text: "We review your profile and connect you with suitable jobs or workers." },
-                  { icon: HeartHandshake, title: "Visa & arrival support", text: "We help with visa documents and stay available after you start working." }
-                ].map((step, i) => (
-                  <div key={i} className="bg-[#f4f6fb] rounded-2xl p-6 border border-[#dde3ec]/80 hover:shadow-xl hover:-translate-y-1 hover:border-[#2f6fed]/30 transition-all duration-300 group">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] text-white flex items-center justify-center mb-4 shadow-md group-hover:scale-110 transition-transform duration-300">
-                      <step.icon className="w-6 h-6" />
+
+              <div className="relative h-[420px] animate-in fade-in slide-in-from-right-5 duration-700 md:h-[500px]">
+                <article className="absolute left-2 top-4 w-[86%] rotate-[-6deg] rounded-3xl border border-[#e2d8cd] bg-[#fff8f1] p-5 shadow-[0_22px_35px_-28px_rgba(80,55,30,0.55)] md:p-6">
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a6a49]">Worker_Profile.md</p>
+                  <h3 className="text-xl font-semibold text-[#2e241a]">Identity + readiness</h3>
+                  <ul className="mt-3 space-y-2 text-sm text-[#5d4b3a]">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2a7f62]" /> Passport verified</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2a7f62]" /> Profile completion tracked</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2a7f62]" /> Queue eligibility clear</li>
+                  </ul>
+                </article>
+
+                <article className="absolute right-0 top-[96px] w-[80%] rotate-[5deg] rounded-3xl border border-[#d9e3d8] bg-[#f3fff1] p-5 shadow-[0_20px_35px_-28px_rgba(24,72,42,0.45)] md:p-6">
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#567255]">Employer_Request.doc</p>
+                  <h3 className="text-xl font-semibold text-[#1f3a20]">Role requirements</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#446645]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
+                </article>
+
+                <article className="absolute bottom-[38px] left-[9%] w-[84%] rotate-[-1deg] rounded-3xl border border-[#d9dce8] bg-[#f7f8ff] p-5 shadow-[0_18px_30px_-24px_rgba(43,58,120,0.4)] md:p-6">
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5f678c]">Visa_File.pdf</p>
+                  <h3 className="text-xl font-semibold text-[#1f2648]">Operational handover</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#4b5478]">
+                    Once confirmed, we handle the document workflow to move from match to legal arrival.
+                  </p>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          {/* What we do */}
+          <section className="border-b border-[#e8e8e2] bg-white py-16 md:py-20">
+            <div className="mx-auto max-w-[1180px] px-5">
+              <div className="mb-10 text-center">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#77776f]">What we actually do</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#171717] md:text-4xl">
+                  Three documents, one clear system
+                </h2>
+              </div>
+              <div className="grid gap-5 md:grid-cols-3">
+                <article className="rounded-3xl border border-[#ece2d4] bg-[#fff8f0] p-6">
+                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffe7cc] text-[#9b5c17]">
+                    <Stamp className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-[#2e241a]">Verification</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#5e4e3f]">Document quality checks, profile consistency, and clear status visibility.</p>
+                </article>
+                <article className="rounded-3xl border border-[#dfeadd] bg-[#f4fff2] p-6">
+                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#dbf2d8] text-[#296f30]">
+                    <BriefcaseBusiness className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-[#1f3821]">Matching</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#426244]">Needs-based pairing between real employer requirements and verified worker profiles.</p>
+                </article>
+                <article className="rounded-3xl border border-[#dddff0] bg-[#f5f7ff] p-6">
+                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#e0e5ff] text-[#414f9d]">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-[#242a48]">Visa & arrival</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#4f5779]">Operational support from confirmed offer to final arrival handover.</p>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          {/* How it works */}
+          <section id="how-it-works" className="border-b border-[#e8e8e2] bg-[#f8f7f3] py-16 md:py-20">
+            <div className="mx-auto max-w-[1020px] px-5">
+              <div className="rounded-[30px] border border-[#dfdfd8] bg-white p-6 shadow-[0_30px_60px_-55px_rgba(20,20,20,0.5)] md:p-8">
+                <div className="mb-6 flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#f0efea] text-[#4b4b46]">
+                    <Files className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7a7a72]">Process_Document</p>
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">How the flow works</h2>
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {processSteps.map((step, idx) => (
+                    <div key={step} className="flex items-start gap-3 rounded-2xl border border-[#ebebe5] bg-[#fcfcfb] px-4 py-3">
+                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f1f0ea] text-xs font-semibold text-[#505049]">
+                        {idx + 1}
+                      </span>
+                      <p className="text-sm text-[#44443f]">{step}</p>
                     </div>
-                    <h3 className="font-bold text-[#183b56] mb-2 text-lg">{step.title}</h3>
-                    <p className="text-sm text-[#6c7a89] leading-relaxed">{step.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* For Workers - Simplified */}
-          <section id="workers" className="py-16 md:py-20">
-            <div className="max-w-[1120px] mx-auto px-5">
-              <div className="grid md:grid-cols-2 gap-10 items-center">
-                <div>
-                  <div className="inline-block px-4 py-1.5 bg-[#1dbf73]/10 rounded-full text-sm font-bold text-[#1dbf73] mb-4">
-                    For workers
-                  </div>
-                  <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-5">
-                    Real opportunities, not empty promises
-                  </h2>
-                  <p className="text-[#6c7a89] mb-6 text-lg leading-relaxed">
-                    We help you understand what you are signing and what you can really expect when you arrive.
-                  </p>
-                  <ul className="space-y-4 text-[#1b2430]">
-                    <li className="flex items-start gap-3">
-                      <Check className="w-6 h-6 text-[#1dbf73] shrink-0" />
-                      <span>We explain your contract in simple language – salary, working hours, accommodation.</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="w-6 h-6 text-[#1dbf73] shrink-0" />
-                      <span>We tell you honestly if an offer looks unrealistic or dangerous.</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="w-6 h-6 text-[#1dbf73] shrink-0" />
-                      <span>We support you with documents for work visa step by step.</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-gradient-to-br from-[#e8fff2] to-[#f9fffb] rounded-2xl p-8 border border-[#1dbf73]/20">
-                  <h3 className="font-bold text-[#183b56] mb-4 text-lg">What workers usually ask us</h3>
-                  <ul className="space-y-3 text-[#1b2430]">
-                    <li className="flex items-start gap-2">
-                      <ArrowRight className="w-5 h-5 text-[#1dbf73] shrink-0 mt-0.5" />
-                      <span>Already have an offer but not sure if it&apos;s safe or fair</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <ArrowRight className="w-5 h-5 text-[#1dbf73] shrink-0 mt-0.5" />
-                      <span>Need help understanding the contract and visa documents</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <ArrowRight className="w-5 h-5 text-[#1dbf73] shrink-0 mt-0.5" />
-                      <span>Want someone to check the employer before deciding</span>
-                    </li>
-                  </ul>
+                  ))}
                 </div>
               </div>
             </div>
           </section>
 
-          {/* For Employers - Simplified */}
-          <section id="employers" className="py-16 md:py-20 bg-white">
-            <div className="max-w-[1120px] mx-auto px-5">
-              <div className="grid md:grid-cols-2 gap-10 items-center">
-                <div className="bg-gradient-to-br from-[#e4ebff] to-[#f9fbff] rounded-2xl p-8 border border-[#2f6fed]/20 order-2 md:order-1">
-                  <h3 className="font-bold text-[#183b56] mb-4 text-lg">What serious employers get</h3>
-                  <ul className="space-y-3 text-[#1b2430]">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-[#2f6fed] shrink-0 mt-0.5" />
-                      <span>Workers who understand the job before travelling</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-[#2f6fed] shrink-0 mt-0.5" />
-                      <span>Correct documents for work visa applications</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-[#2f6fed] shrink-0 mt-0.5" />
-                      <span>Less misunderstandings and early resignations</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-[#2f6fed] shrink-0 mt-0.5" />
-                      <span>Support after arrival to solve issues early</span>
-                    </li>
-                  </ul>
+          {/* Workers / Employers */}
+          <section className="border-b border-[#e8e8e2] bg-white py-16 md:py-20">
+            <div className="mx-auto grid max-w-[1180px] gap-6 px-5 md:grid-cols-2">
+              <article id="workers" className="rounded-3xl border border-[#e6e4d8] bg-[#fefdf9] p-6">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e2e0d4] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6d6d65]">
+                  <UserRound className="h-3.5 w-3.5" />
+                  For workers
                 </div>
-                <div className="order-1 md:order-2">
-                  <div className="inline-block px-4 py-1.5 bg-[#dbe7ff] rounded-full text-sm font-bold text-[#1a56db] mb-4">
-                    For employers
-                  </div>
-                  <h2 className="text-2xl md:text-4xl font-bold text-[#183b56] mb-5">
-                    Stability, not just &quot;cheap labour&quot;
-                  </h2>
-                  <p className="text-[#6c7a89] mb-6 text-lg leading-relaxed">
-                    We focus on realistic offers and transparent communication, so you don&apos;t have to constantly replace staff.
-                  </p>
-                  <ul className="space-y-4 text-[#1b2430]">
-                    <li className="flex items-start gap-3">
-                      <ArrowRight className="w-5 h-5 text-[#6c7a89] shrink-0 mt-0.5" />
-                      <span>We help connect legal requirements with worker expectations.</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <ArrowRight className="w-5 h-5 text-[#6c7a89] shrink-0 mt-0.5" />
-                      <span>Available in flexible hours when workers can really talk.</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <ArrowRight className="w-5 h-5 text-[#6c7a89] shrink-0 mt-0.5" />
-                      <span>We build cooperation step by step – starting small and growing.</span>
-                    </li>
-                  </ul>
+                <h3 className="text-2xl font-semibold text-[#191919]">Transparent path to legal work</h3>
+                <ul className="mt-4 space-y-3 text-sm text-[#4b4b44]">
+                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-[#2a7f62]" /> Clear checklist of what is required.</li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-[#2a7f62]" /> Verified employers only inside the flow.</li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-[#2a7f62]" /> Visa process starts after confirmation.</li>
+                </ul>
+              </article>
+              <article id="employers" className="rounded-3xl border border-[#e6e4d8] bg-[#fefdf9] p-6">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e2e0d4] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6d6d65]">
+                  <BriefcaseBusiness className="h-3.5 w-3.5" />
+                  For employers
                 </div>
-              </div>
+                <h3 className="text-2xl font-semibold text-[#191919]">Structured hiring with fewer surprises</h3>
+                <ul className="mt-4 space-y-3 text-sm text-[#4b4b44]">
+                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-[#2a7f62]" /> Role requirements captured upfront.</li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-[#2a7f62]" /> Matching against verified worker readiness.</li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-[#2a7f62]" /> Ongoing support through onboarding.</li>
+                </ul>
+              </article>
             </div>
           </section>
 
-          {/* CTA Section - New, impactful */}
-          <section className="py-16 md:py-20">
-            <div className="max-w-[800px] mx-auto px-5 text-center">
-              <h2 className="text-2xl md:text-4xl font-bold text-[#0F172A] mb-5">
-                Ready to get started?
+          {/* Pricing note */}
+          <section className="border-b border-[#e8e8e2] bg-[#f8f7f3] py-16 md:py-20">
+            <div className="mx-auto max-w-[980px] px-5">
+              <article className="rounded-[30px] border border-[#e2e2da] bg-white p-6 md:p-8">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e3e2d7] bg-[#fbfaf6] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#63635d]">
+                  <CircleDollarSign className="h-3.5 w-3.5" />
+                  Pricing note
+                </div>
+                <h2 className="text-2xl font-semibold text-[#171717] md:text-3xl">Simple and explicit pricing</h2>
+                <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
+                  <div className="rounded-2xl border border-[#ecece5] bg-[#fcfcfa] p-4">
+                    <p className="text-[#72726a]">Entry fee</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#161616]">$9</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#ecece5] bg-[#fcfcfa] p-4">
+                    <p className="text-[#72726a]">Placement fee</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#161616]">After match</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#ecece5] bg-[#fcfcfa] p-4">
+                    <p className="text-[#72726a]">Guarantee</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#161616]">90 days</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          {/* CTA */}
+          <section className="bg-white py-16 md:py-20">
+            <div className="mx-auto max-w-[840px] px-5 text-center">
+              <h2 className="text-3xl font-semibold tracking-tight text-[#171717] md:text-4xl">
+                Start your profile in minutes
               </h2>
-              <p className="text-[#6c7a89] text-lg mb-8">
-                Create a free account and let us help you with legal work opportunities.
+              <p className="mt-4 text-base text-[#56564f] md:text-lg">
+                Choose your path and we will handle the operational side of the process.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link
-                  href="/signup"
-                  className="px-10 py-4 rounded-full bg-gradient-to-r from-[#2f6fed] to-[#1c4dd6] font-bold text-lg shadow-lg shadow-blue-500/40 hover:translate-y-[-2px] hover:shadow-xl transition-all"
-                  style={{ color: '#ffffff' }}
+                  href="/signup?type=worker"
+                  className="inline-flex items-center justify-center rounded-2xl bg-[#151515] px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#252525]"
                 >
-                  Create Free Account
+                  Join as Worker
                 </Link>
-                <a
-                  href="mailto:contact@workersunited.eu"
-                  className="px-10 py-4 rounded-full bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] font-bold text-lg hover:bg-blue-50 hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-md"
+                <Link
+                  href="/signup?type=employer"
+                  className="inline-flex items-center justify-center rounded-2xl border border-[#d6d6cf] bg-white px-7 py-4 text-base font-semibold text-[#1c1c1c] transition hover:bg-[#f0efea]"
                 >
-                  Contact Us
-                </a>
+                  Join as Employer
+                </Link>
               </div>
             </div>
           </section>
