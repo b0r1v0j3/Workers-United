@@ -92,7 +92,7 @@ export default function Home() {
                     How it works
                   </Link>
                 </div>
-                <div className="mt-8 flex flex-col items-start gap-3 text-sm text-[#4f4f48] md:flex-row md:flex-wrap md:items-center">
+                <div className="mt-8 hidden flex-wrap items-center gap-3 text-sm text-[#4f4f48] md:flex">
                   <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
                     <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
                     Verified process
@@ -132,6 +132,21 @@ export default function Home() {
                     Once confirmed, we handle the document workflow to move from match to legal arrival.
                   </p>
                 </article>
+              </div>
+
+              <div className="mt-2 flex flex-col items-start gap-3 text-sm text-[#4f4f48] md:hidden">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                  <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
+                  Verified process
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                  <Clock3 className="h-4 w-4 text-[#7a3f8a]" />
+                  Fast onboarding
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
+                  <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
+                  90-day guarantee
+                </span>
               </div>
             </div>
           </section>
