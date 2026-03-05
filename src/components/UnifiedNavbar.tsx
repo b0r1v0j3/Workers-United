@@ -66,9 +66,14 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                 <div className="z-10 flex items-center gap-3">
                     <Link href="/" className="flex items-center gap-2.5 md:gap-3 hover:opacity-90 transition-opacity py-1">
                         {isPublic ? (
-                            <span className="text-[15px] font-semibold uppercase tracking-[0.06em] text-[#111111] md:text-base">
-                                Workers United
-                            </span>
+                            <Image
+                                src="/logo-wordmark.png"
+                                alt="Workers United"
+                                width={859}
+                                height={63}
+                                className="h-auto w-[122px] object-contain shrink-0 transition-opacity md:w-[168px]"
+                                priority
+                            />
                         ) : (
                             <Image
                                 src="/logo-icon.png"
