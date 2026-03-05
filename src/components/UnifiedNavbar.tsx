@@ -17,6 +17,7 @@ interface UnifiedNavbarProps {
 export default function UnifiedNavbar({ variant, user: userProp, profileName: profileNameProp }: UnifiedNavbarProps) {
     const [clientUser, setClientUser] = useState<SupabaseUser | null>(userProp || null);
     const [clientProfileName, setClientProfileName] = useState(profileNameProp || "");
+    const [isScrolled, setIsScrolled] = useState(false);
 
     // Client-side auth fetch for public variant (allows homepage to be statically cached)
     useEffect(() => {
@@ -44,34 +45,44 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const profileName = profileNameProp || clientProfileName;
     const isPublic = variant === "public";
 
+    useEffect(() => {
+        if (!isPublic) return;
+        const onScroll = () => setIsScrolled(window.scrollY > 8);
+        onScroll();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, [isPublic]);
+
     return (
         <nav
             className={`sticky top-0 z-50 backdrop-blur-md ${
                 isPublic
-                    ? "bg-white/95 h-[80px] sm:h-[92px] md:h-[108px]"
+                    ? `${isScrolled ? "bg-white/70 backdrop-blur-sm" : "bg-white/40 backdrop-blur-[2px]"} h-[52px] md:h-[56px]`
                     : "bg-white/90 shadow-sm border-b border-[#dddfe2]/50 h-[68px]"
             }`}
         >
-            <div className="w-full px-4 md:px-8 lg:px-10 h-full flex items-center justify-between">
+            <div className="w-full px-3 md:px-8 lg:px-10 h-full flex items-center justify-between relative">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
                     <Link href="/" className="flex items-center gap-2.5 md:gap-3 hover:opacity-90 transition-opacity py-1">
                         <Image
                             src="/logo-icon.png"
                             alt="Workers United Logo Icon"
-                            width={84}
-                            height={84}
-                            className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
+                            width={40}
+                            height={40}
+                            className="h-7 w-7 md:h-8 md:w-8 object-contain shrink-0 transition-opacity"
                             priority
                         />
-                        <Image
-                            src="/logo-wordmark.png"
-                            alt="Workers United"
-                            width={859}
-                            height={63}
-                            className="h-auto w-[132px] sm:w-[180px] md:w-[300px] object-contain shrink-0 transition-opacity"
-                            priority
-                        />
+                        {!isPublic && (
+                            <Image
+                                src="/logo-wordmark.png"
+                                alt="Workers United"
+                                width={859}
+                                height={63}
+                                className="h-auto w-[132px] md:w-[158px] object-contain shrink-0 transition-opacity"
+                                priority
+                            />
+                        )}
                     </Link>
 
                     {/* Context Badge (Admin/Employer) */}
@@ -82,37 +93,54 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                     )}
                 </div>
 
+                {/* Center: Desktop wordmark for public navbar */}
+                {isPublic && (
+                    <Link
+                        href="/"
+                        className="hidden md:block absolute left-1/2 -translate-x-1/2 hover:opacity-90 transition-opacity"
+                    >
+                        <Image
+                            src="/logo-wordmark.png"
+                            alt="Workers United"
+                            width={859}
+                            height={63}
+                            className="h-auto w-[200px] lg:w-[220px] object-contain"
+                            priority
+                        />
+                    </Link>
+                )}
+
                 {/* Center: Admin Global Search */}
                 {variant === "admin" && (
                     <GlobalSearch />
                 )}
 
                 {/* Right: Actions */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3 z-10">
                     {isPublic ? (
                         user ? (
                             <div className="flex items-center gap-2 md:gap-3">
-                                <span className="text-sm md:text-base font-semibold text-[#050505] hidden md:block">
+                                <span className="text-sm font-semibold text-[#050505] hidden md:block">
                                     {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}
                                 </span>
                                 <Link
                                     href="/profile"
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#F4F4F5] text-[#111111] rounded-md font-medium text-sm hover:bg-[#EAEAEA] transition-colors"
+                                    className="inline-flex items-center px-3 md:px-4 py-1.5 bg-[#F4F4F5]/80 text-[#111111] rounded-md font-medium text-sm hover:bg-[#EAEAEA] transition-colors"
                                 >
                                     Profile
                                 </Link>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2 md:gap-3">
+                            <div className="flex items-center gap-1 md:gap-2">
                                 <Link
                                     href="/login"
-                                    className="inline-flex items-center px-3 md:px-5 py-2 text-[#111111] font-medium text-sm md:text-[15px] hover:bg-[#F4F4F5] rounded-md transition-colors"
+                                    className="inline-flex items-center px-3 md:px-4 py-1.5 text-[#111111] font-medium text-sm hover:bg-[#F4F4F5]/80 rounded-md transition-colors"
                                 >
                                     Log in
                                 </Link>
                                 <Link
                                     href="/signup"
-                                    className="inline-flex items-center px-3 md:px-5 py-2 text-[#111111] font-medium text-sm md:text-[15px] hover:bg-[#F4F4F5] rounded-md transition-colors"
+                                    className="inline-flex items-center px-3 md:px-4 py-1.5 text-[#111111] font-medium text-sm hover:bg-[#F4F4F5]/80 rounded-md transition-colors"
                                 >
                                     Sign up
                                 </Link>
