@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, PRICES, getCheckoutSuccessUrl, getCheckoutCancelUrl, PaymentType } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
+import { logServerActivity } from "@/lib/activityLoggerServer";
 
 export async function POST(request: NextRequest) {
+    let userIdForLog: string | null = null;
+
     try {
         const supabase = await createClient();
+        const admin = createAdminClient();
 
         // Check authentication
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+        userIdForLog = user.id;
 
         const body = await request.json();
         const { type, offerId } = body as { type: PaymentType; offerId?: string };
@@ -20,14 +26,38 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
         }
 
+        await logServerActivity(user.id, "checkout_session_create_attempt", "payment", {
+            type,
+            offer_id: offerId || null,
+        });
+
         // Get user profile
-        const { data: profile } = await supabase
+        let { data: profile } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", user.id)
             .single();
 
         if (!profile) {
+            // Self-heal missing profile records to prevent onboarding dead-ends.
+            await admin.from("profiles").upsert({
+                id: user.id,
+                email: user.email || "",
+                full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "",
+                user_type: user.user_metadata?.user_type || "worker",
+            });
+
+            const { data: repairedProfile } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", user.id)
+                .maybeSingle();
+
+            profile = repairedProfile ?? null;
+        }
+
+        if (!profile) {
+            await logServerActivity(user.id, "checkout_profile_missing", "payment", { type }, "error");
             return NextResponse.json({ error: "Profile not found" }, { status: 404 });
         }
 
@@ -62,11 +92,47 @@ export async function POST(request: NextRequest) {
 
         // For entry fee, allow payment for all candidate profiles
         if (type === "entry_fee") {
-            const { data: candidate } = await supabase
+            const { data: initialCandidate, error: candidateError } = await supabase
                 .from("candidates")
                 .select("entry_fee_paid")
                 .eq("profile_id", user.id)
-                .single();
+                .maybeSingle();
+            let candidate = initialCandidate;
+
+            if (candidateError) {
+                console.error("Candidate fetch error:", candidateError);
+                return NextResponse.json({ error: "Failed to check candidate status" }, { status: 500 });
+            }
+
+            if (!candidate) {
+                await admin
+                    .from("candidates")
+                    .upsert(
+                        {
+                            profile_id: user.id,
+                            status: "NEW",
+                            entry_fee_paid: false,
+                        },
+                        { onConflict: "profile_id" }
+                    );
+
+                const { data: repairedCandidate, error: repairedCandidateError } = await supabase
+                    .from("candidates")
+                    .select("entry_fee_paid")
+                    .eq("profile_id", user.id)
+                    .maybeSingle();
+
+                if (repairedCandidateError) {
+                    console.error("Candidate repair fetch error:", repairedCandidateError);
+                    return NextResponse.json({ error: "Failed to initialize candidate profile" }, { status: 500 });
+                }
+
+                candidate = repairedCandidate;
+
+                await logServerActivity(user.id, "checkout_candidate_auto_created", "payment", {
+                    source: "create_checkout",
+                });
+            }
 
             const eligibility = getEntryFeeEligibility(candidate);
             if (!eligibility.allowed) {
@@ -138,11 +204,27 @@ export async function POST(request: NextRequest) {
             .update({ stripe_checkout_session_id: session.id })
             .eq("id", payment.id);
 
+        await logServerActivity(user.id, "checkout_session_created", "payment", {
+            type,
+            payment_id: payment.id,
+            stripe_session_id: session.id,
+            amount_cents: amountCents,
+        });
+
         return NextResponse.json({
             checkoutUrl: session.url,
             sessionId: session.id,
         });
-    } catch (error) {
+    } catch (error: unknown) {
+        if (userIdForLog) {
+            await logServerActivity(
+                userIdForLog,
+                "checkout_session_failed",
+                "payment",
+                { error: error instanceof Error ? error.message : String(error) },
+                "error"
+            );
+        }
         console.error("Checkout error:", error);
         return NextResponse.json(
             { error: "Failed to create checkout session" },

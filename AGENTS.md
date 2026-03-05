@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 05.03.2026 (lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
+> **Poslednje ažuriranje:** 05.03.2026 (onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
 
 ---
 
@@ -248,6 +248,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] Onboarding resilience + telemetry alignment — checkout auto-heal za missing `profiles/candidates`, brain collect mapiranje po `user_id` (docs/payments), brain report save schema fix (`brain_reports.report`) + anonymous tracking fix — 05.03.2026
+- [x] Brain report email Gmail-safe rendering fix (table-based layout, removed flex/grid, escaped dynamic AI text) — 05.03.2026
 - [x] Core lint debt pass 2 — stricter API typing + cleanup (`AppShell`, `UnifiedNavbar`, `WorkerSidebar`, `ReviewClient`, Stripe/Health/GodMode routes); warnings 223 → 193, lint/test/build green — 05.03.2026
 - [x] Lint stabilization + React hook purity fixes + date locale cleanup (`en-US` → `en-GB`) — 05.03.2026
 - [x] Brain memory dedup + WhatsApp webhook hardening + system-smoke alert cooldown (6h anti-spam) — 05.03.2026
@@ -542,6 +544,10 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 45. **`brain_memory` upisi MORAJU ići kroz `saveBrainFactsDedup()`** — WhatsApp learning loop i Brain self-improve ne smeju direktno `insert` bez dedupa. Koristiti `src/lib/brain-memory.ts` da se spreče duplikati i prompt-bloat.
 46. **WhatsApp webhook token + admin telefoni su ENV-driven** — `WHATSAPP_VERIFY_TOKEN` (ili fallback na `CRON_SECRET`) mora biti set; hardcoded verify token fallback je uklonjen. Admin telefon za WhatsApp komande ide kroz `OWNER_PHONE` ili `OWNER_PHONES` (comma-separated).
 47. **ESLint gate: no blocking errors, warnings ostaju kao tehnički dug** — `@typescript-eslint/no-explicit-any` je privremeno warning da produkcioni lint ne blokira deploy dok se radi postepena tipizacija. `npm run lint` mora ostati na 0 errors.
+48. **`brain_reports` schema koristi `report` JSON kolonu (ne `content`/`report_type`)** — Brain Monitor i `/api/brain/report` MORAJU upisivati u `report` polje i proveriti DB grešku pre nego što označe `reportSaved=true`.
+49. **`/api/track` za anonimne evente MORA slati `user_id: null`** — string `"anonymous"` nije validan UUID i tiho ubija funnel telemetry; anonimni status i kontekst treba čuvati u `details`.
+50. **Brain stall metrika mora mapirati po korisniku (`candidate_documents.user_id`, `payments.user_id`)** — heuristika `created_at && c.created_at` daje lažne rezultate (`no_docs_uploaded`, `payment_at`) i vodi AI na pogrešne zaključke.
+51. **Checkout route MORA imati onboarding self-heal** — ako nedostaje `profiles` ili `candidates` zapis, `/api/stripe/create-checkout` treba automatski da ih kreira pre eligibility check-a, da worker ne ostane blokiran i da payment telemetry beleži realne pokušaje.
 
 
 ---
