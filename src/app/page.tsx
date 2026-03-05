@@ -113,7 +113,7 @@ export default function Home() {
                     90-day guarantee
                   </span>
                 </div>
-                <p className="mt-5 max-w-[620px] text-base leading-relaxed text-[#4f4f48] md:text-lg">
+                <p className="mt-6 max-w-[620px] text-base leading-relaxed text-[#4f4f48] md:mt-5 md:text-lg">
                   Workers United connects workers and employers through verified profiles, clear legal steps, and full visa operations.
                   You always know what happens next.
                 </p>
