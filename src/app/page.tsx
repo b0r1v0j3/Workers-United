@@ -238,19 +238,23 @@ export default function Home() {
                   <CircleDollarSign className="h-3.5 w-3.5" />
                   Pricing note
                 </div>
-                <h2 className="text-2xl font-semibold text-[#171717] md:text-3xl">Simple and explicit pricing</h2>
+                <h2 className="text-2xl font-semibold text-[#171717] md:text-3xl">Simple pricing with a clear refund promise</h2>
+                <p className="mt-3 text-sm leading-relaxed text-[#5a5a53] md:text-base">
+                  Start with a one-time <strong>$9 Job Finder Access fee</strong>. If we do not find you a job within
+                  <strong> 90 days</strong>, you receive a <strong>full refund</strong>.
+                </p>
                 <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
                   <div className="rounded-2xl border border-[#ecece5] bg-[#fcfcfa] p-4">
-                    <p className="text-[#72726a]">Entry fee</p>
-                    <p className="mt-1 text-2xl font-semibold text-[#161616]">$9</p>
+                    <p className="text-[#72726a]">Job Finder Access</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#161616]">$9 one-time</p>
                   </div>
                   <div className="rounded-2xl border border-[#ecece5] bg-[#fcfcfa] p-4">
-                    <p className="text-[#72726a]">Placement fee</p>
-                    <p className="mt-1 text-2xl font-semibold text-[#161616]">After match</p>
+                    <p className="text-[#72726a]">Refund promise</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#161616]">100% refund</p>
                   </div>
                   <div className="rounded-2xl border border-[#ecece5] bg-[#fcfcfa] p-4">
-                    <p className="text-[#72726a]">Guarantee</p>
-                    <p className="mt-1 text-2xl font-semibold text-[#161616]">90 days</p>
+                    <p className="text-[#72726a]">Refund window</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#161616]">No match in 90 days</p>
                   </div>
                 </div>
               </article>
@@ -269,13 +273,13 @@ export default function Home() {
               <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link
                   href="/signup?type=worker"
-                  className="inline-flex items-center justify-center rounded-2xl bg-[#151515] px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#252525]"
+                  className="inline-flex items-center justify-center rounded-2xl border border-[#d6d6cf] bg-white px-7 py-4 text-base font-semibold !text-[#1c1c1c] transition hover:bg-[#f0efea]"
                 >
                   Join as Worker
                 </Link>
                 <Link
                   href="/signup?type=employer"
-                  className="inline-flex items-center justify-center rounded-2xl border border-[#d6d6cf] bg-white px-7 py-4 text-base font-semibold text-[#1c1c1c] transition hover:bg-[#f0efea]"
+                  className="inline-flex items-center justify-center rounded-2xl border border-[#d6d6cf] bg-white px-7 py-4 text-base font-semibold !text-[#1c1c1c] transition hover:bg-[#f0efea]"
                 >
                   Join as Employer
                 </Link>
