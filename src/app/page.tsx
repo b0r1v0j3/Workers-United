@@ -15,7 +15,7 @@ export default function Home() {
             "@type": "Organization",
             name: "Workers United",
             url: "https://workersunited.eu",
-            logo: "https://workersunited.eu/logo-icon.png",
+            logo: "https://workersunited.eu/logo-complete-transparent.png",
             description: "Workers United connects serious employers with reliable workers worldwide and guides both sides through the full work visa process.",
             address: {
               "@type": "PostalAddress",

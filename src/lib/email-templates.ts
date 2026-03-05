@@ -106,7 +106,7 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
             
             <!-- Clean White Header "Integrated" into the window -->
             <div style="background: #FFFFFF; padding: 40px 40px 30px; text-align: center; border-bottom: 1px solid #E5E5EA;">
-                 <img src="https://www.workersunited.eu/logo-wordmark.png" alt="Workers United" width="160" height="auto" style="vertical-align: middle; display: block; margin: 0 auto;">
+                 <img src="https://www.workersunited.eu/logo-complete-transparent.png" alt="Workers United" width="180" height="auto" style="vertical-align: middle; display: block; margin: 0 auto;">
             </div>
 
             <!-- Content Area -->

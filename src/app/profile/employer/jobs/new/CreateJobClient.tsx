@@ -143,9 +143,14 @@ export default function CreateJobClient() {
                             </svg>
                             <span className="font-medium">Back to Profile</span>
                         </Link>
-                        <div className="flex items-center gap-2">
-                            <Image src="/logo-icon.png" alt="Workers United logo" width={40} height={40} className="h-10 w-10 object-contain" />
-                            <Image src="/logo-wordmark.png" alt="Workers United" width={138} height={32} className="h-auto w-[132px] object-contain" />
+                        <div className="flex items-center">
+                            <Image
+                                src="/logo-complete-transparent.png"
+                                alt="Workers United logo"
+                                width={196}
+                                height={196}
+                                className="h-auto w-[148px] object-contain"
+                            />
                         </div>
                     </div>
                 </div>

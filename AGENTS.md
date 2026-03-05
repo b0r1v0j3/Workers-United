@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 05.03.2026 (auth UI alignment: `/login` redizajniran u isti one-panel Notion stil kao `/signup` sa istim card/layout/input/button sistemom i neutral loading skeletonom; signup layout simplification po vlasničkom zahtevu: uklonjen ceo levi info panel, ostavljen single centered auth card + Sign in CTA, neutral one-panel loading skeleton; signup visual final polish: veći transparentni full logo `logo-complete-transparent.png` levo+desno, neutral Notion paleta bez plavih gradijenata + neutral loading skeleton, signup brand header simplification: uklonjen “balon” oko logotipa, global old-logo cleanup: `logo.png` uklonjen iz svih sajt ruta i zamenjen `logo-icon`/`logo-wordmark`, desktop+mobile signup redesign u Apple/Notion stilu + richer signup telemetry, worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
+> **Poslednje ažuriranje:** 05.03.2026 (global logo consistency pass: uklonjene preostale `logo-icon`/`logo-wordmark` reference iz UI i prebačeno na `logo-complete-transparent.png` bez “balon” prikaza; usklađeni `UnifiedNavbar`, auth stranice i profile header-i + offline/PWA asseti, auth UI alignment: `/login` redizajniran u isti one-panel Notion stil kao `/signup` sa istim card/layout/input/button sistemom i neutral loading skeletonom; signup layout simplification po vlasničkom zahtevu: uklonjen ceo levi info panel, ostavljen single centered auth card + Sign in CTA, neutral one-panel loading skeleton; signup visual final polish: veći transparentni full logo `logo-complete-transparent.png` levo+desno, neutral Notion paleta bez plavih gradijenata + neutral loading skeleton, signup brand header simplification: uklonjen “balon” oko logotipa, global old-logo cleanup: `logo.png` uklonjen iz svih sajt ruta i zamenjen `logo-icon`/`logo-wordmark`, desktop+mobile signup redesign u Apple/Notion stilu + richer signup telemetry, worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
 
 ---
 
@@ -132,9 +132,9 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Format datuma: DD/MM/YYYY** — uvek koristiti `toLocaleDateString('en-GB')` ili `toLocaleString('en-GB')`. NIKAD američki format MM/DD/YYYY.
 
 ### Logo & Navbar dizajn:
-- **Pristup logotipu se prmenio** — više ne koristimo jedan spojen fajl. Sada koristimo dvokomponentni logo.
-- **Ikona (ruke):** `public/logo-icon.png` — tamno plave ruke bez pozadine i bez teksta. Veličina u navbar-u: fiksna `h-16 w-16`.
-- **Tekst (wordmark):** `public/logo-wordmark.png` — tekst "WORKERS UNITED" bez pozadine, horizontalno trimovan. Veličina u navbar-u: fiksna `w-[140px]`.
+- **Pristup logotipu se promenio** — za glavni UI branding koristi se **jedan** transparentni full logo (`public/logo-complete-transparent.png`) bez dodatnih “balon”/badge okvira.
+- **Ikona (ruke):** `public/logo-hands.png` — koristi se za male kvadratne kontekste (npr. PWA icon/fallback avatar), bez pozadine.
+- **Wordmark-only varijanta:** `public/logo-wordmark.png` ostaje dostupna za specifične email/layout potrebe, ali nije primarni sajt logo.
 - **Navbar dizajn:** Navigacija (`UnifiedNavbar.tsx`) je tanka (`h-[64px]`), sa trajnim glassmorphism efektom (`bg-white/90 backdrop-blur-md`). Dinamički scroll (bubrenje/skupljanje) je **ukinut** po zahtevu vlasnika u korist čistije linije. 
 - **`logo-full.jpg`** — full logo sa plavom pozadinom, koristi se za OG/meta slike, NE za navbar.
 - `/profile` — auto-redirect na worker ili employer
@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Global logo consistency cleanup: uklonjene preostale stare logo reference iz UI (`UnifiedNavbar`, `auth-code-error`, `auth/select-role`, `profile/settings`, `profile/worker/offers/[id]`, `profile/employer/jobs/new`) i prebačeno na `logo-complete-transparent.png` bez “balon” prikaza; usklađeni i email header + offline/PWA logo asseti (`manifest.json`, `offline.html`, `sw.js`) — 05.03.2026
 - [x] Login/signup vizuelno usklađeni: `/login` prebačen na isti one-panel auth card sistem kao `/signup` (isti logo/header, neutral input/button stil, Google + email divider, reset-password state i loading skeleton) — 05.03.2026
 - [x] Signup layout simplification po vlasničkom zahtevu: uklonjen levi explainer panel na `/signup`, ostavljen samo centriran form card sa `Sign in` linkom, i loading skeleton prebačen na isti one-panel raspored — 05.03.2026
 - [x] Signup final visual polish po feedback-u: uvećan logo na desnom panelu, levo/desno koristi transparentni full logo (`logo-complete-transparent.png`), uklonjeni preostali plavi tonovi (neutral Notion paleta) i usklađen `loading` skeleton — 05.03.2026
