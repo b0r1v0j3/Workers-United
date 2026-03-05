@@ -201,9 +201,14 @@ export function SignupForm({ userType }: SignupFormProps) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-white px-6">
                 <div className="w-full max-w-md rounded-[28px] border border-[#dbe5f3] bg-[#f8fafc] p-8 text-center shadow-[0_24px_60px_-35px_rgba(15,23,42,0.55)]">
-                    <div className="mx-auto mb-5 flex items-center justify-center gap-2">
-                        <Image src="/logo-icon.png" alt="Workers United logo" width={28} height={28} className="h-7 w-7 object-contain" />
-                        <Image src="/logo-wordmark.png" alt="Workers United" width={150} height={34} className="h-auto w-[148px] object-contain" />
+                    <div className="mx-auto mb-5 flex items-center justify-center">
+                        <Image
+                            src="/logo-centered.png"
+                            alt="Workers United logo"
+                            width={112}
+                            height={112}
+                            className="h-auto w-[96px] object-contain"
+                        />
                     </div>
 
                     <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50">

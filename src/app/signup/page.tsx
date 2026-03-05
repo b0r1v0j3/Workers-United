@@ -24,9 +24,14 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     : "border-blue-300/25 bg-[linear-gradient(145deg,#0f172a_0%,#1e3a5f_55%,#1d4ed8_100%)]"
                     }`}
                 >
-                    <Link href="/" className="inline-flex items-center gap-3">
-                        <Image src="/logo-icon.png" alt="Workers United" width={44} height={44} className="h-11 w-11 object-contain" />
-                        <Image src="/logo-wordmark.png" alt="Workers United" width={170} height={40} className="h-auto w-[156px] object-contain" />
+                    <Link href="/" className="inline-flex items-center">
+                        <Image
+                            src="/logo-centered.png"
+                            alt="Workers United logo"
+                            width={128}
+                            height={128}
+                            className="h-auto w-[110px] object-contain"
+                        />
                     </Link>
 
                     <div className="mt-8 lg:mt-12">
@@ -73,9 +78,14 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                     <div className="flex w-full items-start justify-center rounded-[28px] border border-[#d9e2ef] bg-white/95 px-5 py-5 shadow-[0_24px_60px_-35px_rgba(15,23,42,0.35)] backdrop-blur-sm sm:px-7 sm:py-7 lg:px-10 lg:py-9">
                         <div className="w-full max-w-[470px]">
                             <div className="mb-8 text-center">
-                                <div className="mx-auto mb-4 flex items-center justify-center gap-2">
-                                    <Image src="/logo-icon.png" alt="Workers United logo" width={30} height={30} className="h-7 w-7 object-contain" />
-                                    <Image src="/logo-wordmark.png" alt="Workers United" width={150} height={34} className="h-auto w-[148px] object-contain" />
+                                <div className="mx-auto mb-4 flex items-center justify-center">
+                                    <Image
+                                        src="/logo-centered.png"
+                                        alt="Workers United logo"
+                                        width={110}
+                                        height={110}
+                                        className="h-auto w-[94px] object-contain"
+                                    />
                                 </div>
                                 <h2 className="text-3xl font-semibold tracking-tight text-[#0f172a]">Create your account</h2>
                                 <p className="mt-2 text-[15px] leading-relaxed text-[#64748b]">
