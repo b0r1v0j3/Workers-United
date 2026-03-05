@@ -31,9 +31,9 @@ export default function CookieConsent() {
                     <Image
                         src="/cookie-icons8.png"
                         alt="Cookie icon"
-                        width={28}
-                        height={28}
-                        className="mt-0.5 h-7 w-7 shrink-0"
+                        width={56}
+                        height={56}
+                        className="mt-0.5 h-14 w-14 shrink-0"
                     />
                     <p className="text-sm text-[#475569] leading-relaxed">
                         We use essential cookies for authentication and site functionality. No tracking or advertising cookies are used.
