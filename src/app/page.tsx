@@ -8,10 +8,8 @@ import {
   CheckCircle2,
   CircleDollarSign,
   Clock3,
-  FileText,
   Files,
   ShieldCheck,
-  Stamp,
   UserRound,
 } from "lucide-react";
 
@@ -133,41 +131,6 @@ export default function Home() {
                   <p className="mt-2 text-sm leading-relaxed text-[#4b5478]">
                     Once confirmed, we handle the document workflow to move from match to legal arrival.
                   </p>
-                </article>
-              </div>
-            </div>
-          </section>
-
-          {/* What we do */}
-          <section className="border-b border-[#e8e8e2] bg-white py-16 md:py-20">
-            <div className="mx-auto max-w-[1180px] px-5">
-              <div className="mb-10 text-center">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#77776f]">What we actually do</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#171717] md:text-4xl">
-                  Three documents, one clear system
-                </h2>
-              </div>
-              <div className="grid gap-5 md:grid-cols-3">
-                <article className="rounded-3xl border border-[#ece2d4] bg-[#fff8f0] p-6">
-                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffe7cc] text-[#9b5c17]">
-                    <Stamp className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-[#2e241a]">Verification</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#5e4e3f]">Document quality checks, profile consistency, and clear status visibility.</p>
-                </article>
-                <article className="rounded-3xl border border-[#dfeadd] bg-[#f4fff2] p-6">
-                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#dbf2d8] text-[#296f30]">
-                    <BriefcaseBusiness className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-[#1f3821]">Matching</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#426244]">Needs-based pairing between real employer requirements and verified worker profiles.</p>
-                </article>
-                <article className="rounded-3xl border border-[#dddff0] bg-[#f5f7ff] p-6">
-                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#e0e5ff] text-[#414f9d]">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-[#242a48]">Visa & arrival</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#4f5779]">Operational support from confirmed offer to final arrival handover.</p>
                 </article>
               </div>
             </div>
