@@ -90,10 +90,10 @@ export default function Home() {
                     <p className="mt-2 text-xs leading-relaxed text-[#446645]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
                   </article>
 
-                  <article className="absolute bottom-2 left-[9%] w-[84%] rotate-[-1deg] rounded-3xl border border-[#d9dce8] bg-[#f7f8ff] p-4 shadow-[0_18px_30px_-24px_rgba(43,58,120,0.4)]">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f678c]">Visa_File.pdf</p>
-                    <h3 className="text-lg font-semibold text-[#1f2648]">Operational handover</h3>
-                    <p className="mt-2 text-xs leading-relaxed text-[#4b5478]">
+                  <article className="absolute bottom-2 left-[9%] w-[84%] rotate-[-1deg] rounded-3xl border border-[#d9dce8] bg-[#f7f8ff] p-5 shadow-[0_18px_30px_-24px_rgba(43,58,120,0.4)]">
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5f678c]">Visa_File.pdf</p>
+                    <h3 className="text-xl font-semibold text-[#1f2648]">Operational handover</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-[#4b5478]">
                       Once confirmed, we handle the document workflow to move from match to legal arrival.
                     </p>
                   </article>
