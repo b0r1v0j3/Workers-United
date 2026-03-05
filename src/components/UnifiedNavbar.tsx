@@ -51,19 +51,11 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                 <div className="flex items-center gap-3">
                     <Link href="/" className="flex items-center gap-2 md:gap-3 hover:opacity-90 transition-opacity">
                         <Image
-                            src="/logo-icon.png"
+                            src="/logo-complete-transparent.png"
                             alt="Workers United Logo"
-                            width={80}
-                            height={80}
-                            className="h-12 w-12 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
-                            priority
-                        />
-                        <Image
-                            src="/logo-wordmark.png"
-                            alt="Workers United"
-                            width={200}
-                            height={50}
-                            className="w-[140px] md:w-[160px] h-auto object-contain transition-opacity"
+                            width={240}
+                            height={240}
+                            className="h-auto w-[148px] md:w-[190px] object-contain shrink-0 transition-opacity"
                             priority
                         />
                     </Link>

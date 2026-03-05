@@ -163,7 +163,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                     icon={
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                            src={user?.user_metadata?.avatar_url || "/logo-icon.png"}
+                            src={user?.user_metadata?.avatar_url || "/logo-hands.png"}
                             alt="Profile avatar"
                             className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm"
                         />

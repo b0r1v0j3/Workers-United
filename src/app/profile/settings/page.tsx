@@ -83,9 +83,14 @@ export default function AccountSettingsPage() {
                     <Link href="/profile" className="text-[#65676b] hover:text-[#050505] text-sm font-semibold flex items-center gap-2">
                         ← Back to Profile
                     </Link>
-                    <Link href="/" className="flex items-center gap-2">
-                        <Image src="/logo-icon.png" alt="Workers United logo" width={44} height={44} className="h-11 w-11 object-contain" />
-                        <Image src="/logo-wordmark.png" alt="Workers United" width={140} height={32} className="hidden h-auto w-[130px] object-contain sm:block" />
+                    <Link href="/" className="inline-flex items-center">
+                        <Image
+                            src="/logo-complete-transparent.png"
+                            alt="Workers United logo"
+                            width={196}
+                            height={196}
+                            className="h-auto w-[140px] object-contain sm:w-[156px]"
+                        />
                     </Link>
                     <div className="w-[120px]" />
                 </div>
