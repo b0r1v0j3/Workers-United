@@ -60,12 +60,26 @@
             cursor: pointer;
         }
         .btn:hover { opacity: 0.9; }
-        .logo { margin-bottom: 16px; }
+        .logo { margin-bottom: 0; }
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .brand-wordmark {
+            width: 150px;
+            height: auto;
+        }
     </style>
 </head>
 <body>
     <div class="card">
-        <img src="/logo.png" alt="Workers United" width="48" height="48" class="logo">
+        <div class="brand">
+            <img src="/logo-icon.png" alt="Workers United icon" width="44" height="44" class="logo">
+            <img src="/logo-wordmark.png" alt="Workers United" class="brand-wordmark">
+        </div>
         <div class="icon">📡</div>
         <h1>You're offline</h1>
         <p>It looks like you've lost your internet connection. Please check your connection and try again.</p>

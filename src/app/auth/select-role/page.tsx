@@ -101,7 +101,10 @@ export default function SelectRolePage() {
         <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center p-6 font-montserrat">
             {/* Header */}
             <div className="mb-10 text-center">
-                <Image src="/logo.png" alt="Workers United" width={64} height={64} className="mx-auto mb-4" />
+                <div className="mx-auto mb-4 flex items-center justify-center gap-2">
+                    <Image src="/logo-icon.png" alt="Workers United logo" width={48} height={48} className="h-12 w-12 object-contain" />
+                    <Image src="/logo-wordmark.png" alt="Workers United" width={150} height={36} className="h-auto w-[146px] object-contain" />
+                </div>
                 <h1 className="text-3xl font-bold text-[#1e293b] mb-2 tracking-tight">Welcome to Workers United</h1>
                 <p className="text-[#64748b] text-lg font-medium">How would you like to use the platform?</p>
             </div>

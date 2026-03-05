@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { EMPLOYER_INDUSTRIES } from "@/lib/constants";
 
@@ -143,8 +144,8 @@ export default function CreateJobClient() {
                             <span className="font-medium">Back to Profile</span>
                         </Link>
                         <div className="flex items-center gap-2">
-                            <img src="/logo.png" alt="Workers United" className="h-[60px] w-auto object-contain" />
-                            <span className="font-bold text-[#1E3A5F]">Workers United</span>
+                            <Image src="/logo-icon.png" alt="Workers United logo" width={40} height={40} className="h-10 w-10 object-contain" />
+                            <Image src="/logo-wordmark.png" alt="Workers United" width={138} height={32} className="h-auto w-[132px] object-contain" />
                         </div>
                     </div>
                 </div>

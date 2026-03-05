@@ -1,9 +1,10 @@
-const CACHE_NAME = 'wu-cache-v1';
+const CACHE_NAME = 'wu-cache-v2';
 
 // Static assets to pre-cache on install
 const PRECACHE_URLS = [
     '/offline.html',
-    '/logo.png',
+    '/logo-icon.png',
+    '/logo-wordmark.png',
     '/logo-white.png',
     '/manifest.json',
 ];

@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 05.03.2026 (worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
+> **Poslednje ažuriranje:** 05.03.2026 (global old-logo cleanup: `logo.png` uklonjen iz svih sajt ruta i zamenjen `logo-icon`/`logo-wordmark`, desktop+mobile signup redesign u Apple/Notion stilu + richer signup telemetry, worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
 
 ---
 
@@ -245,9 +245,10 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **n8n email automation** — retry failed emails, auto-responder za inbox
 - [ ] Multi-country pricing za placement fee — **odloženo** dok se ne proširimo na druge zemlje
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
-- [ ] **Desktop signup page review** — user reported it needs styling update
 
 ### ✅ Završeno (poslednje)
+- [x] Global logo migration na sajtu — uklonjene sve `logo.png` reference iz `src/` + PWA/offline asseta (`public/manifest.json`, `public/offline.html`, `public/sw.js`) i prebačeno na novi `logo-icon.png` + `logo-wordmark.png` — 05.03.2026
+- [x] Desktop+mobile signup redesign (`/signup`) u Apple/Notion stilu + Gmail-safe skeleton + dodatni funnel telemetry eventi (`signup_submit_attempt`, `signup_success`, `signup_validation_failed`, Google signup eventi) — 05.03.2026
 - [x] Supabase non-breaking terminology bridge: dodata migracija `20260305143000_worker_alias_views.sql` (`worker_onboarding`, `worker_documents`, `worker_readiness` view aliasi) bez rename postojećih tabela — 05.03.2026
 - [x] Terminology alignment: user-facing `candidate` → `worker` (checkout/queue/admin/employer copy + API poruke + Brain prompt/input normalization) — 05.03.2026
 - [x] Onboarding resilience + telemetry alignment — checkout auto-heal za missing `profiles/candidates`, brain collect mapiranje po `user_id` (docs/payments), brain report save schema fix (`brain_reports.report`) + anonymous tracking fix — 05.03.2026
@@ -370,6 +371,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] ~~**WhatsApp AI Chatbot (n8n + GPT-4o)** — konverzacijski bot sa memorijom (100 poruka), enriched profilom, dokumentima i plaćanjima~~ ✅ 28.02.2026
 - [ ] **n8n Email AI Auto-Responder** — novi workflow za automatske odgovore na emailove
 - [ ] **n8n AI Agent sa Tools** — bot dobija tools za aktivne akcije (pretraživanje poslova, ažuriranje statusa). Dugoročno: self-improving agent koji uči iz interakcija.
+- [ ] **Auth Design System unification** — izdvojiti reusable auth komponente (`AuthCard`, `AuthInput`, `AuthPrimaryButton`, shared password/email validation hints) za `/signup` + `/login` da UI ostane konzistentan i lak za održavanje
+- [ ] **Brand assets hardening** — dodati jedan shared `BrandLogo` komponent i zabraniti direktan `logo.png` kroz lint/custom check (CI guard) da se stari logo više nikad ne vrati u UI
 - [ ] **Type Safety Sprint (Phase 2 lint cleanup)** — uklanjanje `any` iz admin/API sloja i vraćanje `@typescript-eslint/no-explicit-any` na error
 - [ ] **Live Visa Process Tracker** — "Currently processing: X applications", "Documents verified today: Y". ⏳ **USLOV: 100+ korisnika u sistemu**
 - [ ] **"Work in [Country]" Pages** — SEO stranice (npr. /work-in-germany) sa pravnim koracima, platama, troškovima. ⏳ **USLOV: bar 2 aktivne zemlje**

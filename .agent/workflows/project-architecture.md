@@ -36,7 +36,7 @@ Workers-United/
 ├── .agent/workflows/          # AI agent workflow docs
 │   ├── add-profile-field.md   # Steps to add a new profile field
 │   └── project-architecture.md  # ← this file
-├── public/                    # Static assets (logo.png, logo-full.jpg, etc.)
+├── public/                    # Static assets (logo-icon.png, logo-wordmark.png, logo-full.jpg, etc.)
 ├── scripts/                   # Utility scripts (screenshots, SQL setup)
 ├── supabase/                  # SQL migrations & schema files
 │   ├── FULL_SETUP.sql         # Comprehensive DB setup
@@ -340,8 +340,9 @@ When adding a new feature, follow this order:
 - Date format: **DD/MM/YYYY** — use `toLocaleDateString('en-GB')`, NEVER US format
 
 ### Logo
-- **Never regenerate or replace `public/logo.png`** — it's the official logo
-- Navbar size: `h-[60px]` (h-15) — do not change
+- Official navbar/site logo is the two-part set: `public/logo-icon.png` + `public/logo-wordmark.png`
+- Legacy `logo.png` is deprecated in UI routes and should not be used in new code
+- Navbar size: icon `h-16 w-16` + wordmark `w-[140px]` (desktop can be slightly wider)
 - `logo-full.jpg` is for OG/meta images only, NOT navbar
 
 ### Vercel Deployment

@@ -48,7 +48,7 @@ export default function AuthCodeErrorPage() {
                 <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                 <div className="relative z-10">
                     <Link href="/" className="flex items-center gap-3 mb-24">
-                        <Image src="/logo.png" alt="Workers United logo" width={48} height={48} className="drop-shadow-lg lg:brightness-0 lg:invert" />
+                        <Image src="/logo-icon.png" alt="Workers United logo" width={48} height={48} className="h-12 w-12 object-contain" />
                         <span className="text-2xl font-bold tracking-tight">Workers United</span>
                     </Link>
 
@@ -72,8 +72,8 @@ export default function AuthCodeErrorPage() {
                 {/* Mobile Logo */}
                 <div className="lg:hidden absolute top-6 left-0 right-0 flex justify-center">
                     <Link href="/" className="flex items-center gap-2">
-                        <Image src="/logo.png" alt="Workers United" width={48} height={48} />
-                        <span className="font-bold text-[#1E3A5F] text-lg tracking-tight">Workers United</span>
+                        <Image src="/logo-icon.png" alt="Workers United" width={44} height={44} className="h-11 w-11 object-contain" />
+                        <Image src="/logo-wordmark.png" alt="Workers United" width={140} height={32} className="h-auto w-[132px] object-contain" />
                     </Link>
                 </div>
 
