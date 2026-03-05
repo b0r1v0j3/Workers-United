@@ -336,6 +336,7 @@ When adding a new feature, follow this order:
 - User-facing text: **"worker"** (never "candidate")
 - User-facing text: **"Sign In"** (never "Log In")
 - Internal DB tables still use `candidates` for workers
+- Transitional DB aliases are available for gradual migration: `worker_onboarding` (→ `candidates`), `worker_documents` (→ `candidate_documents`), `worker_readiness` (→ `candidate_readiness`)
 - Date format: **DD/MM/YYYY** — use `toLocaleDateString('en-GB')`, NEVER US format
 
 ### Logo
