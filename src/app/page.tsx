@@ -66,11 +66,7 @@ export default function Home() {
           <section className="relative overflow-hidden border-b border-[#e7e7e2] bg-[radial-gradient(circle_at_12%_8%,#ffe6d4_0,transparent_38%),radial-gradient(circle_at_90%_18%,#dff4ff_0,transparent_36%),radial-gradient(circle_at_55%_92%,#e7f7ec_0,transparent_42%),#f7f6f2] py-12 md:py-16">
             <div className="mx-auto grid max-w-[1180px] gap-10 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
               <div className="animate-in fade-in slide-in-from-left-5 duration-700">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#dadad1] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5b5b54]">
-                  <Files className="h-3.5 w-3.5" />
-                  Document-first workflow
-                </span>
-                <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-[#141414] md:text-6xl">
+                <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-[#141414] md:text-6xl">
                   We run hiring like a clean stack of documents, not chaos.
                 </h1>
                 <div className="relative mt-5 h-[300px] w-full md:hidden">
