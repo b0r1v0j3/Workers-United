@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 05.03.2026 (signup layout simplification po vlasničkom zahtevu: uklonjen ceo levi info panel, ostavljen single centered auth card + Sign in CTA, neutral one-panel loading skeleton; signup visual final polish: veći transparentni full logo `logo-complete-transparent.png` levo+desno, neutral Notion paleta bez plavih gradijenata + neutral loading skeleton, signup brand header simplification: uklonjen “balon” oko logotipa, global old-logo cleanup: `logo.png` uklonjen iz svih sajt ruta i zamenjen `logo-icon`/`logo-wordmark`, desktop+mobile signup redesign u Apple/Notion stilu + richer signup telemetry, worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
+> **Poslednje ažuriranje:** 05.03.2026 (auth UI alignment: `/login` redizajniran u isti one-panel Notion stil kao `/signup` sa istim card/layout/input/button sistemom i neutral loading skeletonom; signup layout simplification po vlasničkom zahtevu: uklonjen ceo levi info panel, ostavljen single centered auth card + Sign in CTA, neutral one-panel loading skeleton; signup visual final polish: veći transparentni full logo `logo-complete-transparent.png` levo+desno, neutral Notion paleta bez plavih gradijenata + neutral loading skeleton, signup brand header simplification: uklonjen “balon” oko logotipa, global old-logo cleanup: `logo.png` uklonjen iz svih sajt ruta i zamenjen `logo-icon`/`logo-wordmark`, desktop+mobile signup redesign u Apple/Notion stilu + richer signup telemetry, worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails)
 
 ---
 
@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Login/signup vizuelno usklađeni: `/login` prebačen na isti one-panel auth card sistem kao `/signup` (isti logo/header, neutral input/button stil, Google + email divider, reset-password state i loading skeleton) — 05.03.2026
 - [x] Signup layout simplification po vlasničkom zahtevu: uklonjen levi explainer panel na `/signup`, ostavljen samo centriran form card sa `Sign in` linkom, i loading skeleton prebačen na isti one-panel raspored — 05.03.2026
 - [x] Signup final visual polish po feedback-u: uvećan logo na desnom panelu, levo/desno koristi transparentni full logo (`logo-complete-transparent.png`), uklonjeni preostali plavi tonovi (neutral Notion paleta) i usklađen `loading` skeleton — 05.03.2026
 - [x] Signup logo placement finalization po feedback-u: u gornjim brand blokovima koristi se ceo transparentni full logo (`logo-complete-transparent.png`) umesto razdvojenog icon+wordmark prikaza — 05.03.2026
