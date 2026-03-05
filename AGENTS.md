@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Homepage/footer spacing polish: uklonjen višak praznog “plavkastog” prostora ispod `Start your profile in minutes` uklanjanjem `mt-20` margine sa `Footer` komponente — 05.03.2026
 - [x] Homepage simplification po feedback-u: kompletna sekcija `What we actually do` uklonjena sa landing stranice radi čistijeg, kraćeg toka sadržaja — 05.03.2026
 - [x] Homepage flow-copy tweak: korak #1 u “How the flow works” promenjen u `Create your account and activate Job Finder.` radi jasnijeg funnel CTA jezika — 05.03.2026
 - [x] Homepage terminology micro-polish: `Job Finder Access` preimenovan u prirodniji `Job Finder` u pricing sekciji (bez promene flow-a/cena) — 05.03.2026
