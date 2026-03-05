@@ -240,12 +240,12 @@ export default function Home() {
                 </div>
                 <h2 className="text-2xl font-semibold text-[#171717] md:text-3xl">Simple pricing with a clear refund promise</h2>
                 <p className="mt-3 text-sm leading-relaxed text-[#5a5a53] md:text-base">
-                  Start with a one-time <strong>$9 Job Finder Access fee</strong>. If we do not find you a job within
+                  Start with a one-time <strong>$9 Job Finder fee</strong>. If we do not find you a job within
                   <strong> 90 days</strong>, you receive a <strong>full refund</strong>.
                 </p>
                 <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
                   <div className="rounded-2xl border border-[#ecece5] bg-[#fcfcfa] p-4">
-                    <p className="text-[#72726a]">Job Finder Access</p>
+                    <p className="text-[#72726a]">Job Finder</p>
                     <p className="mt-1 text-2xl font-semibold text-[#161616]">$9 one-time</p>
                   </div>
                   <div className="rounded-2xl border border-[#ecece5] bg-[#fcfcfa] p-4">
