@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Public navbar branding correction: levi `Workers United` vraćen sa plain teksta na originalni wordmark asset (`logo-wordmark.png`) po vizuelnom zahtevu — 05.03.2026
 - [x] Footer mobile social layout fix: uklonjen wrap i smanjen mobilni gap/ikonice (`gap-2`, `w/h-6`) da svih 7 mreža stane u jedan red na telefonu — 05.03.2026
 - [x] Hero spacing follow-up: uvodni pasus (`Workers United connects workers...`) spušten još malo naniže (`mt-9`, `md:mt-8`) radi jasnijeg razmaka od plave kartice — 05.03.2026
 - [x] Public navbar branding alignment fix: vraćena veća veličina ruku (centrirana ikona), a raspored `Workers United` levo + centrirane ruke primenjen i na mobilni prikaz — 05.03.2026
