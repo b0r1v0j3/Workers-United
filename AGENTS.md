@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Hero copy-order refinement po feedback-u: jedinstveni badge blok (`Verified process / Fast onboarding / 90-day guarantee`) premešten između glavnog H1 naslova i uvodnog opisa; uklonjeni prethodni duplikati (desktop+mobile) — 05.03.2026
 - [x] Mobile hero visual emphasis tweak: kartice su podignute u toku skrolovanja tako što su mobilni hero badge-ovi premešteni ispod stack kartica; desktop badge raspored ostaje nepromenjen — 05.03.2026
 - [x] Mobile hero badges layout finalization: na telefonu su badge-ovi složeni jedan ispod drugog redom `Verified process` → `Fast onboarding` → `90-day guarantee` (desktop raspored ostaje horizontalan) — 05.03.2026
 - [x] Mobile hero badge ordering fix: u hero “chips” grupi dodat mobilni line-break tako da `90-day guarantee` ide ispod `Fast onboarding` (desktop raspored ostaje netaknut) — 05.03.2026
