@@ -17,7 +17,7 @@ import {
 
 export default function Home() {
   const processSteps = [
-    "Create account as worker or employer.",
+    "Create your account and activate Job Finder.",
     "Complete profile and required documents.",
     "We verify details and documents.",
     "We match based on real role needs.",
