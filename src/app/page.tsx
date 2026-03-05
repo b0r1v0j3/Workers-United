@@ -132,20 +132,6 @@ export default function Home() {
                     How it works
                   </Link>
                 </div>
-                <div className="mt-6 flex flex-col items-start gap-3 text-sm text-[#4f4f48] md:hidden">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                    <BadgeCheck className="h-4 w-4 text-[#2a7f62]" />
-                    Verified process
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                    <Clock3 className="h-4 w-4 text-[#7a3f8a]" />
-                    Fast onboarding
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#dfdfd7] bg-white px-3 py-1.5">
-                    <ShieldCheck className="h-4 w-4 text-[#b3681f]" />
-                    90-day guarantee
-                  </span>
-                </div>
               </div>
 
               <div className="relative hidden h-[420px] animate-in fade-in slide-in-from-right-5 duration-700 md:block md:h-[500px]">
