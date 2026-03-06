@@ -104,10 +104,11 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <!-- The "Window" (Card) -->
         <div style="background:white; border-radius:24px; overflow: hidden; border: 1px solid #E5E5EA;">
             
-            <!-- Compact text-only header (no clickable/downloadable image) -->
+            <!-- Compact brand text header (WORKERS bold + UNITED regular, no image/download affordance) -->
             <div style="background: #FFFFFF; padding: 14px 24px; text-align: center; border-bottom: 1px solid #E5E5EA;">
-                 <div style="font-size:12px; letter-spacing:2.2px; font-weight:700; color:#111111; text-transform:uppercase; line-height:1;">
-                    Workers United
+                 <div style="font-size:12px; letter-spacing:1.6px; color:#111111; text-transform:uppercase; line-height:1; font-family:'Montserrat', Arial, sans-serif;">
+                    <span style="font-weight:800;">Workers</span>
+                    <span style="font-weight:500; margin-left:4px;">United</span>
                  </div>
             </div>
 
