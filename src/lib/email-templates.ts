@@ -247,10 +247,16 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
 
                     <div style="background:#F5F5F7; border-radius:12px; padding:15px; margin:30px 0; text-align: center; border: 1px solid #E5E5EA;">
-                        <p style="margin:0; color: #1D1D1F; font-weight: 600; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <img src="https://img.icons8.com/ios/50/000000/checked.png" width="20">
-                            ${data.amount || "$9"} Payment Received
-                        </p>
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto; border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:0 8px 0 0; vertical-align:middle;">
+                                    <img src="https://img.icons8.com/ios/50/000000/checked.png" width="20" height="20" alt="" style="display:block;">
+                                </td>
+                                <td style="padding:0; vertical-align:middle; color:#1D1D1F; font-weight:600; font-size:16px; white-space:nowrap;">
+                                    ${data.amount || "$9"} Payment Received
+                                </td>
+                            </tr>
+                        </table>
                     </div>
                     
                     <div style="margin: 30px 0; text-align: center;">
