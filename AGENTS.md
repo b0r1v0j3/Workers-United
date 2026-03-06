@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Hero desktop card layering tweak: zelena `Employer_Request.doc` kartica spuštena (`top-[120px]`) i podignuta iznad plave (`z-20`) da blago preklopi `Operational handover` i otkrije više teksta na braon kartici — 06.03.2026
 - [x] Social preview update: globalni Open Graph/Twitter preview prebačen na standardni logo (`/logo-centered.png`) sa cache-bust query (`?v=20260306`) radi osvežavanja LinkedIn thumbnail-a — 06.03.2026
 - [x] Reliability fix pass: `admin/email-preview` prebačen na reactive template loading (nema stale preview state), a `worker/edit ProfileClient` dobio timezone-safe date parsing (`YYYY-MM-DD`) + stabilan `fetchProfile` lifecycle (`useCallback`/`useEffect`) — 06.03.2026
 - [x] Cloud connection hardening: `scripts/cloud-doctor.ps1` stabilizovan (Vercel auth false-fail fix), dodate optional n8n + `/api/health` provere i `npm run cloud:doctor` za one-command dijagnostiku — 06.03.2026

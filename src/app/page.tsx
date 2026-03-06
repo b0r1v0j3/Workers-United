@@ -141,13 +141,13 @@ export default function Home() {
                   </ul>
                 </article>
 
-                <article className="absolute right-0 top-[96px] w-[80%] rotate-[5deg] rounded-3xl border border-[#d9e3d8] bg-[#f3fff1] p-5 shadow-[0_20px_35px_-28px_rgba(24,72,42,0.45)] md:p-6">
+                <article className="absolute right-0 top-[120px] z-20 w-[80%] rotate-[5deg] rounded-3xl border border-[#d9e3d8] bg-[#f3fff1] p-5 shadow-[0_20px_35px_-28px_rgba(24,72,42,0.45)] md:p-6">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#567255]">Employer_Request.doc</p>
                   <h3 className="text-xl font-semibold text-[#1f3a20]">Role requirements</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[#446645]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
                 </article>
 
-                <article className="absolute bottom-[38px] left-[9%] w-[84%] rotate-[-1deg] rounded-3xl border border-[#d9dce8] bg-[#f7f8ff] p-5 shadow-[0_18px_30px_-24px_rgba(43,58,120,0.4)] md:p-6">
+                <article className="absolute bottom-[38px] left-[9%] z-10 w-[84%] rotate-[-1deg] rounded-3xl border border-[#d9dce8] bg-[#f7f8ff] p-5 shadow-[0_18px_30px_-24px_rgba(43,58,120,0.4)] md:p-6">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5f678c]">Visa_File.pdf</p>
                   <h3 className="text-xl font-semibold text-[#1f2648]">Operational handover</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[#4b5478]">
