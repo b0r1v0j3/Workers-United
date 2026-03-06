@@ -24,9 +24,20 @@ export default async function QueuePage() {
         redirect("/profile/worker");
     }
 
+    // Check for pending offers (source of truth for "You have an offer" UI)
+    const { data: pendingOffers } = await supabase
+        .from("offers")
+        .select(`
+      *,
+      job_requests(*, employers(company_name))
+    `)
+        .eq("candidate_id", candidate.id)
+        .eq("status", "pending")
+        .order("expires_at", { ascending: true });
+
     const { data: completedEntryPayment } = await supabase
         .from("payments")
-        .select("id")
+        .select("id, paid_at")
         .eq("payment_type", "entry_fee")
         .in("status", ["completed", "paid"])
         .or(`user_id.eq.${user.id},profile_id.eq.${user.id}`)
@@ -38,29 +49,25 @@ export default async function QueuePage() {
         !!completedEntryPayment?.id ||
         isPostEntryFeeWorkerStatus(candidate.status);
 
-    const isInQueue = hasPaidEntryFee && candidate.status === "IN_QUEUE";
-    const hasPendingOffer = candidate.status === "OFFER_PENDING";
-    const paymentActivationPending = hasPaidEntryFee && !candidate.entry_fee_paid && !hasPendingOffer && !isInQueue;
-    const queueJoinedDate = candidate.queue_joined_at
-        ? new Date(candidate.queue_joined_at)
+    const hasPendingOffer = (pendingOffers?.length || 0) > 0;
+    const statusDriftWithoutOffer = candidate.status === "OFFER_PENDING" && !hasPendingOffer;
+    const paymentAcceptedNoOffer = hasPaidEntryFee && !hasPendingOffer;
+    const queueJoinedSource = candidate.queue_joined_at || completedEntryPayment?.paid_at || null;
+    const queueJoinedDate = queueJoinedSource
+        ? new Date(queueJoinedSource)
         : null;
     const nowMs = new Date().getTime();
 
-    // Calculate days in queue
-    const daysInQueue = queueJoinedDate
+    // 90-day countdown (refund eligibility window)
+    const rawDaysElapsed = queueJoinedDate
         ? Math.floor((nowMs - queueJoinedDate.getTime()) / (1000 * 60 * 60 * 24))
         : 0;
-
-    // Check for pending offers
-    const { data: pendingOffers } = await supabase
-        .from("offers")
-        .select(`
-      *,
-      job_requests(*, employers(company_name))
-    `)
-        .eq("candidate_id", candidate.id)
-        .eq("status", "pending")
-        .order("expires_at", { ascending: true });
+    const daysElapsed = Math.min(90, Math.max(0, rawDaysElapsed));
+    const daysRemaining = Math.max(0, 90 - daysElapsed);
+    const progressPercent = Math.min(100, Math.max(0, Math.round((daysElapsed / 90) * 100)));
+    const refundEligibleDate = queueJoinedDate
+        ? new Date(queueJoinedDate.getTime() + (90 * 24 * 60 * 60 * 1000))
+        : null;
 
     return (
         <div className="w-full">
@@ -99,46 +106,70 @@ export default async function QueuePage() {
                                 <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer in 90 days</span>
                             </div>
                         </div>
-                    ) : isInQueue ? (
-                        // In queue, waiting
-                        <div className="text-center py-4">
-                            <div className="text-6xl font-bold text-[#1877f2] mb-2">
-                                #{candidate.queue_position}
-                            </div>
-                            <p className="text-[#65676b] mb-4">Your position in the queue</p>
-
-                            <div className="flex justify-center gap-8 text-sm text-[#65676b]">
-                                <div>
-                                    <span className="block text-2xl font-semibold text-[#050505]">{daysInQueue}</span>
-                                    Days in queue
+                    ) : paymentAcceptedNoOffer ? (
+                        // Paid and waiting for a real offer
+                        <div className="py-2">
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2">
+                                        <path d="M20 6L9 17l-5-5" />
+                                    </svg>
                                 </div>
-                                <div>
-                                    <span className="block text-2xl font-semibold text-[#050505]">
-                                        {90 - daysInQueue}
-                                    </span>
-                                    Days until refund eligibility
+                                <h2 className="text-xl font-semibold text-[#050505] mb-2">
+                                    Payment Accepted
+                                </h2>
+                                <p className="text-[#65676b] max-w-2xl mx-auto">
+                                    Your $9 payment is confirmed. We are now matching your profile with employers.
+                                    You will receive an offer within 90 days, or your payment is refunded in full.
+                                </p>
+                            </div>
+
+                            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                                    <p className="text-xs uppercase tracking-wide text-emerald-700 font-semibold">Day</p>
+                                    <p className="text-2xl font-bold text-emerald-800">{daysElapsed}</p>
+                                    <p className="text-xs text-emerald-700">of 90</p>
+                                </div>
+                                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center">
+                                    <p className="text-xs uppercase tracking-wide text-blue-700 font-semibold">Remaining</p>
+                                    <p className="text-2xl font-bold text-blue-800">{daysRemaining}</p>
+                                    <p className="text-xs text-blue-700">days to guarantee deadline</p>
+                                </div>
+                                <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-center">
+                                    <p className="text-xs uppercase tracking-wide text-violet-700 font-semibold">Refund Eligibility</p>
+                                    <p className="text-sm sm:text-base font-bold text-violet-800">
+                                        {refundEligibleDate
+                                            ? refundEligibleDate.toLocaleDateString("en-GB")
+                                            : "Calculating..."}
+                                    </p>
+                                    <p className="text-xs text-violet-700">if no offer is received</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-5">
+                                <div className="flex items-center justify-between text-xs font-semibold text-[#65676b] mb-2">
+                                    <span>90-day matching window</span>
+                                    <span>{progressPercent}% elapsed</span>
+                                </div>
+                                <div className="w-full h-3 rounded-full bg-gray-100 border border-gray-200 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-blue-500 to-violet-500 transition-all duration-700"
+                                        style={{ width: `${progressPercent}%` }}
+                                    />
                                 </div>
                             </div>
 
                             <div className="mt-6 p-4 bg-[#e7f3ff] rounded-xl text-sm text-[#1877f2] border border-[#b3d4fc]">
                                 <p>
-                                    <strong>How it works:</strong> When an employer posts a job matching your profile,
-                                    you&apos;ll receive an offer based on your queue position. First in queue = first to receive offers.
+                                    <strong>What happens next:</strong> We keep matching your profile with active employer requests.
+                                    As soon as there is a fit, you&apos;ll get a real offer here and by email.
                                 </p>
                             </div>
-                        </div>
-                    ) : paymentActivationPending ? (
-                        <div className="text-center py-4">
-                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2">
-                                    <path d="M20 6L9 17l-5-5" />
-                                </svg>
-                            </div>
-                            <h2 className="text-xl font-semibold text-[#050505] mb-2">Payment Confirmed</h2>
-                            <p className="text-[#65676b] max-w-lg mx-auto">
-                                Your entry fee is paid. We are syncing your worker profile status now.
-                                Please refresh this page in a few seconds.
-                            </p>
+                            {statusDriftWithoutOffer && (
+                                <p className="text-center text-xs text-amber-700 mt-3">
+                                    We are syncing your status view. No active offer is currently pending.
+                                </p>
+                            )}
                         </div>
                     ) : (
                         // Other status
