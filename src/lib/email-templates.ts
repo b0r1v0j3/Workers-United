@@ -99,7 +99,8 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
     <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${subtitle}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
     
     <!-- Main Email Container -->
-    <div style="max-width:600px; margin: 40px auto; padding: 0 15px;">
+    <div style="max-width:600px; margin: 0 auto; padding: 0 15px;">
+        <div style="height:28px; line-height:28px; font-size:1px;">&nbsp;</div>
         
         <!-- The "Window" (Card) -->
         <div style="background:white; border-radius:24px; overflow: hidden; border: 1px solid #E5E5EA;">
