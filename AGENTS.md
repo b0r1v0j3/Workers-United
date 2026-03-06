@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Payment-success email badge centering fix: `$9 Payment Received` segment u Gmail-u prebačen sa `flex` na table-based centering (`align="center"` + inline icon/text ćelije) da vizuelno bude centriran kao u admin preview-u — 06.03.2026
 - [x] Email header simplification po feedback-u: uklonjen klikabilni logo image blok iz svih email template-ova (`wrapModernTemplate`), uveden mali text-only brand header `Workers United` sa minimalnim vertikalnim prostorom da Gmail više ne prikazuje image download affordance u zaglavlju — 06.03.2026
 - [x] Worker application-status UX fix: “You have an offer” sada se prikazuje SAMO kada stvarno postoji aktivna pending ponuda u `offers`; za plaćene korisnike bez realne ponude uveden jasan `Payment Accepted` state sa 90-day guarantee copy + countdown/progress bar + refund-eligibility datum (DD/MM/YYYY) — 06.03.2026
 - [x] Stripe payment recovery + UX sync hardening: dodat `/api/stripe/confirm-session` fallback za success redirect, webhook/schema usklađivanje za `payments` tabelu (bez nepostojećih kolona), anti-duplicate checkout guard, i worker/queue UI sada koristi i `payments` signal da sakrije `Pay $9` čim je uplata potvrđena — 06.03.2026
