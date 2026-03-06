@@ -37,14 +37,21 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://workersunited.eu",
     siteName: "Workers United",
-    images: ["/logo-full.jpg"],
+    images: [
+      {
+        url: "/logo-centered.png?v=20260306",
+        width: 768,
+        height: 768,
+        alt: "Workers United logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Workers United – Legal International Hiring",
     description:
       "Transparent process. Full legal work visa guidance for international workers and companies.",
-    images: ["/logo-full.jpg"],
+    images: ["/logo-centered.png?v=20260306"],
   },
   manifest: "/manifest.json",
   other: {

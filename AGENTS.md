@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Social preview update: globalni Open Graph/Twitter preview prebačen na standardni logo (`/logo-centered.png`) sa cache-bust query (`?v=20260306`) radi osvežavanja LinkedIn thumbnail-a — 06.03.2026
 - [x] Reliability fix pass: `admin/email-preview` prebačen na reactive template loading (nema stale preview state), a `worker/edit ProfileClient` dobio timezone-safe date parsing (`YYYY-MM-DD`) + stabilan `fetchProfile` lifecycle (`useCallback`/`useEffect`) — 06.03.2026
 - [x] Cloud connection hardening: `scripts/cloud-doctor.ps1` stabilizovan (Vercel auth false-fail fix), dodate optional n8n + `/api/health` provere i `npm run cloud:doctor` za one-command dijagnostiku — 06.03.2026
 - [x] Footer mobile social icon sizing correction: vraćena stara veličina ikonica (`w/h-8`), uz zbijeni razmak (`gap-1.5`) i `flex-nowrap` da sve mreže ostanu u jednom redu na telefonu — 05.03.2026
