@@ -104,12 +104,9 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <!-- The "Window" (Card) -->
         <div style="background:white; border-radius:24px; overflow: hidden; border: 1px solid #E5E5EA;">
             
-            <!-- Compact brand text header (WORKERS bold + UNITED regular, no image/download affordance) -->
+            <!-- Compact official wordmark header -->
             <div style="background: #FFFFFF; padding: 14px 24px; text-align: center; border-bottom: 1px solid #E5E5EA;">
-                 <div style="font-size:12px; letter-spacing:1.6px; color:#111111; text-transform:uppercase; line-height:1; font-family:'Montserrat', Arial, sans-serif;">
-                    <span style="font-weight:800;">Workers</span>
-                    <span style="font-weight:500; margin-left:4px;">United</span>
-                 </div>
+                <img src="https://workersunited.eu/logo-wordmark-email.png" alt="Workers United" width="168" height="12" style="display:block; margin:0 auto; width:168px; height:12px; border:0; outline:none; text-decoration:none;">
             </div>
 
             <!-- Content Area -->
