@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -73,19 +73,42 @@ const PASSPORT_EXPIRY_YEARS = Array.from({ length: 11 }, (_, i) => currentYear +
 // Empty child template
 const EMPTY_CHILD = { last_name: "", first_name: "", dobDay: "", dobMonth: "", dobYear: "" };
 
+function parseDateParts(dateStr: string | null | undefined) {
+    if (!dateStr) return null;
+
+    const normalized = dateStr.split("T")[0];
+    const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+        const [, year, month, day] = match;
+        return {
+            day: `${Number(day)}`,
+            month: `${Number(month)}`,
+            year,
+        };
+    }
+
+    const fallback = new Date(dateStr);
+    if (Number.isNaN(fallback.getTime())) return null;
+    return {
+        day: fallback.getUTCDate().toString(),
+        month: (fallback.getUTCMonth() + 1).toString(),
+        year: fallback.getUTCFullYear().toString(),
+    };
+}
+
 // Helper to parse YYYY-MM-DD into { prefixDay, prefixMonth, prefixYear }
 function parseDateToComponents(dateStr: string | null | undefined, prefix: string) {
-    if (!dateStr) return { [`${prefix}Day`]: "", [`${prefix}Month`]: "", [`${prefix}Year`]: "" };
-    const d = new Date(dateStr);
+    const parsed = parseDateParts(dateStr);
+    if (!parsed) return { [`${prefix}Day`]: "", [`${prefix}Month`]: "", [`${prefix}Year`]: "" };
     return {
-        [`${prefix}Day`]: d.getDate().toString(),
-        [`${prefix}Month`]: (d.getMonth() + 1).toString(),
-        [`${prefix}Year`]: d.getFullYear().toString(),
+        [`${prefix}Day`]: parsed.day,
+        [`${prefix}Month`]: parsed.month,
+        [`${prefix}Year`]: parsed.year,
     };
 }
 
 export default function ProfilePage() {
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [candidate, setCandidate] = useState<Candidate | null>(null);
     const [loading, setLoading] = useState(true);
@@ -143,11 +166,7 @@ export default function ProfilePage() {
     const [hasChildren, setHasChildren] = useState(false);
     const [children, setChildren] = useState<Array<{ last_name: string; first_name: string; dobDay: string; dobMonth: string; dobYear: string }>>([]);
 
-    useEffect(() => {
-        fetchProfile();
-    }, []);
-
-    async function fetchProfile() {
+    const fetchProfile = useCallback(async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
@@ -174,14 +193,7 @@ export default function ProfilePage() {
 
             if (candidateData) {
                 setCandidate(candidateData);
-                // Parse DOB
-                let dobDay = "", dobMonth = "", dobYear = "";
-                if (candidateData.date_of_birth) {
-                    const dob = new Date(candidateData.date_of_birth);
-                    dobDay = dob.getDate().toString();
-                    dobMonth = (dob.getMonth() + 1).toString();
-                    dobYear = dob.getFullYear().toString();
-                }
+                const dobParts = parseDateToComponents(candidateData.date_of_birth, "dob");
 
                 // Determine if original_citizenship is same
                 const origSame = !candidateData.original_citizenship ||
@@ -190,9 +202,9 @@ export default function ProfilePage() {
                 setFormData(prev => ({
                     ...prev,
                     nationality: candidateData.nationality || "",
-                    dobDay,
-                    dobMonth,
-                    dobYear,
+                    dobDay: dobParts.dobDay || "",
+                    dobMonth: dobParts.dobMonth || "",
+                    dobYear: dobParts.dobYear || "",
                     phone: candidateData.phone || "",
                     address: candidateData.address || "",
                     current_country: candidateData.current_country || "",
@@ -255,7 +267,11 @@ export default function ProfilePage() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [supabase]);
+
+    useEffect(() => {
+        void fetchProfile();
+    }, [fetchProfile]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
