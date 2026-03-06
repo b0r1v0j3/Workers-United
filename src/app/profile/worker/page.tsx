@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,17 @@ export default async function WorkerProfilePage() {
         .from("candidates")
         .select("*")
         .eq("profile_id", user.id)
-        .single();
+        .maybeSingle();
+
+    // Payment fallback guard: if candidate flag is stale, hide pay CTA when payment is already completed.
+    const { data: completedEntryPayment } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("payment_type", "entry_fee")
+        .in("status", ["completed", "paid"])
+        .or(`user_id.eq.${user.id},profile_id.eq.${user.id}`)
+        .limit(1)
+        .maybeSingle();
 
     // Fetch documents
     const { data: documents } = await supabase
@@ -41,15 +52,21 @@ export default async function WorkerProfilePage() {
         .eq("user_id", user.id);
 
     // Fetch pending offers
-    const { data: pendingOffers } = await supabase
-        .from("offers")
-        .select("*, job_request:job_requests(title, destination_country, employer:employers(company_name))")
-        .eq("candidate_id", candidate?.id)
-        .eq("status", "pending");
+    const { data: pendingOffers } = candidate?.id
+        ? await supabase
+            .from("offers")
+            .select("*, job_request:job_requests(title, destination_country, employer:employers(company_name))")
+            .eq("candidate_id", candidate.id)
+            .eq("status", "pending")
+        : { data: [] as Array<Record<string, unknown>> };
 
     // Calculate verified count from actual documents
     const verifiedDocs = documents?.filter(d => d.status === 'verified') || [];
     const verifiedCount = verifiedDocs.length;
+    const hasPaidEntryFee =
+        !!candidate?.entry_fee_paid ||
+        !!completedEntryPayment?.id ||
+        isPostEntryFeeWorkerStatus(candidate?.status);
     const inQueue = candidate?.status === "IN_QUEUE";
 
     // Calculate profile completion using shared function
@@ -68,6 +85,7 @@ export default async function WorkerProfilePage() {
             profileCompletion={profileCompletion}
             isReady={isReady}
             inQueue={inQueue}
+            hasPaidEntryFee={hasPaidEntryFee}
         />
     );
 }

@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Stripe payment recovery + UX sync hardening: dodat `/api/stripe/confirm-session` fallback za success redirect, webhook/schema usklađivanje za `payments` tabelu (bez nepostojećih kolona), anti-duplicate checkout guard, i worker/queue UI sada koristi i `payments` signal da sakrije `Pay $9` čim je uplata potvrđena — 06.03.2026
 - [x] Hero desktop card layering tweak: zelena `Employer_Request.doc` kartica spuštena (`top-[120px]`) i podignuta iznad plave (`z-20`) da blago preklopi `Operational handover` i otkrije više teksta na braon kartici — 06.03.2026
 - [x] Social preview update: globalni Open Graph/Twitter preview prebačen na standardni logo (`/logo-centered.png`) sa cache-bust query (`?v=20260306`) radi osvežavanja LinkedIn thumbnail-a — 06.03.2026
 - [x] Reliability fix pass: `admin/email-preview` prebačen na reactive template loading (nema stale preview state), a `worker/edit ProfileClient` dobio timezone-safe date parsing (`YYYY-MM-DD`) + stabilan `fetchProfile` lifecycle (`useCallback`/`useEffect`) — 06.03.2026
@@ -360,6 +361,13 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | `/api/contracts/generate-all` | POST | Bulk generisanje DOCX za sve matchovane |
 | `/api/contracts/download-all` | POST | ZIP download svih dokumenata |
 | `/api/contracts/preview` | GET | Preview placeholder podataka za DOCX dokumente |
+
+### Stripe API Routes:
+| Putanja | Metoda | Namena |
+|---|---|---|
+| `/api/stripe/create-checkout` | POST | Kreira Stripe Checkout session za `entry_fee` ili `confirmation_fee` |
+| `/api/stripe/webhook` | POST | Stripe webhook finalizacija (`checkout.session.completed`) + post-payment status/email akcije |
+| `/api/stripe/confirm-session` | POST | Fallback potvrda plaćanja sa success redirect-a (`session_id`) kad webhook kasni/padne |
 
 ### Key Libraries:
 | Fajl | Namena |

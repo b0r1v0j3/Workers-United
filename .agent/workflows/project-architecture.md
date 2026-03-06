@@ -72,7 +72,7 @@ Workers-United/
 │   │   │   ├── cron/          # 8 cron jobs (see below)
 │   │   │   ├── documents/     # verify, verify-passport
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
-│   │   │   ├── stripe/        # create-checkout, webhook
+│   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback
 │   │   │   ├── email-queue/   # Email queue processor
 │   │   │   ├── godmode/       # Dev testing endpoint
 │   │   │   ├── health/        # Health check
@@ -185,8 +185,9 @@ User (Browser)
 1. Worker completes profile to 100% → gets verified
 2. Worker clicks "Pay" → Stripe Checkout Session created (`/api/stripe/create-checkout`)
 3. Stripe redirects back → Webhook confirms payment (`/api/stripe/webhook`)
-4. Worker enters queue (`IN_QUEUE` status)
-5. Cron job (`match-jobs`) attempts to match with employer requests
+4. Success redirect includes `session_id`; client can call `/api/stripe/confirm-session` as fallback if webhook is delayed
+5. Worker enters queue (`IN_QUEUE` status or preserved advanced status)
+6. Cron job (`match-jobs`) attempts to match with employer requests
 
 ---
 

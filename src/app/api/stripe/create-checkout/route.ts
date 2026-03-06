@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 
 export async function POST(request: NextRequest) {
     let userIdForLog: string | null = null;
@@ -92,9 +93,23 @@ export async function POST(request: NextRequest) {
 
         // For entry fee, allow payment for all worker profiles
         if (type === "entry_fee") {
+            // Guard against duplicate checkout creation when payment is already completed.
+            const { data: existingCompletedPayment } = await supabase
+                .from("payments")
+                .select("id")
+                .eq("payment_type", "entry_fee")
+                .in("status", ["completed", "paid"])
+                .or(`user_id.eq.${user.id},profile_id.eq.${user.id}`)
+                .limit(1)
+                .maybeSingle();
+
+            if (existingCompletedPayment) {
+                return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
+            }
+
             const { data: initialCandidate, error: candidateError } = await supabase
                 .from("candidates")
-                .select("entry_fee_paid")
+                .select("entry_fee_paid, status, job_search_active, queue_joined_at")
                 .eq("profile_id", user.id)
                 .maybeSingle();
             let candidate = initialCandidate;
@@ -118,7 +133,7 @@ export async function POST(request: NextRequest) {
 
                 const { data: repairedCandidate, error: repairedCandidateError } = await supabase
                     .from("candidates")
-                    .select("entry_fee_paid")
+                    .select("entry_fee_paid, status, job_search_active, queue_joined_at")
                     .eq("profile_id", user.id)
                     .maybeSingle();
 
@@ -132,6 +147,16 @@ export async function POST(request: NextRequest) {
                 await logServerActivity(user.id, "checkout_candidate_auto_created", "payment", {
                     source: "create_checkout",
                 });
+            }
+
+            const alreadyActivated =
+                !!candidate?.entry_fee_paid ||
+                !!candidate?.job_search_active ||
+                !!candidate?.queue_joined_at ||
+                isPostEntryFeeWorkerStatus(candidate?.status);
+
+            if (alreadyActivated) {
+                return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
             }
 
             const eligibility = getEntryFeeEligibility(candidate);
@@ -150,6 +175,7 @@ export async function POST(request: NextRequest) {
             .from("payments")
             .insert({
                 user_id: user.id,
+                profile_id: user.id,
                 amount,
                 amount_cents: amountCents,
                 payment_type: type,
@@ -199,10 +225,27 @@ export async function POST(request: NextRequest) {
         });
 
         // Update payment record with session ID
-        await supabase
+        const { error: sessionIdUpdateError } = await supabase
             .from("payments")
             .update({ stripe_checkout_session_id: session.id })
             .eq("id", payment.id);
+
+        if (sessionIdUpdateError) {
+            // Fallback via admin client in case user RLS blocks the update.
+            const { error: adminSessionIdUpdateError } = await admin
+                .from("payments")
+                .update({ stripe_checkout_session_id: session.id })
+                .eq("id", payment.id);
+
+            if (adminSessionIdUpdateError) {
+                await logServerActivity(user.id, "checkout_session_id_update_failed", "payment", {
+                    payment_id: payment.id,
+                    stripe_session_id: session.id,
+                    user_update_error: sessionIdUpdateError.message,
+                    admin_update_error: adminSessionIdUpdateError.message,
+                }, "error");
+            }
+        }
 
         await logServerActivity(user.id, "checkout_session_created", "payment", {
             type,

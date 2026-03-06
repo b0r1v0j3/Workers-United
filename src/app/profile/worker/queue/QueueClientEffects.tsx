@@ -12,15 +12,56 @@ export default function QueueClientEffects() {
 
     useEffect(() => {
         const payment = searchParams.get("payment");
-        if (payment === "success") {
-            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-            toast.success("Payment successful! We are activating your queue status.");
+        const sessionId = searchParams.get("session_id");
+
+        let cancelled = false;
+
+        const handleSuccess = async () => {
+            if (payment !== "success") return;
+
+            if (sessionId) {
+                try {
+                    const res = await fetch("/api/stripe/confirm-session", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ sessionId }),
+                    });
+                    const data = await res.json();
+
+                    if (cancelled) return;
+
+                    if (res.ok && data.state === "paid") {
+                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+                        toast.success("Payment verified. You are now active in the queue.");
+                    } else if (data.state === "pending") {
+                        toast.info("Payment is still processing. Refresh in a few seconds.");
+                    } else {
+                        toast.warning(data.error || "Payment was detected, but final activation is pending.");
+                    }
+                } catch {
+                    if (!cancelled) {
+                        toast.warning("Payment return detected. Verification is still in progress.");
+                    }
+                }
+            } else {
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+                toast.success("Payment successful! We are activating your queue status.");
+            }
+
             // Clean URL without reload
             window.history.replaceState({}, "", "/profile/worker/queue");
-        } else if (payment === "cancelled") {
+        };
+
+        void handleSuccess();
+
+        if (payment === "cancelled") {
             toast.info("Payment cancelled. You can try again when you're ready.");
             window.history.replaceState({}, "", "/profile/worker/queue");
         }
+
+        return () => {
+            cancelled = true;
+        };
     }, [searchParams]);
 
     return null;
@@ -51,6 +92,11 @@ export function PayToJoinButton({ displayName }: { displayName: string }) {
             const data = await res.json();
 
             if (!res.ok) {
+                if (typeof data.error === "string" && data.error.toLowerCase().includes("already paid")) {
+                    toast.success("Payment already confirmed. Refreshing queue status.");
+                    window.location.href = "/profile/worker/queue";
+                    return;
+                }
                 setError(data.error || "Something went wrong. Please try again.");
                 setLoading(false);
                 return;

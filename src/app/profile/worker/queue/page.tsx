@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Shield } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
 
 export const dynamic = "force-dynamic";
@@ -23,8 +24,23 @@ export default async function QueuePage() {
         redirect("/profile/worker");
     }
 
-    const isInQueue = candidate.entry_fee_paid && candidate.status === "IN_QUEUE";
+    const { data: completedEntryPayment } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("payment_type", "entry_fee")
+        .in("status", ["completed", "paid"])
+        .or(`user_id.eq.${user.id},profile_id.eq.${user.id}`)
+        .limit(1)
+        .maybeSingle();
+
+    const hasPaidEntryFee =
+        !!candidate.entry_fee_paid ||
+        !!completedEntryPayment?.id ||
+        isPostEntryFeeWorkerStatus(candidate.status);
+
+    const isInQueue = hasPaidEntryFee && candidate.status === "IN_QUEUE";
     const hasPendingOffer = candidate.status === "OFFER_PENDING";
+    const paymentActivationPending = hasPaidEntryFee && !candidate.entry_fee_paid && !hasPendingOffer && !isInQueue;
     const queueJoinedDate = candidate.queue_joined_at
         ? new Date(candidate.queue_joined_at)
         : null;
@@ -52,7 +68,21 @@ export default async function QueuePage() {
             <main className="w-full">
                 {/* Queue Status Card */}
                 <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-6">
-                    {!candidate.entry_fee_paid ? (
+                    {hasPendingOffer ? (
+                        // Has pending offer
+                        <div className="text-center py-4">
+                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                    <polyline points="22,4 12,14.01 9,11.01" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-semibold text-[#050505] mb-2">🎉 You Have an Offer!</h2>
+                            <p className="text-[#65676b] mb-4">
+                                Check below to review and confirm your job offer.
+                            </p>
+                        </div>
+                    ) : !hasPaidEntryFee ? (
                         // Not paid yet — show payment CTA
                         <div className="relative z-10 flex flex-col items-center justify-center gap-6 text-center py-8">
                             <div className="flex flex-col items-center">
@@ -68,20 +98,6 @@ export default async function QueuePage() {
                                 <Shield size={14} className="shrink-0 text-gray-400" />
                                 <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer in 90 days</span>
                             </div>
-                        </div>
-                    ) : hasPendingOffer ? (
-                        // Has pending offer
-                        <div className="text-center py-4">
-                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                    <polyline points="22,4 12,14.01 9,11.01" />
-                                </svg>
-                            </div>
-                            <h2 className="text-xl font-semibold text-[#050505] mb-2">🎉 You Have an Offer!</h2>
-                            <p className="text-[#65676b] mb-4">
-                                Check below to review and confirm your job offer.
-                            </p>
                         </div>
                     ) : isInQueue ? (
                         // In queue, waiting
@@ -110,6 +126,19 @@ export default async function QueuePage() {
                                     you&apos;ll receive an offer based on your queue position. First in queue = first to receive offers.
                                 </p>
                             </div>
+                        </div>
+                    ) : paymentActivationPending ? (
+                        <div className="text-center py-4">
+                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2">
+                                    <path d="M20 6L9 17l-5-5" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-semibold text-[#050505] mb-2">Payment Confirmed</h2>
+                            <p className="text-[#65676b] max-w-lg mx-auto">
+                                Your entry fee is paid. We are syncing your worker profile status now.
+                                Please refresh this page in a few seconds.
+                            </p>
                         </div>
                     ) : (
                         // Other status

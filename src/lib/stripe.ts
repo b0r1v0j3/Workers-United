@@ -23,14 +23,15 @@ export type PaymentType = "entry_fee" | "confirmation_fee";
 
 export function getCheckoutSuccessUrl(type: PaymentType, offerId?: string): string {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const sessionParam = "session_id={CHECKOUT_SESSION_ID}";
 
     switch (type) {
         case "entry_fee":
-            return `${baseUrl}/profile/worker/queue?payment=success`;
+            return `${baseUrl}/profile/worker/queue?payment=success&${sessionParam}`;
         case "confirmation_fee":
             return offerId
-                ? `${baseUrl}/profile/worker/offers/${offerId}?payment=success`
-                : `${baseUrl}/profile/worker/queue?payment=success`;
+                ? `${baseUrl}/profile/worker/offers/${offerId}?payment=success&${sessionParam}`
+                : `${baseUrl}/profile/worker/queue?payment=success&${sessionParam}`;
         default:
             return `${baseUrl}/profile/worker`;
     }

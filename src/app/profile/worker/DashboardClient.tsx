@@ -36,12 +36,13 @@ interface DashboardClientProps {
     profileCompletion: number;
     isReady: boolean;
     inQueue: boolean;
+    hasPaidEntryFee: boolean;
 }
 
 type TabType = "profile" | "documents" | "status";
 
 export default function DashboardClient({
-    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue
+    user, profile, candidate, documents = [], pendingOffers = [], profileCompletion, isReady, inQueue, hasPaidEntryFee
 }: DashboardClientProps) {
     const [activeTab, setActiveTab] = useState<TabType>("profile");
     const [payLoading, setPayLoading] = useState(false);
@@ -65,6 +66,11 @@ export default function DashboardClient({
             if (data.checkoutUrl) {
                 window.location.href = data.checkoutUrl;
             } else {
+                if (typeof data.error === "string" && data.error.toLowerCase().includes("already paid")) {
+                    toast.success("Payment already confirmed. Opening queue status.");
+                    window.location.href = "/profile/worker/queue";
+                    return;
+                }
                 fetch("/api/track", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -153,7 +159,6 @@ export default function DashboardClient({
     };
 
     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
-    const hasPaidEntryFee = !!candidate?.entry_fee_paid;
     const canStartPayment = !hasPaidEntryFee && !inQueue;
     const paymentPendingActivation = hasPaidEntryFee && !inQueue;
     const hasUploadedDocs = documents && documents.length > 0;
