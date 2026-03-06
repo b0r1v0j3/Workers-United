@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Mail, Monitor, Smartphone, CheckCircle, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Mail, Monitor, Smartphone, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
 
 // ─── Mock data for each email template ──────────────────────────
 
@@ -92,15 +92,9 @@ export default function EmailPreviewPage() {
     const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
 
-    // Load preview on mount
-    useEffect(() => {
-        loadPreview(selectedType);
-    }, []);
-
-    const loadPreview = async (type: string) => {
+    const loadPreview = useCallback(async (type: string) => {
         setLoading(true);
         setError(null);
-        setSelectedType(type);
 
         try {
             const res = await fetch("/api/admin/email-preview", {
@@ -111,13 +105,18 @@ export default function EmailPreviewPage() {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             setHtmlContent(json.html);
-        } catch (err: any) {
-            setError(err.message || "Failed to load preview");
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to load preview");
             setHtmlContent("");
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    // Load preview whenever template changes
+    useEffect(() => {
+        void loadPreview(selectedType);
+    }, [selectedType, loadPreview]);
 
     return (
         <div className="min-h-screen bg-[#f0f2f5] p-6 font-montserrat">
@@ -173,7 +172,7 @@ export default function EmailPreviewPage() {
                             {Object.entries(EMAIL_LABELS).map(([key, label]) => (
                                 <button
                                     key={key}
-                                    onClick={() => loadPreview(key)}
+                                    onClick={() => setSelectedType(key)}
                                     className={`w-full text-left px-4 py-3 text-sm font-medium transition-all flex items-center justify-between group ${selectedType === key
                                         ? "bg-blue-50 text-[#1877f2] border-l-4 border-[#1877f2]"
                                         : "text-gray-600 hover:bg-gray-50 border-l-4 border-transparent hover:pl-5"
