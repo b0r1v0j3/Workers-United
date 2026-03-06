@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Email header spacing tweak po feedback-u: u `wrapModernTemplate` povećan gornji razmak zaglavlja (`padding-top 24px`, bottom 16px) da wordmark više ne deluje zalepljeno uz gornju ivicu kartice u Gmail prikazu — 06.03.2026
 - [x] Email header brand asset alignment: umesto generičkog text rendera, `wrapModernTemplate` sada koristi fabrički wordmark asset (`public/logo-wordmark-email.png`) izvučen iz `public/new logo/text-.png` (trim + resize), pa email header zadržava originalnu tipografiju (`WORKERS` bold / `UNITED` regular) u malom prostoru — 06.03.2026
 - [x] Email brand-header typography correction: text-only header zadržan bez slike, ali vraćen na brend stil (`WORKERS` bold + `UNITED` regular) u kompaktnom prostoru, umesto generičkog jednoličnog natpisa — 06.03.2026
 - [x] Payment-success email badge centering fix: `$9 Payment Received` segment u Gmail-u prebačen sa `flex` na table-based centering (`align="center"` + inline icon/text ćelije) da vizuelno bude centriran kao u admin preview-u — 06.03.2026
