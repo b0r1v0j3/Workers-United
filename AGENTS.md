@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Worker application-status UX fix: “You have an offer” sada se prikazuje SAMO kada stvarno postoji aktivna pending ponuda u `offers`; za plaćene korisnike bez realne ponude uveden jasan `Payment Accepted` state sa 90-day guarantee copy + countdown/progress bar + refund-eligibility datum (DD/MM/YYYY) — 06.03.2026
 - [x] Stripe payment recovery + UX sync hardening: dodat `/api/stripe/confirm-session` fallback za success redirect, webhook/schema usklađivanje za `payments` tabelu (bez nepostojećih kolona), anti-duplicate checkout guard, i worker/queue UI sada koristi i `payments` signal da sakrije `Pay $9` čim je uplata potvrđena — 06.03.2026
 - [x] Hero desktop card layering tweak: zelena `Employer_Request.doc` kartica spuštena (`top-[120px]`) i podignuta iznad plave (`z-20`) da blago preklopi `Operational handover` i otkrije više teksta na braon kartici — 06.03.2026
 - [x] Social preview update: globalni Open Graph/Twitter preview prebačen na standardni logo (`/logo-centered.png`) sa cache-bust query (`?v=20260306`) radi osvežavanja LinkedIn thumbnail-a — 06.03.2026
