@@ -106,7 +106,7 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <div style="background:white; border-radius:24px; overflow: hidden; border: 1px solid #E5E5EA;">
             
             <!-- Compact official wordmark header -->
-            <div style="background: #FFFFFF; padding: 24px 24px 16px; text-align: center; border-bottom: 1px solid #E5E5EA;">
+            <div style="background: #FFFFFF; padding: 20px 24px; text-align: center; border-bottom: 1px solid #E5E5EA;">
                 <img src="https://workersunited.eu/logo-wordmark-email.png" alt="Workers United" width="168" height="12" style="display:block; margin:0 auto; width:168px; height:12px; border:0; outline:none; text-decoration:none;">
             </div>
 

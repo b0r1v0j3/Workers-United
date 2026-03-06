@@ -247,6 +247,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — end-to-end test celokupnog flow-a
 
 ### ✅ Završeno (poslednje)
+- [x] Email header vertical-centering correction: wordmark zona u gornjem delu kartice vraćena na simetričan padding (`20px` gore/dole) da `WORKERS UNITED` ostane vizuelno centriran u header bloku nakon top-offset izmene — 06.03.2026
 - [x] Email card top offset fix (Gmail-safe): uklonjen oslonac na `margin-top` wrappera i dodat eksplicitan gornji spacer (`28px`) pre glavne bele kartice u `wrapModernTemplate`, tako da ceo email panel više ne “udara” u vrh sive pozadine u Gmail prikazu — 06.03.2026
 - [x] Email header spacing tweak po feedback-u: u `wrapModernTemplate` povećan gornji razmak zaglavlja (`padding-top 24px`, bottom 16px) da wordmark više ne deluje zalepljeno uz gornju ivicu kartice u Gmail prikazu — 06.03.2026
 - [x] Email header brand asset alignment: umesto generičkog text rendera, `wrapModernTemplate` sada koristi fabrički wordmark asset (`public/logo-wordmark-email.png`) izvučen iz `public/new logo/text-.png` (trim + resize), pa email header zadržava originalnu tipografiju (`WORKERS` bold / `UNITED` regular) u malom prostoru — 06.03.2026
