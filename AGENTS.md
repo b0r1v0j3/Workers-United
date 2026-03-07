@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 07.03.2026 (Admin/workspace consistency pass 3: admin sidebar više ne nudi zbunjujuće role preview linkove, admin workers/employers/agencies registry stranice dele isti operativni hero/metric/layout sistem, worker table akcije su razdvojene na `Inspect workspace` vs `Open case`, a postojeći worker/employer/agency workspaces ostaju poravnati oko istog AppShell obrasca; AGENTS sekcije `Sada / Sledeće / Kasnije` i roadmap ostaju kanonski plan rada)
+> **Poslednje ažuriranje:** 07.03.2026 (Admin/workspace consistency pass 4: admin sidebar više ne nudi zbunjujuće role preview linkove, workers/employers/agencies registry stranice dele isti operativni hero/metric/layout sistem, worker case view (`/admin/workers/[id]`) dobio je hero + inspect prečice, a `Queue` i `Jobs` admin ekran sada koriste isti admin ops jezik i guidance kartice kao ostatak sistema; postojeći worker/employer/agency workspaces ostaju poravnati oko istog AppShell obrasca; AGENTS sekcije `Sada / Sledeće / Kasnije` i roadmap ostaju kanonski plan rada)
 
 ---
 
@@ -270,6 +270,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Admin/workspace consistency pass 4: `/admin/workers/[id]` više ne ulazi direktno u stari long-form case view, već otvara admin hero + inspect prečice za worker/documents/queue; `/admin/queue` i `/admin/jobs` su poravnati na isti admin ops hero/guidance/layout sistem kao ostatak admina — 07.03.2026
 - [x] Admin/workspace consistency pass 3: admin sidebar više ne nudi zbunjujuće role preview linkove, uveden je zajednički `AdminSectionHero` za workers/employers/agencies registry stranice, a worker admin tabela sada jasno odvaja `Inspect workspace` od `Open case`; employer i agency admin liste dele isti operativni layout, metrike i inspect jezik — 07.03.2026
 - [x] Profile workspace consistency pass 2: worker overview više ne deluje kao poseban proizvod, već koristi isti hero/metrics/left-rail ritam kao employer workspace; dodat je jasniji `Next action` blok, dokument summary, i usklađen `Queue & Status / Support` language. Agency dashboard sada eksplicitnije vodi iz intake forme u puni worker workspace (`Create Draft and Open Worker Workspace`, `Open worker workspace`) i prazno stanje objašnjava šta se dešava posle draft-a — 07.03.2026
 - [x] Admin inspect workspace pass: admin više ne mora da se oslanja samo na apstraktni `/profile/*` UI preview. Worker, employer i agency workspace sada podržavaju read-only `?inspect=<profile_id>` otvaranje nad stvarnim account podacima bez mutacije admin naloga; worker inspect pokriva overview + documents + queue, employer inspect otvara kanonski tabbed workspace nad ciljanim employer zapisom, agency inspect pokriva dashboard + worker editor, dodata je i `/admin/agencies` lista, a admin workers/employers/dashboard sada imaju direktne `Open Workspace` ulaze — 07.03.2026
