@@ -53,9 +53,9 @@ Workers-United/
 │   │   ├── signup/            # Signup page
 │   │   ├── profile/
 │   │   │   ├── page.tsx       # Auto-redirect (/profile → worker, employer, or agency)
-│   │   │   ├── worker/        # Worker workspace in shared AppShell with simplified `Overview / Documents / Queue / Support` language; admin can inspect real worker data via `?inspect=<profile_id>` in read-only preview
-│   │   │   ├── employer/      # Canonical employer workspace in shared AppShell; simplified `Next action + Hiring status` sidebar pattern, `jobs*` routes redirect back into employer tabs, and admin can inspect real employer workspaces via `?inspect=<profile_id>`
-│   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a simpler `Add worker` intake + workers list, while admin preview stays read-only via `?inspect=<profile_id>`
+│   │   │   ├── worker/        # Worker workspace in shared AppShell with simplified `Overview / Documents / Queue / Support` language; overview no longer duplicates Documents/Queue/Support cards in the main canvas, main content is a single primary column, and admin can inspect real worker data via `?inspect=<profile_id>` in read-only preview
+│   │   │   ├── employer/      # Canonical employer workspace in shared AppShell; `jobs*` routes redirect back into employer tabs, company/job content now lives in a single primary column without duplicate helper panels, and admin can inspect real employer workspaces via `?inspect=<profile_id>`
+│   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action and a neutral white/gray modal intake. Generic admin preview uses local sandbox drafts, while `?inspect=<profile_id>` opens the real agency workspace without changing the admin role
 │   │   │   └── settings/      # GDPR: delete account, export data
 │   │   ├── admin/
 │   │   │   ├── page.tsx       # Admin operations dashboard (stats, action cards, pipeline, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
@@ -94,7 +94,7 @@ Workers-United/
 │   │   └── terms/             # Terms & conditions page
 │   ├── proxy.ts                # ← CSRF + auth guard (profile, admin, API routes)
 │   ├── components/
-│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), inspect-query preservation across admin previews, safe routing back to /admin, explicit admin preview shortcuts, and no duplicate employer/agency shortcut blocks
+│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), inspect-query preservation across admin previews, safe routing back to /admin, a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
@@ -191,8 +191,8 @@ User (Browser)
 3. For Google OAuth from login page (first time): user is redirected to `/auth/select-role` to choose worker/employer/agency
 4. Agency-submitted worker drafts can be claimed via `/signup?type=worker&claim=<candidate-id>`; callback/API links the draft to the real worker auth/profile only when the worker signs up with the same invited email
 5. Claimed or draft agency workers can be managed from `/profile/agency/workers/[id]`, where the agency can fill almost the full worker profile (`identity/contact/citizenship/family/preferences/passport`), while keeping `email` and `phone` optional contact channels; the same page also handles document upload/replacement, manual review requests, and the `$9` Job Finder payment for claimed workers
-6. Admin access to `/profile/agency` is now read-only preview only: it must never provision an agency row or downgrade the admin role in `profiles`; mutating actions stay available only to actual agency accounts
-7. Admin access to `/profile/worker`, `/profile/employer`, and `/profile/agency` is read-only preview only: worker edit/upload/payment, employer save/job posting, and agency draft/doc/payment actions are disabled so the admin account never auto-provisions role-specific data or leaves the admin role; when needed, admin now opens the real target workspace with `?inspect=<profile_id>` instead of overloading the admin's own role records
+6. Generic admin access to `/profile/agency` is a local sandbox preview: it never provisions an agency row or downgrades the admin role, but it does allow the same add-worker popup flow using browser-local preview drafts so the owner can inspect the UX end-to-end
+7. Admin access to `/profile/worker` and `/profile/employer` remains read-only preview only, while `/profile/agency?inspect=<profile_id>` opens the real target agency workspace with admin authority attached to that agency instead of overloading the admin's own role records
 8. Employer workspace is now canonical at `/profile/employer`; legacy `/profile/employer/jobs` and `/profile/employer/jobs/new` immediately redirect into `?tab=jobs` and `?tab=post-job`
 9. On first login → user creates profile in the worker/employer domain (`candidates` remains the legacy physical table for workers)
 10. `profiles` table links auth user to their role
@@ -224,7 +224,7 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/layout.tsx` | Root layout — loads Montserrat font, GodModeWrapper, CookieConsent |
-| `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, hides account-only actions, preserves `?inspect=` across workspace nav, and routes Dashboard back to `/admin` |
+| `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, differentiates agency sandbox preview from real inspect mode, and uses a wider neutral dashboard canvas |
 | `src/components/UnifiedNavbar.tsx` | Top navigation bar (logo, links, user menu); dashboard logo routes by role and surfaces `Admin Preview` when admin is viewing worker/employer/agency workspaces |
 
 ### Worker Flow
@@ -242,9 +242,17 @@ User (Browser)
 ### Employer Flow
 | File | Role |
 |---|---|
-| `src/app/profile/employer/page.tsx` | Canonical employer workspace with tabs for company info, post-job form, and active jobs inside shared `AppShell`; supports read-only admin inspect via `?inspect=<profile_id>` |
+| `src/app/profile/employer/page.tsx` | Canonical employer workspace with tabs for company info, post-job form, and active jobs inside shared `AppShell`; sidebar remains the single navigation source for `New Job Request`, and the jobs empty state no longer duplicates that CTA in the main canvas; supports read-only admin inspect via `?inspect=<profile_id>` |
 | `src/app/profile/employer/jobs/` | Legacy redirect to `/profile/employer?tab=jobs` |
 | `src/app/profile/employer/jobs/new/` | Legacy redirect to `/profile/employer?tab=post-job` |
+
+### Agency Flow
+| File | Role |
+|---|---|
+| `src/app/profile/agency/page.tsx` | Agency workspace entry; loads real agency workers, supports generic admin sandbox preview, and allows real agency inspect via `?inspect=<profile_id>` without role drift |
+| `src/app/profile/agency/AgencyDashboardClient.tsx` | Single-board agency dashboard: clean workers table, header search + the only `Add worker` CTA, local preview drafts, and modal-based add/edit flow that keeps the dashboard mounted |
+| `src/app/profile/agency/AgencyWorkerCreateModal.tsx` | Neutral white/gray/black agency worker intake modal; supports save-draft, close-confirm, admin sandbox preview drafts, and real agency creation through `/api/agency/workers` |
+| `src/app/profile/agency/workers/[id]/AgencyWorkerClient.tsx` | Full worker editor for agency-owned workers, including documents, review requests, and Job Finder payment for claimed workers |
 
 ### Admin
 | File | Role |
@@ -385,7 +393,7 @@ When adding a new feature, follow this order:
 - User-facing text: **"worker"** (never "candidate")
 - User-facing text: **"Sign In"** (never "Log In")
 - Internal DB tables still use `candidates` for workers
-- Agency foundation is additive-first: `supabase/migrations/20260306180000_agency_foundation_scaffold.sql` adds `agencies` plus worker attribution fields on `candidates`; the migration is now applied on live Supabase, and agency flow spans `/profile/agency`, `/profile/agency/workers/[id]`, `/api/agency/workers`, `/api/agency/workers/[workerId]/documents`, `/api/agency/claim`, and `/signup?type=worker&claim=...`. The schema guard is still kept so preview/local environments fail gracefully if the migration is missing, and admin preview must only show the disabled intake/editor structure without creating data
+- Agency foundation is additive-first: `supabase/migrations/20260306180000_agency_foundation_scaffold.sql` adds `agencies` plus worker attribution fields on `candidates`; the migration is now applied on live Supabase, and agency flow spans `/profile/agency`, `/profile/agency/workers/[id]`, `/api/agency/workers`, `/api/agency/workers/[workerId]/documents`, `/api/agency/claim`, and `/signup?type=worker&claim=...`. The schema guard is still kept so preview/local environments fail gracefully if the migration is missing. Generic admin preview now uses browser-local sandbox drafts, while `?inspect=<profile_id>` is the real agency inspect path that must never mutate the admin role itself
 - Transitional DB aliases are available for gradual migration: `worker_onboarding` (→ `candidates`), `worker_documents` (→ `candidate_documents`), `worker_readiness` (→ `candidate_readiness`)
 - Date format: **DD/MM/YYYY** — use `toLocaleDateString('en-GB')`, NEVER US format
 
