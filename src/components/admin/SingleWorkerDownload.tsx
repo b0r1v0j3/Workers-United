@@ -42,17 +42,25 @@ export default function SingleWorkerDownload({ profileId, workerName }: { profil
     };
 
     return (
-        <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
-            <h2 className="font-bold text-[#1e293b] text-xl mb-4">📦 Download Documents</h2>
+        <div className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+            <div className="mb-5">
+                <div className="inline-flex rounded-full border border-[#e3ded2] bg-[#faf8f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b675d]">
+                    Export
+                </div>
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#18181b]">Worker document bundle</h2>
+                <p className="mt-2 text-sm leading-relaxed text-[#57534e]">
+                    Download the generated PDF set together with the uploaded worker files in a single ZIP.
+                </p>
+            </div>
             {error && (
-                <div className="mb-3 px-3 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-200">
+                <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                     {error}
                 </div>
             )}
             <button
                 onClick={handleDownload}
                 disabled={downloading}
-                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-2.5 rounded-lg font-bold text-sm hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 transition-all"
+                className="w-full rounded-xl bg-[#18181b] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#27272a] disabled:opacity-50"
             >
                 {downloading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -63,11 +71,11 @@ export default function SingleWorkerDownload({ profileId, workerName }: { profil
                         Preparing...
                     </span>
                 ) : (
-                    "📥 Download All Docs (ZIP)"
+                    "Download full ZIP"
                 )}
             </button>
-            <p className="text-[11px] text-[#94a3b8] mt-2 text-center">
-                Generated PDF + uploaded passport, photo, diploma
+            <p className="mt-3 text-center text-[11px] text-[#8a8479]">
+                Includes generated PDFs plus passport, biometric photo, and diploma
             </p>
         </div>
     );

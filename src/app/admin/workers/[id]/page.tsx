@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -112,8 +113,10 @@ export default async function CandidateDetailPage({ params }: PageProps) {
     });
     const verifiedDocumentsCount = (documents || []).filter((doc: any) => doc.status === "verified").length;
     const pendingDocumentsCount = (documents || []).filter((doc: any) => ["pending", "uploaded", "verifying", "manual_review"].includes(doc.status || "")).length;
+    const rejectedDocumentsCount = (documents || []).filter((doc: any) => doc.status === "rejected").length;
     const completedPaymentsCount = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || "")).length;
     const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
+    const latestSignature = signatures?.[0] || null;
     const displayName = candidateProfile?.full_name || authUser.user_metadata?.full_name || authUser.email || "Worker";
     const workerStatus = candidateData?.status || "NEW";
     const approvalState = candidateData?.admin_approved ? "Approved" : "Pending";
@@ -394,9 +397,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
     };
 
     return (
-        <>
-
-            <div className="max-w-[1200px] mx-auto px-5 py-10">
+        <div className="max-w-[1200px] mx-auto px-5 py-10">
                 <div className="mb-6 flex flex-wrap items-center gap-3">
                     <Link
                         href="/admin/workers"
@@ -433,7 +434,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     title={displayName}
                     description="Admin case view for approvals, documents, payments, and matching. Use the inspect links above when you want the real worker workspace instead of the admin control surface."
                     metrics={[
-                        { label: "Status", value: workerStatus.replace(/_/g, " "), meta: approvalState },
+                        { label: "Status", value: toDisplayLabel(workerStatus), meta: approvalState },
                         { label: "Completion", value: `${profileCompletion}%`, meta: candidateProfile?.email || authUser.email || "No email" },
                         { label: "Docs", value: `${verifiedDocumentsCount}/3`, meta: pendingDocumentsCount > 0 ? `${pendingDocumentsCount} pending` : "No pending review" },
                         { label: "Paid", value: completedPaymentsCount, meta: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} pending` : "No pending payments" },
@@ -460,449 +461,650 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     />
                 </div>
 
-                <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column: Worker Info */}
-                    <div className="lg:col-span-1 space-y-6">
-                        {/* No Profile Notice */}
-                        {!candidateProfile && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-[16px] p-4 text-amber-800 text-sm font-medium flex items-center gap-2">
-                                <AlertTriangle size={16} /> This user has not completed their profile yet. Only basic auth data is available.
-                            </div>
-                        )}
+                <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.6fr)]">
+                    <div className="space-y-6">
+                        {!candidateProfile ? (
+                            <OpsNotice copy="This user has not completed the worker profile yet. Only auth metadata and any existing document or payment records are available." />
+                        ) : null}
 
-                        {/* Profile Card — All Fields */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="font-bold text-slate-900 text-lg">Profile Info</h2>
-                                <span className="text-xs font-bold text-slate-500">{profileCompletion}% complete</span>
+                        <OpsPanelCard
+                            eyebrow="Worker snapshot"
+                            title="Profile and readiness"
+                            description="Core identity, passport, and family data used for verification and downstream visa paperwork."
+                        >
+                            <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <div className="text-sm font-semibold text-[#18181b]">Completion signal</div>
+                                        <div className="mt-1 text-sm text-[#71717a]">
+                                            Worker profile is currently {profileCompletion}% complete.
+                                        </div>
+                                    </div>
+                                    <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${profileCompletion === 100
+                                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                        : profileCompletion >= 50
+                                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                                            : "border-amber-200 bg-amber-50 text-amber-700"
+                                        }`}>
+                                        {profileCompletion === 100 ? "Ready" : "Needs completion"}
+                                    </span>
+                                </div>
+                                <div className="mt-4 h-2 rounded-full bg-[#ece7dc]">
+                                    <div
+                                        className={`h-2 rounded-full transition-all ${profileCompletion === 100
+                                            ? "bg-emerald-500"
+                                            : profileCompletion >= 50
+                                                ? "bg-blue-500"
+                                                : "bg-amber-500"
+                                            }`}
+                                        style={{ width: `${profileCompletion}%` }}
+                                    />
+                                </div>
                             </div>
 
-                            {/* Progress Bar */}
-                            <div className="w-full bg-slate-100 rounded-full h-2 mb-5">
-                                <div className={`h-2 rounded-full transition-all ${profileCompletion === 100 ? 'bg-emerald-500' : profileCompletion >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`}
-                                    style={{ width: `${profileCompletion}%` }} />
-                            </div>
-
-                            {/* Basic Info */}
-                            <div className="mb-4">
-                                <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Basic Info</h3>
-                                <div className="grid grid-cols-1 gap-2">
+                            <div className="mt-5 space-y-4">
+                                <FieldGroup title="Basic info" description="Identity and contact data used across notifications and case handling.">
                                     <InfoRow label="Full Name" value={candidateProfile?.full_name || authUser.user_metadata?.full_name} />
                                     <InfoRow label="Email" value={candidateProfile?.email || authUser.email} />
                                     <InfoRow label="Phone" value={candidateData?.phone} />
                                     <InfoRow label="Gender" value={candidateData?.gender} />
-                                </div>
-                            </div>
+                                </FieldGroup>
 
-                            {/* Personal Details */}
-                            <div className="mb-4">
-                                <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Personal Details</h3>
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                                    <InfoRow label="Date of Birth" value={candidateData?.date_of_birth ? new Date(candidateData.date_of_birth).toLocaleDateString('en-GB') : null} />
+                                <FieldGroup title="Personal details" description="Birth, citizenship, and mobility history.">
+                                    <InfoRow label="Date of Birth" value={formatDate(candidateData?.date_of_birth)} />
                                     <InfoRow label="Nationality" value={candidateData?.nationality} />
                                     <InfoRow label="Citizenship" value={candidateData?.citizenship} />
                                     <InfoRow label="Current Country" value={candidateData?.current_country} />
                                     <InfoRow label="Birth Country" value={candidateData?.birth_country} />
                                     <InfoRow label="Birth City" value={candidateData?.birth_city} />
                                     <InfoRow label="Marital Status" value={candidateData?.marital_status} />
-                                    <InfoRow label="Lives Abroad" value={candidateData?.lives_abroad != null ? (candidateData.lives_abroad ? 'Yes' : 'No') : null} />
-                                    <InfoRow label="Previous Visas" value={candidateData?.previous_visas != null ? (candidateData.previous_visas ? 'Yes' : 'No') : null} />
-                                </div>
-                            </div>
+                                    <InfoRow label="Lives Abroad" value={formatBoolean(candidateData?.lives_abroad)} />
+                                    <InfoRow label="Previous Visas" value={formatBoolean(candidateData?.previous_visas)} />
+                                </FieldGroup>
 
-                            {/* Passport Details */}
-                            <div className="mb-4">
-                                <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Passport</h3>
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                <FieldGroup title="Passport" description="Primary identity document values used in generated forms.">
                                     <InfoRow label="Passport Number" value={candidateData?.passport_number} />
                                     <InfoRow label="Issued By" value={candidateData?.passport_issued_by} />
-                                    <InfoRow label="Issue Date" value={candidateData?.passport_issue_date ? new Date(candidateData.passport_issue_date).toLocaleDateString('en-GB') : null} />
-                                    <InfoRow label="Expiry Date" value={candidateData?.passport_expiry_date ? new Date(candidateData.passport_expiry_date).toLocaleDateString('en-GB') : null} />
-                                </div>
-                            </div>
+                                    <InfoRow label="Issue Date" value={formatDate(candidateData?.passport_issue_date)} />
+                                    <InfoRow label="Expiry Date" value={formatDate(candidateData?.passport_expiry_date)} />
+                                </FieldGroup>
 
-                            {/* Preferences */}
-                            <div className="mb-4">
-                                <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Preferences</h3>
-                                <div className="grid grid-cols-1 gap-2">
+                                <FieldGroup title="Preferences" description="Current worker job target and matching intent." columnsClass="grid-cols-1">
                                     <InfoRow label="Preferred Job" value={candidateData?.preferred_job} />
-                                </div>
-                            </div>
+                                </FieldGroup>
 
-                            {/* Family Data — only when married */}
-                            {candidateData?.marital_status?.toLowerCase() === 'married' && (
-                                <div>
-                                    <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">
-                                        Family <span className="text-amber-500 normal-case">(required for married)</span>
-                                    </h3>
-                                    {candidateData?.family_data?.spouse ? (
-                                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-3">
-                                            <InfoRow label="Spouse First Name" value={candidateData.family_data.spouse.first_name} />
-                                            <InfoRow label="Spouse Last Name" value={candidateData.family_data.spouse.last_name} />
-                                            <InfoRow label="Spouse DOB" value={candidateData.family_data.spouse.dob ? new Date(candidateData.family_data.spouse.dob).toLocaleDateString('en-GB') : null} />
-                                            <InfoRow label="Spouse Birth Country" value={candidateData.family_data.spouse.birth_country} />
-                                            <InfoRow label="Spouse Birth City" value={candidateData.family_data.spouse.birth_city} />
+                                {candidateData?.marital_status?.toLowerCase() === "married" ? (
+                                    <FieldGroup
+                                        title="Family data"
+                                        description="Required for married workers and later contract or visa preparation."
+                                    >
+                                        {candidateData?.family_data?.spouse ? (
+                                            <>
+                                                <InfoRow label="Spouse First Name" value={candidateData.family_data.spouse.first_name} />
+                                                <InfoRow label="Spouse Last Name" value={candidateData.family_data.spouse.last_name} />
+                                                <InfoRow label="Spouse DOB" value={formatDate(candidateData.family_data.spouse.dob)} />
+                                                <InfoRow label="Spouse Birth Country" value={candidateData.family_data.spouse.birth_country} />
+                                                <InfoRow label="Spouse Birth City" value={candidateData.family_data.spouse.birth_city} />
+                                            </>
+                                        ) : (
+                                            <div className="sm:col-span-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                                No spouse data entered yet.
+                                            </div>
+                                        )}
+
+                                        {candidateData?.family_data?.children?.length > 0 ? (
+                                            <div className="sm:col-span-2 rounded-2xl border border-[#ece8dd] bg-white px-4 py-4">
+                                                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
+                                                    Children ({candidateData.family_data.children.length})
+                                                </div>
+                                                <div className="mt-3 space-y-3">
+                                                    {candidateData.family_data.children.map((child: any, index: number) => (
+                                                        <div
+                                                            key={index}
+                                                            className="grid gap-3 border-l-2 border-[#ece8dd] pl-4 sm:grid-cols-3"
+                                                        >
+                                                            <InfoRow
+                                                                label={`Child ${index + 1} Name`}
+                                                                value={`${child.first_name || ""} ${child.last_name || ""}`.trim()}
+                                                            />
+                                                            <InfoRow label="DOB" value={formatDate(child.dob)} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </FieldGroup>
+                                ) : null}
+                            </div>
+                        </OpsPanelCard>
+
+                        <OpsPanelCard
+                            eyebrow="Case controls"
+                            title="Approval and status"
+                            description="Admin approval, payment readiness, and worker state transitions all live here."
+                        >
+                            {candidateData ? (
+                                <div className="space-y-4">
+                                    <div className={`rounded-[24px] border p-5 ${candidateData.admin_approved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div>
+                                                <div className="text-sm font-semibold text-[#18181b]">Approval state</div>
+                                                <div className="mt-1 text-sm text-[#57534e]">
+                                                    {candidateData.admin_approved
+                                                        ? "Worker is unlocked for payment and downstream queue operations."
+                                                        : "Worker still needs an explicit admin approval decision before payment readiness is fully clear."}
+                                                </div>
+                                            </div>
+                                            <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${candidateData.admin_approved
+                                                ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                                                : "border-amber-300 bg-amber-100 text-amber-700"
+                                                }`}>
+                                                {candidateData.admin_approved ? <Check size={14} /> : <Clock size={14} />}
+                                                {candidateData.admin_approved ? "Approved" : "Pending approval"}
+                                            </span>
                                         </div>
-                                    ) : (
-                                        <div className="text-sm text-red-400 font-medium mb-3 flex items-center gap-1"><AlertTriangle size={14} /> No spouse data entered</div>
-                                    )}
-                                    {candidateData?.family_data?.children?.length > 0 && (
+                                        {candidateData.admin_approved_at ? (
+                                            <p className="mt-4 text-xs font-medium text-[#57534e]">
+                                                Approved on {formatDateTime(candidateData.admin_approved_at)}
+                                            </p>
+                                        ) : null}
+                                        <form action={approveWorker} className="mt-4">
+                                            <input type="hidden" name="action" value={candidateData.admin_approved ? "revoke" : "approve"} />
+                                            <button
+                                                type="submit"
+                                                className={`w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${candidateData.admin_approved
+                                                    ? "bg-red-500 hover:bg-red-600"
+                                                    : "bg-emerald-600 hover:bg-emerald-700"
+                                                    }`}
+                                            >
+                                                {candidateData.admin_approved ? "Revoke approval" : "Approve for payment"}
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5">
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div>
+                                                <div className="text-sm font-semibold text-[#18181b]">Worker status</div>
+                                                <div className="mt-1 text-sm text-[#57534e]">
+                                                    Use controlled status changes when the case actually moves to the next operational phase.
+                                                </div>
+                                            </div>
+                                            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(candidateData.status || "NEW")}`}>
+                                                {toDisplayLabel(candidateData.status || "NEW")}
+                                            </span>
+                                        </div>
+
+                                        <form action={updateCandidateStatus} className="mt-4 space-y-4">
+                                            <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
+                                            <div>
+                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
+                                                    Update status
+                                                </label>
+                                                <select
+                                                    name="status"
+                                                    defaultValue={candidateData.status || "NEW"}
+                                                    className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
+                                                >
+                                                    <option value="NEW">New</option>
+                                                    <option value="PROFILE_COMPLETE">Profile Complete</option>
+                                                    <option value="PENDING_APPROVAL">Pending Approval</option>
+                                                    <option value="VERIFIED">Verified</option>
+                                                    <option value="APPROVED">Approved</option>
+                                                    <option value="IN_QUEUE">In Queue</option>
+                                                    <option value="OFFER_PENDING">Offer Pending</option>
+                                                    <option value="OFFER_ACCEPTED">Offer Accepted</option>
+                                                    <option value="VISA_PROCESS_STARTED">Visa Process Started</option>
+                                                    <option value="VISA_APPROVED">Visa Approved</option>
+                                                    <option value="PLACED">Placed</option>
+                                                    <option value="REJECTED">Rejected</option>
+                                                    <option value="REFUND_FLAGGED">Refund Flagged</option>
+                                                </select>
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
+                                            >
+                                                Save worker status
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            ) : (
+                                <EmptyAdminState copy="There is no worker record yet, so approval and status controls are unavailable until signup completion creates the worker row." />
+                            )}
+                        </OpsPanelCard>
+
+                        <OpsPanelCard
+                            eyebrow="Financials"
+                            title="Payments and contract data"
+                            description="Track completed payments, pending sessions, and the current contract payload used for generated PDFs."
+                        >
+                            <div className="space-y-4">
+                                {contractData ? (
+                                    <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5">
+                                        <div className="mb-4">
+                                            <div className="text-sm font-semibold text-[#18181b]">Contract payload snapshot</div>
+                                            <p className="mt-1 text-sm text-[#71717a]">
+                                                Values currently merged into worker contract and visa documents.
+                                            </p>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <InfoRow label="Employer Company Name" value={contractData.employer_company_name} />
+                                            <InfoRow label="Employer City" value={contractData.employer_city} />
+                                            <InfoRow label="APR Number" value={contractData.employer_apr_number} />
+                                            <InfoRow label="Founding Date" value={contractData.employer_founding_date} />
+                                            <InfoRow label="Signing City" value={contractData.signing_city} />
+                                            <InfoRow label="PIB" value={contractData.employer_pib} />
+                                            <InfoRow label="MB" value={contractData.employer_mb} />
+                                        </div>
+                                        <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-relaxed text-blue-900">
+                                            <strong>Editing note:</strong> use <code className="font-mono">/api/admin/edit-data</code> or the DB UI
+                                            until this case surface gets a dedicated contract editor.
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <EmptyAdminState copy="No contract payload is available yet. It appears once the worker has a match with enough employer and job data to build the document set." />
+                                )}
+
+                                <div className="rounded-[24px] border border-[#ece8dd] bg-white p-5">
+                                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                                         <div>
-                                            <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mb-1">Children ({candidateData.family_data.children.length})</div>
-                                            {candidateData.family_data.children.map((child: any, i: number) => (
-                                                <div key={i} className="grid grid-cols-3 gap-x-2 gap-y-1 mb-2 pl-2 border-l-2 border-slate-100">
-                                                    <InfoRow label={`Child ${i + 1} Name`} value={`${child.first_name || ''} ${child.last_name || ''}`} />
-                                                    <InfoRow label="DOB" value={child.dob ? new Date(child.dob).toLocaleDateString('en-GB') : null} />
+                                            <div className="text-sm font-semibold text-[#18181b]">Payment history</div>
+                                            <p className="mt-1 text-sm text-[#71717a]">
+                                                Entry fee, pending checkout attempts, and refund outcomes.
+                                            </p>
+                                        </div>
+                                        <div className="inline-flex items-center gap-2 rounded-full border border-[#ece8dd] bg-[#faf8f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b675d]">
+                                            {completedPaymentsCount} completed
+                                        </div>
+                                    </div>
+
+                                    {payments && payments.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {payments.map((payment: any) => (
+                                                <div
+                                                    key={payment.id}
+                                                    className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-[#ece8dd] bg-[#fcfbf8] px-4 py-4"
+                                                >
+                                                    <div>
+                                                        <div className="text-base font-semibold text-[#18181b]">{formatPaymentAmount(payment)}</div>
+                                                        <div className="mt-1 text-sm text-[#71717a]">
+                                                            {formatDate(payment.paid_at || payment.created_at) || "No date"}
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-[#8a8479]">
+                                                            {payment.type ? toDisplayLabel(payment.type) : "Payment"}
+                                                        </div>
+                                                    </div>
+                                                    <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${payment.refund_status === "completed"
+                                                        ? "bg-orange-100 text-orange-700"
+                                                        : payment.status === "completed"
+                                                            ? "bg-emerald-100 text-emerald-700"
+                                                            : "bg-slate-100 text-slate-600"
+                                                        }`}>
+                                                        {payment.refund_status === "completed" ? "Refunded" : toDisplayLabel(payment.status || "pending")}
+                                                    </span>
                                                 </div>
                                             ))}
                                         </div>
+                                    ) : (
+                                        <EmptyAdminState copy="No payments recorded for this worker yet." />
                                     )}
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Admin Approval */}
-                        <div className={`rounded-[16px] shadow-sm border p-6 ${candidateData?.admin_approved ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-                            <h2 className="font-bold text-[#1e293b] text-xl mb-3">Admin Approval</h2>
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className={`text-xs font-bold uppercase px-3 py-1.5 rounded-full border ${candidateData?.admin_approved
-                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
-                                    : 'bg-amber-100 text-amber-700 border-amber-300'
-                                    }`}>
-                                    {candidateData?.admin_approved ? <span className="flex items-center gap-1"><Check size={14} /> Approved</span> : <span className="flex items-center gap-1"><Clock size={14} /> Pending Approval</span>}
-                                </span>
                             </div>
-                            {candidateData?.admin_approved && candidateData?.admin_approved_at && (
-                                <p className="text-xs text-emerald-600 mb-3">
-                                    Approved {new Date(candidateData.admin_approved_at).toLocaleDateString('en-GB')} at {new Date(candidateData.admin_approved_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                            )}
-                            <form action={approveWorker}>
-                                {candidateData?.admin_approved ? (
-                                    <>
-                                        <input type="hidden" name="action" value="revoke" />
-                                        <button type="submit" className="w-full bg-red-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-red-600 transition-colors">
-                                            Revoke Approval
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <input type="hidden" name="action" value="approve" />
-                                        <button type="submit" className="w-full bg-emerald-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-emerald-600 transition-colors">
-                                            <span className="flex items-center justify-center gap-2"><Check size={16} /> Approve for Payment</span>
-                                        </button>
-                                    </>
-                                )}
-                            </form>
-                        </div>
+                        </OpsPanelCard>
 
-                        {/* Status Control */}
-                        <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
-                            <h2 className="font-bold text-[#1e293b] text-xl mb-4">Worker Status</h2>
-                            <form action={updateCandidateStatus}>
-                                <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
-                                <div className="mb-4">
-                                    <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Current Status</label>
-                                    <span className={`text-[12px] px-3 py-1.5 rounded-full font-bold uppercase border ${getStatusColor(candidateData?.status || 'pending')}`}>
-                                        {candidateData?.status || 'pending'}
-                                    </span>
-                                </div>
-                                <div className="mb-4">
-                                    <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Update Status</label>
-                                    <select name="status" className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm">
-                                        <option value="NEW">New</option>
-                                        <option value="PROFILE_COMPLETE">Profile Complete</option>
-                                        <option value="PENDING_APPROVAL">Pending Approval</option>
-                                        <option value="VERIFIED">Verified</option>
-                                        <option value="APPROVED">Approved</option>
-                                        <option value="IN_QUEUE">In Queue</option>
-                                        <option value="OFFER_PENDING">Offer Pending</option>
-                                        <option value="OFFER_ACCEPTED">Offer Accepted</option>
-                                        <option value="VISA_PROCESS_STARTED">Visa Process Started</option>
-                                        <option value="VISA_APPROVED">Visa Approved</option>
-                                        <option value="PLACED">Placed</option>
-                                        <option value="REJECTED">Rejected</option>
-                                        <option value="REFUND_FLAGGED">Refund Flagged</option>
-                                    </select>
-                                </div>
-                                <button type="submit" className="w-full bg-[#2f6fed] text-white py-2 rounded-lg font-bold text-sm hover:bg-[#1e5cd6] transition-colors">
-                                    Update Status
-                                </button>
-                            </form>
-                        </div>
-
-                        {/* Employer & Contract Custom Data (For PDF Generation) */}
-                        {contractData && (
-                            <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
-                                <h2 className="font-bold text-[#1e293b] text-xl mb-4">Contract Data (PDF)</h2>
-                                <p className="text-xs text-slate-500 mb-4">Values used when generating this worker&apos;s contract and visa docs.</p>
-
-                                {/* A grid for displaying current config and a hint to use Edit API if needed */}
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                                        <InfoRow label="Employer Company Name" value={contractData.employer_company_name} />
-                                        <InfoRow label="Employer City" value={contractData.employer_city} />
-                                        <InfoRow label="APR Number" value={contractData.employer_apr_number} />
-                                        <InfoRow label="Founding Date" value={contractData.employer_founding_date} />
-                                        <InfoRow label="Signing City" value={contractData.signing_city} />
-                                        <InfoRow label="PIB" value={contractData.employer_pib} />
-                                        <InfoRow label="MB" value={contractData.employer_mb} />
-                                    </div>
-                                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-                                        <strong>Note:</strong> To modify these fields, please utilize the `/api/admin/edit-data` route directly (via GodMode console) or database UI until a dedicated edit form is available here.
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Payment History */}
-                        <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
-                            <h2 className="font-bold text-[#1e293b] text-xl mb-4">Payment History</h2>
-                            {payments && payments.length > 0 ? (
-                                <div className="space-y-3">
-                                    {payments.map((payment: any) => (
-                                        <div key={payment.id} className="border border-[#f1f5f9] rounded-lg p-3">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <div className="font-bold text-[#1e293b]">
-                                                        ${Number(payment.amount ?? (Number(payment.amount_cents || 0) / 100)).toFixed(2)}
-                                                    </div>
-                                                    <div className="text-[12px] text-[#64748b]">
-                                                        {payment.paid_at || payment.created_at
-                                                            ? new Date(payment.paid_at || payment.created_at).toLocaleDateString('en-GB')
-                                                            : 'No date'}
-                                                    </div>
-                                                </div>
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${payment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                                    payment.refund_status === 'completed' ? 'bg-orange-100 text-orange-700' :
-                                                        'bg-gray-100 text-gray-600'
-                                                    }`}>
-                                                    {payment.refund_status === 'completed' ? 'Refunded' : payment.status}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-[#94a3b8] italic">No payments found</div>
-                            )}
-                        </div>
-
-                        {/* Document Preview */}
                         <DocumentPreview profileId={id} />
 
-                        {/* Signature Card */}
-                        <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
-                            <h2 className="font-bold text-[#1e293b] text-xl mb-4">Digital Signature</h2>
-                            {signatures && signatures.length > 0 ? (
+                        <OpsPanelCard
+                            eyebrow="Signature"
+                            title="Digital signature"
+                            description="Latest signature capture available for generated document flows."
+                        >
+                            {latestSignature ? (
                                 <div className="space-y-4">
-                                    <div className="border border-[#f1f5f9] rounded-lg p-4 bg-[#f8fafc]">
+                                    <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-4">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
-                                            src={signatures[0].signature_data}
-                                            alt="User Signature"
-                                            className="max-w-full h-auto bg-white rounded border"
-                                            style={{ maxHeight: '100px' }}
+                                            src={latestSignature.signature_data}
+                                            alt="Worker signature"
+                                            className="max-h-[120px] w-full rounded-xl border border-[#e7e5e4] bg-white object-contain"
                                         />
                                     </div>
-                                    <div className="text-[12px] text-[#64748b] space-y-1">
-                                        <div><strong>Document:</strong> {signatures[0].document_type}</div>
-                                        <div><strong>Signed:</strong> {new Date(signatures[0].created_at).toLocaleString('en-GB')}</div>
-                                        <div><strong>IP:</strong> {signatures[0].ip_address || 'N/A'}</div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <InfoRow label="Document" value={latestSignature.document_type} />
+                                        <InfoRow label="Signed" value={formatDateTime(latestSignature.created_at)} />
+                                        <InfoRow label="IP" value={latestSignature.ip_address || "N/A"} />
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-[#94a3b8] italic">No signature on file</div>
+                                <EmptyAdminState copy="No signature is stored for this worker yet." />
                             )}
-                        </div>
+                        </OpsPanelCard>
 
-                        {/* Manual Match */}
-                        {candidateData && (
-                            <ManualMatchButton candidateId={candidateData.id} />
-                        )}
+                        {candidateData ? <ManualMatchButton candidateId={candidateData.id} /> : null}
 
-                        {/* Download Documents */}
                         <SingleWorkerDownload
                             profileId={id}
                             workerName={candidateProfile?.full_name || authUser.user_metadata?.full_name || "Worker"}
                         />
                     </div>
 
-                    {/* Right Column: Documents */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] overflow-hidden">
-                            <div className="px-6 py-4 border-b border-[#dde3ec]">
-                                <h2 className="font-bold text-[#1e293b] text-xl">Documents</h2>
-                                <p className="text-[#64748b] text-sm">Review and verify uploaded documents</p>
+                    <div className="space-y-6">
+                        <OpsPanelCard
+                            eyebrow="Document operations"
+                            title="Verification queue"
+                            description="Review uploaded passport, biometric photo, and diploma, then move each document through AI or manual verification."
+                        >
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                <MiniMetric label="Verified" value={`${verifiedDocumentsCount}/3`} meta="Ready to use" tone="emerald" />
+                                <MiniMetric label="Pending" value={pendingDocumentsCount} meta="Needs review" tone="amber" />
+                                <MiniMetric label="Rejected" value={rejectedDocumentsCount} meta="Needs re-upload" tone="rose" />
                             </div>
 
                             {documents && documents.length > 0 ? (
-                                <div className="divide-y divide-[#f1f5f9]">
+                                <div className="mt-5 space-y-4">
                                     {documents.map((doc: any) => (
-                                        <div key={doc.id} className="p-6">
-                                            <div className="flex justify-between items-start mb-4">
+                                        <article
+                                            key={doc.id}
+                                            className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5"
+                                        >
+                                            <div className="flex flex-wrap items-start justify-between gap-3">
                                                 <div>
-                                                    <h3 className="font-bold text-[#1e293b] capitalize text-lg">{doc.document_type}</h3>
-                                                    <div className="text-[12px] text-[#64748b]">
-                                                        Uploaded: {new Date(doc.created_at).toLocaleString('en-GB')}
+                                                    <div className="inline-flex items-center gap-2 rounded-full border border-[#ded8ca] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b675d]">
+                                                        <Paperclip size={14} />
+                                                        {toDisplayLabel(doc.document_type)}
                                                     </div>
+                                                    <p className="mt-3 text-sm text-[#71717a]">
+                                                        Uploaded {formatDateTime(doc.created_at) || "Unknown time"}
+                                                    </p>
                                                 </div>
-                                                <span className={`text-[11px] px-3 py-1 rounded-full font-bold uppercase border ${getStatusColor(doc.status)}`}>
-                                                    {doc.status}
+                                                <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(doc.status)}`}>
+                                                    {toDisplayLabel(doc.status)}
                                                 </span>
                                             </div>
 
-                                            {/* Document Preview & Actions Modal */}
-                                            {doc.storage_path && (
+                                            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                                                <InlineFact label="Storage" value={doc.storage_path ? "File attached" : "No file"} />
+                                                <InlineFact label="Admin Notes" value={doc.admin_notes ? "Present" : "None"} />
+                                                <InlineFact label="AI Result" value={doc.verification_result ? "Available" : "None"} />
+                                            </div>
+
+                                            {doc.storage_path ? (
                                                 <DocumentViewerModal
                                                     url={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`}
                                                     documentType={doc.document_type}
                                                     status={doc.status}
                                                 >
-                                                    {/* AI Verification Result */}
-                                                    {doc.verification_result && (
-                                                        <div className="bg-[#f0f9ff] rounded-lg p-4 border border-[#bae6fd]">
-                                                            <h4 className="font-bold text-[#0369a1] text-sm mb-2 flex items-center gap-2"><Brain size={14} /> AI Verification Result</h4>
-                                                            <pre className="text-[12px] text-[#0c4a6e] whitespace-pre-wrap">
-                                                                {typeof doc.verification_result === 'object'
+                                                    {doc.verification_result ? (
+                                                        <ModalDetailCard title="AI verification result" icon={<Brain size={14} />} tone="blue">
+                                                            <pre className="whitespace-pre-wrap text-[12px] leading-relaxed text-[#0f172a]">
+                                                                {typeof doc.verification_result === "object"
                                                                     ? JSON.stringify(doc.verification_result, null, 2)
                                                                     : doc.verification_result}
                                                             </pre>
-                                                        </div>
-                                                    )}
+                                                        </ModalDetailCard>
+                                                    ) : null}
 
-                                                    {/* Admin Notes */}
-                                                    {doc.admin_notes && (
-                                                        <div className="bg-[#fef3c7] rounded-lg p-4 border border-[#fde68a]">
-                                                            <h4 className="font-bold text-[#92400e] text-sm mb-1 flex items-center gap-2"><StickyNote size={14} /> Admin Notes</h4>
-                                                            <p className="text-[#78350f] text-sm">{doc.admin_notes}</p>
-                                                        </div>
-                                                    )}
+                                                    {doc.admin_notes ? (
+                                                        <ModalDetailCard title="Admin notes" icon={<StickyNote size={14} />} tone="amber">
+                                                            <p className="text-sm text-[#78350f]">{doc.admin_notes}</p>
+                                                        </ModalDetailCard>
+                                                    ) : null}
 
-                                                    {/* Verification Form */}
-                                                    <form action={updateDocumentStatus} className="bg-[#f8fafc] rounded-lg p-4 border border-[#dde3ec]">
+                                                    <form action={updateDocumentStatus} className="rounded-[22px] border border-[#e6e6e1] bg-[#faf8f3] p-4">
                                                         <input type="hidden" name="doc_id" value={doc.id} />
                                                         <input type="hidden" name="doc_type" value={doc.document_type} />
                                                         <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
-                                                        <div className="space-y-4 mb-4">
-                                                            <div>
-                                                                <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Set Status</label>
-                                                                <select name="status" defaultValue={doc.status} className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm bg-white">
-                                                                    <option value="pending">Pending</option>
-                                                                    <option value="verifying">Verifying</option>
-                                                                    <option value="verified">Verified</option>
-                                                                    <option value="rejected">Rejected</option>
-                                                                </select>
-                                                            </div>
-                                                            <div>
-                                                                <label className="text-[12px] text-[#64748b] uppercase font-bold block mb-2">Admin Notes</label>
-                                                                <input
-                                                                    type="text"
-                                                                    name="admin_notes"
-                                                                    defaultValue={doc.admin_notes || ""}
-                                                                    placeholder="Add internal notes..."
-                                                                    className="w-full border border-[#dde3ec] rounded-lg px-3 py-2 text-sm"
-                                                                />
-                                                            </div>
+                                                        <div className="mb-4">
+                                                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
+                                                                Set status
+                                                            </label>
+                                                            <select
+                                                                name="status"
+                                                                defaultValue={doc.status}
+                                                                className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
+                                                            >
+                                                                <option value="pending">Pending</option>
+                                                                <option value="verifying">Verifying</option>
+                                                                <option value="verified">Verified</option>
+                                                                <option value="rejected">Rejected</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="mb-4">
+                                                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
+                                                                Admin notes
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                name="admin_notes"
+                                                                defaultValue={doc.admin_notes || ""}
+                                                                placeholder="Add internal notes..."
+                                                                className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
+                                                            />
                                                         </div>
                                                         <button
                                                             type="submit"
-                                                            className="w-full bg-[#2f6fed] text-white px-4 py-3 rounded-lg font-bold text-sm hover:bg-[#1e5cd6] transition-colors"
+                                                            className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
                                                         >
-                                                            Save Status Changes
+                                                            Save status changes
                                                         </button>
                                                     </form>
 
-                                                    {/* Admin Actions */}
-                                                    <div className="space-y-3 mt-2">
-                                                        <h4 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Additional Actions</h4>
-
-                                                        {/* Re-Verify Document */}
-                                                        <div>
-                                                            <ReVerifyButton documentId={doc.id} />
+                                                    <div className="space-y-3">
+                                                        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
+                                                            Additional actions
                                                         </div>
 
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {/* Request New Document */}
-                                                            <details className="group col-span-2">
-                                                                <summary className="w-full bg-orange-100/50 text-orange-600 border border-orange-200 px-3 py-2 rounded-lg font-bold text-sm hover:bg-orange-100 transition-colors cursor-pointer list-none flex items-center justify-center gap-2">
-                                                                    <Mail size={16} /> Request New Document
-                                                                </summary>
-                                                                <form action={requestNewDocument} className="mt-2 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                                                                    <input type="hidden" name="doc_id" value={doc.id} />
-                                                                    <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
-                                                                    <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                                    <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
+                                                        <ReVerifyButton documentId={doc.id} />
 
-                                                                    <p className="text-xs text-orange-800 mb-3 leading-relaxed">
-                                                                        This will <strong>delete</strong> the current document and send an email to the worker asking them to upload a new one.
-                                                                    </p>
+                                                        <details className="group rounded-[22px] border border-orange-200 bg-orange-50 p-0">
+                                                            <summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-[22px] px-4 py-3 text-sm font-semibold text-orange-700 transition hover:bg-orange-100">
+                                                                <Mail size={16} />
+                                                                Request new document
+                                                            </summary>
+                                                            <form action={requestNewDocument} className="space-y-3 border-t border-orange-200 px-4 py-4">
+                                                                <input type="hidden" name="doc_id" value={doc.id} />
+                                                                <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
+                                                                <input type="hidden" name="doc_type" value={doc.document_type} />
+                                                                <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
+                                                                <p className="text-xs leading-relaxed text-orange-900">
+                                                                    This deletes the current file and emails the worker with a request to upload a new version.
+                                                                </p>
+                                                                <textarea
+                                                                    name="reason"
+                                                                    required
+                                                                    placeholder="Explain what needs to change in the re-upload."
+                                                                    className="min-h-[110px] w-full rounded-xl border border-orange-300 bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+                                                                />
+                                                                <button
+                                                                    type="submit"
+                                                                    className="w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-700"
+                                                                >
+                                                                    Delete current file and notify worker
+                                                                </button>
+                                                            </form>
+                                                        </details>
 
-                                                                    <label className="text-[11px] text-orange-700 uppercase font-bold block mb-1">
-                                                                        Message to Worker:
-                                                                    </label>
-                                                                    <textarea
-                                                                        name="reason"
-                                                                        required
-                                                                        placeholder="e.g., The passport image is too blurry, please take a clearer photo..."
-                                                                        className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-orange-200 focus:outline-none"
-                                                                        rows={3}
-                                                                    />
-                                                                    <button
-                                                                        type="submit"
-                                                                        className="w-full bg-orange-600 text-white px-3 py-2.5 rounded-lg font-bold text-sm hover:bg-orange-700 transition-colors"
-                                                                    >
-                                                                        Delete & Send Request
-                                                                    </button>
-                                                                </form>
-                                                            </details>
-
-                                                            {/* Delete Document */}
-                                                            <details className="group col-span-2">
-                                                                <summary className="w-full bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-lg font-bold text-sm hover:bg-red-100 transition-colors cursor-pointer list-none flex items-center justify-center gap-2">
-                                                                    <Trash2 size={16} /> Delete Silently
-                                                                </summary>
-                                                                <form action={deleteDocument} className="mt-2 p-4 bg-red-50 rounded-lg border border-red-200">
-                                                                    <input type="hidden" name="doc_id" value={doc.id} />
-                                                                    <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
-                                                                    <p className="text-xs text-red-800 mb-3 leading-relaxed">
-                                                                        Are you sure you want to delete this document <strong>without</strong> notifying the worker?
-                                                                    </p>
-                                                                    <button
-                                                                        type="submit"
-                                                                        className="w-full bg-red-600 text-white px-3 py-2.5 rounded-lg font-bold text-sm hover:bg-red-700 transition-colors"
-                                                                    >
-                                                                        Yes, Delete Silently
-                                                                    </button>
-                                                                </form>
-                                                            </details>
-                                                        </div>
+                                                        <details className="group rounded-[22px] border border-red-200 bg-red-50 p-0">
+                                                            <summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-[22px] px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100">
+                                                                <Trash2 size={16} />
+                                                                Delete silently
+                                                            </summary>
+                                                            <form action={deleteDocument} className="space-y-3 border-t border-red-200 px-4 py-4">
+                                                                <input type="hidden" name="doc_id" value={doc.id} />
+                                                                <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
+                                                                <p className="text-xs leading-relaxed text-red-900">
+                                                                    This removes the document without notifying the worker.
+                                                                </p>
+                                                                <button
+                                                                    type="submit"
+                                                                    className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                                                                >
+                                                                    Confirm silent delete
+                                                                </button>
+                                                            </form>
+                                                        </details>
                                                     </div>
                                                 </DocumentViewerModal>
+                                            ) : (
+                                                <div className="mt-4 rounded-[20px] border border-dashed border-[#d6d3d1] bg-white px-4 py-4 text-sm text-[#78716c]">
+                                                    No storage file is linked to this document row.
+                                                </div>
                                             )}
-                                        </div>
+                                        </article>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="p-10 text-center text-[#94a3b8] italic">
+                                <div className="mt-5 rounded-[24px] border border-dashed border-[#d6d3d1] bg-[#fcfbf8] px-5 py-10 text-center text-sm text-[#78716c]">
                                     No documents uploaded yet.
                                 </div>
                             )}
-                        </div>
+                        </OpsPanelCard>
                     </div>
                 </div>
             </div>
-        </>
     );
 }
 
-// ─── Helper Component ────────────────────────────────────────
+// ─── Helper Components ───────────────────────────────────────
+
+function OpsPanelCard({
+    eyebrow,
+    title,
+    description,
+    children,
+}: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    children: ReactNode;
+}) {
+    return (
+        <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+            <div className="mb-5">
+                <div className="inline-flex rounded-full border border-[#e3ded2] bg-[#faf8f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b675d]">
+                    {eyebrow}
+                </div>
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#18181b]">{title}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-[#57534e]">{description}</p>
+            </div>
+            {children}
+        </section>
+    );
+}
+
+function FieldGroup({
+    title,
+    description,
+    children,
+    columnsClass = "sm:grid-cols-2",
+}: {
+    title: string;
+    description: string;
+    children: ReactNode;
+    columnsClass?: string;
+}) {
+    return (
+        <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5">
+            <div>
+                <div className="text-sm font-semibold text-[#18181b]">{title}</div>
+                <p className="mt-1 text-sm text-[#71717a]">{description}</p>
+            </div>
+            <div className={`mt-4 grid gap-3 ${columnsClass}`}>{children}</div>
+        </div>
+    );
+}
+
+function MiniMetric({
+    label,
+    value,
+    meta,
+    tone,
+}: {
+    label: string;
+    value: string | number;
+    meta: string;
+    tone: "emerald" | "amber" | "rose";
+}) {
+    const toneClass = tone === "emerald"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : tone === "amber"
+            ? "border-amber-200 bg-amber-50 text-amber-700"
+            : "border-rose-200 bg-rose-50 text-rose-700";
+
+    return (
+        <div className="rounded-[20px] border border-[#ece8dd] bg-white p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">{label}</div>
+            <div className="mt-2 flex items-end justify-between gap-3">
+                <div className="text-2xl font-semibold tracking-tight text-[#18181b]">{value}</div>
+                <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${toneClass}`}>
+                    {meta}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function InlineFact({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-[18px] border border-[#ece8dd] bg-white px-4 py-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">{label}</div>
+            <div className="mt-2 text-sm font-medium text-[#18181b]">{value}</div>
+        </div>
+    );
+}
+
+function ModalDetailCard({
+    title,
+    icon,
+    tone,
+    children,
+}: {
+    title: string;
+    icon: ReactNode;
+    tone: "blue" | "amber";
+    children: ReactNode;
+}) {
+    const toneClass = tone === "blue"
+        ? "border-blue-200 bg-blue-50"
+        : "border-amber-200 bg-amber-50";
+    const textClass = tone === "blue" ? "text-blue-900" : "text-amber-900";
+
+    return (
+        <div className={`rounded-[22px] border p-4 ${toneClass}`}>
+            <div className={`mb-2 flex items-center gap-2 text-sm font-semibold ${textClass}`}>
+                {icon}
+                {title}
+            </div>
+            {children}
+        </div>
+    );
+}
+
+function OpsNotice({ copy }: { copy: string }) {
+    return (
+        <div className="flex items-start gap-3 rounded-[24px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+            <p className="leading-relaxed">{copy}</p>
+        </div>
+    );
+}
+
+function EmptyAdminState({ copy }: { copy: string }) {
+    return (
+        <div className="rounded-[22px] border border-dashed border-[#d6d3d1] bg-[#faf8f3] px-4 py-4 text-sm leading-relaxed text-[#78716c]">
+            {copy}
+        </div>
+    );
+}
 
 function InfoRow({ label, value }: { label: string; value: any }) {
     const isEmpty = value === null || value === undefined || value === '';
     return (
-        <div>
-            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">{label}</div>
-            <div className={`text-sm font-medium ${isEmpty ? 'text-red-400' : 'text-slate-800'}`}>
+        <div className="rounded-[18px] border border-[#ece8dd] bg-white px-4 py-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">{label}</div>
+            <div className={`mt-2 text-sm font-medium ${isEmpty ? 'text-[#d97706]' : 'text-[#18181b]'}`}>
                 {isEmpty ? '—' : String(value)}
             </div>
         </div>
@@ -932,4 +1134,31 @@ function CaseHintCard({
             <p className="text-sm leading-relaxed text-[#57534e]">{copy}</p>
         </div>
     );
+}
+
+function formatDate(value?: string | null) {
+    return value ? new Date(value).toLocaleDateString("en-GB") : null;
+}
+
+function formatDateTime(value?: string | null) {
+    return value ? new Date(value).toLocaleString("en-GB") : null;
+}
+
+function formatBoolean(value?: boolean | null) {
+    if (value === null || value === undefined) return null;
+    return value ? "Yes" : "No";
+}
+
+function toDisplayLabel(value?: string | null) {
+    if (!value) return "—";
+    return value
+        .toLowerCase()
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+}
+
+function formatPaymentAmount(payment: any) {
+    const amount = Number(payment?.amount ?? (Number(payment?.amount_cents || 0) / 100));
+    return Number.isFinite(amount) ? `$${amount.toFixed(2)}` : "—";
 }

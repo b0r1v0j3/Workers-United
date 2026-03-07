@@ -62,7 +62,7 @@ Workers-United/
 │   │   │   ├── layout.tsx     # Admin layout (AppShell)
 │   │   │   ├── agencies/      # Agency registry with shared admin hero/metrics layout + direct agency workspace inspect links
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
-│   │   │   ├── workers/       # Worker registry + [id] case detail; table now separates inspect-workspace from admin case actions, and worker case detail now opens with admin hero + inspect shortcuts into worker/documents/queue workspaces
+│   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, and worker case detail now uses the same admin ops-card system for profile, approvals, payments, signature, and document review, with inspect shortcuts into worker/documents/queue workspaces
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout
 │   │   │   ├── queue/         # Queue operations screen with shared admin hero, 90-day watch, and inspect-vs-case actions
 │   │   │   ├── jobs/          # Smart Match Hub with shared admin hero/guidance wrapper around matching client
@@ -97,6 +97,7 @@ Workers-United/
 │   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with role-specific sidebar nav, inspect-query preservation across admin previews, safe routing back to /admin, and no redundant admin sidebar preview links
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
+│   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
 │   │   ├── CookieConsent.tsx   # GDPR cookie banner
 │   │   ├── AgencySetupRequired.tsx # Graceful setup-required card when agency migration is missing
@@ -252,7 +253,7 @@ User (Browser)
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
 | `src/app/admin/workers/page.tsx` | Worker list with filter tabs |
-| `src/app/admin/workers/[id]/page.tsx` | Worker detail with document review |
+| `src/app/admin/workers/[id]/page.tsx` | Worker case surface with shared admin ops cards for profile snapshot, approvals, payments, contract payload, signature, and document review |
 | `src/app/admin/announcements/page.tsx` | Bulk email (Workers / Employers / Everyone) |
 | `src/app/admin/settings/page.tsx` | Platform settings |
 

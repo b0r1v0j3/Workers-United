@@ -35,9 +35,9 @@ export default function DocumentViewerModal({ url, documentType, status, childre
             <button
                 type="button"
                 onClick={() => setIsOpen(true)}
-                className="w-full mt-3 bg-[#f8fbff] text-[#2f6fed] border border-[#2f6fed]/20 px-4 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#ddd8cb] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3]"
             >
-                Review Document
+                Open document review
             </button>
         );
     }
@@ -90,11 +90,11 @@ export default function DocumentViewerModal({ url, documentType, status, childre
 
             {/* Right/Bottom: Actions Sidebar */}
             <div className="w-full md:w-[420px] bg-white flex flex-col h-[40vh] md:h-full overflow-y-auto">
-                <div className="p-5 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e7e5e4] bg-white p-5">
                     <div>
-                        <h2 className="text-xl font-bold text-slate-900 capitalize">{documentType}</h2>
-                        <div className="text-sm text-slate-500 flex items-center gap-2 mt-1">
-                            Status: <span className="font-bold uppercase text-[10px] px-2 py-0.5 rounded-full bg-slate-100">{status}</span>
+                        <h2 className="text-xl font-semibold text-slate-900 capitalize">{documentType}</h2>
+                        <div className="mt-1 flex items-center gap-2 text-sm text-slate-500">
+                            Status: <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase">{status}</span>
                         </div>
                     </div>
                     {/* Desktop Close Button */}
