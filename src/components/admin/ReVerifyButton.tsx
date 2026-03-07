@@ -33,16 +33,16 @@ export default function ReVerifyButton({ documentId }: { documentId: string }) {
     };
 
     return (
-        <div className="inline-flex flex-col">
+        <div className="flex flex-col gap-2">
             <button
                 onClick={handleReVerify}
                 disabled={loading}
-                className="bg-purple-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-purple-600 disabled:opacity-50 transition-colors"
+                className="w-full rounded-xl border border-[#ddd8cb] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3] disabled:opacity-50"
             >
-                {loading ? "🔄 Verifying..." : "🤖 Re-Verify"}
+                {loading ? "Re-verifying..." : "Run AI re-verification"}
             </button>
             {result && (
-                <span className={`mt-1 text-[10px] font-medium ${result.type === "success" ? "text-emerald-600" : "text-red-600"
+                <span className={`text-[11px] font-medium ${result.type === "success" ? "text-emerald-600" : "text-red-600"
                     }`}>
                     {result.msg}
                 </span>
