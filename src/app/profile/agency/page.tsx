@@ -1,0 +1,229 @@
+import { redirect } from "next/navigation";
+import AppShell from "@/components/AppShell";
+import AgencySetupRequired from "@/components/AgencySetupRequired";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+    ensureAgencyRecord,
+    getAgencyRecordByProfileId,
+    getAgencySchemaState,
+    getAgencyWorkerEmail,
+    getAgencyWorkerName,
+    isAgencyWorkerClaimed,
+} from "@/lib/agencies";
+import { normalizeUserType } from "@/lib/domain";
+import { getWorkerCompletion } from "@/lib/profile-completion";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import AgencyDashboardClient, { type AgencyDashboardProps } from "./AgencyDashboardClient";
+
+export const dynamic = "force-dynamic";
+
+interface AgencyWorkerQueryRow {
+    id: string;
+    profile_id: string | null;
+    phone: string | null;
+    nationality: string | null;
+    current_country: string | null;
+    preferred_job: string | null;
+    status: string | null;
+    updated_at: string | null;
+    queue_joined_at: string | null;
+    entry_fee_paid: boolean | null;
+    job_search_active: boolean | null;
+    submitted_full_name: string | null;
+    submitted_email: string | null;
+    profiles?: { full_name?: string | null; email?: string | null } | Array<{ full_name?: string | null; email?: string | null }> | null;
+}
+
+export default async function AgencyProfilePage({
+    searchParams,
+}: {
+    searchParams: Promise<{ inspect?: string }>;
+}) {
+    const supabase = await createClient();
+    const admin = createAdminClient();
+    const params = await searchParams;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        redirect("/login");
+    }
+
+    const userType = normalizeUserType(user.user_metadata?.user_type);
+    if (userType === "employer") {
+        redirect("/profile/employer");
+    }
+    if (userType !== "agency" && userType !== "admin") {
+        redirect("/profile/worker");
+    }
+
+    const agencySchemaState = await getAgencySchemaState(admin);
+    if (!agencySchemaState.ready) {
+        return (
+            <AppShell user={user} variant="dashboard">
+                <AgencySetupRequired />
+            </AppShell>
+        );
+    }
+
+    const isAdminPreview = userType === "admin";
+    const inspectProfileId = isAdminPreview ? params?.inspect?.trim() || null : null;
+    const targetAgencyProfileId = inspectProfileId || user.id;
+
+    const { data: profile } = await admin
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", targetAgencyProfileId)
+        .maybeSingle();
+
+    if (inspectProfileId && !profile) {
+        redirect("/admin/agencies");
+    }
+
+    const agency = userType === "agency"
+        ? (await ensureAgencyRecord(admin, {
+            userId: user.id,
+            email: user.email,
+            fullName: profile?.full_name || user.user_metadata?.full_name,
+            agencyName: user.user_metadata?.company_name,
+        })).agency
+        : await getAgencyRecordByProfileId(admin, targetAgencyProfileId);
+
+    if (userType === "agency" && !agency) {
+        redirect("/profile");
+    }
+    if (inspectProfileId && !agency) {
+        redirect("/admin/agencies");
+    }
+
+    const agencyId = agency?.id || null;
+    const { data: workersRaw, error: workersError } = agencyId
+        ? await admin
+            .from("candidates")
+            .select(`
+                id,
+                profile_id,
+                phone,
+                nationality,
+                current_country,
+                preferred_job,
+                status,
+                updated_at,
+                queue_joined_at,
+                entry_fee_paid,
+                job_search_active,
+                submitted_full_name,
+                submitted_email,
+                profiles:profiles!candidates_profile_id_fkey(full_name, email)
+            `)
+            .eq("agency_id", agencyId)
+            .order("updated_at", { ascending: false })
+        : { data: [] as AgencyWorkerQueryRow[], error: null };
+
+    if (workersError) {
+        console.error("[AgencyDashboard] Worker fetch failed:", workersError);
+    }
+
+    const workers: AgencyWorkerQueryRow[] = workersRaw || [];
+    const claimedProfileIds = workers
+        .map((worker) => worker.profile_id)
+        .filter((profileId): profileId is string => Boolean(profileId));
+
+    const { data: documents } = claimedProfileIds.length > 0
+        ? await admin
+            .from("candidate_documents")
+            .select("user_id, document_type, status")
+            .in("user_id", claimedProfileIds)
+        : { data: [] as Array<{ user_id: string; document_type: string; status: string | null }> };
+
+    const { data: payments } = claimedProfileIds.length > 0
+        ? await admin
+            .from("payments")
+            .select("profile_id, payment_type, status")
+            .in("profile_id", claimedProfileIds)
+        : { data: [] as Array<{ profile_id: string | null; payment_type: string | null; status: string | null }> };
+
+    const docsByUser = new Map<string, Array<{ user_id: string; document_type: string; status: string | null }>>();
+    for (const doc of documents || []) {
+        const current = docsByUser.get(doc.user_id) || [];
+        current.push(doc);
+        docsByUser.set(doc.user_id, current);
+    }
+
+    const paymentsByProfile = new Map<string, Array<{ profile_id: string | null; payment_type: string | null; status: string | null }>>();
+    for (const payment of payments || []) {
+        if (!payment.profile_id) continue;
+        const current = paymentsByProfile.get(payment.profile_id) || [];
+        current.push(payment);
+        paymentsByProfile.set(payment.profile_id, current);
+    }
+
+    const workerRows: AgencyDashboardProps["workers"] = workers.map((worker) => {
+        const claimed = isAgencyWorkerClaimed(worker);
+        const profileId = worker.profile_id || null;
+        const workerDocuments = claimed && profileId ? docsByUser.get(profileId) || [] : [];
+        const verifiedDocuments = workerDocuments.filter((doc) => doc.status === "verified").length;
+        const profileLike = { full_name: getAgencyWorkerName(worker) };
+        const completion = getWorkerCompletion({
+            profile: profileLike,
+            candidate: worker,
+            documents: workerDocuments,
+        }, { phoneOptional: true }).completion;
+
+        const workerPayments = claimed && profileId ? paymentsByProfile.get(profileId) || [] : [];
+        const hasPaidEntryFee =
+            !!worker.entry_fee_paid ||
+            !!worker.job_search_active ||
+            isPostEntryFeeWorkerStatus(worker.status) ||
+            workerPayments.some((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
+        const hasPendingEntryFee = workerPayments.some((payment) => payment.payment_type === "entry_fee" && payment.status === "pending");
+
+        return {
+            id: worker.id,
+            name: getAgencyWorkerName(worker),
+            email: getAgencyWorkerEmail(worker),
+            phone: worker.phone || null,
+            nationality: worker.nationality || null,
+            currentCountry: worker.current_country || null,
+            preferredJob: worker.preferred_job || null,
+            status: worker.status || "NEW",
+            completion,
+            claimed,
+            claimLabel: claimed
+                ? "Claimed"
+                : worker.submitted_email
+                    ? "Invite ready"
+                    : "Add email first",
+            claimPath: claimed || !worker.id || !worker.submitted_email
+                ? null
+                : `/signup?type=worker&claim=${worker.id}`,
+            verifiedDocuments,
+            documentsLabel: claimed ? `${verifiedDocuments}/3 verified` : "Awaiting claim",
+            paymentLabel: claimed ? hasPaidEntryFee ? "Paid" : hasPendingEntryFee ? "Pending" : "Not paid" : "Awaiting claim",
+            updatedAt: worker.updated_at || null,
+        };
+    });
+
+    const stats: AgencyDashboardProps["stats"] = {
+        totalWorkers: workerRows.length,
+        claimedWorkers: workerRows.filter((worker) => worker.claimed).length,
+        readyWorkers: workerRows.filter((worker) => worker.completion === 100 && worker.verifiedDocuments >= 3).length,
+        paidWorkers: workerRows.filter((worker) => worker.paymentLabel === "Paid").length,
+        draftWorkers: workerRows.filter((worker) => !worker.claimed).length,
+    };
+
+    return (
+        <AppShell user={user} variant="dashboard">
+            <AgencyDashboardClient
+                agency={{
+                    displayName: agency?.display_name || agency?.legal_name || (isAdminPreview ? "Agency Preview" : "Agency Dashboard"),
+                    contactEmail: agency?.contact_email || profile?.email || user.email || "",
+                }}
+                stats={stats}
+                workers={workerRows}
+                readOnlyPreview={isAdminPreview}
+                inspectProfileId={inspectProfileId}
+            />
+        </AppShell>
+    );
+}

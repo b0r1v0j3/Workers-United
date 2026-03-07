@@ -94,9 +94,17 @@ export default async function EmployersPage() {
                                 </div>
 
                                 {/* Job Count */}
-                                <div className="shrink-0 text-center">
+                                <div className="shrink-0 text-center md:text-right">
                                     <div className="text-2xl font-bold text-blue-600">{jobCountMap.get(employer.id) || 0}</div>
                                     <div className="text-xs text-slate-500">Jobs Posted</div>
+                                    <div className="mt-3 flex justify-center md:justify-end gap-2">
+                                        <a
+                                            href={`/profile/employer?inspect=${employer.profile_id}`}
+                                            className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+                                        >
+                                            Open Workspace
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>

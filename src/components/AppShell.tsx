@@ -6,17 +6,22 @@ import {
     Building2,
     Settings,
     Mail,
+    MessageSquareMore,
     Briefcase,
     User,
     LogOut,
     BarChart3,
     ListOrdered,
     FileSearch,
+    FileText,
+    Pencil,
+    Plus,
     X,
 } from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
-import { usePathname } from "next/navigation";
+import { normalizeUserType } from "@/lib/domain";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -74,6 +79,19 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
         };
     }, []);
 
+    const normalizedUserType = normalizeUserType(user?.user_metadata?.user_type);
+    const isAdminPreview = normalizedUserType === "admin" && variant !== "admin";
+    const sidebarExpanded = isAdminPreview && typeof window !== "undefined" && window.innerWidth >= 1024
+        ? true
+        : isOpen;
+    const previewLabel = pathname?.startsWith("/profile/agency")
+        ? "Agency Workspace Preview"
+        : pathname?.startsWith("/profile/employer")
+            ? "Employer Profile Preview"
+            : pathname?.startsWith("/profile/worker")
+                ? "Worker Profile Preview"
+                : "Profile Preview";
+
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-montserrat">
             {/* Fixed Navbar */}
@@ -84,7 +102,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
 
             <div className="flex-1 flex max-w-[1920px] mx-auto w-full pt-6 relative">
                 {/* Mobile Backdrop */}
-                {isOpen && (
+                {sidebarExpanded && (
                     <div
                         className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-opacity delay-75"
                         onClick={() => setIsOpen(false)}
@@ -96,7 +114,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                     fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out px-2 lg:px-0
                     lg:top-[80px] lg:bottom-0 lg:overflow-y-auto lg:pb-4 lg:z-0
                     pt-[64px] lg:pt-0
-                    ${isOpen ? "w-72 lg:w-[280px] translate-x-0" : "w-[68px] translate-x-0"}
+                    ${sidebarExpanded ? "w-72 lg:w-[280px] translate-x-0" : "w-[68px] translate-x-0"}
                 `}>
                     <div className="h-full overflow-y-auto p-2 lg:p-4 bg-white lg:bg-white/50 backdrop-blur-sm border border-gray-200 lg:border-white/60 shadow-sm rounded-xl lg:rounded-2xl lg:h-[calc(100vh-100px)] flex flex-col items-center lg:items-stretch">
                         {/* Mobile Header with Close Button (only when open) */}
@@ -107,12 +125,29 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                             </button>
                         </div>
 
-                        <SidebarContent user={user} variant={variant} isCollapsed={!isOpen} onMenuToggle={() => setIsOpen(!isOpen)} />
+                            <SidebarContent user={user} variant={variant} isCollapsed={!sidebarExpanded} onMenuToggle={() => setIsOpen(!sidebarExpanded)} />
                     </div>
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className={`flex-1 max-w-[1000px] mx-auto w-full pb-10 animate-fade-in-up transition-all duration-300 px-3 sm:px-6 ${isOpen ? 'pl-[84px] lg:pl-3 lg:ml-[280px]' : 'pl-[84px] lg:pl-3 lg:ml-[68px]'}`}>
+                <main className={`flex-1 max-w-[1000px] mx-auto w-full pb-10 animate-fade-in-up transition-all duration-300 px-3 sm:px-6 ${sidebarExpanded ? 'pl-[84px] lg:pl-3 lg:ml-[280px]' : 'pl-[84px] lg:pl-3 lg:ml-[68px]'}`}>
+                    {isAdminPreview && (
+                        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-900 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">Admin Preview Mode</div>
+                                <div className="mt-1 font-semibold">{previewLabel}</div>
+                                <p className="mt-1 text-blue-800/80">
+                                    You are viewing a role-specific workspace as an admin. Dashboard always returns to the admin panel.
+                                </p>
+                            </div>
+                            <Link
+                                href="/admin"
+                                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                            >
+                                Back to Admin
+                            </Link>
+                        </div>
+                    )}
                     {variant === 'admin' && <AdminBreadcrumbs />}
                     {children}
                 </main>
@@ -129,13 +164,37 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarContentProps) {
-    const userType = user?.user_metadata?.user_type;
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const userType = normalizeUserType(user?.user_metadata?.user_type) || "worker";
+    const isAdminPreview = userType === "admin" && variant !== "admin";
+    const isWorkerWorkspace = variant !== "admin" && (userType === "worker" || (isAdminPreview && pathname?.startsWith("/profile/worker")));
+    const isEmployerWorkspace = variant !== "admin" && (userType === "employer" || (isAdminPreview && pathname?.startsWith("/profile/employer")));
+    const isAgencyWorkspace = variant !== "admin" && (userType === "agency" || (isAdminPreview && pathname?.startsWith("/profile/agency")));
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const inspectId = searchParams.get("inspect");
+
+    const withInspect = (href: string) => {
+        if (!isAdminPreview || !inspectId) return href;
+        const [basePath, queryString] = href.split("?");
+        const params = new URLSearchParams(queryString || "");
+        params.set("inspect", inspectId);
+        const nextQuery = params.toString();
+        return nextQuery ? `${basePath}?${nextQuery}` : basePath;
+    };
 
     // Determine Home link based on context
-    const homeHref = variant === 'admin' ? '/admin'
+    const homeHref = variant === 'admin' || isAdminPreview ? '/admin'
         : userType === 'employer' ? '/profile/employer'
-            : '/profile/worker';
+            : userType === 'agency' ? '/profile/agency'
+                : '/profile/worker';
+    const homeLabel = isAdminPreview
+        ? "Admin Dashboard"
+        : userType === "employer"
+            ? "Employer Overview"
+            : userType === "agency"
+                ? "Agency Dashboard"
+                : "Worker Overview";
 
     return (
         <div className="space-y-1.5 w-full flex flex-col items-center lg:items-stretch">
@@ -154,12 +213,18 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 </button>
             )}
 
-            <SidebarLink href={homeHref} icon={<LayoutDashboard size={20} />} label="Dashboard" isCollapsed={isCollapsed} />
+            <SidebarLink
+                href={homeHref}
+                icon={<LayoutDashboard size={20} />}
+                label={homeLabel}
+                isCollapsed={isCollapsed}
+                queryTab={variant !== "admin" && !isAdminPreview && userType === "employer" ? "company" : undefined}
+            />
 
             {/* Only show profile link outside admin mode */}
-            {variant !== 'admin' && (
+            {variant !== 'admin' && !isAdminPreview && (
                 <SidebarLink
-                    href={userType === 'employer' ? '/profile/employer' : '/profile/worker'}
+                    href={userType === 'employer' ? '/profile/employer' : userType === 'agency' ? '/profile/agency' : '/profile/worker'}
                     icon={
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -175,20 +240,65 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
 
             <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Menu</div>
 
+            {isWorkerWorkspace && (
+                <>
+                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Worker Workspace</div>
+                    <SidebarLink href={withInspect("/profile/worker/documents")} icon={<FileText size={20} />} label="Documents" isCollapsed={isCollapsed} />
+                    <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue & Status" isCollapsed={isCollapsed} />
+                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support Inbox" isCollapsed={isCollapsed} disabled={isAdminPreview} />
+                    <SidebarLink href="/profile/worker/edit" icon={<Pencil size={20} />} label="Edit Profile" isCollapsed={isCollapsed} disabled={isAdminPreview} />
+                </>
+            )}
+
+            {isEmployerWorkspace && (
+                <>
+                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Employer Workspace</div>
+                    <SidebarLink href={withInspect("/profile/employer?tab=jobs")} icon={<Briefcase size={20} />} label="Job Requests" isCollapsed={isCollapsed} queryTab="jobs" />
+                    <SidebarLink href={withInspect("/profile/employer?tab=post-job")} icon={<Plus size={20} />} label="Post a Job" isCollapsed={isCollapsed} queryTab="post-job" />
+                </>
+            )}
+
+            {isAgencyWorkspace && (
+                <>
+                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Agency Workspace</div>
+                    <SidebarLink href={withInspect("/profile/agency")} icon={<Users size={20} />} label="Agency Workers" isCollapsed={isCollapsed} />
+                    {pathname?.startsWith("/profile/agency/workers/") && (
+                        <SidebarLink
+                            href={withInspect(pathname)}
+                            icon={<User size={20} />}
+                            label={isAdminPreview ? "Worker Editor Preview" : "Worker Editor"}
+                            isCollapsed={isCollapsed}
+                        />
+                    )}
+                </>
+            )}
+
+            {isAdminPreview && (
+                <>
+                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>UI Previews</div>
+                    <SidebarLink href={withInspect("/profile/worker")} icon={<User size={20} />} label="Worker Preview" isCollapsed={isCollapsed} />
+                    <SidebarLink href={withInspect("/profile/employer")} icon={<Building2 size={20} />} label="Employer Preview" isCollapsed={isCollapsed} />
+                    <SidebarLink href={withInspect("/profile/agency")} icon={<Users size={20} />} label="Agency Preview" isCollapsed={isCollapsed} />
+                </>
+            )}
+
             {variant === 'admin' && (
                 <>
                     <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/agencies" icon={<Users size={20} />} label="Agencies" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} />
 
-                    <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>View As</div>
+                    <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>UI Previews</div>
                     <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Worker Profile" isCollapsed={isCollapsed} />
                     <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Employer Profile" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/profile/agency" icon={<Building2 size={20} />} label="Agency Dashboard" isCollapsed={isCollapsed} />
                 </>
             )}
 
@@ -199,8 +309,14 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 </>
             )}
 
+            {variant !== 'admin' && userType === 'agency' && (
+                <>
+                    <SidebarLink href="/profile/agency" icon={<Users size={20} />} label="Agency Workers" isCollapsed={isCollapsed} />
+                </>
+            )}
+
             {/* Account settings for all non-admin users */}
-            {variant !== 'admin' && (
+            {variant !== 'admin' && !isAdminPreview && (
                 <div className="pt-2">
                     <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} />
                 </div>
@@ -251,9 +367,42 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
     );
 }
 
-function SidebarLink({ href, icon, label, isCollapsed }: { href: string; icon: React.ReactNode; label: string; isCollapsed: boolean }) {
+function SidebarLink({
+    href,
+    icon,
+    label,
+    isCollapsed,
+    disabled = false,
+    queryTab,
+}: {
+    href: string;
+    icon: React.ReactNode;
+    label: string;
+    isCollapsed: boolean;
+    disabled?: boolean;
+    queryTab?: string;
+}) {
     const pathname = usePathname();
-    const isActive = pathname === href || (href !== '/admin' && href !== '/profile/employer' && href !== '/profile/worker' && pathname.startsWith(href));
+    const searchParams = useSearchParams();
+    const baseHref = href.split("?")[0];
+    const currentTab = searchParams.get("tab") || "company";
+    const isActive = queryTab
+        ? pathname === baseHref && currentTab === queryTab
+        : pathname === baseHref || (baseHref !== '/admin' && baseHref !== '/profile/employer' && baseHref !== '/profile/worker' && baseHref !== '/profile/agency' && pathname.startsWith(baseHref));
+
+    if (disabled) {
+        return (
+            <div
+                title={isCollapsed ? `${label} (disabled in admin preview)` : undefined}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-300 cursor-not-allowed`}
+            >
+                <div className="w-6 h-6 flex items-center justify-center shrink-0 text-slate-300">
+                    {icon}
+                </div>
+                <span className={`font-medium text-[14px] whitespace-nowrap ${isCollapsed ? "hidden" : "block"}`}>{label}</span>
+            </div>
+        );
+    }
 
     return (
         <Link
@@ -290,6 +439,7 @@ function AdminBreadcrumbs() {
         queue: 'Queue',
         review: 'Document Review',
         analytics: 'Analytics',
+        inbox: 'Inbox',
         'email-preview': 'Email Preview',
         settings: 'Settings',
     };
