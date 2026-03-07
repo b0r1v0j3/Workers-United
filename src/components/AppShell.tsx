@@ -188,13 +188,15 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
         : userType === 'employer' ? '/profile/employer'
             : userType === 'agency' ? '/profile/agency'
                 : '/profile/worker';
-    const homeLabel = isAdminPreview
-        ? "Admin Dashboard"
-        : userType === "employer"
-            ? "Employer Overview"
-            : userType === "agency"
-                ? "Agency Dashboard"
-                : "Worker Overview";
+    const homeLabel = variant === "admin"
+        ? "Dashboard"
+        : isAdminPreview
+            ? "Admin Dashboard"
+            : userType === "employer"
+                ? "Employer Overview"
+                : userType === "agency"
+                    ? "Agency Dashboard"
+                    : "Worker Overview";
 
     return (
         <div className="space-y-1.5 w-full flex flex-col items-center lg:items-stretch">
@@ -287,6 +289,11 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                     <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/agencies" icon={<Users size={20} />} label="Agencies" isCollapsed={isCollapsed} />
+                    <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Previews</div>
+                    <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Preview Worker" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Preview Employer" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/profile/agency" icon={<Users size={20} />} label="Preview Agency" isCollapsed={isCollapsed} />
+                    <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Operations</div>
                     <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" isCollapsed={isCollapsed} />

@@ -58,7 +58,7 @@ Workers-United/
 │   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity, claim, documents, and payment actions; admin preview stays read-only and can inspect real agency workspaces via `?inspect=<profile_id>`
 │   │   │   └── settings/      # GDPR: delete account, export data
 │   │   ├── admin/
-│   │   │   ├── page.tsx       # Admin operations dashboard (stats, action cards, pipeline, queue watch, inbox, recent lists, role-safety, workspace templates, and direct inspect links into real workspaces)
+│   │   │   ├── page.tsx       # Admin operations dashboard (stats, action cards, pipeline, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
 │   │   │   ├── layout.tsx     # Admin layout (AppShell)
 │   │   │   ├── agencies/      # Agency registry with shared admin hero/metrics layout + direct agency workspace inspect links
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
@@ -94,7 +94,7 @@ Workers-United/
 │   │   └── terms/             # Terms & conditions page
 │   ├── proxy.ts                # ← CSRF + auth guard (profile, admin, API routes)
 │   ├── components/
-│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with role-specific sidebar nav, inspect-query preservation across admin previews, safe routing back to /admin, and no redundant admin sidebar preview links
+│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with role-specific sidebar nav, inspect-query preservation across admin previews, safe routing back to /admin, explicit admin preview shortcuts, and a correct `Dashboard` home label inside admin
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
