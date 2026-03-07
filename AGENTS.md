@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 07.03.2026 (Workspace cleanup pass 5: agency i employer prazna stanja više ne dupliraju glavne akcije; `Add worker` ostaje samo u agency header-u, `New Job Request` ostaje samo u employer sidebar-u, a empty-state copy sada upućuje korisnika na ta kanonska mesta; prethodni cleanup ostaje aktivan: worker overview ne duplira `Documents / Queue / Support`, `AppShell` desktop canvas je stabilizovan pri collapse-u sidebar-a, `San Marino` je uklonjen iz country lista, a worker/employer ekrani su u neutralnom white/gray/black smeru)
+> **Poslednje ažuriranje:** 07.03.2026 (Fake internal worker cleanup: live worker/auth/profile nalog `borivoje@workersunited.org` je obrisan iz Supabase-a zajedno sa candidate i email_queue tragovima; `profile-reminders` sada preskače interne/test adrese preko shared `isInternalOrTestEmail`, `.org` domen je dodat u interni filter, a legacy notify script više ne sadrži tu nepostojeću adresu. Prethodni cleanup ostaje aktivan: agency/employer prazna stanja ne dupliraju glavne akcije, worker overview ne duplira `Documents / Queue / Support`, `AppShell` desktop canvas je stabilizovan pri collapse-u sidebar-a, `San Marino` je uklonjen iz country lista, a worker/employer ekrani su u neutralnom white/gray/black smeru)
 
 ---
 
@@ -270,6 +270,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Fake internal worker cleanup: obrisan je lažni live worker/auth/profiles zapis `borivoje@workersunited.org` zajedno sa candidate i `email_queue` istorijom; `profile-reminders` sada preskače interne/test email adrese preko shared filtera, a legacy ručni notify script više ne sadrži tu `.org` adresu — 07.03.2026
 - [x] Workspace cleanup pass 5: agency i employer prazna stanja više ne dupliraju glavne akcije u sredini ekrana; `Add worker` ostaje samo u agency header-u, `New Job Request` samo u employer sidebar-u, a empty-state poruke sada jasno upućuju na ta kanonska mesta — 07.03.2026
 - [x] Workspace cleanup pass 4: worker overview više ne duplira `Documents / Queue / Support` kartice u sredini ekrana; ti tokovi su sada samo sidebar entry point-i, pa overview ostaje čist i fokusiran na profil podatke — 07.03.2026
 - [x] Workspace cleanup pass 3: `AppShell` desktop canvas je stabilizovan pa collapse sidebar-a više ne povlači ceo ekran ulevo; `San Marino` uklonjen je iz globalnih country lista; worker i employer workspace-i su svedeni na jednu glavnu kolonu bez redundantnih levih helper panela, uz neutralniji white/gray/black hero stil i employer edit akciju direktno u `Company Information` kartici — 07.03.2026

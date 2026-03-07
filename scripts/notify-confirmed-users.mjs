@@ -43,8 +43,7 @@ const emails = [
     "suraj_viza@1yahoo.com",
     "mrashid.freelancer@gmail.com",
     "jafarquadri@yahoo.co.in",
-    "rameshgharti72@gmail.com",
-    "borivoje@workersunited.org"
+    "rameshgharti72@gmail.com"
 ];
 
 const html = `

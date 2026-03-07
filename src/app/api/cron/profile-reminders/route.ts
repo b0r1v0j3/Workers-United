@@ -3,6 +3,7 @@ import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/mailer";
 import { getWorkerCompletion, getEmployerCompletion } from "@/lib/profile-completion";
 import { getEmailTemplate } from "@/lib/email-templates";
+import { isInternalOrTestEmail } from "@/lib/reporting";
 
 // ─── Main cron handler ──────────────────────────────────────────
 // Runs daily via Vercel cron — sends profile completion reminders + auto-deletes after 30 days
@@ -88,7 +89,10 @@ export async function GET(request: Request) {
             const userType = user.user_metadata?.user_type;
             const isEmployer = userType === "employer";
 
-            if (!email) continue;
+            if (!email || isInternalOrTestEmail(email)) {
+                skipped++;
+                continue;
+            }
 
             const accountAgeDays = Math.floor(
                 (Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)
