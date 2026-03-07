@@ -139,6 +139,86 @@ function getEmployerTab(tab: string | null): TabType {
     return "company";
 }
 
+function getEmployerNextAction({
+    readOnlyPreview,
+    employer,
+    editing,
+    hasCountry,
+    isPrimaryMarket,
+    completion,
+    jobsCount,
+}: {
+    readOnlyPreview: boolean;
+    employer: EmployerProfile | null;
+    editing: boolean;
+    hasCountry: boolean;
+    isPrimaryMarket: boolean;
+    completion: number;
+    jobsCount: number;
+}) {
+    if (readOnlyPreview) {
+        return {
+            badge: "Preview",
+            title: "Inspect the employer workspace safely",
+            copy: "Review the same overview, company data, and job request structure a real employer sees, without changing any company record.",
+        };
+    }
+
+    if (!employer) {
+        return {
+            badge: "Setup",
+            title: "Finish company setup first",
+            copy: "Save the company profile first. Job requests unlock inside the same workspace as soon as the company record exists.",
+        };
+    }
+
+    if (editing) {
+        return {
+            badge: "Editing",
+            title: "Finish the company details",
+            copy: "Use this edit state to complete the missing company fields, then save to return to the main hiring workspace.",
+        };
+    }
+
+    if (!hasCountry) {
+        return {
+            badge: "Setup",
+            title: "Add the primary company details",
+            copy: "Start with company name, phone, country, and industry so the hiring workspace can move out of setup mode.",
+        };
+    }
+
+    if (!isPrimaryMarket) {
+        return {
+            badge: "Expansion",
+            title: "Keep the company profile ready",
+            copy: "This market is not live yet. Complete the company profile now so the hiring workspace is ready as soon as coverage opens.",
+        };
+    }
+
+    if (completion < 100) {
+        return {
+            badge: "Readiness",
+            title: "Complete the company profile",
+            copy: "Finish the remaining company fields so the employer workspace reaches full readiness before new hiring requests are added.",
+        };
+    }
+
+    if (jobsCount === 0) {
+        return {
+            badge: "Hiring",
+            title: "Create the first job request",
+            copy: "The company profile is ready. The next step is to open a job request so Workers United can start matching workers.",
+        };
+    }
+
+    return {
+        badge: "Hiring",
+        title: "Manage the active job requests",
+        copy: "Review open requests, track filled positions, and keep company information current from this single workspace.",
+    };
+}
+
 // ─── Main Component ─────────────────────────────────────────────
 export default function EmployerProfilePage({
     readOnlyPreview = false,
@@ -477,7 +557,16 @@ export default function EmployerProfilePage({
                 : "Expanding";
     const workspaceSummary = readOnlyPreview
         ? "Review the employer workspace structure without changing your admin role."
-        : "Manage company information, post job requests, and keep hiring data in one workspace.";
+        : "Keep company details, readiness, and job requests in one workspace.";
+    const nextAction = getEmployerNextAction({
+        readOnlyPreview,
+        employer,
+        editing,
+        hasCountry,
+        isPrimaryMarket,
+        completion,
+        jobsCount: jobs.length,
+    });
 
     return (
         <div className="space-y-6">
@@ -515,18 +604,37 @@ export default function EmployerProfilePage({
 
             <section className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
                 <div className="space-y-4">
-                    <div className={`${surfaceClass} sticky top-24 p-2`}>
-                        <TabButton label="Company Info" icon={<LayoutDashboard size={18} />} active={activeTab === "company"} onClick={() => handleTabChange("company")} />
-                        {employer && isPrimaryMarket && (
-                            <TabButton label="Post a Job" icon={<Plus size={18} />} active={activeTab === "post-job"} onClick={() => handleTabChange("post-job")} />
-                        )}
-                        {employer && isPrimaryMarket && (
-                            <TabButton label={`Active Jobs (${jobs.length})`} icon={<Briefcase size={18} />} active={activeTab === "jobs"} onClick={() => handleTabChange("jobs")} />
-                        )}
+                    <div className={`${surfaceClass} sticky top-24`}>
+                        <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111111] text-white">
+                                <LayoutDashboard size={18} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-semibold text-[#18181b]">
+                                    {readOnlyPreview ? "Read-only admin preview" : "Next action"}
+                                </h2>
+                                <p className="text-xs uppercase tracking-[0.16em] text-[#8a8479]">
+                                    {nextAction.badge}
+                                </p>
+                            </div>
+                        </div>
+
+                        <h3 className="text-lg font-semibold text-[#18181b]">{nextAction.title}</h3>
+                        <p className="mt-2 text-sm leading-relaxed text-[#57534e]">{nextAction.copy}</p>
+
+                        <div className="mt-5 space-y-2">
+                            <TabButton label="Overview" icon={<LayoutDashboard size={18} />} active={activeTab === "company"} onClick={() => handleTabChange("company")} />
+                            {employer && isPrimaryMarket && (
+                                <TabButton label="New Job Request" icon={<Plus size={18} />} active={activeTab === "post-job"} onClick={() => handleTabChange("post-job")} />
+                            )}
+                            {employer && isPrimaryMarket && (
+                                <TabButton label={`Job Requests (${jobs.length})`} icon={<Briefcase size={18} />} active={activeTab === "jobs"} onClick={() => handleTabChange("jobs")} />
+                            )}
+                        </div>
 
                         {employer && !editing && activeTab === "company" && !readOnlyPreview && (
                             <>
-                                <div className="my-2 border-t border-[#f0ede6]" />
+                                <div className="my-4 border-t border-[#f0ede6]" />
                                 <button
                                     type="button"
                                     onClick={() => setEditing(true)}
@@ -546,26 +654,27 @@ export default function EmployerProfilePage({
                             </div>
                             <div>
                                 <h2 className="text-base font-semibold text-[#18181b]">
-                                    {readOnlyPreview ? "Read-only admin preview" : "Workspace flow"}
+                                    {readOnlyPreview ? "Preview mode" : "Hiring status"}
                                 </h2>
                                 <p className="text-xs uppercase tracking-[0.16em] text-[#8a8479]">
-                                    {readOnlyPreview ? "Structure only" : "Company setup"}
+                                    {readOnlyPreview ? "Structure only" : "Readiness"}
                                 </p>
                             </div>
                         </div>
-                        <div className="space-y-2 leading-relaxed">
-                            {readOnlyPreview ? (
-                                <>
-                                    <p>This preview shows how employer company data and job requests are organized.</p>
-                                    <p>Admin preview cannot create an employer profile, edit company details, or post jobs.</p>
-                                </>
-                            ) : (
-                                <>
-                                    <p>Complete company details first so your hiring workspace reaches 100% readiness.</p>
-                                    <p>When your company profile is ready, post job requests and track them in one place.</p>
-                                </>
-                            )}
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <EmployerSignal label="Completion" value={`${completion}%`} />
+                            <EmployerSignal label="Status" value={workspaceStatus} />
+                            <EmployerSignal label="Open jobs" value={String(openJobsCount)} />
                         </div>
+                        <p className="mt-4 leading-relaxed">
+                            {readOnlyPreview
+                                ? "Admin preview stays read-only. Use the employer list to inspect real employer data."
+                                : hasCountry
+                                    ? isPrimaryMarket
+                                        ? `Selected market: ${companyForm.country}. This workspace is ready for company setup and job requests.`
+                                        : `Selected market: ${companyForm.country}. Hiring is not live there yet, but the company profile can still be prepared now.`
+                                    : "Choose a country and complete the company profile to unlock the full hiring flow."}
+                        </p>
                     </div>
                 </div>
 
@@ -611,7 +720,7 @@ export default function EmployerProfilePage({
                                             <Building2 className="text-[#111111]" /> Employer Preview
                                         </h3>
                                         <p className="text-sm leading-relaxed text-[#57534e]">
-                                            This admin account does not have a real employer profile attached. Preview stays read-only and cannot create one from this page.
+                                            No real employer profile is linked to this preview entry point. Preview stays read-only and cannot create one from here.
                                         </p>
                                     </div>
                                 ) : editing ? (
@@ -780,7 +889,7 @@ export default function EmployerProfilePage({
                             <div className={surfaceClass}>
                                 <h3 className="mb-6 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
                                     <div className="rounded-lg bg-emerald-100 p-2 text-emerald-600"><Plus size={20} /></div>
-                                    {readOnlyPreview ? "Post a Job Preview" : "Post a New Job"}
+                                    {readOnlyPreview ? "New Job Request Preview" : "New Job Request"}
                                 </h3>
 
                                 {jobAlert && !readOnlyPreview && (
@@ -793,8 +902,8 @@ export default function EmployerProfilePage({
 
                                 {readOnlyPreview && (
                                     <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-950">
-                                        <p className="font-medium">This is the job request form employers use after their company profile is ready.</p>
-                                        <p className="mt-2 text-blue-900/80">Admin preview can inspect the structure, but it cannot post or edit jobs from this account.</p>
+                                        <p className="font-medium">This is the job request form employers use after the company profile is ready.</p>
+                                        <p className="mt-2 text-blue-900/80">Admin preview can inspect the structure, but it cannot create or edit job requests from this account.</p>
                                     </div>
                                 )}
 
@@ -858,15 +967,15 @@ export default function EmployerProfilePage({
 
                                     <div className="flex justify-end border-t border-[#f0ede6] pt-4">
                                         {readOnlyPreview ? (
-                                            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
-                                                Job posting is disabled in admin preview
+                                                <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                                                Job request creation is disabled in admin preview
                                             </div>
                                         ) : (
                                             <button type="button" onClick={submitJob} disabled={postingJob}
                                                 className="flex items-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50">
                                                 {postingJob ? (
                                                     <><div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div> Posting...</>
-                                                ) : <><Plus className="w-5 h-5" /> Post Job Request</>}
+                                                ) : <><Plus className="w-5 h-5" /> Create Job Request</>}
                                             </button>
                                         )}
                                     </div>
@@ -882,11 +991,11 @@ export default function EmployerProfilePage({
                                         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#faf8f3]">
                                             <Briefcase size={32} className="text-[#a8a29e]" />
                                         </div>
-                                        <h3 className="mb-2 text-xl font-semibold text-[#18181b]">No jobs posted yet</h3>
-                                        <p className="mb-6 text-[#57534e]">Create your first job request to start matching with workers.</p>
+                                        <h3 className="mb-2 text-xl font-semibold text-[#18181b]">No job requests yet</h3>
+                                        <p className="mb-6 text-[#57534e]">Create the first job request to start matching with workers.</p>
                                         {!readOnlyPreview && (
                                             <button type="button" onClick={() => handleTabChange('post-job')} className="rounded-2xl bg-[#111111] px-6 py-3 font-semibold text-white transition hover:bg-[#2b2b2b]">
-                                                Post a Job
+                                                Create Job Request
                                             </button>
                                         )}
                                     </div>
@@ -991,6 +1100,15 @@ function EmployerMetricCard({ label, value }: { label: string; value: string | n
         <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.45)]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8479]">{label}</div>
             <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181b]">{value}</div>
+        </div>
+    );
+}
+
+function EmployerSignal({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-2xl border border-[#ebe7df] bg-white px-4 py-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a8a29e]">{label}</div>
+            <div className="mt-1 text-sm font-semibold text-[#18181b]">{value}</div>
         </div>
     );
 }

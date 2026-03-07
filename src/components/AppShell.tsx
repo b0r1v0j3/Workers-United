@@ -137,7 +137,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">Admin Preview Mode</div>
                                 <div className="mt-1 font-semibold">{previewLabel}</div>
                                 <p className="mt-1 text-blue-800/80">
-                                    You are viewing a role-specific workspace as an admin. Dashboard always returns to the admin panel.
+                                    You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.
                                 </p>
                             </div>
                             <Link
@@ -191,12 +191,8 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
     const homeLabel = variant === "admin"
         ? "Dashboard"
         : isAdminPreview
-            ? "Admin Dashboard"
-            : userType === "employer"
-                ? "Employer Overview"
-                : userType === "agency"
-                    ? "Agency Dashboard"
-                    : "Worker Overview";
+            ? "Back to Admin"
+            : "Overview";
 
     return (
         <div className="space-y-1.5 w-full flex flex-col items-center lg:items-stretch">
@@ -246,8 +242,8 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 <>
                     <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Worker Workspace</div>
                     <SidebarLink href={withInspect("/profile/worker/documents")} icon={<FileText size={20} />} label="Documents" isCollapsed={isCollapsed} />
-                    <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue & Status" isCollapsed={isCollapsed} />
-                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support Inbox" isCollapsed={isCollapsed} disabled={isAdminPreview} />
+                    <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} />
+                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} disabled={isAdminPreview} />
                     <SidebarLink href="/profile/worker/edit" icon={<Pencil size={20} />} label="Edit Profile" isCollapsed={isCollapsed} disabled={isAdminPreview} />
                 </>
             )}
@@ -256,7 +252,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 <>
                     <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Employer Workspace</div>
                     <SidebarLink href={withInspect("/profile/employer?tab=jobs")} icon={<Briefcase size={20} />} label="Job Requests" isCollapsed={isCollapsed} queryTab="jobs" />
-                    <SidebarLink href={withInspect("/profile/employer?tab=post-job")} icon={<Plus size={20} />} label="Post a Job" isCollapsed={isCollapsed} queryTab="post-job" />
+                    <SidebarLink href={withInspect("/profile/employer?tab=post-job")} icon={<Plus size={20} />} label="New Job Request" isCollapsed={isCollapsed} queryTab="post-job" />
                 </>
             )}
 
@@ -277,7 +273,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
 
             {isAdminPreview && (
                 <>
-                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>UI Previews</div>
+                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Role Previews</div>
                     <SidebarLink href={withInspect("/profile/worker")} icon={<User size={20} />} label="Worker Preview" isCollapsed={isCollapsed} />
                     <SidebarLink href={withInspect("/profile/employer")} icon={<Building2 size={20} />} label="Employer Preview" isCollapsed={isCollapsed} />
                     <SidebarLink href={withInspect("/profile/agency")} icon={<Users size={20} />} label="Agency Preview" isCollapsed={isCollapsed} />
@@ -301,19 +297,6 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                     <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} />
-                </>
-            )}
-
-            {/* Employer shortcuts only outside admin mode */}
-            {variant !== 'admin' && userType === 'employer' && (
-                <>
-                    <SidebarLink href="/profile/employer/jobs" icon={<Briefcase size={20} />} label="Job Postings" isCollapsed={isCollapsed} />
-                </>
-            )}
-
-            {variant !== 'admin' && userType === 'agency' && (
-                <>
-                    <SidebarLink href="/profile/agency" icon={<Users size={20} />} label="Agency Workers" isCollapsed={isCollapsed} />
                 </>
             )}
 
