@@ -9,6 +9,7 @@ const TEST_EMAIL_MARKERS = [
 
 const INTERNAL_EMAIL_SUFFIXES = [
     "@workersunited.eu",
+    "@workersunited.org",
 ];
 
 export function isInternalOrTestEmail(email?: string | null) {
