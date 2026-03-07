@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 06.03.2026 (homepage pricing + CTA copy polish: uklonjen confusing `Placement fee / After match` iz public pricing bloka, uveden jasniji copy za `$9 Job Finder Access` + `100% refund` ako nema match-a u 90 dana, i CTA dugmad u final sekciji vizuelno usklađena (worker/employer) sa ispravnim kontrastom teksta; cookie icon size tweak: u `CookieConsent` ikonica povećana 2x (`28px` → `56px`) po feedback-u; cookie icon correction: `CookieConsent` sada koristi tačnu Icons8 ikonicu sa linka `/icon/97693/cookie` (asset: `https://img.icons8.com/plasticine/512w/cookie.png` sačuvan kao `public/cookie-icons8.png`); homepage CTA + cookie UX polish: `Get started` dugme u hero sekciji dobilo hard `!text-white` + bela strelica zbog kontrasta na tamnoj pozadini; `CookieConsent` prebačen sa emoji na preuzetu Icons8 cookie ikonu (`public/cookie-icons8.png`) uz postojeći banner layout; public navbar icon-only tweak po feedback-u: uvećana samo ikonica ruku u levom delu headera na ~2x, bez promene visine headera, tipografije, glass efekta i desnih akcija; public navbar desktop refinement: `WORKERS UNITED` wordmark centriran na desktopu, header dodatno stanjен (`h-[52px] md:h-[56px]`), i uveden blagi scroll glass efekat (`bg-white/40` na vrhu → `bg-white/70` pri skrolu uz blago zamućenje); public navbar final UX polish: logo uvećan ~2x, full-width left/right alignment bez centralnog max-width containment, uklonjen public border/shadow separator, zadržan sticky scroll behavior, desni blok reorder na `ime/prezime -> Profile` i guest akcije vraćene na `Log in + Sign up`; public header cleanup + logo visibility fix: `UnifiedNavbar` sada koristi pravi split brand (`logo-icon` + `logo-wordmark`), povećana je visina headera da se ništa ne seče i uklonjeni su suvišni public nav linkovi/hamburger za čistiji landing; homepage redesign: potpuno nova Notion-style “document stack” struktura sa multi-color akcentima bez vezivanja za jednu boju; sekcije reorganizovane u dokumente: hero stack, what-we-do, process checklist, worker/employer docs, pricing note i final CTA; global logo consistency pass: uklonjene preostale `logo-icon`/`logo-wordmark` reference iz UI i prebačeno na `logo-complete-transparent.png` bez “balon” prikaza; usklađeni `UnifiedNavbar`, auth stranice i profile header-i + offline/PWA asseti, auth UI alignment: `/login` redizajniran u isti one-panel Notion stil kao `/signup` sa istim card/layout/input/button sistemom i neutral loading skeletonom; signup layout simplification po vlasničkom zahtevu: uklonjen ceo levi info panel, ostavljen single centered auth card + Sign in CTA, neutral one-panel loading skeleton; signup visual final polish: veći transparentni full logo `logo-complete-transparent.png` levo+desno, neutral Notion paleta bez plavih gradijenata + neutral loading skeleton, signup brand header simplification: uklonjen “balon” oko logotipa, global old-logo cleanup: `logo.png` uklonjen iz svih sajt ruta i zamenjen `logo-icon`/`logo-wordmark`, desktop+mobile signup redesign u Apple/Notion stilu + richer signup telemetry, worker/employer terminology alignment u UI/API/Brain report + safe Supabase worker alias views migration, onboarding self-heal + telemetry alignment, brain report email Gmail-safe render fix, lint stabilization, system smoke cron, expanded health checks, payment unlock guardrails, cloud-doctor hardening script + npm `cloud:doctor` command)
+> **Poslednje ažuriranje:** 07.03.2026 (Profile workspace consistency pass 2: worker overview sada koristi isti `workspace hero + left rail + metrics + action cards` ritam kao employer/agency, agency intake copy i CTA jasnije vode `draft -> worker workspace`, a admin/inspect osnova iz prethodnog koraka ostaje aktivna; AGENTS sekcije `Sada / Sledeće / Kasnije` i roadmap ostaju kanonski plan rada)
 
 ---
 
@@ -59,7 +59,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
 - **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
-- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. n8n + GPT-4o-mini obrađuje WhatsApp komunikaciju, Gemini obrađuje email i verifikaciju dokumenata. Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI. WhatsApp bot se dopisuje sa korisnicima — prepoznaje ih po broju telefona, zna njihov status, i daje personalizovane odgovore.
+- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. GPT obrađuje WhatsApp komunikaciju i verifikaciju dokumenata, dok Gemini ostaje fallback za document AI ako OpenAI vision trenutno nije dostupan. Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI. WhatsApp bot se dopisuje sa korisnicima — prepoznaje ih po broju telefona, zna njihov status, i daje personalizovane odgovore.
 
 ---
 
@@ -87,10 +87,11 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 4. AI automatski verifikuje dokumenta
 5. Profil mora biti 100% popunjen da bi bio verifikovan
 6. Kad je verifikovan → može da plati $9 za traženje posla
-7. Ulazi u QUEUE (red čekanja) — čeka da se nađe match
-8. Ako se nađe posao → doplatiti placement fee (npr. $190 za Srbiju)
-9. Mi pokrećemo proces apliciranja za radnu vizu
-10. Kad viza bude odobrena → sprovodimo radnika do poslodavca
+7. Posle uspešne `$9` uplate otključava mu se in-platform support inbox (`/profile/worker/inbox`)
+8. Ulazi u QUEUE (red čekanja) — čeka da se nađe match
+9. Ako se nađe posao → doplatiti placement fee (npr. $190 za Srbiju)
+10. Mi pokrećemo proces apliciranja za radnu vizu
+11. Kad viza bude odobrena → sprovodimo radnika do poslodavca
 ```
 
 ### Poslodavac (Employer):
@@ -109,6 +110,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - Pregled svih kandidata i poslodavaca
 - Ručna verifikacija dokumenata (backup za AI)
 - Upravljanje queue-om i ponudama
+- In-platform support inbox za odgovaranje worker-ima bez izlaska na WhatsApp/email
 - God Mode za testiranje
 ```
 
@@ -140,16 +142,19 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - `/profile` — auto-redirect na worker ili employer
 - `/profile/worker` — profil radnika (3 taba: Profile Info, Documents, Status)
 - `/profile/worker/edit` — editovanje profila (single-page form, ne wizard)
+- `/profile/worker/inbox` — worker support inbox (otključava se posle `$9 Job Finder` uplate)
 - `/profile/worker/queue` — status u redu čekanja
 - `/profile/worker/offers/[id]` — detalji ponude
 - `/profile/employer` — profil poslodavca
-- `/profile/employer/jobs` — lista job request-ova
-- `/profile/employer/jobs/new` — kreiranje novog job request-a
+- `/profile/employer/jobs` — legacy ruta koja redirectuje na `/profile/employer?tab=jobs`
+- `/profile/employer/jobs/new` — legacy ruta koja redirectuje na `/profile/employer?tab=post-job`
 - `/admin` — admin panel
 - `/admin/workers` — lista radnika (ranije /admin/candidates)
 - `/admin/workers/[id]` — detalji radnika
 - `/admin/employers` — lista poslodavaca
+- `/admin/agencies` — lista agencija + read-only `Open Workspace` inspect ulaz
 - `/admin/queue` — queue management
+- `/admin/inbox` — admin support inbox
 - `/admin/settings` — admin podešavanja
 
 ### Tehnički stack:
@@ -157,7 +162,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Styling:** Tailwind CSS v4, Montserrat font
 - **Backend:** Supabase (Auth + PostgreSQL + Storage)
 - **Plaćanja:** Stripe (Checkout Sessions + Webhooks)
-- **AI:** Gemini 3.0 Flash (verifikacija dokumenata, sa fallback chain: 3.0-flash → 2.5-pro → 2.5-flash) + GPT-4o-mini via n8n (WhatsApp chatbot) + GPT 5.3 Codex via n8n (AI Brain)
+- **AI:** OpenAI GPT-4o-mini (primarni vision sloj za verifikaciju dokumenata + WhatsApp AI), Gemini fallback chain za document verification (`gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`), i GPT 5.3 Codex via n8n (AI Brain)
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
 - **Hosting:** Vercel Pro (sa cron jobovima)
 - **Automation:** n8n Cloud (WhatsApp AI chatbot workflow)
@@ -173,6 +178,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 ```bash
 npm install        # Instalacija dependency-ja
 npm run dev        # Development server (localhost:3000)
+npm run typecheck  # Obavezan TypeScript gate (tsc --noEmit)
 npm run build      # Production build
 npm run start      # Production server
 npm run lint       # ESLint provera
@@ -190,7 +196,10 @@ STRIPE_SECRET_KEY=sk_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
 
-# Google Gemini AI
+# OpenAI
+OPENAI_API_KEY=your-openai-key
+
+# Google Gemini AI (document verification fallback)
 GEMINI_API_KEY=your-gemini-key
 
 # Email (Google Workspace SMTP)
@@ -240,13 +249,47 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 > Za kompletnu istoriju promena pogledaj `CHANGELOG.md`
 
 ### 🔲 TODO
-- [ ] **n8n Email AI Auto-Responder** — novi workflow: AI odgovara na emailove (contact@workersunited.eu)
+#### Sada
+- [ ] **Admin/Ops rewrite v2** — jedan stvarno funkcionalan admin za pregled worker/employer/agency naloga, bez role drift-a, sa jasnim ulazom u queue/offers/payments/docs i bez konfuznih preview slepih ulica
+- [ ] **Profile workspace unification pass 2** — worker, employer i agency moraju vizuelno i funkcionalno da deluju kao isti proizvod: isti shell, jasne sekcije, bez neobjašnjenih ikonica i bez različitih UX pravila po ulozi
+- [ ] **Messaging phase 2** — worker/employer match thread unlock (`accepted offer + placement fee paid`), anti-contact leakage filter, employer inbox, admin oversight
+- [ ] **Final smoke test** — puni end-to-end test glavnih flow-ova na produkciji (worker, employer, agency, support, payment, admin)
+
+#### Sledeće
+- [ ] **Payment recovery automation** — abandoned checkout follow-up (`1h / 24h / 72h`), source attribution, admin funnel signal za `opened checkout but not paid`
+- [ ] **Agency operations v2** — filteri, search, `needs action`, `missing contact`, `verified but unpaid`, `paid but waiting`, bulk operacije
+- [ ] **n8n Email AI Auto-Responder** — novi workflow: AI odgovara na emailove (`contact@workersunited.eu`)
 - [ ] **n8n AI Agent sa tools** — bot dobija mogućnost da radi akcije (provera otvorenih pozicija, ažuriranje statusa, slanje emaila)
 - [ ] **n8n email automation** — retry failed emails, auto-responder za inbox
-- [ ] Multi-country pricing za placement fee — **odloženo** dok se ne proširimo na druge zemlje
-- [ ] **Final smoke test** — end-to-end test celokupnog flow-a
+
+#### Kasnije / uslovno
+- [ ] **Per-country placement fee engine** — priprema za više zemalja i različite confirmation/placement cene po destinaciji
+- [ ] **Multi-country pricing za placement fee** — **odloženo** dok se ne proširimo na druge zemlje
+- [ ] **Renewals / compliance layer** — statusi posle match-a, expiries, renewals, case visibility za vizni proces
+- [ ] **Multi-language support** — ključne instrukcije na jezicima radnika
+- [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Profile workspace consistency pass 2: worker overview više ne deluje kao poseban proizvod, već koristi isti hero/metrics/left-rail ritam kao employer workspace; dodat je jasniji `Next action` blok, dokument summary, i usklađen `Queue & Status / Support` language. Agency dashboard sada eksplicitnije vodi iz intake forme u puni worker workspace (`Create Draft and Open Worker Workspace`, `Open worker workspace`) i prazno stanje objašnjava šta se dešava posle draft-a — 07.03.2026
+- [x] Admin inspect workspace pass: admin više ne mora da se oslanja samo na apstraktni `/profile/*` UI preview. Worker, employer i agency workspace sada podržavaju read-only `?inspect=<profile_id>` otvaranje nad stvarnim account podacima bez mutacije admin naloga; worker inspect pokriva overview + documents + queue, employer inspect otvara kanonski tabbed workspace nad ciljanim employer zapisom, agency inspect pokriva dashboard + worker editor, dodata je i `/admin/agencies` lista, a admin workers/employers/dashboard sada imaju direktne `Open Workspace` ulaze — 07.03.2026
+- [x] AGENTS cleanup + roadmap regrouping: aktivni plan rada više nije razbacan kroz `TODO`, `Launch Status` i dva odvojena `Suggestions` bloka; uveden je fazni redosled `admin/ops -> profile consistency -> agency -> messaging -> funnel/payments -> AI`, dok su istorijski launch snapshot i niche predlozi zadržani odvojeno od glavnog plana — 07.03.2026
+- [x] Unified profile workspace pass: worker je prebačen na zajednički `AppShell` sa role-specific navigacijom, employer workspace je spojen u jedan kanonski ekran sa tabovima (`company/post-job/jobs`) i legacy `/profile/employer/jobs*` rute sada samo redirectuju na isti ekran; agency dashboard sada eksplicitno pokazuje tok `draft -> full worker profile -> docs/payment`, a admin preview shell više ne prikazuje zbunjujuće nalog-linkove van preview konteksta — 07.03.2026
+- [x] Profile workspace alignment + admin preview clarity: employer profil sada koristi isti `AppShell` kao agency/admin pa preview više ima jasan povratak u `/admin`; employer hero/side rail/info kartice su poravnate sa neutralnim workspace stilom, agency preview prikazuje zaključan isti `Add Worker Draft` intake obrazac kao realan agency flow, a worker profil sada jasno označava `Support Inbox` u sidebaru i objašnjava otključavanje support-a posle `$9` uplate — 07.03.2026
+- [x] Messaging v1 foundation + support inbox: u repo dodat `20260306234500_messaging_foundation.sql`, live `src/lib/database.types.ts` regenerisan sa `conversations*` tabelama, worker support inbox uveden na `/profile/worker/inbox` i otključava se tek posle uspešne `$9` uplate, dok admin sada ima `/admin/inbox` + dashboard/sidebar entry point za odgovaranje na support thread-ove bez izlaska iz platforme — 06.03.2026
+- [x] Admin role repair + safe role previews: admin preview worker/employer/agency više ne menja `profiles.user_type`, accidental admin-owned agency redovi su uklonjeni, owner worker zapis je vraćen iz lažnog `OFFER_PENDING` u `IN_QUEUE`, a admin dashboard dobio je `Admin Role Safety` + `Workspace Previews` blokove za jasan ulaz u read-only role view-e — 06.03.2026
+- [x] Agency full worker-profile parity + admin operations cleanup: `/profile/agency/workers/[id]` više nije skraćeni draft editor, već pokriva praktično ceo worker profil shape (`identity/contact/citizenship/preferences/family/passport`), pri čemu su `phone` i draft `email` opciona contact polja za notifikacije; agency completion helper više ne tretira telefon kao obavezan u agency kontekstu. Admin preview navigation je poravnata tako da `Dashboard` i brand/logo povratak iz preview režima uvek vode na `/admin`, a admin landing je zamenjen jednostavnijim operativnim panelom sa jasnim stats/action/pipeline/queue listama — 06.03.2026
+- [x] Live agency/worker E2E validation + payment drift hardening: kreirani dedicated test nalozi (`worker/employer/agency/admin` + claimed agency worker), generisana sintetička passport/diploma/biometric dokumenta, potvrđeni production flow-ovi `agency PATCH -> upload -> verify` i `worker -> verify` sa 3/3 verified i auto statusom `VERIFIED`; admin dashboard / worker detail / funnel metrics prebačeni sa nepostojećeg `payments.created_at` na `paid_at`, a `create-checkout` session ID upis sada ide preko admin klijenta da pending payment ne ostane bez `stripe_checkout_session_id` — 06.03.2026
+- [x] Document AI switch to GPT-primary: uveden `src/lib/document-ai.ts`, live document verification rute (`/api/verify-document`, `/api/documents/verify`, `/api/documents/verify-passport`) više ne zavise od `gemini.ts`, već koriste OpenAI GPT-4o-mini kao primarni vision provider uz Gemini fallback chain za outage/rate-limit scenarije — 06.03.2026
+- [x] WhatsApp first-contact copy simplification: AI prompt i fallback bot više ne otvaraju razgovor sa `$9` uplatom ili listom dokumenata; za generična pitanja sada vode korisnika na `signup -> profile -> Job Finder`, a cenu spominju samo na direktan upit, uz kratak odgovor `Job Finder = $9` + `90-day refund` — 06.03.2026
+- [x] Staged typed admin client rollout: `src/lib/supabase/admin.ts` sada pored legacy `createAdminClient()` ima i `createTypedAdminClient()` sa live `Database` generikom; `brain/collect`, `brain/improve`, `cron/system-smoke` i `activityLoggerServer` su prebačeni na typed helper, a nullable telemetry timestamp-i i `user_activity.details` su poravnati tako da schema drift puca ranije bez rušenja ostatka app layer-a — 06.03.2026
+- [x] TypeScript gate restoration: uklonjen `next.config.ts` bypass (`ignoreBuildErrors`), dodat `npm run typecheck`, `tsconfig.json` više ne uvlači `scripts/` u app typecheck, a source type mismatch-evi u `brain/collect`, `profile-completion`, `offer-finalization`, agency helperima i signup/employer/admin chart UI-u su poravnati tako da `typecheck`, `lint`, `test` i `build` prolaze bez TS blockera — 06.03.2026
+- [x] Agency phase 3 live operations: produkcioni Supabase sada ima `agencies` + worker ownership kolone, deployovan je agency documents/payment tok (`/api/agency/workers/[workerId]/documents`, agency-safe `/api/verify-document`, `/api/documents/request-review`, Stripe target-worker checkout), a `/profile/agency/workers/[id]` sada iz jedne stranice radi upload, re-upload, manual review i `$9` aktivaciju za claimed workere — 06.03.2026
+- [x] Agency claim flow + setup guard: agency-submitted draft worker sada može da se claim-uje kroz worker signup/auth callback bez dupliranja profila; dodati su claim helper/API, claim link UX u agency dashboardu, i graceful fallback kada live Supabase još nema `agencies` tabelu/ownership kolone — 06.03.2026
+- [x] Agency phase 2 foundation: uvedeni `agency` signup/select-role/auth redirect tokovi, `src/lib/agencies.ts`, dashboard `/profile/agency`, worker detail/editor `/profile/agency/workers/[id]`, i server-side ownership API rute `/api/agency/workers`; agency draft workeri koriste legacy `candidates` tabelu uz nova attribution polja (`agency_id`, `submitted_by_profile_id`, `submitted_full_name`, `submitted_email`) i read-only readiness/payment signale. Potvrđeno lokalno (`lint/test/build` green), ali live Supabase još nema `agencies` + ownership kolone, tako da je SQL migracija OBAVEZNA pre deploy-a agency feature-a — 06.03.2026
+- [x] Worker-domain foundation + agency DB scaffold: uvedeni `src/lib/domain.ts` + `src/lib/workers.ts` kao kanonski sloj za `worker` terminologiju nad legacy `candidates` tabelom; auth callback, role select, godmode, admin backfill i offer notification helperi više ne koriste aktivan `candidate` naming, a dodat je i additive scaffold `20260306180000_agency_foundation_scaffold.sql` (`agencies` + `candidates.source_type/agency_id/submitted_by_profile_id/claimed_by_worker_at`) bez live cutover-a — 06.03.2026
+- [x] Contract docs schema-drift fix: `/api/contracts/prepare|generate|generate-all|preview` i admin worker PDF panel više ne čitaju nepostojeće `contract_data` core kolone, već sklapaju contract payload iz live `matches/candidates/profiles/employers/job_requests/candidate_documents`; `contract_data` je sveden na postojeće override/meta vrednosti, a `/api/admin/edit-data` mapira contract-derived polja na prave source tabele umesto na mrtve kolone — 06.03.2026
+- [x] Live schema/runtime hardening pass: zatvoreni su `/api/admin/trigger-document-fix-emails` i `/api/track`, `/api/offers` + Stripe confirmation tok poravnati su sa realnim `offers` kolonama i statusima (`OFFER_PENDING` pre uplate, `OFFER_ACCEPTED` posle potvrde), Smart Match više ne koristi ambiguous `profiles` embed, a `brain/improve`, `system-smoke` i `whatsapp-nudge` sada loguju u `user_activity`; read-only live Supabase probe + lint/test/build prošli — 06.03.2026
+- [x] Brain report data-truth fix: `src/app/api/brain/collect/route.ts` usklađen sa realnom Supabase šemom (`candidates/payments/email_queue/job_requests/matches/offers`), uveden loud-fail za query greške umesto tihog null input-a, a payment telemetry sada kombinuje `payments` + `user_activity`; potvrđeno da je lažni P0 “125 missing worker onboarding records” nestao (`workersWithoutWorkerOnboarding = 0`) — 06.03.2026
 - [x] Email header vertical-centering correction: wordmark zona u gornjem delu kartice vraćena na simetričan padding (`20px` gore/dole) da `WORKERS UNITED` ostane vizuelno centriran u header bloku nakon top-offset izmene — 06.03.2026
 - [x] Email card top offset fix (Gmail-safe): uklonjen oslonac na `margin-top` wrappera i dodat eksplicitan gornji spacer (`28px`) pre glavne bele kartice u `wrapModernTemplate`, tako da ceo email panel više ne “udara” u vrh sive pozadine u Gmail prikazu — 06.03.2026
 - [x] Email header spacing tweak po feedback-u: u `wrapModernTemplate` povećan gornji razmak zaglavlja (`padding-top 24px`, bottom 16px) da wordmark više ne deluje zalepljeno uz gornju ivicu kartice u Gmail prikazu — 06.03.2026
@@ -334,20 +377,23 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 | Komponenta | Putanja | Opis |
 |---|---|---|
-| AppShell | `src/components/AppShell.tsx` | Layout wrapper (Sidebar + Navbar + Content) |
+| AppShell | `src/components/AppShell.tsx` | Zajednički layout wrapper (Sidebar + Navbar + Content) za admin, worker, employer i agency workspace; sidebar renderuje role-specific navigaciju, čuva admin `?inspect=` kontekst kroz preview linkove i jasnije prikazuje worker `Queue & Status` umesto stare search/loupe semantike |
 | UnifiedNavbar | `src/components/UnifiedNavbar.tsx` | Top navigacija |
 | Proxy Guard | `src/proxy.ts` | CSRF + auth guard za `/profile`, `/admin`, `/api/*` |
 | Profile Redirector | `src/app/profile/page.tsx` | Auto-redirect worker/employer |
-| Worker Profile | `src/app/profile/worker/page.tsx` | Profil radnika (3 taba) |
-| Worker DashboardClient | `src/app/profile/worker/DashboardClient.tsx` | Klijentska komponenta profila |
+| Worker Profile | `src/app/profile/worker/page.tsx` | Profil radnika; admin read-only inspect podržan preko `?inspect=<profile_id>` |
+| Worker DashboardClient | `src/app/profile/worker/DashboardClient.tsx` | Klijentska komponenta profila + payment CTA + support unlock objašnjenje/inbox entry |
 | Worker Edit | `src/app/profile/worker/edit/` | Editovanje profila |
-| Worker Queue | `src/app/profile/worker/queue/` | Red čekanja |
+| Worker Queue | `src/app/profile/worker/queue/` | Red čekanja; admin inspect podržan preko `?inspect=<profile_id>` |
 | Worker Offers | `src/app/profile/worker/offers/[id]/` | Ponude |
-| Worker Documents | `src/app/profile/worker/documents/` | Upload dokumenata |
-| Employer Profile | `src/app/profile/employer/page.tsx` | EmployerProfileClient |
-| Employer Jobs | `src/app/profile/employer/jobs/` | Job request-ovi |
+| Worker Documents | `src/app/profile/worker/documents/` | Upload dokumenata; admin inspect podržan preko `?inspect=<profile_id>` |
+| Employer Profile | `src/app/profile/employer/page.tsx` | Kanonski employer workspace u `AppShell`-u sa tabovima `company / post-job / jobs`; admin read-only inspect podržan preko `?inspect=<profile_id>` |
+| Employer Jobs | `src/app/profile/employer/jobs/` | Legacy redirect ka kanonskom employer workspace tabu `jobs` |
+| Agency Profile | `src/app/profile/agency/page.tsx` | Agency dashboard; admin read-only inspect podržan preko `?inspect=<profile_id>` |
+| Agency Worker Editor | `src/app/profile/agency/workers/[id]/` | Agency-owned worker editor; admin inspect prati agency context kroz `?inspect=<profile_id>` |
 | Account Settings | `src/app/profile/settings/page.tsx` | GDPR: delete account, export data |
 | Admin | `src/app/admin/` | Admin panel |
+| Admin Agencies | `src/app/admin/agencies/page.tsx` | Lista agencija sa worker counts i `Open Workspace` inspect ulazom |
 | Admin Announcements | `src/app/admin/announcements/` | Bulk email sender |
 | Admin Email Preview | `src/app/admin/email-preview/` | Preview svih email template-ova |
 | Admin Analytics | `src/app/admin/analytics/` | Conversion funnel dashboard |
@@ -414,30 +460,71 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 ## 7. 💡 PREDLOZI ZA UNAPREĐENJE
 > AI treba da dopunjuje ovu listu kad vidi priliku. Korisnik odlučuje šta se implementira.
+>
+> **Važno:** Ovo je aktivni roadmap. `Sekcija 5 / TODO` je operativni backlog, a ova sekcija opisuje **zašto** i **kojim redom** sistem treba unapređivati.
 
-### Prioritet: Visok
-- [x] ~~**Istekli dokumenti** — dodati `expires_at` polje za pasoš, automatski alert kad ističe za <6 meseci~~
-- [x] ~~**Admin Conversion Funnel** — vizuelni prikaz: signup → profil 100% → verified → platio → match → viza~~
+### 7.1 Trenutni glavni cilj
+- Napraviti platformu koja je istovremeno:
+  - operativno jasna adminu
+  - konzistentna worker/employer/agency korisnicima
+  - spremna za skaliranje bez ručnih zakrpa i role/data drift-a
 
-### Prioritet: Srednji
-- [ ] **Per-Country Landing Pages ZA POSLODAVCE** — `/hire-workers-serbia`, `/hire-workers-germany` sa info za poslodavce kako da nađu radnike preko nas (SEO)
-- [ ] **Homepage Modular Document Blocks** — izdvojiti homepage sekcije u reusable blokove (DocumentCard/Checklist/LegalNote) za brzo A/B testiranje copy-ja i boja bez rušenja layout-a
-- [x] ~~**Email sekvence** — welcome email, podsetnik za nepotpun profil, status update iz queue-a~~
-- [x] ~~**Konsolidacija email sistema** — spojen `check-incomplete-profiles` u `profile-reminders`, shared `profile-completion.ts` lib, strict TemplateData, admin email preview~~
-- [ ] **n8n email auto-responder** — AI obrađuje email thread-ove (ne samo kontakt formu)
-- [x] ~~**WhatsApp AI Chatbot (n8n + GPT-4o)** — konverzacijski bot sa memorijom (100 poruka), enriched profilom, dokumentima i plaćanjima~~ ✅ 28.02.2026
-- [ ] **n8n Email AI Auto-Responder** — novi workflow za automatske odgovore na emailove
-- [ ] **n8n AI Agent sa Tools** — bot dobija tools za aktivne akcije (pretraživanje poslova, ažuriranje statusa). Dugoročno: self-improving agent koji uči iz interakcija.
-- [ ] **Auth Design System unification** — izdvojiti reusable auth komponente (`AuthCard`, `AuthInput`, `AuthPrimaryButton`, shared password/email validation hints) za `/signup` + `/login` da UI ostane konzistentan i lak za održavanje
-- [ ] **Brand assets hardening** — dodati jedan shared `BrandLogo` komponent i zabraniti direktan `logo.png` kroz lint/custom check (CI guard) da se stari logo više nikad ne vrati u UI
-- [ ] **Type Safety Sprint (Phase 2 lint cleanup)** — uklanjanje `any` iz admin/API sloja i vraćanje `@typescript-eslint/no-explicit-any` na error
-- [ ] **Live Visa Process Tracker** — "Currently processing: X applications", "Documents verified today: Y". ⏳ **USLOV: 100+ korisnika u sistemu**
-- [ ] **"Work in [Country]" Pages** — SEO stranice (npr. /work-in-germany) sa pravnim koracima, platama, troškovima. ⏳ **USLOV: bar 2 aktivne zemlje**
+### 7.2 Preporučeni redosled rada
+1. **Admin / Ops System**
+   - pravi `inspect user` i `view as` bez mutacije admin profila
+   - jasan ulaz u queue, payment, docs, offers, messaging, agency ownership
+   - jedan admin koji služi radu, ne samo preview-u
+2. **Profile & Workspace Consistency**
+   - worker, employer i agency moraju deliti isti mentalni model
+   - isti shell, isti ritam sekcija, iste karte/status signali, manje slepih ruta
+   - ukloniti unexplained ikonice, dead-end preview-je i vizuelni drift
+3. **Agency Operations**
+   - agency kao pravi operativni kanal za unošenje worker-a
+   - puni worker intake, `needs action`, bulk ops, status filteri, ownership jasnost
+4. **Messaging**
+   - v1 support inbox je baza
+   - sledeće: worker/employer match chat, anti-contact leakage, admin oversight, transcript history
+5. **Funnel & Payments**
+   - abandoned checkout recovery
+   - source attribution i real conversion insight
+   - per-country placement fee infrastruktura
+6. **AI & Automation**
+   - email auto-responder
+   - tool-using agent
+   - health automation
+   - tek posle operativne stabilnosti dalje širiti multi-model eksperimente
 
-### Prioritet: Nizak (kad bude živih korisnika)
-- [ ] **Success Stories** — pravi case studies sa video snimcima (oprema nabavljena: iPhone 17 Pro)
-- [ ] **Referral sistem** — radnik koji je uspešno plasiran preporučuje druge
-- [ ] **Multi-language support** — ključne instrukcije na jezicima radnika
+### 7.3 Principi za buduće promene
+- **Ne dodavati nove AI slojeve pre nego što admin i operativa budu jasni.**
+- **Ne praviti nove odvojene workspace obrasce po ulozi** ako isti problem može da reši shared komponenta/shell.
+- **Ne raditi fizički rename `candidates -> workers` prerano.** Prvo završiti domain cleanup kroz UI/API/helper sloj, pa tek onda DB rename.
+- **Support i employer komunikacija moraju ostati unutar platforme.** Email/phone reveal nije deo modela.
+
+### 7.4 Backlog po uticaju
+#### Visok uticaj
+- [ ] **Admin/Ops rewrite v2** — case-centric admin, jasan pregled svih role workspace-a, agency ownership i messaging stanja
+- [ ] **Profile workspace unification pass 2** — worker/employer/agency shared UX language, manje konfuzije, bolja mobilna upotrebljivost
+- [ ] **Messaging phase 2** — employer inbox + worker/employer match thread unlock + anti-contact leakage filter
+- [ ] **Payment recovery automation** — follow-up sekvence i admin funnel alerti za `created checkout / not paid`
+- [ ] **Rate limiting** — dodati zaštitu na osetljive rute, posebno `verify-document`, `offers`, `track`, `send-email`
+- [ ] **Error monitoring** — Sentry ili ekvivalent za hvatanje tihih production grešaka pre nego što ih korisnik prijavi
+
+#### Srednji uticaj
+- [ ] **n8n Email AI Auto-Responder** — AI obrada inbox thread-ova
+- [ ] **n8n AI Agent sa Tools** — aktivne radnje umesto čistog chat-a
+- [ ] **Auth Design System unification** — shared auth komponente za `/signup` i `/login`
+- [ ] **Brand assets hardening** — shared `BrandLogo` + guard da se legacy logo ne vrati
+- [ ] **Type Safety Sprint (Phase 2)** — dalje smanjivanje `any` u admin/API sloju i vraćanje strožih lint pravila
+- [ ] **Homepage Modular Document Blocks** — reusable landing blokovi za brže A/B testiranje copy-ja i strukture
+- [ ] **Per-Country Landing Pages ZA POSLODAVCE** — SEO landing stranice po destinacijama
+- [ ] **Cloud doctor automation** — pokretati `npm run cloud:doctor` periodično i alertovati samo na status prelaz u `FAIL`
+
+#### Nizak / uslovni uticaj
+- [ ] **Live Visa Process Tracker** — tek kad bude dovoljno stvarnih procesa (`100+` korisnika / aktivni slučajevi)
+- [ ] **"Work in [Country]" Pages** — tek kad budu bar dve aktivne zemlje
+- [ ] **Success Stories** — pravi case studies i video sadržaj kad bude dovoljno realnih uspeha
+- [ ] **Referral sistem** — nakon prve jače baze zadovoljnih plasiranih worker-a
+- [ ] **Multi-language support** — kad product copy i support operativa budu dovoljno stabilni
 
 ---
 
@@ -461,7 +548,7 @@ Za svakog matchovanog radnika se generišu **4 dokumenta**:
 ### Šta već postoji ✅
 - `api/contracts/prepare/route.ts` — sklapa `contract_data` iz match (radnik + poslodavac + job)
 - `contract_data` Supabase tabela — čuva sve podatke za ugovor
-- `gemini.ts → extractPassportData()` — AI čita pasoše (full_name, passport_number, nationality, DOB, expiry, gender, POB)
+- `document-ai.ts → extractPassportData()` — AI čita pasoše (full_name, passport_number, nationality, DOB, expiry, gender, POB)
 - `documents` tabela sa `ai_extracted_data` JSON poljem
 
 ### Šta fali ❌
@@ -509,13 +596,13 @@ Za svakog matchovanog radnika se generišu **4 dokumenta**:
 > [!CAUTION]
 > **Opis posla ima 3 bullet-a po jeziku** — svaki bullet je zaseban paragraf u šablonu. NIKAD ne mapirati sve bullet-e na isti tekst jer to pravi 3x duplikaciju! Uvek `{{JOB_DESC_SR_1}}`, `{{JOB_DESC_SR_2}}`, `{{JOB_DESC_SR_3}}` zasebno.
 
-#### 2. Proširiti Gemini passport ekstrakciju
+#### 2. Proširiti document AI passport ekstrakciju
 Trenutno `extractPassportData()` ne izvlači:
 - `date_of_issue` — datum izdavanja pasoša (POTREBNO za UGOVOR i POZIVNO PISMO)
 - `issuing_authority` — izdavač pasoša (POTREBNO za POZIVNO PISMO)
 
 Dodati u:
-- `gemini.ts` → prompt i `PassportData` interface
+- `document-ai.ts` → prompt i `PassportData` interface
 - `ai_extracted_data` JSON se automatski ažurira (nema schema promene u Supabase za ovo)
 
 #### 3. Proširiti `contract_data` tabelu
@@ -544,7 +631,7 @@ Dugme "Generate Contracts" na admin match detail stranici:
 ### Dupla verifikacija (online + offline)
 
 ```
-Upload pasoša → Gemini čita (online, primarni) → čuva u ai_extracted_data
+Upload pasoša → document AI čita (OpenAI primarni, Gemini fallback) → čuva u ai_extracted_data
                                                       ↓
 Admin: "Generate Contracts" → sajt generiše DOCX/PDF iz šablona
                                                       ↓
@@ -555,7 +642,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 ```
 
 > [!IMPORTANT]
-> **Gemini je primarni izvor podataka** — Tesseract (lokalni OCR) se NE koristi kao dupli OCR jer je manje pouzdan.
+> **OpenAI GPT je primarni izvor podataka, Gemini je fallback** — Tesseract (lokalni OCR) se NE koristi kao dupli OCR jer je manje pouzdan.
 > Lokalna verifikacija je **rule-based** (provera formata, logičnosti) + **vizuelna** (PDF pregled).
 
 ### ⚠️ Gotchas za dokument generisanje
@@ -574,7 +661,9 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 13. **`profiles` tabela NEMA `role` kolonu** — kolona se zove `user_type`. NIKAD ne koristiti `profile?.role`. Svuda koristiti `profile?.user_type !== 'admin'`. Ovo je bila sistemska greška u 14 fajlova.
 14. **Employer status vrednosti su UPPERCASE** — DB CHECK dozvoljava samo `PENDING`, `VERIFIED`, `REJECTED`. NIKAD lowercase `active/pending/rejected`.
 15. **Admin auth check pattern** — za API rute: `select("user_type")` + `profile?.user_type !== "admin"`. Za stranice: isti pattern + `isGodModeUser()` fallback. Za server actions: samo `user_type`, bez godmode.
-16. **Webhook/Cron rute MORAJU koristiti `createAdminClient()`** — `createClient()` zahteva auth cookies. Stripe webhooks, WhatsApp webhooks, i Vercel cron jobs NEMAJU cookies. Sve DB operacije će tiho da failuju. Uvek koristiti `createAdminClient()` za ove rute.
+15a. **`worker` je kanonski domain naziv, `candidates` je samo legacy storage layer** — za novi kod UVEK koristiti `src/lib/domain.ts` (`normalizeUserType()`, `shouldProvisionWorkerRecords()`) i `src/lib/workers.ts` (`ensureWorkerRecord()`). Ne uvoditi nove helpere/komentare/API payload-e sa `candidate*` imenima osim kada moraš da gađaš fizičku DB tabelu/kolonu.
+15b. **Agency feature zahteva migraciju pre deploy-a** — agency stranice/API sada imaju graceful setup guard i više ne treba da pucaju ružno kada schema nije spremna, ali puni agency flow (`ensureAgencyRecord()`, dashboard ownership, claim linkovanje) i dalje očekuje `public.agencies` tabelu i ownership kolone na `candidates` (`agency_id`, `submitted_by_profile_id`, `submitted_full_name`, `submitted_email`, `source_type`, `claimed_by_worker_at`). Live proverom 06.03.2026 potvrđeno je da te stvari još NE postoje. Pre prvog deploy-a agency feature-a MORA da se pusti `supabase/migrations/20260306180000_agency_foundation_scaffold.sql`.
+16. **Webhook/Cron rute MORAJU koristiti service-role admin helper (`createAdminClient()` ili `createTypedAdminClient()`)** — `createClient()` zahteva auth cookies. Stripe webhooks, WhatsApp webhooks, i Vercel cron jobs NEMAJU cookies. Sve DB operacije će tiho da failuju. Za schema-sensitive rute (`Brain`, `system-smoke`, server activity logging) preferirati `createTypedAdminClient()`, a legacy query-heavy rute ostaviti na `createAdminClient()` dok se ne sanira postojeći query debt.
 17. **`OFFER_ACCEPTED` status** — ~~NE POSTOJI u CHECK constraint~~ FIXED u migraciji `007_admin_approval.sql`. Videti Gotcha #10 za potpunu listu dozvoljenih statusa.
 18. **`payments` tabela schema** — ~~drift~~ FIXED. `COMPLETE_RESET.sql` sada koristi `user_id` i `amount` (ne `profile_id`/`amount_cents`). Dodate kolone: `stripe_checkout_session_id`, `paid_at`, `deadline_at`, `metadata`, `refund_status`, `refund_notes`.
 19. **Next.js `redirect()` u try/catch** — `redirect()` radi tako što THROWUJE specijalan error sa `digest: "NEXT_REDIRECT"`. Ako imaš try/catch, MORAŠ re-throwovati: `if (err?.digest?.startsWith("NEXT_REDIRECT")) throw err;`. Inače redirect nikad neće raditi.
@@ -614,8 +703,11 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 ---
 
-## 9. 🚀 LAUNCH STATUS — 01.03.2026
+## 9. 🚀 LAUNCH STATUS / ARHIVA
 
+> Ova sekcija je **istorijski snapshot launch momenta**. Aktivni prioriteti su u Sekciji 5 (`TODO`) i Sekciji 7 (`Roadmap`).
+
+### Launch snapshot — 01.03.2026
 > **Cilj:** 1. marta sajt počinje da zarađuje.
 
 ### ⚠️ Preduslovi za launch
@@ -630,6 +722,15 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 9. ✅ WhatsApp AI chatbot (n8n + GPT-4) — 28.02.2026
 10. ⬜ Final smoke test
 11. ⬜ n8n email automation (retry failed emails)
+
+### Trenutno čitanje ovog statusa — 07.03.2026
+- Platforma je live i naplaćuje `$9 Job Finder`
+- Agency foundation, messaging v1 i unified profile shell su uvedeni
+- Glavni preostali problemi više nisu "launch blockers", nego:
+  - admin/ops ergonomija
+  - profile/workspace konzistentnost
+  - messaging phase 2
+  - payment recovery i funnel intelligence
 
 ---
 
@@ -688,7 +789,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 24. **Brain collect — `totalEmployers` mora da koristi `employers` tabelu** — `users.totalEmployers` je koristio `profiles.user_type === "employer"` filter, dok je `employers.total` brojao `employers` tabelu. Ovo stvara nekonzistentnost (3 vs 5). FIXED: obe metrike sada koriste `employers` tabelu.
 
-25. **Gemini model fallback chain** — `src/lib/gemini.ts` koristi chain: `gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`. Ako primarni model padne (404, rate limit), automatski se probava sledeći. Custom `AIInfraError` klasa razlikuje AI infra greške od pravih document issues. Kad AI padne, dokumenti idu na `pending_manual_review` umesto da se odbiju korisniku.
+25. **Document AI provider chain** — `src/lib/document-ai.ts` koristi OpenAI GPT-4o-mini kao primarni vision provider, pa tek onda Gemini fallback chain `gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`. Ako primarni provider padne (5xx, rate limit, outage), automatski se probava sledeći. Custom `AIInfraError` klasa razlikuje AI infra greške od pravih document issues. Kad AI padne, dokumenti idu na `manual_review` umesto da se odbiju korisniku.
 
 26. **n8n Tool čvorovi sa `$fromAI()` — body mora biti "Using Fields Below"** — Nikad ne mešati `{{ $fromAI() }}` expression-e unutar raw JSON stringa. n8n ne može da parsira `{"action": {{ $fromAI('action') }}}` kao validan JSON. Umesto toga koristiti "Specify Body: Using Fields Below" i dodati svako polje pojedinačno. `$fromAI()` expressions prikazuju "undefined" u editoru — to je normalno, popunjavaju se u runtime-u.
 
@@ -696,21 +797,17 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 28. **n8n AI builder je nesiguran za kompleksne konfiguracije** — Za jednostavne promene OK, ali za JSON body formatting, expression syntax, i credential setup bolje davati korisniku ručna uputstva korak-po-korak nego prompt za n8n AI.
 
+29. **Brain collect NE SME da guta query/schema greške** — Ako `src/app/api/brain/collect/route.ts` koristi nepostojeću kolonu (`recipient` umesto `recipient_email`, `profiles.phone`, `matches.created_at`, itd.), rezultat NE SME da bude `data: null` prosleđen AI-u. Ruta mora da fail-uje sa 500 i jasnim logom, inače Brain generiše lažne P0/P1 zaključke iz praznih setova. Pre svake izmene u brain query-ima proveri `src/lib/database.types.ts`.
+
 ---
 
-## 💡 Suggestions
+## 📦 Legacy / Niche Suggestions
+
+> Ovi predlozi nisu deo aktivnog glavnog roadmap-a, ali ostaju sačuvani kao korisne ideje ili specifični follow-up-i.
 
 1. Consider adding article/section numbers back to UGOVOR O RADU — the original DOCX didn't have numbered articles (just section headers), but adding them could improve readability.
 2. The POZIVNO PISMO has a hardcoded "1 ЈЕДНА (ONE)" for number of visits — this could be made configurable.
 3. Consider adding a PDF preview feature in the admin panel before generating final documents.
-4. **Payment/Stripe integration** — kad se bude pravio payment flow, profil gate je već na mestu na API nivou (`contracts/prepare/route.ts`). Samo treba dodati frontend poruku na worker dashboard-u tipa "Complete your profile to proceed to payment" i disable-ovati payment dugme dok `profileCompletion < 100`.
-5. ~~**Middleware proširenje**~~ ✅ DONE — `src/proxy.ts` (ranije `src/middleware.ts`) implementira CSRF + auth guard za `/profile`, `/admin`, i `/api/*` rute.
-6. **Rate limiting** — Dodati Upstash rate limit na API rute, pogotovo `verify-document` i `offers`.
-7. ~~**Regenerisati database.types.ts**~~ ✅ DONE — `npm run db:types` script dodat u `package.json`.
-8. ~~**CSRF zaštita**~~ ✅ DONE — Origin/Referer validacija u `src/proxy.ts`. Webhook/cron/brain rute izuzete.
-9. **Brain multi-model debata** — Proširiti n8n workflow da koristi 3 modela (GPT, Claude, Gemini) u 4 runde kako je opisano u brain_system_design.md.
-10. **Error monitoring (Sentry)** — Sentry free tier za hvatanje tihih API grešaka pre nego što korisnici prijave.
-11. **Health check dashboard** — Proširiti `/api/health` da proverava Supabase, Stripe, SMTP, WhatsApp konekciju.
-12. **Automated DB backup verification** — Supabase Pro radi daily backup, ali treba bar jednom testirati restore.
-13. **OpenGraph dynamic slike** — Generisati OG slike sa brojem radnika / zemljama za social sharing.
-14. **Cloud doctor automation** — Pokretati `npm run cloud:doctor` kroz n8n/Vercel scheduled workflow (npr. na 3h) i slati alert samo kad status pređe u `FAIL`.
+4. **Brain multi-model debata** — Proširiti n8n workflow da koristi 3 modela (GPT, Claude, Gemini) u 4 runde kako je opisano u `brain_system_design.md`, ali tek kad core operativa bude stabilna.
+5. **Automated DB backup verification** — Supabase Pro radi daily backup, ali treba bar jednom testirati restore.
+6. **OpenGraph dynamic slike** — Generisati OG slike sa brojem radnika / zemljama za social sharing.
