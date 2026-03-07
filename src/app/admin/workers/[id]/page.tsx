@@ -6,12 +6,14 @@ import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
 import { queueEmail } from "@/lib/email-templates";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import { buildContractDataForMatch } from "@/lib/contract-data";
+import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
 import ReVerifyButton from "@/components/admin/ReVerifyButton";
 import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
 import DocumentPreview from "@/components/admin/DocumentPreview";
 import DocumentViewerModal from "./DocumentViewerModal";
-import { AlertTriangle, Check, Clock, Trash2, Mail, Paperclip, Brain, StickyNote, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2, X } from "lucide-react";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -66,10 +68,14 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
     // Fetch contract data to allow manual editing for PDF generation
     let contractData = null;
-    const { data: matches } = await adminClient.from("matches").select("id").eq("candidate_id", candidateData?.id).order("created_at", { ascending: false }).limit(1);
+    const { data: matches } = await adminClient.from("matches").select("id").eq("candidate_id", candidateData?.id).limit(1);
     if (matches && matches.length > 0) {
-        const res = await adminClient.from("contract_data").select("*").eq("match_id", matches[0].id).single();
-        contractData = res.data;
+        try {
+            const contractBuild = await buildContractDataForMatch(adminClient, matches[0].id);
+            contractData = contractBuild.contractData;
+        } catch (error) {
+            console.warn("Failed to build contract data preview:", error);
+        }
     }
 
     // Fetch documents
@@ -80,11 +86,15 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         .order("created_at", { ascending: false });
 
     // Fetch payments
-    const { data: payments } = await adminClient
+    const { data: rawPayments } = await adminClient
         .from("payments")
         .select("*")
-        .eq("user_id", id)
-        .order("created_at", { ascending: false });
+        .eq("user_id", id);
+    const payments = [...(rawPayments || [])].sort((a: any, b: any) => {
+        const aTime = a?.paid_at ? new Date(a.paid_at).getTime() : 0;
+        const bTime = b?.paid_at ? new Date(b.paid_at).getTime() : 0;
+        return bTime - aTime;
+    });
 
     // Fetch signatures
     const { data: signatures } = await adminClient
@@ -100,6 +110,16 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         candidate: candidateData,
         documents: (documents || []).map((d: any) => ({ document_type: d.document_type })),
     });
+    const verifiedDocumentsCount = (documents || []).filter((doc: any) => doc.status === "verified").length;
+    const pendingDocumentsCount = (documents || []).filter((doc: any) => ["pending", "uploaded", "verifying", "manual_review"].includes(doc.status || "")).length;
+    const completedPaymentsCount = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || "")).length;
+    const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
+    const displayName = candidateProfile?.full_name || authUser.user_metadata?.full_name || authUser.email || "Worker";
+    const workerStatus = candidateData?.status || "NEW";
+    const approvalState = candidateData?.admin_approved ? "Approved" : "Pending";
+    const workspaceInspectHref = `/profile/worker?inspect=${id}`;
+    const documentsInspectHref = `/profile/worker/documents?inspect=${id}`;
+    const queueInspectHref = `/profile/worker/queue?inspect=${id}`;
 
     async function updateDocumentStatus(formData: FormData) {
         "use server";
@@ -377,12 +397,70 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         <>
 
             <div className="max-w-[1200px] mx-auto px-5 py-10">
-                {/* Back Link */}
-                <Link href="/admin/workers" className="text-[#2f6fed] font-semibold hover:underline mb-6 inline-block">
-                    ← Back to Workers
-                </Link>
+                <div className="mb-6 flex flex-wrap items-center gap-3">
+                    <Link
+                        href="/admin/workers"
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3]"
+                    >
+                        <ArrowLeft size={16} />
+                        Back to workers
+                    </Link>
+                    <Link
+                        href={workspaceInspectHref}
+                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                    >
+                        <ExternalLink size={16} />
+                        Inspect workspace
+                    </Link>
+                    <Link
+                        href={documentsInspectHref}
+                        className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                    >
+                        <ExternalLink size={16} />
+                        Inspect documents
+                    </Link>
+                    <Link
+                        href={queueInspectHref}
+                        className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
+                    >
+                        <ListOrdered size={16} />
+                        Inspect queue
+                    </Link>
+                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <AdminSectionHero
+                    eyebrow="Worker case view"
+                    title={displayName}
+                    description="Admin case view for approvals, documents, payments, and matching. Use the inspect links above when you want the real worker workspace instead of the admin control surface."
+                    metrics={[
+                        { label: "Status", value: workerStatus.replace(/_/g, " "), meta: approvalState },
+                        { label: "Completion", value: `${profileCompletion}%`, meta: candidateProfile?.email || authUser.email || "No email" },
+                        { label: "Docs", value: `${verifiedDocumentsCount}/3`, meta: pendingDocumentsCount > 0 ? `${pendingDocumentsCount} pending` : "No pending review" },
+                        { label: "Paid", value: completedPaymentsCount, meta: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} pending` : "No pending payments" },
+                    ]}
+                />
+
+                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                    <CaseHintCard
+                        title="Inspect workspace"
+                        copy="Read-only worker workspace with the exact user-facing layout. No admin actions live there."
+                        tone="dark"
+                    />
+                    <CaseHintCard
+                        title="Admin case view"
+                        copy="Use the cards below for approvals, document actions, payment history, matching, and downloads."
+                        tone="blue"
+                    />
+                    <CaseHintCard
+                        title="Current case signal"
+                        copy={candidateData?.admin_approved
+                            ? "This worker is already admin-approved. Keep focus on queue, offers, payments, and document validity."
+                            : "This worker still needs admin approval before the downstream flow becomes fully operational."}
+                        tone="amber"
+                    />
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column: Worker Info */}
                     <div className="lg:col-span-1 space-y-6">
                         {/* No Profile Notice */}
@@ -590,7 +668,9 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                         ${Number(payment.amount ?? (Number(payment.amount_cents || 0) / 100)).toFixed(2)}
                                                     </div>
                                                     <div className="text-[12px] text-[#64748b]">
-                                                        {new Date(payment.created_at).toLocaleDateString('en-GB')}
+                                                        {payment.paid_at || payment.created_at
+                                                            ? new Date(payment.paid_at || payment.created_at).toLocaleDateString('en-GB')
+                                                            : 'No date'}
                                                     </div>
                                                 </div>
                                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${payment.status === 'completed' ? 'bg-green-100 text-green-700' :
@@ -825,6 +905,31 @@ function InfoRow({ label, value }: { label: string; value: any }) {
             <div className={`text-sm font-medium ${isEmpty ? 'text-red-400' : 'text-slate-800'}`}>
                 {isEmpty ? '—' : String(value)}
             </div>
+        </div>
+    );
+}
+
+function CaseHintCard({
+    title,
+    copy,
+    tone,
+}: {
+    title: string;
+    copy: string;
+    tone: "dark" | "blue" | "amber";
+}) {
+    const toneClass = tone === "blue"
+        ? "bg-blue-600 text-white"
+        : tone === "amber"
+            ? "bg-amber-500 text-white"
+            : "bg-[#111111] text-white";
+
+    return (
+        <div className="rounded-[24px] border border-[#e6e6e1] bg-white p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+            <div className={`mb-3 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${toneClass}`}>
+                {title}
+            </div>
+            <p className="text-sm leading-relaxed text-[#57534e]">{copy}</p>
         </div>
     );
 }
