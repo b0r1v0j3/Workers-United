@@ -7,8 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import {
     Building2, MapPin, Globe, Phone, Calendar, FileText, Hash, Users,
-    Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, Banknote,
-    LayoutDashboard, Shield
+    Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, Banknote
 } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -137,86 +136,6 @@ function getEmployerTab(tab: string | null): TabType {
         return tab;
     }
     return "company";
-}
-
-function getEmployerNextAction({
-    readOnlyPreview,
-    employer,
-    editing,
-    hasCountry,
-    isPrimaryMarket,
-    completion,
-    jobsCount,
-}: {
-    readOnlyPreview: boolean;
-    employer: EmployerProfile | null;
-    editing: boolean;
-    hasCountry: boolean;
-    isPrimaryMarket: boolean;
-    completion: number;
-    jobsCount: number;
-}) {
-    if (readOnlyPreview) {
-        return {
-            badge: "Preview",
-            title: "Inspect the employer workspace safely",
-            copy: "Review the same overview, company data, and job request structure a real employer sees, without changing any company record.",
-        };
-    }
-
-    if (!employer) {
-        return {
-            badge: "Setup",
-            title: "Finish company setup first",
-            copy: "Save the company profile first. Job requests unlock inside the same workspace as soon as the company record exists.",
-        };
-    }
-
-    if (editing) {
-        return {
-            badge: "Editing",
-            title: "Finish the company details",
-            copy: "Use this edit state to complete the missing company fields, then save to return to the main hiring workspace.",
-        };
-    }
-
-    if (!hasCountry) {
-        return {
-            badge: "Setup",
-            title: "Add the primary company details",
-            copy: "Start with company name, phone, country, and industry so the hiring workspace can move out of setup mode.",
-        };
-    }
-
-    if (!isPrimaryMarket) {
-        return {
-            badge: "Expansion",
-            title: "Keep the company profile ready",
-            copy: "This market is not live yet. Complete the company profile now so the hiring workspace is ready as soon as coverage opens.",
-        };
-    }
-
-    if (completion < 100) {
-        return {
-            badge: "Readiness",
-            title: "Complete the company profile",
-            copy: "Finish the remaining company fields so the employer workspace reaches full readiness before new hiring requests are added.",
-        };
-    }
-
-    if (jobsCount === 0) {
-        return {
-            badge: "Hiring",
-            title: "Create the first job request",
-            copy: "The company profile is ready. The next step is to open a job request so Workers United can start matching workers.",
-        };
-    }
-
-    return {
-        badge: "Hiring",
-        title: "Manage the active job requests",
-        copy: "Review open requests, track filled positions, and keep company information current from this single workspace.",
-    };
 }
 
 // ─── Main Component ─────────────────────────────────────────────
@@ -558,22 +477,13 @@ export default function EmployerProfilePage({
     const workspaceSummary = readOnlyPreview
         ? "Review the employer workspace structure without changing your admin role."
         : "Keep company details, readiness, and job requests in one workspace.";
-    const nextAction = getEmployerNextAction({
-        readOnlyPreview,
-        employer,
-        editing,
-        hasCountry,
-        isPrimaryMarket,
-        completion,
-        jobsCount: jobs.length,
-    });
 
     return (
         <div className="space-y-6">
-            <section className="relative overflow-hidden rounded-[28px] border border-[#e8e5de] bg-[linear-gradient(135deg,#fcfbf7_0%,#f1eee5_50%,#f7f5ef_100%)] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.35)]">
+            <section className="relative overflow-hidden rounded-[28px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_70px_-52px_rgba(15,23,42,0.22)]">
                 <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-2xl">
-                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#dfdbd0] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b675d]">
+                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
                             <Building2 size={14} />
                             Employer Workspace
                         </div>
@@ -602,83 +512,7 @@ export default function EmployerProfilePage({
                 <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-[#111111]/5 blur-3xl" />
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
-                <div className="space-y-4">
-                    <div className={`${surfaceClass} sticky top-24`}>
-                        <div className="mb-4 flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111111] text-white">
-                                <LayoutDashboard size={18} />
-                            </div>
-                            <div>
-                                <h2 className="text-base font-semibold text-[#18181b]">
-                                    {readOnlyPreview ? "Read-only admin preview" : "Next action"}
-                                </h2>
-                                <p className="text-xs uppercase tracking-[0.16em] text-[#8a8479]">
-                                    {nextAction.badge}
-                                </p>
-                            </div>
-                        </div>
-
-                        <h3 className="text-lg font-semibold text-[#18181b]">{nextAction.title}</h3>
-                        <p className="mt-2 text-sm leading-relaxed text-[#57534e]">{nextAction.copy}</p>
-
-                        <div className="mt-5 space-y-2">
-                            <TabButton label="Overview" icon={<LayoutDashboard size={18} />} active={activeTab === "company"} onClick={() => handleTabChange("company")} />
-                            {employer && isPrimaryMarket && (
-                                <TabButton label="New Job Request" icon={<Plus size={18} />} active={activeTab === "post-job"} onClick={() => handleTabChange("post-job")} />
-                            )}
-                            {employer && isPrimaryMarket && (
-                                <TabButton label={`Job Requests (${jobs.length})`} icon={<Briefcase size={18} />} active={activeTab === "jobs"} onClick={() => handleTabChange("jobs")} />
-                            )}
-                        </div>
-
-                        {employer && !editing && activeTab === "company" && !readOnlyPreview && (
-                            <>
-                                <div className="my-4 border-t border-[#f0ede6]" />
-                                <button
-                                    type="button"
-                                    onClick={() => setEditing(true)}
-                                    className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-[#57534e] transition hover:bg-[#faf8f3] hover:text-[#18181b]"
-                                >
-                                    <Pencil size={18} />
-                                    Edit company profile
-                                </button>
-                            </>
-                        )}
-                    </div>
-
-                    <div className="rounded-[26px] border border-[#ece7df] bg-[#faf8f3] p-5 text-sm text-[#57534e] shadow-[0_20px_50px_-40px_rgba(15,23,42,0.25)]">
-                        <div className="mb-3 flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111111] text-white">
-                                <Shield size={18} />
-                            </div>
-                            <div>
-                                <h2 className="text-base font-semibold text-[#18181b]">
-                                    {readOnlyPreview ? "Preview mode" : "Hiring status"}
-                                </h2>
-                                <p className="text-xs uppercase tracking-[0.16em] text-[#8a8479]">
-                                    {readOnlyPreview ? "Structure only" : "Readiness"}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-3">
-                            <EmployerSignal label="Completion" value={`${completion}%`} />
-                            <EmployerSignal label="Status" value={workspaceStatus} />
-                            <EmployerSignal label="Open jobs" value={String(openJobsCount)} />
-                        </div>
-                        <p className="mt-4 leading-relaxed">
-                            {readOnlyPreview
-                                ? "Admin preview stays read-only. Use the employer list to inspect real employer data."
-                                : hasCountry
-                                    ? isPrimaryMarket
-                                        ? `Selected market: ${companyForm.country}. This workspace is ready for company setup and job requests.`
-                                        : `Selected market: ${companyForm.country}. Hiring is not live there yet, but the company profile can still be prepared now.`
-                                    : "Choose a country and complete the company profile to unlock the full hiring flow."}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="min-w-0 space-y-6">
+            <section className="space-y-6">
                         {/* Coming soon banner for markets not enabled yet */}
                         {employer && hasCountry && !isPrimaryMarket && !editing && (
                             <div className="rounded-[26px] border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-6 shadow-sm">
@@ -859,9 +693,21 @@ export default function EmployerProfilePage({
                                     </div>
                                 ) : (
                                     <div className={surfaceClass}>
-                                        <h3 className="mb-6 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
-                                            <Building2 className="text-[#111111]" /> Company Information
-                                        </h3>
+                                        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                            <h3 className="flex items-center gap-2 text-xl font-semibold text-[#18181b]">
+                                                <Building2 className="text-[#111111]" /> Company Information
+                                            </h3>
+                                            {!readOnlyPreview && employer && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditing(true)}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#d1d5db] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:bg-slate-50"
+                                                >
+                                                    <Pencil size={16} />
+                                                    Edit company
+                                                </button>
+                                            )}
+                                        </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <InfoRow icon={<Building2 size={18} />} label="Company Name" value={companyForm.company_name} />
                                             <InfoRow icon={<Briefcase size={18} />} label="Industry" value={companyForm.industry} />
@@ -988,16 +834,11 @@ export default function EmployerProfilePage({
                             <div className="space-y-6">
                                 {jobs.length === 0 ? (
                                     <div className={`${surfaceClass} p-12 text-center`}>
-                                        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#faf8f3]">
-                                            <Briefcase size={32} className="text-[#a8a29e]" />
+                                        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#fafafa]">
+                                            <Briefcase size={32} className="text-[#6b7280]" />
                                         </div>
                                         <h3 className="mb-2 text-xl font-semibold text-[#18181b]">No job requests yet</h3>
-                                        <p className="mb-6 text-[#57534e]">Create the first job request to start matching with workers.</p>
-                                        {!readOnlyPreview && (
-                                            <button type="button" onClick={() => handleTabChange('post-job')} className="rounded-2xl bg-[#111111] px-6 py-3 font-semibold text-white transition hover:bg-[#2b2b2b]">
-                                                Create Job Request
-                                            </button>
-                                        )}
+                                        <p className="text-[#6b7280]">Use New Job Request in the sidebar to create the first opening and start matching with workers.</p>
                                     </div>
                                 ) : (
                                     jobs.map(job => (
@@ -1071,44 +912,18 @@ export default function EmployerProfilePage({
                                 )}
                             </div>
                         )}
-                    </div>
-                </section>
-            </div>
-        );
+            </section>
+        </div>
+    );
 }
 
 // ─── Helper Components ──────────────────────────────────────────
-
-function TabButton({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition-all duration-200 ${active
-                ? 'border border-[#e7e2d7] bg-[#f5f2eb] text-[#18181b] shadow-sm'
-                : 'border border-transparent text-[#57534e] hover:bg-[#faf8f3] hover:text-[#18181b]'
-                }`}
-        >
-            <span className={active ? 'text-[#18181b]' : 'text-[#a8a29e]'}>{icon}</span>
-            <span>{label}</span>
-        </button>
-    );
-}
 
 function EmployerMetricCard({ label, value }: { label: string; value: string | number }) {
     return (
         <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.45)]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8479]">{label}</div>
             <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181b]">{value}</div>
-        </div>
-    );
-}
-
-function EmployerSignal({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="rounded-2xl border border-[#ebe7df] bg-white px-4 py-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a8a29e]">{label}</div>
-            <div className="mt-1 text-sm font-semibold text-[#18181b]">{value}</div>
         </div>
     );
 }
