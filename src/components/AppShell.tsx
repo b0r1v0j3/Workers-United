@@ -294,11 +294,6 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                     <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} />
-
-                    <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>UI Previews</div>
-                    <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Worker Profile" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Employer Profile" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/profile/agency" icon={<Building2 size={20} />} label="Agency Dashboard" isCollapsed={isCollapsed} />
                 </>
             )}
 
@@ -435,6 +430,7 @@ function AdminBreadcrumbs() {
     const labelMap: Record<string, string> = {
         workers: 'Workers',
         employers: 'Employers',
+        agencies: 'Agencies',
         jobs: 'Jobs',
         queue: 'Queue',
         review: 'Document Review',
@@ -450,7 +446,9 @@ function AdminBreadcrumbs() {
             {segments.map((seg, idx) => {
                 const href = '/admin/' + segments.slice(0, idx + 1).join('/');
                 const isLast = idx === segments.length - 1;
-                const label = labelMap[seg] || (seg.length > 20 ? seg.slice(0, 8) + '...' : seg);
+                const label = idx > 0 && segments[0] === "workers"
+                    ? "Worker Detail"
+                    : labelMap[seg] || (seg.length > 20 ? seg.slice(0, 8) + '...' : seg);
                 return (
                     <span key={idx} className="flex items-center gap-1.5">
                         <span className="text-slate-300">›</span>

@@ -194,7 +194,7 @@ export default async function AdminDashboard() {
     const previewCards = [
         {
             href: "/profile/worker",
-            title: "Worker Preview",
+            title: "Worker Template",
             description: currentWorker
                 ? `${currentWorker.status || "NEW"}${currentWorker.entry_fee_paid ? " • entry fee paid" : ""}`
                 : "No worker record linked to this admin account.",
@@ -206,7 +206,7 @@ export default async function AdminDashboard() {
         },
         {
             href: "/profile/employer",
-            title: "Employer Preview",
+            title: "Employer Template",
             description: currentEmployer
                 ? `${currentEmployer.company_name || "Employer profile"} • ${currentEmployer.status || "PENDING"}`
                 : "No employer record linked to this admin account.",
@@ -220,7 +220,7 @@ export default async function AdminDashboard() {
         },
         {
             href: "/profile/agency",
-            title: "Agency Preview",
+            title: "Agency Template",
             description: currentAgency
                 ? `${currentAgency.display_name || currentAgency.legal_name || "Agency"} • ${currentAgency.status || "active"}`
                 : "No agency record linked to this admin account.",
@@ -289,8 +289,8 @@ export default async function AdminDashboard() {
 
                     <div className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
                         <div className="mb-5">
-                            <h2 className="text-lg font-semibold text-[#18181b]">UI Preview Modes</h2>
-                            <p className="mt-1 text-sm text-[#71717a]">Shell-only previews for worker, employer, and agency UI. Use the admin lists below to open real role workspaces with actual account data.</p>
+                            <h2 className="text-lg font-semibold text-[#18181b]">Workspace Templates</h2>
+                            <p className="mt-1 text-sm text-[#71717a]">Shell-only UI templates for worker, employer, and agency. Use the admin lists below to inspect real accounts with real data.</p>
                         </div>
                         <div className="grid gap-3 md:grid-cols-3">
                             {previewCards.map((card) => (
