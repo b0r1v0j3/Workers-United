@@ -64,8 +64,8 @@ Workers-United/
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
 │   │   │   ├── workers/       # Worker registry + [id] case detail; table now separates inspect-workspace from admin case actions, and worker case detail now opens with admin hero + inspect shortcuts into worker/documents/queue workspaces
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout
-│   │   │   ├── queue/         # Queue management
-│   │   │   ├── jobs/          # Job listings
+│   │   │   ├── queue/         # Queue operations screen with shared admin hero, 90-day watch, and inspect-vs-case actions
+│   │   │   ├── jobs/          # Smart Match Hub with shared admin hero/guidance wrapper around matching client
 │   │   │   ├── announcements/ # Bulk email sender
 │   │   │   ├── refunds/       # Refund management
 │   │   │   └── settings/      # Platform settings
