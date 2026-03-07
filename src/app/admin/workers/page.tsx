@@ -3,10 +3,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
-import { DeleteUserButton } from "@/components/DeleteUserButton";
 import AppShell from "@/components/AppShell";
-import { Hourglass } from "lucide-react";
+import { BadgeCheck, Hourglass, ListOrdered, Users } from "lucide-react";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import WorkersTableClient, { WorkerTableRow } from "./WorkersTableClient";
 
 export default async function CandidatesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
@@ -134,22 +134,94 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     };
     const filterLabel = filterLabels[filter] || 'All';
     const nowMs = new Date().getTime();
+    const readyWorkersCount = activeAuthUsers.filter((authUser: any) => {
+        const { verifiedDocs, profileCompletion } = getUserStats(authUser.id);
+        return profileCompletion === 100 && verifiedDocs >= 3;
+    }).length;
+    const needsApprovalCount = activeAuthUsers.filter((authUser: any) => {
+        const candidate = candidateMap.get(authUser.id);
+        const { profileCompletion } = getUserStats(authUser.id);
+        return !!candidate && profileCompletion === 100 && !candidate.admin_approved;
+    }).length;
+    const queueCount = activeAuthUsers.filter((authUser: any) => candidateMap.get(authUser.id)?.status === "IN_QUEUE").length;
+    const paidWorkersCount = activeAuthUsers.filter((authUser: any) => !!candidateMap.get(authUser.id)?.entry_fee_paid).length;
 
     return (
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
-                {/* Header */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200">
-                    <div className="flex justify-between items-center mb-3">
+                <AdminSectionHero
+                    eyebrow="Admin workers"
+                    title="Worker Operations"
+                    description="Use this list for two different jobs: inspect the real worker workspace, or open the admin case view for approvals, payments, documents, and queue handling."
+                    metrics={[
+                        { label: "Workers", value: activeAuthUsers.length, meta: `${filterLabel} view: ${filteredUsers.length}` },
+                        { label: "Ready", value: readyWorkersCount, meta: "100% profile + 3 docs" },
+                        { label: "Approval", value: needsApprovalCount, meta: "Waiting for admin" },
+                        { label: "In Queue", value: queueCount, meta: "Active Job Finder workers" },
+                        { label: "Paid", value: paidWorkersCount, meta: "Entry fee confirmed" },
+                    ]}
+                />
+
+                <section className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-[24px] border border-[#e6e6e1] bg-white p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                        <div className="mb-3 flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111111] text-white">
+                                <Users size={18} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-semibold text-[#18181b]">Inspect workspace</h2>
+                                <p className="text-sm text-[#71717a]">Read-only worker workspace with the exact user data.</p>
+                            </div>
+                        </div>
+                        <p className="text-sm leading-relaxed text-[#57534e]">
+                            Use the <span className="font-semibold text-[#18181b]">Inspect workspace</span> action when you want to see what the worker sees.
+                        </p>
+                    </div>
+                    <div className="rounded-[24px] border border-[#e6e6e1] bg-white p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                        <div className="mb-3 flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white">
+                                <BadgeCheck size={18} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-semibold text-[#18181b]">Case view</h2>
+                                <p className="text-sm text-[#71717a]">Admin-only detail view for approvals, documents, and payments.</p>
+                            </div>
+                        </div>
+                        <p className="text-sm leading-relaxed text-[#57534e]">
+                            Use <span className="font-semibold text-[#18181b]">Open case</span> when you need admin actions, review tools, or payment history.
+                        </p>
+                    </div>
+                    <div className="rounded-[24px] border border-[#e6e6e1] bg-white p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                        <div className="mb-3 flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-white">
+                                <ListOrdered size={18} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-semibold text-[#18181b]">Current focus</h2>
+                                <p className="text-sm text-[#71717a]">The filter pills below drive the list and table count.</p>
+                            </div>
+                        </div>
+                        <p className="text-sm leading-relaxed text-[#57534e]">
+                            {filter === "all"
+                                ? "You are looking at the full worker registry."
+                                : `You are focused on ${filterLabel.toLowerCase()} workers right now.`}
+                        </p>
+                    </div>
+                </section>
+
+                <div className="rounded-[28px] border border-[#e6e6e1] bg-white p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                    <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
                         <div>
-                            <h1 className="text-xl font-bold text-slate-900">Workers</h1>
-                            <p className="text-sm text-slate-500">
-                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `${activeAuthUsers.length} registered`}
+                            <h2 className="text-lg font-semibold text-[#18181b]">Worker filters</h2>
+                            <p className="text-sm text-[#71717a]">
+                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `${activeAuthUsers.length} registered workers`}
                             </p>
+                        </div>
+                        <div className="rounded-full border border-[#ebe7df] bg-[#faf8f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b675d]">
+                            Filters update the table below
                         </div>
                     </div>
 
-                    {/* Status Filter Tabs */}
                     <div className="flex flex-wrap gap-1.5">
                         <FilterTab href="/admin/workers" label="All" active={filter === 'all'} color="slate" />
                         <FilterTab href="/admin/workers?filter=NEW" label="New" active={filter === 'NEW'} color="slate" />
@@ -165,7 +237,6 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                     </div>
                 </div>
 
-                {/* Users Table */}
                 <WorkersTableClient
                     data={filteredUsers.map((authUser: any) => {
                         const profile = profileMap.get(authUser.id);
@@ -192,6 +263,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                                 ? Math.max(0, 30 - Math.floor((nowMs - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
                                 : null,
                             authProvider: authUser.app_metadata?.provider || 'email',
+                            paymentState: candidate?.entry_fee_paid ? "Paid" : candidate?.status === "IN_QUEUE" ? "In Queue" : "Unpaid",
                         } satisfies WorkerTableRow;
                     })}
                     currentFilter={filter}
@@ -220,34 +292,11 @@ function FilterTab({ href, label, active, color, icon }: {
 
     return (
         <Link href={href}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${active ? `${c.activeBg} ${c.activeText}` : 'text-slate-500 hover:bg-slate-50'
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${active ? `${c.activeBg} ${c.activeText}` : 'text-slate-500 hover:bg-slate-50'
                 }`}
         >
             {icon && <span className="mr-1 inline-block align-text-bottom">{icon}</span>}
             {label}
         </Link>
-    );
-}
-
-function StatusBadge({ status }: { status: string }) {
-    const styles: Record<string, string> = {
-        NEW: "bg-slate-100 text-slate-600",
-        PROFILE_COMPLETE: "bg-blue-100 text-blue-700",
-        PENDING_APPROVAL: "bg-indigo-100 text-indigo-700",
-        VERIFIED: "bg-emerald-100 text-emerald-700",
-        APPROVED: "bg-emerald-100 text-emerald-700",
-        IN_QUEUE: "bg-amber-100 text-amber-700",
-        OFFER_PENDING: "bg-orange-100 text-orange-700",
-        OFFER_ACCEPTED: "bg-orange-100 text-orange-700",
-        VISA_PROCESS_STARTED: "bg-green-100 text-green-700",
-        VISA_APPROVED: "bg-green-100 text-green-700",
-        PLACED: "bg-green-100 text-green-800",
-        REJECTED: "bg-red-100 text-red-700",
-        REFUND_FLAGGED: "bg-rose-100 text-rose-700",
-    };
-    return (
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${styles[status] || 'bg-slate-100 text-slate-600'}`}>
-            {status?.replace(/_/g, ' ') || 'UNKNOWN'}
-        </span>
     );
 }

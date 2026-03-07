@@ -24,6 +24,7 @@ export type WorkerTableRow = {
     daysUntilDeletion: number | null;
     entryFeePaid: boolean;
     authProvider: string;
+    paymentState: string;
 };
 
 export default function WorkersTableClient({ data, currentFilter }: { data: WorkerTableRow[], currentFilter: string }) {
@@ -89,11 +90,22 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
         return result;
     }, [data, search, jobFilter, countryFilter, sortField, sortDir]);
 
+    const filterLabel = currentFilter === "all" ? "All workers" : currentFilter.replace(/_/g, " ");
+
     return (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col mt-6">
+        <div className="overflow-hidden rounded-[28px] border border-[#e6e6e1] bg-white shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)] flex flex-col">
             {/* Toolbar */}
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="relative w-full md:w-64">
+            <div className="border-b border-[#f0ede6] bg-[#faf8f3] p-4">
+                <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">Worker registry</div>
+                        <div className="mt-1 text-sm text-[#57534e]">
+                            {filteredAndSortedData.length} shown · {data.length} in current dataset · {filterLabel}
+                        </div>
+                    </div>
+                </div>
+                <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+                <div className="relative w-full md:w-72">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
@@ -104,7 +116,7 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                     />
                 </div>
 
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex w-full gap-2 md:w-auto">
                     <select
                         value={countryFilter}
                         onChange={e => setCountryFilter(e.target.value)}
@@ -122,6 +134,7 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                         <option value="all">All Jobs</option>
                         {uniqueJobs.map(j => <option key={j} value={j}>{j}</option>)}
                     </select>
+                </div>
                 </div>
             </div>
 
@@ -208,11 +221,14 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                     </div>
                                 </td>
                                 <td className="px-4 py-3">
-                                    <div className="flex flex-col gap-1 items-start">
-                                        <StatusBadge status={worker.status} />
-                                        {worker.completion === 100 && !worker.adminApproved && (
-                                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-50 text-purple-700">
-                                                <Hourglass size={10} /> Needs Appr
+                                        <div className="flex flex-col gap-1 items-start">
+                                            <StatusBadge status={worker.status} />
+                                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${worker.paymentState === "Paid" ? "bg-emerald-100 text-emerald-700" : worker.paymentState === "In Queue" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"}`}>
+                                                {worker.paymentState}
+                                            </span>
+                                            {worker.completion === 100 && !worker.adminApproved && (
+                                                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-50 text-purple-700">
+                                                    <Hourglass size={10} /> Needs Appr
                                             </span>
                                         )}
                                     </div>
@@ -267,15 +283,15 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                     <div className="flex items-center justify-end gap-2">
                                         <Link
                                             href={`/profile/worker?inspect=${worker.profile_id}`}
-                                            className="text-xs font-bold text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md transition-colors border border-transparent hover:border-emerald-100"
+                                            className="rounded-md border border-transparent px-2 py-1 text-xs font-bold text-emerald-700 transition-colors hover:border-emerald-100 hover:bg-emerald-50"
                                         >
-                                            Workspace
+                                            Inspect workspace
                                         </Link>
                                         <Link
                                             href={`/admin/workers/${worker.id}`}
-                                            className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors border border-transparent hover:border-blue-100"
+                                            className="rounded-md border border-transparent px-2 py-1 text-xs font-bold text-blue-600 transition-colors hover:border-blue-100 hover:bg-blue-50"
                                         >
-                                            View
+                                            Open case
                                         </Link>
                                         {!worker.isCurrentUser && (
                                             <DeleteUserButton userId={worker.id} userName={worker.name} />
@@ -295,7 +311,7 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                 </table>
             </div>
 
-            <div className="p-3 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 font-medium text-center">
+            <div className="border-t border-[#f0ede6] bg-[#faf8f3] p-3 text-center text-xs font-medium text-slate-500">
                 Showing {filteredAndSortedData.length} of {data.length} workers in this view
             </div>
         </div>
