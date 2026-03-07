@@ -266,6 +266,12 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <Link
+                                            href={`/profile/worker?inspect=${worker.profile_id}`}
+                                            className="text-xs font-bold text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md transition-colors border border-transparent hover:border-emerald-100"
+                                        >
+                                            Workspace
+                                        </Link>
+                                        <Link
                                             href={`/admin/workers/${worker.id}`}
                                             className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors border border-transparent hover:border-blue-100"
                                         >

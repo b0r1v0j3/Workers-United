@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
-import UnifiedNavbar from "@/components/UnifiedNavbar";
 import {
     Building2, MapPin, Globe, Phone, Calendar, FileText, Hash, Users,
-    Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp, Banknote,
-    LayoutDashboard
+    Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, Banknote,
+    LayoutDashboard, Shield
 } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -53,6 +52,16 @@ interface JobRequest {
     created_at: string;
 }
 
+export interface EmployerInspectSnapshot {
+    profile: {
+        id: string;
+        email: string | null;
+        full_name: string | null;
+    } | null;
+    employer: EmployerProfile | null;
+    jobs: JobRequest[];
+}
+
 // ─── Company form type ──────────────────────────────────────────
 interface CompanyForm {
     company_name: string;
@@ -72,9 +81,30 @@ interface CompanyForm {
     founding_date: string;
 }
 
+function createCompanyFormFromEmployer(employer: EmployerProfile | null): CompanyForm {
+    return {
+        company_name: employer?.company_name || "",
+        tax_id: employer?.tax_id || "",
+        company_registration_number: employer?.company_registration_number || "",
+        company_address: employer?.company_address || "",
+        contact_phone: employer?.contact_phone || "",
+        country: employer?.country || "",
+        city: employer?.city || "",
+        postal_code: employer?.postal_code || "",
+        website: employer?.website || "",
+        industry: employer?.industry || "",
+        company_size: employer?.company_size || "",
+        founded_year: employer?.founded_year || "",
+        description: employer?.description || "",
+        business_registry_number: employer?.business_registry_number || "",
+        founding_date: employer?.founding_date || "",
+    };
+}
+
 // ─── Shared styles ──────────────────────────────────────────────
-const inputClass = "w-full border border-gray-200 rounded-xl px-4 py-3 text-[15px] focus:ring-2 focus:ring-[#1877f2]/20 focus:border-[#1877f2] bg-gray-50 hover:bg-white focus:bg-white transition-all duration-200 outline-none";
-const labelClass = "block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2";
+const inputClass = "w-full rounded-2xl border border-[#e4e4df] bg-[#fafaf8] px-4 py-3 text-[15px] text-[#18181b] outline-none transition hover:bg-white focus:border-[#111111] focus:bg-white focus:ring-0";
+const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#78716c]";
+const surfaceClass = "rounded-[26px] border border-[#e6e6e1] bg-white p-6 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.3)]";
 
 // ─── Helper: Calculate Completion ───────────────────────────────
 function calculateCompletion(form: CompanyForm) {
@@ -102,16 +132,32 @@ function calculateCompletion(form: CompanyForm) {
 
 type TabType = "company" | "post-job" | "jobs";
 
+function getEmployerTab(tab: string | null): TabType {
+    if (tab === "post-job" || tab === "jobs") {
+        return tab;
+    }
+    return "company";
+}
+
 // ─── Main Component ─────────────────────────────────────────────
-export default function EmployerProfilePage() {
+export default function EmployerProfilePage({
+    readOnlyPreview = false,
+    inspectSnapshot = null,
+}: {
+    readOnlyPreview?: boolean;
+    inspectSnapshot?: EmployerInspectSnapshot | null;
+}) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const supabase = createClient();
+    const requestedTab = getEmployerTab(searchParams.get("tab"));
+    const inspectProfileId = readOnlyPreview ? inspectSnapshot?.profile?.id || searchParams.get("inspect") : null;
 
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: Record<string, string> } | null>(null);
+    const [user, setUser] = useState<SupabaseUser | null>(null);
     const [employer, setEmployer] = useState<EmployerProfile | null>(null);
     const [jobs, setJobs] = useState<JobRequest[]>([]);
-    const [activeTab, setActiveTab] = useState<TabType>("company");
+    const [activeTab, setActiveTab] = useState<TabType>(requestedTab);
 
     // ─ Company info state
     const [editing, setEditing] = useState(false);
@@ -145,6 +191,15 @@ export default function EmployerProfilePage() {
 
     // ─── Fetch data ─────────────────────────────────────────────
     const fetchData = useCallback(async () => {
+        if (readOnlyPreview && inspectSnapshot) {
+            setEmployer(inspectSnapshot.employer);
+            setCompanyForm(createCompanyFormFromEmployer(inspectSnapshot.employer));
+            setJobs(inspectSnapshot.jobs);
+            setEditing(false);
+            setLoading(false);
+            return;
+        }
+
         const { data: { user: u } } = await supabase.auth.getUser();
         if (!u) { router.replace("/login"); return; }
         setUser(u);
@@ -152,39 +207,50 @@ export default function EmployerProfilePage() {
         const { data: profile } = await supabase.from("profiles").select("user_type").eq("id", u.id).single();
         if (profile?.user_type !== "employer" && profile?.user_type !== "admin") { router.replace("/profile/worker"); return; }
 
-        const { data: emp } = await supabase.from("employers").select("*").eq("profile_id", u.id).single();
+        const { data: emp } = await supabase
+            .from("employers")
+            .select("*")
+            .eq("profile_id", u.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
         if (emp) {
             setEmployer(emp);
-            setCompanyForm({
-                company_name: emp.company_name || "",
-                tax_id: emp.tax_id || "",
-                company_registration_number: emp.company_registration_number || "",
-                company_address: emp.company_address || "",
-                contact_phone: emp.contact_phone || "",
-                country: emp.country || "",
-                city: emp.city || "",
-                postal_code: emp.postal_code || "",
-                website: emp.website || "",
-                industry: emp.industry || "",
-                company_size: emp.company_size || "",
-                founded_year: emp.founded_year || "",
-                description: emp.description || "",
-                business_registry_number: emp.business_registry_number || "",
-                founding_date: emp.founding_date || "",
-            });
+            setCompanyForm(createCompanyFormFromEmployer(emp));
             const { data: jobData } = await supabase.from("job_requests").select("*").eq("employer_id", emp.id).order("created_at", { ascending: false });
             setJobs(jobData || []);
         } else {
-            setEditing(true);
-            setCompanyForm(prev => ({
-                ...prev,
-                company_name: u.user_metadata?.company_name || "",
-            }));
+            if (readOnlyPreview) {
+                setEditing(false);
+            } else {
+                setEditing(true);
+                setCompanyForm(prev => ({
+                    ...prev,
+                    company_name: u.user_metadata?.company_name || "",
+                }));
+            }
         }
         setLoading(false);
-    }, [supabase, router]);
+    }, [supabase, router, readOnlyPreview, inspectSnapshot]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    useEffect(() => {
+        setActiveTab(requestedTab);
+    }, [requestedTab]);
+
+    const handleTabChange = useCallback((tab: TabType) => {
+        setActiveTab(tab);
+        const params = new URLSearchParams();
+        if (tab !== "company") {
+            params.set("tab", tab);
+        }
+        if (inspectProfileId) {
+            params.set("inspect", inspectProfileId);
+        }
+        const nextPath = params.toString() ? `/profile/employer?${params.toString()}` : "/profile/employer";
+        router.replace(nextPath, { scroll: false });
+    }, [router, inspectProfileId]);
 
     // ─── Company info handlers ──────────────────────────────────
     const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -193,6 +259,10 @@ export default function EmployerProfilePage() {
     };
 
     const saveCompany = async () => {
+        if (readOnlyPreview) {
+            setCompanyAlert({ type: "error", msg: "Admin preview is read-only." });
+            return;
+        }
         setSaving(true);
         setCompanyAlert(null);
         try {
@@ -251,7 +321,15 @@ export default function EmployerProfilePage() {
                 if (error) throw error;
             }
 
-            const { data: emp } = await supabase.from("employers").select("*").eq("profile_id", user.id).single();
+            const { data: emp } = employer
+                ? await supabase.from("employers").select("*").eq("id", employer.id).maybeSingle()
+                : await supabase
+                    .from("employers")
+                    .select("*")
+                    .eq("profile_id", user.id)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
             if (emp) setEmployer(emp);
 
             setCompanyAlert({ type: "success", msg: "Company info saved!" });
@@ -265,23 +343,7 @@ export default function EmployerProfilePage() {
 
     const cancelEdit = () => {
         if (employer) {
-            setCompanyForm({
-                company_name: employer.company_name || "",
-                tax_id: employer.tax_id || "",
-                company_registration_number: employer.company_registration_number || "",
-                company_address: employer.company_address || "",
-                contact_phone: employer.contact_phone || "",
-                country: employer.country || "",
-                city: employer.city || "",
-                postal_code: employer.postal_code || "",
-                website: employer.website || "",
-                industry: employer.industry || "",
-                company_size: employer.company_size || "",
-                founded_year: employer.founded_year || "",
-                description: employer.description || "",
-                business_registry_number: employer.business_registry_number || "",
-                founding_date: employer.founding_date || "",
-            });
+            setCompanyForm(createCompanyFormFromEmployer(employer));
         }
         setEditing(false);
         setCompanyAlert(null);
@@ -294,6 +356,10 @@ export default function EmployerProfilePage() {
     };
 
     const submitJob = async () => {
+        if (readOnlyPreview) {
+            setJobAlert({ type: "error", msg: "Admin preview is read-only." });
+            return;
+        }
         setPostingJob(true); setJobAlert(null);
         try {
             if (!jobForm.title.trim()) throw new Error("Job title is required");
@@ -330,6 +396,10 @@ export default function EmployerProfilePage() {
     };
 
     const startEditJob = (job: JobRequest) => {
+        if (readOnlyPreview) {
+            setJobAlert({ type: "error", msg: "Admin preview is read-only." });
+            return;
+        }
         setEditingJobId(job.id);
         setEditJobForm({
             title: job.title, description: job.description || "",
@@ -346,6 +416,10 @@ export default function EmployerProfilePage() {
     };
 
     const saveEditJob = async () => {
+        if (readOnlyPreview) {
+            setJobAlert({ type: "error", msg: "Admin preview is read-only." });
+            return;
+        }
         setSavingJob(true); setEditJobError(null);
         try {
             const { error } = await supabase.from("job_requests").update({
@@ -371,6 +445,10 @@ export default function EmployerProfilePage() {
     };
 
     const deleteJob = async (jobId: string) => {
+        if (readOnlyPreview) {
+            setJobAlert({ type: "error", msg: "Admin preview is read-only." });
+            return;
+        }
         try {
             await supabase.from("job_requests").delete().eq("id", jobId);
             setJobs(prev => prev.filter(j => j.id !== jobId));
@@ -381,79 +459,120 @@ export default function EmployerProfilePage() {
     const completion = calculateCompletion(companyForm);
 
     if (loading) return (
-        <div className="min-h-screen bg-[#F0F4F8] flex items-center justify-center">
-            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className={`${surfaceClass} flex min-h-[320px] items-center justify-center`}>
+            <div className="h-14 w-14 animate-spin rounded-full border-4 border-[#111111] border-t-transparent" />
         </div>
     );
 
     // Country gate: full features currently available in selected markets
     const isPrimaryMarket = companyForm.country.toLowerCase() === 'serbia';
     const hasCountry = companyForm.country.trim().length > 0;
+    const openJobsCount = jobs.filter((job) => job.status === "open").length;
+    const workspaceStatus = readOnlyPreview
+        ? "Preview"
+        : !hasCountry
+            ? "Setup"
+            : isPrimaryMarket
+                ? "Live"
+                : "Expanding";
+    const workspaceSummary = readOnlyPreview
+        ? "Review the employer workspace structure without changing your admin role."
+        : "Manage company information, post job requests, and keep hiring data in one workspace.";
 
     return (
-        <div className="min-h-screen bg-[#F0F4F8]">
-            {/* NAVBAR */}
-            <UnifiedNavbar variant="dashboard" user={user} profileName={companyForm.company_name || ""} />
-
-            {/* MAIN CONTENT */}
-            <div className="max-w-6xl mx-auto px-4 py-8">
-
-                {/* Hero Section */}
-                <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1E3A5F] via-[#2f6fed] to-[#2563EB] p-8 text-white shadow-xl">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-                                    <Building2 className="text-white" />
-                                </div>
-                                <h1 className="text-3xl font-bold">{companyForm.company_name || "Company Profile"}</h1>
-                            </div>
-                            <p className="text-blue-100 opacity-90 max-w-lg">
-                                Manage your company information and job postings.
-                            </p>
+        <div className="space-y-6">
+            <section className="relative overflow-hidden rounded-[28px] border border-[#e8e5de] bg-[linear-gradient(135deg,#fcfbf7_0%,#f1eee5_50%,#f7f5ef_100%)] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.35)]">
+                <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="max-w-2xl">
+                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#dfdbd0] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b675d]">
+                            <Building2 size={14} />
+                            Employer Workspace
                         </div>
-                        {completion < 100 && (
-                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 min-w-[200px]">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Completion</span>
-                                    <span className="font-bold">{completion}%</span>
-                                </div>
-                                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                                    <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${completion}%` }} />
-                                </div>
-                            </div>
+                        <h1 className="text-3xl font-semibold tracking-tight text-[#18181b]">
+                            {companyForm.company_name || (readOnlyPreview ? "Employer Preview" : "Company Profile")}
+                        </h1>
+                        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#57534e]">
+                            {workspaceSummary}
+                        </p>
+                        {hasCountry && (
+                            <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#8a8479]">
+                                {companyForm.country}
+                                {companyForm.city ? ` · ${companyForm.city}` : ""}
+                                {companyForm.website ? ` · ${companyForm.website}` : ""}
+                            </p>
                         )}
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <EmployerMetricCard label="Completion" value={`${completion}%`} />
+                        <EmployerMetricCard label="Jobs" value={jobs.length} />
+                        <EmployerMetricCard label="Open" value={openJobsCount} />
+                        <EmployerMetricCard label="Status" value={workspaceStatus} />
+                    </div>
                 </div>
+                <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-[#111111]/5 blur-3xl" />
+            </section>
 
-                <div className="flex flex-col md:flex-row gap-6">
-                    {/* Sidebar Tabs */}
-                    <div className="md:w-64 flex-shrink-0 space-y-2">
-                        <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 sticky top-24">
-                            <TabButton label="Company Info" icon={<LayoutDashboard size={18} />} active={activeTab === 'company'} onClick={() => setActiveTab('company')} />
-                            {employer && isPrimaryMarket && <TabButton label="Post a Job" icon={<Plus size={18} />} active={activeTab === 'post-job'} onClick={() => setActiveTab('post-job')} />}
-                            {employer && isPrimaryMarket && <TabButton label={`Active Jobs (${jobs.length})`} icon={<Briefcase size={18} />} active={activeTab === 'jobs'} onClick={() => setActiveTab('jobs')} />}
+            <section className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
+                <div className="space-y-4">
+                    <div className={`${surfaceClass} sticky top-24 p-2`}>
+                        <TabButton label="Company Info" icon={<LayoutDashboard size={18} />} active={activeTab === "company"} onClick={() => handleTabChange("company")} />
+                        {employer && isPrimaryMarket && (
+                            <TabButton label="Post a Job" icon={<Plus size={18} />} active={activeTab === "post-job"} onClick={() => handleTabChange("post-job")} />
+                        )}
+                        {employer && isPrimaryMarket && (
+                            <TabButton label={`Active Jobs (${jobs.length})`} icon={<Briefcase size={18} />} active={activeTab === "jobs"} onClick={() => handleTabChange("jobs")} />
+                        )}
 
-                            {employer && !editing && activeTab === 'company' && (
+                        {employer && !editing && activeTab === "company" && !readOnlyPreview && (
+                            <>
+                                <div className="my-2 border-t border-[#f0ede6]" />
+                                <button
+                                    type="button"
+                                    onClick={() => setEditing(true)}
+                                    className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-[#57534e] transition hover:bg-[#faf8f3] hover:text-[#18181b]"
+                                >
+                                    <Pencil size={18} />
+                                    Edit company profile
+                                </button>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="rounded-[26px] border border-[#ece7df] bg-[#faf8f3] p-5 text-sm text-[#57534e] shadow-[0_20px_50px_-40px_rgba(15,23,42,0.25)]">
+                        <div className="mb-3 flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111111] text-white">
+                                <Shield size={18} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-semibold text-[#18181b]">
+                                    {readOnlyPreview ? "Read-only admin preview" : "Workspace flow"}
+                                </h2>
+                                <p className="text-xs uppercase tracking-[0.16em] text-[#8a8479]">
+                                    {readOnlyPreview ? "Structure only" : "Company setup"}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="space-y-2 leading-relaxed">
+                            {readOnlyPreview ? (
                                 <>
-                                    <div className="my-2 border-t border-slate-100"></div>
-                                    <button
-                                        onClick={() => setEditing(true)}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-                                    >
-                                        <Pencil size={18} /> Edit Profile
-                                    </button>
+                                    <p>This preview shows how employer company data and job requests are organized.</p>
+                                    <p>Admin preview cannot create an employer profile, edit company details, or post jobs.</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p>Complete company details first so your hiring workspace reaches 100% readiness.</p>
+                                    <p>When your company profile is ready, post job requests and track them in one place.</p>
                                 </>
                             )}
                         </div>
                     </div>
+                </div>
 
-                    {/* Tab Content */}
-                    <div className="flex-1 min-w-0">
+                <div className="min-w-0 space-y-6">
                         {/* Coming soon banner for markets not enabled yet */}
                         {employer && hasCountry && !isPrimaryMarket && !editing && (
-                            <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+                            <div className="rounded-[26px] border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-6 shadow-sm">
                                 <div className="flex items-start gap-4">
                                     <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                         <Globe className="text-amber-600" size={24} />
@@ -486,10 +605,19 @@ export default function EmployerProfilePage() {
                                     </div>
                                 )}
 
-                                {editing ? (
-                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-                                        <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
-                                            <Pencil size={20} className="text-blue-500" /> Edit Company Details
+                                {!employer && readOnlyPreview ? (
+                                    <div className={surfaceClass}>
+                                        <h3 className="mb-4 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
+                                            <Building2 className="text-[#111111]" /> Employer Preview
+                                        </h3>
+                                        <p className="text-sm leading-relaxed text-[#57534e]">
+                                            This admin account does not have a real employer profile attached. Preview stays read-only and cannot create one from this page.
+                                        </p>
+                                    </div>
+                                ) : editing ? (
+                                    <div className={surfaceClass}>
+                                        <h3 className="mb-6 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
+                                            <Pencil size={20} className="text-[#111111]" /> Edit Company Details
                                         </h3>
 
                                         <div className="space-y-6">
@@ -607,23 +735,23 @@ export default function EmployerProfilePage() {
                                                 </div>
                                             )}
 
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                                            <div className="flex justify-end gap-3 border-t border-[#f0ede6] pt-4">
                                                 {employer && (
-                                                    <button type="button" onClick={cancelEdit} className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-colors">
+                                                    <button type="button" onClick={cancelEdit} className="rounded-2xl border border-[#d6d3d1] px-6 py-3 font-semibold text-[#57534e] transition hover:bg-[#fafaf8]">
                                                         Cancel
                                                     </button>
                                                 )}
                                                 <button type="button" onClick={saveCompany} disabled={saving}
-                                                    className="px-8 py-3 bg-[#1877f2] text-white rounded-xl hover:bg-[#166fe5] font-bold shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2 transition-all">
+                                                    className="flex items-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50">
                                                     {saving ? "Saving..." : "Save Changes"}
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-                                        <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
-                                            <Building2 className="text-blue-500" /> Company Information
+                                    <div className={surfaceClass}>
+                                        <h3 className="mb-6 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
+                                            <Building2 className="text-[#111111]" /> Company Information
                                         </h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <InfoRow icon={<Building2 size={18} />} label="Company Name" value={companyForm.company_name} />
@@ -649,13 +777,13 @@ export default function EmployerProfilePage() {
 
                         {/* ====================== POST A JOB TAB ====================== */}
                         {activeTab === 'post-job' && employer && (
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-                                <h3 className="font-bold text-slate-900 text-xl mb-6 flex items-center gap-2">
-                                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><Plus size={20} /></div>
-                                    Post a New Job
+                            <div className={surfaceClass}>
+                                <h3 className="mb-6 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
+                                    <div className="rounded-lg bg-emerald-100 p-2 text-emerald-600"><Plus size={20} /></div>
+                                    {readOnlyPreview ? "Post a Job Preview" : "Post a New Job"}
                                 </h3>
 
-                                {jobAlert && (
+                                {jobAlert && !readOnlyPreview && (
                                     <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium ${jobAlert.type === "success"
                                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                         : "bg-red-50 text-red-700 border border-red-200"}`}>
@@ -663,7 +791,14 @@ export default function EmployerProfilePage() {
                                     </div>
                                 )}
 
-                                <div className="space-y-6">
+                                {readOnlyPreview && (
+                                    <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-950">
+                                        <p className="font-medium">This is the job request form employers use after their company profile is ready.</p>
+                                        <p className="mt-2 text-blue-900/80">Admin preview can inspect the structure, but it cannot post or edit jobs from this account.</p>
+                                    </div>
+                                )}
+
+                                <fieldset className="space-y-6" disabled={readOnlyPreview}>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
                                             <label className={labelClass}>Job Title <span className="text-red-500">*</span></label>
@@ -721,15 +856,21 @@ export default function EmployerProfilePage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-end pt-4 border-t border-slate-100">
-                                        <button type="button" onClick={submitJob} disabled={postingJob}
-                                            className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-lg shadow-emerald-500/30 disabled:opacity-50 flex items-center gap-2 transition-all">
-                                            {postingJob ? (
-                                                <><div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div> Posting...</>
-                                            ) : <><Plus className="w-5 h-5" /> Post Job Request</>}
-                                        </button>
+                                    <div className="flex justify-end border-t border-[#f0ede6] pt-4">
+                                        {readOnlyPreview ? (
+                                            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                                                Job posting is disabled in admin preview
+                                            </div>
+                                        ) : (
+                                            <button type="button" onClick={submitJob} disabled={postingJob}
+                                                className="flex items-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50">
+                                                {postingJob ? (
+                                                    <><div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div> Posting...</>
+                                                ) : <><Plus className="w-5 h-5" /> Post Job Request</>}
+                                            </button>
+                                        )}
                                     </div>
-                                </div>
+                                </fieldset>
                             </div>
                         )}
 
@@ -737,15 +878,17 @@ export default function EmployerProfilePage() {
                         {activeTab === 'jobs' && employer && (
                             <div className="space-y-6">
                                 {jobs.length === 0 ? (
-                                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-12 text-center">
-                                        <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                            <Briefcase size={32} className="text-slate-400" />
+                                    <div className={`${surfaceClass} p-12 text-center`}>
+                                        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#faf8f3]">
+                                            <Briefcase size={32} className="text-[#a8a29e]" />
                                         </div>
-                                        <h3 className="text-xl font-bold text-slate-800 mb-2">No jobs posted yet</h3>
-                                        <p className="text-slate-500 mb-6">Create your first job request to start matching with workers.</p>
-                                        <button onClick={() => setActiveTab('post-job')} className="px-6 py-3 bg-[#1877f2] text-white rounded-xl font-bold hover:bg-blue-600 transition-colors">
-                                            Post a Job
-                                        </button>
+                                        <h3 className="mb-2 text-xl font-semibold text-[#18181b]">No jobs posted yet</h3>
+                                        <p className="mb-6 text-[#57534e]">Create your first job request to start matching with workers.</p>
+                                        {!readOnlyPreview && (
+                                            <button type="button" onClick={() => handleTabChange('post-job')} className="rounded-2xl bg-[#111111] px-6 py-3 font-semibold text-white transition hover:bg-[#2b2b2b]">
+                                                Post a Job
+                                            </button>
+                                        )}
                                     </div>
                                 ) : (
                                     jobs.map(job => (
@@ -766,25 +909,29 @@ export default function EmployerProfilePage() {
                                                     </div>
 
                                                     <div className="flex items-center gap-2">
-                                                        {editingJobId === job.id ? (
+                                                        {editingJobId === job.id && !readOnlyPreview ? (
                                                             <>
                                                                 <button onClick={() => setEditingJobId(null)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancel</button>
                                                                 <button onClick={saveEditJob} disabled={savingJob} className="px-4 py-2 text-sm font-bold bg-[#1877f2] text-white rounded-lg hover:bg-blue-600">Save</button>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <button onClick={() => startEditJob(job)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                                                                    <Pencil size={18} />
-                                                                </button>
-                                                                {confirmDeleteJobId === job.id ? (
-                                                                    <div className="flex items-center gap-2 bg-red-50 p-1 rounded-lg">
-                                                                        <button onClick={() => deleteJob(job.id)} className="text-xs font-bold text-red-600 px-2 py-1 hover:bg-red-100 rounded">Delete?</button>
-                                                                        <button onClick={() => setConfirmDeleteJobId(null)} className="text-xs font-bold text-slate-500 px-2 py-1 hover:bg-slate-200 rounded">No</button>
-                                                                    </div>
-                                                                ) : (
-                                                                    <button onClick={() => setConfirmDeleteJobId(job.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                                                                        <Trash2 size={18} />
-                                                                    </button>
+                                                                {!readOnlyPreview && (
+                                                                    <>
+                                                                        <button onClick={() => startEditJob(job)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                                                            <Pencil size={18} />
+                                                                        </button>
+                                                                        {confirmDeleteJobId === job.id ? (
+                                                                            <div className="flex items-center gap-2 bg-red-50 p-1 rounded-lg">
+                                                                                <button onClick={() => deleteJob(job.id)} className="text-xs font-bold text-red-600 px-2 py-1 hover:bg-red-100 rounded">Delete?</button>
+                                                                                <button onClick={() => setConfirmDeleteJobId(null)} className="text-xs font-bold text-slate-500 px-2 py-1 hover:bg-slate-200 rounded">No</button>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <button onClick={() => setConfirmDeleteJobId(job.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                                                                <Trash2 size={18} />
+                                                                            </button>
+                                                                        )}
+                                                                    </>
                                                                 )}
                                                             </>
                                                         )}
@@ -792,7 +939,7 @@ export default function EmployerProfilePage() {
                                                 </div>
 
                                                 {/* Editing Form */}
-                                                {editingJobId === job.id && (
+                                                {editingJobId === job.id && !readOnlyPreview && (
                                                     <div className="mt-6 pt-6 border-t border-slate-100 bg-slate-50/50 -mx-6 -mb-6 p-6">
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                                             <div>
@@ -816,10 +963,9 @@ export default function EmployerProfilePage() {
                             </div>
                         )}
                     </div>
-                </div>
+                </section>
             </div>
-        </div>
-    );
+        );
 }
 
 // ─── Helper Components ──────────────────────────────────────────
@@ -827,15 +973,25 @@ export default function EmployerProfilePage() {
 function TabButton({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode }) {
     return (
         <button
+            type="button"
             onClick={onClick}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${active
-                ? 'bg-blue-50 text-blue-700 shadow-sm'
-                : 'text-slate-600 hover:bg-slate-50'
+            className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition-all duration-200 ${active
+                ? 'border border-[#e7e2d7] bg-[#f5f2eb] text-[#18181b] shadow-sm'
+                : 'border border-transparent text-[#57534e] hover:bg-[#faf8f3] hover:text-[#18181b]'
                 }`}
         >
-            <span className={active ? 'text-blue-600' : 'text-slate-400'}>{icon}</span>
-            {label}
+            <span className={active ? 'text-[#18181b]' : 'text-[#a8a29e]'}>{icon}</span>
+            <span>{label}</span>
         </button>
+    );
+}
+
+function EmployerMetricCard({ label, value }: { label: string; value: string | number }) {
+    return (
+        <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.45)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8479]">{label}</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181b]">{value}</div>
+        </div>
     );
 }
 
@@ -843,11 +999,11 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string,
     return (
         <div className="group">
             <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-slate-400 group-hover:text-blue-500 transition-colors">{icon}</span>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+                <span className="text-[#a8a29e] transition-colors group-hover:text-[#78716c]">{icon}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a8a29e]">{label}</span>
             </div>
-            <div className="pl-7 font-medium text-slate-900 text-base border-b border-transparent group-hover:border-slate-100 pb-1 transition-colors">
-                {value || <span className="text-slate-300 italic">Not provided</span>}
+            <div className="border-b border-transparent pb-1 pl-7 text-sm font-medium text-[#18181b] transition-colors group-hover:border-[#f0ede6]">
+                {value || <span className="italic text-[#b4b4ae]">Not provided</span>}
             </div>
         </div>
     );

@@ -1,31 +1,50 @@
 import Link from "next/link";
 import { Shield } from "lucide-react";
 import { redirect } from "next/navigation";
+import { normalizeUserType } from "@/lib/domain";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
 
 export const dynamic = "force-dynamic";
 
-export default async function QueuePage() {
+export default async function QueuePage({
+    searchParams,
+}: {
+    searchParams: Promise<{ inspect?: string }>;
+}) {
     const supabase = await createClient();
+    const params = await searchParams;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
+    const userType = normalizeUserType(user.user_metadata?.user_type);
+    if (userType === "employer") {
+        redirect("/profile/employer");
+    }
+    if (userType === "agency") {
+        redirect("/profile/agency");
+    }
+    const isAdminPreview = userType === "admin";
+    const inspectProfileId = isAdminPreview ? params?.inspect?.trim() || null : null;
+    const targetProfileId = inspectProfileId || user.id;
+    const dataClient = inspectProfileId ? createAdminClient() : supabase;
+
     // Get candidate with queue info
-    const { data: candidate } = await supabase
+    const { data: candidate } = await dataClient
         .from("candidates")
         .select("*")
-        .eq("profile_id", user.id)
-        .single();
+        .eq("profile_id", targetProfileId)
+        .maybeSingle();
 
     if (!candidate) {
-        redirect("/profile/worker");
+        redirect(inspectProfileId ? "/admin/workers" : "/profile/worker");
     }
 
     // Check for pending offers (source of truth for "You have an offer" UI)
-    const { data: pendingOffers } = await supabase
+    const { data: pendingOffers } = await dataClient
         .from("offers")
         .select(`
       *,
@@ -35,12 +54,12 @@ export default async function QueuePage() {
         .eq("status", "pending")
         .order("expires_at", { ascending: true });
 
-    const { data: completedEntryPayment } = await supabase
+    const { data: completedEntryPayment } = await dataClient
         .from("payments")
         .select("id, paid_at")
         .eq("payment_type", "entry_fee")
         .in("status", ["completed", "paid"])
-        .or(`user_id.eq.${user.id},profile_id.eq.${user.id}`)
+        .or(`user_id.eq.${targetProfileId},profile_id.eq.${targetProfileId}`)
         .limit(1)
         .maybeSingle();
 
@@ -71,7 +90,7 @@ export default async function QueuePage() {
 
     return (
         <div className="w-full">
-            <QueueClientEffects />
+            {!isAdminPreview && <QueueClientEffects />}
             <main className="w-full">
                 {/* Queue Status Card */}
                 <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-6">
@@ -100,11 +119,19 @@ export default async function QueuePage() {
                                     Pay a one-time $9 fee to join our active worker queue. We&apos;ll find you a job in Europe.
                                 </p>
                             </div>
-                            <PayToJoinButton displayName={user.user_metadata?.full_name || "Worker"} />
-                            <div className="mt-2 flex items-center justify-center gap-1.5 text-gray-500 text-[11px] sm:text-xs font-medium text-center px-1">
-                                <Shield size={14} className="shrink-0 text-gray-400" />
-                                <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer in 90 days</span>
-                            </div>
+                            {isAdminPreview ? (
+                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                                    Read-only admin preview. Queue payment is disabled here.
+                                </div>
+                            ) : (
+                                <>
+                                    <PayToJoinButton displayName={user.user_metadata?.full_name || "Worker"} />
+                                    <div className="mt-2 flex items-center justify-center gap-1.5 text-gray-500 text-[11px] sm:text-xs font-medium text-center px-1">
+                                        <Shield size={14} className="shrink-0 text-gray-400" />
+                                        <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer in 90 days</span>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ) : paymentAcceptedNoOffer ? (
                         // Paid and waiting for a real offer
@@ -187,7 +214,7 @@ export default async function QueuePage() {
                         <h2 className="text-lg font-bold text-[#050505]">Your Active Offers</h2>
 
                         {pendingOffers.map((offer) => (
-                            <OfferCard key={offer.id} offer={offer} />
+                            <OfferCard key={offer.id} offer={offer} readOnlyPreview={isAdminPreview} />
                         ))}
                     </div>
                 )}
@@ -197,7 +224,7 @@ export default async function QueuePage() {
 }
 
 
-function OfferCard({ offer }: {
+function OfferCard({ offer, readOnlyPreview = false }: {
     offer: {
         id: string;
         expires_at: string;
@@ -210,6 +237,7 @@ function OfferCard({ offer }: {
             employers?: { company_name: string };
         };
     }
+    readOnlyPreview?: boolean;
 }) {
     const expiresAt = new Date(offer.expires_at);
     const now = new Date();
@@ -250,12 +278,18 @@ function OfferCard({ offer }: {
                 or it will be offered to the next worker in the queue.
             </div>
 
-            <Link
-                href={`/profile/worker/offers/${offer.id}`}
-                className="block text-center bg-[#1877f2] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#166fe5] transition-colors shadow-sm w-full"
-            >
-                Confirm Offer - Pay $190
-            </Link>
+            {readOnlyPreview ? (
+                <div className="block text-center rounded-lg border border-blue-200 bg-blue-50 px-6 py-3 text-sm font-medium text-blue-800">
+                    Offer confirmation is disabled in admin preview
+                </div>
+            ) : (
+                <Link
+                    href={`/profile/worker/offers/${offer.id}`}
+                    className="block text-center bg-[#1877f2] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#166fe5] transition-colors shadow-sm w-full"
+                >
+                    Confirm Offer - Pay $190
+                </Link>
+            )}
         </div>
     );
 }
