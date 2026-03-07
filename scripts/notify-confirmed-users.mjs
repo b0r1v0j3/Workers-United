@@ -38,7 +38,6 @@ const emails = [
     "stsebastianroyal@gmail.com",
     "abubakarouy@gmail.com",
     "abubakarkawahi@gmail.com",
-    "suleka31@yahoo.coms",
     "tabishahmed529@gmail.com",
     "suraj_viza@1yahoo.com",
     "mrashid.freelancer@gmail.com",
