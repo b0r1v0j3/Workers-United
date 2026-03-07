@@ -122,6 +122,7 @@ Workers-United/
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
 │   │   ├── brain-memory.ts    # Brain memory dedup + normalization helpers
+│   │   ├── reporting.ts       # Reporting filters for admin metrics (exclude Codex/test/internal-orphan payments)
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
 │   │   ├── constants.ts       # Shared constants
@@ -271,6 +272,7 @@ User (Browser)
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries |
+| `src/lib/reporting.ts` | Shared reporting helpers; keeps admin dashboard and analytics revenue clean by excluding Codex/test/internal-orphan payment rows |
 | `src/lib/contract-data.ts` | Shared contract-doc payload builder; derives full PDF data from live `matches/candidates/profiles/employers/job_requests/candidate_documents` and persists only supported `contract_data` override/meta fields |
 | `src/lib/offer-finalization.ts` | Shared confirmation-fee finalization helper; idempotently transitions `offers.pending -> offers.accepted` and increments job capacity once |
 | `src/lib/domain.ts` | Canonical role/domain helper; normalizes legacy `candidate` metadata into the `worker` domain and exposes worker storage constants |
@@ -372,6 +374,7 @@ When adding a new feature, follow this order:
 - The user metadata key is `user_id` (not `userId`). Mismatch causes payment to succeed but post-payment actions to fail silently.
 - The webhook handles both `entry_fee` ($9) and `confirmation_fee` ($190) — check the metadata `fee_type` field.
 - Confirmation-fee flow is two-stage: worker first moves to `OFFER_PENDING` while the `offers` row stays `pending`; only webhook/`confirm-session` finalization marks the offer `accepted` and increments `positions_filled`.
+- Admin revenue/reporting views must filter payments through `src/lib/reporting.ts`. Otherwise synthetic Codex/test rows or orphaned payment records will inflate `$ revenue` and revenue charts.
 
 ### Next.js 16 Specifics
 - `src/middleware.ts` is deprecated in Next.js 16 → use `src/proxy.ts` (helper remains `src/lib/supabase/middleware.ts`)

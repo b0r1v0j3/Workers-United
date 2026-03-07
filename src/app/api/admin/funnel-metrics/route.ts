@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, getAllAuthUsers } from '@/lib/supabase/admin';
 import { isGodModeUser } from '@/lib/godmode';
 import { getWorkerCompletion } from '@/lib/profile-completion';
+import { isReportablePaymentProfile } from '@/lib/reporting';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
         // Fetch all profiles and candidates to calculate per-user completion
         const { data: allProfiles } = await supabase
             .from('profiles')
-            .select('id, full_name');
+            .select('id, full_name, email');
 
         const { data: allCandidates } = await supabase
             .from('candidates')
@@ -166,12 +167,23 @@ export async function GET(request: Request) {
         });
 
         // Populate revenue (need to fetch payments)
+        const paymentProfileMap = new Map(allProfiles?.map(p => [p.id, p]) || []);
+
         const { data: allPayments } = await supabase
             .from('payments')
-            .select('amount, amount_cents, created_at, status')
+            .select('amount, amount_cents, paid_at, status, profile_id')
             .in('status', ['paid', 'completed']);
         allPayments?.forEach((p: any) => {
-            const dateKey = new Date(p.created_at).toISOString().split('T')[0];
+            if (!p.paid_at) {
+                return;
+            }
+
+            const paymentProfile = p.profile_id ? paymentProfileMap.get(p.profile_id) || null : null;
+            if (!isReportablePaymentProfile(paymentProfile)) {
+                return;
+            }
+
+            const dateKey = new Date(p.paid_at).toISOString().split('T')[0];
             if (timeSeriesMap.has(dateKey)) {
                 const value = p.amount != null ? Number(p.amount) : Number(p.amount_cents || 0) / 100;
                 timeSeriesMap.get(dateKey)!.revenue += Number.isFinite(value) ? value : 0;
