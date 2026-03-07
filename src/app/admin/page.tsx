@@ -48,13 +48,6 @@ export default async function AdminDashboard() {
 
     const workers = workersRaw || [];
     const profileMap = new Map((profiles || []).map((entry: any) => [entry.id, entry]));
-    const currentProfile = profileMap.get(user.id);
-    const currentWorker = workers.find((worker: any) => worker.profile_id === user.id) || null;
-    const currentEmployers = (employers || [])
-        .filter((entry: any) => entry.profile_id === user.id)
-        .sort((left: any, right: any) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
-    const currentEmployer = currentEmployers[0] || null;
-    const currentAgency = (agencies || []).find((entry: any) => entry.profile_id === user.id) || null;
     const docsByUser = new Map<string, Array<{ user_id: string; document_type: string; status: string | null }>>();
     for (const doc of documents || []) {
         const current = docsByUser.get(doc.user_id) || [];
@@ -194,41 +187,24 @@ export default async function AdminDashboard() {
     const previewCards = [
         {
             href: "/profile/worker",
-            title: "Worker Template",
-            description: currentWorker
-                ? `${currentWorker.status || "NEW"}${currentWorker.entry_fee_paid ? " • entry fee paid" : ""}`
-                : "No worker record linked to this admin account.",
-            meta: currentWorker
-                ? `${currentProfile?.full_name || "Worker"} • ${currentProfile?.email || user.email || ""}`
-                : "Opens the worker workspace in read-only mode.",
+            title: "Preview Worker",
+            description: "See the worker workspace exactly as the product looks, in read-only mode.",
+            meta: "Use worker list rows to inspect real worker data.",
             icon: <User size={18} />,
-            tone: currentWorker ? "neutral" : "warning",
         },
         {
             href: "/profile/employer",
-            title: "Employer Template",
-            description: currentEmployer
-                ? `${currentEmployer.company_name || "Employer profile"} • ${currentEmployer.status || "PENDING"}`
-                : "No employer record linked to this admin account.",
-            meta: currentEmployer
-                ? currentEmployers.length > 1
-                    ? `${currentEmployers.length} employer records found • using latest`
-                    : currentProfile?.email || user.email || ""
-                : "Opens the employer workspace in read-only mode.",
+            title: "Preview Employer",
+            description: "Open the employer workspace shell without changing the admin role or company data.",
+            meta: "Use employer list rows to inspect real employer accounts.",
             icon: <Building2 size={18} />,
-            tone: currentEmployer ? "neutral" : "warning",
         },
         {
             href: "/profile/agency",
-            title: "Agency Template",
-            description: currentAgency
-                ? `${currentAgency.display_name || currentAgency.legal_name || "Agency"} • ${currentAgency.status || "active"}`
-                : "No agency record linked to this admin account.",
-            meta: currentAgency
-                ? currentAgency.contact_email || currentProfile?.email || user.email || ""
-                : "Opens the agency workspace in read-only mode without creating agency data.",
+            title: "Preview Agency",
+            description: "Open the agency dashboard shell in read-only mode without creating drafts or agency rows.",
+            meta: "Use agency list rows to inspect real agencies and their workers.",
             icon: <Users size={18} />,
-            tone: currentAgency ? "neutral" : "warning",
         },
     ] as const;
 
@@ -256,58 +232,33 @@ export default async function AdminDashboard() {
                     </div>
                 </section>
 
-                <section className="grid gap-6 xl:grid-cols-[1.1fr_1.9fr]">
-                    <div className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
-                        <div className="mb-5 flex items-start gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white">
-                                <ShieldCheck size={20} />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-semibold text-[#18181b]">Admin Role Safety</h2>
-                                <p className="mt-1 text-sm text-[#71717a]">Previewing worker, employer, or agency screens no longer changes the admin account type.</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-950">
-                            <div className="flex items-center justify-between gap-3">
-                                <span className="font-medium">Profile role</span>
-                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-                                    {profileType || "unknown"}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between gap-3">
-                                <span className="font-medium">Auth metadata role</span>
-                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-                                    {metadataType || "unknown"}
-                                </span>
-                            </div>
-                            <p className="text-blue-900/80">
-                                Worker, employer, and agency views are now explicit read-only previews. Use real role accounts for editing, uploads, payments, and draft creation.
+                <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                    <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2 className="text-lg font-semibold text-[#18181b]">Preview Modes</h2>
+                            <p className="mt-1 max-w-2xl text-sm text-[#71717a]">
+                                Open worker, employer, or agency views directly from admin. These are read-only previews, so the admin role always stays admin.
                             </p>
                         </div>
+                        <div className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+                            {profileType || metadataType || "admin"} stays admin
+                        </div>
                     </div>
-
-                    <div className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
-                        <div className="mb-5">
-                            <h2 className="text-lg font-semibold text-[#18181b]">Workspace Templates</h2>
-                            <p className="mt-1 text-sm text-[#71717a]">Shell-only UI templates for worker, employer, and agency. Use the admin lists below to inspect real accounts with real data.</p>
-                        </div>
-                        <div className="grid gap-3 md:grid-cols-3">
-                            {previewCards.map((card) => (
-                                <Link key={card.href} href={card.href} className="rounded-2xl border border-[#ebe7df] bg-[#fcfcfb] px-4 py-4 transition hover:border-[#d7d0c6] hover:bg-white">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111111] text-white">
-                                        {card.icon}
-                                    </div>
-                                    <div className="mt-4 text-sm font-semibold text-[#18181b]">{card.title}</div>
-                                    <div className="mt-2 text-sm text-[#57534e]">{card.description}</div>
-                                    <div className="mt-3 text-xs text-[#78716c]">{card.meta}</div>
-                                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#111111]">
-                                        Open preview
-                                        <ChevronRight size={14} />
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                        {previewCards.map((card) => (
+                            <Link key={card.href} href={card.href} className="rounded-2xl border border-[#ebe7df] bg-[#fcfcfb] px-4 py-4 transition hover:border-[#d7d0c6] hover:bg-white">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111111] text-white">
+                                    {card.icon}
+                                </div>
+                                <div className="mt-4 text-sm font-semibold text-[#18181b]">{card.title}</div>
+                                <div className="mt-2 text-sm text-[#57534e]">{card.description}</div>
+                                <div className="mt-3 text-xs text-[#78716c]">{card.meta}</div>
+                                <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#111111]">
+                                    Open preview
+                                    <ChevronRight size={14} />
+                                </div>
+                            </Link>
+                        ))}
                     </div>
                 </section>
 

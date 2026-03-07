@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 07.03.2026 (Admin/workspace consistency pass 5: `/admin/workers/[id]` više nije mešavina starog i novog UI-ja, već koristi isti ops-card sistem za profil, approval/status, payments, contract payload, signature i document review; pomoćne admin kartice (`DocumentPreview`, `ManualMatchButton`, `SingleWorkerDownload`, `ReVerifyButton`, document modal trigger) vizuelno su poravnate sa novim admin shell-om i copy-em)
+> **Poslednje ažuriranje:** 07.03.2026 (Admin simplification follow-up: admin sidebar više ne prikazuje pogrešan `Worker Overview` label na dashboardu, već jasan `Dashboard`; vraćeni su direktni `Preview Worker / Employer / Agency` ulazi u admin navigaciju, a `/admin` preview sekcija više ne zavisi od adminovih sopstvenih legacy role redova nego prikazuje čiste read-only preview entry pointe bez role konfuzije)
 
 ---
 
@@ -270,6 +270,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Admin simplification follow-up: `/admin` više ne zavisi od adminovih sopstvenih legacy worker/employer/agency redova za preview kartice; sidebar sada jasno nudi `Dashboard` + direktne `Preview Worker / Employer / Agency` ulaze, pa admin može odmah da vidi kako role izgledaju bez role drift konfuzije — 07.03.2026
 - [x] Admin/workspace consistency pass 5: `/admin/workers/[id]` prepakovan u jedinstven admin ops-card sistem (profile snapshot, approval/status, payments, contract payload, signature, documents), a pomoćne admin kartice za doc preview, manual match, download i re-verify vizuelno poravnate sa ostatkom admin shell-a — 07.03.2026
 - [x] Admin/workspace consistency pass 4: `/admin/workers/[id]` više ne ulazi direktno u stari long-form case view, već otvara admin hero + inspect prečice za worker/documents/queue; `/admin/queue` i `/admin/jobs` su poravnati na isti admin ops hero/guidance/layout sistem kao ostatak admina — 07.03.2026
 - [x] Admin/workspace consistency pass 3: admin sidebar više ne nudi zbunjujuće role preview linkove, uveden je zajednički `AdminSectionHero` za workers/employers/agencies registry stranice, a worker admin tabela sada jasno odvaja `Inspect workspace` od `Open case`; employer i agency admin liste dele isti operativni layout, metrike i inspect jezik — 07.03.2026
