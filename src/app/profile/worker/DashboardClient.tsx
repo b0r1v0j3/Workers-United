@@ -268,9 +268,9 @@ export default function DashboardClient({
                         <h3 className="text-lg font-semibold text-[#18181b]">{nextAction.title}</h3>
                         <p className="mt-2 text-sm leading-relaxed text-[#57534e]">{nextAction.copy}</p>
                         <div className="mt-5 grid gap-3">
-                            <LinkCard href="/profile/worker/edit" title="Profile editor" copy="Update personal details, preferences, and passport data." disabled={readOnlyPreview} />
+                            <LinkCard href="/profile/worker/edit" title="Profile" copy="Update personal details, preferences, and passport data." disabled={readOnlyPreview} />
                             <LinkCard href="/profile/worker/documents" title="Documents" copy="Upload or review passport, biometric photo, and diploma." />
-                            <LinkCard href="/profile/worker/queue" title="Queue & Status" copy="Track payment, queue state, and any active offer." />
+                            <LinkCard href="/profile/worker/queue" title="Queue" copy="Track payment, queue state, and any active offer." />
                         </div>
                     </div>
 
@@ -329,9 +329,9 @@ export default function DashboardClient({
                                 ) : inQueue || paymentPendingActivation || activeOfferCount > 0 ? (
                                     <Link
                                         href="/profile/worker/queue"
-                                        className="inline-flex items-center justify-center rounded-xl border border-[#dedad2] bg-white px-5 py-2.5 text-sm font-semibold text-[#18181b] shadow-sm transition hover:bg-[#faf8f3]"
-                                    >
-                                        Open Queue & Status
+                                            className="inline-flex items-center justify-center rounded-xl border border-[#dedad2] bg-white px-5 py-2.5 text-sm font-semibold text-[#18181b] shadow-sm transition hover:bg-[#faf8f3]"
+                                        >
+                                        Open Queue
                                     </Link>
                                 ) : (
                                     <PayButton displayName={displayName} payLoading={payLoading} onPay={handlePay} />

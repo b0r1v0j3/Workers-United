@@ -168,7 +168,7 @@ export default async function AdminDashboard() {
         { href: "/admin/employers", label: "Employers", meta: `${totalEmployers} total`, icon: <Building2 size={18} /> },
         { href: "/admin/agencies", label: "Agencies", meta: `${agencies?.length || 0} total`, icon: <Users size={18} /> },
         { href: "/admin/queue", label: "Queue", meta: `${statusCounts.IN_QUEUE || 0} in queue`, icon: <ListOrdered size={18} /> },
-        { href: "/admin/jobs", label: "Jobs", meta: `${pendingEmployers.length} pending employers`, icon: <ChevronRight size={18} /> },
+        { href: "/admin/jobs", label: "Jobs", meta: "job requests and matching", icon: <ChevronRight size={18} /> },
         { href: "/admin/inbox", label: "Inbox", meta: `${waitingOnSupportThreads} waiting on support`, icon: <MessageSquareMore size={18} /> },
         { href: "/admin/analytics", label: "Analytics", meta: "charts and funnel", icon: <BarChart3 size={18} /> },
     ];
@@ -188,22 +188,22 @@ export default async function AdminDashboard() {
         {
             href: "/profile/worker",
             title: "Preview Worker",
-            description: "See the worker workspace exactly as the product looks, in read-only mode.",
-            meta: "Use worker list rows to inspect real worker data.",
+            description: "Open the worker workspace UI in read-only mode.",
+            meta: "Real worker inspection lives in the Workers list.",
             icon: <User size={18} />,
         },
         {
             href: "/profile/employer",
             title: "Preview Employer",
-            description: "Open the employer workspace shell without changing the admin role or company data.",
-            meta: "Use employer list rows to inspect real employer accounts.",
+            description: "Open the employer workspace UI in read-only mode.",
+            meta: "Real employer inspection lives in the Employers list.",
             icon: <Building2 size={18} />,
         },
         {
             href: "/profile/agency",
             title: "Preview Agency",
-            description: "Open the agency dashboard shell in read-only mode without creating drafts or agency rows.",
-            meta: "Use agency list rows to inspect real agencies and their workers.",
+            description: "Open the agency workspace UI in read-only mode.",
+            meta: "Real agency inspection lives in the Agencies list.",
             icon: <Users size={18} />,
         },
     ] as const;
@@ -220,7 +220,7 @@ export default async function AdminDashboard() {
                             </div>
                             <h1 className="text-3xl font-semibold tracking-tight text-[#18181b]">Operations Dashboard</h1>
                             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e]">
-                                One place for blocked approvals, queue risk, payments, and the fastest paths into workers, employers, review, jobs, and analytics.
+                                One place for workers, employers, agencies, queue risk, payments, review, and support.
                             </p>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -235,9 +235,9 @@ export default async function AdminDashboard() {
                 <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
                     <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
                         <div>
-                            <h2 className="text-lg font-semibold text-[#18181b]">Preview Modes</h2>
+                            <h2 className="text-lg font-semibold text-[#18181b]">Open a Preview</h2>
                             <p className="mt-1 max-w-2xl text-sm text-[#71717a]">
-                                Open worker, employer, or agency views directly from admin. These are read-only previews, so the admin role always stays admin.
+                                Use these buttons when you want to see the worker, employer, or agency UI. Use the lists below when you want to inspect a real account.
                             </p>
                         </div>
                         <div className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">

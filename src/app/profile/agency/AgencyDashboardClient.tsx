@@ -143,7 +143,7 @@ export default function AgencyDashboardClient({ agency, stats, workers, readOnly
                         </div>
                         <h1 className="text-3xl font-semibold tracking-tight text-[#18181b]">{agency.displayName}</h1>
                         <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#57534e]">
-                            Track agency-submitted workers, monitor readiness, and keep every profile moving toward verification and payment.
+                            Add workers, finish their profiles, and track readiness, claim status, documents, and payment in one place.
                         </p>
                         <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#8a8479]">
                             {agency.contactEmail}
@@ -170,22 +170,22 @@ export default function AgencyDashboardClient({ agency, stats, workers, readOnly
                                     <UserPlus size={20} />
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-semibold text-[#18181b]">How agencies add a worker</h2>
-                                    <p className="text-sm text-[#71717a]">Admin preview is read-only, but the real agency flow starts with this intake and continues in the full worker workspace.</p>
+                                    <h2 className="text-lg font-semibold text-[#18181b]">Worker intake preview</h2>
+                                    <p className="text-sm text-[#71717a]">This shows the real intake form agencies use before the full worker workspace opens.</p>
                                 </div>
                             </div>
 
                             <div className="space-y-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-5 text-sm text-blue-950">
                                 <p className="font-medium">
-                                    Real agencies start with a draft here, then continue inside the same worker workspace used for the full worker profile.
+                                    Real agencies start here, then continue inside the full worker workspace.
                                 </p>
                                 <div className="space-y-2 text-blue-900/80">
                                     <p>Email and phone stay optional. Add them only if the worker should receive notifications or a claim link.</p>
-                                    <p>Preview mode shows the exact intake structure, but creation stays disabled and always returns to the admin panel.</p>
+                                    <p>Preview mode keeps creation disabled and always returns to the admin panel.</p>
                                 </div>
                             </div>
 
-                            <AgencyFlowSteps />
+                            <AgencyChecklist />
 
                             <div className="mt-5">
                                 <AgencyWorkerDraftForm
@@ -204,12 +204,12 @@ export default function AgencyDashboardClient({ agency, stats, workers, readOnly
                                     <UserPlus size={20} />
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-semibold text-[#18181b]">Start the worker intake here</h2>
-                                    <p className="text-sm text-[#71717a]">Create the draft first, then continue inside the full worker workspace with all remaining worker fields.</p>
+                                    <h2 className="text-lg font-semibold text-[#18181b]">Add worker</h2>
+                                    <p className="text-sm text-[#71717a]">Start with the basics here. The full worker profile opens immediately after the draft is created.</p>
                                 </div>
                             </div>
 
-                            <AgencyFlowSteps />
+                            <AgencyChecklist />
 
                             <AgencyWorkerDraftForm
                                 form={form}
@@ -225,14 +225,14 @@ export default function AgencyDashboardClient({ agency, stats, workers, readOnly
                 <div className="rounded-[26px] border border-[#e6e6e1] bg-white p-6 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.3)]">
                     <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <h2 className="text-lg font-semibold text-[#18181b]">Agency Workers</h2>
-                            <p className="text-sm text-[#71717a]">Every worker your agency submitted, with readiness and payment signals in one place.</p>
+                            <h2 className="text-lg font-semibold text-[#18181b]">Workers</h2>
+                            <p className="text-sm text-[#71717a]">See every worker, their readiness, documents, payment, and claim state at a glance.</p>
                         </div>
                         <label className="relative block w-full max-w-xs">
                             <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#a1a1aa]" />
                             <input
                                 className="w-full rounded-2xl border border-[#e4e4df] bg-[#fafaf8] py-3 pl-11 pr-4 text-sm text-[#18181b] outline-none transition focus:border-[#111111]"
-                                placeholder="Search workers"
+                                placeholder="Search name, email, phone"
                                 value={search}
                                 onChange={(event) => setSearch(event.target.value)}
                             />
@@ -244,8 +244,8 @@ export default function AgencyDashboardClient({ agency, stats, workers, readOnly
                             <p className="text-base font-semibold text-[#292524]">No workers found</p>
                             <p className="mt-2 text-sm text-[#78716c]">
                                 {readOnlyPreview
-                                    ? "Real agency-submitted workers appear here after drafts are created."
-                                    : "Create the first worker draft in the left card. The system will immediately open the full worker workspace after creation."}
+                                    ? "Real agency workers appear here after drafts are created."
+                                    : "Add the first worker on the left. The full worker profile opens immediately after creation."}
                             </p>
                         </div>
                     ) : (
@@ -332,37 +332,30 @@ function AgencyWorkerDraftForm({
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111111] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2b2b] disabled:cursor-not-allowed disabled:opacity-70"
             >
                 {isCreating ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
-                {disabled ? "Preview: Creation Disabled" : "Create Draft and Open Worker Workspace"}
+                {disabled ? "Preview Only" : "Add Worker"}
             </button>
         </form>
     );
 }
 
-function AgencyFlowSteps() {
-    const steps = [
-        {
-            title: "Create draft",
-            copy: "Add the worker name first. Email and phone stay optional unless you want the worker to receive notifications.",
-        },
-        {
-            title: "Continue in worker workspace",
-            copy: "After the draft is created, the agency continues in the same full worker workspace used for the complete worker profile.",
-        },
-        {
-            title: "Handle docs and payment",
-            copy: "After the worker claims the profile, the agency can manage documents, verification, and Job Finder payment.",
-        },
+function AgencyChecklist() {
+    const items = [
+        "Start with the worker name. Email and phone stay optional unless the worker should receive notifications.",
+        "After creation, continue inside the full worker profile with the same core fields the worker sees.",
+        "Once claimed, the agency can handle documents, verification, and Job Finder payment.",
     ];
 
     return (
-        <div className="mt-5 grid gap-3">
-            {steps.map((step, index) => (
-                <div key={step.title} className="rounded-2xl border border-[#ebe7df] bg-[#faf8f3] px-4 py-3">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">Step {index + 1}</div>
-                    <div className="mt-1 text-sm font-semibold text-[#18181b]">{step.title}</div>
-                    <p className="mt-1 text-sm leading-relaxed text-[#57534e]">{step.copy}</p>
-                </div>
-            ))}
+        <div className="mt-5 rounded-2xl border border-[#ebe7df] bg-[#faf8f3] px-4 py-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">How it works</div>
+            <div className="mt-3 space-y-3">
+                {items.map((item) => (
+                    <div key={item} className="flex items-start gap-3 text-sm leading-relaxed text-[#57534e]">
+                        <span className="mt-2 h-2 w-2 rounded-full bg-[#18181b]" />
+                        <span>{item}</span>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
@@ -462,7 +455,7 @@ function WorkerRow({
                         href={workerHref}
                         className="inline-flex items-center gap-2 font-semibold text-[#18181b] transition hover:text-[#4f46e5]"
                     >
-                        {worker.claimed ? "Open worker workspace" : "Open draft workspace"}
+                        {worker.claimed ? "Open worker" : "Open draft"}
                         <ArrowRight size={15} />
                     </Link>
                 </div>
