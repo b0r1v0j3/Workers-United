@@ -5,6 +5,7 @@ import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import { isReportablePaymentProfile } from "@/lib/reporting";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -88,8 +89,11 @@ export default async function AdminDashboard() {
     }
     const avgCompletion = completionCount > 0 ? Math.round(completionTotal / completionCount) : 0;
 
-    const successfulPayments = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || ""));
-    const pendingEntryPayments = (payments || []).filter((payment: any) => payment.payment_type === "entry_fee" && payment.status === "pending").length;
+    const reportablePayments = (payments || []).filter((payment: any) =>
+        isReportablePaymentProfile(payment.profile_id ? profileMap.get(payment.profile_id) || null : null)
+    );
+    const successfulPayments = reportablePayments.filter((payment: any) => ["completed", "paid"].includes(payment.status || ""));
+    const pendingEntryPayments = reportablePayments.filter((payment: any) => payment.payment_type === "entry_fee" && payment.status === "pending").length;
     const supportInboxThreads = supportConversations?.length || 0;
     const waitingOnSupportThreads = (supportConversations || []).filter((conversation: any) => conversation.status === "waiting_on_support").length;
     const totalRevenue = successfulPayments.reduce((sum: number, payment: any) => {

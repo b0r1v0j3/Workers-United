@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 07.03.2026 (Workspace simplification pass: `AppShell` sada koristi kraći zajednički jezik (`Overview`, `Queue`, `Support`, `New Job Request`) i bez duplih employer/agency shortcut-a; admin preview banner i `/admin` preview sekcija su skraćeni i jasniji; worker landing copy je poravnat na `Profile / Documents / Queue`; agency dashboard je sveden na jasan `Add worker` intake + kraći checklist; employer workspace je prebačen na jednostavniji `Next action + Hiring status` obrazac umesto mešavine flow copy-ja i tabova)
+> **Poslednje ažuriranje:** 07.03.2026 (Admin revenue metrics cleanup: `/admin` dashboard i analytics više ne broje Codex/test/orphan payment redove kao stvaran prihod; workspace simplification pass: `AppShell` sada koristi kraći zajednički jezik (`Overview`, `Queue`, `Support`, `New Job Request`) i bez duplih employer/agency shortcut-a; admin preview banner i `/admin` preview sekcija su skraćeni i jasniji; worker landing copy je poravnat na `Profile / Documents / Queue`; agency dashboard je sveden na jasan `Add worker` intake + kraći checklist; employer workspace je prebačen na jednostavniji `Next action + Hiring status` obrazac umesto mešavine flow copy-ja i tabova)
 
 ---
 
@@ -270,6 +270,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Admin revenue + analytics metrics cleanup: `reporting.ts` uvodi filter za Codex/test/internal-orphan payment profile-e, pa `/admin` i `funnel-metrics` više ne sabiraju sintetičke uplate u stvaran prihod — 07.03.2026
 - [x] Workspace simplification pass: `AppShell` sada koristi kraće zajedničke role nazive (`Overview`, `Queue`, `Support`, `New Job Request`) i bez duplih shortcut-a; worker landing je poravnat na `Profile / Documents / Queue`, agency dashboard na jasan `Add worker` intake + sažet checklist, employer workspace na `Next action + Hiring status`, a `/admin` preview copy dodatno očišćen — 07.03.2026
 - [x] Admin simplification follow-up: `/admin` više ne zavisi od adminovih sopstvenih legacy worker/employer/agency redova za preview kartice; sidebar sada jasno nudi `Dashboard` + direktne `Preview Worker / Employer / Agency` ulaze, pa admin može odmah da vidi kako role izgledaju bez role drift konfuzije — 07.03.2026
 - [x] Admin/workspace consistency pass 5: `/admin/workers/[id]` prepakovan u jedinstven admin ops-card sistem (profile snapshot, approval/status, payments, contract payload, signature, documents), a pomoćne admin kartice za doc preview, manual match, download i re-verify vizuelno poravnate sa ostatkom admin shell-a — 07.03.2026
