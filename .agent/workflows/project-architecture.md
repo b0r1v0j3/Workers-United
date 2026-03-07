@@ -62,7 +62,7 @@ Workers-United/
 │   │   │   ├── layout.tsx     # Admin layout (AppShell)
 │   │   │   ├── agencies/      # Agency registry with shared admin hero/metrics layout + direct agency workspace inspect links
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
-│   │   │   ├── workers/       # Worker registry + [id] case detail; table now separates inspect-workspace from admin case actions
+│   │   │   ├── workers/       # Worker registry + [id] case detail; table now separates inspect-workspace from admin case actions, and worker case detail now opens with admin hero + inspect shortcuts into worker/documents/queue workspaces
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout
 │   │   │   ├── queue/         # Queue management
 │   │   │   ├── jobs/          # Job listings
