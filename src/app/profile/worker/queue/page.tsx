@@ -5,6 +5,7 @@ import { normalizeUserType } from "@/lib/domain";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
 
 export const dynamic = "force-dynamic";
@@ -32,14 +33,14 @@ export default async function QueuePage({
     const targetProfileId = inspectProfileId || user.id;
     const dataClient = inspectProfileId ? createAdminClient() : supabase;
 
-    // Get candidate with queue info
-    const { data: candidate } = await dataClient
-        .from("candidates")
-        .select("*")
-        .eq("profile_id", targetProfileId)
-        .maybeSingle();
+    // Get canonical worker record with queue info
+    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(
+        dataClient,
+        targetProfileId,
+        "*"
+    );
 
-    if (!candidate) {
+    if (!workerRecord) {
         redirect(inspectProfileId ? "/admin/workers" : "/profile/worker");
     }
 
@@ -50,7 +51,7 @@ export default async function QueuePage({
       *,
       job_requests(*, employers(company_name))
     `)
-        .eq("candidate_id", candidate.id)
+        .eq("worker_id", workerRecord.id)
         .eq("status", "pending")
         .order("expires_at", { ascending: true });
 
@@ -64,14 +65,14 @@ export default async function QueuePage({
         .maybeSingle();
 
     const hasPaidEntryFee =
-        !!candidate.entry_fee_paid ||
+        !!workerRecord.entry_fee_paid ||
         !!completedEntryPayment?.id ||
-        isPostEntryFeeWorkerStatus(candidate.status);
+        isPostEntryFeeWorkerStatus(workerRecord.status);
 
     const hasPendingOffer = (pendingOffers?.length || 0) > 0;
-    const statusDriftWithoutOffer = candidate.status === "OFFER_PENDING" && !hasPendingOffer;
+    const statusDriftWithoutOffer = workerRecord.status === "OFFER_PENDING" && !hasPendingOffer;
     const paymentAcceptedNoOffer = hasPaidEntryFee && !hasPendingOffer;
-    const queueJoinedSource = candidate.queue_joined_at || completedEntryPayment?.paid_at || null;
+    const queueJoinedSource = workerRecord.queue_joined_at || completedEntryPayment?.paid_at || null;
     const queueJoinedDate = queueJoinedSource
         ? new Date(queueJoinedSource)
         : null;
@@ -201,8 +202,8 @@ export default async function QueuePage({
                     ) : (
                         // Other status
                         <div className="text-center py-4">
-                            <p className="text-[#65676b]">
-                                Status: <strong>{candidate.status}</strong>
+                                <p className="text-[#65676b]">
+                                Status: <strong>{workerRecord.status}</strong>
                             </p>
                         </div>
                     )}

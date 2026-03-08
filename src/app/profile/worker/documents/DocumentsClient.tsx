@@ -4,12 +4,13 @@ import DocumentWizard from "@/components/DocumentWizard";
 import { CheckCircle2, AlertCircle, Loader2, Upload, Clock, FileText } from "lucide-react";
 
 interface DocumentsClientProps {
-    candidateId: string;
+    workerProfileId: string;
     email: string;
     documents: any[];
+    readOnlyPreview?: boolean;
 }
 
-export default function DocumentsClient({ candidateId, email, documents }: DocumentsClientProps) {
+export default function DocumentsClient({ workerProfileId, email, documents, readOnlyPreview = false }: DocumentsClientProps) {
 
     const getDocStatus = (type: string) => {
         const doc = documents.find(d => d.document_type === type);
@@ -24,13 +25,17 @@ export default function DocumentsClient({ candidateId, email, documents }: Docum
 
     return (
         <div className="w-full space-y-6">
-            {!hasAllDocs && (
+            {readOnlyPreview ? (
+                <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 text-sm text-blue-900">
+                    Admin preview is read-only. Document upload is disabled here.
+                </div>
+            ) : !hasAllDocs && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                     <div className="mb-6">
                         <h3 className="font-semibold text-gray-900 text-xl">Upload Documents</h3>
                         <p className="text-gray-500 mt-1">Please ensure all documents are clear and readable.</p>
                     </div>
-                    <DocumentWizard candidateId={candidateId} email={email} />
+                    <DocumentWizard workerProfileId={workerProfileId} email={email} />
                 </div>
             )}
 

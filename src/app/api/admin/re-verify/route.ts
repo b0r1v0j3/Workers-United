@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         // Fetch the document
         const { data: doc, error: docErr } = await admin
-            .from("candidate_documents")
+            .from("worker_documents")
             .select("*")
             .eq("id", documentId)
             .single();
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         // Reset status to "verifying" so the worker sees it's being processed
         await admin
-            .from("candidate_documents")
+            .from("worker_documents")
             .update({
                 status: "verifying",
                 verification_result: null,
@@ -56,12 +56,7 @@ export async function POST(request: NextRequest) {
             })
             .eq("id", documentId);
 
-        // Build the public URL for the document
-        const storageUrl = doc.storage_path
-            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`
-            : null;
-
-        if (!storageUrl) {
+        if (!doc.storage_path) {
             return NextResponse.json({ error: "Document has no storage path" }, { status: 400 });
         }
 
@@ -78,7 +73,7 @@ export async function POST(request: NextRequest) {
                 Cookie: request.headers.get("cookie") || "",
             },
             body: JSON.stringify({
-                candidateId: doc.user_id,
+                workerId: doc.user_id,
                 docType: doc.document_type,
             }),
         });
@@ -88,7 +83,7 @@ export async function POST(request: NextRequest) {
         if (!verifyRes.ok) {
             // Reset status back to pending on failure
             await admin
-                .from("candidate_documents")
+                .from("worker_documents")
                 .update({
                     status: "pending",
                     admin_notes: `Re-verification failed: ${verifyData.error || "Unknown error"}`,

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Users,
@@ -16,13 +16,8 @@ import {
     Plus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getWorkerCompletion } from "@/lib/profile-completion";
-import AgencyWorkerCreateModal, {
-    type AgencyWorkerModalPayload,
-    type AgencyWorkerPreviewDraft,
-} from "./AgencyWorkerCreateModal";
+import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 
-const previewStorageKey = "wu-admin-agency-preview-workers";
 const surfaceClass = "rounded-[28px] border border-[#e7e7e5] bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
 
 export interface AgencyDashboardProps {
@@ -59,58 +54,7 @@ export interface AgencyDashboardProps {
     inspectProfileId?: string | null;
 }
 
-type DashboardWorker = AgencyDashboardProps["workers"][number] & {
-    kind: "live" | "preview";
-    previewDraft?: AgencyWorkerPreviewDraft;
-};
-
-function previewDraftToWorker(draft: AgencyWorkerPreviewDraft): DashboardWorker {
-    const payload: AgencyWorkerModalPayload = draft.payload;
-    const completion = getWorkerCompletion({
-        profile: { full_name: payload.fullName },
-        candidate: {
-            phone: payload.phone || null,
-            nationality: payload.nationality || null,
-            current_country: payload.currentCountry || null,
-            preferred_job: payload.preferredJob || null,
-            gender: payload.gender || null,
-            date_of_birth: payload.dateOfBirth || null,
-            birth_country: payload.birthCountry || null,
-            birth_city: payload.birthCity || null,
-            citizenship: payload.citizenship || null,
-            marital_status: payload.maritalStatus || null,
-            passport_number: payload.passportNumber || null,
-            passport_issued_by: payload.passportIssuedBy || null,
-            passport_issue_date: payload.passportIssueDate || null,
-            passport_expiry_date: payload.passportExpiryDate || null,
-            lives_abroad: payload.livesAbroad || null,
-            previous_visas: payload.previousVisas || null,
-            family_data: payload.familyData,
-        },
-        documents: [],
-    }, { phoneOptional: true }).completion;
-
-    return {
-        kind: "preview",
-        previewDraft: draft,
-        id: draft.id,
-        name: payload.fullName || "Untitled worker",
-        email: payload.email || null,
-        phone: payload.phone || null,
-        nationality: payload.nationality || null,
-        currentCountry: payload.currentCountry || null,
-        preferredJob: payload.preferredJob || null,
-        status: "DRAFT",
-        completion,
-        claimed: false,
-        claimLabel: "Sandbox draft",
-        claimPath: null,
-        verifiedDocuments: 0,
-        documentsLabel: "0/3 verified",
-        paymentLabel: "Not paid",
-        updatedAt: draft.updatedAt,
-    };
-}
+type DashboardWorker = AgencyDashboardProps["workers"][number];
 
 export default function AgencyDashboardClient({
     agency,
@@ -120,82 +64,17 @@ export default function AgencyDashboardClient({
     inspectProfileId = null,
 }: AgencyDashboardProps) {
     const router = useRouter();
-    const sandboxPreview = readOnlyPreview && !inspectProfileId;
+    const genericPreview = readOnlyPreview && !inspectProfileId;
     const [search, setSearch] = useState("");
     const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
-    const [activePreviewDraft, setActivePreviewDraft] = useState<AgencyWorkerPreviewDraft | null>(null);
-    const [previewDrafts, setPreviewDrafts] = useState<AgencyWorkerPreviewDraft[]>(() => {
-        if (typeof window === "undefined" || !(readOnlyPreview && !inspectProfileId)) {
-            return [];
-        }
-
-        try {
-            const raw = window.localStorage.getItem(previewStorageKey);
-            if (!raw) {
-                return [];
-            }
-
-            const parsed = JSON.parse(raw);
-            if (!Array.isArray(parsed)) {
-                return [];
-            }
-
-            return parsed.filter((item): item is AgencyWorkerPreviewDraft =>
-                Boolean(item)
-                && typeof item === "object"
-                && typeof (item as AgencyWorkerPreviewDraft).id === "string"
-                && typeof (item as AgencyWorkerPreviewDraft).updatedAt === "string"
-                && Boolean((item as AgencyWorkerPreviewDraft).payload)
-            );
-        } catch {
-            return [];
-        }
-    });
-
-    useEffect(() => {
-        if (!sandboxPreview || typeof window === "undefined") {
-            return;
-        }
-
-        window.localStorage.setItem(previewStorageKey, JSON.stringify(previewDrafts));
-    }, [previewDrafts, sandboxPreview]);
-
-    const previewWorkers = useMemo<DashboardWorker[]>(
-        () => sandboxPreview ? previewDrafts.map(previewDraftToWorker) : [],
-        [previewDrafts, sandboxPreview]
-    );
-
-    const liveWorkers = useMemo<DashboardWorker[]>(
-        () => workers.map((worker) => ({ ...worker, kind: "live" as const })),
-        [workers]
-    );
-
-    const allWorkers = useMemo(
-        () => [...previewWorkers, ...liveWorkers],
-        [previewWorkers, liveWorkers]
-    );
-
-    const visibleStats = useMemo(() => {
-        if (!sandboxPreview && previewWorkers.length === 0) {
-            return stats;
-        }
-
-        return {
-            totalWorkers: allWorkers.length,
-            claimedWorkers: allWorkers.filter((worker) => worker.claimed).length,
-            readyWorkers: allWorkers.filter((worker) => worker.completion === 100 && worker.verifiedDocuments >= 3).length,
-            paidWorkers: allWorkers.filter((worker) => worker.paymentLabel === "Paid").length,
-            draftWorkers: allWorkers.filter((worker) => !worker.claimed).length,
-        };
-    }, [allWorkers, previewWorkers.length, sandboxPreview, stats]);
 
     const filteredWorkers = useMemo(() => {
         const query = search.trim().toLowerCase();
         if (!query) {
-            return allWorkers;
+            return workers;
         }
 
-        return allWorkers.filter((worker) =>
+        return workers.filter((worker) =>
             [
                 worker.name,
                 worker.email || "",
@@ -207,27 +86,14 @@ export default function AgencyDashboardClient({
                 worker.claimLabel,
             ].some((value) => value.toLowerCase().includes(query))
         );
-    }, [allWorkers, search]);
+    }, [search, workers]);
 
     function openNewWorkerModal() {
-        setActivePreviewDraft(null);
         setIsWorkerModalOpen(true);
     }
 
     function closeWorkerModal() {
-        setActivePreviewDraft(null);
         setIsWorkerModalOpen(false);
-    }
-
-    function handlePreviewSave(draft: AgencyWorkerPreviewDraft) {
-        setPreviewDrafts((current) => {
-            const next = current.some((item) => item.id === draft.id)
-                ? current.map((item) => item.id === draft.id ? draft : item)
-                : [draft, ...current];
-
-            return next.sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime());
-        });
-        closeWorkerModal();
     }
 
     function handleLiveSave() {
@@ -247,7 +113,7 @@ export default function AgencyDashboardClient({
                             </div>
                             <h1 className="text-3xl font-semibold tracking-tight text-[#111827]">{agency.displayName}</h1>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                One place for every worker profile. Add a worker from here and keep the dashboard open while you fill the full form in a popup.
+                                One place for every worker profile. Open the full worker form from here and keep the workspace visible while you review it.
                             </p>
                             <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#9ca3af]">
                                 {agency.contactEmail}
@@ -255,11 +121,11 @@ export default function AgencyDashboardClient({
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                            <StatCard label="Total" value={visibleStats.totalWorkers} icon={<Users size={18} />} />
-                            <StatCard label="Claimed" value={visibleStats.claimedWorkers} icon={<BadgeCheck size={18} />} />
-                            <StatCard label="Ready" value={visibleStats.readyWorkers} icon={<FileCheck2 size={18} />} />
-                            <StatCard label="Paid" value={visibleStats.paidWorkers} icon={<CreditCard size={18} />} />
-                            <StatCard label="Drafts" value={visibleStats.draftWorkers} icon={<UserPlus size={18} />} />
+                            <StatCard label="Total" value={stats.totalWorkers} icon={<Users size={18} />} />
+                            <StatCard label="Claimed" value={stats.claimedWorkers} icon={<BadgeCheck size={18} />} />
+                            <StatCard label="Ready" value={stats.readyWorkers} icon={<FileCheck2 size={18} />} />
+                            <StatCard label="Paid" value={stats.paidWorkers} icon={<CreditCard size={18} />} />
+                            <StatCard label="Drafts" value={stats.draftWorkers} icon={<UserPlus size={18} />} />
                         </div>
                     </div>
                 </section>
@@ -319,7 +185,7 @@ export default function AgencyDashboardClient({
                                                     </div>
                                                     <h3 className="mt-4 text-lg font-semibold text-[#111827]">No workers yet</h3>
                                                     <p className="mt-2 max-w-md text-sm leading-relaxed text-[#6b7280]">
-                                                        Use the Add worker button above to create the first worker. The popup stays on top of the dashboard and asks before closing if anything changed.
+                                                        Use the Add worker button above to open the full worker form without leaving this workspace.
                                                     </p>
                                                 </div>
                                             </td>
@@ -327,14 +193,10 @@ export default function AgencyDashboardClient({
                                     ) : (
                                         filteredWorkers.map((worker) => (
                                             <WorkerTableRow
-                                                key={`${worker.kind}-${worker.id}`}
+                                                key={worker.id}
                                                 worker={worker}
                                                 inspectProfileId={inspectProfileId}
-                                                sandboxPreview={sandboxPreview}
-                                                onOpenPreviewDraft={(draft) => {
-                                                    setActivePreviewDraft(draft);
-                                                    setIsWorkerModalOpen(true);
-                                                }}
+                                                readOnlyPreview={readOnlyPreview}
                                             />
                                         ))
                                     )}
@@ -347,11 +209,9 @@ export default function AgencyDashboardClient({
 
             <AgencyWorkerCreateModal
                 open={isWorkerModalOpen}
-                readOnlyPreview={sandboxPreview}
+                readOnlyPreview={genericPreview}
                 inspectProfileId={inspectProfileId}
-                initialDraft={activePreviewDraft}
                 onClose={closeWorkerModal}
-                onPreviewSave={handlePreviewSave}
                 onLiveSave={handleLiveSave}
             />
         </>
@@ -373,13 +233,11 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
 function WorkerTableRow({
     worker,
     inspectProfileId,
-    sandboxPreview,
-    onOpenPreviewDraft,
+    readOnlyPreview,
 }: {
     worker: DashboardWorker;
     inspectProfileId: string | null;
-    sandboxPreview: boolean;
-    onOpenPreviewDraft: (draft: AgencyWorkerPreviewDraft) => void;
+    readOnlyPreview: boolean;
 }) {
     const workerHref = inspectProfileId
         ? `/profile/agency/workers/${worker.id}?inspect=${inspectProfileId}`
@@ -387,9 +245,7 @@ function WorkerTableRow({
 
     const statusClass = worker.claimed
         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-        : worker.kind === "preview"
-            ? "border-blue-200 bg-blue-50 text-blue-700"
-            : "border-amber-200 bg-amber-50 text-amber-700";
+        : "border-slate-200 bg-slate-50 text-slate-700";
 
     async function handleCopyClaimLink() {
         if (!worker.claimPath) {
@@ -421,32 +277,21 @@ function WorkerTableRow({
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.paymentLabel}</td>
             <td className="px-5 py-4 align-top">
                 <div className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusClass}`}>
-                    {worker.kind === "preview" ? "Sandbox draft" : worker.claimed ? "Claimed" : "Draft"}
+                    {worker.claimed ? "Claimed" : "Draft"}
                 </div>
                 <div className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">{worker.claimLabel}</div>
             </td>
             <td className="px-5 py-4 align-top">
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                    {worker.kind === "preview" && worker.previewDraft ? (
-                        <button
-                            type="button"
-                            onClick={() => onOpenPreviewDraft(worker.previewDraft!)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
-                        >
-                            Continue
-                            <ArrowRight size={14} />
-                        </button>
-                    ) : (
-                        <Link
-                            href={workerHref}
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
-                        >
-                            Open
-                            <ArrowRight size={14} />
-                        </Link>
-                    )}
+                    <Link
+                        href={workerHref}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
+                    >
+                        Open
+                        <ArrowRight size={14} />
+                    </Link>
 
-                    {!worker.claimed && worker.kind === "live" && !sandboxPreview && (
+                    {!worker.claimed && (!readOnlyPreview || Boolean(inspectProfileId)) && (
                         <button
                             type="button"
                             onClick={handleCopyClaimLink}

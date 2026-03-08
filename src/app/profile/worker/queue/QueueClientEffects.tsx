@@ -67,7 +67,15 @@ export default function QueueClientEffects() {
     return null;
 }
 
-export function PayToJoinButton({ displayName }: { displayName: string }) {
+export function PayToJoinButton({
+    displayName,
+    source = "queue_page",
+    redirectPath = "/profile/worker/queue",
+}: {
+    displayName: string;
+    source?: string;
+    redirectPath?: string;
+}) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -79,7 +87,7 @@ export function PayToJoinButton({ displayName }: { displayName: string }) {
         fetch("/api/track", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "payment_click", category: "funnel", details: { type: "entry_fee", source: "queue_page" } }),
+            body: JSON.stringify({ action: "payment_click", category: "funnel", details: { type: "entry_fee", source } }),
         }).catch(() => { });
 
         try {
@@ -94,7 +102,7 @@ export function PayToJoinButton({ displayName }: { displayName: string }) {
             if (!res.ok) {
                 if (typeof data.error === "string" && data.error.toLowerCase().includes("already paid")) {
                     toast.success("Payment already confirmed. Refreshing queue status.");
-                    window.location.href = "/profile/worker/queue";
+                    window.location.href = redirectPath;
                     return;
                 }
                 setError(data.error || "Something went wrong. Please try again.");

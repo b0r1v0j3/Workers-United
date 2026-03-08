@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { queueEmail } from "@/lib/email-templates";
 import { resolveWorkerStatusAfterEntryFee } from "@/lib/worker-status";
+import { finalizeConfirmationFeeOffer } from "@/lib/offer-finalization";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
     apiVersion: "2024-04-10",
@@ -40,10 +42,18 @@ export async function POST(req: NextRequest) {
         const paymentType = session.metadata?.payment_type || "entry_fee";
         const paymentId = session.metadata?.payment_id;
         const offerId = session.metadata?.offer_id;
+        const targetProfileId = session.metadata?.target_profile_id || userId;
+        const paidByProfileId = session.metadata?.paid_by_profile_id || userId;
+        const targetWorkerId = session.metadata?.target_worker_id || null;
 
         if (!userId) {
             console.error("No user_id found in session metadata");
             return NextResponse.json({ error: "No user_id in metadata" }, { status: 400 });
+        }
+
+        if (!targetProfileId) {
+            console.error("No target_profile_id found in session metadata");
+            return NextResponse.json({ error: "No target profile in metadata" }, { status: 400 });
         }
 
         try {
@@ -71,15 +81,19 @@ export async function POST(req: NextRequest) {
             };
 
             const paymentPayload = {
-                user_id: userId,
-                profile_id: userId,
+                user_id: targetProfileId,
+                profile_id: targetProfileId,
                 amount,
                 amount_cents: expectedAmountCents,
                 status: "completed",
                 stripe_checkout_session_id: session.id,
                 payment_type: paymentType,
                 paid_at: new Date().toISOString(),
-                metadata: paymentMetadata,
+                metadata: {
+                    ...paymentMetadata,
+                    paid_by_profile_id: paidByProfileId || null,
+                    target_worker_id: targetWorkerId || null,
+                },
             };
 
             if (paymentId) {
@@ -121,18 +135,21 @@ export async function POST(req: NextRequest) {
             // Handle post-payment actions based on type
             if (paymentType === "entry_fee") {
                 const nowIso = new Date().toISOString();
-                const { data: existingCandidate } = await supabase
-                    .from("candidates")
-                    .select("id, status, queue_joined_at, phone")
-                    .eq("profile_id", userId)
-                    .maybeSingle();
+                const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord(
+                    supabase,
+                    targetProfileId,
+                    "id, status, queue_joined_at, phone, updated_at, entry_fee_paid, job_search_active, nationality, current_country, preferred_job"
+                );
+                if (existingWorkerRecordError) {
+                    throw existingWorkerRecordError;
+                }
 
-                if (!existingCandidate) {
-                    const { error: candidateUpsertError } = await supabase
-                        .from("candidates")
+                if (!existingWorkerRecord) {
+                    const { error: workerRecordUpsertError } = await supabase
+                        .from("worker_onboarding")
                         .upsert(
                             {
-                                profile_id: userId,
+                                profile_id: targetProfileId,
                                 entry_fee_paid: true,
                                 status: "IN_QUEUE",
                                 queue_joined_at: nowIso,
@@ -141,8 +158,8 @@ export async function POST(req: NextRequest) {
                             },
                             { onConflict: "profile_id" }
                         );
-                    if (candidateUpsertError) {
-                        throw candidateUpsertError;
+                    if (workerRecordUpsertError) {
+                        throw workerRecordUpsertError;
                     }
                 } else {
                     const updatePayload: Record<string, unknown> = {
@@ -151,32 +168,38 @@ export async function POST(req: NextRequest) {
                         job_search_activated_at: nowIso,
                     };
 
-                    if (!existingCandidate.queue_joined_at) {
+                    if (!existingWorkerRecord.queue_joined_at) {
                         updatePayload.queue_joined_at = nowIso;
                     }
 
-                    const nextStatus = resolveWorkerStatusAfterEntryFee(existingCandidate.status);
-                    if (existingCandidate.status !== nextStatus) {
+                    const nextStatus = resolveWorkerStatusAfterEntryFee(existingWorkerRecord.status);
+                    if (existingWorkerRecord.status !== nextStatus) {
                         updatePayload.status = nextStatus;
                     }
 
-                    const { error: candidateUpdateError } = await supabase
-                        .from("candidates")
+                    const { error: workerRecordUpdateError } = await supabase
+                        .from("worker_onboarding")
                         .update(updatePayload)
-                        .eq("profile_id", userId);
-                    if (candidateUpdateError) {
-                        throw candidateUpdateError;
+                        .eq("profile_id", targetProfileId);
+                    if (workerRecordUpdateError) {
+                        throw workerRecordUpdateError;
                     }
                 }
 
-                await logServerActivity(userId, "payment_completed", "payment", { type: "entry_fee", amount: 9, currency: session.currency?.toUpperCase() || "USD" });
+                await logServerActivity(targetProfileId, "payment_completed", "payment", {
+                    type: "entry_fee",
+                    amount: 9,
+                    currency: session.currency?.toUpperCase() || "USD",
+                    paid_by_profile_id: paidByProfileId || null,
+                    target_worker_id: targetWorkerId,
+                });
 
                 // Send payment confirmation email
                 try {
                     const { data: existingPaymentEmail } = await supabase
                         .from("email_queue")
                         .select("id")
-                        .eq("user_id", userId)
+                        .eq("user_id", targetProfileId)
                         .eq("email_type", "payment_success")
                         .in("status", ["pending", "sent"])
                         .maybeSingle();
@@ -188,26 +211,26 @@ export async function POST(req: NextRequest) {
                     const { data: profile } = await supabase
                         .from("profiles")
                         .select("full_name, email")
-                        .eq("id", userId)
+                        .eq("id", targetProfileId)
                         .single();
 
-                    const { data: candidate } = await supabase
-                        .from("candidates")
-                        .select("phone")
-                        .eq("profile_id", userId)
-                        .single();
+                    const { data: workerRecord } = await loadCanonicalWorkerRecord(
+                        supabase,
+                        targetProfileId,
+                        "id, phone, updated_at"
+                    );
 
-                    const recipientEmail = session.customer_email || profile?.email || "";
+                    const recipientEmail = profile?.email || session.customer_email || "";
                     if (recipientEmail) {
                         await queueEmail(
                             supabase,
-                            userId,
+                            targetProfileId,
                             "payment_success",
                             recipientEmail,
                             profile?.full_name || "Worker",
                             { amount: "$9" },
                             undefined,
-                            candidate?.phone || undefined
+                            workerRecord?.phone || undefined
                         );
                     } else {
                         await logServerActivity(userId, "payment_success_email_skipped", "payment", {
@@ -219,25 +242,14 @@ export async function POST(req: NextRequest) {
                     // Don't fail the webhook for email errors
                 }
             } else if (paymentType === "confirmation_fee" && offerId) {
-                // Accept the offer
-                const { error: offerUpdateError } = await supabase
-                    .from("offers")
-                    .update({ status: "accepted", accepted_at: new Date().toISOString() })
-                    .eq("id", offerId);
-                if (offerUpdateError) {
-                    throw offerUpdateError;
-                }
+                await finalizeConfirmationFeeOffer(supabase, targetProfileId, offerId);
 
-                // Update candidate status
-                const { error: candidateStatusError } = await supabase
-                    .from("candidates")
-                    .update({ status: "OFFER_ACCEPTED" })
-                    .eq("profile_id", userId);
-                if (candidateStatusError) {
-                    throw candidateStatusError;
-                }
-
-                await logServerActivity(userId, "payment_completed", "payment", { type: "confirmation_fee", amount: 190, offer_id: offerId });
+                await logServerActivity(targetProfileId, "payment_completed", "payment", {
+                    type: "confirmation_fee",
+                    amount: 190,
+                    offer_id: offerId,
+                    paid_by_profile_id: paidByProfileId || null,
+                });
             }
 
         } catch (err: unknown) {

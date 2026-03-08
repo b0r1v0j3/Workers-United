@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
         // Query verified documents with expiry dates
         const { data: docs, error } = await supabase
-            .from('candidate_documents')
+            .from('worker_documents')
             .select(`
                 *,
                 profiles:user_id(
@@ -66,12 +66,12 @@ export async function GET(request: Request) {
             }
 
             // Lookup phone for WhatsApp dual-send
-            const { data: candidate } = await supabase
-                .from("candidates")
+            const { data: workerRecord } = await supabase
+                .from("worker_onboarding")
                 .select("phone")
                 .eq("profile_id", profile.id)
                 .maybeSingle();
-            const phone = candidate?.phone || undefined;
+            const phone = workerRecord?.phone || undefined;
 
             // Send email via queue helper (which tries SMTP immediately)
             await queueEmail(

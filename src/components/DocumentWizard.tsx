@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { MAX_FILE_SIZE_MB, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
 import { FileText, BookUser, Camera, GraduationCap } from "lucide-react";
 import { logActivity, logError } from "@/lib/activityLogger";
+import { sanitizeStorageFileName } from "@/lib/workers";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
 interface FileUpload {
     file: File | null;
@@ -15,12 +17,12 @@ interface FileUpload {
 }
 
 interface DocumentWizardProps {
-    candidateId: string;
+    workerProfileId: string;
     email: string;
     onComplete?: () => void;
 }
 
-export default function DocumentWizard({ candidateId, email, onComplete }: DocumentWizardProps) {
+export default function DocumentWizard({ workerProfileId, email, onComplete }: DocumentWizardProps) {
     const supabase = createClient();
     const [uploads, setUploads] = useState<Record<string, FileUpload>>({
         passport: { file: null, status: "missing", message: "" },
@@ -37,9 +39,9 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
     useEffect(() => {
         async function loadExistingDocs() {
             const { data: docs } = await supabase
-                .from("candidate_documents")
+                .from("worker_documents")
                 .select("document_type, status")
-                .eq("user_id", candidateId);
+                .eq("user_id", workerProfileId);
 
             if (docs && docs.length > 0) {
                 const updates: Record<string, FileUpload> = { ...uploads };
@@ -82,7 +84,7 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             }
         }
         loadExistingDocs();
-    }, [candidateId]);
+    }, [workerProfileId]);
 
     // Update status helper
     const updateStatus = (type: string, status: FileUpload["status"], message: string, file: File | null = null) => {
@@ -156,21 +158,21 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
                 }
             }
 
-            const fileName = `${Date.now()}_${uploadFile.name}`;
-            const storagePath = `${candidateId}/${type}/${fileName}`;
+            const fileName = `${Date.now()}_${sanitizeStorageFileName(uploadFile.name, type)}`;
+            const storagePath = `${workerProfileId}/${type}/${fileName}`;
 
             updateStatus(type, "uploaded", "Uploading...", uploadFile);
 
-            // Upload to candidate-docs bucket
+            // Upload to the legacy worker-documents storage bucket
             const { error: uploadError } = await supabase.storage
-                .from("candidate-docs")
+                .from(WORKER_DOCUMENTS_BUCKET)
                 .upload(storagePath, uploadFile);
 
             if (uploadError) throw uploadError;
 
-            // Upsert to candidate_documents table
-            await supabase.from("candidate_documents").upsert({
-                user_id: candidateId,
+            // Upsert to the legacy worker-documents table
+            await supabase.from("worker_documents").upsert({
+                user_id: workerProfileId,
                 document_type: type,
                 storage_path: storagePath,
                 status: 'uploaded',
@@ -181,16 +183,16 @@ export default function DocumentWizard({ candidateId, email, onComplete }: Docum
             logActivity("document_uploaded_to_storage", "documents", { doc_type: type, storage_path: storagePath });
             updateStatus(type, "verifying", "Verifying with AI...");
 
-            await supabase.from("candidate_documents").update({
+            await supabase.from("worker_documents").update({
                 status: 'verifying',
                 updated_at: new Date().toISOString()
-            }).eq('user_id', candidateId).eq('document_type', type);
+            }).eq('user_id', workerProfileId).eq('document_type', type);
 
             // Trigger verification
             const response = await fetch('/api/verify-document', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ candidateId, docType: type })
+                body: JSON.stringify({ workerId: workerProfileId, docType: type })
             });
 
             const result = await response.json();

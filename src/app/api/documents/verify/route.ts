@@ -5,7 +5,7 @@ import {
     compareNames,
     verifyDiploma,
     verifyBiometricPhoto
-} from "@/lib/gemini";
+} from "@/lib/document-ai";
 
 export async function POST(request: NextRequest) {
     try {
@@ -24,12 +24,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Document ID required" }, { status: 400 });
         }
 
-        // Get document with candidate info
+        // Get document with linked worker onboarding info
         const { data: document, error: docError } = await supabase
             .from("documents")
             .select(`
                 *,
-                candidates(*, profiles(*))
+                worker_onboarding!documents_worker_id_fkey(*, profiles(*))
             `)
             .eq("id", documentId)
             .single();
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify ownership
-        if (document.candidates?.profile_id !== user.id) {
+        if (document.worker_onboarding?.profile_id !== user.id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
 // Passport verification with expiry check
 async function verifyPassport(
-    document: { file_url: string; candidate_id: string; candidates?: { profiles?: { full_name?: string } } },
+    document: { file_url: string; worker_id: string; worker_onboarding?: { profiles?: { full_name?: string } } },
     supabase: Awaited<ReturnType<typeof createClient>>
 ) {
     const result = await extractPassportData(document.file_url);
@@ -148,7 +148,7 @@ async function verifyPassport(
     }
 
     // Check name match
-    const signupName = document.candidates?.profiles?.full_name || "";
+    const signupName = document.worker_onboarding?.profiles?.full_name || "";
     const nameMatches = compareNames(result.data.full_name, signupName);
 
     if (!nameMatches && signupName) {

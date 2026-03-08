@@ -15,12 +15,14 @@ import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
 import DocumentPreview from "@/components/admin/DocumentPreview";
 import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2, X } from "lucide-react";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { getWorkerDocumentPublicUrl, WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
 interface PageProps {
     params: Promise<{ id: string }>;
 }
 
-export default async function CandidateDetailPage({ params }: PageProps) {
+export default async function WorkerDetailPage({ params }: PageProps) {
     const { id } = await params;
     const supabase = await createClient();
 
@@ -54,22 +56,18 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         notFound();
     }
 
-    // Fetch candidate profile (may not exist if user never completed signup)
-    const { data: candidateProfile } = await adminClient
+    // Fetch worker profile (may not exist if user never completed signup)
+    const { data: workerProfile } = await adminClient
         .from("profiles")
         .select("*")
         .eq("id", id)
         .single();
 
-    const { data: candidateData } = await adminClient
-        .from("candidates")
-        .select("*")
-        .eq("profile_id", id)
-        .single();
+    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(adminClient, id, "*");
 
     // Fetch contract data to allow manual editing for PDF generation
     let contractData = null;
-    const { data: matches } = await adminClient.from("matches").select("id").eq("candidate_id", candidateData?.id).limit(1);
+    const { data: matches } = await adminClient.from("matches").select("id").eq("worker_id", workerRecord?.id).limit(1);
     if (matches && matches.length > 0) {
         try {
             const contractBuild = await buildContractDataForMatch(adminClient, matches[0].id);
@@ -81,7 +79,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
     // Fetch documents
     const { data: documents } = await adminClient
-        .from("candidate_documents")
+        .from("worker_documents")
         .select("*")
         .eq("user_id", id)
         .order("created_at", { ascending: false });
@@ -107,8 +105,8 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
     // Profile completion
     const { completion: profileCompletion } = getWorkerCompletion({
-        profile: candidateProfile,
-        candidate: candidateData,
+        profile: workerProfile,
+        worker: workerRecord,
         documents: (documents || []).map((d: any) => ({ document_type: d.document_type })),
     });
     const verifiedDocumentsCount = (documents || []).filter((doc: any) => doc.status === "verified").length;
@@ -117,9 +115,9 @@ export default async function CandidateDetailPage({ params }: PageProps) {
     const completedPaymentsCount = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || "")).length;
     const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
     const latestSignature = signatures?.[0] || null;
-    const displayName = candidateProfile?.full_name || authUser.user_metadata?.full_name || authUser.email || "Worker";
-    const workerStatus = candidateData?.status || "NEW";
-    const approvalState = candidateData?.admin_approved ? "Approved" : "Pending";
+    const displayName = workerProfile?.full_name || authUser.user_metadata?.full_name || authUser.email || "Worker";
+    const workerStatus = workerRecord?.status || "NEW";
+    const approvalState = workerRecord?.admin_approved ? "Approved" : "Pending";
     const workspaceInspectHref = `/profile/worker?inspect=${id}`;
     const documentsInspectHref = `/profile/worker/documents?inspect=${id}`;
     const queueInspectHref = `/profile/worker/queue?inspect=${id}`;
@@ -147,7 +145,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         const adminClient = createAdminClient();
 
         await adminClient
-            .from("candidate_documents")
+            .from("worker_documents")
             .update({
                 status: newStatus,
                 admin_notes: adminNotes,
@@ -204,13 +202,13 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         // Delete from storage
         if (storagePath) {
             await adminClient.storage
-                .from("candidate-docs")
+                .from(WORKER_DOCUMENTS_BUCKET)
                 .remove([storagePath]);
         }
 
         // Delete from database
         await adminClient
-            .from("candidate_documents")
+            .from("worker_documents")
             .delete()
             .eq("id", docId);
 
@@ -244,13 +242,13 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         // Delete from storage
         if (storagePath) {
             await adminClient.storage
-                .from("candidate-docs")
+                .from(WORKER_DOCUMENTS_BUCKET)
                 .remove([storagePath]);
         }
 
         // Delete from database  
         await adminClient
-            .from("candidate_documents")
+            .from("worker_documents")
             .delete()
             .eq("id", docId);
 
@@ -297,7 +295,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
         if (action === "approve") {
             await adminClient
-                .from("candidates")
+                .from("worker_onboarding")
                 .update({
                     admin_approved: true,
                     admin_approved_at: new Date().toISOString(),
@@ -309,7 +307,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                 .eq("profile_id", id);
         } else {
             await adminClient
-                .from("candidates")
+                .from("worker_onboarding")
                 .update({
                     admin_approved: false,
                     admin_approved_at: null,
@@ -323,7 +321,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         revalidatePath(`/admin/workers/${id}`);
     }
 
-    async function updateCandidateStatus(formData: FormData) {
+    async function updateWorkerStatus(formData: FormData) {
         "use server";
         const newStatus = formData.get("status") as string;
         const userEmail = formData.get("user_email") as string;
@@ -345,7 +343,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
         const adminClient = createAdminClient();
 
         await adminClient
-            .from("candidates")
+            .from("worker_onboarding")
             .update({
                 status: newStatus,
                 updated_at: new Date().toISOString()
@@ -435,7 +433,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     description="Admin case view for approvals, documents, payments, and matching. Use the inspect links above when you want the real worker workspace instead of the admin control surface."
                     metrics={[
                         { label: "Status", value: toDisplayLabel(workerStatus), meta: approvalState },
-                        { label: "Completion", value: `${profileCompletion}%`, meta: candidateProfile?.email || authUser.email || "No email" },
+                        { label: "Completion", value: `${profileCompletion}%`, meta: workerProfile?.email || authUser.email || "No email" },
                         { label: "Docs", value: `${verifiedDocumentsCount}/3`, meta: pendingDocumentsCount > 0 ? `${pendingDocumentsCount} pending` : "No pending review" },
                         { label: "Paid", value: completedPaymentsCount, meta: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} pending` : "No pending payments" },
                     ]}
@@ -454,7 +452,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                     />
                     <CaseHintCard
                         title="Current case signal"
-                        copy={candidateData?.admin_approved
+                        copy={workerRecord?.admin_approved
                             ? "This worker is already admin-approved. Keep focus on queue, offers, payments, and document validity."
                             : "This worker still needs admin approval before the downstream flow becomes fully operational."}
                         tone="amber"
@@ -463,7 +461,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
                 <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.6fr)]">
                     <div className="space-y-6">
-                        {!candidateProfile ? (
+                        {!workerProfile ? (
                             <OpsNotice copy="This user has not completed the worker profile yet. Only auth metadata and any existing document or payment records are available." />
                         ) : null}
 
@@ -504,47 +502,47 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
                             <div className="mt-5 space-y-4">
                                 <FieldGroup title="Basic info" description="Identity and contact data used across notifications and case handling.">
-                                    <InfoRow label="Full Name" value={candidateProfile?.full_name || authUser.user_metadata?.full_name} />
-                                    <InfoRow label="Email" value={candidateProfile?.email || authUser.email} />
-                                    <InfoRow label="Phone" value={candidateData?.phone} />
-                                    <InfoRow label="Gender" value={candidateData?.gender} />
+                                    <InfoRow label="Full Name" value={workerProfile?.full_name || authUser.user_metadata?.full_name} />
+                                    <InfoRow label="Email" value={workerProfile?.email || authUser.email} />
+                                    <InfoRow label="Phone" value={workerRecord?.phone} />
+                                    <InfoRow label="Gender" value={workerRecord?.gender} />
                                 </FieldGroup>
 
                                 <FieldGroup title="Personal details" description="Birth, citizenship, and mobility history.">
-                                    <InfoRow label="Date of Birth" value={formatDate(candidateData?.date_of_birth)} />
-                                    <InfoRow label="Nationality" value={candidateData?.nationality} />
-                                    <InfoRow label="Citizenship" value={candidateData?.citizenship} />
-                                    <InfoRow label="Current Country" value={candidateData?.current_country} />
-                                    <InfoRow label="Birth Country" value={candidateData?.birth_country} />
-                                    <InfoRow label="Birth City" value={candidateData?.birth_city} />
-                                    <InfoRow label="Marital Status" value={candidateData?.marital_status} />
-                                    <InfoRow label="Lives Abroad" value={formatBoolean(candidateData?.lives_abroad)} />
-                                    <InfoRow label="Previous Visas" value={formatBoolean(candidateData?.previous_visas)} />
+                                    <InfoRow label="Date of Birth" value={formatDate(workerRecord?.date_of_birth)} />
+                                    <InfoRow label="Nationality" value={workerRecord?.nationality} />
+                                    <InfoRow label="Citizenship" value={workerRecord?.citizenship} />
+                                    <InfoRow label="Current Country" value={workerRecord?.current_country} />
+                                    <InfoRow label="Birth Country" value={workerRecord?.birth_country} />
+                                    <InfoRow label="Birth City" value={workerRecord?.birth_city} />
+                                    <InfoRow label="Marital Status" value={workerRecord?.marital_status} />
+                                    <InfoRow label="Lives Abroad" value={formatBoolean(workerRecord?.lives_abroad)} />
+                                    <InfoRow label="Previous Visas" value={formatBoolean(workerRecord?.previous_visas)} />
                                 </FieldGroup>
 
                                 <FieldGroup title="Passport" description="Primary identity document values used in generated forms.">
-                                    <InfoRow label="Passport Number" value={candidateData?.passport_number} />
-                                    <InfoRow label="Issued By" value={candidateData?.passport_issued_by} />
-                                    <InfoRow label="Issue Date" value={formatDate(candidateData?.passport_issue_date)} />
-                                    <InfoRow label="Expiry Date" value={formatDate(candidateData?.passport_expiry_date)} />
+                                    <InfoRow label="Passport Number" value={workerRecord?.passport_number} />
+                                    <InfoRow label="Issued By" value={workerRecord?.passport_issued_by} />
+                                    <InfoRow label="Issue Date" value={formatDate(workerRecord?.passport_issue_date)} />
+                                    <InfoRow label="Expiry Date" value={formatDate(workerRecord?.passport_expiry_date)} />
                                 </FieldGroup>
 
                                 <FieldGroup title="Preferences" description="Current worker job target and matching intent." columnsClass="grid-cols-1">
-                                    <InfoRow label="Preferred Job" value={candidateData?.preferred_job} />
+                                    <InfoRow label="Preferred Job" value={workerRecord?.preferred_job} />
                                 </FieldGroup>
 
-                                {candidateData?.marital_status?.toLowerCase() === "married" ? (
+                                {workerRecord?.marital_status?.toLowerCase() === "married" ? (
                                     <FieldGroup
                                         title="Family data"
                                         description="Required for married workers and later contract or visa preparation."
                                     >
-                                        {candidateData?.family_data?.spouse ? (
+                                        {workerRecord?.family_data?.spouse ? (
                                             <>
-                                                <InfoRow label="Spouse First Name" value={candidateData.family_data.spouse.first_name} />
-                                                <InfoRow label="Spouse Last Name" value={candidateData.family_data.spouse.last_name} />
-                                                <InfoRow label="Spouse DOB" value={formatDate(candidateData.family_data.spouse.dob)} />
-                                                <InfoRow label="Spouse Birth Country" value={candidateData.family_data.spouse.birth_country} />
-                                                <InfoRow label="Spouse Birth City" value={candidateData.family_data.spouse.birth_city} />
+                                                <InfoRow label="Spouse First Name" value={workerRecord.family_data.spouse.first_name} />
+                                                <InfoRow label="Spouse Last Name" value={workerRecord.family_data.spouse.last_name} />
+                                                <InfoRow label="Spouse DOB" value={formatDate(workerRecord.family_data.spouse.dob)} />
+                                                <InfoRow label="Spouse Birth Country" value={workerRecord.family_data.spouse.birth_country} />
+                                                <InfoRow label="Spouse Birth City" value={workerRecord.family_data.spouse.birth_city} />
                                             </>
                                         ) : (
                                             <div className="sm:col-span-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -552,13 +550,13 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                             </div>
                                         )}
 
-                                        {candidateData?.family_data?.children?.length > 0 ? (
+                                        {workerRecord?.family_data?.children?.length > 0 ? (
                                             <div className="sm:col-span-2 rounded-2xl border border-[#ece8dd] bg-white px-4 py-4">
                                                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
-                                                    Children ({candidateData.family_data.children.length})
+                                                    Children ({workerRecord.family_data.children.length})
                                                 </div>
                                                 <div className="mt-3 space-y-3">
-                                                    {candidateData.family_data.children.map((child: any, index: number) => (
+                                                    {workerRecord.family_data.children.map((child: any, index: number) => (
                                                         <div
                                                             key={index}
                                                             className="grid gap-3 border-l-2 border-[#ece8dd] pl-4 sm:grid-cols-3"
@@ -583,41 +581,41 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                             title="Approval and status"
                             description="Admin approval, payment readiness, and worker state transitions all live here."
                         >
-                            {candidateData ? (
+                            {workerRecord ? (
                                 <div className="space-y-4">
-                                    <div className={`rounded-[24px] border p-5 ${candidateData.admin_approved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+                                    <div className={`rounded-[24px] border p-5 ${workerRecord.admin_approved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
                                         <div className="flex flex-wrap items-start justify-between gap-3">
                                             <div>
                                                 <div className="text-sm font-semibold text-[#18181b]">Approval state</div>
                                                 <div className="mt-1 text-sm text-[#57534e]">
-                                                    {candidateData.admin_approved
+                                                    {workerRecord.admin_approved
                                                         ? "Worker is unlocked for payment and downstream queue operations."
                                                         : "Worker still needs an explicit admin approval decision before payment readiness is fully clear."}
                                                 </div>
                                             </div>
-                                            <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${candidateData.admin_approved
+                                            <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${workerRecord.admin_approved
                                                 ? "border-emerald-300 bg-emerald-100 text-emerald-700"
                                                 : "border-amber-300 bg-amber-100 text-amber-700"
                                                 }`}>
-                                                {candidateData.admin_approved ? <Check size={14} /> : <Clock size={14} />}
-                                                {candidateData.admin_approved ? "Approved" : "Pending approval"}
+                                                {workerRecord.admin_approved ? <Check size={14} /> : <Clock size={14} />}
+                                                {workerRecord.admin_approved ? "Approved" : "Pending approval"}
                                             </span>
                                         </div>
-                                        {candidateData.admin_approved_at ? (
+                                        {workerRecord.admin_approved_at ? (
                                             <p className="mt-4 text-xs font-medium text-[#57534e]">
-                                                Approved on {formatDateTime(candidateData.admin_approved_at)}
+                                                Approved on {formatDateTime(workerRecord.admin_approved_at)}
                                             </p>
                                         ) : null}
                                         <form action={approveWorker} className="mt-4">
-                                            <input type="hidden" name="action" value={candidateData.admin_approved ? "revoke" : "approve"} />
+                                            <input type="hidden" name="action" value={workerRecord.admin_approved ? "revoke" : "approve"} />
                                             <button
                                                 type="submit"
-                                                className={`w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${candidateData.admin_approved
+                                                className={`w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${workerRecord.admin_approved
                                                     ? "bg-red-500 hover:bg-red-600"
                                                     : "bg-emerald-600 hover:bg-emerald-700"
                                                     }`}
                                             >
-                                                {candidateData.admin_approved ? "Revoke approval" : "Approve for payment"}
+                                                {workerRecord.admin_approved ? "Revoke approval" : "Approve for payment"}
                                             </button>
                                         </form>
                                     </div>
@@ -630,20 +628,20 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                     Use controlled status changes when the case actually moves to the next operational phase.
                                                 </div>
                                             </div>
-                                            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(candidateData.status || "NEW")}`}>
-                                                {toDisplayLabel(candidateData.status || "NEW")}
+                                            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(workerRecord.status || "NEW")}`}>
+                                                {toDisplayLabel(workerRecord.status || "NEW")}
                                             </span>
                                         </div>
 
-                                        <form action={updateCandidateStatus} className="mt-4 space-y-4">
-                                            <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
+                                        <form action={updateWorkerStatus} className="mt-4 space-y-4">
+                                            <input type="hidden" name="user_email" value={workerProfile?.email || authUser.email || ""} />
                                             <div>
                                                 <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                     Update status
                                                 </label>
                                                 <select
                                                     name="status"
-                                                    defaultValue={candidateData.status || "NEW"}
+                                                    defaultValue={workerRecord.status || "NEW"}
                                                     className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
                                                 >
                                                     <option value="NEW">New</option>
@@ -782,11 +780,11 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                             )}
                         </OpsPanelCard>
 
-                        {candidateData ? <ManualMatchButton candidateId={candidateData.id} /> : null}
+                        {workerRecord ? <ManualMatchButton workerRecordId={workerRecord.id} /> : null}
 
                         <SingleWorkerDownload
                             profileId={id}
-                            workerName={candidateProfile?.full_name || authUser.user_metadata?.full_name || "Worker"}
+                            workerName={workerProfile?.full_name || authUser.user_metadata?.full_name || "Worker"}
                         />
                     </div>
 
@@ -832,7 +830,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
 
                                             {doc.storage_path ? (
                                                 <DocumentViewerModal
-                                                    url={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`}
+                                                    url={getWorkerDocumentPublicUrl(doc.storage_path) || ""}
                                                     documentType={doc.document_type}
                                                     status={doc.status}
                                                 >
@@ -855,7 +853,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                     <form action={updateDocumentStatus} className="rounded-[22px] border border-[#e6e6e1] bg-[#faf8f3] p-4">
                                                         <input type="hidden" name="doc_id" value={doc.id} />
                                                         <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                        <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
+                                                        <input type="hidden" name="user_email" value={workerProfile?.email || authUser.email || ""} />
                                                         <div className="mb-4">
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                                 Set status
@@ -907,7 +905,7 @@ export default async function CandidateDetailPage({ params }: PageProps) {
                                                                 <input type="hidden" name="doc_id" value={doc.id} />
                                                                 <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
                                                                 <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                                <input type="hidden" name="user_email" value={candidateProfile?.email || authUser.email || ""} />
+                                                                <input type="hidden" name="user_email" value={workerProfile?.email || authUser.email || ""} />
                                                                 <p className="text-xs leading-relaxed text-orange-900">
                                                                     This deletes the current file and emails the worker with a request to upload a new version.
                                                                 </p>

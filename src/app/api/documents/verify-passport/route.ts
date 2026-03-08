@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { extractPassportData, compareNames } from "@/lib/gemini";
+import { extractPassportData, compareNames } from "@/lib/document-ai";
 
 export async function POST(request: NextRequest) {
     try {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
             .from("documents")
             .select(`
         *,
-        candidates(*, profiles(*))
+        worker_onboarding!documents_worker_id_fkey(*, profiles(*))
       `)
             .eq("id", documentId)
             .single();
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify ownership
-        if (document.candidates?.profile_id !== user.id) {
+        if (document.worker_onboarding?.profile_id !== user.id) {
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("user_type")
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Compare with signup data
-        const signupName = document.candidates?.profiles?.full_name || "";
+        const signupName = document.worker_onboarding?.profiles?.full_name || "";
         const aiName = result.data.full_name;
         const nameMatches = compareNames(aiName, signupName);
 
@@ -127,26 +127,26 @@ export async function POST(request: NextRequest) {
             })
             .eq("id", documentId);
 
-        // If verified, update candidate status
+        // If verified, update worker status
         if (verificationStatus === "verified") {
-            // Check if candidate has all required docs verified
+            // Check if the worker has all required docs verified
             const { data: allDocs } = await supabase
                 .from("documents")
                 .select("document_type, verification_status")
-                .eq("candidate_id", document.candidate_id);
+                .eq("worker_id", document.worker_id);
 
             const passportVerified = allDocs?.some(
                 d => d.document_type === "passport" && d.verification_status === "verified"
             );
 
-            // Update candidate record with extracted data if passport verified
+            // Update the worker onboarding record with extracted passport data if needed
             if (passportVerified) {
                 await supabase
-                    .from("candidates")
+                    .from("worker_onboarding")
                     .update({
                         // Store verified passport data in metadata or specific fields if available
                     })
-                    .eq("id", document.candidate_id);
+                    .eq("id", document.worker_id);
             }
         }
 

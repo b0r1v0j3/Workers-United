@@ -3,10 +3,10 @@ import { sendEmail } from "@/lib/mailer";
 import { sendJobOffer as sendWhatsAppJobOffer } from "@/lib/whatsapp";
 
 interface OfferNotificationData {
-  candidateEmail: string;
-  candidateName: string;
-  candidatePhone?: string;
-  candidateUserId?: string;
+  workerEmail: string;
+  workerName: string;
+  workerPhone?: string;
+  workerUserId?: string;
   jobTitle: string;
   companyName: string;
   country: string;
@@ -15,8 +15,8 @@ interface OfferNotificationData {
 }
 
 interface OfferExpiredData {
-  candidateEmail: string;
-  candidateName: string;
+  workerEmail: string;
+  workerName: string;
   jobTitle: string;
   queuePosition: number;
 }
@@ -45,7 +45,7 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
       </div>
       
       <div style="padding: 30px; background: #f9fafb;">
-        <p>Dear ${data.candidateName},</p>
+        <p>Dear ${data.workerName},</p>
         
         <p>Great news! You have been matched with a job opportunity:</p>
         
@@ -95,7 +95,7 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
   `;
 
   try {
-    const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
+    const result = await sendEmail(data.workerEmail, emailSubject, emailBody);
     if (!result.success) {
       console.error(`❌ Failed to send offer notification: ${result.error}`);
     }
@@ -104,16 +104,16 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
   }
 
   // Also send WhatsApp if phone number available
-  if (data.candidatePhone) {
+  if (data.workerPhone) {
     try {
       await sendWhatsAppJobOffer(
-        data.candidatePhone,
-        data.candidateName,
+        data.workerPhone,
+        data.workerName,
         data.jobTitle,
         data.companyName,
         data.country,
         data.offerId,
-        data.candidateUserId
+        data.workerUserId
       );
     } catch (err) {
       console.error("WhatsApp offer notification error:", err);
@@ -130,7 +130,7 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
       </div>
       
       <div style="padding: 30px; background: #f9fafb;">
-        <p>Dear ${data.candidateName},</p>
+        <p>Dear ${data.workerName},</p>
         
         <p>Unfortunately, your offer for <strong>${data.jobTitle}</strong> has expired 
         because the confirmation fee was not paid within 24 hours.</p>
@@ -153,7 +153,7 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
   `;
 
   try {
-    const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
+    const result = await sendEmail(data.workerEmail, emailSubject, emailBody);
     if (!result.success) {
       console.error(`❌ Failed to send expired notification: ${result.error}`);
     }
@@ -163,8 +163,8 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
 }
 
 export async function sendQueueJoinedNotification(data: {
-  candidateEmail: string;
-  candidateName: string;
+  workerEmail: string;
+  workerName: string;
   queuePosition: number;
 }): Promise<void> {
   const emailSubject = "🎯 You're in the queue! Job search started";
@@ -176,7 +176,7 @@ export async function sendQueueJoinedNotification(data: {
       </div>
       
       <div style="padding: 30px; background: #f9fafb;">
-        <p>Dear ${data.candidateName},</p>
+        <p>Dear ${data.workerName},</p>
         
         <p>Your payment has been confirmed and you're now active in our job matching queue!</p>
         
@@ -209,7 +209,7 @@ export async function sendQueueJoinedNotification(data: {
   `;
 
   try {
-    const result = await sendEmail(data.candidateEmail, emailSubject, emailBody);
+    const result = await sendEmail(data.workerEmail, emailSubject, emailBody);
     if (!result.success) {
       console.error(`❌ Failed to send queue notification: ${result.error}`);
     }

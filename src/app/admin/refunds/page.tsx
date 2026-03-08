@@ -21,9 +21,9 @@ export default async function AdminRefundsPage() {
 
     const adminClient = createAdminClient();
 
-    // Get candidates marked for refund
-    const { data: refundCandidates } = await adminClient
-        .from("candidates")
+    // Get worker records marked for refund
+    const { data: refundWorkers } = await adminClient
+        .from("worker_onboarding")
         .select(`
             *,
             profiles(email, full_name)
@@ -62,19 +62,19 @@ export default async function AdminRefundsPage() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-100">
-                            {refundCandidates?.map((candidate: any) => {
-                                const joinedAt = new Date(candidate.queue_joined_at);
+                            {refundWorkers?.map((workerRecord: any) => {
+                                const joinedAt = new Date(workerRecord.queue_joined_at);
                                 const daysWaited = Math.floor((nowMs - joinedAt.getTime()) / (1000 * 60 * 60 * 24));
 
                                 return (
-                                    <tr key={candidate.id} className="hover:bg-slate-50 transition-colors">
+                                    <tr key={workerRecord.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-slate-900">
-                                                {candidate.profiles?.full_name || "No name"}
+                                                {workerRecord.profiles?.full_name || "No name"}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                            {candidate.profiles?.email}
+                                            {workerRecord.profiles?.email}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                                             {joinedAt.toLocaleDateString('en-GB')}
@@ -87,15 +87,15 @@ export default async function AdminRefundsPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             <div className="flex gap-3">
-                                                <ProcessRefundButton candidateId={candidate.id} paymentId={candidate.entry_payment_id} />
-                                                <DenyRefundButton candidateId={candidate.id} />
+                                                <ProcessRefundButton workerRecordId={workerRecord.id} paymentId={workerRecord.entry_payment_id} />
+                                                <DenyRefundButton workerRecordId={workerRecord.id} />
                                             </div>
                                         </td>
                                     </tr>
                                 );
                             })}
 
-                            {(!refundCandidates || refundCandidates.length === 0) && (
+                            {(!refundWorkers || refundWorkers.length === 0) && (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-10 text-center text-slate-400">
                                         No refunds pending
@@ -110,7 +110,7 @@ export default async function AdminRefundsPage() {
     );
 }
 
-function ProcessRefundButton({ candidateId, paymentId }: { candidateId: string; paymentId?: string }) {
+function ProcessRefundButton({ workerRecordId, paymentId }: { workerRecordId: string; paymentId?: string }) {
     async function processRefund() {
         "use server";
 
@@ -138,9 +138,9 @@ function ProcessRefundButton({ candidateId, paymentId }: { candidateId: string; 
         }
 
         await supabase
-            .from("candidates")
+            .from("worker_onboarding")
             .update({ status: "REJECTED" })
-            .eq("id", candidateId);
+            .eq("id", workerRecordId);
 
         redirect("/admin/refunds");
     }
@@ -157,7 +157,7 @@ function ProcessRefundButton({ candidateId, paymentId }: { candidateId: string; 
     );
 }
 
-function DenyRefundButton({ candidateId }: { candidateId: string }) {
+function DenyRefundButton({ workerRecordId }: { workerRecordId: string }) {
     async function denyRefund() {
         "use server";
 
@@ -177,11 +177,11 @@ function DenyRefundButton({ candidateId }: { candidateId: string }) {
 
         const supabase = createAdminClient();
 
-        // Return to queue
+        // Return worker to queue
         await supabase
-            .from("candidates")
+            .from("worker_onboarding")
             .update({ status: "IN_QUEUE" })
-            .eq("id", candidateId);
+            .eq("id", workerRecordId);
 
         redirect("/admin/refunds");
     }

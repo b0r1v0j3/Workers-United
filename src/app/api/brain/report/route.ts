@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // ─── Brain Report Storage ───────────────────────────────────────────────────
-// Stores weekly brain analysis reports in Supabase
+// Stores brain analysis reports in Supabase
 // Called by Brain Monitor after GPT generates the report
 //
 // Auth: Requires CRON_SECRET bearer token
+
+const DEFAULT_BRAIN_REPORT_MODEL = process.env.BRAIN_DAILY_MODEL || "gpt-5-mini";
 
 export async function POST(request: NextRequest) {
     // Auth check
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
             .from("brain_reports")
             .insert({
                 report,
-                model: model || "gpt-5.3-codex",
+                model: model || DEFAULT_BRAIN_REPORT_MODEL,
                 findings_count: findings_count || 0,
                 created_at: new Date().toISOString(),
             })

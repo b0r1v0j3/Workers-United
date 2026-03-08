@@ -1,16 +1,28 @@
 import Link from "next/link";
 import { SignupForm } from "./signup-form";
 import Image from "next/image";
+import { getAgencyClaimContext } from "@/lib/agencies";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 interface SignupPageProps {
-    searchParams: Promise<{ type?: string }>;
+    searchParams: Promise<{ type?: string; claim?: string }>;
 }
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
     const params = await searchParams;
-    const userType = params.type === "employer" ? "employer" : "worker";
+    const claimWorkerId = typeof params.claim === "string" ? params.claim : null;
+    const requestedType = params.type === "employer"
+        ? "employer"
+        : params.type === "agency"
+            ? "agency"
+            : "worker";
+    const userType = claimWorkerId ? "worker" : requestedType;
+
+    const claimContext = claimWorkerId
+        ? await getAgencyClaimContext(createAdminClient(), claimWorkerId).catch(() => null)
+        : null;
 
     return (
         <div className="relative min-h-screen overflow-hidden bg-[#f4f4f2] font-montserrat">
@@ -31,12 +43,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                                     </Link>
                                 </div>
                                 <h2 className="text-3xl font-semibold tracking-tight text-[#18181b]">Create your account</h2>
-                                <p className="mt-2 text-[15px] leading-relaxed text-[#52525b]">
-                                    Join as {userType === "employer" ? "an employer" : "a worker"} and continue to onboarding.
-                                </p>
                             </div>
 
-                            <div className="mb-7 grid grid-cols-2 rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] p-1.5">
+                            <div className={`mb-7 grid rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] p-1.5 ${claimContext ? "grid-cols-1" : "grid-cols-3"}`}>
                                 <Link
                                     href="/signup?type=worker"
                                     className={`rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition ${userType === "worker"
@@ -46,23 +55,36 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                                 >
                                     I&apos;m a Worker
                                 </Link>
-                                <Link
-                                    href="/signup?type=employer"
-                                    className={`rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition ${userType === "employer"
-                                        ? "bg-white text-[#18181b] shadow-[0_8px_24px_-20px_rgba(0,0,0,0.45)]"
-                                        : "text-[#71717a] hover:text-[#27272a]"
-                                        }`}
-                                >
-                                    I&apos;m an Employer
-                                </Link>
+                                {!claimContext && (
+                                    <>
+                                        <Link
+                                            href="/signup?type=employer"
+                                            className={`rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition ${userType === "employer"
+                                                ? "bg-white text-[#18181b] shadow-[0_8px_24px_-20px_rgba(0,0,0,0.45)]"
+                                                : "text-[#71717a] hover:text-[#27272a]"
+                                                }`}
+                                        >
+                                            I&apos;m an Employer
+                                        </Link>
+                                        <Link
+                                            href="/signup?type=agency"
+                                            className={`rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition ${userType === "agency"
+                                                ? "bg-white text-[#18181b] shadow-[0_8px_24px_-20px_rgba(0,0,0,0.45)]"
+                                                : "text-[#71717a] hover:text-[#27272a]"
+                                                }`}
+                                        >
+                                            I&apos;m an Agency
+                                        </Link>
+                                    </>
+                                )}
                             </div>
 
-                            <SignupForm userType={userType} />
+                            <SignupForm userType={userType} claimContext={claimContext} />
 
                             <p className="mt-7 text-center text-sm text-[#71717a]">
                                 Already have an account?{" "}
                                 <Link href="/login" className="font-semibold text-[#18181b] underline-offset-4 hover:underline">
-                                    Sign in
+                                    Sign In
                                 </Link>
                             </p>
                         </div>

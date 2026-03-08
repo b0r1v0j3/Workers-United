@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 08.03.2026 (Worker-domain cleanup pass 3 je live: admin search, admin queue i Smart Match Hub više ne oslanjaju se na raw `candidate` redove kao kanonski app sloj, već deduplikuju `candidates` preko kanonskog worker helpera pre prikaza rezultata, queue watch-a i matching liste. `src/lib/contract-data.ts` sada koristi `worker` / `workerProfile` kao kanonski build rezultat uz backward-compatible `candidate` alias za legacy potrošače. Prethodni 08.03.2026 ops sloj ostaje aktivan: `/admin/exceptions`, `Email Health` i abandoned checkout recovery)
+> **Poslednje ažuriranje:** 08.03.2026 (Worker `candidate -> worker` cutover je završen end-to-end: live public schema više ne izlaže `candidates` / `candidate_documents`, `contract_data` koristi samo `worker_*` override kolone, jedini preostali storage bucket je `worker-docs`, auth signup trigger sada upisuje direktno u kanonski `workers`, worker workspace shell je vizuelno poravnat, a Brain/ops monitoring sada ispravno parsira dnevni report, šalje exception mail, razlikuje platform-side WhatsApp template kvar od nedostavljivog broja/zemlje i `system-smoke` više ne proglašava opcioni degradirani servis potpuno zdravim.)
 
 ---
 
@@ -27,6 +27,7 @@ Ovaj fajl je **jedini izvor istine** za ceo projekat. Svaki novi chat MORA da pr
     - **Cron jobove** (`src/app/api/cron/`) — koji šalju automatske mejlove i WhatsApp poruke
     
     **Pravilo:** Svaka promena koja menja ono što korisnik vidi na sajtu MORA da se reflektuje i u svim kanalima komunikacije (email + WhatsApp). Ako zaboraviš — korisnik dobija poruku sa pogrešnim linkom ili zastarelim informacijama.
+12. **🔑 Shortcut keyword `REVIZIJA`** — ako korisnik u novom chatu napiše samo `REVIZIJA`, tretiraj to kao zahtev za puni dnevni ops sweep bez dodatnog objašnjavanja: `git pull`, pregled današnjeg `brain_reports`, ručni `system-smoke`, provera recent `email_queue` failova, provera recent `whatsapp_messages` failova, vizuelni/runtime sweep najkritičnijih flow-ova i odmah zatim fix najvažnijeg otkrivenog problema ako je bezbedan za isti pass.
 
 ### Pravila za ažuriranje ovog fajla:
 1. **NIKAD ne briši Sekcije 1-4** — one su trajne i menjaju se samo kad vlasnik projekta to eksplicitno traži
@@ -79,7 +80,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 
 ## 3. 👤 TOK KORISNIKA
 
-### Radnik (Worker/Candidate):
+### Radnik (Worker):
 ```
 1. Registracija (signup)
 2. Popuni profil (lični podaci, radne preferencije, potpis)
@@ -101,13 +102,13 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 3. Profil mora biti 100% popunjen da bi bio verifikovan
 4. U profilu ima odeljak za traženje radnika:
    - Broj radnika, plata, lokacija rada, opis posla
-5. Mi tražimo match iz naše baze verifikovanih kandidata
+5. Mi tražimo match iz naše baze verifikovanih radnika
 6. Kad nađemo match → realizujemo vizu i sprovedemo radnika
 ```
 
 ### Admin:
 ```
-- Pregled svih kandidata i poslodavaca
+- Pregled svih radnika i poslodavaca
 - Ručna verifikacija dokumenata (backup za AI)
 - Upravljanje queue-om i ponudama
 - In-platform support inbox za odgovaranje worker-ima bez izlaska na WhatsApp/email
@@ -270,6 +271,31 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Ops monitoring precision pass: `api/health` sada proverava Stripe/SMTP/WhatsApp/n8n paralelno, klasifikuje WhatsApp template failove na platform-side (`template/config/provider`) vs recipient-side (`undeliverable` / country restriction), a `system-smoke` više diže lažno `healthy` stanje kada je opcioni servis stvarno `degraded`; dodati su i test guardovi za smoke evaluator i WhatsApp health klasifikaciju — 08.03.2026
+- [x] Brain + ops monitoring hardening: `brain-monitor` sada robustno parsira OpenAI Responses JSON, upisuje stvarni `structured_report` objekat umesto raw output niza, pravilno obeležava email delivery rezultat i razume `retry_email` akcije koje vraćaju `email_ids`; `api/health` i `system-smoke` više ne kriju recent WhatsApp template failove, pa je današnji Brain exception run ručno ponovo pokrenut i uspešno poslat mailom — 08.03.2026
+- [x] Workspace shell polish pass 9: uklonjen je suvišni `Signed in as` profil blok iz workspace sidebara, pa leva kolona ostaje čista navigacija bez dupliranja identiteta koji već postoji u header-u — 08.03.2026
+- [x] Workspace shell polish pass 8: dashboard header više ne koristi stari levo-zakucani full-logo raspored, već prati isti sistem kao public header sa wordmark-om levo i centriranom logo-ikonicom kroz profile/settings/workspace ekrane — 08.03.2026
+- [x] Workspace shell polish pass 7: `/profile/settings` sada koristi isti dashboard shell kao ostatak profila, `Account Settings` sidebar entry ima isti active behavior kao ostale stavke, a logout confirm overlay više nije zarobljen u sidebar-u nego se otvara kao pravi centralni modal na produkciji — 08.03.2026
+- [x] Worker workspace shell + overview hotfix: `AppShell` više ne duplira `Overview` i worker profil kao dva aktivna entry-ja za isti `/profile/worker`, aktivni sidebar state je vraćen kroz colored icon/rail tonove, mobile sidebar više ne kreće preko dashboard header-a, a `/profile/worker` je ponovo pravi početni ekran sa `Next action`, document readiness signalima, support unlock stanjem i direktnim `$9 Job Finder` CTA-om umesto da payment postoji samo na `Queue` ruti — 08.03.2026
+- [x] Auth signup trigger worker-first hotfix: live auth sync više ne pokušava da kreira worker kroz ugašeni `public.candidates` alias, već normalizuje legacy `candidate` metadata na `worker`, upisuje direktno u `profiles + workers`, i dodatno sinhronizuje `profiles.user_type` + kanonske worker/employer redove kada Google OAuth callback naknadno dopiše role metadata; time su popravljeni email signup i Google OAuth signup posle finalnog worker-first cleanup-a, a `/auth/auth-code-error` sada razlikuje stvarni signup server error od istekle confirmation veze — 08.03.2026
+- [x] Worker-domain cleanup pass 16: final contract/storage/public-schema cleanup — dodat je `supabase/migrations/20260308234500_finalize_worker_contract_storage_cleanup.sql`, `contract_data` override kolone su poravnate na `worker_*`, produkcija je redeploy-ovana na worker-first runtime, legacy `candidate-docs` i prazni `documents` bucket su ugašeni, a live public schema više ne izlaže `candidates` / `candidate_documents`; završni runtime/docs sweep uklonio je i poslednje aktivne `candidate` tragove van istorijskih migracija/FK imena — 08.03.2026
+- [x] Worker-domain cleanup pass 15: završni app-layer alias cleanup posle stage 3 — `profile-completion` testovi i worker completion helper više ne koriste `candidate` wrapper shape, `admin/edit-data` više nema `candidates -> workers` runtime alias, a generisani live tipovi su osveženi posle SQL stage 3 tako da aktivni `src` runtime više nema `candidate_id` niti `candidateId` tragove van compatibility/storage/contract sloja — 08.03.2026
+- [x] Worker FK migration stage 3 applied on live Supabase: legacy `candidate_id` kolone obrisane su iz `documents / matches / offers`, stari sync trigger/check/FK/index sloj je uklonjen, RLS policy-ji na `documents / matches / offers / contract_data` su prebačeni na `worker_id`, a `handle_offer_rejection()` sada radi nad `public.workers` / `offers.worker_id`; `src/lib/database.types.ts` je regenerisan sa live stage-3 šemom i `typecheck/lint/test/build` prolaze — 08.03.2026
+- [x] Worker FK migration stage 2 applied on live Supabase + runtime cutover: `documents`, `matches` i `offers` sada imaju live `worker_id` kolone sa backfill/sync triggerima/FK-ovima, a app-layer više ne šalje niti čita aktivne `candidateId` / `candidate_id` ključeve u dokument verify/request-review/manual-match/brain act tokovima; dodat je i finalni stage 3 SQL `20260308223000_drop_legacy_candidate_fk_columns.sql` za brisanje legacy `candidate_id` kolona — 08.03.2026
+- [x] Worker FK migration stage 2 prepared: dodat je `supabase/migrations/20260308210000_worker_fk_transition.sql` koji uvodi additive `worker_id` kolone za `documents / matches / offers`, radi backfill iz `candidate_id`, dodaje sync trigger/equality check/FK/indekse i sprema poslednji worker-first FK korak bez rušenja legacy `candidate_id` compatibility sloja; migracija je pripremljena, ali još nije puštena na live Supabase — 08.03.2026
+- [x] Worker physical-table migration stage 1 applied on live Supabase: `public.candidates` je fizički renamovan u `public.workers`, `public.candidate_documents` u `public.worker_documents`, a stara imena su vraćena kao compatibility view layer (`public.candidates`, `public.candidate_documents`) uz aktivan `worker_onboarding`; `src/lib/database.types.ts` je regenerisan sa live worker-first šemom, pa je fizički DB sloj sada konačno usklađen sa app domenom — 08.03.2026
+- [x] Worker physical-table migration stage prepared: dodat je `supabase/migrations/20260308193000_worker_physical_tables.sql` koji radi fizički rename `public.candidates -> public.workers` i rešava stvarni live hybrid documents state tako što prvo uklanja zavisni `worker_documents` compatibility view, zatim renamuje fizički `candidate_documents` u `worker_documents`, pa vraća `candidates` / `candidate_documents` kao compatibility view layer uz obnovu `worker_onboarding` / `worker_readiness`; SQL je pripremljen u repou i sada je uspešno primenjen na live Supabase — 08.03.2026
+- [x] Worker-domain cleanup pass 14: `email-health`, agency worker CRUD + agency document upload, checkout recovery, confirmation-fee finalization, `match-jobs`, `funnel-metrics`, worker offer detail i offer-expiry cron više ne koriste direktne `candidates` / `candidate_documents` query-je, već `worker_onboarding` / `worker_documents` alias view layer; posle ovog passa u `src` više nema aktivnih runtime `candidate_documents` query-ja, a preostali `candidate` trag je sveden na fizičku šemu (`candidate_id`, contract `candidate_*` payload, auto-generated types) — 08.03.2026
+- [x] Worker-domain cleanup pass 13: dodat je shared `src/lib/worker-documents.ts`, pa `DocumentWizard`, `verify-document`, admin review/detail, contract generate/download, profile-reminders i user deletion više ne hardkodiraju `candidate-docs` u app-layer kodu; legacy bucket ime ostaje samo kao kompatibilni storage detalj ispod worker-first helpera — 08.03.2026
+- [x] Worker-domain cleanup pass 12: `JobsMatchClient`, `ManualMatchButton`, `DocumentWizard`, admin `re-verify` i auto-match response više ne šalju/izlažu `candidateId` kao aktivan app-layer ključ; `manual-match`, `verify-document` i `documents/request-review` server rute sada koriste `workerId` kao kanonski input uz interni `legacyCandidateId` fallback, a `payment-eligibility` alias je jasno označen kao privremena kompatibilnost — 08.03.2026
+- [x] Worker-domain cleanup pass 11: runtime query layer u `src` sada koristi `worker_onboarding` i `worker_documents` alias view-e umesto direktnih `candidates` / `candidate_documents` query-ja; `brain/collect`, `admin-exceptions` i `contracts/prepare` su poravnati na nullable view tipove, pa `typecheck`, `lint`, `test` i `build` prolaze bez dodatnog Supabase SQL koraka. Fizička kompatibilnost ostaje samo ispod haube (`candidates`, `candidate-docs`, legacy `candidateId`) — 08.03.2026
+- [x] Worker-domain cleanup pass 10: `src/lib/contract-data.ts` više nema aktivne `candidate` / `candidateProfile` alias-e u `ContractBuildResult`, dok `src/app/api/brain/act/route.ts` sada prihvata `update_worker_status` kao kanonski naziv uz legacy `update_candidate_status` fallback; time su preostali `candidate` tragovi praktično svedeni na fizičke `candidates` / `candidate-docs` resurse i dva namerna compatibility fallback-a (`account/export`, `profile-completion`) — 08.03.2026
+- [x] Worker-domain cleanup pass 9: `auth/callback`, `offers`, `stripe/confirm-session`, `stripe/webhook`, `cron/profile-reminders`, `cron/match-jobs`, `queue/auto-match`, `queue-user-email`, `cron/check-expiring-docs`, worker offer detalj i ceo WhatsApp runtime sada koriste `worker` / `workerRecord` kao kanonski lokalni app-layer naziv umesto `candidate`; preostali `candidate` tragovi svedeni su uglavnom na fizičku `candidates` tabelu, `candidate-docs` bucket i par namernih compatibility aliasa (`account/export`, `profile-completion`, `contract-data`) — 08.03.2026
+- [x] Worker-domain cleanup pass 8: `src/app/profile/worker/page.tsx`, `DashboardClient.tsx` i `queue/page.tsx` sada koriste `workerRecord` / `worker` kao kanonski lokalni naziv umesto `candidate`, dok `src/components/DocumentWizard.tsx` i `src/app/profile/agency/workers/[id]/AgencyWorkerClient.tsx` šalju `workerId` kao primarni ključ ka `/api/verify-document` i `/api/documents/request-review` uz legacy `candidateId` fallback — 08.03.2026
+- [x] Worker-domain cleanup pass 7: `src/app/api/verify-document`, `src/app/api/documents/request-review` i `src/app/api/admin/manual-match` sada prihvataju `workerId` kao kanonski request ključ uz legacy `candidateId` fallback; `src/app/api/admin/re-verify`, `src/components/admin/ManualMatchButton.tsx` i `src/app/admin/jobs/JobsMatchClient.tsx` šalju oba ključa tokom tranzicije, pa document/manual-match tokovi više ne zavise isključivo od `candidateId` API jezika — 08.03.2026
+- [x] Worker-domain cleanup pass 6: `src/app/admin/workers/[id]/page.tsx` više nema privremene `candidateProfile` / `candidateData` alias-e, worker edit (`/profile/worker/edit`) i worker documents upload flow sada koriste `workerRecord` / `workerProfileId` kao kanonske app-layer nazive, a `contracts/prepare|download-all`, `check-expiry`, `manual-match` internali i Stripe checkout auto-create helper više ne koriste `candidate` za lokalni worker domain jezik; preostali `candidate` tragovi ostaju samo kao fizički DB/storage/API compatibility sloj i `contract-data` legacy alias — 08.03.2026
+- [x] Worker-domain cleanup pass 5: `src/app/api/brain/improve/route.ts` sada koristi `workerRows` / `workerResult` u sistemskom snapshot-u, `src/app/admin/refunds/page.tsx` refund flow tretira `candidates` kao worker records umesto kao app-layer `candidate` entitete, `src/app/admin/jobs/JobsMatchClient.tsx` Smart Match radi nad `worker` lokalnim zapisima, a `/api/admin/document-status` koristi `workerRecordIds` / `workerRecordMap` kada sklapa admin status pregled dokumenata — 08.03.2026
+- [x] Worker-domain cleanup pass 4: `src/app/api/brain/collect/route.ts` sada koristi `workerRows`, `workerRecordProfileIds`, `workerDocs` i `workerPayments` kao kanonske lokalne app-layer nazive umesto `candidates*`; `src/app/api/admin/edit-data/route.ts` contract-derived worker polja sada uređuje preko `contractBuild.worker` / `workerProfile`, a `src/lib/messaging.ts` i `src/lib/user-management.ts` više ne tretiraju kanonski worker zapis kao `candidate` u support gating-u i cascade delete helperu — 08.03.2026
 - [x] Worker-domain cleanup pass 3: `/api/admin/search`, `/admin/queue` i `/admin/jobs` sada kanonski deduplikuju legacy `candidates` redove po `profile_id` pre prikaza admin rezultata, queue watch-a i Smart Match worker liste, pa duplikati više ne naduvavaju search/queue/jobs UI; `src/lib/contract-data.ts` je prebačen na `worker` / `workerProfile` build rezultat uz backward-compatible `candidate` alias za postojeće contract rute — 08.03.2026
 - [x] Admin exception dashboard: dodat je shared `src/lib/admin-exceptions.ts` snapshot helper i novi `/admin/exceptions` ekran koji u jednom mestu prikazuje invalid/bounced email profile-e, otvorene a neplaćene checkout-e, stale pending payment drift, manual-review dokumente, `verified but unpaid`, `paid but not in queue` i otvorene job request-e bez ponuda; admin sidebar/dashboard sada imaju direktan `Exceptions` ulaz sa live signal count-om — 08.03.2026
 - [x] Abandoned checkout recovery automation: dodat je hourly `/api/cron/checkout-recovery` koji prati stvarno otvorene `$9` checkout-e preko `user_activity + payments`, preskače interne/test/typo email profile, šalje `checkout_recovery` follow-up u `1h / 24h / 72h` kroz email + postojeći WhatsApp `status_update` template, i posle trećeg koraka markira stale pending entry-fee redove kao `abandoned`; `create-checkout` sada upisuje `checkout_started_at` + `deadline_at`, pa recovery i Brain/reporting više ne zavise od nagađanja oko starosti pending checkout-a — 08.03.2026
@@ -430,7 +456,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 ### Admin API Routes:
 | Putanja | Metoda | Namena |
 |---|---|---|
-| `/api/admin/manual-match` | POST/GET | Ručno matchovanje kandidata → posao |
+| `/api/admin/manual-match` | POST/GET | Ručno matchovanje radnika → posao |
 | `/api/admin/edit-data` | POST | Inline editovanje user/employer/contract polja |
 | `/api/admin/re-verify` | POST | Re-trigger AI verifikacije dokumenta |
 | `/api/contracts/generate-all` | POST | Bulk generisanje DOCX za sve matchovane |
@@ -474,7 +500,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - **TemplateData:** Striktni tipovi — dodaj novo polje eksplicitno u `TemplateData` interface, nema više `[key: string]: any`
 - **Profile completion:** UVEK koristi `getWorkerCompletion()` / `getEmployerCompletion()` iz `src/lib/profile-completion.ts`. NIKAD ne dodavaj novu inline kalkulaciju.
 - **check-expiring-docs:** Ima 30-dnevnu zaštitu od spam-a — ne šalje dupli email istom korisniku unutar 30 dana
-- **⚠️ candidates.id ≠ auth.uid()**: `candidates.id` je auto-generisan UUID (uuid_generate_v4). `auth.uid()` = `profiles.id`. Za sve operacije nad `candidate_documents` koristiti `user.id` (auth UID), NIKAD `candidates.id`. Inače RLS tiho blokira insert/update.
+- **⚠️ worker_onboarding.id ≠ auth.uid()**: `worker_onboarding.id` / fizički `workers.id` je auto-generisan UUID, dok je `auth.uid()` = `profiles.id`. Za `worker_documents.user_id`, storage foldere i profile-based lookup uvek koristiti `user.id` (`profile_id`), NIKAD `workers.id`. Inače RLS i joins tiho pucaju ili vraćaju pogrešan red.
 - **User Activity Tracking:** Svi ključni koraci korisnika se loguju u `user_activity` tabelu. Client: `logActivity()` / `logError()` iz `src/lib/activityLogger.ts`. Server: `logServerActivity()` iz `src/lib/activityLoggerServer.ts`. Nikad ne treba da blokira main flow — fire-and-forget.
 
 ---
@@ -518,7 +544,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 ### 7.3 Principi za buduće promene
 - **Ne dodavati nove AI slojeve pre nego što admin i operativa budu jasni.**
 - **Ne praviti nove odvojene workspace obrasce po ulozi** ako isti problem može da reši shared komponenta/shell.
-- **Ne raditi fizički rename `candidates -> workers` prerano.** Prvo završiti domain cleanup kroz UI/API/helper sloj, pa tek onda DB rename.
+- **Ne vraćati legacy `candidate*` sloj nazad.** Novi SQL, helperi, payload-i i storage putanje moraju ostati worker-first (`workers`, `worker_onboarding`, `worker_documents`, `worker-docs`).
 - **Support i employer komunikacija moraju ostati unutar platforme.** Email/phone reveal nije deo modela.
 
 ### 7.4 Backlog po uticaju
@@ -531,6 +557,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Error monitoring** — Sentry ili ekvivalent za hvatanje tihih production grešaka pre nego što ih korisnik prijavi
 
 #### Srednji uticaj
+- [ ] **Workspace visual regression smoke** — Playwright ili sličan screenshot/smoke paket za worker/employer/agency shell na desktop + mobile breakpoint-ima, sa proverom aktivnog sidebar state-a, header overlap-a i prisustva primarnog CTA-a na overview ekranima
+- [ ] **WhatsApp delivery policy map** — pre slanja template nudževa razlikovati `invalid / no WhatsApp / country-restricted` brojeve od pravih platformskih kvarova, pa unsupported regione automatski prebacivati na email-only ili admin review umesto da stalno pune fail log
 - [ ] **n8n Email AI Auto-Responder** — AI obrada inbox thread-ova
 - [ ] **n8n AI Agent sa Tools** — aktivne radnje umesto čistog chat-a
 - [ ] **Auth Design System unification** — shared auth komponente za `/signup` i `/login`
@@ -539,6 +567,8 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Homepage Modular Document Blocks** — reusable landing blokovi za brže A/B testiranje copy-ja i strukture
 - [ ] **Per-Country Landing Pages ZA POSLODAVCE** — SEO landing stranice po destinacijama
 - [ ] **Cloud doctor automation** — pokretati `npm run cloud:doctor` periodično i alertovati samo na status prelaz u `FAIL`
+- [ ] **Worker-first regression guard** — dodati CI/smoke proveru koja alarmira ako runtime, SQL ili storage ponovo uvedu `candidate*` putanje umesto `worker_onboarding` / `worker_documents` / `worker-docs`
+- [ ] **Supabase migration history cleanup** — poravnati lokalne i remote migration lance tako da `supabase db push` više ne pokušava da reaplajuje stare bazne SQL fajlove; sledeći live hotfix ne sme zavisiti od ručnog Management API zaobilaza
 
 #### Nizak / uslovni uticaj
 - [ ] **Live Visa Process Tracker** — tek kad bude dovoljno stvarnih procesa (`100+` korisnika / aktivni slučajevi)
@@ -567,14 +597,15 @@ Za svakog matchovanog radnika se generišu **4 dokumenta**:
 | POZIVNO PISMO | Pozivno pismo za vizu | DOCX → PDF |
 
 ### Šta već postoji ✅
-- `api/contracts/prepare/route.ts` — sklapa `contract_data` iz match (radnik + poslodavac + job)
-- `contract_data` Supabase tabela — čuva sve podatke za ugovor
-- `document-ai.ts → extractPassportData()` — AI čita pasoše (full_name, passport_number, nationality, DOB, expiry, gender, POB)
-- `documents` tabela sa `ai_extracted_data` JSON poljem
+- `api/contracts/prepare/route.ts` + `api/contracts/generate/route.ts` — sklapanje contract payload-a i generisanje 4 PDF dokumenta iz admin toka
+- `src/lib/contract-data.ts` — sklapa contract payload iz live `matches / worker_onboarding / profiles / employers / job_requests / worker_documents`
+- `contract_data` Supabase tabela — čuva samo override/meta vrednosti za ugovor; worker override kolone su `worker_passport_issue_date`, `worker_passport_issuer`, `worker_place_of_birth`, `worker_gender`
+- `document-ai.ts → extractPassportData()` — AI čita pasoše (full_name, passport_number, nationality, DOB, expiry, gender, POB, date_of_issue, issuing_authority)
+- Generisani PDF ugovori idu u `worker-docs/contracts/{matchId}/`
 
-### Šta fali ❌
+### Kanonski template/data contract
 
-#### 1. Čisti DOCX šabloni sa placeholder-ima
+#### 1. Template placeholder-i
 Šabloni treba da imaju generičke placeholder-e umesto konkretnih podataka:
 ```
 {{WORKER_FULL_NAME}}       — ime i prezime radnika
@@ -612,36 +643,38 @@ Za svakog matchovanog radnika se generišu **4 dokumenta**:
 ```
 
 > [!CAUTION]
-> **UGOVOR O RADU** ima **2-kolonski layout** (newspaper-style columns u DOCX). Srpski tekst ide u levu kolonu, engleski u desnu. NE koristiti tabele — koristiti DOCX section columns.
+> **UGOVOR O RADU** ima **2-kolonski layout**. Srpski tekst ide u levu kolonu, engleski u desnu. NIKAD ne svoditi ovaj dokument na single-column fallback bez eksplicitne odluke.
 
 > [!CAUTION]
 > **Opis posla ima 3 bullet-a po jeziku** — svaki bullet je zaseban paragraf u šablonu. NIKAD ne mapirati sve bullet-e na isti tekst jer to pravi 3x duplikaciju! Uvek `{{JOB_DESC_SR_1}}`, `{{JOB_DESC_SR_2}}`, `{{JOB_DESC_SR_3}}` zasebno.
 
-#### 2. Proširiti document AI passport ekstrakciju
-Trenutno `extractPassportData()` ne izvlači:
+#### 2. Passport extraction polja
+`extractPassportData()` MORA da nastavi da izvlači:
 - `date_of_issue` — datum izdavanja pasoša (POTREBNO za UGOVOR i POZIVNO PISMO)
 - `issuing_authority` — izdavač pasoša (POTREBNO za POZIVNO PISMO)
 
-Dodati u:
-- `document-ai.ts` → prompt i `PassportData` interface
-- `ai_extracted_data` JSON se automatski ažurira (nema schema promene u Supabase za ovo)
+Ako menjaš prompt ili `PassportData` interface, proveri da ova dva polja ostaju u AI output-u i u `documents.ai_extracted_data`.
 
-#### 3. Proširiti `contract_data` tabelu
-Dodati kolone u Supabase:
+#### 3. `contract_data` override kolone
+Worker override kolone u live Supabase su:
 ```sql
-ALTER TABLE contract_data 
-  ADD COLUMN candidate_passport_issue_date DATE,
-  ADD COLUMN candidate_passport_issuer TEXT;
+SELECT
+  worker_passport_issue_date,
+  worker_passport_issuer,
+  worker_place_of_birth,
+  worker_gender
+FROM contract_data;
 ```
 
-#### 4. Server-side DOCX generisanje
-Implementirati API rutu (npr. `api/contracts/generate/route.ts`) koja:
-1. Čita `contract_data` za dati match
-2. Učitava DOCX šablon iz `public/templates/` ili Supabase Storage
-3. Zameni sve `{{PLACEHOLDER}}` sa pravim podacima
-4. Konvertuje DOCX → PDF (koristiti `docx-templates` ili `pizzip + docxtemplater` npm pakete)
-5. Upload PDF u Supabase Storage
-6. Vrati URL za download
+`contract_data` NIJE source of truth za worker/employer/job core polja; ta polja i dalje dolaze iz live relacionih tabela preko `src/lib/contract-data.ts`.
+
+#### 4. Server-side PDF generisanje
+`api/contracts/generate/route.ts` danas:
+1. Učita/ensure-uje kanonski `contract_data` za dati match
+2. Generiše 4 PDF dokumenta iz deljenog `pdf-generator` sloja
+3. Uploaduje PDF-ove u `worker-docs/contracts/{matchId}/`
+4. Upisuje javne URL-ove u `contract_data.generated_documents`
+5. Vraća URL-ove za download u admin UI
 
 #### 5. Admin UI za generisanje
 Dugme "Generate Contracts" na admin match detail stranici:
@@ -674,16 +707,16 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 5. **DOCX run splitting** — Word deli tekst u run-ove nepredvidivo. Placeholder `{{NAME}}` može biti u 2-3 run-a. Koristiti biblioteku koja to handluje (docxtemplater).
 6. **Admin user counting** — kad se broje workeri iz auth usera, UVEK isključiti i `employer` I `admin` (`user_type !== 'employer' && user_type !== 'admin'`). Inače admin nalog ulazi u worker statistike.
 7. **Admin profile access** — admin mora proći `user_type` check na 3 mesta: server-side `page.tsx`, klijentski `EmployerProfileClient.tsx fetchData()`, i layout guard. Ako dodaš novu zaštitu, proveri SVA 3.
-8. **Storage bucket je `candidate-docs`** — NIKAD ne koristiti `from("documents")` za storage. Bucket `documents` NE POSTOJI. Jedini bucket je `candidate-docs`. Generisani DOCX ugovori idu u `candidate-docs/contracts/{matchId}/`.
+8. **Kanonski i jedini aktivni storage bucket je `worker-docs`** — NIKAD ne koristiti `from("documents")` za storage. Bucket `documents` NE POSTOJI. `candidate-docs` je ugašen. Novi runtime/helperi moraju uvek gađati `worker-docs`. Generisani PDF ugovori idu u `worker-docs/contracts/{matchId}/`.
 9. **Whitelist za edit-data mora da odgovara stvarnoj DB šemi** — pre dodavanja kolone u whitelist, PROVERI da kolona zaista postoji u tabeli (FULL_SETUP.sql + migracije). Phantom kolone u whitelistu = tihi fail.
-10. **CHECK constraint na candidates.status** — dozvoljene vrednosti: `NEW, PROFILE_COMPLETE, PENDING_APPROVAL, VERIFIED, APPROVED, IN_QUEUE, OFFER_PENDING, OFFER_ACCEPTED, VISA_PROCESS_STARTED, VISA_APPROVED, PLACED, REJECTED, REFUND_FLAGGED`. Svaka druga vrednost → DB error. Migracija: `007_admin_approval.sql`. **Kad dodaješ novi status, ažuriraj I migraciju I ovaj spisak.**
+10. **CHECK constraint na `workers.status`** — dozvoljene vrednosti: `NEW, PROFILE_COMPLETE, PENDING_APPROVAL, VERIFIED, APPROVED, IN_QUEUE, OFFER_PENDING, OFFER_ACCEPTED, VISA_PROCESS_STARTED, VISA_APPROVED, PLACED, REJECTED, REFUND_FLAGGED`. Svaka druga vrednost → DB error. Migracija: `007_admin_approval.sql`. **Kad dodaješ novi status, ažuriraj I migraciju I ovaj spisak.**
 11. **JS operator precedence u ternary** — `A || B ? C : D` se evaluira kao `(A||B) ? C : D`, NE kao `A || (B ? C : D)`. Uvijek stavljaj zagrade.
 12. **Unicode u regex** — za srpska imena (Č, Ć, Š, Ž, Đ) koristiti `\p{L}` sa `u` flagom, NIKAD `[A-Z]`.
 13. **`profiles` tabela NEMA `role` kolonu** — kolona se zove `user_type`. NIKAD ne koristiti `profile?.role`. Svuda koristiti `profile?.user_type !== 'admin'`. Ovo je bila sistemska greška u 14 fajlova.
 14. **Employer status vrednosti su UPPERCASE** — DB CHECK dozvoljava samo `PENDING`, `VERIFIED`, `REJECTED`. NIKAD lowercase `active/pending/rejected`.
 15. **Admin auth check pattern** — za API rute: `select("user_type")` + `profile?.user_type !== "admin"`. Za stranice: isti pattern + `isGodModeUser()` fallback. Za server actions: samo `user_type`, bez godmode.
-15a. **`worker` je kanonski domain naziv, `candidates` je samo legacy storage layer** — za novi kod UVEK koristiti `src/lib/domain.ts` (`normalizeUserType()`, `shouldProvisionWorkerRecords()`) i `src/lib/workers.ts` (`ensureWorkerRecord()`, `loadCanonicalWorkerRecord()`, `pickCanonicalWorkerRecord()`). Ne uvoditi nove helpere/komentare/API payload-e sa `candidate*` imenima osim kada moraš da gađaš fizičku DB tabelu/kolonu. Posebno: ne koristiti raw `.single()` / `.maybeSingle()` na `candidates` kada lookup radiš po `profile_id` ili telefonu, jer live može imati duplikate.
-15b. **Agency feature zahteva migraciju pre deploy-a** — agency stranice/API sada imaju graceful setup guard i više ne treba da pucaju ružno kada schema nije spremna, ali puni agency flow (`ensureAgencyRecord()`, dashboard ownership, claim linkovanje) i dalje očekuje `public.agencies` tabelu i ownership kolone na `candidates` (`agency_id`, `submitted_by_profile_id`, `submitted_full_name`, `submitted_email`, `source_type`, `claimed_by_worker_at`). Live proverom 06.03.2026 potvrđeno je da te stvari još NE postoje. Pre prvog deploy-a agency feature-a MORA da se pusti `supabase/migrations/20260306180000_agency_foundation_scaffold.sql`.
+15a. **`worker` je kanonski domain naziv, a live DB/storage je worker-first** — za novi kod UVEK koristiti `src/lib/domain.ts` (`normalizeUserType()`, `shouldProvisionWorkerRecords()`), `src/lib/workers.ts` (`ensureWorkerRecord()`, `loadCanonicalWorkerRecord()`, `pickCanonicalWorkerRecord()`) i `src/lib/worker-documents.ts`. Ne uvoditi nove helpere/komentare/API payload-e sa `candidate*` imenima; ti tragovi smeju ostati samo u istorijskim migracijama, starim FK imenima i eksplicitno označenim kompatibilnim zapisima. Posebno: ne koristiti raw `.single()` / `.maybeSingle()` na `worker_onboarding` / fizičkom `workers` kada lookup radiš po `profile_id` ili telefonu, jer live može imati duplikate.
+15b. **Agency foundation migration je live, ali schema guard ostaje obavezan** — puni agency flow sada očekuje `public.agencies` i ownership kolone na fizičkom `workers` (`agency_id`, `submitted_by_profile_id`, `submitted_full_name`, `submitted_email`, `source_type`, `claimed_by_worker_at`). Produkcija je poravnata, ali preview/local okruženja i dalje mogu biti bez te migracije, zato `getAgencySchemaState()` guard NE uklanjati.
 16. **Webhook/Cron rute MORAJU koristiti service-role admin helper (`createAdminClient()` ili `createTypedAdminClient()`)** — `createClient()` zahteva auth cookies. Stripe webhooks, WhatsApp webhooks, i Vercel cron jobs NEMAJU cookies. Sve DB operacije će tiho da failuju. Za schema-sensitive rute (`Brain`, `system-smoke`, server activity logging) preferirati `createTypedAdminClient()`, a legacy query-heavy rute ostaviti na `createAdminClient()` dok se ne sanira postojeći query debt.
 17. **`OFFER_ACCEPTED` status** — ~~NE POSTOJI u CHECK constraint~~ FIXED u migraciji `007_admin_approval.sql`. Videti Gotcha #10 za potpunu listu dozvoljenih statusa.
 18. **`payments` tabela schema** — ~~drift~~ FIXED. `COMPLETE_RESET.sql` sada koristi `user_id` i `amount` (ne `profile_id`/`amount_cents`). Dodate kolone: `stripe_checkout_session_id`, `paid_at`, `deadline_at`, `metadata`, `refund_status`, `refund_notes`.
@@ -693,33 +726,33 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 22. **Supabase `.in()` sa praznim nizom crashuje** — `.in("id", [])` baca error. UVEK koristi guard: `.in("id", ids.length > 0 ? ids : ["__none__"])`. Videti `document-status/route.ts` za ispravan pattern.
 23. **`verify-document` storage/DB ops moraju koristiti admin klijent za admin pozive** — kada admin triggeruje re-verify (preko `/api/admin/re-verify`), `verify-document` prima admin-ove cookies. Ali storage operacije (upload/remove/update) koriste RLS. Admin ne može menjati tuđe fajlove preko RLS-bound klijenta. Koristiti `storageClient = isAdmin ? createAdminClient() : supabase` pattern.
 24. **TypeScript interface ≠ DB kolona** — kad dodaješ novo polje u `ContractDataForDocs` interface ili bilo koji drugi tip koji mapira na DB tabelu, MORAŠ napraviti SQL migraciju (`ALTER TABLE ... ADD COLUMN`). TypeScript se kompajlira bez greške ali INSERT puca u runtime-u. Uvek ažuriraj i `COMPLETE_RESET.sql`.
-25. **User/Admin delete MORA da obriše SVE povezane tabele** — `delete-user` i `account/delete` moraju brisati: `candidate_documents`, `signatures`, `contract_data` (kroz matches), `offers`, `matches`, `payments`, `email_queue`, `whatsapp_messages`, pa tek onda `candidates`, `employers`, `profiles`, auth. Bez toga ostaju siročići u bazi.
-26. **`queue/auto-match` koristi `createClient()` umesto `createAdminClient()`** — ~~krhak pattern~~ FIXED. Admin-only ruta sada koristi `createAdminClient()` za sve DB operacije (`offers`, `candidates`, `job_requests`). `createClient()` ostaje samo za auth check.
+25. **User/Admin delete MORA da obriše SVE povezane tabele** — `delete-user` i `account/delete` moraju brisati: `worker_documents`, `signatures`, `contract_data` (kroz matches), `offers`, `matches`, `payments`, `email_queue`, `whatsapp_messages`, pa tek onda `workers`, `employers`, `agencies`, `profiles`, auth. Bez toga ostaju siročići u bazi.
+26. **`queue/auto-match` koristi `createClient()` umesto `createAdminClient()`** — ~~krhak pattern~~ FIXED. Admin-only ruta sada koristi `createAdminClient()` za sve DB operacije (`offers`, `worker_onboarding`, `job_requests`). `createClient()` ostaje samo za auth check.
 27. **Profile completion drift — koristi `getWorkerCompletion()` kao single source of truth** — `workers/page.tsx` je imao inline 16-field proveru koja nije koristila deljenu `getWorkerCompletion()` funkciju. Svaki put kad se menja logika kompletnosti profila, morala bi se menjati na 3 mesta. UVEK koristiti `getWorkerCompletion()` iz `profile-completion.ts`.
 28. **ContactForm → `/api/send-email` ruta je MORALA da postoji** — ContactForm je pozivao `/api/send-email` koji NIJE postojao. Svaki submit je davao 404. Ruta je kreirana sa email validacijom i slanjem na admin email preko `sendEmail()` iz `mailer.ts`.
 29. **⚠️ SVI CRON JOBOVI SU UGAŠENI — sistem je u fazi pripreme** — `vercel.json` crons array je prazan. Četiri cron joba su bila aktivna i slala emailove korisnicima: `match-jobs` (svaki sat — matchovao workere sa jobovima), `check-expiry` (svaki sat — procesovao expired offers), `profile-reminders` (svaki dan — slao remindere i **BRISAO KORISNIKE posle 30 dana**), `check-expiring-docs` (svaki dan). Rute i dalje postoje u `/api/cron/` i mogu se ručno pozvati. Kad sistem bude spreman za produkciju, dodaj schedule-ove nazad u `vercel.json`.
 30. **🚫 AUTOMATSKI CRON MEJLOVI SU UGAŠENI — welcome/signup emailovi RADE normalno** — Cron jobovi su ugašeni jer su slali lažne notifikacije (npr. "pronađen vam je posao") kad nema odobrenih profila u sistemu. Welcome email, signup potvrda, admin announcements, kontakt forma — SVE TO RADI. Samo `match-jobs`, `profile-reminders`, `check-expiring-docs`, `check-expiry` su isključeni u `vercel.json`. NE uključivati ih dok tim ne kaže.
 31. **🛡️ MANUELNA ADMIN VERIFIKACIJA NIJE payment-gate** — Admin approval ostaje za operativni pregled i QA, ali $9 entry fee je otključan za sve worker profile. Worker može da plati bez `admin_approved=true`; webhook i dalje prebacuje u `IN_QUEUE` i postavlja `queue_joined_at`. DB kolone `admin_approved`, `admin_approved_at`, `admin_approved_by` ostaju za admin procese. Migracija: `007_admin_approval.sql`.
 32. **🚀 LAUNCH DATUM: 01.03.2026** — sve mora biti gotovo do tada. Videti Sekciju 9.
-33. **Stripe webhook MORA da postavi `queue_joined_at`** — kad se kandidat prebaci u `IN_QUEUE` posle plaćanja entry fee, MORA se postaviti i `queue_joined_at: new Date().toISOString()`. Bez toga, 90-dnevni countdown na admin dashboardu ne radi jer je `queue_joined_at` null.
+33. **Stripe webhook MORA da postavi `queue_joined_at`** — kad se worker prebaci u `IN_QUEUE` posle plaćanja entry fee, MORA se postaviti i `queue_joined_at: new Date().toISOString()`. Bez toga, 90-dnevni countdown na admin dashboardu ne radi jer je `queue_joined_at` null.
 34. **`notifications.ts` koristi `NEXT_PUBLIC_BASE_URL`** — env var za base URL je `NEXT_PUBLIC_BASE_URL`, NE `NEXT_PUBLIC_SITE_URL`. Offer link je `/profile/worker/offers/{id}`, NE `/profile/offers/{id}`. Format datuma je `en-GB`, NE `en-US`.
-35. **`match-jobs` cron MORA filtrirati `IN_QUEUE` + `entry_fee_paid`** — bez ovih filtera, cron matchuje SVE kandidate sa verifikovanim pasošem, uključujući one koji nisu platili entry fee ni ušli u queue.
-36. **Auto-deletion u `profile-reminders` MORA da obriše SVE tabele** — samo brisanje auth usera (`deleteUser`) ostavlja siročiće u `candidates`, `profiles`, `candidate_documents`, `payments`, `email_queue`, `employers`. UVEK brisati SVE povezane tabele + storage pre brisanja auth usera. Isti pattern kao `account/delete` i `admin/delete-user`.
+35. **`match-jobs` cron MORA filtrirati `IN_QUEUE` + `entry_fee_paid`** — bez ovih filtera, cron matchuje SVE workere sa verifikovanim pasošem, uključujući one koji nisu platili entry fee ni ušli u queue.
+36. **Auto-deletion u `profile-reminders` MORA da obriše SVE tabele** — samo brisanje auth usera (`deleteUser`) ostavlja siročiće u `workers`, `profiles`, `worker_documents`, `payments`, `email_queue`, `employers`, `agencies`. UVEK brisati SVE povezane tabele + storage pre brisanja auth usera. Isti pattern kao `account/delete` i `admin/delete-user`.
 37. **Google OAuth korisnici NEMAJU `user_type` pri prvom login-u** — ako korisnik klikne "Sign in with Google" na login stranici (ne signup), biće preusmeren na `/auth/select-role`. Auth callback proverava `user_metadata.user_type` i ako ga nema, šalje tamo. Signup stranica automatski šalje `user_type` kroz URL param.
 38. **Google OAuth — Supabase Provider MORA biti konfigurisan** — potreban Google Cloud OAuth Client ID + Secret u Supabase Dashboard → Authentication → Providers → Google. Redirect URL iz Supabase mora biti dodat kao Authorized Redirect URI u Google Cloud Console.
 39. **WhatsApp šabloni MORAJU biti odobreni u Meta Business Manager-u pre korišćenja** — `sendWhatsAppTemplate()` će vratiti error ako template nije approved. Imena šablona su lowercase sa underscores (npr. `document_reminder`). Maximum 550 karaktera za body. Utility šabloni ne smeju imati promotivni sadržaj — Meta ih automatski re-kategoriše u Marketing.
 40. **WhatsApp webhook MORA koristiti `createAdminClient()`** — Meta šalje webhook bez auth cookies. Sve DB operacije moraju koristiti service role client. Webhook ruta ima i GET (verifikacija) i POST (poruke + status update-ovi).
 41. **`queueEmail()` podržava opcionalni `recipientPhone` parametar** — kad se prosledi, automatski šalje i WhatsApp template uz email. WhatsApp failure NIKAD ne blokira email slanje. Dodati phone kao poslednji argument: `queueEmail(supabase, userId, type, email, name, data, scheduledFor, phone)`.
 42. **RLS policy MORA koristiti `(select auth.uid())` a NE `auth.uid()` direktno** — `auth.uid()` se re-evaluira za SVAKI red u tabeli, što drastično usporava query-je. Zamotan u subquery `(select auth.uid())` se poziva samo jednom. Ovo važi za sve `auth.<function>()` pozive u RLS policy-ima (uid, jwt, role). Supabase Advisor detektuje ovo kao performance warning.
-43. **Telefon se čuva u `candidates.phone`, NE u Supabase Auth** — Auth `phone` polje je za SMS login. Naš phone se čuva u candidates tabeli. `ProfileClient.tsx` sinhronizuje phone u `auth.user_metadata` na save da bude vidljiv u Auth dashboardu. WhatsApp webhook traži korisnika po `candidates.phone`.
+43. **Telefon se čuva u `worker_onboarding.phone` / fizičkom `workers.phone`, NE u Supabase Auth** — Auth `phone` polje je za SMS login. Naš phone se čuva u worker sloju. `ProfileClient.tsx` sinhronizuje phone u `auth.user_metadata` na save da bude vidljiv u Auth dashboardu. WhatsApp webhook prvo traži korisnika po `worker_onboarding.phone`, pa po auth metadata fallback-u.
 44. **Business facts MORAJU ići u `platform_config` tabelu** — NIKAD ne hardkodovati cene, garanciju, kontakt email ili politiku u kod. Koristiti `getPlatformConfig()` iz `src/lib/platform-config.ts`. Admin menja u Settings → Platform Config. WhatsApp bot, Brain Monitor i budući automation/tool slojevi — svi čitaju iz iste baze. Cache: 5 min. Fallback: hardkodovane default vrednosti ako DB pukne.
 45. **`brain_memory` upisi MORAJU ići kroz `saveBrainFactsDedup()`** — WhatsApp learning loop i Brain self-improve ne smeju direktno `insert` bez dedupa. Koristiti `src/lib/brain-memory.ts` da se spreče duplikati i prompt-bloat.
 46. **WhatsApp webhook token + admin telefoni su ENV-driven** — `WHATSAPP_VERIFY_TOKEN` (ili fallback na `CRON_SECRET`) mora biti set; hardcoded verify token fallback je uklonjen. Admin telefon za WhatsApp komande ide kroz `OWNER_PHONE` ili `OWNER_PHONES` (comma-separated).
 47. **ESLint gate: no blocking errors, warnings ostaju kao tehnički dug** — `@typescript-eslint/no-explicit-any` je privremeno warning da produkcioni lint ne blokira deploy dok se radi postepena tipizacija. `npm run lint` mora ostati na 0 errors.
 48. **`brain_reports` schema koristi `report` JSON kolonu (ne `content`/`report_type`)** — Brain Monitor i `/api/brain/report` MORAJU upisivati u `report` polje i proveriti DB grešku pre nego što označe `reportSaved=true`.
 49. **`/api/track` za anonimne evente MORA slati `user_id: null`** — string `"anonymous"` nije validan UUID i tiho ubija funnel telemetry; anonimni status i kontekst treba čuvati u `details`.
-50. **Brain stall metrika mora mapirati po korisniku (`candidate_documents.user_id`, `payments.user_id`)** — heuristika `created_at && c.created_at` daje lažne rezultate (`no_docs_uploaded`, `payment_at`) i vodi AI na pogrešne zaključke.
-51. **Checkout route MORA imati onboarding self-heal** — ako nedostaje `profiles` ili `candidates` zapis, `/api/stripe/create-checkout` treba automatski da ih kreira pre eligibility check-a, da worker ne ostane blokiran i da payment telemetry beleži realne pokušaje.
+50. **Brain stall metrika mora mapirati po korisniku (`worker_documents.user_id`, `payments.user_id`)** — heuristika `created_at && c.created_at` daje lažne rezultate (`no_docs_uploaded`, `payment_at`) i vodi AI na pogrešne zaključke.
+51. **Checkout route MORA imati onboarding self-heal** — ako nedostaje `profiles` ili `worker_onboarding` zapis, `/api/stripe/create-checkout` treba automatski da ih kreira pre eligibility check-a, da worker ne ostane blokiran i da payment telemetry beleži realne pokušaje.
 
 
 ---

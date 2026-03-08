@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateAllDocuments, validateContractData, type DocumentType, type ContractDataForDocs } from "@/lib/pdf-generator";
+import { buildContractDataForMatch, ensureStoredContractData } from "@/lib/contract-data";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
 // POST: Generate all 4 PDF documents for a contract
 export async function POST(request: NextRequest) {
@@ -32,22 +34,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Match ID required" }, { status: 400 });
         }
 
-        // Get contract data
-        const { data: contractData, error: fetchError } = await supabase
-            .from("contract_data")
-            .select("*")
-            .eq("match_id", matchId)
-            .single();
-
-        if (fetchError || !contractData) {
-            return NextResponse.json(
-                { error: "Contract data not found. Run 'Prepare Contract Data' first." },
-                { status: 404 }
-            );
-        }
+        const adminSupabase = createAdminClient();
+        const prepared = await ensureStoredContractData(adminSupabase, matchId);
+        const contractData = prepared.contractData as ContractDataForDocs;
 
         // Validate required fields before generating
-        const missingFields = validateContractData(contractData as ContractDataForDocs);
+        const missingFields = validateContractData(contractData);
         if (missingFields.length > 0) {
             return NextResponse.json(
                 {
@@ -59,12 +51,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate all 4 documents
-        const documents = await generateAllDocuments(contractData as ContractDataForDocs);
+        const documents = await generateAllDocuments(contractData);
 
         // Upload to Supabase Storage
-        const adminSupabase = createAdminClient();
-
-        const workerName = (contractData.candidate_full_name || "unknown")
+        const workerName = (contractData.worker_full_name || "unknown")
             .replace(/[^\p{L}\p{N}\s]/gu, "")
             .replace(/\s+/g, "_");
 
@@ -84,7 +74,7 @@ export async function POST(request: NextRequest) {
 
             // Upload to storage (upsert to overwrite if re-generating)
             const { error: uploadError } = await adminSupabase.storage
-                .from("candidate-docs")
+                .from(WORKER_DOCUMENTS_BUCKET)
                 .upload(fullPath, buffer, {
                     contentType: "application/pdf",
                     upsert: true,
@@ -97,7 +87,7 @@ export async function POST(request: NextRequest) {
 
             // Get public URL
             const { data: urlData } = adminSupabase.storage
-                .from("candidate-docs")
+                .from(WORKER_DOCUMENTS_BUCKET)
                 .getPublicUrl(fullPath);
 
             generatedDocs[docType] = urlData.publicUrl;
@@ -119,7 +109,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             documents: generatedDocs,
-            message: `Generated ${documents.size} documents for ${contractData.candidate_full_name}`,
+            message: `Generated ${documents.size} documents for ${contractData.worker_full_name}`,
         });
     } catch (error) {
         console.error("Document generation error:", error);
@@ -157,23 +147,27 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const { data: contractData, error } = await supabase
-        .from("contract_data")
-        .select("generated_documents, generated_at, candidate_full_name")
-        .eq("match_id", matchId)
-        .single();
+    try {
+        const adminSupabase = createAdminClient();
+        const contractBuild = await buildContractDataForMatch(adminSupabase, matchId);
+        const generatedDocuments = contractBuild.storedContractData?.generated_documents;
+        const hasDocuments = Boolean(
+            generatedDocuments &&
+            typeof generatedDocuments === "object" &&
+            !Array.isArray(generatedDocuments) &&
+            Object.keys(generatedDocuments).length > 0
+        );
 
-    if (error || !contractData) {
-        return NextResponse.json({ error: "Contract data not found" }, { status: 404 });
+        return NextResponse.json({
+            generated: hasDocuments,
+            documents: generatedDocuments || {},
+            generatedAt: contractBuild.storedContractData?.generated_at || null,
+            workerName: contractBuild.contractData.worker_full_name || null,
+        });
+    } catch (error) {
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : "Contract data not found" },
+            { status: 404 }
+        );
     }
-
-    const hasDocuments = contractData.generated_documents &&
-        Object.keys(contractData.generated_documents).length > 0;
-
-    return NextResponse.json({
-        generated: hasDocuments,
-        documents: contractData.generated_documents || {},
-        generatedAt: contractData.generated_at,
-        workerName: contractData.candidate_full_name,
-    });
 }

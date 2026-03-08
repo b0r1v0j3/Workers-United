@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { normalizeUserType } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
-import WorkerLayoutClient from "./WorkerLayoutClient";
+import AppShell from "@/components/AppShell";
 
 export const dynamic = "force-dynamic";
 
@@ -17,22 +18,17 @@ export default async function WorkerLayout({
     }
 
     // Redirect employers to employer profile
-    const userType = user.user_metadata?.user_type;
+    const userType = normalizeUserType(user.user_metadata?.user_type);
     if (userType === 'employer') {
         redirect("/profile/employer");
     }
-
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-    const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
+    if (userType === "agency") {
+        redirect("/profile/agency");
+    }
 
     return (
-        <WorkerLayoutClient user={user} displayName={displayName}>
+        <AppShell user={user} variant="dashboard">
             {children}
-        </WorkerLayoutClient>
+        </AppShell>
     );
 }

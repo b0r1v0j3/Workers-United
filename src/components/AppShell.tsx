@@ -36,21 +36,37 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children, user, variant = "dashboard" }: AppShellProps) {
-    const [isOpen, setIsOpen] = useState(() => {
-        if (typeof window === "undefined") return true;
-        return window.innerWidth >= 1024;
-    });
+    const [isDesktop, setIsDesktop] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    // Close sidebar on mobile when route changes
     useEffect(() => {
         if (typeof window === "undefined") return;
-        if (window.innerWidth < 1024) {
+
+        const mediaQuery = window.matchMedia("(min-width: 1024px)");
+        const syncViewportState = (matches: boolean) => {
+            setIsDesktop(matches);
+            setIsOpen(matches);
+        };
+
+        syncViewportState(mediaQuery.matches);
+
+        const handleChange = (event: MediaQueryListEvent) => {
+            syncViewportState(event.matches);
+        };
+
+        mediaQuery.addEventListener("change", handleChange);
+        return () => mediaQuery.removeEventListener("change", handleChange);
+    }, []);
+
+    // Close sidebar drawer on mobile when route changes
+    useEffect(() => {
+        if (!isDesktop) {
             const timeoutId = window.setTimeout(() => setIsOpen(false), 0);
             return () => window.clearTimeout(timeoutId);
         }
-    }, [pathname]);
+    }, [pathname, searchParams, isDesktop]);
 
     // Swipe to open/close logic (mostly for mobile)
     useEffect(() => {
@@ -63,6 +79,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
 
         const handleTouchEnd = (e: TouchEvent) => {
             touchEndX = e.changedTouches[0].clientX;
+            if (isDesktop) return;
             // Swipe right from the left edge (open)
             if (touchStartX < 50 && touchEndX - touchStartX > 50) {
                 setIsOpen(true);
@@ -80,13 +97,11 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
             document.removeEventListener('touchstart', handleTouchStart);
             document.removeEventListener('touchend', handleTouchEnd);
         };
-    }, []);
+    }, [isDesktop]);
 
     const normalizedUserType = normalizeUserType(user?.user_metadata?.user_type);
     const isAdminPreview = normalizedUserType === "admin" && variant !== "admin";
-    const sidebarExpanded = isAdminPreview && typeof window !== "undefined" && window.innerWidth >= 1024
-        ? true
-        : isOpen;
+    const sidebarExpanded = isAdminPreview && isDesktop ? true : isOpen;
     const inspectId = searchParams.get("inspect");
     const previewLabel = pathname?.startsWith("/profile/agency")
         ? "Agency Workspace Preview"
@@ -100,6 +115,16 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
             ? "You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow."
             : "You are previewing the agency workspace structure as admin. The add-worker modal opens for inspection only and does not persist preview data."
         : "You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.";
+    const sidebarWidthClass = sidebarExpanded ? "w-72 lg:w-[280px]" : "w-[68px] lg:w-[84px]";
+    const mainOffsetClass = isDesktop
+        ? sidebarExpanded
+            ? "lg:ml-[280px]"
+            : "lg:ml-[84px]"
+        : "pl-[84px]";
+    const handleMenuToggle = () => {
+        if (isAdminPreview && isDesktop) return;
+        setIsOpen((current) => !current);
+    };
 
     return (
         <div className="min-h-screen bg-[#f5f5f4] flex flex-col font-montserrat">
@@ -109,23 +134,23 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 user={user}
             />
 
-            <div className="flex-1 flex max-w-[1920px] mx-auto w-full pt-6 relative">
+            <div className="flex-1 flex max-w-[1920px] mx-auto w-full relative">
                 {/* Mobile Backdrop */}
-                {sidebarExpanded && (
+                {!isDesktop && sidebarExpanded && (
                     <div
-                        className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-opacity delay-75"
+                        className="fixed inset-x-0 bottom-0 top-[68px] bg-black/35 z-[54] backdrop-blur-sm transition-opacity"
                         onClick={() => setIsOpen(false)}
                     />
                 )}
 
                 {/* SIDEBAR (Desktop + Mobile Drawer/Thin Sidebar) */}
                 <aside className={`
-                    fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out px-2 lg:px-0
-                    lg:top-[80px] lg:bottom-0 lg:overflow-y-auto lg:pb-4 lg:z-0
-                    pt-[64px] lg:pt-0
-                    ${sidebarExpanded ? "w-72 lg:w-[280px] translate-x-0" : "w-[68px] translate-x-0"}
+                    fixed left-0 z-[55] transition-all duration-300 ease-in-out px-2 lg:px-0
+                    top-[68px] bottom-0 pt-3 pb-3
+                    lg:top-[80px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
+                    ${sidebarWidthClass}
                 `}>
-                    <div className="h-full overflow-y-auto p-2 lg:p-4 bg-white lg:bg-white/50 backdrop-blur-sm border border-gray-200 lg:border-white/60 shadow-sm rounded-xl lg:rounded-2xl lg:h-[calc(100vh-100px)] flex flex-col items-center lg:items-stretch">
+                    <div className="h-full overflow-y-auto p-2 lg:p-4 bg-white lg:bg-white/50 backdrop-blur-sm border border-gray-200 lg:border-white/60 shadow-sm rounded-xl lg:rounded-2xl flex flex-col items-center lg:items-stretch">
                         {/* Mobile Header with Close Button (only when open) */}
                         <div className={`flex justify-between items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
                             <h2 className="font-bold text-lg text-gray-900">Menu</h2>
@@ -134,12 +159,12 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                             </button>
                         </div>
 
-                            <SidebarContent user={user} variant={variant} isCollapsed={!sidebarExpanded} onMenuToggle={() => setIsOpen(!sidebarExpanded)} />
+                        <SidebarContent user={user} variant={variant} isCollapsed={!sidebarExpanded} onMenuToggle={handleMenuToggle} />
                     </div>
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className="flex-1 min-w-0 w-full pb-10 animate-fade-in-up transition-all duration-300 px-3 pl-[84px] sm:px-6 lg:ml-[280px] lg:pl-6 lg:pr-8">
+                <main className={`flex-1 min-w-0 w-full pb-10 pt-6 animate-fade-in-up transition-all duration-300 px-3 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
                     {isAdminPreview && (
                         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-900 md:flex-row md:items-center md:justify-between">
                             <div>
@@ -174,6 +199,39 @@ interface SidebarContentProps {
     onMenuToggle?: () => void;
 }
 
+type SidebarTone = "blue" | "emerald" | "amber" | "violet" | "rose" | "slate" | "red";
+
+const SIDEBAR_TONE_STYLES: Record<SidebarTone, { active: string; icon: string }> = {
+    blue: {
+        active: "border border-blue-100 bg-blue-50 text-blue-700 shadow-sm",
+        icon: "text-blue-600",
+    },
+    emerald: {
+        active: "border border-emerald-100 bg-emerald-50 text-emerald-700 shadow-sm",
+        icon: "text-emerald-600",
+    },
+    amber: {
+        active: "border border-amber-100 bg-amber-50 text-amber-800 shadow-sm",
+        icon: "text-amber-600",
+    },
+    violet: {
+        active: "border border-violet-100 bg-violet-50 text-violet-700 shadow-sm",
+        icon: "text-violet-600",
+    },
+    rose: {
+        active: "border border-rose-100 bg-rose-50 text-rose-700 shadow-sm",
+        icon: "text-rose-600",
+    },
+    slate: {
+        active: "border border-slate-200 bg-slate-100 text-slate-800 shadow-sm",
+        icon: "text-slate-700",
+    },
+    red: {
+        active: "border border-red-100 bg-red-50 text-red-700 shadow-sm",
+        icon: "text-red-600",
+    },
+};
+
 function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarContentProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -204,7 +262,6 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
         : isAdminPreview
             ? "Back to Admin"
             : "Overview";
-
     return (
         <div className="space-y-1.5 w-full flex flex-col items-center lg:items-stretch">
             {/* Toggle Button Inside Box */}
@@ -227,88 +284,69 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 icon={<LayoutDashboard size={20} />}
                 label={homeLabel}
                 isCollapsed={isCollapsed}
+                tone="blue"
                 queryTab={variant !== "admin" && !isAdminPreview && userType === "employer" ? "company" : undefined}
             />
-
-            {/* Only show profile link outside admin mode */}
-            {variant !== 'admin' && !isAdminPreview && (
-                <SidebarLink
-                    href={userType === 'employer' ? '/profile/employer' : userType === 'agency' ? '/profile/agency' : '/profile/worker'}
-                    icon={
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                            src={user?.user_metadata?.avatar_url || "/logo-hands.png"}
-                            alt="Profile avatar"
-                            className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm"
-                        />
-                    }
-                    label={user?.user_metadata?.full_name || "My Profile"}
-                    isCollapsed={isCollapsed}
-                />
-            )}
 
             <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Menu</div>
 
             {isWorkerWorkspace && (
                 <>
                     <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Worker Workspace</div>
-                    <SidebarLink href={withInspect("/profile/worker/documents")} icon={<FileText size={20} />} label="Documents" isCollapsed={isCollapsed} />
-                    <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} />
-                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} />
-                    <SidebarLink href={withInspect("/profile/worker/edit")} icon={<Pencil size={20} />} label="Edit Profile" isCollapsed={isCollapsed} />
+                    <SidebarLink href={withInspect("/profile/worker/documents")} icon={<FileText size={20} />} label="Documents" isCollapsed={isCollapsed} tone="emerald" />
+                    <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} tone="amber" />
+                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} tone="violet" />
+                    <SidebarLink href={withInspect("/profile/worker/edit")} icon={<Pencil size={20} />} label="Edit Profile" isCollapsed={isCollapsed} tone="rose" />
+                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" />
                 </>
             )}
 
             {isEmployerWorkspace && (
                 <>
                     <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Employer Workspace</div>
-                    <SidebarLink href={withInspect("/profile/employer?tab=jobs")} icon={<Briefcase size={20} />} label="Job Requests" isCollapsed={isCollapsed} queryTab="jobs" />
-                    <SidebarLink href={withInspect("/profile/employer?tab=post-job")} icon={<Plus size={20} />} label="New Job Request" isCollapsed={isCollapsed} queryTab="post-job" />
+                    <SidebarLink href={withInspect("/profile/employer?tab=jobs")} icon={<Briefcase size={20} />} label="Job Requests" isCollapsed={isCollapsed} tone="emerald" queryTab="jobs" />
+                    <SidebarLink href={withInspect("/profile/employer?tab=post-job")} icon={<Plus size={20} />} label="New Job Request" isCollapsed={isCollapsed} tone="violet" queryTab="post-job" />
+                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" />
                 </>
             )}
 
             {isAgencyWorkspace && (
                 <>
                     <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Agency Workspace</div>
-                    <SidebarLink href={withInspect("/profile/agency")} icon={<Users size={20} />} label="Agency Workers" isCollapsed={isCollapsed} />
+                    <SidebarLink href={withInspect("/profile/agency")} icon={<Users size={20} />} label="Agency Workers" isCollapsed={isCollapsed} tone="emerald" />
                     {pathname?.startsWith("/profile/agency/workers/") && (
                         <SidebarLink
                             href={withInspect(pathname)}
                             icon={<User size={20} />}
                             label={isAdminPreview ? "Worker Editor Preview" : "Worker Editor"}
                             isCollapsed={isCollapsed}
+                            tone="rose"
                         />
                     )}
+                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" />
                 </>
             )}
 
             {variant === 'admin' && (
                 <>
-                    <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/agencies" icon={<Users size={20} />} label="Agencies" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" isCollapsed={isCollapsed} tone="emerald" />
+                    <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href="/admin/agencies" icon={<Users size={20} />} label="Agencies" isCollapsed={isCollapsed} tone="violet" />
                     <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Previews</div>
-                    <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Preview Worker" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Preview Employer" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/profile/agency" icon={<Users size={20} />} label="Preview Agency" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Preview Worker" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Preview Employer" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href="/profile/agency" icon={<Users size={20} />} label="Preview Agency" isCollapsed={isCollapsed} tone="blue" />
                     <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Operations</div>
-                    <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/exceptions" icon={<AlertTriangle size={20} />} label="Exceptions" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/email-health" icon={<MailX size={20} />} label="Email Health" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} />
-                    <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" isCollapsed={isCollapsed} tone="amber" />
+                    <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} tone="amber" />
+                    <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" isCollapsed={isCollapsed} tone="rose" />
+                    <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} tone="violet" />
+                    <SidebarLink href="/admin/exceptions" icon={<AlertTriangle size={20} />} label="Exceptions" isCollapsed={isCollapsed} tone="red" />
+                    <SidebarLink href="/admin/email-health" icon={<MailX size={20} />} label="Email Health" isCollapsed={isCollapsed} tone="red" />
+                    <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} tone="slate" />
                 </>
-            )}
-
-            {/* Account settings for all non-admin users */}
-            {variant !== 'admin' && !isAdminPreview && (
-                <div className="pt-2">
-                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} />
-                </div>
             )}
 
             <div className={`mt-auto w-full flex flex-col ${variant === 'admin' ? 'pt-4' : 'pt-2'}`}>
@@ -363,6 +401,7 @@ function SidebarLink({
     isCollapsed,
     disabled = false,
     queryTab,
+    tone = "blue",
 }: {
     href: string;
     icon: React.ReactNode;
@@ -370,11 +409,13 @@ function SidebarLink({
     isCollapsed: boolean;
     disabled?: boolean;
     queryTab?: string;
+    tone?: SidebarTone;
 }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const baseHref = href.split("?")[0];
     const currentTab = searchParams.get("tab") || "company";
+    const toneStyles = SIDEBAR_TONE_STYLES[tone];
     const isActive = queryTab
         ? pathname === baseHref && currentTab === queryTab
         : pathname === baseHref || (baseHref !== '/admin' && baseHref !== '/profile/employer' && baseHref !== '/profile/worker' && baseHref !== '/profile/agency' && pathname.startsWith(baseHref));
@@ -396,16 +437,14 @@ function SidebarLink({
     return (
         <Link
             href={href}
+            aria-current={isActive ? "page" : undefined}
             title={isCollapsed ? label : undefined}
-            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group relative overflow-hidden w-full ${isCollapsed ? 'justify-center' : 'justify-start'} ${isActive
-                ? "bg-blue-50 text-blue-700 shadow-sm"
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-transparent transition-all duration-200 group relative overflow-hidden w-full ${isCollapsed ? 'justify-center' : 'justify-start'} ${isActive
+                ? toneStyles.active
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
         >
-            {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 bg-blue-500 rounded-r-md" />
-            )}
-            <div className={`w-6 h-6 flex items-center justify-center shrink-0 transition-colors ${isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+            <div className={`w-6 h-6 flex items-center justify-center shrink-0 transition-colors ${isActive ? toneStyles.icon : "text-slate-400 group-hover:text-slate-600"
                 }`}>
                 {icon}
             </div>

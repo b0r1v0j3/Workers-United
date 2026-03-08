@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Failed to save signature" }, { status: 500 });
         }
 
-        // Update candidate signature URL
+        // Update worker signature reference on the onboarding record
         await supabase
-            .from("candidates")
+            .from("worker_onboarding")
             .update({
                 signature_url: data.id, // Reference to signature
                 signature_agreed_at: new Date().toISOString()

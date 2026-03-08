@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTypedAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@/lib/database.types";
 import { sendEmail } from "@/lib/mailer";
 import { evaluateSmoke, SmokeRouteCheck, SmokeServiceCheck } from "@/lib/smoke-evaluator";
 
@@ -19,6 +20,29 @@ interface HealthApiResponse {
         whatsapp?: { state: string };
         n8n?: { state: string };
     };
+}
+
+function assertNoError(error: { message: string } | null, context: string): void {
+    if (error) {
+        throw new Error(`${context}: ${error.message}`);
+    }
+}
+
+async function insertSystemActivity(
+    supabase: ReturnType<typeof createTypedAdminClient>,
+    action: string,
+    status: "ok" | "error" | "warning",
+    details: Record<string, unknown>
+): Promise<void> {
+    const { error } = await supabase.from("user_activity").insert({
+        user_id: null,
+        action,
+        category: "system",
+        status,
+        details: details as Json,
+    });
+
+    assertNoError(error, `Failed to log ${action}`);
 }
 
 function mapService(name: string, state: string | undefined, required: boolean): SmokeServiceCheck {
@@ -56,21 +80,18 @@ async function probeRoute(baseUrl: string, path: string): Promise<SmokeRouteChec
     }
 }
 
-async function shouldSendCriticalAlert(supabase: ReturnType<typeof createAdminClient>): Promise<boolean> {
+async function shouldSendCriticalAlert(supabase: ReturnType<typeof createTypedAdminClient>): Promise<boolean> {
     const threshold = new Date(Date.now() - CRITICAL_ALERT_COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await supabase
-        .from("activity_log")
+        .from("user_activity")
         .select("id")
         .eq("action", ALERT_ACTION)
         .gte("created_at", threshold)
         .order("created_at", { ascending: false })
         .limit(1);
 
-    if (error) {
-        console.warn("[system-smoke] Failed to check alert cooldown:", error.message);
-        return true;
-    }
+    assertNoError(error, "Failed to evaluate smoke alert cooldown");
 
     return !data || data.length === 0;
 }
@@ -82,7 +103,7 @@ export async function GET(request: Request) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
-    const supabase = createAdminClient();
+    const supabase = createTypedAdminClient();
     const started = Date.now();
 
     try {
@@ -92,7 +113,7 @@ export async function GET(request: Request) {
         });
 
         const healthJson = (await healthRes.json()) as HealthApiResponse;
-        const routeChecks = await Promise.all(REQUIRED_ROUTES.map((p) => probeRoute(baseUrl, p)));
+        const routeChecks = await Promise.all(REQUIRED_ROUTES.map((path) => probeRoute(baseUrl, path)));
 
         const serviceChecks: SmokeServiceCheck[] = [
             mapService("supabase", healthJson.checks?.supabase?.state, true),
@@ -105,19 +126,13 @@ export async function GET(request: Request) {
         const evaluation = evaluateSmoke(serviceChecks, routeChecks);
         const durationMs = Date.now() - started;
 
-        await supabase.from("activity_log").insert({
-            user_id: "system",
-            action: "system_smoke_check",
-            category: "system",
-            status: evaluation.status === "critical" ? "error" : "success",
-            details: {
-                baseUrl,
-                durationMs,
-                healthStatus: healthJson.status,
-                evaluation,
-                routes: routeChecks,
-                services: serviceChecks,
-            },
+        await insertSystemActivity(supabase, "system_smoke_check", evaluation.status === "critical" ? "error" : "ok", {
+            baseUrl,
+            durationMs,
+            healthStatus: healthJson.status,
+            evaluation,
+            routes: routeChecks,
+            services: serviceChecks,
         });
 
         if (evaluation.status === "critical") {
@@ -128,15 +143,15 @@ export async function GET(request: Request) {
                 try {
                     const emailResult = await sendEmail(
                         ownerEmail,
-                        "🚨 System Smoke Check CRITICAL",
+                        "System Smoke Check CRITICAL",
                         `
                         <h2>Workers United Smoke Check Alert</h2>
                         <p><strong>Status:</strong> ${evaluation.status.toUpperCase()}</p>
                         <p><strong>Duration:</strong> ${durationMs}ms</p>
                         <h3>Critical Issues</h3>
-                        <ul>${evaluation.criticalIssues.map((i) => `<li>${i}</li>`).join("")}</ul>
+                        <ul>${evaluation.criticalIssues.map((issue) => `<li>${issue}</li>`).join("")}</ul>
                         <h3>Warnings</h3>
-                        <ul>${evaluation.warnings.map((w) => `<li>${w}</li>`).join("")}</ul>
+                        <ul>${evaluation.warnings.map((warning) => `<li>${warning}</li>`).join("")}</ul>
                         <h3>Routes</h3>
                         <pre>${JSON.stringify(routeChecks, null, 2)}</pre>
                         <h3>Services</h3>
@@ -144,40 +159,27 @@ export async function GET(request: Request) {
                         `
                     );
 
-                    await supabase.from("activity_log").insert({
-                        user_id: "system",
-                        action: ALERT_ACTION,
-                        category: "system",
-                        status: emailResult.success ? "success" : "warning",
-                        details: {
+                    await insertSystemActivity(
+                        supabase,
+                        ALERT_ACTION,
+                        emailResult.success ? "ok" : "warning",
+                        {
                             ownerEmail,
                             emailResult,
                             evaluation,
-                        },
-                    });
+                        }
+                    );
                 } catch (emailErr) {
-                    await supabase.from("activity_log").insert({
-                        user_id: "system",
-                        action: ALERT_ACTION,
-                        category: "system",
-                        status: "error",
-                        details: {
-                            ownerEmail,
-                            error: emailErr instanceof Error ? emailErr.message : "Unknown email error",
-                            evaluation,
-                        },
+                    await insertSystemActivity(supabase, ALERT_ACTION, "error", {
+                        ownerEmail,
+                        error: emailErr instanceof Error ? emailErr.message : "Unknown email error",
+                        evaluation,
                     });
                 }
             } else {
-                await supabase.from("activity_log").insert({
-                    user_id: "system",
-                    action: "system_smoke_alert_suppressed",
-                    category: "system",
-                    status: "warning",
-                    details: {
-                        reason: `Cooldown active (${CRITICAL_ALERT_COOLDOWN_HOURS}h)`,
-                        evaluation,
-                    },
+                await insertSystemActivity(supabase, "system_smoke_alert_suppressed", "warning", {
+                    reason: `Cooldown active (${CRITICAL_ALERT_COOLDOWN_HOURS}h)`,
+                    evaluation,
                 });
             }
         }
@@ -191,13 +193,12 @@ export async function GET(request: Request) {
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
-        await supabase.from("activity_log").insert({
-            user_id: "system",
-            action: "system_smoke_check",
-            category: "system",
-            status: "error",
-            details: { error: message },
-        });
+
+        try {
+            await insertSystemActivity(supabase, "system_smoke_check", "error", { error: message });
+        } catch (logError) {
+            console.error("[system-smoke] Failed to log smoke error:", logError);
+        }
 
         return NextResponse.json({ error: message }, { status: 500 });
     }

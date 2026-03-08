@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 
 interface DocumentGeneratorProps {
-    candidateId: string;
     matchId?: string;
-    candidateName: string;
+    workerName: string;
 }
 
 interface GeneratedDocs {
@@ -19,7 +18,7 @@ const DOC_LABELS: Record<string, string> = {
     POZIVNO_PISMO: "✉️ POZIVNO PISMO",
 };
 
-export default function DocumentGenerator({ candidateId, matchId, candidateName }: DocumentGeneratorProps) {
+export default function DocumentGenerator({ matchId, workerName }: DocumentGeneratorProps) {
     const [status, setStatus] = useState<"idle" | "preparing" | "generating" | "done" | "error">("idle");
     const [message, setMessage] = useState("");
     const [documents, setDocuments] = useState<GeneratedDocs>({});
@@ -123,7 +122,7 @@ export default function DocumentGenerator({ candidateId, matchId, candidateName 
         <div className="bg-white rounded-[16px] shadow-sm border border-[#dde3ec] p-6">
             <h2 className="font-bold text-[#1e293b] text-xl mb-2">📄 Visa Documents</h2>
             <p className="text-[#64748b] text-sm mb-4">
-                Generate UGOVOR, IZJAVA, OVLAŠĆENJE, POZIVNO PISMO for {candidateName}
+                Generate UGOVOR, IZJAVA, OVLAŠĆENJE, POZIVNO PISMO for {workerName}
             </p>
 
             {/* Match ID input (if not provided) */}

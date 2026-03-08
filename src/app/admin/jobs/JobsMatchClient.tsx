@@ -1,19 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronRight, Briefcase, Globe, CheckCircle2, AlertCircle } from "lucide-react";
+import { ChevronRight, Briefcase, Globe, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
 import { toast } from "sonner";
 
 export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: any[] }) {
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
     const [isMatching, setIsMatching] = useState(false);
-
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
 
     const selectedJob = jobs.find(j => j.id === selectedJobId);
 
@@ -21,22 +15,22 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
     const matches = useMemo(() => {
         if (!selectedJob) return [];
 
-        return queue.map(candidate => {
+        return queue.map(worker => {
             let score = 0;
             const reasons: string[] = [];
 
             // 1. Industry / Job Title Match
-            if (candidate.preferred_job && selectedJob.industry) {
-                if (selectedJob.industry.toLowerCase().includes(candidate.preferred_job.toLowerCase()) ||
-                    candidate.preferred_job.toLowerCase().includes(selectedJob.industry.toLowerCase())) {
+            if (worker.preferred_job && selectedJob.industry) {
+                if (selectedJob.industry.toLowerCase().includes(worker.preferred_job.toLowerCase()) ||
+                    worker.preferred_job.toLowerCase().includes(selectedJob.industry.toLowerCase())) {
                     score += 50;
                     reasons.push("Industry Match");
                 }
             }
 
             // 2. Queue Time (priority to those waiting longer)
-            if (candidate.queue_joined_at) {
-                const daysInQueue = Math.floor((Date.now() - new Date(candidate.queue_joined_at).getTime()) / (1000 * 60 * 60 * 24));
+            if (worker.queue_joined_at) {
+                const daysInQueue = Math.floor((Date.now() - new Date(worker.queue_joined_at).getTime()) / (1000 * 60 * 60 * 24));
                 score += Math.min(daysInQueue, 30); // Max 30 points for time
                 if (daysInQueue > 14) reasons.push("Waiting > 14 days");
             }
@@ -46,14 +40,14 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
             // For now, they are in IN_QUEUE, which implies they are verified.
 
             return {
-                ...candidate,
+                ...worker,
                 score,
                 reasons
             };
         }).sort((a, b) => b.score - a.score).filter(c => c.score > 0); // Only show relevant matches
     }, [selectedJob, queue]);
 
-    const handleGenerateOffer = async (candidateId: string) => {
+    const handleGenerateOffer = async (workerRecordId: string) => {
         if (!selectedJob) return;
         setIsMatching(true);
         try {
@@ -63,15 +57,15 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     jobRequestId: selectedJob.id,
-                    employerId: selectedJob.employer_id, // ensure this is the profile_id of employer
-                    candidateId: candidateId
+                    workerId: workerRecordId,
                 })
             });
+            const data = await res.json();
             if (res.ok) {
                 toast.success("Match created successfully!");
                 setTimeout(() => window.location.reload(), 1000);
             } else {
-                toast.error("Failed to create match.");
+                toast.error(data.error || "Failed to create match.");
             }
         } catch (e) {
             console.error(e);
@@ -124,8 +118,8 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                                     </td>
                                     {!selectedJobId && (
                                         <td className="px-4 py-3">
-                                            <div className="text-sm font-medium text-slate-800">{job.employers?.company_name}</div>
-                                            <div className="text-[11px] text-slate-500">{job.employers?.profiles?.email}</div>
+                                            <div className="text-sm font-medium text-slate-800">{job.employer?.company_name}</div>
+                                            <div className="text-[11px] text-slate-500">{job.employer?.profiles?.email}</div>
                                         </td>
                                     )}
                                     <td className="px-4 py-3">
@@ -174,7 +168,7 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                             <div>
                                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Smart Match</h3>
                                 <h2 className="text-xl font-bold text-slate-900">{selectedJob?.title}</h2>
-                                <p className="text-sm text-slate-600">{selectedJob?.employers?.company_name}</p>
+                                <p className="text-sm text-slate-600">{selectedJob?.employer?.company_name}</p>
                             </div>
                             <JobStatusBadge status={selectedJob?.status || "open"} />
                         </div>
@@ -193,7 +187,7 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                                                 <div className="text-xs font-bold text-blue-600">#{idx + 1}</div>
                                                 <div className="text-[10px] text-slate-400 font-bold">{match.score}pts</div>
                                             </div>
-                                            <img src={match.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${match.profiles?.full_name?.replace(' ', '+') || "Worker"}`} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                                            <img src={`https://ui-avatars.com/api/?name=${match.profiles?.full_name?.replace(' ', '+') || "Worker"}&background=random`} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
                                             <div>
                                                 <h4 className="font-bold text-slate-900 text-sm leading-tight">
                                                     <Link href={`/admin/workers/${match.profile_id}`} className="hover:text-blue-600 transition-colors">
@@ -222,7 +216,7 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => handleGenerateOffer(match.profile_id)}
+                                            onClick={() => handleGenerateOffer(match.id)}
                                             disabled={isMatching || selectedJob?.status !== 'open'}
                                             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow-sm transition-colors whitespace-nowrap"
                                         >

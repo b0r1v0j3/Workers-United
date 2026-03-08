@@ -24,10 +24,10 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
     const roleConfig = {
         admin: { label: "Admin", icon: Shield, color: "text-red-600", bg: "bg-red-50", border: "border-red-200", ring: "ring-red-500/10" },
         employer: { label: "Employer", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", ring: "ring-blue-500/10" },
-        candidate: { label: "Worker", icon: User, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-500/10" },
+        worker: { label: "Worker", icon: User, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-500/10" },
     };
 
-    const current = roleConfig[currentRole as keyof typeof roleConfig] || roleConfig.candidate;
+    const current = roleConfig[currentRole as keyof typeof roleConfig] || roleConfig.worker;
 
     const handleRoleSwitch = async (action: string) => {
         setLoading(true);
@@ -104,7 +104,7 @@ export function GodModePanel({ currentRole, userName }: GodModePanelProps) {
                                 <ActionButton
                                     icon={User}
                                     label="Switch to Worker"
-                                    onClick={() => handleRoleSwitch("switch_to_candidate")}
+                                    onClick={() => handleRoleSwitch("switch_to_worker")}
                                     loading={loading}
                                     activeColor="text-emerald-700 hover:bg-emerald-50 hover:border-emerald-100"
                                 />

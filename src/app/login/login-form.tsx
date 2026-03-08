@@ -97,7 +97,7 @@ export function LoginForm() {
                         Signing in...
                     </>
                 ) : (
-                    "Sign in"
+                    "Sign In"
                 )}
             </button>
         </form>

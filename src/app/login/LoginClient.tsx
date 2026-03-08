@@ -87,7 +87,7 @@ export default function LoginPage() {
                                 </Link>
                             </div>
                             <h2 className="text-3xl font-semibold tracking-tight text-[#18181b]">
-                                {resetMode ? "Reset password" : "Sign in"}
+                                {resetMode ? "Reset password" : "Sign In"}
                             </h2>
                             <p className="mt-2 text-[15px] leading-relaxed text-[#52525b]">
                                 {resetMode
@@ -136,7 +136,7 @@ export default function LoginPage() {
                                     }}
                                     className="w-full text-center text-sm font-semibold text-[#18181b] underline-offset-2 hover:underline"
                                 >
-                                    Back to sign in
+                                    Back to Sign In
                                 </button>
                             </form>
                         ) : (
@@ -212,7 +212,7 @@ export default function LoginPage() {
                                                 Signing in...
                                             </>
                                         ) : (
-                                            "Sign in"
+                                            "Sign In"
                                         )}
                                     </button>
 

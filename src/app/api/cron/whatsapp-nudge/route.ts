@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp";
+import { isInternalOrTestEmail } from "@/lib/reporting";
+import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 
 // ─── WhatsApp Nudge Cron ────────────────────────────────────────────────────
 // Runs daily. Finds ALL users who haven't paid yet.
@@ -10,6 +12,14 @@ import { sendWhatsAppTemplate } from "@/lib/whatsapp";
 // Auth: CRON_SECRET bearer token
 
 export const dynamic = "force-dynamic";
+
+interface NudgeWorkerRecord extends WorkerRecordSnapshot {
+    id: string;
+    profile_id: string | null;
+    phone: string | null;
+    status: string | null;
+    entry_fee_paid: boolean | null;
+}
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
@@ -24,56 +34,80 @@ export async function GET(request: Request) {
     const results = { found: 0, nudged: 0, skipped: 0, errors: 0 };
 
     try {
-        // Find ALL candidates who haven't paid and have a phone number
-        const { data: unpaidCandidates } = await supabase
-            .from("candidates")
-            .select("id, profile_id, phone, status, created_at, entry_fee_paid")
+        // Find all worker records that still haven't paid and have a phone number
+        const { data: unpaidWorkerRows } = await supabase
+            .from("worker_onboarding")
+            .select("id, profile_id, phone, status, entry_fee_paid, updated_at, queue_joined_at, job_search_active, nationality, current_country, preferred_job")
             .eq("entry_fee_paid", false)
             .not("phone", "is", null);
 
-        if (!unpaidCandidates || unpaidCandidates.length === 0) {
+        if (!unpaidWorkerRows || unpaidWorkerRows.length === 0) {
             return NextResponse.json({ status: "no_workers_to_nudge", ...results });
         }
 
-        results.found = unpaidCandidates.length;
+        const workerGroups = new Map<string, NudgeWorkerRecord[]>();
+        for (const rawWorkerRecord of unpaidWorkerRows as NudgeWorkerRecord[]) {
+            const normalizedPhone = normalizeWorkerPhone(rawWorkerRecord.phone);
+            const dedupeKey = rawWorkerRecord.profile_id || normalizedPhone || rawWorkerRecord.id;
+            const existing = workerGroups.get(dedupeKey) || [];
+            existing.push(rawWorkerRecord);
+            workerGroups.set(dedupeKey, existing);
+        }
+
+        const canonicalWorkerRows = Array.from(workerGroups.values())
+            .map(group => pickCanonicalWorkerRecord(group))
+            .filter((workerRecord): workerRecord is NudgeWorkerRecord => !!workerRecord);
+
+        results.found = canonicalWorkerRows.length;
 
         // Get phones that received a nudge in the last 7 days (avoid spam)
         const { data: recentNudges } = await supabase
             .from("whatsapp_messages")
             .select("phone_number")
             .eq("template_name", "profile_incomplete")
+            .in("status", ["sent", "delivered", "read"])
             .gte("created_at", weekAgo.toISOString());
 
         const alreadyNudgedPhones = new Set(
-            (recentNudges || []).map((n: { phone_number: string }) => n.phone_number)
+            (recentNudges || [])
+                .map((n: { phone_number: string }) => normalizeWorkerPhone(n.phone_number))
+                .filter((phone): phone is string => !!phone)
         );
 
         // Get profile names
-        const profileIds = unpaidCandidates.map(c => c.profile_id).filter(Boolean);
+        const profileIds = canonicalWorkerRows.map(workerRecord => workerRecord.profile_id).filter((value): value is string => !!value);
         const { data: profiles } = await supabase
             .from("profiles")
-            .select("id, full_name")
+            .select("id, full_name, email")
             .in("id", profileIds);
 
         const profileMap = new Map(
-            (profiles || []).map(p => [p.id, p.full_name])
+            (profiles || []).map(p => [p.id, p])
         );
 
         // Send nudges
-        for (const candidate of unpaidCandidates) {
-            if (!candidate.phone) continue;
-
-            // Normalize phone
-            const phone = candidate.phone.replace(/[\s\-()]/g, "");
-            if (alreadyNudgedPhones.has(phone) || alreadyNudgedPhones.has("+" + phone)) {
+        for (const workerRecord of canonicalWorkerRows) {
+            const phone = normalizeWorkerPhone(workerRecord.phone);
+            if (!phone) {
                 results.skipped++;
                 continue;
             }
 
-            const name = profileMap.get(candidate.profile_id)?.split(" ")[0] || "there";
+            if (alreadyNudgedPhones.has(phone)) {
+                results.skipped++;
+                continue;
+            }
+
+            const profile = workerRecord.profile_id ? profileMap.get(workerRecord.profile_id) : null;
+            if (isInternalOrTestEmail(profile?.email)) {
+                results.skipped++;
+                continue;
+            }
+
+            const name = profile?.full_name?.split(" ")[0] || "there";
 
             try {
-                await sendWhatsAppTemplate({
+                const sendResult = await sendWhatsAppTemplate({
                     to: phone,
                     templateName: "profile_incomplete",
                     bodyParams: [
@@ -82,9 +116,16 @@ export async function GET(request: Request) {
                         "complete your registration and join the job queue"
                     ],
                     buttonParams: [{ type: "url", url: "/profile/worker" }],
-                    userId: candidate.profile_id,
+                    userId: workerRecord.profile_id || undefined,
                 });
-                results.nudged++;
+
+                if (sendResult.success) {
+                    results.nudged++;
+                    alreadyNudgedPhones.add(phone);
+                } else {
+                    console.error(`[Nudge] Failed for ${phone}:`, sendResult.error);
+                    results.errors++;
+                }
             } catch (err) {
                 console.error(`[Nudge] Failed for ${phone}:`, err);
                 results.errors++;
@@ -95,13 +136,17 @@ export async function GET(request: Request) {
         }
 
         // Log the cron run
-        await supabase.from("activity_log").insert({
-            user_id: "system",
+        const { error: logError } = await supabase.from("user_activity").insert({
+            user_id: null,
             action: "whatsapp_nudge_cron",
             category: "system",
-            status: "success",
+            status: "ok",
             details: results,
         });
+
+        if (logError) {
+            console.warn("[Nudge] Failed to log cron run:", logError.message);
+        }
 
         return NextResponse.json({ status: "success", ...results });
 

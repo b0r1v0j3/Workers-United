@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
+import { ensureWorkerRecord } from "@/lib/workers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
             case "verify":
                 // Skip to verified status
                 await supabase
-                    .from("candidates")
+                    .from("worker_onboarding")
                     .update({
                         status: "VERIFIED",
                         updated_at: new Date().toISOString()
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
                 // Skip to in queue status
                 const nextPos = await getNextQueuePosition(supabase);
                 await supabase
-                    .from("candidates")
+                    .from("worker_onboarding")
                     .update({
                         status: "IN_QUEUE",
                         entry_fee_paid: true,
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
             case "offer":
                 // Skip to offer pending
                 await supabase
-                    .from("candidates")
+                    .from("worker_onboarding")
                     .update({
                         status: "OFFER_PENDING",
                         updated_at: new Date().toISOString()
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
             case "reset":
                 // Reset to new
                 await supabase
-                    .from("candidates")
+                    .from("worker_onboarding")
                     .update({
                         status: "NEW",
                         entry_fee_paid: false,
@@ -101,31 +102,17 @@ export async function POST(request: NextRequest) {
                     .eq("id", user.id);
                 break;
 
-            case "switch_to_candidate":
-                // Create candidate profile if not exists
-                const { data: existingCandidate } = await supabase
-                    .from("candidates")
-                    .select("id")
-                    .eq("profile_id", user.id)
-                    .single();
-
-                if (!existingCandidate) {
-                    await supabase.from("candidates").insert({
-                        profile_id: user.id,
-                        status: "NEW"
-                    });
-                }
-
+            case "switch_to_worker":
                 // Update user_metadata in auth
                 await supabase.auth.updateUser({
                     data: { user_type: "worker" }
                 });
 
-                // Update profile to candidate
-                await supabase
-                    .from("profiles")
-                    .update({ user_type: "worker" })
-                    .eq("id", user.id);
+                await ensureWorkerRecord(supabase, {
+                    userId: user.id,
+                    email: user.email,
+                    fullName: user.user_metadata?.full_name,
+                });
                 break;
 
             case "switch_to_admin":
@@ -158,7 +145,7 @@ const getErrorMessage = (error: unknown): string => {
 
 async function getNextQueuePosition(supabase: SupabaseClient): Promise<number> {
     const { data } = await supabase
-        .from("candidates")
+        .from("worker_onboarding")
         .select("queue_position")
         .not("queue_position", "is", null)
         .order("queue_position", { ascending: false })

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +10,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import { logActivity, logError } from "@/lib/activityLogger";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
 
 interface Profile {
     id: string;
@@ -17,7 +19,7 @@ interface Profile {
     user_type: string;
 }
 
-interface Candidate {
+interface WorkerRecord {
     id: string;
     nationality: string;
     date_of_birth: string;
@@ -43,6 +45,19 @@ interface Candidate {
     passport_expiry_date: string;
     lives_abroad: string;
     previous_visas: string;
+}
+
+interface WorkerRecordLookupRow {
+    id: string;
+    updated_at?: string | null;
+    entry_fee_paid?: boolean | null;
+    job_search_active?: boolean | null;
+    queue_joined_at?: string | null;
+    phone?: string | null;
+    nationality?: string | null;
+    current_country?: string | null;
+    preferred_job?: string | null;
+    status?: string | null;
 }
 
 // Generate days, months, years for DOB
@@ -107,11 +122,20 @@ function parseDateToComponents(dateStr: string | null | undefined, prefix: strin
     };
 }
 
-export default function ProfilePage() {
+export default function ProfilePage({
+    readOnlyPreview = false,
+    initialProfile = null,
+    initialWorkerRecord = null,
+}: {
+    readOnlyPreview?: boolean;
+    initialProfile?: Profile | null;
+    initialWorkerRecord?: WorkerRecord | null;
+}) {
     const supabase = useMemo(() => createClient(), []);
+    const searchParams = useSearchParams();
     const [profile, setProfile] = useState<Profile | null>(null);
-    const [candidate, setCandidate] = useState<Candidate | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [workerRecord, setWorkerRecord] = useState<WorkerRecord | null>(null);
+    const [loading, setLoading] = useState(() => !(readOnlyPreview && initialProfile));
     const [saving, setSaving] = useState(false);
     // Removed error/success state as we use Toast now
 
@@ -166,8 +190,115 @@ export default function ProfilePage() {
     const [hasChildren, setHasChildren] = useState(false);
     const [children, setChildren] = useState<Array<{ last_name: string; first_name: string; dobDay: string; dobMonth: string; dobYear: string }>>([]);
 
+    const overviewHref = useMemo(() => {
+        const inspect = searchParams.get("inspect");
+        return inspect ? `/profile/worker?inspect=${inspect}` : "/profile/worker";
+    }, [searchParams]);
+
+    const resetFamilyState = useCallback(() => {
+        setHasSpouse(false);
+        setSpouseData({
+            first_name: "",
+            last_name: "",
+            dobDay: "",
+            dobMonth: "",
+            dobYear: "",
+            birth_country: "",
+            birth_city: "",
+        });
+        setHasChildren(false);
+        setChildren([]);
+    }, []);
+
+    const applyLoadedData = useCallback((profileData: Profile | null, workerRecordData: WorkerRecord | null) => {
+        setProfile(profileData);
+
+        if (profileData) {
+            const nameParts = (profileData.full_name || "").trim().split(" ");
+            const first_name = nameParts[0] || "";
+            const last_name = nameParts.slice(1).join(" ") || "";
+            setFormData(prev => ({ ...prev, first_name, last_name }));
+        }
+
+        setWorkerRecord(workerRecordData);
+        if (!workerRecordData) {
+            resetFamilyState();
+            return;
+        }
+
+        const dobParts = parseDateToComponents(workerRecordData.date_of_birth, "dob");
+        const origSame = !workerRecordData.original_citizenship ||
+            workerRecordData.original_citizenship === workerRecordData.citizenship;
+
+        setFormData(prev => ({
+            ...prev,
+            nationality: workerRecordData.nationality || "",
+            dobDay: dobParts.dobDay || "",
+            dobMonth: dobParts.dobMonth || "",
+            dobYear: dobParts.dobYear || "",
+            phone: workerRecordData.phone || "",
+            address: workerRecordData.address || "",
+            current_country: workerRecordData.current_country || "",
+            preferred_job: workerRecordData.preferred_job || "",
+            desired_countries: workerRecordData.desired_countries || [],
+            birth_country: workerRecordData.birth_country || "",
+            birth_city: workerRecordData.birth_city || "",
+            citizenship: workerRecordData.citizenship || "",
+            original_citizenship_same: origSame,
+            original_citizenship: workerRecordData.original_citizenship || "",
+            maiden_name: workerRecordData.maiden_name || "",
+            father_name: workerRecordData.father_name || "",
+            mother_name: workerRecordData.mother_name || "",
+            marital_status: workerRecordData.marital_status || "",
+            gender: workerRecordData.gender || "",
+            passport_number: workerRecordData.passport_number || "",
+            passport_issued_by: workerRecordData.passport_issued_by || "",
+            ...parseDateToComponents(workerRecordData.passport_issue_date, "passport_issue"),
+            ...parseDateToComponents(workerRecordData.passport_expiry_date, "passport_expiry"),
+            lives_abroad: workerRecordData.lives_abroad || "",
+            previous_visas: workerRecordData.previous_visas || "",
+        }));
+
+        resetFamilyState();
+        if (workerRecordData.family_data) {
+            const fd = workerRecordData.family_data;
+            if (fd.spouse) {
+                setHasSpouse(true);
+                const sp = fd.spouse;
+                const spParsed = sp.dob ? parseDateToComponents(sp.dob, "dob") : { dobDay: "", dobMonth: "", dobYear: "" };
+                setSpouseData({
+                    first_name: sp.first_name || "",
+                    last_name: sp.last_name || "",
+                    dobDay: spParsed.dobDay || "",
+                    dobMonth: spParsed.dobMonth || "",
+                    dobYear: spParsed.dobYear || "",
+                    birth_country: sp.birth_country || "",
+                    birth_city: sp.birth_city || "",
+                });
+            }
+            if (fd.children && fd.children.length > 0) {
+                setHasChildren(true);
+                setChildren(fd.children.map((c: any) => {
+                    const cp = c.dob ? parseDateToComponents(c.dob, "dob") : { dobDay: "", dobMonth: "", dobYear: "" };
+                    return {
+                        first_name: c.first_name || "",
+                        last_name: c.last_name || "",
+                        dobDay: cp.dobDay || "",
+                        dobMonth: cp.dobMonth || "",
+                        dobYear: cp.dobYear || "",
+                    };
+                }));
+            }
+        }
+    }, [resetFamilyState]);
+
     const fetchProfile = useCallback(async () => {
         try {
+            if (readOnlyPreview && initialProfile) {
+                applyLoadedData(initialProfile, initialWorkerRecord);
+                return;
+            }
+
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
@@ -177,97 +308,21 @@ export default function ProfilePage() {
                 .eq("id", user.id)
                 .single();
 
-            if (profileData) {
-                setProfile(profileData);
-                const nameParts = (profileData.full_name || "").trim().split(" ");
-                const first_name = nameParts[0] || "";
-                const last_name = nameParts.slice(1).join(" ") || "";
-                setFormData(prev => ({ ...prev, first_name, last_name }));
+            const { data: workerRecordData, error: workerRecordError } = await loadCanonicalWorkerRecord<WorkerRecord>(
+                supabase,
+                user.id,
+                "*"
+            );
+            if (workerRecordError) {
+                throw new Error(workerRecordError.message);
             }
-
-            const { data: candidateData } = await supabase
-                .from("candidates")
-                .select("*")
-                .eq("profile_id", user.id)
-                .single();
-
-            if (candidateData) {
-                setCandidate(candidateData);
-                const dobParts = parseDateToComponents(candidateData.date_of_birth, "dob");
-
-                // Determine if original_citizenship is same
-                const origSame = !candidateData.original_citizenship ||
-                    candidateData.original_citizenship === candidateData.citizenship;
-
-                setFormData(prev => ({
-                    ...prev,
-                    nationality: candidateData.nationality || "",
-                    dobDay: dobParts.dobDay || "",
-                    dobMonth: dobParts.dobMonth || "",
-                    dobYear: dobParts.dobYear || "",
-                    phone: candidateData.phone || "",
-                    address: candidateData.address || "",
-                    current_country: candidateData.current_country || "",
-                    preferred_job: candidateData.preferred_job || "",
-                    desired_countries: candidateData.desired_countries || [],
-                    // New fields
-                    birth_country: candidateData.birth_country || "",
-                    birth_city: candidateData.birth_city || "",
-                    citizenship: candidateData.citizenship || "",
-                    original_citizenship_same: origSame,
-                    original_citizenship: candidateData.original_citizenship || "",
-                    maiden_name: candidateData.maiden_name || "",
-                    father_name: candidateData.father_name || "",
-                    mother_name: candidateData.mother_name || "",
-                    marital_status: candidateData.marital_status || "",
-                    gender: candidateData.gender || "",
-                    passport_number: candidateData.passport_number || "",
-                    passport_issued_by: candidateData.passport_issued_by || "",
-                    ...parseDateToComponents(candidateData.passport_issue_date, "passport_issue"),
-                    ...parseDateToComponents(candidateData.passport_expiry_date, "passport_expiry"),
-                    lives_abroad: candidateData.lives_abroad || "",
-                    previous_visas: candidateData.previous_visas || "",
-                }));
-
-                // Load family data
-                if (candidateData.family_data) {
-                    const fd = candidateData.family_data;
-                    if (fd.spouse) {
-                        setHasSpouse(true);
-                        // Parse spouse dob into components
-                        const sp = fd.spouse;
-                        const spParsed = sp.dob ? parseDateToComponents(sp.dob, "dob") : { dobDay: "", dobMonth: "", dobYear: "" };
-                        setSpouseData({
-                            first_name: sp.first_name || "",
-                            last_name: sp.last_name || "",
-                            dobDay: spParsed.dobDay || "",
-                            dobMonth: spParsed.dobMonth || "",
-                            dobYear: spParsed.dobYear || "",
-                            birth_country: sp.birth_country || "",
-                            birth_city: sp.birth_city || "",
-                        });
-                    }
-                    if (fd.children && fd.children.length > 0) {
-                        setHasChildren(true);
-                        setChildren(fd.children.map((c: any) => {
-                            const cp = c.dob ? parseDateToComponents(c.dob, "dob") : { dobDay: "", dobMonth: "", dobYear: "" };
-                            return {
-                                first_name: c.first_name || "",
-                                last_name: c.last_name || "",
-                                dobDay: cp.dobDay || "",
-                                dobMonth: cp.dobMonth || "",
-                                dobYear: cp.dobYear || "",
-                            };
-                        }));
-                    }
-                }
-            }
+            applyLoadedData(profileData, workerRecordData);
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
-    }, [supabase]);
+    }, [applyLoadedData, initialProfile, initialWorkerRecord, readOnlyPreview, supabase]);
 
     useEffect(() => {
         void fetchProfile();
@@ -275,6 +330,10 @@ export default function ProfilePage() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (readOnlyPreview) {
+            toast.error("Admin preview is read-only.");
+            return;
+        }
         setSaving(true);
         // Removed setError/setSuccess
 
@@ -337,7 +396,7 @@ export default function ProfilePage() {
                 passportExpiryDate = `${formData.passport_expiry_year}-${formData.passport_expiry_month.padStart(2, '0')}-${formData.passport_expiry_day.padStart(2, '0')}`;
             }
 
-            const candidateUpdates = {
+            const workerRecordUpdates = {
                 nationality: formData.nationality || null,
                 date_of_birth: dateOfBirth,
                 phone: formData.phone ? formData.phone.replace(/[\s\-()]/g, '') : null,
@@ -366,20 +425,38 @@ export default function ProfilePage() {
                 previous_visas: formData.previous_visas || null,
             };
 
-            if (candidate) {
+            if (workerRecord) {
                 const { error: updateErr } = await supabase
-                    .from("candidates")
-                    .update(candidateUpdates)
-                    .eq("id", candidate.id);
+                    .from("worker_onboarding")
+                    .update(workerRecordUpdates)
+                    .eq("id", workerRecord.id);
                 if (updateErr) throw new Error(updateErr.message);
             } else {
-                const { error: insertErr } = await supabase
-                    .from("candidates")
-                    .insert({
-                        profile_id: user.id,
-                        ...candidateUpdates,
-                    });
-                if (insertErr) throw new Error(insertErr.message);
+                const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord<WorkerRecordLookupRow>(
+                    supabase,
+                    user.id,
+                    "id, updated_at, entry_fee_paid, job_search_active, queue_joined_at, phone, nationality, current_country, preferred_job, status"
+                );
+
+                if (existingWorkerRecordError) {
+                    throw new Error(existingWorkerRecordError.message);
+                }
+
+                if (existingWorkerRecord?.id) {
+                    const { error: recoveredUpdateErr } = await supabase
+                        .from("worker_onboarding")
+                        .update(workerRecordUpdates)
+                        .eq("id", existingWorkerRecord.id);
+                    if (recoveredUpdateErr) throw new Error(recoveredUpdateErr.message);
+                } else {
+                    const { error: insertErr } = await supabase
+                        .from("worker_onboarding")
+                        .insert({
+                            profile_id: user.id,
+                            ...workerRecordUpdates,
+                        });
+                    if (insertErr) throw new Error(insertErr.message);
+                }
             }
 
             // Sync phone to Supabase Auth so it appears in Auth dashboard
@@ -390,7 +467,7 @@ export default function ProfilePage() {
                 });
             }
 
-            logActivity("profile_saved", "profile", { is_new: !candidate, fields_filled: Object.keys(candidateUpdates).filter(k => (candidateUpdates as Record<string, unknown>)[k] != null).length });
+            logActivity("profile_saved", "profile", { is_new: !workerRecord, fields_filled: Object.keys(workerRecordUpdates).filter(k => (workerRecordUpdates as Record<string, unknown>)[k] != null).length });
             toast.success("Profile saved successfully!");
             await fetchProfile();
         } catch (err) {
@@ -485,7 +562,7 @@ export default function ProfilePage() {
         <div className="w-full">
             <div className="w-full">
                 <form onSubmit={handleSubmit}>
-                    <div className="space-y-4">
+                    <fieldset disabled={saving || readOnlyPreview} className="space-y-4">
                         {/* • • • • • • • • • • • • • • •  Account Information Card • • • • • • • • • • • • • • •  */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="px-4 py-3 border-b border-gray-200">
@@ -512,6 +589,7 @@ export default function ProfilePage() {
                                             onChange={(phone) => setFormData(prev => ({ ...prev, phone: '+' + phone }))}
                                             inputClass={`${inputClass} !pl-12 !w-full`}
                                             buttonClass="!border-gray-300 !bg-gray-50 !rounded-l-md"
+                                            disabled={readOnlyPreview || saving}
                                             enableSearch={true}
                                             searchPlaceholder="Search country..."
                                         />
@@ -1134,35 +1212,41 @@ export default function ProfilePage() {
                                 </div>
                             </div>
                         </div>
-
+                    </fieldset>
 
                         {/* Save / Cancel Buttons */}
-                        <div className="flex justify-end gap-3 pt-2 pb-24 md:pb-8">
+                        <div className="flex flex-col gap-3 pt-2 pb-24 md:flex-row md:items-center md:justify-end md:pb-8">
+                            {readOnlyPreview && (
+                                <div className="text-sm text-gray-500 md:mr-auto">
+                                    Preview is read-only. Review the full form structure here, then return to the worker overview.
+                                </div>
+                            )}
                             <Link
-                                href="/profile/worker"
+                                href={overviewHref}
                                 className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[15px]"
                             >
-                                Cancel
+                                {readOnlyPreview ? "Back to Overview" : "Cancel"}
                             </Link>
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="px-5 py-2.5 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium text-[15px] disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {saving ? (
-                                    <>
-                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                        </svg>
-                                        Saving...
-                                    </>
-                                ) : (
-                                    "Save Changes"
-                                )}
-                            </button>
+                            {!readOnlyPreview && (
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-5 py-2.5 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium text-[15px] disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {saving ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                            </svg>
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        "Save Changes"
+                                    )}
+                                </button>
+                            )}
                         </div>
-                    </div>
                 </form>
             </div>
         </div>

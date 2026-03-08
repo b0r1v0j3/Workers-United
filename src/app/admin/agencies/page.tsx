@@ -45,7 +45,7 @@ export default async function AgenciesPage() {
     const [{ data: rawAgencies }, { data: profiles }, { data: workers }] = await Promise.all([
         admin.from("agencies").select("*").order("created_at", { ascending: false }),
         admin.from("profiles").select("id, email, full_name"),
-        admin.from("candidates").select("agency_id, profile_id"),
+        admin.from("worker_onboarding").select("agency_id, profile_id"),
     ]);
 
     const profileLookup = new Map((profiles || []).map((entry: any) => [entry.id, entry]));

@@ -7,6 +7,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import NotificationBell from "./NotificationBell";
 import GlobalSearch from "./admin/GlobalSearch";
+import { normalizeUserType } from "@/lib/domain";
 
 interface UnifiedNavbarProps {
     variant: "public" | "dashboard" | "admin";
@@ -44,6 +45,15 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const user = userProp || clientUser;
     const profileName = profileNameProp || clientProfileName;
     const isPublic = variant === "public";
+    const showCenteredLogoIcon = variant !== "admin";
+    const normalizedUserType = normalizeUserType(user?.user_metadata?.user_type);
+    const dashboardHref = variant === "admin" || (!isPublic && normalizedUserType === "admin")
+        ? "/admin"
+        : normalizedUserType === "employer"
+            ? "/profile/employer"
+            : normalizedUserType === "agency"
+                ? "/profile/agency"
+                : "/profile/worker";
 
     useEffect(() => {
         if (!isPublic) return;
@@ -64,33 +74,33 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
             <div className="w-full px-3 md:px-8 lg:px-10 h-full flex items-center justify-between relative">
                 {/* Left: Logo */}
                 <div className="z-10 flex items-center gap-3">
-                    <Link href="/" className="flex items-center gap-2.5 md:gap-3 hover:opacity-90 transition-opacity py-1">
-                        {isPublic ? (
-                            <Image
-                                src="/logo-wordmark.png"
-                                alt="Workers United"
-                                width={859}
-                                height={63}
-                                className="h-auto w-[122px] object-contain shrink-0 transition-opacity md:w-[168px]"
-                                priority
-                            />
+                    <Link href={isPublic ? "/" : dashboardHref} className="flex items-center gap-2.5 md:gap-3 hover:opacity-90 transition-opacity py-1">
+                        {variant === "admin" ? (
+                            <>
+                                <Image
+                                    src="/logo-icon.png"
+                                    alt="Workers United Logo Icon"
+                                    width={80}
+                                    height={80}
+                                    className="h-14 w-14 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
+                                    priority
+                                />
+                                <Image
+                                    src="/logo-wordmark.png"
+                                    alt="Workers United"
+                                    width={859}
+                                    height={63}
+                                    className="h-auto w-[132px] md:w-[158px] object-contain shrink-0 transition-opacity"
+                                    priority
+                                />
+                            </>
                         ) : (
                             <Image
-                                src="/logo-icon.png"
-                                alt="Workers United Logo Icon"
-                                width={80}
-                                height={80}
-                                className="h-14 w-14 md:h-16 md:w-16 object-contain shrink-0 transition-opacity"
-                                priority
-                            />
-                        )}
-                        {!isPublic && (
-                            <Image
                                 src="/logo-wordmark.png"
                                 alt="Workers United"
                                 width={859}
                                 height={63}
-                                className="h-auto w-[132px] md:w-[158px] object-contain shrink-0 transition-opacity"
+                                className={`h-auto object-contain shrink-0 transition-opacity ${isPublic ? "w-[122px] md:w-[168px]" : "w-[132px] md:w-[158px]"}`}
                                 priority
                             />
                         )}
@@ -102,12 +112,17 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             Admin
                         </span>
                     )}
+                    {variant !== "admin" && !isPublic && normalizedUserType === "admin" && (
+                        <span className="bg-blue-100 text-blue-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                            Admin Preview
+                        </span>
+                    )}
                 </div>
 
                 {/* Center: Public logo icon */}
-                {isPublic && (
+                {showCenteredLogoIcon && (
                     <Link
-                        href="/"
+                        href={isPublic ? "/" : dashboardHref}
                         className="absolute left-1/2 -translate-x-1/2 hover:opacity-90 transition-opacity"
                     >
                         <Image
@@ -147,7 +162,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                                     href="/login"
                                     className="inline-flex items-center px-3 md:px-4 py-1.5 text-[#111111] font-medium text-sm hover:bg-[#F4F4F5]/80 rounded-md transition-colors"
                                 >
-                                    Log in
+                                    Sign In
                                 </Link>
                                 <Link
                                     href="/signup"

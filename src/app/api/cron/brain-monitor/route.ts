@@ -7,7 +7,7 @@ import { sendEmail } from "@/lib/mailer";
 // and sends email reports. Runs daily via Vercel Cron.
 //
 // Brain Monitor — runs via Vercel Cron (configured in vercel.json).
-// Uses: OpenAI Responses API (gpt-5.3-codex), GitHub API, Supabase, SMTP
+// Uses: OpenAI Responses API, GitHub API, Supabase, SMTP
 //
 // Auth: CRON_SECRET bearer token
 
@@ -18,6 +18,73 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = "b0r1v0j3/Workers-United";
 const ADMIN_EMAIL = "cvetkovicborivoje@gmail.com";
+const BRAIN_DAILY_MODEL = process.env.BRAIN_DAILY_MODEL || "gpt-5-mini";
+const DAILY_EXCEPTION_HEALTH_THRESHOLD = 85;
+
+function unwrapResponseJsonText(text: string): string {
+    const trimmed = text.trim();
+    const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    return fencedMatch ? fencedMatch[1].trim() : trimmed;
+}
+
+function extractResponsesJsonText(aiData: any): string | null {
+    if (typeof aiData?.output_text === "string" && aiData.output_text.trim()) {
+        return unwrapResponseJsonText(aiData.output_text);
+    }
+
+    if (!Array.isArray(aiData?.output)) {
+        return null;
+    }
+
+    const contentTexts = aiData.output
+        .flatMap((item: any) => Array.isArray(item?.content) ? item.content : [])
+        .map((part: any) => typeof part?.text === "string" ? unwrapResponseJsonText(part.text) : null)
+        .filter((text: string | null): text is string => !!text && text.trim().length > 0);
+
+    const jsonText = contentTexts.find((text: string) => text.startsWith("{") && text.endsWith("}"));
+    return jsonText || contentTexts[0] || null;
+}
+
+function parseBrainAnalysis(aiData: any): BrainAnalysis {
+    const aiContent = extractResponsesJsonText(aiData);
+
+    if (!aiContent) {
+        throw new Error("Empty AI response");
+    }
+
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(aiContent);
+    } catch {
+        throw new Error(`Failed to parse AI response: ${aiContent.substring(0, 300)}`);
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("AI response did not contain the expected JSON object");
+    }
+
+    return parsed as BrainAnalysis;
+}
+
+function getRetryEmailIds(params: Record<string, unknown> | undefined): string[] {
+    if (!params) return [];
+
+    const ids = new Set<string>();
+
+    if (typeof params.email_id === "string" && params.email_id.trim()) {
+        ids.add(params.email_id);
+    }
+
+    if (Array.isArray(params.email_ids)) {
+        for (const rawId of params.email_ids) {
+            if (typeof rawId === "string" && rawId.trim()) {
+                ids.add(rawId);
+            }
+        }
+    }
+
+    return Array.from(ids);
+}
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
@@ -32,6 +99,9 @@ export async function GET(request: Request) {
         aiAnalyzed: false,
         issuesCreated: 0,
         emailSent: false,
+        emailSkipped: false,
+        emailReason: null as string | null,
+        emailError: null as string | null,
         reportSaved: false,
         error: null as string | null,
     };
@@ -80,7 +150,7 @@ export async function GET(request: Request) {
         const existingIssues = await getExistingIssueTitles();
         const allResolvedTitles = existingIssues.closed;
 
-        // ─── Step 2: AI Analysis (OpenAI Responses API for Codex) ────────
+        // ─── Step 2: AI Analysis (OpenAI Responses API) ──────────────────
         if (!OPENAI_API_KEY) {
             throw new Error("OPENAI_API_KEY not set");
         }
@@ -92,7 +162,7 @@ export async function GET(request: Request) {
         const today = new Date().toISOString().split("T")[0];
         const prompt = buildAnalysisPrompt(platformData, today, allResolvedTitles);
 
-        // Codex models use /v1/responses (not /v1/chat/completions)
+        // GPT-5 models use /v1/responses (not /v1/chat/completions)
         const aiRes = await fetch("https://api.openai.com/v1/responses", {
             method: "POST",
             headers: {
@@ -100,7 +170,7 @@ export async function GET(request: Request) {
                 Authorization: `Bearer ${OPENAI_API_KEY}`,
             },
             body: JSON.stringify({
-                model: "gpt-5.3-codex",
+                model: BRAIN_DAILY_MODEL,
                 instructions: getSystemPrompt(businessFacts),
                 input: prompt,
                 text: {
@@ -115,21 +185,7 @@ export async function GET(request: Request) {
         }
 
         const aiData = await aiRes.json();
-        // Responses API returns output_text (not choices[0].message.content)
-        const aiContent = aiData.output_text
-            || aiData.output?.[0]?.content?.[0]?.text
-            || JSON.stringify(aiData.output);
-
-        if (!aiContent) {
-            throw new Error("Empty AI response");
-        }
-
-        let analysis: BrainAnalysis;
-        try {
-            analysis = JSON.parse(aiContent);
-        } catch {
-            throw new Error(`Failed to parse AI response: ${aiContent.substring(0, 300)}`);
-        }
+        const analysis = parseBrainAnalysis(aiData);
         results.aiAnalyzed = true;
 
         // ─── Step 3: Create GitHub Issues ────────────────────────────────
@@ -149,24 +205,47 @@ export async function GET(request: Request) {
             }
         }
 
-        // ─── Step 4: Send Email Report ───────────────────────────────────
-        const emailHtml = buildEmailReport(analysis, platformData, results.issuesCreated, startTime);
-        const emailResult = await sendEmail(
-            ADMIN_EMAIL,
-            `🧠 Brain Report — ${today} — ${analysis.healthScore}/100`,
-            emailHtml
-        );
-        results.emailSent = emailResult.success;
+        // ─── Step 4: Send Email Report (exception-only) ─────────────────
+        const emailReasons = getDailyExceptionReasons(analysis);
+        if (emailReasons.length > 0) {
+            const emailHtml = buildEmailReport(
+                analysis,
+                platformData,
+                results.issuesCreated,
+                startTime,
+                BRAIN_DAILY_MODEL,
+                emailReasons
+            );
+            const emailResult = await sendEmail(
+                ADMIN_EMAIL,
+                `🧠 Brain Alert — ${today} — ${analysis.healthScore}/100`,
+                emailHtml
+            );
+            results.emailSent = emailResult.success;
+            results.emailReason = emailReasons.join("; ");
+            results.emailError = emailResult.success ? null : (emailResult.error || "Unknown email error");
+        } else {
+            results.emailSkipped = true;
+            results.emailReason = "No material change — saved to brain_reports only";
+        }
 
         // ─── Step 5: Save Report to Database ─────────────────────────────
         const brainReportPayload = {
-            report_type: "automated_daily",
+            report_type: emailReasons.length > 0 ? "automated_daily_exception" : "automated_daily_snapshot",
             email_summary: analysis.summary,
+            email_reasons: emailReasons,
+            delivery_mode: emailReasons.length === 0
+                ? "db_only"
+                : results.emailSent
+                    ? "email_and_db"
+                    : "db_and_email_failed",
+            email_delivery: results.emailSkipped ? "skipped" : (results.emailSent ? "sent" : "failed"),
+            email_error: results.emailError,
             structured_report: analysis,
         };
         const { error: saveReportError } = await supabase.from("brain_reports").insert({
             report: brainReportPayload,
-            model: "gpt-5.3-codex",
+            model: BRAIN_DAILY_MODEL,
             findings_count: analysis.issues?.length || 0,
         });
         if (saveReportError) {
@@ -181,124 +260,19 @@ export async function GET(request: Request) {
             for (const action of analysis.actions) {
                 let actionStatus = "logged";
 
-                // Auto-heal: retry failed emails
-                if (action.type === "retry_email" && action.params?.email_id) {
+                // Exception-report mode: only safe deterministic actions auto-execute.
+                const retryEmailIds = getRetryEmailIds(action.params);
+                if (action.type === "retry_email" && retryEmailIds.length > 0) {
                     try {
-                        await supabase.from("email_queue")
+                        const { error: retryError } = await supabase.from("email_queue")
                             .update({ status: "pending", error_message: null })
-                            .eq("id", action.params.email_id);
-                        actionStatus = "executed";
+                            .in("id", retryEmailIds);
+                        actionStatus = retryError ? "failed" : "executed";
                     } catch { actionStatus = "failed"; }
                 }
 
-                // Auto-heal: clean stale data
-                if (action.type === "clean_stale_data" && action.params?.table) {
-                    actionStatus = "logged"; // Log only for safety
-                }
-
-                // Self-Improvement #2: Update platform config (bot prompt hotfix)
-                if (action.type === "update_config" && action.params?.key && action.params?.value) {
-                    try {
-                        const { error } = await supabase.from("platform_config")
-                            .update({ value: String(action.params.value) })
-                            .eq("key", String(action.params.key));
-                        actionStatus = error ? "failed" : "executed";
-                        if (!error) console.log(`[Brain] ⚙️ Config updated: ${action.params.key}`);
-                    } catch { actionStatus = "failed"; }
-                }
-
-                // Self-Improvement #2: Send employer verification nudge
-                if (action.type === "send_employer_nudge" && action.params?.employer_id) {
-                    try {
-                        const { data: employer } = await supabase
-                            .from("employers")
-                            .select("id, status")
-                            .eq("id", action.params.employer_id)
-                            .single();
-                        if (employer && employer.status === "PENDING") {
-                            // Log the nudge — admin will see it in brain_actions
-                            actionStatus = "executed";
-                            console.log(`[Brain] 📧 Employer nudge logged for ${action.params.employer_id}`);
-                        } else {
-                            actionStatus = "skipped";
-                        }
-                    } catch { actionStatus = "failed"; }
-                }
-
-                // Self-Improvement #2: Update/correct brain_memory facts
-                if (action.type === "update_memory" && action.params?.old_content && action.params?.new_content) {
-                    try {
-                        const { error } = await supabase.from("brain_memory")
-                            .update({
-                                content: String(action.params.new_content),
-                                confidence: 0.95,
-                            })
-                            .eq("content", String(action.params.old_content));
-                        actionStatus = error ? "failed" : "executed";
-                        if (!error) console.log(`[Brain] 🧠 Memory corrected: ${String(action.params.old_content).substring(0, 50)}...`);
-                    } catch { actionStatus = "failed"; }
-                }
-
-                // Self-Improvement #2: Delete outdated brain_memory facts
-                if (action.type === "delete_memory" && action.params?.content) {
-                    try {
-                        const { error } = await supabase.from("brain_memory")
-                            .delete()
-                            .eq("content", String(action.params.content));
-                        actionStatus = error ? "failed" : "executed";
-                    } catch { actionStatus = "failed"; }
-                }
-
-                // Auto-heal: confirm stuck unconfirmed users (>48h)
-                if (action.type === "confirm_stuck_users" && action.params?.user_ids) {
-                    try {
-                        const userIds = action.params.user_ids as string[];
-                        let confirmed = 0;
-                        for (const userId of userIds.slice(0, 50)) {
-                            const { error } = await supabase.auth.admin.updateUserById(userId, {
-                                email_confirm: true,
-                            });
-                            if (!error) confirmed++;
-                        }
-                        actionStatus = confirmed > 0 ? "executed" : "failed";
-                        console.log(`[Brain] ✅ Auto-confirmed ${confirmed}/${userIds.length} stuck users`);
-                    } catch { actionStatus = "failed"; }
-                }
-
-                // Auto-heal: create missing profile + worker onboarding records
-                if (action.type === "create_missing_records" && action.params?.user_ids) {
-                    try {
-                        const userIds = action.params.user_ids as string[];
-                        let created = 0;
-                        for (const userId of userIds.slice(0, 50)) {
-                            const { data: authUser } = await supabase.auth.admin.getUserById(userId);
-                            if (!authUser?.user) continue;
-
-                            // Ensure profile exists
-                            const { data: existingProfile } = await supabase
-                                .from("profiles").select("id").eq("id", userId).maybeSingle();
-                            if (!existingProfile) {
-                                await supabase.from("profiles").upsert({
-                                    id: userId,
-                                    full_name: authUser.user.user_metadata?.full_name || authUser.user.email?.split("@")[0] || "User",
-                                    user_type: "worker",
-                                });
-                            }
-
-                            // Ensure worker onboarding record exists
-                            const { data: existingCandidate } = await supabase
-                                .from("candidates").select("id").eq("profile_id", userId).maybeSingle();
-                            if (!existingCandidate) {
-                                await supabase.from("candidates").insert({
-                                    profile_id: userId,
-                                    status: "NEW",
-                                });
-                                created++;
-                            }
-                        }
-                        actionStatus = created > 0 ? "executed" : "skipped";
-                        console.log(`[Brain] 📋 Created ${created} missing worker onboarding records`);
-                    } catch { actionStatus = "failed"; }
+                if (action.type !== "retry_email") {
+                    actionStatus = "logged";
                 }
 
                 await supabase.from("brain_actions").insert({
@@ -401,17 +375,17 @@ interface BrainAnalysis {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getSystemPrompt(businessFacts: string): string {
-    return `You are the Workers United Platform Brain — an autonomous AI system that runs 5 organized operations every morning.
+    return `You are the Workers United Platform Brain — an autonomous AI system that runs 7 organized operations every morning.
 
 Platform context (from live database — ALWAYS use these exact values):
 ${businessFacts}
 - Flow: Signup → Profile → Documents (passport, diploma, photo) → AI Verification → Admin Approval → Payment → Queue → Job Match
-- AI: Gemini 3.0 Flash for document verification (with fallback chain)
-- WhatsApp: Direct OpenAI GPT-4o chatbot with memory + self-learning (brain_memory table)
+- AI: OpenAI GPT-4o-mini for document verification, with Gemini fallback if OpenAI vision is unavailable
+- WhatsApp: GPT-5 mini intent router + response flow, with business facts and stored brain_memory context
 - Email: Nodemailer + Google Workspace SMTP
-- Terminology rule: In all findings/issues/improvements, use ONLY "worker" and "employer". Never use the word "candidate" in output text.
+- Terminology rule: In all findings/issues/improvements, use only the canonical platform terms "worker" and "employer".
 
-You run 5 OPERATIONS. Analyze each separately:
+You run 7 OPERATIONS. Analyze each separately:
 
 ## Operation 1: 🔧 SYSTEM HEALTH
 - API errors, 5xx rates, failed endpoints
@@ -459,15 +433,10 @@ Rules:
 9. You now have funnelTimestamps data showing per-user stage timing — use it to find WHERE users stall
 10. You now have paymentTelemetry showing failed/abandoned checkout attempts — analyze drop-off
 
-## Auto-Remediation powers (actions you can EXECUTE):
-- retry_email: Retry a failed email by ID
-- update_config: Update platform_config values (e.g., fix bot greeting). Params: { key: "...", value: "..." }
-- send_employer_nudge: Flag a pending employer for verification nudge. Params: { employer_id: "..." }
-- update_memory: Correct an outdated brain_memory fact. Params: { old_content: "...", new_content: "..." }
-- delete_memory: Remove an incorrect brain_memory fact. Params: { content: "..." }
-- confirm_stuck_users: Auto-confirm emails for users stuck unconfirmed >48h. Params: { user_ids: ["..."] }
-- create_missing_records: Create missing worker onboarding records for auth users. Params: { user_ids: ["..."] }
-- log_observation: Log an observation for admin review
+## Auto-Remediation powers:
+- retry_email is the ONLY action that auto-executes without human review
+- update_config, send_employer_nudge, update_memory, delete_memory, confirm_stuck_users, and create_missing_records are recommendation-only actions that will be logged for admin review
+- log_observation is recommendation-only
 
 ## Operation 6: 🧠 SELF-IMPROVEMENT
 - What capabilities are you MISSING that would make you more effective?
@@ -513,34 +482,30 @@ Respond in JSON:
 }`;
 }
 
+function getDailyExceptionReasons(analysis: BrainAnalysis): string[] {
+    const reasons: string[] = [];
+
+    if ((analysis.issues?.length || 0) > 0) {
+        reasons.push(`${analysis.issues.length} issue(s) detected`);
+    }
+
+    if ((analysis.actions || []).some((action) => action.type === "retry_email")) {
+        reasons.push("auto-retry email action suggested");
+    }
+
+    if ((analysis.operations || []).some((operation) => operation.status === "CRITICAL")) {
+        reasons.push("at least one operation is CRITICAL");
+    }
+
+    if (analysis.healthScore < DAILY_EXCEPTION_HEALTH_THRESHOLD) {
+        reasons.push(`health score below ${DAILY_EXCEPTION_HEALTH_THRESHOLD}`);
+    }
+
+    return reasons;
+}
+
 function getAiInputData(data: Record<string, unknown>): Record<string, unknown> {
     const aiData = structuredClone(data) as Record<string, unknown>;
-
-    const stalls = aiData.stalls as Record<string, unknown> | undefined;
-    if (stalls && typeof stalls.no_candidate_record === "number") {
-        stalls.no_worker_record = stalls.no_candidate_record;
-        delete stalls.no_candidate_record;
-    }
-
-    const authHealth = aiData.authHealth as Record<string, unknown> | undefined;
-    if (authHealth) {
-        const workersWithoutCandidate = authHealth.workersWithoutCandidate as Record<string, unknown> | undefined;
-        if (workersWithoutCandidate && typeof workersWithoutCandidate.count === "number") {
-            authHealth.workersWithoutWorkerOnboarding = workersWithoutCandidate;
-            delete authHealth.workersWithoutCandidate;
-        }
-    }
-
-    const funnelTimestamps = aiData.funnelTimestamps as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(funnelTimestamps)) {
-        for (const row of funnelTimestamps) {
-            if (row.candidate_id) {
-                row.worker_record_id = row.candidate_id;
-                delete row.candidate_id;
-            }
-        }
-    }
-
     return aiData;
 }
 
@@ -551,11 +516,11 @@ function buildAnalysisPrompt(data: Record<string, unknown>, date: string, resolv
     const aiInputData = getAiInputData(data);
     return `Morning Brain Report — ${date}
 
-Run your 5 operations on this platform data:
+Run your operations on this platform data:
 
 ${JSON.stringify(aiInputData, null, 2)}${resolvedSection}
 
-Execute each operation (System Health, Funnel, Email/WhatsApp, Code Quality, Growth) and report findings.`;
+Execute each operation (System Health, Funnel, Email/WhatsApp, Code Quality, Growth, Self-Improvement, Auth Health) and report findings.`;
 }
 
 async function getExistingIssueTitles(): Promise<{ open: string[]; closed: string[] }> {
@@ -625,7 +590,9 @@ function buildEmailReport(
     analysis: BrainAnalysis,
     _platformData: Record<string, unknown>,
     issuesCreated: number,
-    startTime: number
+    startTime: number,
+    modelName: string,
+    exceptionReasons: string[]
 ): string {
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     const reportDate = new Date().toLocaleDateString("en-GB", {
@@ -785,6 +752,20 @@ function buildEmailReport(
                         </table>
                     </td>
                 </tr>
+                ${exceptionReasons.length ? `
+                    <tr>
+                        <td style="padding:0 0 20px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;">
+                                <tr>
+                                    <td style="padding:18px 20px;">
+                                        <div style="font-size:13px;line-height:1.4;font-weight:700;color:${colors.text};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Why you got this email</div>
+                                        <div style="font-size:14px;line-height:1.7;color:${colors.textMuted};">${escapeHtml(exceptionReasons.join(" • "))}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                ` : ""}
                 <tr>
                     <td style="padding:0 0 24px;">
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -862,7 +843,7 @@ function buildEmailReport(
                 ` : ""}
                 <tr>
                     <td align="center" style="padding:26px 0 0;border-top:1px solid ${colors.border};">
-                        <div style="font-size:12px;line-height:1.6;color:${colors.textMuted};">Generated autonomously by Codex 5.3 Brain Monitor</div>
+                        <div style="font-size:12px;line-height:1.6;color:${colors.textMuted};">Generated autonomously by Brain Monitor (${escapeHtml(modelName)})</div>
                         <div style="font-size:12px;line-height:1.6;color:${colors.border};">Workers United Platform</div>
                     </td>
                 </tr>

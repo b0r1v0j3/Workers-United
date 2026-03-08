@@ -50,9 +50,9 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: "No open jobs to process", matched_count: 0 });
         }
 
-        // 2. Fetch Verified Candidates (those with at least one verified passport document)
+        // 2. Fetch verified worker documents (at least one verified passport)
         const { data: verifiedDocs, error: docsError } = await supabase
-            .from('candidate_documents')
+            .from('worker_documents')
             .select('user_id')
             .eq('status', 'verified')
             .eq('document_type', 'passport');
@@ -68,9 +68,9 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: "No verified workers to match", matched_count: 0 });
         }
 
-        // Fetch candidate details for verified user IDs — only those IN_QUEUE and paid
-        const { data: candidates, error: candidatesError } = await supabase
-            .from('candidates')
+        // Fetch worker onboarding rows for verified profile IDs — only those IN_QUEUE and paid
+        const { data: workerRows, error: workerRowsError } = await supabase
+            .from('worker_onboarding')
             .select(`
                 *,
                 profiles!inner(*)
@@ -79,70 +79,70 @@ export async function GET(request: Request) {
             .eq('status', 'IN_QUEUE')
             .eq('entry_fee_paid', true);
 
-        if (candidatesError) {
-            console.error("[Job Match] Error fetching candidates:", candidatesError);
-            return NextResponse.json({ error: candidatesError.message }, { status: 500 });
+        if (workerRowsError) {
+            console.error("[Job Match] Error fetching worker rows:", workerRowsError);
+            return NextResponse.json({ error: workerRowsError.message }, { status: 500 });
         }
 
         let totalMatches = 0;
         let emailsSent = 0;
 
-        // Pre-fetch active offers for dedup (candidateId|jobId)
+        // Pre-fetch active offers for dedup (workerRecordId|jobId)
         const jobIds = openJobs.map(j => j.id);
         const { data: activeOffers } = await supabase
             .from("offers")
-            .select("candidate_id, job_request_id, status")
+            .select("worker_id, job_request_id, status")
             .in("job_request_id", jobIds)
             .in("status", ["pending", "accepted"]);
 
         const activeOfferKeys = new Set<string>();
-        const matchedCandidateIds = new Set<string>();
+        const matchedWorkerRecordIds = new Set<string>();
         for (const o of activeOffers || []) {
-            if (o.candidate_id && o.job_request_id) {
-                activeOfferKeys.add(`${o.candidate_id}|${o.job_request_id}`);
-                matchedCandidateIds.add(o.candidate_id);
+            if (o.worker_id && o.job_request_id) {
+                activeOfferKeys.add(`${o.worker_id}|${o.job_request_id}`);
+                matchedWorkerRecordIds.add(o.worker_id);
             }
         }
 
         // 3. Matching Logic
         for (const job of openJobs) {
-            for (const candidate of candidates || []) {
-                // One active offer at a time per candidate
-                if (matchedCandidateIds.has(candidate.id)) {
+            for (const workerRow of workerRows || []) {
+                // One active offer at a time per worker
+                if (matchedWorkerRecordIds.has(workerRow.id)) {
                     continue;
                 }
 
                 // Skip if no profile (should rely on inner join but safety check)
-                if (!candidate.profiles) continue;
+                if (!workerRow.profiles) continue;
 
                 // A. Industry Match
                 const jobIndustry = (job.industry || "").toLowerCase();
-                const candidateIndustry = (candidate.preferred_job || "").toLowerCase();
+                const workerIndustry = (workerRow.preferred_job || "").toLowerCase();
 
                 const industryMatch =
-                    candidateIndustry === "any" ||
-                    candidateIndustry === jobIndustry ||
-                    (jobIndustry === "other" && candidateIndustry !== "");
+                    workerIndustry === "any" ||
+                    workerIndustry === jobIndustry ||
+                    (jobIndustry === "other" && workerIndustry !== "");
 
                 if (!industryMatch) continue;
 
                 // B. Location Match
                 const jobLocation = job.destination_country || "Europe";
-                const candidateLocations = candidate.desired_countries || [];
+                const workerPreferredLocations = workerRow.desired_countries || [];
 
                 const locationMatch =
-                    candidateLocations.includes("Any") ||
-                    candidateLocations.includes(jobLocation);
+                    workerPreferredLocations.includes("Any") ||
+                    workerPreferredLocations.includes(jobLocation);
 
                 if (!locationMatch) continue;
 
-                // C. Match Found! Skip if active offer already exists for this candidate/job
-                const offerKey = `${candidate.id}|${job.id}`;
+                // C. Match found. Skip if an active offer already exists for this worker/job.
+                const offerKey = `${workerRow.id}|${job.id}`;
                 if (activeOfferKeys.has(offerKey)) {
                     continue;
                 }
 
-                // D. Create offer (24h expiry) and move candidate to OFFER_PENDING
+                // D. Create offer (24h expiry) and move worker to OFFER_PENDING
                 const expiresAt = new Date();
                 expiresAt.setHours(expiresAt.getHours() + 24);
 
@@ -150,8 +150,8 @@ export async function GET(request: Request) {
                     .from("offers")
                     .insert({
                         job_request_id: job.id,
-                        candidate_id: candidate.id,
-                        queue_position_at_offer: candidate.queue_position,
+                        worker_id: workerRow.id,
+                        queue_position_at_offer: workerRow.queue_position,
                         expires_at: expiresAt.toISOString(),
                     })
                     .select("id")
@@ -163,17 +163,17 @@ export async function GET(request: Request) {
                 }
 
                 await supabase
-                    .from("candidates")
+                    .from("worker_onboarding")
                     .update({ status: "OFFER_PENDING" })
-                    .eq("id", candidate.id);
+                    .eq("id", workerRow.id);
 
                 // E. Send notification with real offer link
                 await queueEmail(
                     supabase,
-                    candidate.profiles.id,
+                    workerRow.profiles.id,
                     "job_match",
-                    candidate.profiles.email,
-                    candidate.profiles.full_name || "Worker",
+                    workerRow.profiles.email,
+                    workerRow.profiles.full_name || "Worker",
                     {
                         jobId: job.id,
                         jobTitle: job.title,
@@ -186,7 +186,7 @@ export async function GET(request: Request) {
 
                 // Mark as active so we don't create duplicate offers in this run
                 activeOfferKeys.add(offerKey);
-                matchedCandidateIds.add(candidate.id);
+                matchedWorkerRecordIds.add(workerRow.id);
                 totalMatches++;
                 emailsSent++;
             }

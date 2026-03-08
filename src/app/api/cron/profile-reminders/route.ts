@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/mailer";
 import { getWorkerCompletion, getEmployerCompletion } from "@/lib/profile-completion";
 import { getEmailTemplate } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
 // ─── Main cron handler ──────────────────────────────────────────
 // Runs daily via Vercel cron — sends profile completion reminders + auto-deletes after 30 days
@@ -38,22 +39,22 @@ export async function GET(request: Request) {
         // ─── BATCH FETCH ALL DATA (6 queries total instead of ~3N) ─────────
         const [
             { data: allProfiles },
-            { data: allCandidates },
+            { data: allWorkerRecords },
             { data: allEmployers },
             { data: allDocs },
             { data: allEmails },
         ] = await Promise.all([
             supabase.from("profiles").select("id, full_name"),
-            supabase.from("candidates").select("*"),
+            supabase.from("worker_onboarding").select("*"),
             supabase.from("employers").select("*"),
-            supabase.from("candidate_documents").select("user_id, document_type, status"),
+            supabase.from("worker_documents").select("user_id, document_type, status"),
             supabase.from("email_queue").select("id, recipient_email, email_type, subject, created_at")
                 .in("email_type", ["profile_reminder", "profile_warning"]),
         ]);
 
         // Build lookup maps for O(1) access
         const profileMap = new Map((allProfiles || []).map(p => [p.id, p]));
-        const candidateMap = new Map((allCandidates || []).map(c => [c.profile_id, c]));
+        const workerRecordMap = new Map((allWorkerRecords || []).map(workerRow => [workerRow.profile_id, workerRow]));
         const employerMap = new Map((allEmployers || []).map(e => [e.profile_id, e]));
         const docsByUser = new Map<string, typeof allDocs>();
         for (const d of allDocs || []) {
@@ -107,17 +108,17 @@ export async function GET(request: Request) {
                 const result = getEmployerCompletion({ employer });
                 missingItems = result.missingFields;
             } else {
-                const candidate = candidateMap.get(userId) || null;
+                const workerRecord = workerRecordMap.get(userId) || null;
                 const docs = docsByUser.get(userId) || [];
 
                 // NEVER delete paid workers or workers with accepted offers
-                if (candidate?.status === "IN_QUEUE" || candidate?.status === "OFFER_PENDING") {
+                if (workerRecord?.status === "IN_QUEUE" || workerRecord?.status === "OFFER_PENDING") {
                     continue;
                 }
 
                 const result = getWorkerCompletion({
                     profile: profileData,
-                    candidate,
+                    worker: workerRecord,
                     documents: docs as { document_type: string }[]
                 });
                 missingItems = result.missingFields;
@@ -146,22 +147,22 @@ export async function GET(request: Request) {
 
                 // Clean up all related data before deleting auth user
                 // (mirrors account/delete and admin/delete-user patterns)
-                await supabase.from("candidate_documents").delete().eq("user_id", userId);
+                await supabase.from("worker_documents").delete().eq("user_id", userId);
                 await supabase.from("signatures").delete().eq("user_id", userId);
                 await supabase.from("payments").delete().eq("user_id", userId);
                 await supabase.from("email_queue").delete().eq("user_id", userId);
-                await supabase.from("candidates").delete().eq("profile_id", userId);
+                await supabase.from("worker_onboarding").delete().eq("profile_id", userId);
                 await supabase.from("employers").delete().eq("profile_id", userId);
                 await supabase.from("profiles").delete().eq("id", userId);
 
                 // Delete storage files
                 for (const docType of ['passport', 'biometric_photo', 'diploma']) {
                     const { data: files } = await supabase.storage
-                        .from("candidate-docs")
+                        .from(WORKER_DOCUMENTS_BUCKET)
                         .list(`${userId}/${docType}`);
                     if (files && files.length > 0) {
                         const filePaths = files.map((f: { name: string }) => `${userId}/${docType}/${f.name}`);
-                        await supabase.storage.from("candidate-docs").remove(filePaths);
+                        await supabase.storage.from(WORKER_DOCUMENTS_BUCKET).remove(filePaths);
                     }
                 }
 

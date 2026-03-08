@@ -31,16 +31,16 @@ export const DOCUMENT_LABELS: Record<DocumentType, string> = {
 
 export interface ContractDataForDocs {
     // Worker
-    candidate_full_name: string;
-    candidate_passport_number: string;
-    candidate_nationality: string;
-    candidate_date_of_birth: string;
-    candidate_passport_expiry: string;
-    candidate_address: string;
-    candidate_passport_issue_date?: string | null;
-    candidate_passport_issuer?: string | null;
-    candidate_place_of_birth?: string | null;
-    candidate_gender?: string | null;
+    worker_full_name: string;
+    worker_passport_number: string;
+    worker_nationality: string;
+    worker_date_of_birth: string;
+    worker_passport_expiry: string;
+    worker_address: string;
+    worker_passport_issue_date?: string | null;
+    worker_passport_issuer?: string | null;
+    worker_place_of_birth?: string | null;
+    worker_gender?: string | null;
 
     // Employer
     employer_company_name: string;
@@ -74,7 +74,7 @@ export interface ContractDataForDocs {
 }
 
 // ─── Nationality Mappings ────────────────────────────────────────────────────
-// Maps nationality (as returned by Gemini from passport) to Serbian grammatical
+// Maps nationality (as returned by document AI from passport) to Serbian grammatical
 // forms needed in contract templates.
 
 interface NationalityForms {
@@ -209,27 +209,27 @@ function getPassportIssuer(
  * Keys match the placeholder variables used in all 4 PDF templates.
  */
 export function buildPlaceholderData(data: ContractDataForDocs): Record<string, string> {
-    const natForms = getNationalityForms(data.candidate_nationality);
-    const { firstName, lastName } = splitName(data.candidate_full_name || "");
+    const natForms = getNationalityForms(data.worker_nationality);
+    const { firstName, lastName } = splitName(data.worker_full_name || "");
     const [descSr1, descSr2, descSr3] = splitJobDescription(data.job_description_sr);
     const [descEn1, descEn2, descEn3] = splitJobDescription(data.job_description_en);
 
     return {
         // Worker personal data
-        WORKER_FULL_NAME: data.candidate_full_name || "___________",
+        WORKER_FULL_NAME: data.worker_full_name || "___________",
         WORKER_FIRST_NAME: firstName,
         WORKER_LAST_NAME: lastName,
-        WORKER_ADDRESS: data.candidate_address || "___________",
+        WORKER_ADDRESS: data.worker_address || "___________",
 
         // Passport data
-        PASSPORT_NUMBER: data.candidate_passport_number || "___________",
-        DATE_OF_BIRTH: formatDateSR(data.candidate_date_of_birth),
-        PLACE_OF_BIRTH: data.candidate_place_of_birth || "___________",
-        PASSPORT_ISSUE_DATE: formatDateSR(data.candidate_passport_issue_date),
-        PASSPORT_EXPIRY_DATE: formatDateSR(data.candidate_passport_expiry),
+        PASSPORT_NUMBER: data.worker_passport_number || "___________",
+        DATE_OF_BIRTH: formatDateSR(data.worker_date_of_birth),
+        PLACE_OF_BIRTH: data.worker_place_of_birth || "___________",
+        PASSPORT_ISSUE_DATE: formatDateSR(data.worker_passport_issue_date),
+        PASSPORT_EXPIRY_DATE: formatDateSR(data.worker_passport_expiry),
         PASSPORT_ISSUER: getPassportIssuer(
-            data.candidate_passport_issuer,
-            data.candidate_nationality,
+            data.worker_passport_issuer,
+            data.worker_nationality,
         ),
 
         // Nationality — 3 forms for Serbian grammar + English
@@ -379,11 +379,11 @@ export async function generateAllDocuments(
 export function validateContractData(data: ContractDataForDocs): string[] {
     const missing: string[] = [];
 
-    if (!data.candidate_full_name) missing.push("Worker full name");
-    if (!data.candidate_passport_number) missing.push("Passport number");
-    if (!data.candidate_nationality) missing.push("Nationality");
-    if (!data.candidate_date_of_birth) missing.push("Date of birth");
-    if (!data.candidate_passport_expiry) missing.push("Passport expiry date");
+    if (!data.worker_full_name) missing.push("Worker full name");
+    if (!data.worker_passport_number) missing.push("Passport number");
+    if (!data.worker_nationality) missing.push("Nationality");
+    if (!data.worker_date_of_birth) missing.push("Date of birth");
+    if (!data.worker_passport_expiry) missing.push("Passport expiry date");
     if (!data.employer_company_name) missing.push("Employer company name");
     if (!data.employer_address) missing.push("Employer address");
     if (!data.employer_pib) missing.push("Employer PIB");

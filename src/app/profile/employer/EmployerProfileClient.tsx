@@ -101,9 +101,9 @@ function createCompanyFormFromEmployer(employer: EmployerProfile | null): Compan
 }
 
 // ─── Shared styles ──────────────────────────────────────────────
-const inputClass = "w-full rounded-2xl border border-[#e4e4df] bg-[#fafaf8] px-4 py-3 text-[15px] text-[#18181b] outline-none transition hover:bg-white focus:border-[#111111] focus:bg-white focus:ring-0";
-const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#78716c]";
-const surfaceClass = "rounded-[26px] border border-[#e6e6e1] bg-white p-6 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.3)]";
+const inputClass = "w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] text-[#18181b] outline-none transition hover:bg-[#fafafa] focus:border-[#111111] focus:bg-white focus:ring-0";
+const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]";
+const surfaceClass = "rounded-[26px] border border-[#e5e7eb] bg-white p-6 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.18)]";
 
 // ─── Helper: Calculate Completion ───────────────────────────────
 function calculateCompletion(form: CompanyForm) {
@@ -467,6 +467,7 @@ export default function EmployerProfilePage({
     const isPrimaryMarket = companyForm.country.toLowerCase() === 'serbia';
     const hasCountry = companyForm.country.trim().length > 0;
     const openJobsCount = jobs.filter((job) => job.status === "open").length;
+    const showCompanyForm = editing || (readOnlyPreview && !employer);
     const workspaceStatus = readOnlyPreview
         ? "Preview"
         : !hasCountry
@@ -490,11 +491,11 @@ export default function EmployerProfilePage({
                         <h1 className="text-3xl font-semibold tracking-tight text-[#18181b]">
                             {companyForm.company_name || (readOnlyPreview ? "Employer Preview" : "Company Profile")}
                         </h1>
-                        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#57534e]">
+                        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#52525b]">
                             {workspaceSummary}
                         </p>
                         {hasCountry && (
-                            <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#8a8479]">
+                            <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#9ca3af]">
                                 {companyForm.country}
                                 {companyForm.city ? ` · ${companyForm.city}` : ""}
                                 {companyForm.website ? ` · ${companyForm.website}` : ""}
@@ -515,20 +516,20 @@ export default function EmployerProfilePage({
             <section className="space-y-6">
                         {/* Coming soon banner for markets not enabled yet */}
                         {employer && hasCountry && !isPrimaryMarket && !editing && (
-                            <div className="rounded-[26px] border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-6 shadow-sm">
+                            <div className="rounded-[26px] border border-[#dbe4f0] bg-[#f8fafc] p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.18)]">
                                 <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                        <Globe className="text-amber-600" size={24} />
+                                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[#eef2f7]">
+                                        <Globe className="text-[#475569]" size={24} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-amber-900 text-lg mb-1">We&apos;re expanding to {companyForm.country} soon!</h3>
-                                        <p className="text-amber-800 text-sm leading-relaxed">
+                                        <h3 className="mb-1 text-lg font-bold text-[#111827]">We&apos;re expanding to {companyForm.country} soon</h3>
+                                        <p className="text-sm leading-relaxed text-[#475569]">
                                             Workers United is currently onboarding employers in selected markets.
                                             We&apos;re actively expanding coverage. Your registration helps us
                                             prioritize — we&apos;ll notify you as soon as we&apos;re ready in {companyForm.country}.
                                         </p>
-                                        <p className="text-amber-700 text-xs mt-3 font-medium">
-                                            💡 In the meantime, you can complete your company profile so everything is ready when we launch.
+                                        <p className="mt-3 text-xs font-medium text-[#64748b]">
+                                            Complete the profile now so your company is ready when that market goes live.
                                         </p>
                                     </div>
                                 </div>
@@ -548,22 +549,14 @@ export default function EmployerProfilePage({
                                     </div>
                                 )}
 
-                                {!employer && readOnlyPreview ? (
-                                    <div className={surfaceClass}>
-                                        <h3 className="mb-4 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
-                                            <Building2 className="text-[#111111]" /> Employer Preview
-                                        </h3>
-                                        <p className="text-sm leading-relaxed text-[#57534e]">
-                                            No real employer profile is linked to this preview entry point. Preview stays read-only and cannot create one from here.
-                                        </p>
-                                    </div>
-                                ) : editing ? (
+                                {showCompanyForm ? (
                                     <div className={surfaceClass}>
                                         <h3 className="mb-6 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
-                                            <Pencil size={20} className="text-[#111111]" /> Edit Company Details
+                                            {showCompanyForm && !readOnlyPreview ? <Pencil size={20} className="text-[#111111]" /> : <Building2 className="text-[#111111]" />}
+                                            {readOnlyPreview ? "Company Profile Preview" : employer ? "Edit Company Details" : "Complete Company Details"}
                                         </h3>
 
-                                        <div className="space-y-6">
+                                        <fieldset className="space-y-6" disabled={readOnlyPreview || saving}>
                                             <div>
                                                 <label className={labelClass}>Company Name <span className="text-red-500">*</span></label>
                                                 <input type="text" name="company_name" required value={companyForm.company_name} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., ABC Construction d.o.o." />
@@ -678,18 +671,24 @@ export default function EmployerProfilePage({
                                                 </div>
                                             )}
 
-                                            <div className="flex justify-end gap-3 border-t border-[#f0ede6] pt-4">
-                                                {employer && (
-                                                    <button type="button" onClick={cancelEdit} className="rounded-2xl border border-[#d6d3d1] px-6 py-3 font-semibold text-[#57534e] transition hover:bg-[#fafaf8]">
+                                            <div className="flex justify-end gap-3 border-t border-[#e5e7eb] pt-4">
+                                                {employer && !readOnlyPreview && (
+                                                    <button type="button" onClick={cancelEdit} className="rounded-2xl border border-[#d1d5db] px-6 py-3 font-semibold text-[#52525b] transition hover:bg-[#fafafa]">
                                                         Cancel
                                                     </button>
                                                 )}
-                                                <button type="button" onClick={saveCompany} disabled={saving}
-                                                    className="flex items-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50">
-                                                    {saving ? "Saving..." : "Save Changes"}
-                                                </button>
+                                                {readOnlyPreview ? (
+                                                    <div className="rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-[#475569]">
+                                                        Company editing is disabled in admin preview.
+                                                    </div>
+                                                ) : (
+                                                    <button type="button" onClick={saveCompany} disabled={saving}
+                                                        className="flex items-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50">
+                                                        {saving ? "Saving..." : "Save Changes"}
+                                                    </button>
+                                                )}
                                             </div>
-                                        </div>
+                                        </fieldset>
                                     </div>
                                 ) : (
                                     <div className={surfaceClass}>
@@ -731,10 +730,10 @@ export default function EmployerProfilePage({
                         )}
 
                         {/* ====================== POST A JOB TAB ====================== */}
-                        {activeTab === 'post-job' && employer && (
+                        {activeTab === 'post-job' && (employer || readOnlyPreview) && (
                             <div className={surfaceClass}>
                                 <h3 className="mb-6 flex items-center gap-2 text-xl font-semibold text-[#18181b]">
-                                    <div className="rounded-lg bg-emerald-100 p-2 text-emerald-600"><Plus size={20} /></div>
+                                    <div className="rounded-lg bg-[#eef2f7] p-2 text-[#475569]"><Plus size={20} /></div>
                                     {readOnlyPreview ? "New Job Request Preview" : "New Job Request"}
                                 </h3>
 
@@ -743,13 +742,6 @@ export default function EmployerProfilePage({
                                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                         : "bg-red-50 text-red-700 border border-red-200"}`}>
                                         {jobAlert.msg}
-                                    </div>
-                                )}
-
-                                {readOnlyPreview && (
-                                    <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-950">
-                                        <p className="font-medium">This is the job request form employers use after the company profile is ready.</p>
-                                        <p className="mt-2 text-blue-900/80">Admin preview can inspect the structure, but it cannot create or edit job requests from this account.</p>
                                     </div>
                                 )}
 
@@ -811,9 +803,9 @@ export default function EmployerProfilePage({
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-end border-t border-[#f0ede6] pt-4">
+                                    <div className="flex justify-end border-t border-[#e5e7eb] pt-4">
                                         {readOnlyPreview ? (
-                                                <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                                                <div className="rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-[#475569]">
                                                 Job request creation is disabled in admin preview
                                             </div>
                                         ) : (
@@ -830,7 +822,7 @@ export default function EmployerProfilePage({
                         )}
 
                         {/* ====================== POSTED JOBS TAB ====================== */}
-                        {activeTab === 'jobs' && employer && (
+                        {activeTab === 'jobs' && (employer || readOnlyPreview) && (
                             <div className="space-y-6">
                                 {jobs.length === 0 ? (
                                     <div className={`${surfaceClass} p-12 text-center`}>
@@ -921,8 +913,8 @@ export default function EmployerProfilePage({
 
 function EmployerMetricCard({ label, value }: { label: string; value: string | number }) {
     return (
-        <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.45)]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8479]">{label}</div>
+        <div className="rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.18)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">{label}</div>
             <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181b]">{value}</div>
         </div>
     );
@@ -932,11 +924,11 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string,
     return (
         <div className="group">
             <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-[#a8a29e] transition-colors group-hover:text-[#78716c]">{icon}</span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a8a29e]">{label}</span>
+                <span className="text-[#9ca3af] transition-colors group-hover:text-[#52525b]">{icon}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">{label}</span>
             </div>
-            <div className="border-b border-transparent pb-1 pl-7 text-sm font-medium text-[#18181b] transition-colors group-hover:border-[#f0ede6]">
-                {value || <span className="italic text-[#b4b4ae]">Not provided</span>}
+            <div className="border-b border-transparent pb-1 pl-7 text-sm font-medium text-[#18181b] transition-colors group-hover:border-[#e5e7eb]">
+                {value || <span className="italic text-[#9ca3af]">Not provided</span>}
             </div>
         </div>
     );
@@ -947,7 +939,7 @@ function JobStatusBadge({ status }: { status: string }) {
         open: "bg-emerald-100 text-emerald-700 border-emerald-200",
         closed: "bg-slate-100 text-slate-600 border-slate-200",
         filled: "bg-blue-100 text-blue-700 border-blue-200",
-        draft: "bg-amber-100 text-amber-700 border-amber-200",
+        draft: "bg-slate-100 text-slate-600 border-slate-200",
     };
     return (
         <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border ${styles[status] || styles.closed}`}>

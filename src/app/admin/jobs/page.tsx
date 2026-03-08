@@ -81,7 +81,7 @@ export default async function AdminJobsPage() {
 
     // Get all IN_QUEUE worker rows for matching
     const { data: queueWorkerRowsRaw } = await adminClient
-        .from("candidates")
+        .from("worker_onboarding")
         .select("id, profile_id, status, preferred_job, nationality, phone, queue_joined_at, updated_at, entry_fee_paid")
         .eq("status", "IN_QUEUE");
 

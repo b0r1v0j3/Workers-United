@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
 
 export async function GET() {
     try {
@@ -37,15 +38,11 @@ export async function GET() {
             exportData.profile = profile;
         }
 
-        // Candidate data (workers)
-        const { data: candidate } = await supabase
-            .from("candidates")
-            .select("*")
-            .eq("profile_id", userId)
-            .single();
+        // Worker data
+        const { data: worker } = await loadCanonicalWorkerRecord(supabase, userId, "*");
 
-        if (candidate) {
-            exportData.candidate = candidate;
+        if (worker) {
+            exportData.worker = worker;
         }
 
         // Employer data
@@ -59,9 +56,35 @@ export async function GET() {
             exportData.employer = employer;
         }
 
+        // Agency data
+        try {
+            const { data: agency } = await supabase
+                .from("agencies")
+                .select("*")
+                .eq("profile_id", userId)
+                .maybeSingle();
+
+            if (agency) {
+                exportData.agency = agency;
+
+                const { data: agencyWorkers } = await supabase
+                    .from("worker_onboarding")
+                    .select("id, profile_id, status, phone, nationality, current_country, preferred_job, submitted_full_name, submitted_email, updated_at")
+                    .eq("agency_id", agency.id)
+                    .order("updated_at", { ascending: false });
+
+                if (agencyWorkers && agencyWorkers.length > 0) {
+                    exportData.workers = agencyWorkers;
+                    exportData.agency_workers = agencyWorkers;
+                }
+            }
+        } catch (agencyError) {
+            console.warn("[AccountExport] Agency export skipped:", agencyError);
+        }
+
         // Document metadata
         const { data: documents } = await supabase
-            .from("candidate_documents")
+            .from("worker_documents")
             .select("*")
             .eq("user_id", userId);
 

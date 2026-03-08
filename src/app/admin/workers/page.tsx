@@ -8,8 +8,9 @@ import { BadgeCheck, Hourglass, ListOrdered, Users } from "lucide-react";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import WorkersTableClient, { WorkerTableRow } from "./WorkersTableClient";
+import { pickCanonicalWorkerRecord } from "@/lib/workers";
 
-export default async function CandidatesPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+export default async function WorkersPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const params = await searchParams;
     const filter = params?.filter || 'all';
     const supabase = await createClient();
@@ -35,9 +36,9 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
     // Fetch ALL auth users (paginated — listUsers() defaults to 50 per page)
     const allAuthUsers = await getAllAuthUsers(adminClient);
 
-    // Fetch all candidates
-    const { data: candidates } = await adminClient
-        .from("candidates")
+    // Fetch all worker rows from the legacy storage table
+    const { data: workerRows } = await adminClient
+        .from("worker_onboarding")
         .select("*");
 
     // Fetch all profiles
@@ -47,11 +48,22 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
 
     // Fetch all documents
     const { data: allDocs } = await adminClient
-        .from("candidate_documents")
+        .from("worker_documents")
         .select("*");
 
     // Create lookup maps
-    const candidateMap = new Map(candidates?.map(c => [c.profile_id, c]) || []);
+    const workerGroups = new Map<string, any[]>();
+    for (const workerRow of workerRows || []) {
+        if (!workerRow?.profile_id) continue;
+        const current = workerGroups.get(workerRow.profile_id) || [];
+        current.push(workerRow);
+        workerGroups.set(workerRow.profile_id, current);
+    }
+    const workerMap = new Map(
+        Array.from(workerGroups.entries())
+            .map(([profileId, rows]) => [profileId, pickCanonicalWorkerRecord(rows)])
+            .filter((entry): entry is [string, any] => !!entry[1])
+    );
     const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
     // Also fetch employer profile IDs directly from employers table
@@ -79,18 +91,18 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
 
     // Calculate user progress — uses shared getWorkerCompletion() as single source of truth
     const getUserStats = (userId: string) => {
-        const candidate = candidateMap.get(userId);
+        const workerRecord = workerMap.get(userId);
         const p = profileMap.get(userId);
         const userDocs = (allDocs?.filter(d => d.user_id === userId) || []) as { document_type: string }[];
         const verifiedDocs = userDocs.filter((d: any) => d.status === 'verified').length;
 
         const result = getWorkerCompletion({
             profile: p || null,
-            candidate: candidate || null,
+            worker: workerRecord || null,
             documents: userDocs,
         });
 
-        return { candidate, userDocs, verifiedDocs, profileCompletion: result.completion };
+        return { workerRecord, userDocs, verifiedDocs, profileCompletion: result.completion };
     };
 
     // Filter: only show workers (exclude employers and admins)
@@ -113,15 +125,15 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         });
     } else if (filter === 'needs_approval') {
         filteredUsers = activeAuthUsers.filter((u: any) => {
-            const candidate = candidateMap.get(u.id);
+            const workerRecord = workerMap.get(u.id);
             const { profileCompletion } = getUserStats(u.id);
-            return candidate && profileCompletion === 100 && !candidate.admin_approved;
+            return workerRecord && profileCompletion === 100 && !workerRecord.admin_approved;
         });
     } else if (statusFilters.includes(filter)) {
         // Status-based filter from pipeline badges
         filteredUsers = activeAuthUsers.filter((u: any) => {
-            const candidate = candidateMap.get(u.id);
-            return candidate?.status === filter;
+            const workerRecord = workerMap.get(u.id);
+            return workerRecord?.status === filter;
         });
     }
 
@@ -139,12 +151,12 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         return profileCompletion === 100 && verifiedDocs >= 3;
     }).length;
     const needsApprovalCount = activeAuthUsers.filter((authUser: any) => {
-        const candidate = candidateMap.get(authUser.id);
+        const workerRecord = workerMap.get(authUser.id);
         const { profileCompletion } = getUserStats(authUser.id);
-        return !!candidate && profileCompletion === 100 && !candidate.admin_approved;
+        return !!workerRecord && profileCompletion === 100 && !workerRecord.admin_approved;
     }).length;
-    const queueCount = activeAuthUsers.filter((authUser: any) => candidateMap.get(authUser.id)?.status === "IN_QUEUE").length;
-    const paidWorkersCount = activeAuthUsers.filter((authUser: any) => !!candidateMap.get(authUser.id)?.entry_fee_paid).length;
+    const queueCount = activeAuthUsers.filter((authUser: any) => workerMap.get(authUser.id)?.status === "IN_QUEUE").length;
+    const paidWorkersCount = activeAuthUsers.filter((authUser: any) => !!workerMap.get(authUser.id)?.entry_fee_paid).length;
 
     return (
         <AppShell user={user} variant="admin">
@@ -240,7 +252,7 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                 <WorkersTableClient
                     data={filteredUsers.map((authUser: any) => {
                         const profile = profileMap.get(authUser.id);
-                        const { candidate, userDocs, verifiedDocs, profileCompletion } = getUserStats(authUser.id);
+                        const { workerRecord, userDocs, verifiedDocs, profileCompletion } = getUserStats(authUser.id);
 
                         return {
                             id: authUser.id,
@@ -249,21 +261,21 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
                             email: authUser.email,
                             avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${(profile?.full_name || "User").replace(' ', '+')}&background=random`,
                             created_at: authUser.created_at,
-                            status: candidate?.status || "NEW",
-                            phone: candidate?.phone || "",
-                            nationality: candidate?.nationality || "",
-                            job: candidate?.preferred_job || "",
+                            status: workerRecord?.status || "NEW",
+                            phone: workerRecord?.phone || "",
+                            nationality: workerRecord?.nationality || "",
+                            job: workerRecord?.preferred_job || "",
                             completion: profileCompletion,
                             docsCount: userDocs.length,
                             verifiedDocs: verifiedDocs,
-                            adminApproved: !!candidate?.admin_approved,
+                            adminApproved: !!workerRecord?.admin_approved,
                             isCurrentUser: authUser.id === user.id,
-                            entryFeePaid: !!candidate?.entry_fee_paid,
+                            entryFeePaid: !!workerRecord?.entry_fee_paid,
                             daysUntilDeletion: profileCompletion < 100
                                 ? Math.max(0, 30 - Math.floor((nowMs - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
                                 : null,
                             authProvider: authUser.app_metadata?.provider || 'email',
-                            paymentState: candidate?.entry_fee_paid ? "Paid" : candidate?.status === "IN_QUEUE" ? "In Queue" : "Unpaid",
+                            paymentState: workerRecord?.entry_fee_paid ? "Paid" : workerRecord?.status === "IN_QUEUE" ? "In Queue" : "Unpaid",
                         } satisfies WorkerTableRow;
                     })}
                     currentFilter={filter}

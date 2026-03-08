@@ -33,7 +33,7 @@ export async function GET(request: Request) {
             .from("offers")
             .select(`
         *,
-        candidates(*),
+        worker_onboarding!offers_worker_id_fkey(*),
         job_requests(*)
       `)
             .eq("status", "pending")
@@ -50,35 +50,35 @@ export async function GET(request: Request) {
                         .update({ status: "expired" })
                         .eq("id", offer.id);
 
-                    // Return candidate to queue
+                    // Return worker to queue
                     await supabase
-                        .from("candidates")
+                        .from("worker_onboarding")
                         .update({ status: "IN_QUEUE" })
-                        .eq("id", offer.candidate_id);
+                        .eq("id", offer.worker_id);
 
                     results.expiredOffers++;
 
                     // Send expiry notification
                     try {
                         // Fetch profile to get email and name
-                        const { data: candidateProfile } = await supabase
+                        const { data: workerProfile } = await supabase
                             .from("profiles")
                             .select("email, full_name")
-                            .eq("id", offer.candidates?.profile_id)
+                            .eq("id", offer.worker_onboarding?.profile_id)
                             .single();
 
                         await sendOfferExpiredNotification({
-                            candidateEmail: candidateProfile?.email || "",
-                            candidateName: candidateProfile?.full_name || "Worker",
+                            workerEmail: workerProfile?.email || "",
+                            workerName: workerProfile?.full_name || "Worker",
                             jobTitle: offer.job_requests?.title || "Position",
-                            queuePosition: offer.candidates?.queue_position || 0,
+                            queuePosition: offer.worker_onboarding?.queue_position || 0,
                         });
                     } catch (notifError) {
                         console.error("Failed to send expiry notification:", notifError);
                     }
 
-                    // Find and create offer for next candidate
-                    const newOfferId = await shiftOfferToNextCandidate(supabase, offer);
+                    // Find and create offer for the next worker in queue
+                    const newOfferId = await shiftOfferToNextWorker(supabase, offer);
 
                     if (newOfferId) {
                         results.newOffers++;
@@ -95,35 +95,35 @@ export async function GET(request: Request) {
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-        const { data: refundCandidates, error: refundError } = await supabase
-            .from("candidates")
+        const { data: refundWorkers, error: refundError } = await supabase
+            .from("worker_onboarding")
             .select("*")
             .eq("status", "IN_QUEUE")
             .eq("entry_fee_paid", true)
             .lt("queue_joined_at", ninetyDaysAgo.toISOString());
 
         if (refundError) {
-            results.errors.push(`Failed to fetch refund candidates: ${refundError.message}`);
-        } else if (refundCandidates && refundCandidates.length > 0) {
-            for (const candidate of refundCandidates) {
+            results.errors.push(`Failed to fetch refund workers: ${refundError.message}`);
+        } else if (refundWorkers && refundWorkers.length > 0) {
+            for (const workerRecord of refundWorkers) {
                 try {
-                    // Flag candidate for refund
+                    // Flag worker for refund
                     await supabase
-                        .from("candidates")
+                        .from("worker_onboarding")
                         .update({ status: "REFUND_FLAGGED" })
-                        .eq("id", candidate.id);
+                        .eq("id", workerRecord.id);
 
                     // Flag the payment
-                    if (candidate.entry_payment_id) {
+                    if (workerRecord.entry_payment_id) {
                         await supabase
                             .from("payments")
                             .update({ status: "flagged_for_refund" })
-                            .eq("id", candidate.entry_payment_id);
+                            .eq("id", workerRecord.entry_payment_id);
                     }
 
                     results.refundsFlagged++;
                 } catch (refundProcessError) {
-                    results.errors.push(`Failed to flag refund for ${candidate.id}: ${refundProcessError}`);
+                    results.errors.push(`Failed to flag refund for ${workerRecord.id}: ${refundProcessError}`);
                 }
             }
         }
@@ -142,7 +142,7 @@ export async function GET(request: Request) {
     }
 }
 
-async function shiftOfferToNextCandidate(
+async function shiftOfferToNextWorker(
     supabase: ReturnType<typeof createAdminClient>,
     expiredOffer: {
         id: string;
@@ -162,9 +162,9 @@ async function shiftOfferToNextCandidate(
         return null;
     }
 
-    // Find next eligible candidate
-    const { data: nextCandidate } = await supabase
-        .from("candidates")
+    // Find next eligible worker
+    const { data: nextWorkerRecord } = await supabase
+        .from("worker_onboarding")
         .select("*")
         .eq("status", "IN_QUEUE")
         .eq("entry_fee_paid", true)
@@ -173,23 +173,23 @@ async function shiftOfferToNextCandidate(
         .limit(1)
         .single();
 
-    if (!nextCandidate) {
+    if (!nextWorkerRecord) {
         return null;
     }
 
-    // Check candidate doesn't already have an offer for this job
+    // Check worker doesn't already have an offer for this job
     const { data: existingOffer } = await supabase
         .from("offers")
         .select("id")
         .eq("job_request_id", expiredOffer.job_request_id)
-        .eq("candidate_id", nextCandidate.id)
+        .eq("worker_id", nextWorkerRecord.id)
         .single();
 
     if (existingOffer) {
-        // Recurse to find next candidate
-        return shiftOfferToNextCandidate(supabase, {
+        // Recurse to find the next worker
+        return shiftOfferToNextWorker(supabase, {
             ...expiredOffer,
-            queue_position_at_offer: nextCandidate.queue_position,
+            queue_position_at_offer: nextWorkerRecord.queue_position,
         });
     }
 
@@ -201,8 +201,8 @@ async function shiftOfferToNextCandidate(
         .from("offers")
         .insert({
             job_request_id: expiredOffer.job_request_id,
-            candidate_id: nextCandidate.id,
-            queue_position_at_offer: nextCandidate.queue_position,
+            worker_id: nextWorkerRecord.id,
+            queue_position_at_offer: nextWorkerRecord.queue_position,
             expires_at: expiresAt.toISOString(),
         })
         .select()
@@ -213,25 +213,25 @@ async function shiftOfferToNextCandidate(
         return null;
     }
 
-    // Update candidate status
+    // Update worker status
     await supabase
-        .from("candidates")
+        .from("worker_onboarding")
         .update({ status: "OFFER_PENDING" })
-        .eq("id", nextCandidate.id);
+        .eq("id", nextWorkerRecord.id);
 
     // Get profile for notification
     const { data: profile } = await supabase
         .from("profiles")
         .select("email, full_name")
-        .eq("id", nextCandidate.profile_id)
+        .eq("id", nextWorkerRecord.profile_id)
         .single();
 
     // Send offer notification
     if (profile) {
         try {
             await sendOfferNotification({
-                candidateEmail: profile.email,
-                candidateName: profile.full_name || "Worker",
+                workerEmail: profile.email,
+                workerName: profile.full_name || "Worker",
                 jobTitle: jobRequest.title,
                 companyName: "Employer", // Would need employer join
                 country: jobRequest.destination_country,

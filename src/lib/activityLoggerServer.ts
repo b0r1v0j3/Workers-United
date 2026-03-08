@@ -2,9 +2,10 @@
 // For use in API routes (server component context).
 // Uses admin client to bypass RLS for inserting logs.
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTypedAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@/lib/database.types";
 
-type ActivityCategory = "profile" | "documents" | "payment" | "auth" | "navigation" | "error" | "system";
+type ActivityCategory = "profile" | "documents" | "payment" | "auth" | "navigation" | "error" | "system" | "messaging";
 type ActivityStatus = "ok" | "error" | "warning" | "blocked";
 
 interface ActivityDetails {
@@ -16,19 +17,19 @@ interface ActivityDetails {
  * Uses admin client to bypass RLS. Fire-and-forget.
  */
 export async function logServerActivity(
-    userId: string,
+    userId: string | null,
     action: string,
     category: ActivityCategory,
     details: ActivityDetails = {},
     status: ActivityStatus = "ok"
 ): Promise<void> {
     try {
-        const admin = createAdminClient();
+        const admin = createTypedAdminClient();
         await admin.from("user_activity").insert({
             user_id: userId,
             action,
             category,
-            details,
+            details: details as Json,
             status,
         });
     } catch {

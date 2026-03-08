@@ -4,6 +4,7 @@ import { createAdminClient, getAllAuthUsers } from '@/lib/supabase/admin';
 import { isGodModeUser } from '@/lib/godmode';
 import { getWorkerCompletion } from '@/lib/profile-completion';
 import { isReportablePaymentProfile } from '@/lib/reporting';
+import { pickCanonicalWorkerRecord } from '@/lib/workers';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,32 +56,43 @@ export async function GET(request: Request) {
         const totalWorkers = workerUsers.length;
 
         // 2. Completed Profiles (100% completion using same fields as worker/page.tsx)
-        // Fetch all profiles and candidates to calculate per-user completion
+        // Fetch all profiles and worker onboarding rows to calculate per-user completion
         const { data: allProfiles } = await supabase
             .from('profiles')
             .select('id, full_name, email');
 
-        const { data: allCandidates } = await supabase
-            .from('candidates')
+        const { data: allWorkerRecords } = await supabase
+            .from('worker_onboarding')
             .select('profile_id, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas');
 
         const { data: allDocs } = await supabase
-            .from('candidate_documents')
+            .from('worker_documents')
             .select('user_id, document_type, status');
 
         const profileMap = new Map(allProfiles?.map(p => [p.id, p]) || []);
-        const candidateMap = new Map(allCandidates?.map(c => [c.profile_id, c]) || []);
+        const workerGroups = new Map<string, any[]>();
+        for (const workerRow of allWorkerRecords || []) {
+            if (!workerRow?.profile_id) continue;
+            const current = workerGroups.get(workerRow.profile_id) || [];
+            current.push(workerRow);
+            workerGroups.set(workerRow.profile_id, current);
+        }
+        const workerMap = new Map(
+            Array.from(workerGroups.entries())
+                .map(([profileId, rows]) => [profileId, pickCanonicalWorkerRecord(rows)])
+                .filter((entry): entry is [string, any] => !!entry[1])
+        );
 
         // Count using shared 16-field getWorkerCompletion() — single source of truth
         let completedCount = 0;
         for (const wu of workerUsers) {
             const p = profileMap.get(wu.id);
-            const c = candidateMap.get(wu.id);
+            const worker = workerMap.get(wu.id);
             const docs = (allDocs?.filter(d => d.user_id === wu.id) || []) as { document_type: string }[];
 
             const result = getWorkerCompletion({
                 profile: p || null,
-                candidate: c || null,
+                worker: worker || null,
                 documents: docs,
             });
             if (result.completion === 100) completedCount++;
@@ -108,14 +120,14 @@ export async function GET(request: Request) {
             ? new Set(jobMatches.map(m => m.recipient_email)).size
             : 0;
 
-        // 6. Supply vs Demand (IN_QUEUE candidates vs open job positions)
-        const { data: queueCandidates } = await supabase.from('candidates').select('preferred_job').eq('status', 'IN_QUEUE');
+        // 6. Supply vs Demand (IN_QUEUE workers vs open job positions)
+        const { data: queueWorkerRows } = await supabase.from('worker_onboarding').select('preferred_job').eq('status', 'IN_QUEUE');
         const { data: openJobs } = await supabase.from('job_requests').select('industry, positions_count, positions_filled').in('status', ['open', 'matching']);
 
         const sdMap = new Map<string, { industry: string, supply: number, demand: number }>();
 
-        queueCandidates?.forEach(c => {
-            const ind = c.preferred_job || 'Unspecified';
+        queueWorkerRows?.forEach(workerRow => {
+            const ind = workerRow.preferred_job || 'Unspecified';
             if (!sdMap.has(ind)) sdMap.set(ind, { industry: ind, supply: 0, demand: 0 });
             sdMap.get(ind)!.supply += 1;
         });

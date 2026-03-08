@@ -50,6 +50,11 @@ export function evaluateSmoke(
             continue;
         }
 
+        if (!service.required && service.state === "degraded") {
+            warnings.push(`Optional service ${service.name} is degraded`);
+            continue;
+        }
+
         if (service.state === "not_configured") {
             warnings.push(`Service ${service.name} is not configured`);
         }
@@ -65,4 +70,3 @@ export function evaluateSmoke(
 
     return { status: "healthy", criticalIssues, warnings };
 }
-

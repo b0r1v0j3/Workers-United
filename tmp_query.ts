@@ -15,16 +15,21 @@ const supabaseKey = envVars['SUPABASE_SERVICE_ROLE_KEY'];
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function run() {
-    const { data: reports, error: err1 } = await supabase.from('brain_reports').select('content, created_at, report_type').order('created_at', { ascending: false }).limit(1);
+    const { data: reports, error: err1 } = await supabase
+        .from('brain_reports')
+        .select('report, created_at, model, findings_count')
+        .order('created_at', { ascending: false })
+        .limit(1);
     console.log("=== LATEST BRAIN REPORT ===");
     if (err1) console.error("Error fetching reports:", err1);
     reports?.forEach(r => {
-        console.log(`[${r.created_at}] Type: ${r.report_type}`);
-        // parse safely if JSON
+        const report = r.report as Record<string, unknown> | null;
+        const structured = report && typeof report === 'object' ? report.structured_report : null;
+        console.log(`[${r.created_at}] Model: ${r.model} | Findings: ${r.findings_count}`);
         try {
-            console.log(JSON.stringify(typeof r.content === 'string' ? JSON.parse(r.content) : r.content, null, 2).substring(0, 3000));
+            console.log(JSON.stringify(structured ?? report, null, 2).substring(0, 3000));
         } catch (e) {
-            console.log(r.content);
+            console.log(report);
         }
     });
 

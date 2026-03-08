@@ -1,16 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { saveBrainFactsDedup } from "@/lib/brain-memory";
+import type { Json } from "@/lib/database.types";
+
+function assertNoError(error: { message: string } | null, context: string): void {
+    if (error) {
+        throw new Error(`${context}: ${error.message}`);
+    }
+}
+
+async function logBrainRun(
+    supabase: ReturnType<typeof createTypedAdminClient>,
+    status: "ok" | "error",
+    details: Record<string, unknown>
+): Promise<void> {
+    const { error } = await supabase.from("user_activity").insert({
+        user_id: null,
+        action: "brain_self_improvement",
+        category: "system",
+        status,
+        details: details as Json,
+    });
+
+    assertNoError(error, "Failed to log brain self-improvement run");
+}
 
 // ─── Brain Self-Improvement Engine ──────────────────────────────────────────
 // Runs daily via Vercel Cron. Analyzes recent conversations and errors,
 // generates new learnings, and saves them to brain_memory.
-// The bot gets smarter every day with ZERO human intervention.
 //
 // Auth: Requires CRON_SECRET bearer token
 
 export async function GET(request: NextRequest) {
-    // Auth check
     const authHeader = request.headers.get("authorization");
     const expectedToken = process.env.CRON_SECRET;
     if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
@@ -22,113 +43,164 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "OPENAI_API_KEY not configured" }, { status: 500 });
     }
 
-    const supabase = createAdminClient();
+    const supabase = createTypedAdminClient();
     const now = new Date();
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     try {
-        // ─── 1. Gather recent conversations ──────────────────────────────
-        const { data: recentMessages } = await supabase
+        const { data: recentMessages, error: recentMessagesError } = await supabase
             .from("whatsapp_messages")
             .select("phone_number, direction, content, created_at")
             .gte("created_at", dayAgo.toISOString())
             .order("created_at", { ascending: true })
             .limit(200);
 
-        // Group messages by phone number into conversations
+        assertNoError(recentMessagesError, "Failed to load recent WhatsApp messages");
+
         const conversations: Record<string, { role: string; text: string }[]> = {};
         for (const msg of recentMessages || []) {
-            if (!conversations[msg.phone_number]) conversations[msg.phone_number] = [];
+            if (!conversations[msg.phone_number]) {
+                conversations[msg.phone_number] = [];
+            }
             conversations[msg.phone_number].push({
                 role: msg.direction === "inbound" ? "user" : "assistant",
                 text: msg.content || "",
             });
         }
 
-        const conversationSummaries = Object.entries(conversations).map(([phone, msgs]) => {
-            return `--- Conversation with ${phone} ---\n${msgs.map(m => `${m.role}: ${m.text}`).join("\n")}`;
-        }).join("\n\n");
+        const conversationSummaries = Object.entries(conversations)
+            .map(([phone, msgs]) => `--- Conversation with ${phone} ---\n${msgs.map((msg) => `${msg.role}: ${msg.text}`).join("\n")}`)
+            .join("\n\n");
 
-        // ─── 2. Gather recent errors ─────────────────────────────────────
-        const { data: recentErrors } = await supabase
-            .from("activity_log")
+        const { data: recentErrors, error: recentErrorsError } = await supabase
+            .from("user_activity")
             .select("action, category, details, created_at")
             .eq("status", "error")
             .gte("created_at", dayAgo.toISOString())
             .order("created_at", { ascending: false })
             .limit(50);
 
-        const errorSummary = (recentErrors || []).map(e =>
-            `[${e.action}] ${JSON.stringify(e.details)}`
-        ).join("\n") || "(No errors in the last 24 hours)";
+        assertNoError(recentErrorsError, "Failed to load recent error telemetry");
 
-        // ─── 3. Scan FULL system data (workers, docs, payments, config) ─
+        const errorSummary = (recentErrors || [])
+            .map((entry) => `[${entry.action}] ${JSON.stringify(entry.details)}`)
+            .join("\n") || "(No errors in the last 24 hours)";
+
         const [
-            { data: candidates },
-            { data: documents },
-            { data: payments },
-            { data: platformConfig },
-            { data: employers },
-            { data: jobRequests },
+            workerResult,
+            documentResult,
+            paymentResult,
+            platformConfigResult,
+            employerResult,
+            jobRequestResult,
+            existingMemoryResult,
         ] = await Promise.all([
-            supabase.from("candidates").select("status, admin_approved, entry_fee_paid, queue_joined_at, created_at").limit(500),
-            supabase.from("candidate_documents").select("document_type, status, reject_reason").limit(500),
-            supabase.from("payments").select("payment_type, status, amount").limit(500),
-            supabase.from("platform_config").select("key, value, description"),
-            supabase.from("employers").select("status, country, industry").limit(100),
-            supabase.from("job_requests").select("status, industry, country, positions_available").limit(100),
+            supabase
+                .from("worker_onboarding")
+                .select("status, admin_approved, entry_fee_paid, queue_joined_at, job_search_active")
+                .limit(500),
+            supabase
+                .from("worker_documents")
+                .select("document_type, status, reject_reason")
+                .limit(500),
+            supabase
+                .from("payments")
+                .select("payment_type, status, amount, amount_cents")
+                .limit(500),
+            supabase
+                .from("platform_config")
+                .select("key, value, description"),
+            supabase
+                .from("employers")
+                .select("status, country, industry")
+                .limit(100),
+            supabase
+                .from("job_requests")
+                .select("status, industry, destination_country, positions_count, positions_filled")
+                .limit(100),
+            supabase
+                .from("brain_memory")
+                .select("category, content")
+                .order("created_at", { ascending: false })
+                .limit(50),
         ]);
 
-        // Build system snapshot
+        assertNoError(workerResult.error, "Failed to load workers for brain improve");
+        assertNoError(documentResult.error, "Failed to load documents for brain improve");
+        assertNoError(paymentResult.error, "Failed to load payments for brain improve");
+        assertNoError(platformConfigResult.error, "Failed to load platform config for brain improve");
+        assertNoError(employerResult.error, "Failed to load employers for brain improve");
+        assertNoError(jobRequestResult.error, "Failed to load job requests for brain improve");
+        assertNoError(existingMemoryResult.error, "Failed to load existing brain memory");
+
+        const workerRows = workerResult.data || [];
+        const documents = documentResult.data || [];
+        const payments = paymentResult.data || [];
+        const platformConfig = platformConfigResult.data || [];
+        const employers = employerResult.data || [];
+        const jobRequests = jobRequestResult.data || [];
+        const existingMemory = existingMemoryResult.data || [];
+
         const statusCounts: Record<string, number> = {};
-        (candidates || []).forEach(c => { statusCounts[c.status] = (statusCounts[c.status] || 0) + 1; });
+        for (const workerRecord of workerRows) {
+            const status = workerRecord.status || "unknown";
+            statusCounts[status] = (statusCounts[status] || 0) + 1;
+        }
 
         const docStatusCounts: Record<string, number> = {};
-        (documents || []).forEach(d => { docStatusCounts[d.status] = (docStatusCounts[d.status] || 0) + 1; });
+        for (const document of documents) {
+            const status = document.status || "unknown";
+            docStatusCounts[status] = (docStatusCounts[status] || 0) + 1;
+        }
 
-        const paymentInfo = (payments || []).reduce((acc, p) => {
-            if (!acc[p.payment_type]) acc[p.payment_type] = { count: 0, amounts: new Set<number>() };
-            acc[p.payment_type].count++;
-            if (p.amount) acc[p.payment_type].amounts.add(p.amount);
+        const paymentInfo = payments.reduce((acc, payment) => {
+            if (!acc[payment.payment_type]) {
+                acc[payment.payment_type] = { count: 0, amounts: new Set<number>() };
+            }
+            acc[payment.payment_type].count++;
+            const amount = payment.amount ?? (typeof payment.amount_cents === "number" ? payment.amount_cents / 100 : null);
+            if (typeof amount === "number") {
+                acc[payment.payment_type].amounts.add(amount);
+            }
             return acc;
         }, {} as Record<string, { count: number; amounts: Set<number> }>);
 
-        const configFacts = (platformConfig || []).map(c => `${c.key}: ${c.value} (${c.description || "no description"})`).join("\n");
+        const configFacts = platformConfig
+            .map((entry) => `${entry.key}: ${entry.value} (${entry.description || "no description"})`)
+            .join("\n");
+
+        const openPositions = jobRequests.reduce((sum, job) => {
+            const positionsCount = typeof job.positions_count === "number" ? job.positions_count : 0;
+            const positionsFilled = typeof job.positions_filled === "number" ? job.positions_filled : 0;
+            return sum + Math.max(positionsCount - positionsFilled, 0);
+        }, 0);
 
         const systemSnapshot = `
 WORKER ONBOARDING STATUSES: ${JSON.stringify(statusCounts)}
-Total worker onboarding records: ${(candidates || []).length}
-Approved: ${(candidates || []).filter(c => c.admin_approved).length}
-Paid entry fee: ${(candidates || []).filter(c => c.entry_fee_paid).length}
+Total worker onboarding records: ${workerRows.length}
+Approved: ${workerRows.filter((workerRecord) => workerRecord.admin_approved).length}
+Paid entry fee: ${workerRows.filter((workerRecord) => workerRecord.entry_fee_paid).length}
+Job search active: ${workerRows.filter((workerRecord) => workerRecord.job_search_active).length}
 
 DOCUMENTS: ${JSON.stringify(docStatusCounts)}
-Document types: ${[...new Set((documents || []).map(d => d.document_type))].join(", ")}
-Common reject reasons: ${[...new Set((documents || []).filter(d => d.reject_reason).map(d => d.reject_reason))].slice(0, 5).join("; ")}
+Document types: ${[...new Set(documents.map((document) => document.document_type))].join(", ")}
+Common reject reasons: ${[...new Set(documents.filter((document) => document.reject_reason).map((document) => document.reject_reason))].slice(0, 5).join("; ")}
 
 PAYMENTS: ${Object.entries(paymentInfo).map(([type, info]) => `${type}: ${info.count} payments, amounts: ${[...info.amounts].join("/")}`).join("; ")}
 
 PLATFORM CONFIG:
 ${configFacts || "(No config found)"}
 
-EMPLOYERS: ${(employers || []).length} total, countries: ${[...new Set((employers || []).map(e => e.country))].join(", ")}
-JOB REQUESTS: ${(jobRequests || []).length} total, industries: ${[...new Set((jobRequests || []).map(j => j.industry))].join(", ")}
-Available positions: ${(jobRequests || []).reduce((sum, j) => sum + (j.positions_available || 0), 0)}`;
+EMPLOYERS: ${employers.length} total, countries: ${[...new Set(employers.map((employer) => employer.country).filter(Boolean))].join(", ")}
+JOB REQUESTS: ${jobRequests.length} total, industries: ${[...new Set(jobRequests.map((job) => job.industry).filter(Boolean))].join(", ")}
+Open positions remaining: ${openPositions}`;
 
-        // ─── 4. Get existing brain memory ────────────────────────────────
-        const { data: existingMemory } = await supabase
-            .from("brain_memory")
-            .select("category, content")
-            .order("created_at", { ascending: false })
-            .limit(50);
+        const existingFacts = existingMemory
+            .map((entry) => `[${entry.category}] ${entry.content}`)
+            .join("\n") || "(Empty brain)";
 
-        const existingFacts = (existingMemory || []).map(m =>
-            `[${m.category}] ${m.content}`
-        ).join("\n") || "(Empty brain)";
-
-        // ─── 5. Ask Codex to analyze system + conversations and learn ─────
-        // Uses GPT-5.3 Codex (Responses API) — same model as Brain Monitor
         const analysisPrompt = `You are the Brain Improvement Engine for Workers United, a legal international hiring platform.
-Terminology rule: In generated facts, use only "worker" and "employer" (never "candidate").
+Terminology rule: In generated facts, use only the canonical platform terms "worker" and "employer".
 
 Your job is to analyze the FULL SYSTEM DATA and recent conversations, then generate NEW facts to remember. The system data contains the TRUTH — use it to generate accurate facts.
 
@@ -167,7 +239,6 @@ RULES:
 - Output NO_NEW_LEARNINGS if nothing is new
 - Maximum 15 learnings per analysis`;
 
-        // Call Codex via Responses API (not chat/completions)
         const aiRes = await fetch("https://api.openai.com/v1/responses", {
             method: "POST",
             headers: {
@@ -190,14 +261,14 @@ RULES:
         const response = aiData.output_text
             || aiData.output?.[0]?.content?.[0]?.text
             || "";
+
         console.log("[Brain] 🧠 Codex self-improvement analysis:", response);
 
-        // ─── 6. Parse and save learnings ─────────────────────────────────
         const newLearnings: { category: string; content: string }[] = [];
         let saveStats = { inserted: 0, updated: 0, skipped: 0 };
 
         if (!response.includes("NO_NEW_LEARNINGS")) {
-            const lines = response.split("\n").filter((l: string) => l.startsWith("LEARN|"));
+            const lines = response.split("\n").filter((line: string) => line.startsWith("LEARN|"));
             for (const line of lines) {
                 const parts = line.split("|");
                 if (parts.length >= 3) {
@@ -214,29 +285,19 @@ RULES:
                     newLearnings.map((learning) => ({
                         category: learning.category,
                         content: learning.content,
-                        confidence: 0.7, // Auto-learned facts start with lower confidence
+                        confidence: 0.7,
                     }))
-                );
-                console.log(
-                    `[Brain] 🧠 Learning save stats — inserted: ${saveStats.inserted}, updated: ${saveStats.updated}, skipped: ${saveStats.skipped}`
                 );
             }
         }
 
-        // ─── 7. Log the improvement run ──────────────────────────────────
-        await supabase.from("activity_log").insert({
-            user_id: "system",
-            action: "brain_self_improvement",
-            category: "system",
-            status: "success",
-            details: {
-                conversations_analyzed: Object.keys(conversations).length,
-                messages_analyzed: recentMessages?.length || 0,
-                errors_analyzed: recentErrors?.length || 0,
-                new_learnings: newLearnings.length,
-                learning_save_stats: saveStats,
-                learnings: newLearnings,
-            },
+        await logBrainRun(supabase, "ok", {
+            conversations_analyzed: Object.keys(conversations).length,
+            messages_analyzed: recentMessages?.length || 0,
+            errors_analyzed: recentErrors?.length || 0,
+            new_learnings: newLearnings.length,
+            learning_save_stats: saveStats,
+            learnings: newLearnings,
         });
 
         return NextResponse.json({
@@ -250,9 +311,17 @@ RULES:
             saved: saveStats,
             learnings: newLearnings,
         });
-
     } catch (error) {
         console.error("[Brain] Self-improvement error:", error);
+
+        try {
+            await logBrainRun(supabase, "error", {
+                error: error instanceof Error ? error.message : "Unknown error",
+            });
+        } catch (logError) {
+            console.error("[Brain] Failed to log self-improvement error:", logError);
+        }
+
         return NextResponse.json({
             status: "error",
             error: error instanceof Error ? error.message : "Unknown error",

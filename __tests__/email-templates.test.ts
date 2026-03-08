@@ -6,6 +6,7 @@ const ALL_EMAIL_TYPES: EmailType[] = [
     'welcome',
     'profile_complete',
     'payment_success',
+    'checkout_recovery',
     'job_offer',
     'offer_reminder',
     'refund_approved',
@@ -76,6 +77,17 @@ describe('getEmailTemplate', () => {
             name: 'Nikola',
             amount: '$9',
         });
+        expect(html).toContain('$9');
+    });
+
+    it('checkout_recovery step 3 explains that a fresh checkout is needed', () => {
+        const { html, subject } = getEmailTemplate('checkout_recovery', {
+            name: 'Nikola',
+            amount: '$9',
+            recoveryStep: 3,
+        });
+        expect(subject).toContain('expired');
+        expect(html).toContain('fresh checkout');
         expect(html).toContain('$9');
     });
 

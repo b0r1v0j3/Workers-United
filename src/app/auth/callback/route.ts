@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
+import { claimAgencyWorkerDraft, ensureAgencyRecord, getAgencySchemaState } from '@/lib/agencies';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { normalizeUserType } from '@/lib/domain';
 import { queueEmail } from '@/lib/email-templates';
 import { logServerActivity } from '@/lib/activityLoggerServer';
+import { ensureWorkerProfileRecord, ensureWorkerRecord, loadCanonicalWorkerRecord } from '@/lib/workers';
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
     const next = searchParams.get('next');
     const userTypeParam = searchParams.get('user_type'); // From signup flow
+    const claimWorkerIdParam = searchParams.get('claim_worker_id');
 
     if (code) {
         const supabase = await createClient();
@@ -39,12 +43,13 @@ export async function GET(request: Request) {
 
             // If user_type came from signup URL param (Google signup from signup page),
             // set it in the user's metadata
-            if (!userType && userTypeParam && ['worker', 'employer'].includes(userTypeParam)) {
+            if (!userType && userTypeParam && ['worker', 'employer', 'agency'].includes(userTypeParam)) {
                 const adminClient = createAdminClient();
                 await adminClient.auth.admin.updateUserById(user.id, {
                     user_metadata: {
                         ...user.user_metadata,
                         user_type: userTypeParam,
+                        claimed_worker_id: claimWorkerIdParam || user.user_metadata?.claimed_worker_id || null,
                         gdpr_consent: true,
                         gdpr_consent_at: new Date().toISOString(),
                     },
@@ -54,7 +59,9 @@ export async function GET(request: Request) {
 
             // If STILL no user_type (direct Google sign-in without going through signup),
             // redirect to role selection
-            if (!userType) {
+            const normalizedUserType = normalizeUserType(userType);
+
+            if (!normalizedUserType) {
                 await logServerActivity(user.id, "auth_no_role", "auth", { redirect: "/auth/select-role" });
                 return NextResponse.redirect(`${origin}/auth/select-role`);
             }
@@ -78,10 +85,10 @@ export async function GET(request: Request) {
                 ).catch(() => { }); // fire-and-forget
             }
 
-            if (userType === 'admin') {
+            if (normalizedUserType === 'admin') {
                 await logServerActivity(user.id, "auth_login", "auth", { role: "admin" });
                 return NextResponse.redirect(`${origin}/admin`);
-            } else if (userType === 'employer') {
+            } else if (normalizedUserType === 'employer') {
                 // Create employer record if needed
                 const { data: employer } = await supabase
                     .from('employers')
@@ -99,62 +106,98 @@ export async function GET(request: Request) {
 
                 await logServerActivity(user.id, "auth_login", "auth", { role: "employer", is_new: !employer });
                 return NextResponse.redirect(`${origin}/profile/employer`);
+            } else if (normalizedUserType === 'agency') {
+                const agencyAdmin = createAdminClient();
+                const agencySchemaState = await getAgencySchemaState(agencyAdmin);
+                if (!agencySchemaState.ready) {
+                    await logServerActivity(user.id, "auth_login", "auth", { role: "agency", setup_required: true });
+                    return NextResponse.redirect(`${origin}/profile/agency?setup=required`);
+                }
+
+                const agencyResult = await ensureAgencyRecord(agencyAdmin, {
+                    userId: user.id,
+                    email: user.email,
+                    fullName: user.user_metadata?.full_name,
+                    agencyName: user.user_metadata?.company_name,
+                });
+
+                await logServerActivity(user.id, "auth_login", "auth", { role: "agency", is_new: agencyResult.agencyCreated });
+                return NextResponse.redirect(`${origin}/profile/agency`);
             } else {
-                // Ensure profile exists (DB trigger may have failed)
                 const workerAdmin = createAdminClient();
-                const { data: profileCheck } = await workerAdmin
-                    .from('profiles')
-                    .select('id')
-                    .eq('id', user.id)
-                    .maybeSingle();
-                if (!profileCheck) {
-                    await workerAdmin.from('profiles').upsert({
-                        id: user.id,
-                        email: user.email,
-                        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-                        user_type: 'worker',
-                    });
+                const claimWorkerId = claimWorkerIdParam || user.user_metadata?.claimed_worker_id || null;
+                const attemptedClaim = typeof claimWorkerId === "string" && claimWorkerId.trim().length > 0;
+                const profileResult = await ensureWorkerProfileRecord(workerAdmin, {
+                    userId: user.id,
+                    email: user.email,
+                    fullName: user.user_metadata?.full_name,
+                });
+                if (profileResult.profileCreated) {
                     console.log(`[Auth Callback] Created missing profile for ${user.id}`);
                 }
 
-                // Ensure candidate exists
-                const { data: candidateExists } = await workerAdmin
-                    .from('candidates')
-                    .select('id')
-                    .eq('profile_id', user.id)
-                    .maybeSingle();
-                if (!candidateExists) {
-                    await workerAdmin.from('candidates').insert({
-                        profile_id: user.id,
-                        status: 'NEW',
+                let claimResult: Awaited<ReturnType<typeof claimAgencyWorkerDraft>> | null = null;
+                if (attemptedClaim) {
+                    const agencySchemaState = await getAgencySchemaState(workerAdmin);
+                    if (agencySchemaState.ready) {
+                        claimResult = await claimAgencyWorkerDraft(workerAdmin, {
+                            workerId: claimWorkerId,
+                            profileId: user.id,
+                            email: user.email,
+                            fullName: user.user_metadata?.full_name,
+                        });
+                    }
+
+                    await workerAdmin.auth.admin.updateUserById(user.id, {
+                        user_metadata: {
+                            ...user.user_metadata,
+                            claimed_worker_id: null,
+                        },
                     });
-                    console.log(`[Auth Callback] Created missing candidate for ${user.id}`);
                 }
 
-                // Check if worker profile is incomplete (new signup → go to edit)
-                const { data: candidateCheck } = await supabase
-                    .from("candidates")
-                    .select("phone, nationality")
-                    .eq("profile_id", user.id)
-                    .maybeSingle();
+                if (!attemptedClaim) {
+                    const workerRecordResult = await ensureWorkerRecord(workerAdmin, {
+                        userId: user.id,
+                        email: user.email,
+                        fullName: user.user_metadata?.full_name,
+                    });
+                    if (workerRecordResult.workerCreated) {
+                        console.log(`[Auth Callback] Created missing worker record for ${user.id}`);
+                    }
+                }
 
-                // If no candidate record or missing basic fields, send to edit
-                if (!candidateCheck || !candidateCheck.phone || !candidateCheck.nationality) {
+                // Check if the worker onboarding record is incomplete (new signup → go to edit)
+                const { data: workerRecordCheck } = await loadCanonicalWorkerRecord(supabase, user.id, "id, phone, nationality, updated_at, entry_fee_paid, queue_joined_at, job_search_active, current_country, preferred_job, status");
+
+                // If no worker record or basic onboarding data is missing, send to edit
+                if (!workerRecordCheck || !workerRecordCheck.phone || !workerRecordCheck.nationality) {
                     // Proactive WhatsApp onboarding for new workers with a phone
-                    if (candidateCheck?.phone) {
+                    if (workerRecordCheck?.phone) {
                         try {
                             const { sendWelcome } = await import('@/lib/whatsapp');
                             const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'there';
-                            await sendWelcome(candidateCheck.phone, firstName, user.id);
+                            await sendWelcome(workerRecordCheck.phone, firstName, user.id);
                         } catch { /* WA is best-effort */ }
                     }
 
-                    await logServerActivity(user.id, "auth_login", "auth", { role: "worker", is_new: true, redirect: "/profile/worker" });
-                    return NextResponse.redirect(`${origin}/profile/worker`);
+                    await logServerActivity(user.id, "auth_login", "auth", {
+                        role: "worker",
+                        is_new: true,
+                        redirect: "/profile/worker",
+                        claim_result: claimResult?.reason || null,
+                    });
+                    const claimQuery = claimResult ? `?claim=${claimResult.reason}` : "";
+                    return NextResponse.redirect(`${origin}/profile/worker${claimQuery}`);
                 }
 
-                await logServerActivity(user.id, "auth_login", "auth", { role: "worker", is_new: false });
-                return NextResponse.redirect(`${origin}/profile/worker`);
+                await logServerActivity(user.id, "auth_login", "auth", {
+                    role: "worker",
+                    is_new: false,
+                    claim_result: claimResult?.reason || null,
+                });
+                const claimQuery = claimResult ? `?claim=${claimResult.reason}` : "";
+                return NextResponse.redirect(`${origin}/profile/worker${claimQuery}`);
             }
         }
 

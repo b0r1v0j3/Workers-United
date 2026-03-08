@@ -32,7 +32,6 @@ interface AgencyWorkerQueryRow {
     job_search_active: boolean | null;
     submitted_full_name: string | null;
     submitted_email: string | null;
-    profiles?: { full_name?: string | null; email?: string | null } | Array<{ full_name?: string | null; email?: string | null }> | null;
 }
 
 export default async function AgencyProfilePage({
@@ -99,7 +98,7 @@ export default async function AgencyProfilePage({
     const agencyId = agency?.id || null;
     const { data: workersRaw, error: workersError } = agencyId
         ? await admin
-            .from("candidates")
+            .from("worker_onboarding")
             .select(`
                 id,
                 profile_id,
@@ -113,8 +112,7 @@ export default async function AgencyProfilePage({
                 entry_fee_paid,
                 job_search_active,
                 submitted_full_name,
-                submitted_email,
-                profiles:profiles!candidates_profile_id_fkey(full_name, email)
+                submitted_email
             `)
             .eq("agency_id", agencyId)
             .order("updated_at", { ascending: false })
@@ -129,9 +127,16 @@ export default async function AgencyProfilePage({
         .map((worker) => worker.profile_id)
         .filter((profileId): profileId is string => Boolean(profileId));
 
+    const { data: linkedProfiles } = claimedProfileIds.length > 0
+        ? await admin
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", claimedProfileIds)
+        : { data: [] as Array<{ id: string; full_name: string | null; email: string | null }> };
+
     const { data: documents } = claimedProfileIds.length > 0
         ? await admin
-            .from("candidate_documents")
+            .from("worker_documents")
             .select("user_id, document_type, status")
             .in("user_id", claimedProfileIds)
         : { data: [] as Array<{ user_id: string; document_type: string; status: string | null }> };
@@ -158,15 +163,25 @@ export default async function AgencyProfilePage({
         paymentsByProfile.set(payment.profile_id, current);
     }
 
+    const profilesById = new Map(
+        (linkedProfiles || []).map((linkedProfile) => [linkedProfile.id, linkedProfile])
+    );
+
     const workerRows: AgencyDashboardProps["workers"] = workers.map((worker) => {
         const claimed = isAgencyWorkerClaimed(worker);
         const profileId = worker.profile_id || null;
+        const linkedProfile = profileId ? profilesById.get(profileId) || null : null;
         const workerDocuments = claimed && profileId ? docsByUser.get(profileId) || [] : [];
         const verifiedDocuments = workerDocuments.filter((doc) => doc.status === "verified").length;
-        const profileLike = { full_name: getAgencyWorkerName(worker) };
+        const workerIdentity = {
+            submitted_full_name: worker.submitted_full_name,
+            submitted_email: worker.submitted_email,
+            profiles: linkedProfile,
+        };
+        const profileLike = { full_name: getAgencyWorkerName(workerIdentity) };
         const completion = getWorkerCompletion({
             profile: profileLike,
-            candidate: worker,
+            worker,
             documents: workerDocuments,
         }, { phoneOptional: true }).completion;
 
@@ -180,8 +195,8 @@ export default async function AgencyProfilePage({
 
         return {
             id: worker.id,
-            name: getAgencyWorkerName(worker),
-            email: getAgencyWorkerEmail(worker),
+            name: getAgencyWorkerName(workerIdentity),
+            email: getAgencyWorkerEmail(workerIdentity),
             phone: worker.phone || null,
             nationality: worker.nationality || null,
             currentCountry: worker.current_country || null,

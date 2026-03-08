@@ -5,7 +5,7 @@ import { isGodModeUser } from "@/lib/godmode";
 
 export const dynamic = "force-dynamic";
 
-// POST: Create a manual match between a candidate and a job
+// POST: Create a manual match between a worker and a job
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -27,25 +27,32 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        const { candidateId, jobRequestId } = await request.json();
+        const { workerId, jobRequestId } = await request.json() as {
+            workerId?: string;
+            jobRequestId?: string;
+        };
+        const targetWorkerRecordId =
+            typeof workerId === "string" && workerId.trim()
+                ? workerId.trim()
+                : null;
 
-        if (!candidateId || !jobRequestId) {
+        if (!targetWorkerRecordId || !jobRequestId) {
             return NextResponse.json(
-                { error: "Missing required fields: candidateId, jobRequestId" },
+                { error: "Missing required fields: workerId, jobRequestId" },
                 { status: 400 }
             );
         }
 
         const admin = createAdminClient();
 
-        // Verify candidate exists
-        const { data: candidate, error: candErr } = await admin
-            .from("candidates")
+        // Verify worker exists
+        const { data: workerRecord, error: workerRecordError } = await admin
+            .from("worker_onboarding")
             .select("id, profile_id, status")
-            .eq("id", candidateId)
+            .eq("id", targetWorkerRecordId)
             .single();
 
-        if (!candidate || candErr) {
+        if (!workerRecord || workerRecordError) {
             return NextResponse.json({ error: "Worker not found" }, { status: 404 });
         }
 
@@ -64,11 +71,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "No open positions remaining for this job" }, { status: 400 });
         }
 
-        // Check for duplicate — same candidate + same job
+        // Check for duplicate — same worker + same job
         const { data: existingOffer } = await admin
             .from("offers")
             .select("id")
-            .eq("candidate_id", candidateId)
+            .eq("worker_id", targetWorkerRecordId)
             .eq("job_request_id", jobRequestId)
             .in("status", ["pending", "accepted"])
             .limit(1);
@@ -80,14 +87,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Create match row (candidate ↔ employer)
+        let createdMatchId: string | null = null;
+        let createdOfferId: string | null = null;
+
+        // Create match row (worker ↔ employer)
         const { data: match, error: matchErr } = await admin
             .from("matches")
             .insert({
-                candidate_id: candidateId,
+                worker_id: targetWorkerRecordId,
                 employer_id: job.employer_id,
                 status: "PENDING",
-                notes: `Manual match by admin (${user.email})`,
             })
             .select("id")
             .single();
@@ -96,56 +105,60 @@ export async function POST(request: NextRequest) {
             console.error("[Manual Match] Error creating match:", matchErr);
             return NextResponse.json({ error: "Failed to create match" }, { status: 500 });
         }
+        createdMatchId = match.id;
 
-        // Create offer row (candidate ↔ job, no expiry for manual matches)
+        // Create offer row (worker ↔ job, no expiry for manual matches)
         const { data: offer, error: offerErr } = await admin
             .from("offers")
             .insert({
                 job_request_id: jobRequestId,
-                candidate_id: candidateId,
+                worker_id: targetWorkerRecordId,
                 status: "accepted", // Admin-matched = auto-accepted
-                offered_at: new Date().toISOString(),
-                accepted_at: new Date().toISOString(),
             })
             .select("id")
             .single();
 
         if (offerErr) {
             console.error("[Manual Match] Error creating offer:", offerErr);
+            if (createdMatchId) {
+                await admin.from("matches").delete().eq("id", createdMatchId);
+            }
             return NextResponse.json({ error: "Failed to create offer" }, { status: 500 });
         }
+        createdOfferId = offer.id;
 
-        // Update candidate status
-        await admin
-            .from("candidates")
+        // Update worker status
+        const { error: workerStatusError } = await admin
+            .from("worker_onboarding")
             .update({ status: "OFFER_ACCEPTED" })
-            .eq("id", candidateId);
+            .eq("id", targetWorkerRecordId);
 
-        // Create contract_data row skeleton for document generation
-        const { data: candidateProfile } = await admin
-            .from("profiles")
-            .select("full_name")
-            .eq("id", candidate.profile_id)
-            .single();
+        if (workerStatusError) {
+            console.error("[Manual Match] Error updating worker status:", workerStatusError);
+            if (createdOfferId) {
+                await admin.from("offers").delete().eq("id", createdOfferId);
+            }
+            if (createdMatchId) {
+                await admin.from("matches").delete().eq("id", createdMatchId);
+            }
+            return NextResponse.json({ error: "Failed to update worker status" }, { status: 500 });
+        }
 
-        const { data: employer } = await admin
-            .from("employers")
-            .select("company_name, company_address, pib, tax_id")
-            .eq("id", job.employer_id)
-            .single();
-
-        await admin.from("contract_data").insert({
-            match_id: match.id,
-            candidate_full_name: candidateProfile?.full_name || null,
-            employer_company_name: employer?.company_name || null,
-            employer_pib: employer?.tax_id || employer?.pib || null,
-            employer_address: employer?.company_address || null,
-            job_title: job.title,
-            salary_rsd: null,
-            accommodation_address: null,
-            contract_duration_months: null,
-            work_schedule: null,
+        const { error: positionsError } = await admin.rpc("increment_positions_filled", {
+            job_request_id: jobRequestId,
         });
+
+        if (positionsError) {
+            console.error("[Manual Match] Error incrementing positions:", positionsError);
+            await admin.from("worker_onboarding").update({ status: workerRecord.status }).eq("id", targetWorkerRecordId);
+            if (createdOfferId) {
+                await admin.from("offers").delete().eq("id", createdOfferId);
+            }
+            if (createdMatchId) {
+                await admin.from("matches").delete().eq("id", createdMatchId);
+            }
+            return NextResponse.json({ error: "Failed to reserve the job position" }, { status: 500 });
+        }
 
         return NextResponse.json({
             success: true,
@@ -161,7 +174,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET: List available jobs for matching dropdown
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const supabase = await createClient();
 

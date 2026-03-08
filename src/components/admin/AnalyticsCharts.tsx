@@ -121,7 +121,7 @@ export function RevenueChart({ data }: AnalyticsChartsProps) {
                         cursor={{ fill: '#f0f2f5' }}
                         contentStyle={{ borderRadius: '12px', border: '1px solid #dddfe2', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
                         itemStyle={{ fontSize: 14, fontWeight: 600 }}
-                        formatter={(value: number) => [`$${value}`, 'Revenue']}
+                        formatter={(value: number | string | undefined) => [`$${value ?? 0}`, 'Revenue']}
                     />
                     <Bar
                         dataKey="revenue"

@@ -5,7 +5,7 @@ describe('getWorkerCompletion', () => {
     it('returns 0% for completely empty profile', () => {
         const result = getWorkerCompletion({
             profile: null,
-            candidate: null,
+            worker: null,
             documents: [],
         });
         expect(result.completion).toBe(0);
@@ -17,7 +17,7 @@ describe('getWorkerCompletion', () => {
         // lives_abroad/previous_visas can be `false` — that's a valid answer
         const result = getWorkerCompletion({
             profile: { full_name: 'Marko Petrović' },
-            candidate: {
+            worker: {
                 phone: '+381601234567',
                 nationality: 'Serbian',
                 current_country: 'Serbia',
@@ -49,7 +49,7 @@ describe('getWorkerCompletion', () => {
     it('returns expected completion for partially complete profile', () => {
         const result = getWorkerCompletion({
             profile: { full_name: 'Test User' },
-            candidate: {
+            worker: {
                 phone: '+1234567890',
                 nationality: 'Serbian',
                 current_country: 'Serbia',
@@ -69,7 +69,7 @@ describe('getWorkerCompletion', () => {
     it('missing fields use human-readable labels', () => {
         const result = getWorkerCompletion({
             profile: null,
-            candidate: null,
+            worker: null,
             documents: [],
         });
         expect(result.missingFields).toContain('Full Name');

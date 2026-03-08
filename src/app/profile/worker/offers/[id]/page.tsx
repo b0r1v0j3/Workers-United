@@ -19,7 +19,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
         .from("offers")
         .select(`
       *,
-      candidates(*),
+      worker_onboarding!offers_worker_id_fkey(*),
       job_requests(*, employers(*, profiles(*)))
     `)
         .eq("id", id)
@@ -30,13 +30,13 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
     }
 
     // Verify this offer belongs to the current user
-    const { data: candidate } = await supabase
-        .from("candidates")
+    const { data: workerRecord } = await supabase
+        .from("worker_onboarding")
         .select("id, signature_url")
         .eq("profile_id", user.id)
         .single();
 
-    if (!candidate || offer.candidate_id !== candidate.id) {
+    if (!workerRecord || offer.worker_id !== workerRecord.id) {
         redirect("/profile/worker");
     }
 
@@ -47,7 +47,7 @@ export default async function OfferDetailPage({ params }: OfferPageProps) {
     return (
         <OfferClient
             offer={offer}
-            candidate={candidate}
+            workerRecord={workerRecord}
             isExpired={isExpired}
             expiresAt={expiresAt.toISOString()}
         />

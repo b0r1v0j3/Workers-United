@@ -1,10 +1,16 @@
+import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-if (!process.env.GEMINI_API_KEY) {
-    console.warn("Missing GEMINI_API_KEY - AI features will not work");
+if (!process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY) {
+    console.warn("Missing OPENAI_API_KEY and GEMINI_API_KEY - document AI features will not work");
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "dummy_key_for_build");
+const openAI = process.env.OPENAI_API_KEY
+    ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    : null;
+const geminiAI = process.env.GEMINI_API_KEY
+    ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+    : null;
 
 export interface PassportData {
     full_name: string;
@@ -34,7 +40,7 @@ export interface DocumentQualityResult {
     extractedData?: Record<string, string>;
 }
 
-// Helper: fetch image as base64 for Gemini
+// Helper: fetch image as base64 for document AI providers
 export async function fetchImageAsBase64(imageUrl: string): Promise<{ data: string; mimeType: string }> {
     const response = await fetch(imageUrl);
     const buffer = await response.arrayBuffer();
@@ -43,10 +49,26 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<{ data: stri
     return { data: base64, mimeType: contentType };
 }
 
-// ─── Model Fallback Chain ───────────────────────────────────────────────────
-// If primary model fails (404, 5xx, rate limit), try next model automatically.
-// Brain Issue #7/#10/#13/#16: prevents false user rejections from AI infra errors.
-const MODEL_CHAIN = ["gemini-3.0-flash", "gemini-2.5-pro", "gemini-2.5-flash"];
+type AIProviderModel = {
+    provider: "openai" | "gemini";
+    model: string;
+};
+
+// ─── Provider Fallback Chain ────────────────────────────────────────────────
+// OpenAI is primary for document verification; Gemini remains as infra fallback.
+const VISION_CHAIN: AIProviderModel[] = [
+    { provider: "openai", model: "gpt-4o-mini" },
+    { provider: "gemini", model: "gemini-3.0-flash" },
+    { provider: "gemini", model: "gemini-2.5-pro" },
+    { provider: "gemini", model: "gemini-2.5-flash" },
+];
+
+const TEXT_CHAIN: AIProviderModel[] = [
+    { provider: "openai", model: "gpt-4o-mini" },
+    { provider: "gemini", model: "gemini-3.0-flash" },
+    { provider: "gemini", model: "gemini-2.5-pro" },
+    { provider: "gemini", model: "gemini-2.5-flash" },
+];
 
 // Custom error to distinguish AI infra failures from real document issues
 export class AIInfraError extends Error {
@@ -56,24 +78,111 @@ export class AIInfraError extends Error {
     }
 }
 
-// Helper: call Gemini with image and prompt, with model fallback chain
-async function callGeminiVision(imageUrl: string, prompt: string): Promise<string> {
+function cleanModelJson(text: string): string {
+    return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+}
+
+async function callOpenAIVision(
+    image: { data: string; mimeType: string },
+    prompt: string,
+    modelName: string
+): Promise<string> {
+    if (!openAI) {
+        throw new Error("OPENAI_API_KEY not configured");
+    }
+
+    const result = await openAI.chat.completions.create({
+        model: modelName,
+        temperature: 0,
+        max_tokens: 900,
+        messages: [
+            {
+                role: "user",
+                content: [
+                    { type: "text", text: prompt },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: `data:${image.mimeType};base64,${image.data}`,
+                        },
+                    },
+                ],
+            },
+        ],
+    });
+
+    const text = result.choices[0]?.message?.content;
+    if (!text) {
+        throw new Error(`OpenAI ${modelName} returned empty content`);
+    }
+
+    return cleanModelJson(text);
+}
+
+async function callOpenAIText(prompt: string, modelName: string): Promise<string> {
+    if (!openAI) {
+        throw new Error("OPENAI_API_KEY not configured");
+    }
+
+    const result = await openAI.chat.completions.create({
+        model: modelName,
+        temperature: 0,
+        max_tokens: 900,
+        messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = result.choices[0]?.message?.content;
+    if (!text) {
+        throw new Error(`OpenAI ${modelName} returned empty content`);
+    }
+
+    return cleanModelJson(text);
+}
+
+async function callGeminiVision(
+    image: { data: string; mimeType: string },
+    prompt: string,
+    modelName: string
+): Promise<string> {
+    if (!geminiAI) {
+        throw new Error("GEMINI_API_KEY not configured");
+    }
+
+    const model = geminiAI.getGenerativeModel({ model: modelName });
+    const result = await model.generateContent([
+        { text: prompt },
+        { inlineData: { data: image.data, mimeType: image.mimeType } },
+    ]);
+
+    return cleanModelJson(result.response.text());
+}
+
+async function callGeminiText(prompt: string, modelName: string): Promise<string> {
+    if (!geminiAI) {
+        throw new Error("GEMINI_API_KEY not configured");
+    }
+
+    const model = geminiAI.getGenerativeModel({ model: modelName });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+}
+
+// Helper: call document vision model with provider fallback chain
+async function callDocumentVision(imageUrl: string, prompt: string): Promise<string> {
     const image = await fetchImageAsBase64(imageUrl);
     const errors: string[] = [];
 
-    for (const modelName of MODEL_CHAIN) {
+    for (const providerModel of VISION_CHAIN) {
         try {
-            const model = genAI.getGenerativeModel({ model: modelName });
-            const result = await model.generateContent([
-                { text: prompt },
-                { inlineData: { data: image.data, mimeType: image.mimeType } },
-            ]);
-            const text = result.response.text();
-            return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+            if (providerModel.provider === "openai") {
+                return await callOpenAIVision(image, prompt, providerModel.model);
+            }
+            return await callGeminiVision(image, prompt, providerModel.model);
         } catch (err: any) {
             const msg = err?.message || String(err);
-            console.warn(`[Gemini] Model ${modelName} failed: ${msg.substring(0, 200)}`);
-            errors.push(`${modelName}: ${msg.substring(0, 100)}`);
+            const label = `${providerModel.provider}:${providerModel.model}`;
+            console.warn(`[Document AI] ${label} failed: ${msg.substring(0, 200)}`);
+            errors.push(`${label}: ${msg.substring(0, 100)}`);
             // Only retry on infra errors (404, 5xx, rate limit), not on content errors
             if (msg.includes("SAFETY") || msg.includes("blocked")) throw err;
             continue;
@@ -81,27 +190,32 @@ async function callGeminiVision(imageUrl: string, prompt: string): Promise<strin
     }
     throw new AIInfraError(
         `All models failed: ${errors.join(" | ")}`,
-        MODEL_CHAIN
+        VISION_CHAIN.map(({ provider, model }) => `${provider}:${model}`)
     );
 }
 
-// Helper: call Gemini text-only, with model fallback chain
-export async function callGeminiText(prompt: string): Promise<string> {
+// Helper: call document text model with provider fallback chain
+export async function callDocumentText(prompt: string): Promise<string> {
     const errors: string[] = [];
-    for (const modelName of MODEL_CHAIN) {
+    for (const providerModel of TEXT_CHAIN) {
         try {
-            const model = genAI.getGenerativeModel({ model: modelName });
-            const result = await model.generateContent(prompt);
-            return result.response.text();
+            if (providerModel.provider === "openai") {
+                return await callOpenAIText(prompt, providerModel.model);
+            }
+            return await callGeminiText(prompt, providerModel.model);
         } catch (err: any) {
             const msg = err?.message || String(err);
-            console.warn(`[Gemini Text] Model ${modelName} failed: ${msg.substring(0, 200)}`);
-            errors.push(`${modelName}: ${msg.substring(0, 100)}`);
+            const label = `${providerModel.provider}:${providerModel.model}`;
+            console.warn(`[Document AI Text] ${label} failed: ${msg.substring(0, 200)}`);
+            errors.push(`${label}: ${msg.substring(0, 100)}`);
             if (msg.includes("SAFETY") || msg.includes("blocked")) throw err;
             continue;
         }
     }
-    throw new AIInfraError(`All text models failed: ${errors.join(" | ")}`, MODEL_CHAIN);
+    throw new AIInfraError(
+        `All text models failed: ${errors.join(" | ")}`,
+        TEXT_CHAIN.map(({ provider, model }) => `${provider}:${model}`)
+    );
 }
 
 export async function extractPassportData(imageUrl: string): Promise<VerificationResult> {
@@ -130,7 +244,7 @@ Return a JSON object with EXACTLY these fields (use null if not readable):
 IMPORTANT: Be generous. If it looks like a passport, accept it. We will manually verify later.
 Return ONLY the JSON object, no other text.`;
 
-        const content = await callGeminiVision(imageUrl, prompt);
+        const content = await callDocumentVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
 
         if (!parsed.readable) {
@@ -231,7 +345,7 @@ Return JSON:
 IMPORTANT: If it looks like ANY kind of certificate or educational document, accept it. We verify manually later.
 Return ONLY the JSON object, no other text.`;
 
-        const content = await callGeminiVision(imageUrl, prompt);
+        const content = await callDocumentVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
 
         return {
@@ -291,7 +405,7 @@ Return JSON:
 IMPORTANT: If you can see ANY person in the photo, set is_valid_photo to true. We will verify manually later.
 Return ONLY the JSON object, no other text.`;
 
-        const content = await callGeminiVision(imageUrl, prompt);
+        const content = await callDocumentVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
 
         return {
@@ -356,7 +470,7 @@ Rules for cropping:
 - Add 2% padding around the document edges for safety
 - Return ONLY the JSON object, no other text.`;
 
-        const content = await callGeminiVision(imageUrl, prompt);
+        const content = await callDocumentVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
 
         // Normalize rotation to 0/90/180/270

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Eye, CheckCircle2, Send, Loader2 } from "lucide-react";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
 interface ReviewDoc {
     user_id: string;
@@ -28,7 +29,7 @@ export default function ReviewClient() {
     const loadDocs = useCallback(async () => {
         setLoading(true);
         const { data } = await supabase
-            .from("candidate_documents")
+            .from("worker_documents")
             .select("user_id, document_type, status, reject_reason, storage_path, updated_at")
             .eq("status", "manual_review")
             .order("updated_at", { ascending: false });
@@ -69,7 +70,7 @@ export default function ReviewClient() {
         }
         setPreviewing(key);
         const { data } = await supabase.storage
-            .from("candidate-docs")
+            .from(WORKER_DOCUMENTS_BUCKET)
             .createSignedUrl(doc.storage_path, 300);
         setPreviewUrl(data?.signedUrl || null);
     }

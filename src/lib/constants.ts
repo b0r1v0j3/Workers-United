@@ -23,7 +23,7 @@ export const WORLD_COUNTRIES = [
     "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman",
     "Pakistan", "Palestine", "Panama", "Paraguay", "Peru",
     "Philippines", "Poland", "Portugal", "Qatar", "Romania",
-    "Russia", "Rwanda", "San Marino", "Saudi Arabia", "Senegal",
+    "Russia", "Rwanda", "Saudi Arabia", "Senegal",
     "Serbia", "Singapore", "Slovakia", "Slovenia", "Somalia",
     "South Africa", "South Korea", "Spain", "Sri Lanka", "Sudan",
     "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan",
@@ -43,7 +43,7 @@ export const EUROPEAN_COUNTRIES = [
     "Latvia", "Lithuania", "Luxembourg",
     "Malta", "Montenegro", "Netherlands",
     "North Macedonia", "Norway", "Poland", "Portugal", "Romania",
-    "San Marino", "Serbia", "Slovakia", "Slovenia",
+    "Serbia", "Slovakia", "Slovenia",
     "Spain", "Sweden", "Switzerland",
     "United Kingdom"
 ];

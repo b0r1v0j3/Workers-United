@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/mailer";
 import { escapeHtml } from "@/lib/sanitize";
+import { checkRateLimit, standardLimiter } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+    const blocked = checkRateLimit(request, standardLimiter);
+    if (blocked) {
+        return blocked;
+    }
+
     try {
         const body = await request.json();
         const { name, email, phone, country, role, job_preference, message } = body;

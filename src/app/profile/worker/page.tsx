@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
@@ -42,18 +43,18 @@ export default async function WorkerProfilePage({
         .eq("id", targetProfileId)
         .maybeSingle();
 
-    // Fetch candidate data
-    const { data: candidate } = await dataClient
-        .from("candidates")
-        .select("*")
-        .eq("profile_id", targetProfileId)
-        .maybeSingle();
+    // Fetch canonical worker record
+    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(
+        dataClient,
+        targetProfileId,
+        "*"
+    );
 
     if (inspectProfileId && !profile) {
         redirect("/admin/workers");
     }
 
-    // Payment fallback guard: if candidate flag is stale, hide pay CTA when payment is already completed.
+    // Payment fallback guard: if the worker flag is stale, hide pay CTA when payment is already completed.
     const { data: completedEntryPayment } = await dataClient
         .from("payments")
         .select("id")
@@ -65,16 +66,16 @@ export default async function WorkerProfilePage({
 
     // Fetch documents
     const { data: documents } = await dataClient
-        .from("candidate_documents")
+        .from("worker_documents")
         .select("document_type, status, reject_reason")
         .eq("user_id", targetProfileId);
 
     // Fetch pending offers
-    const { data: pendingOffers } = candidate?.id
+    const { data: pendingOffers } = workerRecord?.id
         ? await dataClient
             .from("offers")
             .select("*, job_request:job_requests(title, destination_country, employer:employers(company_name))")
-            .eq("candidate_id", candidate.id)
+            .eq("worker_id", workerRecord.id)
             .eq("status", "pending")
         : { data: [] as Array<Record<string, unknown>> };
 
@@ -82,14 +83,14 @@ export default async function WorkerProfilePage({
     const verifiedDocs = documents?.filter(d => d.status === 'verified') || [];
     const verifiedCount = verifiedDocs.length;
     const hasPaidEntryFee =
-        !!candidate?.entry_fee_paid ||
+        !!workerRecord?.entry_fee_paid ||
         !!completedEntryPayment?.id ||
-        isPostEntryFeeWorkerStatus(candidate?.status);
-    const inQueue = candidate?.status === "IN_QUEUE";
+        isPostEntryFeeWorkerStatus(workerRecord?.status);
+    const inQueue = workerRecord?.status === "IN_QUEUE";
 
     // Calculate profile completion using shared function
     const { completion: profileCompletion } = getWorkerCompletion({
-        profile, candidate, documents: documents || []
+        profile, worker: workerRecord, documents: documents || []
     });
     const isReady = profileCompletion === 100 && verifiedCount >= 3;
     const previewUser = inspectProfileId
@@ -107,7 +108,7 @@ export default async function WorkerProfilePage({
         <DashboardClient
             user={previewUser}
             profile={profile}
-            candidate={candidate}
+            worker={workerRecord}
             documents={documents || []}
             pendingOffers={pendingOffers || []}
             profileCompletion={profileCompletion}

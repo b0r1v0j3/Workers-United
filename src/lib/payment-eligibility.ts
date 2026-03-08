@@ -1,4 +1,4 @@
-export interface EntryFeeCandidateState {
+export interface EntryFeeWorkerState {
     entry_fee_paid?: boolean | null;
 }
 
@@ -8,12 +8,12 @@ export interface EntryFeeEligibility {
     error?: string;
 }
 
-export function getEntryFeeEligibility(candidate: EntryFeeCandidateState | null): EntryFeeEligibility {
-    if (!candidate) {
+export function getEntryFeeEligibility(worker: EntryFeeWorkerState | null): EntryFeeEligibility {
+    if (!worker) {
         return { allowed: false, status: 404, error: "Worker profile not found" };
     }
 
-    if (candidate.entry_fee_paid) {
+    if (worker.entry_fee_paid) {
         return { allowed: false, status: 400, error: "Entry fee already paid" };
     }
 

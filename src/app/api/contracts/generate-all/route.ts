@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateAllDocuments, validateContractData, type DocumentType, type ContractDataForDocs } from "@/lib/pdf-generator";
+import { ensureStoredContractData } from "@/lib/contract-data";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120; // Allow 2 minutes for bulk generation
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         let query = supabase
             .from("contract_data")
-            .select("*");
+            .select("match_id, generated_at");
 
         if (!forceRegenerate) {
             query = query.is("generated_at", null);
@@ -71,16 +73,29 @@ export async function POST(request: NextRequest) {
             POZIVNO_PISMO: "POZIVNO_PISMO",
         };
 
-        for (const contractData of contracts) {
-            const workerLabel = contractData.candidate_full_name || contractData.match_id;
+        for (const contract of contracts) {
+            const matchId = contract.match_id;
+            if (!matchId) {
+                results.skipped++;
+                results.errors.push({
+                    matchId: "unknown",
+                    worker: "Unknown",
+                    error: "Contract data row is missing match_id",
+                });
+                continue;
+            }
 
             try {
+                const prepared = await ensureStoredContractData(adminSupabase, matchId);
+                const contractData = prepared.contractData as ContractDataForDocs;
+                const workerLabel = contractData.worker_full_name || matchId;
+
                 // Validate
-                const missing = validateContractData(contractData as ContractDataForDocs);
+                const missing = validateContractData(contractData);
                 if (missing.length > 0) {
                     results.skipped++;
                     results.errors.push({
-                        matchId: contractData.match_id,
+                        matchId,
                         worker: workerLabel,
                         error: `Missing fields: ${missing.join(", ")}`,
                     });
@@ -88,13 +103,13 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Generate
-                const documents = await generateAllDocuments(contractData as ContractDataForDocs);
+                const documents = await generateAllDocuments(contractData);
 
-                const workerName = (contractData.candidate_full_name || "unknown")
+                const workerName = (contractData.worker_full_name || "unknown")
                     .replace(/[^\p{L}\p{N}\s]/gu, "")
                     .replace(/\s+/g, "_");
 
-                const storagePath = `contracts/${contractData.match_id}`;
+                const storagePath = `contracts/${matchId}`;
                 const generatedDocs: Record<string, string> = {};
 
                 for (const [docType, buffer] of documents) {
@@ -102,7 +117,7 @@ export async function POST(request: NextRequest) {
                     const fullPath = `${storagePath}/${fileName}`;
 
                     const { error: uploadError } = await adminSupabase.storage
-                        .from("candidate-docs")
+                        .from(WORKER_DOCUMENTS_BUCKET)
                         .upload(fullPath, buffer, {
                             contentType: "application/pdf",
                             upsert: true,
@@ -113,7 +128,7 @@ export async function POST(request: NextRequest) {
                     }
 
                     const { data: urlData } = adminSupabase.storage
-                        .from("candidate-docs")
+                        .from(WORKER_DOCUMENTS_BUCKET)
                         .getPublicUrl(fullPath);
 
                     generatedDocs[docType] = urlData.publicUrl;
@@ -126,13 +141,13 @@ export async function POST(request: NextRequest) {
                         generated_documents: generatedDocs,
                         generated_at: new Date().toISOString(),
                     })
-                    .eq("match_id", contractData.match_id);
+                    .eq("match_id", matchId);
 
                 results.generated++;
             } catch (err) {
                 results.errors.push({
-                    matchId: contractData.match_id,
-                    worker: workerLabel,
+                    matchId,
+                    worker: "Unknown",
                     error: err instanceof Error ? err.message : "Unknown error",
                 });
             }
