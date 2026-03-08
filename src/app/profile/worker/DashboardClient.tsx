@@ -70,7 +70,7 @@ interface DashboardClientProps {
     readOnlyPreview?: boolean;
 }
 
-const surfaceClass = "rounded-[26px] border border-[#e5e7eb] bg-white p-6 shadow-[0_20px_45px_-36px_rgba(15,23,42,0.22)]";
+const surfaceClass = "rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_20px_45px_-36px_rgba(15,23,42,0.18)]";
 
 export default function DashboardClient({
     user,
@@ -147,7 +147,7 @@ export default function DashboardClient({
 
     return (
         <div className="space-y-6">
-            <section className="relative overflow-hidden rounded-[28px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_70px_-52px_rgba(15,23,42,0.22)]">
+            <section className="relative overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_70px_-52px_rgba(15,23,42,0.18)]">
                 <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-2xl">
                         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
@@ -198,7 +198,7 @@ export default function DashboardClient({
                             </div>
 
                             {readOnlyPreview ? (
-                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                                <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
                                     Read-only admin preview
                                 </div>
                             ) : inQueue || paymentPendingActivation || activeOfferCount > 0 ? (
@@ -266,7 +266,7 @@ export default function DashboardClient({
                             </p>
                         </div>
                         {readOnlyPreview ? (
-                            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
                                 Preview only
                             </div>
                         ) : supportUnlocked ? (
@@ -277,7 +277,7 @@ export default function DashboardClient({
                                 Open Support Inbox
                             </Link>
                         ) : (
-                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
                                 Unlocks after $9 payment
                             </div>
                         )}
