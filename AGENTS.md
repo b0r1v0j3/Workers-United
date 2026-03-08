@@ -271,6 +271,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Workspace header slimming pass: dashboard/profile header više ne koristi stari previsoki `68px` shell i preveliku centriranu logo-ikonu; `UnifiedNavbar` je stanjio non-public header, smanjio dashboard wordmark/logo mere, a `AppShell` je poravnao backdrop/sidebar/main top offsete na novu nižu visinu bez preklapanja — 09.03.2026
 - [x] Workspace shell cleanup pass 14: mobile sidebar više nema poseban `X` close red koji je gurao sadržaj nadole; hamburger je sada jedini top control u drawer-u, pa su i prve workspace stavke poravnate više ka vrhu bez praznog gapa — 09.03.2026
 - [x] Workspace shell cleanup pass 13: shared `AppShell` više ne prikazuje redundantne non-admin sidebar naslove `Menu` i `Worker / Employer / Agency Workspace`, pa worker/employer/agency navigacija ostaje čista bez suvišnih sekcijskih label-a — 09.03.2026
 - [x] Agency payment flow cleanup: agency dashboard i agency worker detail više ne prikazuju `claim link / claim first / awaiting claim` copy, agencija sada može direktno da otvori `$9` entry-fee checkout i za draft worker-e bez linked worker naloga, a Stripe `create-checkout + webhook + confirm-session` pamte uplatu po `worker_onboarding.id` (`target_worker_id`) tako da više worker-a pod istom agencijom zadržava tačan payment target bez mešanja — 09.03.2026
