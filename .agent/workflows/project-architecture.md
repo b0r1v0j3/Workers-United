@@ -21,7 +21,8 @@ description: Full project architecture reference — tech stack, folder structur
 | Storage | **Supabase Storage** | Documents (passport, diploma, biometric photo) |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
-| AI (Chatbot) | **GPT-4o-mini via n8n** | WhatsApp AI chatbot with memory + enriched user context |
+| AI (Chatbot) | **GPT-5 mini** | WhatsApp AI now uses a small intent router + response model flow with shorter context windows, enriched worker facts, and admin-only `[LEARN]` writes |
+| AI (Brain) | **GPT-5 mini** | Daily Brain Monitor snapshots + exception reports default to `BRAIN_DAILY_MODEL`; every run is stored, email only sends on exception |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
@@ -55,12 +56,14 @@ Workers-United/
 │   │   │   ├── page.tsx       # Auto-redirect (/profile → worker, employer, or agency)
 │   │   │   ├── worker/        # Worker workspace in shared AppShell with simplified `Overview / Documents / Queue / Support` language; overview no longer duplicates Documents/Queue/Support cards in the main canvas, main content is a single primary column, and admin can inspect real worker data via `?inspect=<profile_id>` in read-only preview
 │   │   │   ├── employer/      # Canonical employer workspace in shared AppShell; `jobs*` routes redirect back into employer tabs, company/job content now lives in a single primary column without duplicate helper panels, and admin can inspect real employer workspaces via `?inspect=<profile_id>`
-│   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action and a neutral white/gray modal intake. Generic admin preview uses local sandbox drafts, while `?inspect=<profile_id>` opens the real agency workspace without changing the admin role
+│   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action and a neutral white/gray modal intake. Generic admin preview uses the same real layout in inspect-only mode (no fake persisted drafts), while `?inspect=<profile_id>` opens the real agency workspace without changing the admin role
 │   │   │   └── settings/      # GDPR: delete account, export data
 │   │   ├── admin/
 │   │   │   ├── page.tsx       # Admin operations dashboard (stats, action cards, pipeline, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
 │   │   │   ├── layout.tsx     # Admin layout (AppShell)
 │   │   │   ├── agencies/      # Agency registry with shared admin hero/metrics layout + direct agency workspace inspect links
+│   │   │   ├── exceptions/    # Unified admin exception cockpit (payments, docs, email hygiene, employer demand drift)
+│   │   │   ├── email-health/  # Invalid / bounced email center with safe-delete guard and workspace inspect links
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
 │   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, and worker case detail now uses the same admin ops-card system for profile, approvals, payments, signature, and document review, with inspect shortcuts into worker/documents/queue workspaces
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout
@@ -74,7 +77,7 @@ Workers-United/
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics, admin inbox support list
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail patch + document upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
-│   │   │   ├── cron/          # 8 cron jobs (see below)
+│   │   │   ├── cron/          # 9 cron jobs (see below)
 │   │   │   ├── documents/     # verify, verify-passport
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
 │   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback
@@ -85,8 +88,8 @@ Workers-United/
 │   │   │   ├── profile/       # Profile API
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → n8n AI bridge)
-│   │   │   └── brain/         # AI brain (collect data, self-improve cron)
+│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router/response flow)
+│   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth/email callback handler + agency draft claim linking
 │   │   │   └── select-role/  # Role picker for Google OAuth first-time users
@@ -94,7 +97,7 @@ Workers-United/
 │   │   └── terms/             # Terms & conditions page
 │   ├── proxy.ts                # ← CSRF + auth guard (profile, admin, API routes)
 │   ├── components/
-│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), inspect-query preservation across admin previews, safe routing back to /admin, a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
+│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), inspect-query preservation across admin previews, safe routing back to /admin, direct `Exceptions` + `Email Health` admin navigation, a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
@@ -116,25 +119,27 @@ Workers-United/
 │   │   │   ├── admin.ts       # Service-role Supabase client (bypasses RLS)
 │   │   │   └── middleware.ts  # Auth middleware / proxy
 │   │   ├── mailer.ts          # sendEmail() via Nodemailer
-│   │   ├── email-templates.ts # HTML email templates
+│   │   ├── email-templates.ts # HTML email templates + checkout recovery notification mapping
 │   │   ├── document-ai.ts     # GPT-primary document AI helpers with Gemini fallback
 │   │   ├── stripe.ts          # Stripe client initialization
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
 │   │   ├── brain-memory.ts    # Brain memory dedup + normalization helpers
-│   │   ├── reporting.ts       # Reporting filters for admin metrics (exclude Codex/test/internal-orphan payments)
+│   │   ├── admin-exceptions.ts # Shared admin exception snapshot helper (checkout drift, email hygiene, docs, queue/payment mismatch, employer demand)
+│   │   ├── reporting.ts       # Reporting filters + email hygiene helpers (exclude Codex/test/internal-orphan payments, typo correction suggestions, undeliverable error detection)
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
 │   │   ├── constants.ts       # Shared constants
+│   │   ├── workers.ts         # Canonical worker lookup + normalization helpers (duplicate-safe candidate selection, phone normalization, storage filename sanitization)
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
-│   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging)
+│   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging, failed-send error capture)
 │   │   ├── sanitize.ts        # Input sanitization
 │   │   ├── user-management.ts # Shared user deletion logic
 │   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types)
 │   │   └── imageUtils.ts      # Image processing helpers
 │   └── types/                 # TypeScript types (currently empty)
-├── vercel.json                # Vercel config: security headers + 8 cron jobs
+├── vercel.json                # Vercel config: security headers + 9 cron jobs
 ├── next.config.ts             # Next.js config
 ├── tsconfig.json              # TypeScript config (`scripts/` excluded from app typecheck; Next may auto-add `.next/dev/types`)
 ├── package.json               # Dependencies & scripts (`npm run typecheck` = canonical TS gate)
@@ -155,9 +160,10 @@ Configured in `vercel.json`:
 | `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles |
 | `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months |
 | `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
-| `/api/cron/brain-monitor` | Daily 8 AM UTC | System health monitoring |
+| `/api/cron/brain-monitor` | Daily 8 AM UTC | Daily Brain snapshot + exception report email when critical or meaningfully changed |
 | `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, generates new brain_memory facts |
 | `/api/cron/whatsapp-nudge` | Daily 11 AM UTC | WhatsApp nudges for users who need a profile/doc action |
+| `/api/cron/checkout-recovery` | Every hour at :15 | Recover opened but unpaid `$9` Job Finder checkouts with `1h / 24h / 72h` follow-up and mark stale pending rows as `abandoned` |
 | `/api/cron/system-smoke` | Every hour at :30 | Route + service smoke monitor (`/`, auth pages, `/api/health`) with critical alert cooldown |
 
 ---
@@ -182,7 +188,7 @@ User (Browser)
   │     ├─► Profile reminders (cron)
   │     └─► Admin bulk announcements
   │
-  └─► Vercel Cron → /api/cron/* (scheduled background jobs)
+  └─► Vercel Cron → /api/cron/* (scheduled background jobs; Brain daily runs always save a snapshot, but email only on exception)
 ```
 
 ### Authentication Flow
@@ -191,7 +197,7 @@ User (Browser)
 3. For Google OAuth from login page (first time): user is redirected to `/auth/select-role` to choose worker/employer/agency
 4. Agency-submitted worker drafts can be claimed via `/signup?type=worker&claim=<candidate-id>`; callback/API links the draft to the real worker auth/profile only when the worker signs up with the same invited email
 5. Claimed or draft agency workers can be managed from `/profile/agency/workers/[id]`, where the agency can fill almost the full worker profile (`identity/contact/citizenship/family/preferences/passport`), while keeping `email` and `phone` optional contact channels; the same page also handles document upload/replacement, manual review requests, and the `$9` Job Finder payment for claimed workers
-6. Generic admin access to `/profile/agency` is a local sandbox preview: it never provisions an agency row or downgrades the admin role, but it does allow the same add-worker popup flow using browser-local preview drafts so the owner can inspect the UX end-to-end
+6. Generic admin access to `/profile/agency` is now a true structure preview: it never provisions an agency row or downgrades the admin role, and it opens the same add-worker modal and table layout without persisting fake preview drafts between refreshes
 7. Admin access to `/profile/worker` and `/profile/employer` remains read-only preview only, while `/profile/agency?inspect=<profile_id>` opens the real target agency workspace with admin authority attached to that agency instead of overloading the admin's own role records
 8. Employer workspace is now canonical at `/profile/employer`; legacy `/profile/employer/jobs` and `/profile/employer/jobs/new` immediately redirect into `?tab=jobs` and `?tab=post-job`
 9. On first login → user creates profile in the worker/employer domain (`candidates` remains the legacy physical table for workers)
@@ -200,7 +206,7 @@ User (Browser)
 
 ### Payment Flow
 1. Worker completes profile to 100% → gets verified
-2. Worker or agency clicks "Pay" → Stripe Checkout Session created (`/api/stripe/create-checkout`)
+2. Worker or agency clicks "Pay" → Stripe Checkout Session created (`/api/stripe/create-checkout`), while the pending payment row stores `deadline_at` and `metadata.checkout_started_at` for abandoned-checkout recovery + Brain metrics
 3. Agency-on-behalf payments target the claimed worker `profile_id`, while metadata preserves the paying agency profile and worker id
 4. Stripe redirects back → Webhook confirms payment (`/api/stripe/webhook`)
 5. Success redirect includes `session_id`; client can call `/api/stripe/confirm-session` as fallback if webhook is delayed
@@ -224,17 +230,18 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/layout.tsx` | Root layout — loads Montserrat font, GodModeWrapper, CookieConsent |
-| `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, differentiates agency sandbox preview from real inspect mode, and uses a wider neutral dashboard canvas |
+| `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, keeps only `Back to Admin` plus the current role navigation inside preview workspaces, and uses a wider neutral dashboard canvas |
+| `src/components/DocumentWizard.tsx` | Worker document upload flow; upload keys now pass through `sanitizeStorageFileName()` so camera-style filenames like `IMG_...~2.jpg` cannot break Supabase Storage with `Invalid key` |
 | `src/components/UnifiedNavbar.tsx` | Top navigation bar (logo, links, user menu); dashboard logo routes by role and surfaces `Admin Preview` when admin is viewing worker/employer/agency workspaces |
 
 ### Worker Flow
 | File | Role |
 |---|---|
-| `src/app/profile/worker/page.tsx` | Worker profile landing; supports read-only admin inspect of a real worker via `?inspect=<profile_id>` |
-| `src/app/profile/worker/DashboardClient.tsx` | Client component for worker profile, payment CTA, and support unlock explanation |
+| `src/app/profile/worker/page.tsx` | Worker profile landing; supports read-only admin inspect of a real worker via `?inspect=<profile_id>` and loads worker data through the canonical worker helper instead of assuming one physical `candidates` row |
+| `src/app/profile/worker/DashboardClient.tsx` | Clean worker overview surface with payment CTA/state and support unlock explanation; sidebar remains the navigation source for Documents/Queue/Support/Edit |
 | `src/app/profile/worker/inbox/page.tsx` | Worker support inbox route |
 | `src/app/profile/worker/inbox/WorkerInboxClient.tsx` | Worker support inbox client; loads support thread, enforces locked state pre-payment |
-| `src/app/profile/worker/edit/` | Single-page profile edit form |
+| `src/app/profile/worker/edit/` | Single-page profile edit form; save path reuses canonical worker lookup so an existing worker no longer inserts duplicate `candidates` rows when drift already exists |
 | `src/app/profile/worker/documents/` | Document upload (passport, diploma, photo); also supports read-only admin inspect of the target worker documents |
 | `src/app/profile/worker/queue/` | Queue status page; also supports read-only admin inspect of the target worker payment/queue state |
 | `src/app/profile/worker/offers/[id]/` | Individual job offer details |
@@ -249,15 +256,25 @@ User (Browser)
 ### Agency Flow
 | File | Role |
 |---|---|
-| `src/app/profile/agency/page.tsx` | Agency workspace entry; loads real agency workers, supports generic admin sandbox preview, and allows real agency inspect via `?inspect=<profile_id>` without role drift |
-| `src/app/profile/agency/AgencyDashboardClient.tsx` | Single-board agency dashboard: clean workers table, header search + the only `Add worker` CTA, local preview drafts, and modal-based add/edit flow that keeps the dashboard mounted |
-| `src/app/profile/agency/AgencyWorkerCreateModal.tsx` | Neutral white/gray/black agency worker intake modal; supports save-draft, close-confirm, admin sandbox preview drafts, and real agency creation through `/api/agency/workers` |
+| `src/app/profile/agency/page.tsx` | Agency workspace entry; loads real agency workers, supports generic admin structure preview without fake persisted drafts, and allows real agency inspect via `?inspect=<profile_id>` without role drift |
+| `src/app/profile/agency/AgencyDashboardClient.tsx` | Single-board agency dashboard: clean workers table, header search + the only `Add worker` CTA, modal-based add/edit flow that keeps the dashboard mounted, and generic admin preview that uses the same real layout without local fake-data storage |
+
+### Admin / Data Surfaces
+| File | Role |
+|---|---|
+| `src/app/admin/exceptions/page.tsx` | Unified admin exception cockpit; aggregates checkout recovery drift, invalid/bounced emails, manual-review documents, `verified but unpaid`, `paid but not in queue`, and open employer job requests without offers into one operations screen |
+| `src/app/admin/email-health/page.tsx` | Admin invalid / bounced email registry; aggregates typo domains, known invalid suffixes, and recent undeliverable sends, then links directly into real workspaces |
+| `src/app/admin/email-health/EmailHealthClient.tsx` | Client-side email-health UI with safe-delete actions via the existing admin delete-user API |
+| `src/app/admin/workers/page.tsx` | Worker registry for admin ops; dedupes legacy `candidates` rows per `profile_id` via the canonical worker helper before computing stats or rendering the table |
+| `src/app/admin/workers/[id]/page.tsx` | Admin worker case view; now loads the canonical worker record instead of assuming `.single()` over `candidates` |
+| `src/app/api/account/export/route.ts` | Self-service data export; returns canonical `worker` data from the legacy `candidates` table and keeps a backward-compatible `candidate` alias for older consumers |
+| `src/app/profile/agency/AgencyWorkerCreateModal.tsx` | Neutral white/gray/black agency worker intake modal; supports save-draft, close-confirm, inspect-only admin preview, and real agency creation through `/api/agency/workers` |
 | `src/app/profile/agency/workers/[id]/AgencyWorkerClient.tsx` | Full worker editor for agency-owned workers, including documents, review requests, and Job Finder payment for claimed workers |
 
 ### Admin
 | File | Role |
 |---|---|
-| `src/app/admin/page.tsx` | Admin operations dashboard with actionable stats, queue watch, recent lists, role-safety status, UI preview shortcuts, and direct inspect links into real worker/employer/agency workspaces |
+| `src/app/admin/page.tsx` | Admin operations dashboard with actionable stats, queue watch, recent lists, preview shortcuts, direct inspect links into real worker/employer/agency workspaces, and a top-level `Exceptions` signal sourced from the shared exception snapshot |
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
@@ -273,22 +290,26 @@ User (Browser)
 | `src/lib/supabase/server.ts` | Server-side Supabase client (SSR) |
 | `src/lib/supabase/admin.ts` | Service-role clients: legacy `createAdminClient()` + staged `createTypedAdminClient()` for schema-sensitive routes |
 | `src/lib/mailer.ts` | `sendEmail()` — Nodemailer wrapper |
-| `src/lib/email-templates.ts` | All HTML email templates |
+| `src/lib/email-templates.ts` | All HTML email templates; includes `checkout_recovery` and reuses the existing WhatsApp `status_update` template when a valid worker phone exists |
 | `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
 | `src/lib/smoke-evaluator.ts` | Shared health evaluator (`healthy/degraded/critical`) for smoke checks |
 | `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback) |
 | `src/lib/stripe.ts` | Stripe client init |
-| `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API |
+| `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries |
+| `src/lib/admin-exceptions.ts` | Shared admin exception snapshot helper used by `/admin` and `/admin/exceptions`; centralizes invalid-email, checkout drift, manual review, worker readiness, queue/payment mismatch, and open-demand-without-offers signals |
 | `src/lib/reporting.ts` | Shared reporting helpers; keeps admin dashboard and analytics revenue clean by excluding Codex/test/internal-orphan payment rows |
 | `src/lib/contract-data.ts` | Shared contract-doc payload builder; derives full PDF data from live `matches/candidates/profiles/employers/job_requests/candidate_documents` and persists only supported `contract_data` override/meta fields |
 | `src/lib/offer-finalization.ts` | Shared confirmation-fee finalization helper; idempotently transitions `offers.pending -> offers.accepted` and increments job capacity once |
 | `src/lib/domain.ts` | Canonical role/domain helper; normalizes legacy `candidate` metadata into the `worker` domain and exposes worker storage constants |
-| `src/lib/workers.ts` | Shared worker-record provisioning helper; ensures `profiles` + legacy `candidates` rows exist for worker users |
+| `src/lib/workers.ts` | Canonical worker helper layer; use `loadCanonicalWorkerRecord()` / `pickCanonicalWorkerRecord()` instead of raw `.single()` / `.maybeSingle()` on `candidates`, plus shared phone normalization and storage filename sanitization |
 | `src/lib/agencies.ts` | Agency provisioning + ownership helper; schema guard, claim-link context, claim linking, and agency-owned worker resolution over legacy `candidates` |
+| `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: GPT-5 mini intent router + response generator, shorter history windows, worker snapshot context, and admin-only learning writes |
+| `src/app/api/cron/brain-monitor/route.ts` | Daily Brain v2: GPT-5 mini daily analysis, snapshot persistence to `brain_reports`, exception-only email delivery, retry-email as the only auto-executed action |
+| `src/app/api/brain/report/route.ts` | Brain report storage/read API; default model now follows `BRAIN_DAILY_MODEL` |
 | `src/lib/notifications.ts` | Email notification dispatch helpers |
 | `src/lib/docx-generator.ts` | DOCX generation from templates (docxtemplater + pizzip) |
-| `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging |
+| `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging; failed sends now persist `error_message` into `whatsapp_messages` so delivery issues are debuggable |
 | `src/lib/constants.ts` | Shared constants (industries, countries, etc.) |
 | `src/components/messaging/ConversationThread.tsx` | Reusable conversation thread UI used by worker and admin support inboxes |
 
@@ -348,6 +369,9 @@ When adding a new feature, follow this order:
 | `STRIPE_WEBHOOK_SECRET` | Stripe | ✅ |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe | ✅ |
 | `OPENAI_API_KEY` | OpenAI | ✅ |
+| `WHATSAPP_ROUTER_MODEL` | OpenAI | Optional |
+| `WHATSAPP_RESPONSE_MODEL` | OpenAI | Optional |
+| `BRAIN_DAILY_MODEL` | OpenAI | Optional |
 | `GEMINI_API_KEY` | Google Gemini AI fallback | ✅ |
 | `SMTP_USER` | Google Workspace email | ✅ |
 | `SMTP_PASS` | Google Workspace app password | ✅ |
@@ -358,7 +382,10 @@ When adding a new feature, follow this order:
 | `WHATSAPP_VERIFY_TOKEN` | Webhook verification | For webhook |
 | `META_APP_SECRET` | Meta App Secret | Enables webhook signature verification (`X-Hub-Signature-256`) |
 | `OWNER_PHONE` / `OWNER_PHONES` | Admin WhatsApp command auth | Optional, comma-separated phone list |
-| `OPENAI_API_KEY` | OpenAI | For WhatsApp AI chatbot + primary document verification |
+| `OPENAI_API_KEY` | OpenAI | For WhatsApp router/response models + primary document verification |
+| `WHATSAPP_ROUTER_MODEL` | OpenAI | Optional override for WhatsApp intent classifier (`gpt-5-mini` default) |
+| `WHATSAPP_RESPONSE_MODEL` | OpenAI | Optional override for WhatsApp response generator (`gpt-5-mini` default) |
+| `BRAIN_DAILY_MODEL` | OpenAI | Optional override for daily Brain snapshots/exception reports (`gpt-5-mini` default) |
 
 ---
 
@@ -370,6 +397,8 @@ When adding a new feature, follow this order:
 - **`activity_log` is gone** — cron/Brain/system telemetry now lives in `user_activity`. Any new monitoring or audit write must target `user_activity`, not the removed legacy table.
 - **`contract_data` is not the source of truth for worker/employer/job core fields.** Live Supabase still lacks columns like `candidate_full_name`, `employer_company_name`, `job_title`, `salary_rsd`, `start_date`, and `contract_template`. Contract docs must build those values from live relational tables via `src/lib/contract-data.ts`; keep `contract_data` only for supported override/meta fields (`candidate_passport_issue_date`, `job_description_*`, `end_date`, `signing_date`, `generated_documents`, etc.).
 - **Do not use `.single()` on `contract_data` by `match_id`** in contract routes/admin views. Use the shared contract helper instead, so old duplicate rows or partial rows cannot 500 the PDF flow.
+- **Do not use raw `.single()` / `.maybeSingle()` on `candidates` when the lookup key is `profile_id` or phone.** Use `src/lib/workers.ts` (`loadCanonicalWorkerRecord()`, `pickCanonicalWorkerRecord()`) so duplicate worker rows cannot break worker pages, Stripe flow, support gating, or WhatsApp identity resolution.
+- **Supabase Storage keys must be sanitized before upload.** Camera/device filenames can contain characters like `~` that break uploads with `Invalid key`; route all worker/agency document filenames through `sanitizeStorageFileName()` from `src/lib/workers.ts`.
 
 ### Profile Field Consistency
 - When adding/changing a dropdown field (e.g., `preferred_job`), ensure the **same options** are used everywhere: onboarding form, edit form, employer form, admin display.
@@ -377,6 +406,12 @@ When adding a new feature, follow this order:
 
 ### Email Queue
 - The `email_queue` table has a CHECK constraint on the `type` column. Only use types that exist in the constraint (e.g., `document_reminder`, `profile_incomplete`). New types must be added to the DB constraint first.
+- Invalid-email cleanup is an ops responsibility, not just a mailer concern. Known typo/internal domains (`gmai.com`, `gmial.com`, `yahoo.coms`, `1yahoo.com`, `@workersunited.org`, etc.) should be excluded from reminders/reporting and deleted if the worker has no payments, documents, conversations, or other real business activity.
+
+### WhatsApp Delivery
+- `src/lib/whatsapp.ts` must log failed sends with `status = failed` **and** a real `error_message`; otherwise cron metrics will falsely look healthy while templates silently fail.
+- `src/app/api/cron/whatsapp-nudge/route.ts` must count `nudged` only when Meta actually returns success. Failed template sends are errors, not nudges.
+- Nudge targeting should dedupe workers by canonical profile/phone, otherwise duplicate `candidates` rows will spam the same person and distort operational metrics.
 
 ### Stripe Webhook
 - The user metadata key is `user_id` (not `userId`). Mismatch causes payment to succeed but post-payment actions to fail silently.
@@ -393,7 +428,7 @@ When adding a new feature, follow this order:
 - User-facing text: **"worker"** (never "candidate")
 - User-facing text: **"Sign In"** (never "Log In")
 - Internal DB tables still use `candidates` for workers
-- Agency foundation is additive-first: `supabase/migrations/20260306180000_agency_foundation_scaffold.sql` adds `agencies` plus worker attribution fields on `candidates`; the migration is now applied on live Supabase, and agency flow spans `/profile/agency`, `/profile/agency/workers/[id]`, `/api/agency/workers`, `/api/agency/workers/[workerId]/documents`, `/api/agency/claim`, and `/signup?type=worker&claim=...`. The schema guard is still kept so preview/local environments fail gracefully if the migration is missing. Generic admin preview now uses browser-local sandbox drafts, while `?inspect=<profile_id>` is the real agency inspect path that must never mutate the admin role itself
+- Agency foundation is additive-first: `supabase/migrations/20260306180000_agency_foundation_scaffold.sql` adds `agencies` plus worker attribution fields on `candidates`; the migration is now applied on live Supabase, and agency flow spans `/profile/agency`, `/profile/agency/workers/[id]`, `/api/agency/workers`, `/api/agency/workers/[workerId]/documents`, `/api/agency/claim`, and `/signup?type=worker&claim=...`. The schema guard is still kept so preview/local environments fail gracefully if the migration is missing. Generic admin preview now uses the same real agency layout in inspect-only mode without persisting preview data, while `?inspect=<profile_id>` is the real agency inspect path that must never mutate the admin role itself
 - Transitional DB aliases are available for gradual migration: `worker_onboarding` (→ `candidates`), `worker_documents` (→ `candidate_documents`), `worker_readiness` (→ `candidate_readiness`)
 - Date format: **DD/MM/YYYY** — use `toLocaleDateString('en-GB')`, NEVER US format
 
@@ -406,7 +441,7 @@ When adding a new feature, follow this order:
 ### Vercel Deployment
 - Security headers are in `vercel.json` (X-Frame-Options: DENY, etc.)
 - Cron jobs require `CRON_SECRET` Bearer token auth
-- All 5 cron jobs must stay in `vercel.json` — don't remove them
+- All configured cron jobs must stay in `vercel.json` — don't remove them
 
 ### AI Document Verification
 - **Provider order is intentional** — OpenAI GPT is primary for document vision; Gemini is fallback for resilience, not the source of truth.

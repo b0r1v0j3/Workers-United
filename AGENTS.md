@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 07.03.2026 (Invalid-email worker cleanup: live worker/auth/profile nalog `suleka31@yahoo.coms` je obrisan iz Supabase-a zajedno sa candidate i email_queue tragovima; potvrđeno je da je bio ručno/legacy potvrđen (`email_confirmed_at`) umesto preko realnog inboxa. `profile-reminders` sada pored internih/test adresa preskače i poznate typo domene (`yahoo.coms`, `gmai.com`, `1yahoo.com`, itd.), a legacy notify script više ne sadrži ni `.org` ni `yahoo.coms` adresu. Prethodni cleanup ostaje aktivan: fake `borivoje@workersunited.org` worker je uklonjen, agency/employer prazna stanja ne dupliraju glavne akcije, worker overview ne duplira `Documents / Queue / Support`, `AppShell` desktop canvas je stabilizovan pri collapse-u sidebar-a, `San Marino` je uklonjen iz country lista, a worker/employer ekrani su u neutralnom white/gray/black smeru)
+> **Poslednje ažuriranje:** 08.03.2026 (Admin `Exceptions` cockpit je live: novi `/admin/exceptions` okuplja invalid/bounced email profile-e, otvorene a neplaćene `$9` checkout-e, stale pending payment drift, manual-review dokumente, `verified but unpaid`, `paid but not in queue` i otvorene employer job request-e bez ponuda u jedan operativni ekran sa direktnim workspace/case ulazima. `Email Health` centar i abandoned checkout recovery ostaju aktivni, a admin dashboard/sidebar sada imaju kanonski `Exceptions` signal. Worker-domain cleanup pass 2 ostaje aktivan: admin workers registry/detail, funnel metrics i account export koriste kanonski `worker` app sloj uz legacy `candidate` alias)
 
 ---
 
@@ -59,7 +59,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Potpuna usluga** — mi nismo job board. Mi radimo SVE od A do Ž.
 - **Poslodavci ne plaćaju ništa** — usluga je besplatna za poslodavce, zauvek.
 - **NIŠTA LAŽNO** — nikad ne pravimo placeholder sadržaj, lažne reklame, lažne kontakte ili bilo šta što izgleda kao da postoji a ne postoji. Svaki element na sajtu mora biti funkcionalan i realan.
-- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. GPT obrađuje WhatsApp komunikaciju i verifikaciju dokumenata, dok Gemini ostaje fallback za document AI ako OpenAI vision trenutno nije dostupan. Nema ručnog odgovaranja na poruke. Kontakt forma automatski odgovara uz AI. WhatsApp bot se dopisuje sa korisnicima — prepoznaje ih po broju telefona, zna njihov status, i daje personalizovane odgovore.
+- **POTPUNA AI AUTOMATIZACIJA** — one-man operacija, sve se radi automatski. OpenAI GPT-4o-mini obrađuje verifikaciju dokumenata, dok Gemini ostaje fallback za document AI ako OpenAI vision trenutno nije dostupan. WhatsApp bot sada koristi GPT-5 mini intent router + response sloj, prepoznaje korisnika po broju telefona, zna njegov status i odgovara personalizovano bez ručnog operatera. Kontakt forma automatski odgovara uz AI.
 
 ---
 
@@ -162,10 +162,10 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Styling:** Tailwind CSS v4, Montserrat font
 - **Backend:** Supabase (Auth + PostgreSQL + Storage)
 - **Plaćanja:** Stripe (Checkout Sessions + Webhooks)
-- **AI:** OpenAI GPT-4o-mini (primarni vision sloj za verifikaciju dokumenata + WhatsApp AI), Gemini fallback chain za document verification (`gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`), i GPT 5.3 Codex via n8n (AI Brain)
+- **AI:** OpenAI GPT-4o-mini (primarni vision sloj za verifikaciju dokumenata), GPT-5 mini (`WHATSAPP_ROUTER_MODEL` + `WHATSAPP_RESPONSE_MODEL`) za WhatsApp intent router/response sloj, Gemini fallback chain za document verification (`gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`), i GPT-5 mini (`BRAIN_DAILY_MODEL`) za daily Brain snapshots / exception reports
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
 - **Hosting:** Vercel Pro (sa cron jobovima)
-- **Automation:** n8n Cloud (WhatsApp AI chatbot workflow)
+- **Automation:** n8n Cloud (email/ops automations i budući tool workflows)
 - **Icons:** Lucide React
 
 ### Planovi i pretplate:
@@ -198,6 +198,9 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
 
 # OpenAI
 OPENAI_API_KEY=your-openai-key
+WHATSAPP_ROUTER_MODEL=gpt-5-mini
+WHATSAPP_RESPONSE_MODEL=gpt-5-mini
+BRAIN_DAILY_MODEL=gpt-5-mini
 
 # Google Gemini AI (document verification fallback)
 GEMINI_API_KEY=your-gemini-key
@@ -213,9 +216,6 @@ CRON_SECRET=your-cron-secret
 WHATSAPP_TOKEN=your-permanent-system-user-access-token
 WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
 WHATSAPP_VERIFY_TOKEN=your-webhook-verify-token
-
-# n8n AI Chatbot
-N8N_WHATSAPP_WEBHOOK_URL=https://your-n8n.app.n8n.cloud/webhook/whatsapp-webhook
 
 # App
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
@@ -256,7 +256,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Final smoke test** — puni end-to-end test glavnih flow-ova na produkciji (worker, employer, agency, support, payment, admin)
 
 #### Sledeće
-- [ ] **Payment recovery automation** — abandoned checkout follow-up (`1h / 24h / 72h`), source attribution, admin funnel signal za `opened checkout but not paid`
+- [ ] **Payment recovery automation v2** — source attribution + admin funnel signal za `opened checkout but not paid` sada kada je osnovni abandoned checkout follow-up (`1h / 24h / 72h`) live
 - [ ] **Agency operations v2** — filteri, search, `needs action`, `missing contact`, `verified but unpaid`, `paid but waiting`, bulk operacije
 - [ ] **n8n Email AI Auto-Responder** — novi workflow: AI odgovara na emailove (`contact@workersunited.eu`)
 - [ ] **n8n AI Agent sa tools** — bot dobija mogućnost da radi akcije (provera otvorenih pozicija, ažuriranje statusa, slanje emaila)
@@ -270,6 +270,13 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Admin exception dashboard: dodat je shared `src/lib/admin-exceptions.ts` snapshot helper i novi `/admin/exceptions` ekran koji u jednom mestu prikazuje invalid/bounced email profile-e, otvorene a neplaćene checkout-e, stale pending payment drift, manual-review dokumente, `verified but unpaid`, `paid but not in queue` i otvorene job request-e bez ponuda; admin sidebar/dashboard sada imaju direktan `Exceptions` ulaz sa live signal count-om — 08.03.2026
+- [x] Abandoned checkout recovery automation: dodat je hourly `/api/cron/checkout-recovery` koji prati stvarno otvorene `$9` checkout-e preko `user_activity + payments`, preskače interne/test/typo email profile, šalje `checkout_recovery` follow-up u `1h / 24h / 72h` kroz email + postojeći WhatsApp `status_update` template, i posle trećeg koraka markira stale pending entry-fee redove kao `abandoned`; `create-checkout` sada upisuje `checkout_started_at` + `deadline_at`, pa recovery i Brain/reporting više ne zavise od nagađanja oko starosti pending checkout-a — 08.03.2026
+- [x] Worker-domain cleanup pass 2: `src/lib/profile-completion.ts` sada koristi `worker` kao kanonski input uz backward-compatible `candidate` fallback; `account/export` vraća `worker` payload (plus legacy `candidate` alias) preko kanonskog worker lookup-a, a admin workers registry/detail i funnel metrics više ne zavise od raw `.single()`/jednog `candidate` reda po `profile_id`, nego deduplikuju i koriste kanonski worker zapis — 07.03.2026
+- [x] Admin Email Health center: dodat je `/admin/email-health` sa pregledom typo domena, poznatih nevalidnih internih adresa i recent undeliverable email send-ova, uz direktan `Open workspace` inspect, `safe to delete` guard preko postojećeg `delete-user` toka i novi sidebar/dashboard signal; `src/lib/reporting.ts` sada centralizuje typo correction suggestion, invalid-only suffix heuristics i undeliverable error detection — 08.03.2026
+- [x] Reliability hotfix pass: uveden je kanonski worker lookup sloj u `src/lib/workers.ts` (`pickCanonicalWorkerRecord`, `loadCanonicalWorkerRecord`) pa worker/profile/queue/edit, Stripe payment flow, support gating i WhatsApp webhook više ne pucaju kada jedan `profile_id` ima više redova u `candidates`; `DocumentWizard` i agency document upload sada sanitizuju storage file name pa uploadovi tipa `IMG_...~2.jpg` više ne padaju sa `Invalid key`, `whatsapp.ts` upisuje pravi `error_message` za failed template/text send, a `whatsapp-nudge` deduplikuje workere po profilu/telefonu i broji `nudged` samo kada Meta send stvarno uspe. Na live-u su očišćeni jedini potvrđeni dupli worker cluster i još 3 očigledna typo-domain worker naloga bez uplata/dokumenata — 07.03.2026
+- [x] WhatsApp v2 router + Brain report v2: `/api/whatsapp/webhook` sada koristi GPT-5 mini router (`job_intent / price / documents / support / status / off_topic`) i kraći recent-context response sloj umesto starog giant-prompt `gpt-4o-mini` toka; `[LEARN: ...]` upisi su zaključani samo za admin poruke. `/api/cron/brain-monitor` prebačen je na `BRAIN_DAILY_MODEL` (`gpt-5-mini` default), svaki dnevni run se i dalje snima u `brain_reports`, ali email sada ide samo za stvarne exception slučajeve (`critical`, issue, low health, retry-email), dok je `/api/brain/report` default model poravnat na isti daily model — 07.03.2026
+- [x] Preview/admin simplification + homepage neutral pass: `AppShell` admin preview više ne prikazuje dodatni `Role Previews` blok unutar role workspace-a, worker preview sada otvara `Documents / Queue / Support / Edit Profile`, a `/profile/agency` generic admin preview više nije localStorage sandbox sa lažnim draftovima nego isti stvarni layout + modal bez persistencije; employer preview prikazuje realne company/job forme umesto pomoćnih preview kartica, a landing page je prebačen sa toplih beige/green/blue površina na neutralni white/gray/black sistem sa suptilnim slojevitim dokument karticama — 07.03.2026
 - [x] Invalid-email worker cleanup: obrisan je lažni live worker/auth/profiles zapis `suleka31@yahoo.coms` zajedno sa candidate i `email_queue` istorijom; potvrđeno je da je `email_confirmed_at` bio ručno/legacy postavljen, `profile-reminders` sada preskače i poznate typo domene (`yahoo.coms`, `gmai.com`, `1yahoo.com`, itd.), a legacy ručni notify script više ne sadrži tu adresu — 07.03.2026
 - [x] Fake internal worker cleanup: obrisan je lažni live worker/auth/profiles zapis `borivoje@workersunited.org` zajedno sa candidate i `email_queue` istorijom; `profile-reminders` sada preskače interne/test email adrese preko shared filtera, a legacy ručni notify script više ne sadrži tu `.org` adresu — 07.03.2026
 - [x] Workspace cleanup pass 5: agency i employer prazna stanja više ne dupliraju glavne akcije u sredini ekrana; `Add worker` ostaje samo u agency header-u, `New Job Request` samo u employer sidebar-u, a empty-state poruke sada jasno upućuju na ta kanonska mesta — 07.03.2026
@@ -444,7 +451,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | `src/lib/brain-memory.ts` | Shared deduplikacija + normalizacija za `brain_memory` upise (WhatsApp + Brain improve) |
 | `src/lib/email-templates.ts` | Svi email templateovi + strict `TemplateData` (bez `[key: string]: any`) |
 | `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging, 10 convenience wrappers |
-| `src/lib/platform-config.ts` | Centralized business facts (cene, garancija, kontakt). Kešira 5 min. Čitaju: WhatsApp bot, Brain Monitor, n8n AI |
+| `src/lib/platform-config.ts` | Centralized business facts (cene, garancija, kontakt). Kešira 5 min. Čitaju: WhatsApp bot, Brain Monitor i budući automation/tool slojevi |
 | `src/lib/docx-generator.ts` | DOCX generisanje iz šablona (docxtemplater + nationality mapping) |
 
 ### Cron Jobs (vercel.json):
@@ -674,7 +681,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 13. **`profiles` tabela NEMA `role` kolonu** — kolona se zove `user_type`. NIKAD ne koristiti `profile?.role`. Svuda koristiti `profile?.user_type !== 'admin'`. Ovo je bila sistemska greška u 14 fajlova.
 14. **Employer status vrednosti su UPPERCASE** — DB CHECK dozvoljava samo `PENDING`, `VERIFIED`, `REJECTED`. NIKAD lowercase `active/pending/rejected`.
 15. **Admin auth check pattern** — za API rute: `select("user_type")` + `profile?.user_type !== "admin"`. Za stranice: isti pattern + `isGodModeUser()` fallback. Za server actions: samo `user_type`, bez godmode.
-15a. **`worker` je kanonski domain naziv, `candidates` je samo legacy storage layer** — za novi kod UVEK koristiti `src/lib/domain.ts` (`normalizeUserType()`, `shouldProvisionWorkerRecords()`) i `src/lib/workers.ts` (`ensureWorkerRecord()`). Ne uvoditi nove helpere/komentare/API payload-e sa `candidate*` imenima osim kada moraš da gađaš fizičku DB tabelu/kolonu.
+15a. **`worker` je kanonski domain naziv, `candidates` je samo legacy storage layer** — za novi kod UVEK koristiti `src/lib/domain.ts` (`normalizeUserType()`, `shouldProvisionWorkerRecords()`) i `src/lib/workers.ts` (`ensureWorkerRecord()`, `loadCanonicalWorkerRecord()`, `pickCanonicalWorkerRecord()`). Ne uvoditi nove helpere/komentare/API payload-e sa `candidate*` imenima osim kada moraš da gađaš fizičku DB tabelu/kolonu. Posebno: ne koristiti raw `.single()` / `.maybeSingle()` na `candidates` kada lookup radiš po `profile_id` ili telefonu, jer live može imati duplikate.
 15b. **Agency feature zahteva migraciju pre deploy-a** — agency stranice/API sada imaju graceful setup guard i više ne treba da pucaju ružno kada schema nije spremna, ali puni agency flow (`ensureAgencyRecord()`, dashboard ownership, claim linkovanje) i dalje očekuje `public.agencies` tabelu i ownership kolone na `candidates` (`agency_id`, `submitted_by_profile_id`, `submitted_full_name`, `submitted_email`, `source_type`, `claimed_by_worker_at`). Live proverom 06.03.2026 potvrđeno je da te stvari još NE postoje. Pre prvog deploy-a agency feature-a MORA da se pusti `supabase/migrations/20260306180000_agency_foundation_scaffold.sql`.
 16. **Webhook/Cron rute MORAJU koristiti service-role admin helper (`createAdminClient()` ili `createTypedAdminClient()`)** — `createClient()` zahteva auth cookies. Stripe webhooks, WhatsApp webhooks, i Vercel cron jobs NEMAJU cookies. Sve DB operacije će tiho da failuju. Za schema-sensitive rute (`Brain`, `system-smoke`, server activity logging) preferirati `createTypedAdminClient()`, a legacy query-heavy rute ostaviti na `createAdminClient()` dok se ne sanira postojeći query debt.
 17. **`OFFER_ACCEPTED` status** — ~~NE POSTOJI u CHECK constraint~~ FIXED u migraciji `007_admin_approval.sql`. Videti Gotcha #10 za potpunu listu dozvoljenih statusa.
@@ -704,7 +711,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 41. **`queueEmail()` podržava opcionalni `recipientPhone` parametar** — kad se prosledi, automatski šalje i WhatsApp template uz email. WhatsApp failure NIKAD ne blokira email slanje. Dodati phone kao poslednji argument: `queueEmail(supabase, userId, type, email, name, data, scheduledFor, phone)`.
 42. **RLS policy MORA koristiti `(select auth.uid())` a NE `auth.uid()` direktno** — `auth.uid()` se re-evaluira za SVAKI red u tabeli, što drastično usporava query-je. Zamotan u subquery `(select auth.uid())` se poziva samo jednom. Ovo važi za sve `auth.<function>()` pozive u RLS policy-ima (uid, jwt, role). Supabase Advisor detektuje ovo kao performance warning.
 43. **Telefon se čuva u `candidates.phone`, NE u Supabase Auth** — Auth `phone` polje je za SMS login. Naš phone se čuva u candidates tabeli. `ProfileClient.tsx` sinhronizuje phone u `auth.user_metadata` na save da bude vidljiv u Auth dashboardu. WhatsApp webhook traži korisnika po `candidates.phone`.
-44. **Business facts MORAJU ići u `platform_config` tabelu** — NIKAD ne hardkodovati cene, garanciju, kontakt email ili politiku u kod. Koristiti `getPlatformConfig()` iz `src/lib/platform-config.ts`. Admin menja u Settings → Platform Config. WhatsApp bot, Brain Monitor, n8n AI — svi čitaju iz iste baze. Cache: 5 min. Fallback: hardkodovane default vrednosti ako DB pukne.
+44. **Business facts MORAJU ići u `platform_config` tabelu** — NIKAD ne hardkodovati cene, garanciju, kontakt email ili politiku u kod. Koristiti `getPlatformConfig()` iz `src/lib/platform-config.ts`. Admin menja u Settings → Platform Config. WhatsApp bot, Brain Monitor i budući automation/tool slojevi — svi čitaju iz iste baze. Cache: 5 min. Fallback: hardkodovane default vrednosti ako DB pukne.
 45. **`brain_memory` upisi MORAJU ići kroz `saveBrainFactsDedup()`** — WhatsApp learning loop i Brain self-improve ne smeju direktno `insert` bez dedupa. Koristiti `src/lib/brain-memory.ts` da se spreče duplikati i prompt-bloat.
 46. **WhatsApp webhook token + admin telefoni su ENV-driven** — `WHATSAPP_VERIFY_TOKEN` (ili fallback na `CRON_SECRET`) mora biti set; hardcoded verify token fallback je uklonjen. Admin telefon za WhatsApp komande ide kroz `OWNER_PHONE` ili `OWNER_PHONES` (comma-separated).
 47. **ESLint gate: no blocking errors, warnings ostaju kao tehnički dug** — `@typescript-eslint/no-explicit-any` je privremeno warning da produkcioni lint ne blokira deploy dok se radi postepena tipizacija. `npm run lint` mora ostati na 0 errors.
@@ -773,7 +780,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 12. **WhatsApp webhook requires WABA `subscribed_apps` API call** — After setting up the webhook in Meta Developer Portal, you MUST also call `POST /{WABA-ID}/subscribed_apps` via Graph API Explorer. Without this, Meta's "Test" button works but REAL incoming messages do NOT trigger the webhook. This is the #1 cause of "webhook configured but no events delivered" issues.
 
-13. **WhatsApp AI Chatbot architecture** — The flow is: `User → WhatsApp → Meta → Vercel webhook (route.ts) → n8n AI → Vercel → WhatsApp reply`. Vercel handles sending the reply using its own `WHATSAPP_TOKEN`, NOT n8n. n8n only does AI processing and returns the text via "Respond to Webhook" node. Key env vars: `N8N_WHATSAPP_WEBHOOK_URL`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`/`CRON_SECRET` (for webhook verification).
+13. **WhatsApp AI Chatbot architecture** — The flow is: `User → WhatsApp → Meta → Vercel webhook (route.ts) → GPT-5 mini intent router → GPT-5 mini response generator → Vercel → WhatsApp reply`. Vercel handles both routing and reply generation directly via OpenAI Responses API and sends the reply using its own `WHATSAPP_TOKEN`. Key env vars: `OPENAI_API_KEY`, `WHATSAPP_ROUTER_MODEL`, `WHATSAPP_RESPONSE_MODEL`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`/`CRON_SECRET`.
 
 14. **UVEK koristi `database.types.ts` za kolone** — Fajl `src/lib/database.types.ts` je generisan iz Supabase šeme i sadrži tačna imena kolona za sve tabele. Pre nego što napišeš `.select()` upit, pogledaj šta tip za tu tabelu kaže. Komanda za regenerisanje: `npx supabase gen types typescript --project-id qdwhwlusxjjtlinmpwms > src/lib/database.types.ts`. Pokreni ovo kad dodaš novu kolonu u bazu.
 
@@ -796,7 +803,9 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 21. **Stripe amount validacija** — Webhook proverava `session.payment_status === "paid"` i `session.amount_total` pre nego što dodeli entitlemente. Entry fee = 900 cents ($9), confirmation fee = 19000 cents ($190).
 
-22. **Brain report mora da se sačuva u bazu** — n8n šalje nedeljni izveštaj mejlom, ali MORA i da pozove `POST /api/brain/report` sa `Authorization: Bearer CRON_SECRET` da bi sačuvao izveštaj u `brain_reports` tabelu. Bez toga, nema baseline za poređenje sledeće nedelje. Body: `{ "report": "...", "model": "gpt-5.3-codex", "findings_count": N }`.
+22. **Brain report mora da se sačuva u bazu** — svaki Brain izveštaj ili snapshot MORA da završi u `brain_reports`, bilo kroz `/api/cron/brain-monitor` ili `POST /api/brain/report` sa `Authorization: Bearer CRON_SECRET`. Bez toga nema baseline-a za poređenje. `model` ne hardkodovati; daily fallback sada ide kroz `BRAIN_DAILY_MODEL` (`gpt-5-mini` default).
+
+30. **Daily Brain Monitor je snapshot-first, email-second** — `/api/cron/brain-monitor` sada svaki dan snima structured report u `brain_reports`, ali email šalje samo kada postoje pravi exception signali: kritičan operation status, health score ispod praga, issue findings ili `retry_email` akcija. Ne vraćati ga na obavezni narativni email za svaki run.
 
 23. **Brain code coverage — `KEY_PATHS` mora da pokriva celu bazu** — `brain/code/route.ts` čita fajlove sa GitHub-a za AI analizu. `KEY_PATHS` niz MORA da uključuje `database.types.ts`, SVE API rute, SVE lib fajlove i `proxy.ts` (ranije `middleware.ts`). GPT 5.3 report je flagovao da ne može da validira kolone jer mu `database.types.ts` nije bio poslat. FIXED 01.03.2026: prošireno sa 28 na 70+ fajlova.
 
