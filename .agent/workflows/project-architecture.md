@@ -265,6 +265,7 @@ User (Browser)
 | `src/app/admin/exceptions/page.tsx` | Unified admin exception cockpit; aggregates checkout recovery drift, invalid/bounced emails, manual-review documents, `verified but unpaid`, `paid but not in queue`, and open employer job requests without offers into one operations screen |
 | `src/app/admin/email-health/page.tsx` | Admin invalid / bounced email registry; aggregates typo domains, known invalid suffixes, and recent undeliverable sends, then links directly into real workspaces |
 | `src/app/admin/email-health/EmailHealthClient.tsx` | Client-side email-health UI with safe-delete actions via the existing admin delete-user API |
+| `src/app/api/admin/search/route.ts` | Global admin search; returns `worker` as the canonical app-layer result, dedupes legacy `candidates` rows per `profile_id`, and keeps employer hits separate from worker hits |
 | `src/app/admin/workers/page.tsx` | Worker registry for admin ops; dedupes legacy `candidates` rows per `profile_id` via the canonical worker helper before computing stats or rendering the table |
 | `src/app/admin/workers/[id]/page.tsx` | Admin worker case view; now loads the canonical worker record instead of assuming `.single()` over `candidates` |
 | `src/app/api/account/export/route.ts` | Self-service data export; returns canonical `worker` data from the legacy `candidates` table and keeps a backward-compatible `candidate` alias for older consumers |
@@ -280,6 +281,8 @@ User (Browser)
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
 | `src/app/admin/workers/page.tsx` | Worker list with filter tabs |
 | `src/app/admin/workers/[id]/page.tsx` | Worker case surface with shared admin ops cards for profile snapshot, approvals, payments, contract payload, signature, and document review |
+| `src/app/admin/queue/page.tsx` | Queue operations screen; canonical worker dedupe prevents duplicate legacy `candidates` rows from inflating queue counts, refund watch, or urgent countdowns |
+| `src/app/admin/jobs/page.tsx` | Smart Match Hub; loads the queue through canonical worker dedupe before handing it to matching UI |
 | `src/app/admin/announcements/page.tsx` | Bulk email (Workers / Employers / Everyone) |
 | `src/app/admin/settings/page.tsx` | Platform settings |
 
@@ -299,7 +302,7 @@ User (Browser)
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries |
 | `src/lib/admin-exceptions.ts` | Shared admin exception snapshot helper used by `/admin` and `/admin/exceptions`; centralizes invalid-email, checkout drift, manual review, worker readiness, queue/payment mismatch, and open-demand-without-offers signals |
 | `src/lib/reporting.ts` | Shared reporting helpers; keeps admin dashboard and analytics revenue clean by excluding Codex/test/internal-orphan payment rows |
-| `src/lib/contract-data.ts` | Shared contract-doc payload builder; derives full PDF data from live `matches/candidates/profiles/employers/job_requests/candidate_documents` and persists only supported `contract_data` override/meta fields |
+| `src/lib/contract-data.ts` | Shared contract-doc payload builder; derives full PDF data from live `matches/candidates/profiles/employers/job_requests/candidate_documents`, exposes `worker` / `workerProfile` as the canonical build result, and keeps a backward-compatible `candidate` alias while persisting only supported `contract_data` override/meta fields |
 | `src/lib/offer-finalization.ts` | Shared confirmation-fee finalization helper; idempotently transitions `offers.pending -> offers.accepted` and increments job capacity once |
 | `src/lib/domain.ts` | Canonical role/domain helper; normalizes legacy `candidate` metadata into the `worker` domain and exposes worker storage constants |
 | `src/lib/workers.ts` | Canonical worker helper layer; use `loadCanonicalWorkerRecord()` / `pickCanonicalWorkerRecord()` instead of raw `.single()` / `.maybeSingle()` on `candidates`, plus shared phone normalization and storage filename sanitization |

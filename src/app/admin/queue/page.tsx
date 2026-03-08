@@ -6,6 +6,28 @@ import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import { ExternalLink, ShieldCheck } from "lucide-react";
+import { pickCanonicalWorkerRecord } from "@/lib/workers";
+
+type WorkerQueueRow = {
+    id: string;
+    profile_id: string | null;
+    status: string | null;
+    entry_fee_paid: boolean | null;
+    queue_joined_at: string | null;
+    queue_position: number | null;
+    updated_at: string | null;
+    profiles: { email: string | null; full_name: string | null } | { email: string | null; full_name: string | null }[] | null;
+};
+
+function getWorkerProfileRelation(
+    relation: WorkerQueueRow["profiles"]
+): { email: string | null; full_name: string | null } | null {
+    if (!relation) {
+        return null;
+    }
+
+    return Array.isArray(relation) ? relation[0] || null : relation;
+}
 
 export default async function AdminQueuePage() {
     const supabase = await createClient();
@@ -24,42 +46,53 @@ export default async function AdminQueuePage() {
 
     const adminClient = createAdminClient();
 
-    const { count: queueCount } = await adminClient
-        .from("candidates")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "IN_QUEUE")
-        .eq("entry_fee_paid", true);
-
     const { count: pendingOffersCount } = await adminClient
         .from("offers")
         .select("*", { count: "exact", head: true })
         .eq("status", "pending");
 
-    const { count: refundFlaggedCount } = await adminClient
-        .from("candidates")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "REFUND_FLAGGED");
-
-    const { data: queuedCandidatesRaw } = await adminClient
+    const { data: workerQueueRowsRaw } = await adminClient
         .from("candidates")
         .select(`
-            *,
+            id,
+            profile_id,
+            status,
+            entry_fee_paid,
+            queue_joined_at,
+            queue_position,
+            updated_at,
             profiles(email, full_name)
         `)
-        .eq("entry_fee_paid", true)
-        .in("status", ["IN_QUEUE", "OFFER_PENDING"])
+        .in("status", ["IN_QUEUE", "OFFER_PENDING", "REFUND_FLAGGED"])
         .order("queue_position", { ascending: true })
-        .limit(50);
+        .limit(200);
+
+    const workerRowsByProfileId = new Map<string, WorkerQueueRow[]>();
+    for (const workerRow of (workerQueueRowsRaw || []) as WorkerQueueRow[]) {
+        if (!workerRow.profile_id) continue;
+        const current = workerRowsByProfileId.get(workerRow.profile_id) || [];
+        current.push(workerRow);
+        workerRowsByProfileId.set(workerRow.profile_id, current);
+    }
+
+    const canonicalWorkerRows = Array.from(workerRowsByProfileId.values())
+        .map((rows) => pickCanonicalWorkerRecord(rows))
+        .filter((worker): worker is WorkerQueueRow => Boolean(worker));
+
+    const queueCount = canonicalWorkerRows.filter((worker) => worker.status === "IN_QUEUE" && worker.entry_fee_paid).length;
+    const refundFlaggedCount = canonicalWorkerRows.filter((worker) => worker.status === "REFUND_FLAGGED").length;
 
     const nowMs = getCurrentTimeMs();
-    const queuedCandidates = (queuedCandidatesRaw || []).map((candidate: any) => {
-        const joinedAt = candidate.queue_joined_at ? new Date(candidate.queue_joined_at) : null;
+    const queuedWorkers = canonicalWorkerRows
+        .filter((worker) => worker.entry_fee_paid && ["IN_QUEUE", "OFFER_PENDING"].includes(worker.status || ""))
+        .map((worker) => {
+        const joinedAt = worker.queue_joined_at ? new Date(worker.queue_joined_at) : null;
         const daysInQueue = joinedAt ? Math.floor((nowMs - joinedAt.getTime()) / (1000 * 60 * 60 * 24)) : 0;
         const daysRemaining = Math.max(0, 90 - daysInQueue);
-        return { ...candidate, joinedAt, daysInQueue, daysRemaining };
+        return { ...worker, joinedAt, daysInQueue, daysRemaining };
     });
-    const urgentQueueCount = queuedCandidates.filter((candidate: any) => candidate.daysRemaining <= 30).length;
-    const criticalQueueCount = queuedCandidates.filter((candidate: any) => candidate.daysRemaining <= 14).length;
+    const urgentQueueCount = queuedWorkers.filter((worker) => worker.daysRemaining <= 30).length;
+    const criticalQueueCount = queuedWorkers.filter((worker) => worker.daysRemaining <= 14).length;
 
     return (
         <AppShell user={user} variant="admin">
@@ -113,42 +146,45 @@ export default async function AdminQueuePage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
-                                {queuedCandidates.map((candidate: any) => (
-                                    <tr key={candidate.id} className="transition-colors hover:bg-slate-50">
+                                {queuedWorkers.map((worker) => {
+                                    const workerProfile = getWorkerProfileRelation(worker.profiles);
+
+                                    return (
+                                    <tr key={worker.id} className="transition-colors hover:bg-slate-50">
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">
-                                            {candidate.queue_position}
+                                            {worker.queue_position}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4">
                                             <div className="text-sm font-medium text-slate-900">
-                                                {candidate.profiles?.full_name || "No name"}
+                                                {workerProfile?.full_name || "No name"}
                                             </div>
                                             <div className="text-xs text-slate-500">
-                                                {candidate.profiles?.email || "No email"}
+                                                {workerProfile?.email || "No email"}
                                             </div>
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4">
-                                            <StatusBadge status={candidate.status} />
+                                            <StatusBadge status={worker.status || "UNKNOWN"} />
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500">
-                                            {candidate.joinedAt ? candidate.joinedAt.toLocaleDateString("en-GB") : "No date"}
+                                            {worker.joinedAt ? worker.joinedAt.toLocaleDateString("en-GB") : "No date"}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500">
-                                            <div className="font-medium text-slate-700">{candidate.daysInQueue} days in queue</div>
-                                            <div className={`text-xs font-semibold ${candidate.daysRemaining <= 14 ? "text-red-600" : candidate.daysRemaining <= 30 ? "text-amber-600" : "text-slate-500"}`}>
-                                                {candidate.daysRemaining} days remaining
+                                            <div className="font-medium text-slate-700">{worker.daysInQueue} days in queue</div>
+                                            <div className={`text-xs font-semibold ${worker.daysRemaining <= 14 ? "text-red-600" : worker.daysRemaining <= 30 ? "text-amber-600" : "text-slate-500"}`}>
+                                                {worker.daysRemaining} days remaining
                                             </div>
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                             <div className="flex items-center gap-2">
                                                 <Link
-                                                    href={`/profile/worker/queue?inspect=${candidate.profile_id}`}
+                                                    href={`/profile/worker/queue?inspect=${worker.profile_id}`}
                                                     className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
                                                 >
                                                     <ExternalLink size={12} />
                                                     Inspect queue
                                                 </Link>
                                                 <Link
-                                                    href={`/admin/workers/${candidate.profile_id}`}
+                                                    href={`/admin/workers/${worker.profile_id}`}
                                                     className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
                                                 >
                                                     <ShieldCheck size={12} />
@@ -157,9 +193,10 @@ export default async function AdminQueuePage() {
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
 
-                                {queuedCandidates.length === 0 && (
+                                {queuedWorkers.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-16">
                                             <div className="flex flex-col items-center justify-center text-center">
