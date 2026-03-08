@@ -17,6 +17,15 @@ const getErrorMessage = (error: unknown): string => {
     return error instanceof Error ? error.message : "Unknown error";
 };
 
+function getMetadataValue(value: string | null | undefined): string | null {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
 export async function POST(req: NextRequest) {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
@@ -38,22 +47,23 @@ export async function POST(req: NextRequest) {
 
     if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.user_id;
+        const userId = getMetadataValue(session.metadata?.user_id);
         const paymentType = session.metadata?.payment_type || "entry_fee";
-        const paymentId = session.metadata?.payment_id;
-        const offerId = session.metadata?.offer_id;
-        const targetProfileId = session.metadata?.target_profile_id || userId;
-        const paidByProfileId = session.metadata?.paid_by_profile_id || userId;
-        const targetWorkerId = session.metadata?.target_worker_id || null;
+        const paymentId = getMetadataValue(session.metadata?.payment_id);
+        const offerId = getMetadataValue(session.metadata?.offer_id);
+        const targetProfileId = getMetadataValue(session.metadata?.target_profile_id);
+        const paidByProfileId = getMetadataValue(session.metadata?.paid_by_profile_id) || userId;
+        const targetWorkerId = getMetadataValue(session.metadata?.target_worker_id);
+        const activitySubjectId = targetProfileId || paidByProfileId || userId;
 
         if (!userId) {
             console.error("No user_id found in session metadata");
             return NextResponse.json({ error: "No user_id in metadata" }, { status: 400 });
         }
 
-        if (!targetProfileId) {
-            console.error("No target_profile_id found in session metadata");
-            return NextResponse.json({ error: "No target profile in metadata" }, { status: 400 });
+        if (!targetProfileId && !targetWorkerId) {
+            console.error("No target worker reference found in session metadata");
+            return NextResponse.json({ error: "No target worker in metadata" }, { status: 400 });
         }
 
         try {
@@ -135,58 +145,93 @@ export async function POST(req: NextRequest) {
             // Handle post-payment actions based on type
             if (paymentType === "entry_fee") {
                 const nowIso = new Date().toISOString();
-                const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord(
-                    supabase,
-                    targetProfileId,
-                    "id, status, queue_joined_at, phone, updated_at, entry_fee_paid, job_search_active, nationality, current_country, preferred_job"
-                );
-                if (existingWorkerRecordError) {
-                    throw existingWorkerRecordError;
-                }
-
-                if (!existingWorkerRecord) {
-                    const { error: workerRecordUpsertError } = await supabase
-                        .from("worker_onboarding")
-                        .upsert(
-                            {
-                                profile_id: targetProfileId,
-                                entry_fee_paid: true,
-                                status: "IN_QUEUE",
-                                queue_joined_at: nowIso,
-                                job_search_active: true,
-                                job_search_activated_at: nowIso,
-                            },
-                            { onConflict: "profile_id" }
-                        );
-                    if (workerRecordUpsertError) {
-                        throw workerRecordUpsertError;
+                if (targetProfileId) {
+                    const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord(
+                        supabase,
+                        targetProfileId,
+                        "id, status, queue_joined_at, phone, updated_at, entry_fee_paid, job_search_active, nationality, current_country, preferred_job"
+                    );
+                    if (existingWorkerRecordError) {
+                        throw existingWorkerRecordError;
                     }
-                } else {
+
+                    if (!existingWorkerRecord) {
+                        const { error: workerRecordUpsertError } = await supabase
+                            .from("worker_onboarding")
+                            .upsert(
+                                {
+                                    profile_id: targetProfileId,
+                                    entry_fee_paid: true,
+                                    status: "IN_QUEUE",
+                                    queue_joined_at: nowIso,
+                                    job_search_active: true,
+                                    job_search_activated_at: nowIso,
+                                },
+                                { onConflict: "profile_id" }
+                            );
+                        if (workerRecordUpsertError) {
+                            throw workerRecordUpsertError;
+                        }
+                    } else {
+                        const updatePayload: Record<string, unknown> = {
+                            entry_fee_paid: true,
+                            job_search_active: true,
+                            job_search_activated_at: nowIso,
+                        };
+
+                        if (!existingWorkerRecord.queue_joined_at) {
+                            updatePayload.queue_joined_at = nowIso;
+                        }
+
+                        const nextStatus = resolveWorkerStatusAfterEntryFee(existingWorkerRecord.status);
+                        if (existingWorkerRecord.status !== nextStatus) {
+                            updatePayload.status = nextStatus;
+                        }
+
+                        const { error: workerRecordUpdateError } = await supabase
+                            .from("worker_onboarding")
+                            .update(updatePayload)
+                            .eq("profile_id", targetProfileId);
+                        if (workerRecordUpdateError) {
+                            throw workerRecordUpdateError;
+                        }
+                    }
+                } else if (targetWorkerId) {
+                    const { data: agencyWorkerRecord, error: agencyWorkerRecordError } = await supabase
+                        .from("worker_onboarding")
+                        .select("id, status, queue_joined_at")
+                        .eq("id", targetWorkerId)
+                        .maybeSingle();
+
+                    if (agencyWorkerRecordError || !agencyWorkerRecord) {
+                        throw agencyWorkerRecordError || new Error("Agency worker not found");
+                    }
+
                     const updatePayload: Record<string, unknown> = {
                         entry_fee_paid: true,
                         job_search_active: true,
                         job_search_activated_at: nowIso,
                     };
 
-                    if (!existingWorkerRecord.queue_joined_at) {
+                    if (!agencyWorkerRecord.queue_joined_at) {
                         updatePayload.queue_joined_at = nowIso;
                     }
 
-                    const nextStatus = resolveWorkerStatusAfterEntryFee(existingWorkerRecord.status);
-                    if (existingWorkerRecord.status !== nextStatus) {
+                    const nextStatus = resolveWorkerStatusAfterEntryFee(agencyWorkerRecord.status);
+                    if (agencyWorkerRecord.status !== nextStatus) {
                         updatePayload.status = nextStatus;
                     }
 
-                    const { error: workerRecordUpdateError } = await supabase
+                    const { error: agencyWorkerUpdateError } = await supabase
                         .from("worker_onboarding")
                         .update(updatePayload)
-                        .eq("profile_id", targetProfileId);
-                    if (workerRecordUpdateError) {
-                        throw workerRecordUpdateError;
+                        .eq("id", targetWorkerId);
+                    if (agencyWorkerUpdateError) {
+                        throw agencyWorkerUpdateError;
                     }
                 }
 
-                await logServerActivity(targetProfileId, "payment_completed", "payment", {
+                await logServerActivity(activitySubjectId, "payment_completed", "payment", {
                     type: "entry_fee",
                     amount: 9,
                     currency: session.currency?.toUpperCase() || "USD",
@@ -195,56 +240,66 @@ export async function POST(req: NextRequest) {
                 });
 
                 // Send payment confirmation email
-                try {
-                    const { data: existingPaymentEmail } = await supabase
-                        .from("email_queue")
-                        .select("id")
-                        .eq("user_id", targetProfileId)
-                        .eq("email_type", "payment_success")
-                        .in("status", ["pending", "sent"])
-                        .maybeSingle();
+                if (targetProfileId) {
+                    try {
+                        const { data: existingPaymentEmail } = await supabase
+                            .from("email_queue")
+                            .select("id")
+                            .eq("user_id", targetProfileId)
+                            .eq("email_type", "payment_success")
+                            .in("status", ["pending", "sent"])
+                            .maybeSingle();
 
-                    if (existingPaymentEmail?.id) {
-                        return NextResponse.json({ received: true, message: "Payment already processed" });
-                    }
+                        if (existingPaymentEmail?.id) {
+                            return NextResponse.json({ received: true, message: "Payment already processed" });
+                        }
 
-                    const { data: profile } = await supabase
-                        .from("profiles")
-                        .select("full_name, email")
-                        .eq("id", targetProfileId)
-                        .single();
+                        const { data: profile } = await supabase
+                            .from("profiles")
+                            .select("full_name, email")
+                            .eq("id", targetProfileId)
+                            .single();
 
-                    const { data: workerRecord } = await loadCanonicalWorkerRecord(
-                        supabase,
-                        targetProfileId,
-                        "id, phone, updated_at"
-                    );
-
-                    const recipientEmail = profile?.email || session.customer_email || "";
-                    if (recipientEmail) {
-                        await queueEmail(
+                        const { data: workerRecord } = await loadCanonicalWorkerRecord(
                             supabase,
                             targetProfileId,
-                            "payment_success",
-                            recipientEmail,
-                            profile?.full_name || "Worker",
-                            { amount: "$9" },
-                            undefined,
-                            workerRecord?.phone || undefined
+                            "id, phone, updated_at"
                         );
-                    } else {
-                        await logServerActivity(userId, "payment_success_email_skipped", "payment", {
-                            reason: "No recipient email found in session/customer/profile",
-                        }, "warning");
+
+                        const recipientEmail = profile?.email || session.customer_email || "";
+                        if (recipientEmail) {
+                            await queueEmail(
+                                supabase,
+                                targetProfileId,
+                                "payment_success",
+                                recipientEmail,
+                                profile?.full_name || "Worker",
+                                { amount: "$9" },
+                                undefined,
+                                workerRecord?.phone || undefined
+                            );
+                        } else {
+                            await logServerActivity(userId, "payment_success_email_skipped", "payment", {
+                                reason: "No recipient email found in session/customer/profile",
+                            }, "warning");
+                        }
+                    } catch (emailErr) {
+                        console.error("Failed to send payment confirmation email:", emailErr);
+                        // Don't fail the webhook for email errors
                     }
-                } catch (emailErr) {
-                    console.error("Failed to send payment confirmation email:", emailErr);
-                    // Don't fail the webhook for email errors
+                } else {
+                    await logServerActivity(activitySubjectId, "payment_success_email_skipped", "payment", {
+                        reason: "Agency-managed worker payment has no linked worker profile for worker-side payment_success template",
+                        target_worker_id: targetWorkerId,
+                    }, "warning");
                 }
             } else if (paymentType === "confirmation_fee" && offerId) {
+                if (!targetProfileId) {
+                    throw new Error("Confirmation fee requires a linked worker profile");
+                }
                 await finalizeConfirmationFeeOffer(supabase, targetProfileId, offerId);
 
-                await logServerActivity(targetProfileId, "payment_completed", "payment", {
+                await logServerActivity(activitySubjectId, "payment_completed", "payment", {
                     type: "confirmation_fee",
                     amount: 190,
                     offer_id: offerId,

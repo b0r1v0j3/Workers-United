@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { BadgeCheck, CheckCircle2, CircleAlert, Clock3, CreditCard, FileCheck2, Link2, Loader2, Save, ShieldAlert, Upload } from "lucide-react";
+import { BadgeCheck, CheckCircle2, CircleAlert, Clock3, CreditCard, FileCheck2, Loader2, Save, ShieldAlert, Upload } from "lucide-react";
 import { EUROPEAN_COUNTRIES, GENDER_OPTIONS, MARITAL_STATUSES, MAX_FILE_SIZE_MB, WORKER_INDUSTRIES, WORLD_COUNTRIES } from "@/lib/constants";
 
 type AgencyDocType = "passport" | "biometric_photo" | "diploma";
@@ -75,8 +75,7 @@ interface AgencyWorkerClientProps {
         missingFields: string[];
         verifiedDocuments: number;
         documents: WorkerDocumentState[];
-        claimPath: string | null;
-        claimLabel: string;
+        accessLabel: string;
         paymentLabel: string;
     };
     readOnlyPreview?: boolean;
@@ -211,8 +210,8 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
     const passportInputRef = useRef<HTMLInputElement | null>(null);
     const biometricInputRef = useRef<HTMLInputElement | null>(null);
     const diplomaInputRef = useRef<HTMLInputElement | null>(null);
-    const canManageClaimedWorker = initialWorker.claimed && Boolean(initialWorker.profileId);
-    const canStartEntryPayment = canManageClaimedWorker && initialWorker.paymentLabel === "Not paid";
+    const hasWorkerAccount = initialWorker.claimed && Boolean(initialWorker.profileId);
+    const canStartEntryPayment = initialWorker.paymentLabel === "Not paid";
 
     useEffect(() => {
         const paymentState = searchParams.get("payment");
@@ -267,24 +266,6 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
         if (docType === "passport") return passportInputRef;
         if (docType === "biometric_photo") return biometricInputRef;
         return diplomaInputRef;
-    }
-
-    async function handleCopyClaimLink() {
-        if (readOnlyPreview) {
-            toast.info("Admin preview is read-only.");
-            return;
-        }
-        if (!initialWorker.claimPath) {
-            toast.error("Add the worker email before sharing a claim link.");
-            return;
-        }
-
-        try {
-            await navigator.clipboard.writeText(`${window.location.origin}${initialWorker.claimPath}`);
-            toast.success("Claim link copied.");
-        } catch {
-            toast.error("Could not copy claim link.");
-        }
     }
 
     async function handleSave() {
@@ -462,7 +443,7 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <div className="mb-3 inline-flex rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b675d]">
-                            {readOnlyPreview ? "Admin preview" : initialWorker.claimed ? "Claimed worker" : "Agency draft"}
+                            {readOnlyPreview ? "Admin preview" : initialWorker.claimed ? "Worker account ready" : "Agency-managed profile"}
                         </div>
                         <h1 className="text-3xl font-semibold tracking-tight text-[#18181b]">{initialWorker.fullName}</h1>
                         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e]">
@@ -490,7 +471,7 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
 
             {readOnlyPreview && (
                 <div className="rounded-3xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-950">
-                    This is a read-only admin preview. Use a real agency account to edit worker data, upload documents, start payment, or share claim links.
+                    This is a read-only admin preview. Use a real agency account to edit worker data, upload documents, and start payment.
                 </div>
             )}
 
@@ -503,7 +484,7 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
 
             {!initialWorker.claimed && (
                 <div className="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-                    This worker is still an agency draft. Finish the profile now, and add contact details only if you want the worker to get notifications and a claim link.
+                    This worker is still managed directly by the agency. Finish the profile now, and add contact details only if the worker should receive notifications.
                 </div>
             )}
 
@@ -540,8 +521,8 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
                             <Field
                                 label="Email"
                                 helper={initialWorker.claimed
-                                    ? "Claimed workers keep the login email from their own account."
-                                    : "Optional. Add email only if this worker should receive email notifications and a claim link."}
+                                    ? "This worker already has their own login email."
+                                    : "Optional. Add email only if this worker should receive email notifications."}
                             >
                                 <input
                                     className={`${inputClass} ${initialWorker.claimed ? "cursor-not-allowed bg-[#f5f5f4] text-[#78716c]" : ""}`}
@@ -727,18 +708,16 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
 
                 <div className="space-y-6">
                     <aside className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
-                        <h2 className="text-lg font-semibold text-[#18181b]">Claim Status</h2>
+                        <h2 className="text-lg font-semibold text-[#18181b]">Worker Access</h2>
                         <div className="mt-4 rounded-2xl border border-[#f1ede5] bg-[#faf8f3] px-4 py-3">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a8a29e]">Current state</div>
-                            <div className="mt-1 text-sm font-semibold text-[#18181b]">{initialWorker.claimLabel}</div>
-                            {!initialWorker.claimed && <p className="mt-2 text-sm text-[#57534e]">{initialWorker.claimPath ? "Share this link with the worker so they can claim the profile." : "Add the worker email first, then save to unlock the claim link."}</p>}
+                            <div className="mt-1 text-sm font-semibold text-[#18181b]">{initialWorker.accessLabel}</div>
+                            <p className="mt-2 text-sm text-[#57534e]">
+                                {initialWorker.claimed
+                                    ? "This worker already has their own platform account."
+                                    : "This worker is still managed directly by the agency. A separate worker login can be connected later if needed."}
+                            </p>
                         </div>
-                        {!initialWorker.claimed && !readOnlyPreview && (
-                            <button type="button" onClick={handleCopyClaimLink} disabled={!initialWorker.claimPath} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#ddd6c8] bg-[#faf8f3] px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45">
-                                <Link2 size={16} />
-                                Copy claim link
-                            </button>
-                        )}
                     </aside>
 
                     <aside className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
@@ -746,7 +725,7 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
                         <div className="mt-4 rounded-2xl border border-[#f1ede5] bg-[#faf8f3] px-4 py-3">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a8a29e]">Entry fee</div>
                             <div className="mt-1 text-sm font-semibold text-[#18181b]">{initialWorker.paymentLabel}</div>
-                            <p className="mt-2 text-sm text-[#57534e]">{canManageClaimedWorker ? "Use this to activate Job Finder access for the claimed worker profile." : "Payment becomes available after the worker claims the profile."}</p>
+                            <p className="mt-2 text-sm text-[#57534e]">Use this to activate Job Finder access for this worker.</p>
                         </div>
                         {!readOnlyPreview && canStartEntryPayment && (
                             <button type="button" onClick={handleEntryFeePayment} disabled={paying} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111111] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2b2b] disabled:cursor-not-allowed disabled:opacity-70">
@@ -755,8 +734,8 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
                             </button>
                         )}
                         {readOnlyPreview && <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">Payments are disabled in admin preview.</p>}
-                        {canManageClaimedWorker && initialWorker.paymentLabel === "Pending" && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-[#f3e3b0] bg-[#fff8df] px-4 py-3 text-sm text-[#7a5b00]"><Clock3 size={16} />Payment is already pending for this worker.</p>}
-                        {canManageClaimedWorker && initialWorker.paymentLabel === "Paid" && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 size={16} />Job Finder access is active for this worker.</p>}
+                        {initialWorker.paymentLabel === "Pending" && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-[#f3e3b0] bg-[#fff8df] px-4 py-3 text-sm text-[#7a5b00]"><Clock3 size={16} />Payment is already pending for this worker.</p>}
+                        {initialWorker.paymentLabel === "Paid" && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 size={16} />Job Finder access is active for this worker.</p>}
                     </aside>
 
                     <aside className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
@@ -793,7 +772,7 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
                                             <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${documentState.badgeClass}`}>{documentState.icon}{documentState.label}</div>
                                         </div>
                                         {document?.reject_reason && <p className="mt-3 rounded-2xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-rose-800">{document.reject_reason}</p>}
-                                        {!canManageClaimedWorker ? <p className="mt-3 text-sm text-[#7c6f5d]">Worker claim is required before agencies can upload or verify documents here.</p> : readOnlyPreview ? <p className="mt-3 text-sm text-blue-800">Document actions are disabled in admin preview.</p> : (
+                                        {!hasWorkerAccount ? <p className="mt-3 text-sm text-[#7c6f5d]">Document upload and verification become available once this worker has their own platform account.</p> : readOnlyPreview ? <p className="mt-3 text-sm text-blue-800">Document actions are disabled in admin preview.</p> : (
                                             <div className="mt-4 flex flex-col gap-2">
                                                 <button type="button" onClick={() => getInputRef(documentDefinition.key).current?.click()} disabled={isUploading || isReviewing} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#ddd6c8] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3] disabled:cursor-not-allowed disabled:opacity-60">
                                                     {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}

@@ -8,7 +8,6 @@ import {
     Building2,
     CreditCard,
     FileCheck2,
-    Link2,
     Loader2,
     Pencil,
     Plus,
@@ -22,7 +21,7 @@ import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 
 const surfaceClass = "rounded-[14px] border border-[#e7e7e5] bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
 
-type PaymentState = "awaiting_claim" | "not_paid" | "pending" | "paid";
+type PaymentState = "not_paid" | "pending" | "paid";
 
 export interface AgencyDashboardProps {
     agency: {
@@ -47,8 +46,7 @@ export interface AgencyDashboardProps {
         status: string;
         completion: number;
         claimed: boolean;
-        claimLabel: string;
-        claimPath: string | null;
+        accessLabel: string;
         verifiedDocuments: number;
         documentsLabel: string;
         paymentLabel: string;
@@ -112,7 +110,7 @@ export default function AgencyDashboardClient({
                 worker.currentCountry || "",
                 worker.preferredJob || "",
                 worker.status,
-                worker.claimLabel,
+                worker.accessLabel,
                 worker.paymentLabel,
                 formatDate(worker.createdAt),
             ].some((value) => value.toLowerCase().includes(query))
@@ -288,7 +286,7 @@ export default function AgencyDashboardClient({
 
                         <div className="grid grid-flow-col auto-cols-[minmax(96px,1fr)] gap-3 overflow-x-auto pb-1 sm:grid-cols-5 sm:grid-flow-row sm:auto-cols-auto sm:overflow-visible sm:pb-0">
                             <StatCard label="Total" value={stats.totalWorkers} icon={<Users size={18} />} />
-                            <StatCard label="Claimed" value={stats.claimedWorkers} icon={<BadgeCheck size={18} />} />
+                            <StatCard label="Accounts" value={stats.claimedWorkers} icon={<BadgeCheck size={18} />} />
                             <StatCard label="Ready" value={stats.readyWorkers} icon={<FileCheck2 size={18} />} />
                             <StatCard label="Paid" value={stats.paidWorkers} icon={<CreditCard size={18} />} />
                             <StatCard label="Drafts" value={stats.draftWorkers} icon={<UserPlus size={18} />} />
@@ -402,7 +400,6 @@ export default function AgencyDashboardClient({
                                                 key={worker.id}
                                                 worker={worker}
                                                 index={index + 1}
-                                                inspectProfileId={inspectProfileId}
                                                 isDeleting={isDeleting}
                                                 isPaying={payingWorkerId === worker.id}
                                                 isSelected={selectedWorkerIds.includes(worker.id)}
@@ -440,7 +437,7 @@ export default function AgencyDashboardClient({
                             </h3>
                             <p className="mt-3 text-sm leading-relaxed text-[#6b7280]">
                                 {deleteDialog.includesClaimedAccount
-                                    ? "This selection includes claimed worker accounts. Deleting them also removes the linked account, profile, documents, and payment history."
+                                    ? "This selection includes workers who already have their own accounts. Deleting them also removes the worker account, profile, documents, and payment history."
                                     : "This deletes the selected draft workers from the agency workspace."}
                             </p>
                             <div className="mt-4 rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-3 text-sm text-[#111827]">
@@ -490,7 +487,6 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
 function WorkerTableRow({
     worker,
     index,
-    inspectProfileId,
     isDeleting,
     isPaying,
     isSelected,
@@ -502,7 +498,6 @@ function WorkerTableRow({
 }: {
     worker: DashboardWorker;
     index: number;
-    inspectProfileId: string | null;
     isDeleting: boolean;
     isPaying: boolean;
     isSelected: boolean;
@@ -516,28 +511,11 @@ function WorkerTableRow({
         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
         : "border-slate-200 bg-slate-50 text-slate-700";
 
-    async function handleCopyClaimLink() {
-        if (!worker.claimPath) {
-            toast.error("Add the worker email before sharing a claim link.");
-            return;
-        }
-
-        try {
-            const absoluteUrl = `${window.location.origin}${worker.claimPath}`;
-            await navigator.clipboard.writeText(absoluteUrl);
-            toast.success("Claim link copied.");
-        } catch {
-            toast.error("Could not copy claim link.");
-        }
-    }
-
     const payButtonLabel = worker.paymentState === "paid"
         ? "Paid"
         : worker.paymentState === "pending"
             ? "Pending"
-            : worker.paymentState === "awaiting_claim"
-                ? "Claim first"
-                : "Pay $9";
+            : "Pay $9";
 
     return (
         <tr className="border-b border-[#f1f1ef] transition hover:bg-[#fcfcfc]">
@@ -567,9 +545,9 @@ function WorkerTableRow({
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.paymentLabel}</td>
             <td className="px-5 py-4 align-top">
                 <div className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusClass}`}>
-                    {worker.claimed ? "Claimed" : "Draft"}
+                    {worker.claimed ? "Account ready" : "Agency managed"}
                 </div>
-                <div className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">{worker.claimLabel}</div>
+                <div className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">{worker.accessLabel}</div>
             </td>
             <td className="px-5 py-4 align-top">
                 <div className="flex flex-wrap items-center justify-end gap-2">
@@ -604,17 +582,6 @@ function WorkerTableRow({
                         </button>
                     ) : null}
 
-                    {!worker.claimed && (!readOnlyPreview || Boolean(inspectProfileId)) ? (
-                        <button
-                            type="button"
-                            onClick={handleCopyClaimLink}
-                            disabled={!worker.claimPath}
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-45"
-                        >
-                            <Link2 size={14} />
-                            Claim link
-                        </button>
-                    ) : null}
                 </div>
             </td>
         </tr>
