@@ -31,16 +31,62 @@ export async function GET(_request: NextRequest, context: RouteContext) {
             .eq("id", user.id)
             .maybeSingle();
 
-        if (normalizeUserType(profile?.user_type || user.user_metadata?.user_type) !== "agency") {
+        const userType = normalizeUserType(profile?.user_type || user.user_metadata?.user_type);
+        const requestUrl = new URL(_request.url);
+        const inspectProfileId = userType === "admin"
+            ? requestUrl.searchParams.get("inspect")?.trim() || null
+            : null;
+
+        if (userType !== "agency" && !(userType === "admin" && inspectProfileId)) {
             return NextResponse.json({ error: "Agency access required" }, { status: 403 });
         }
 
-        const { worker } = await getAgencyOwnedWorker(admin, user.id, workerId);
+        const targetAgencyProfileId = userType === "agency" ? user.id : inspectProfileId;
+        const { worker } = await getAgencyOwnedWorker(admin, targetAgencyProfileId || user.id, workerId);
         if (!worker) {
             return NextResponse.json({ error: "Worker not found" }, { status: 404 });
         }
 
-        return NextResponse.json({ worker });
+        const { data: detailedWorker, error: workerError } = await admin
+            .from("worker_onboarding")
+            .select(`
+                id,
+                submitted_full_name,
+                submitted_email,
+                phone,
+                nationality,
+                current_country,
+                preferred_job,
+                desired_countries,
+                gender,
+                marital_status,
+                date_of_birth,
+                birth_country,
+                birth_city,
+                citizenship,
+                original_citizenship,
+                maiden_name,
+                father_name,
+                mother_name,
+                address,
+                family_data,
+                passport_number,
+                passport_issued_by,
+                passport_issue_date,
+                passport_expiry_date,
+                lives_abroad,
+                previous_visas
+            `)
+            .eq("id", workerId)
+            .eq("agency_id", worker.agency_id)
+            .single();
+
+        if (workerError || !detailedWorker) {
+            console.error("[AgencyWorker GET] Worker fetch failed:", workerError);
+            return NextResponse.json({ error: "Worker not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ worker: detailedWorker });
     } catch (error) {
         console.error("[AgencyWorker GET] Error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, Loader2, Save, UserPlus, X } from "lucide-react";
+import { AlertTriangle, Loader2, Pencil, Save, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
     EUROPEAN_COUNTRIES,
@@ -47,6 +47,35 @@ type FormState = {
     previousVisas: string;
 };
 
+type AgencyWorkerDetail = {
+    id: string;
+    submitted_full_name: string | null;
+    submitted_email: string | null;
+    phone: string | null;
+    nationality: string | null;
+    current_country: string | null;
+    preferred_job: string | null;
+    desired_countries: string[] | null;
+    gender: string | null;
+    marital_status: string | null;
+    date_of_birth: string | null;
+    birth_country: string | null;
+    birth_city: string | null;
+    citizenship: string | null;
+    original_citizenship: string | null;
+    maiden_name: string | null;
+    father_name: string | null;
+    mother_name: string | null;
+    address: string | null;
+    family_data: AgencyWorkerModalPayload["familyData"] | null;
+    passport_number: string | null;
+    passport_issued_by: string | null;
+    passport_issue_date: string | null;
+    passport_expiry_date: string | null;
+    lives_abroad: string | null;
+    previous_visas: string | null;
+};
+
 export type AgencyWorkerModalPayload = {
     fullName: string;
     email: string;
@@ -80,6 +109,8 @@ export type AgencyWorkerModalPayload = {
 
 interface Props {
     open: boolean;
+    workerId?: string | null;
+    workerLabel?: string | null;
     readOnlyPreview: boolean;
     inspectProfileId?: string | null;
     onClose: () => void;
@@ -114,6 +145,91 @@ function emptyForm(): FormState {
         passportExpiryDate: "",
         livesAbroad: "",
         previousVisas: "",
+    };
+}
+
+function emptySpouse(): Spouse {
+    return { first_name: "", last_name: "", dob: "", birth_country: "", birth_city: "" };
+}
+
+function splitFullName(fullName: string | null | undefined) {
+    const parts = (fullName || "").trim().split(/\s+/).filter(Boolean);
+    return {
+        firstName: parts[0] || "",
+        lastName: parts.slice(1).join(" "),
+    };
+}
+
+function normalizeDateInput(value: string | null | undefined) {
+    return value ? value.split("T")[0] || "" : "";
+}
+
+function normalizeFamilyData(value: AgencyWorkerModalPayload["familyData"] | null | undefined) {
+    return {
+        spouse: value?.spouse
+            ? {
+                first_name: value.spouse.first_name || "",
+                last_name: value.spouse.last_name || "",
+                dob: normalizeDateInput(value.spouse.dob),
+                birth_country: value.spouse.birth_country || "",
+                birth_city: value.spouse.birth_city || "",
+            }
+            : null,
+        children: Array.isArray(value?.children)
+            ? value.children.map((child) => ({
+                first_name: child.first_name || "",
+                last_name: child.last_name || "",
+                dob: normalizeDateInput(child.dob),
+            }))
+            : [],
+    };
+}
+
+function hydrateWorkerDetail(worker: AgencyWorkerDetail) {
+    const { firstName, lastName } = splitFullName(worker.submitted_full_name);
+    const normalizedFamily = normalizeFamilyData(worker.family_data);
+    const citizenship = worker.citizenship || "";
+    const originalCitizenship = worker.original_citizenship || citizenship;
+    const form: FormState = {
+        firstName,
+        lastName,
+        email: worker.submitted_email || "",
+        phone: worker.phone || "",
+        nationality: worker.nationality || "",
+        currentCountry: worker.current_country || "",
+        preferredJob: worker.preferred_job || "",
+        desiredCountries: worker.desired_countries || [],
+        gender: worker.gender || "",
+        maritalStatus: worker.marital_status || "",
+        dateOfBirth: normalizeDateInput(worker.date_of_birth),
+        birthCountry: worker.birth_country || "",
+        birthCity: worker.birth_city || "",
+        citizenship,
+        originalCitizenshipSame: !originalCitizenship || originalCitizenship === citizenship,
+        originalCitizenship,
+        maidenName: worker.maiden_name || "",
+        fatherName: worker.father_name || "",
+        motherName: worker.mother_name || "",
+        address: worker.address || "",
+        passportNumber: worker.passport_number || "",
+        passportIssuedBy: worker.passport_issued_by || "",
+        passportIssueDate: normalizeDateInput(worker.passport_issue_date),
+        passportExpiryDate: normalizeDateInput(worker.passport_expiry_date),
+        livesAbroad: worker.lives_abroad || "",
+        previousVisas: worker.previous_visas || "",
+    };
+    const spouse = normalizedFamily.spouse || emptySpouse();
+    const children = normalizedFamily.children;
+    const hasSpouse = Boolean(normalizedFamily.spouse);
+    const hasChildren = children.length > 0;
+
+    return {
+        form,
+        hasSpouse,
+        spouse,
+        hasChildren,
+        children,
+        payload: buildPayload(form, hasSpouse, spouse, hasChildren, children),
     };
 }
 
@@ -194,6 +310,8 @@ function Field({ label, helper, children }: { label: string; helper?: string; ch
 
 export default function AgencyWorkerCreateModal({
     open,
+    workerId = null,
+    workerLabel = null,
     readOnlyPreview,
     inspectProfileId = null,
     onClose,
@@ -201,20 +319,12 @@ export default function AgencyWorkerCreateModal({
 }: Props) {
     const [form, setForm] = useState<FormState>(emptyForm());
     const [hasSpouse, setHasSpouse] = useState(false);
-    const [spouse, setSpouse] = useState<Spouse>({ first_name: "", last_name: "", dob: "", birth_country: "", birth_city: "" });
+    const [spouse, setSpouse] = useState<Spouse>(emptySpouse());
     const [hasChildren, setHasChildren] = useState(false);
     const [children, setChildren] = useState<Child[]>([]);
     const [saving, setSaving] = useState(false);
+    const [loadingWorker, setLoadingWorker] = useState(false);
     const [showClosePrompt, setShowClosePrompt] = useState(false);
-
-    useEffect(() => {
-        if (!open) return;
-        setForm(emptyForm());
-        setHasSpouse(false);
-        setSpouse({ first_name: "", last_name: "", dob: "", birth_country: "", birth_city: "" });
-        setHasChildren(false);
-        setChildren([]);
-    }, [open]);
 
     useEffect(() => {
         if (!open || typeof document === "undefined") return;
@@ -230,13 +340,71 @@ export default function AgencyWorkerCreateModal({
         () => buildPayload(
             emptyForm(),
             false,
-            { first_name: "", last_name: "", dob: "", birth_country: "", birth_city: "" },
+            emptySpouse(),
             false,
             [],
         ),
         [],
     );
-    const isDirty = JSON.stringify(payload) !== JSON.stringify(pristinePayload);
+    const [initialPayload, setInitialPayload] = useState<AgencyWorkerModalPayload>(pristinePayload);
+    const isDirty = JSON.stringify(payload) !== JSON.stringify(initialPayload);
+
+    useEffect(() => {
+        if (!open) return;
+        setShowClosePrompt(false);
+
+        if (!workerId) {
+            setForm(emptyForm());
+            setHasSpouse(false);
+            setSpouse(emptySpouse());
+            setHasChildren(false);
+            setChildren([]);
+            setInitialPayload(pristinePayload);
+            setLoadingWorker(false);
+            return;
+        }
+
+        let cancelled = false;
+        const params = new URLSearchParams();
+        if (inspectProfileId) {
+            params.set("inspect", inspectProfileId);
+        }
+
+        setLoadingWorker(true);
+        void (async () => {
+            try {
+                const response = await fetch(`/api/agency/workers/${workerId}${params.toString() ? `?${params.toString()}` : ""}`, {
+                    method: "GET",
+                    cache: "no-store",
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || "Failed to load worker.");
+                }
+                if (cancelled) return;
+
+                const hydrated = hydrateWorkerDetail(data.worker as AgencyWorkerDetail);
+                setForm(hydrated.form);
+                setHasSpouse(hydrated.hasSpouse);
+                setSpouse(hydrated.spouse);
+                setHasChildren(hydrated.hasChildren);
+                setChildren(hydrated.children);
+                setInitialPayload(hydrated.payload);
+            } catch (error) {
+                if (cancelled) return;
+                toast.error(error instanceof Error ? error.message : "Failed to load worker.");
+                onClose();
+            } finally {
+                if (!cancelled) {
+                    setLoadingWorker(false);
+                }
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [inspectProfileId, onClose, open, pristinePayload, workerId]);
 
     function updateField<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
         setForm((current) => ({ ...current, [key]: value }));
@@ -257,6 +425,10 @@ export default function AgencyWorkerCreateModal({
             return false;
         }
 
+        if (loadingWorker) {
+            return false;
+        }
+
         if (!payload.fullName) {
             toast.error("Worker first and last name are required.");
             return false;
@@ -269,24 +441,24 @@ export default function AgencyWorkerCreateModal({
 
         setSaving(true);
         try {
-            const response = await fetch("/api/agency/workers", {
-                method: "POST",
+            const response = await fetch(workerId ? `/api/agency/workers/${workerId}` : "/api/agency/workers", {
+                method: workerId ? "PATCH" : "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ...payload, inspectProfileId }),
             });
             const data = await response.json();
             if (!response.ok) {
-                toast.error(data.error || "Failed to create worker.");
+                toast.error(data.error || (workerId ? "Failed to update worker." : "Failed to create worker."));
                 return false;
             }
-            toast.success("Worker created.");
-            onLiveSave(data.workerId);
+            toast.success(workerId ? "Worker updated." : "Worker created.");
+            onLiveSave(workerId || data.workerId);
 
             setShowClosePrompt(false);
             if (closeAfterSave) onClose();
             return true;
         } catch {
-            toast.error("Failed to create worker.");
+            toast.error(workerId ? "Failed to update worker." : "Failed to create worker.");
             return false;
         } finally {
             setSaving(false);
@@ -310,16 +482,18 @@ export default function AgencyWorkerCreateModal({
                     <div className="flex items-start justify-between gap-4">
                         <div className="max-w-3xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
-                                <UserPlus size={14} />
-                                {readOnlyPreview ? "Admin preview" : "Add worker"}
+                                {workerId ? <Pencil size={14} /> : <UserPlus size={14} />}
+                                {readOnlyPreview ? "Admin preview" : workerId ? "Edit worker" : "Add worker"}
                             </div>
                             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111827]">
-                                Add worker
+                                {workerId ? `Edit ${workerLabel || "worker"}` : "Add worker"}
                             </h2>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
                                 {readOnlyPreview
                                     ? "Inspect the full worker form here without leaving the workspace. Changes are discarded when you close this preview."
-                                    : "Fill the full worker form here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications or a claim link."}
+                                    : workerId
+                                        ? "Update this worker draft here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications or a claim link."
+                                        : "Fill the full worker form here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications or a claim link."}
                             </p>
                         </div>
 
@@ -332,11 +506,11 @@ export default function AgencyWorkerCreateModal({
                                 <button
                                     type="button"
                                     onClick={() => void handleSave(false)}
-                                    disabled={saving}
+                                    disabled={saving || loadingWorker}
                                     className="inline-flex items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    Save worker
+                                    {workerId ? "Save changes" : "Save worker"}
                                 </button>
                             )}
                             <button
@@ -352,11 +526,21 @@ export default function AgencyWorkerCreateModal({
                 </div>
 
                 <div className="flex-1 overflow-y-auto bg-[#f7f7f6] px-6 py-6">
-                    <div className="mx-auto max-w-[920px] space-y-6">
+                    {loadingWorker ? (
+                        <div className="flex h-full min-h-[420px] items-center justify-center">
+                            <div className="inline-flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-5 py-4 text-sm font-semibold text-[#111827] shadow-sm">
+                                <Loader2 size={18} className="animate-spin" />
+                                Loading worker form...
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="mx-auto max-w-[920px] space-y-6">
                         <div className="rounded-[24px] border border-[#e5e7eb] bg-white px-5 py-4 text-sm leading-relaxed text-[#4b5563]">
                             {readOnlyPreview
                                 ? "Email and phone are optional. This preview shows the real worker intake structure without creating preview rows or drafts."
-                                : "Email and phone are optional. Add them only if the worker should receive notifications or a claim link."}
+                                : workerId
+                                    ? "Email and phone are optional. Edit them only if this worker should receive notifications or a claim link."
+                                    : "Email and phone are optional. Add them only if the worker should receive notifications or a claim link."}
                         </div>
 
                         <Section title="Identity">
@@ -648,6 +832,7 @@ export default function AgencyWorkerCreateModal({
                             </div>
                         </Section>
                     </div>
+                    )}
                 </div>
 
                 <div className="border-t border-[#ececec] bg-white px-6 py-4">
@@ -655,7 +840,9 @@ export default function AgencyWorkerCreateModal({
                         <div className="text-sm text-[#6b7280]">
                             {readOnlyPreview
                                 ? "This preview does not save draft workers."
-                                : "Saving creates the worker draft and keeps you on the dashboard."}
+                                : workerId
+                                    ? "Saving updates this worker draft and keeps you on the dashboard."
+                                    : "Saving creates the worker draft and keeps you on the dashboard."}
                         </div>
                         <div className="flex flex-wrap gap-3">
                             <button
@@ -669,11 +856,11 @@ export default function AgencyWorkerCreateModal({
                                 <button
                                     type="button"
                                     onClick={() => void handleSave(true)}
-                                    disabled={saving}
+                                    disabled={saving || loadingWorker}
                                     className="inline-flex items-center gap-2 rounded-2xl bg-[#111111] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    Save and close
+                                    {workerId ? "Save changes and close" : "Save and close"}
                                 </button>
                             )}
                         </div>
@@ -711,11 +898,11 @@ export default function AgencyWorkerCreateModal({
                                 <button
                                     type="button"
                                     onClick={() => void handleSave(true)}
-                                    disabled={saving}
+                                    disabled={saving || loadingWorker}
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#111111] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    Save and close
+                                    {workerId ? "Save changes and close" : "Save and close"}
                                 </button>
                             )}
                             <button
