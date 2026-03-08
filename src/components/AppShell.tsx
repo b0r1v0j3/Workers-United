@@ -116,7 +116,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
             ? "You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow."
             : "You are previewing the agency workspace structure as admin. The add-worker modal opens for inspection only and does not persist preview data."
         : "You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.";
-    const sidebarWidthClass = sidebarExpanded ? "w-72 lg:w-[280px]" : "w-[60px] lg:w-[84px]";
+    const sidebarWidthClass = sidebarExpanded ? "w-72 lg:w-[264px]" : "w-[60px] lg:w-[68px]";
     const mainOffsetClass = isDesktop
         ? sidebarExpanded
             ? "lg:ml-[280px]"
@@ -148,10 +148,10 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 <aside className={`
                     fixed left-0 z-[55] transition-all duration-300 ease-in-out px-2 lg:px-0
                     top-[74px] bottom-3 pt-0 pb-0
-                    lg:top-[80px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
+                    lg:left-4 lg:top-[80px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
                     ${sidebarWidthClass}
                 `}>
-                    <div className="flex h-full flex-col items-center overflow-hidden rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-2xl lg:border-white/60 lg:bg-white/50 lg:p-4 lg:items-stretch">
+                    <div className="flex h-full flex-col items-center overflow-hidden rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-2xl lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
                         {/* Mobile Header with Close Button (only when open) */}
                         <div className={`flex justify-between items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
                             <h2 className="font-bold text-lg text-gray-900">Menu</h2>
