@@ -153,8 +153,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 `}>
                     <div className="flex h-full flex-col items-center overflow-hidden rounded-[14px] border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-[14px] lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
                         {/* Mobile Header with Close Button (only when open) */}
-                        <div className={`flex justify-between items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
-                            <h2 className="font-bold text-lg text-gray-900">Menu</h2>
+                        <div className={`flex justify-end items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
                             <button onClick={() => setIsOpen(false)} className="rounded-[12px] bg-gray-200 p-2 text-gray-600">
                                 <X size={20} />
                             </button>
@@ -297,11 +296,8 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 queryTab={variant !== "admin" && !isAdminPreview && userType === "employer" ? "company" : undefined}
             />
 
-            <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Menu</div>
-
             {isWorkerWorkspace && (
                 <>
-                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Worker Workspace</div>
                     <SidebarLink href={withInspect("/profile/worker/documents")} icon={<FileText size={20} />} label="Documents" isCollapsed={isCollapsed} tone="emerald" />
                     <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} tone="amber" />
                     <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} tone="violet" />
@@ -312,7 +308,6 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
 
             {isEmployerWorkspace && (
                 <>
-                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Employer Workspace</div>
                     <SidebarLink href={withInspect("/profile/employer?tab=jobs")} icon={<Briefcase size={20} />} label="Job Requests" isCollapsed={isCollapsed} tone="emerald" queryTab="jobs" />
                     <SidebarLink href={withInspect("/profile/employer?tab=post-job")} icon={<Plus size={20} />} label="New Job Request" isCollapsed={isCollapsed} tone="violet" queryTab="post-job" />
                     <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" />
@@ -321,7 +316,6 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
 
             {isAgencyWorkspace && (
                 <>
-                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Agency Workspace</div>
                     {pathname?.startsWith("/profile/agency/workers/") && (
                         <SidebarLink
                             href={withInspect(pathname)}
