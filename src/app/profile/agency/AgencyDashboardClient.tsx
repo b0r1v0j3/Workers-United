@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 
-const surfaceClass = "rounded-[28px] border border-[#e7e7e5] bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
+const surfaceClass = "rounded-2xl border border-[#e7e7e5] bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
 
 type PaymentState = "awaiting_claim" | "not_paid" | "pending" | "paid";
 
@@ -270,14 +270,14 @@ export default function AgencyDashboardClient({
     return (
         <>
             <div className="space-y-6">
-                <section className={`${surfaceClass} px-6 py-6`}>
+                <section className={`${surfaceClass} px-5 py-5 sm:px-6 sm:py-6`}>
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                         <div className="max-w-2xl">
                             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
                                 <Building2 size={14} />
                                 Agency Workspace
                             </div>
-                            <h1 className="text-3xl font-semibold tracking-tight text-[#111827]">{agency.displayName}</h1>
+                            <h1 className="text-[2rem] font-semibold tracking-tight text-[#111827] sm:text-3xl">{agency.displayName}</h1>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
                                 One place for every worker profile. Create and edit the full worker form from here without leaving the agency workspace.
                             </p>
@@ -286,7 +286,7 @@ export default function AgencyDashboardClient({
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                        <div className="grid grid-flow-col auto-cols-[minmax(96px,1fr)] gap-3 overflow-x-auto pb-1 sm:grid-cols-5 sm:grid-flow-row sm:auto-cols-auto sm:overflow-visible sm:pb-0">
                             <StatCard label="Total" value={stats.totalWorkers} icon={<Users size={18} />} />
                             <StatCard label="Claimed" value={stats.claimedWorkers} icon={<BadgeCheck size={18} />} />
                             <StatCard label="Ready" value={stats.readyWorkers} icon={<FileCheck2 size={18} />} />
@@ -296,7 +296,7 @@ export default function AgencyDashboardClient({
                     </div>
                 </section>
 
-                <section className={`${surfaceClass} overflow-hidden px-6 py-6`}>
+                <section className={`${surfaceClass} overflow-hidden px-5 py-5 sm:px-6 sm:py-6`}>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div className="max-w-2xl">
                             <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">Workers</h2>
@@ -328,7 +328,7 @@ export default function AgencyDashboardClient({
                     </div>
 
                     {!readOnlyPreview && workers.length > 0 ? (
-                        <div className="mt-5 flex flex-col gap-3 rounded-[24px] border border-[#ececec] bg-[#fafafa] px-4 py-4">
+                        <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-[#ececec] bg-[#fafafa] px-4 py-4">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <p className="text-sm font-semibold text-[#111827]">
@@ -354,7 +354,7 @@ export default function AgencyDashboardClient({
                         </div>
                     ) : null}
 
-                    <div className="mt-6 overflow-hidden rounded-[24px] border border-[#ececec]">
+                    <div className="mt-6 overflow-hidden rounded-2xl border border-[#ececec]">
                         <div className="overflow-x-auto">
                             <table className="min-w-full border-collapse">
                                 <thead className="bg-[#fafafa]">
@@ -434,7 +434,7 @@ export default function AgencyDashboardClient({
             {deleteDialog && typeof document !== "undefined"
                 ? createPortal(
                     <div className="fixed inset-0 z-[140] flex items-center justify-center bg-[rgba(15,23,42,0.18)] p-4 backdrop-blur-sm">
-                        <div className="w-full max-w-md rounded-[28px] border border-[#e5e7eb] bg-white p-6 shadow-[0_34px_100px_-54px_rgba(15,23,42,0.38)]">
+                        <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_34px_100px_-54px_rgba(15,23,42,0.38)]">
                             <h3 className="text-xl font-semibold text-[#111827]">
                                 {deleteDialog.workerIds.length === 1 ? "Delete worker?" : `Delete ${deleteDialog.workerIds.length} workers?`}
                             </h3>
@@ -477,7 +477,7 @@ export default function AgencyDashboardClient({
 
 function StatCard({ label, value, icon }: { label: string; value: number; icon: ReactNode }) {
     return (
-        <div className="rounded-2xl border border-[#ececec] bg-[#fafafa] px-4 py-3">
+        <div className="min-w-[96px] rounded-2xl border border-[#ececec] bg-[#fafafa] px-4 py-3 sm:min-w-0">
             <div className="mb-2 flex items-center justify-between text-[#9ca3af]">
                 {icon}
                 <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">{label}</span>
