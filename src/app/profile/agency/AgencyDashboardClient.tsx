@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -10,10 +9,10 @@ import {
     CreditCard,
     FileCheck2,
     Search,
-    ArrowRight,
     Building2,
     Link2,
     Plus,
+    Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
@@ -64,9 +63,9 @@ export default function AgencyDashboardClient({
     inspectProfileId = null,
 }: AgencyDashboardProps) {
     const router = useRouter();
-    const genericPreview = readOnlyPreview && !inspectProfileId;
     const [search, setSearch] = useState("");
     const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
+    const [selectedWorker, setSelectedWorker] = useState<{ id: string; name: string } | null>(null);
 
     const filteredWorkers = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -89,10 +88,17 @@ export default function AgencyDashboardClient({
     }, [search, workers]);
 
     function openNewWorkerModal() {
+        setSelectedWorker(null);
+        setIsWorkerModalOpen(true);
+    }
+
+    function openEditWorkerModal(worker: DashboardWorker) {
+        setSelectedWorker({ id: worker.id, name: worker.name });
         setIsWorkerModalOpen(true);
     }
 
     function closeWorkerModal() {
+        setSelectedWorker(null);
         setIsWorkerModalOpen(false);
     }
 
@@ -113,7 +119,7 @@ export default function AgencyDashboardClient({
                             </div>
                             <h1 className="text-3xl font-semibold tracking-tight text-[#111827]">{agency.displayName}</h1>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                One place for every worker profile. Open the full worker form from here and keep the workspace visible while you review it.
+                                One place for every worker profile. Create and edit the full worker form from here without leaving the agency workspace.
                             </p>
                             <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#9ca3af]">
                                 {agency.contactEmail}
@@ -197,6 +203,7 @@ export default function AgencyDashboardClient({
                                                 worker={worker}
                                                 inspectProfileId={inspectProfileId}
                                                 readOnlyPreview={readOnlyPreview}
+                                                onEdit={openEditWorkerModal}
                                             />
                                         ))
                                     )}
@@ -209,7 +216,9 @@ export default function AgencyDashboardClient({
 
             <AgencyWorkerCreateModal
                 open={isWorkerModalOpen}
-                readOnlyPreview={genericPreview}
+                workerId={selectedWorker?.id || null}
+                workerLabel={selectedWorker?.name || null}
+                readOnlyPreview={readOnlyPreview}
                 inspectProfileId={inspectProfileId}
                 onClose={closeWorkerModal}
                 onLiveSave={handleLiveSave}
@@ -234,15 +243,13 @@ function WorkerTableRow({
     worker,
     inspectProfileId,
     readOnlyPreview,
+    onEdit,
 }: {
     worker: DashboardWorker;
     inspectProfileId: string | null;
     readOnlyPreview: boolean;
+    onEdit: (worker: DashboardWorker) => void;
 }) {
-    const workerHref = inspectProfileId
-        ? `/profile/agency/workers/${worker.id}?inspect=${inspectProfileId}`
-        : `/profile/agency/workers/${worker.id}`;
-
     const statusClass = worker.claimed
         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
         : "border-slate-200 bg-slate-50 text-slate-700";
@@ -283,13 +290,14 @@ function WorkerTableRow({
             </td>
             <td className="px-5 py-4 align-top">
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                    <Link
-                        href={workerHref}
+                    <button
+                        type="button"
+                        onClick={() => onEdit(worker)}
                         className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
                     >
-                        Open
-                        <ArrowRight size={14} />
-                    </Link>
+                        <Pencil size={14} />
+                        Edit
+                    </button>
 
                     {!worker.claimed && (!readOnlyPreview || Boolean(inspectProfileId)) && (
                         <button
