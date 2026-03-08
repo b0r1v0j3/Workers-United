@@ -47,6 +47,11 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const isPublic = variant === "public";
     const showCenteredLogoIcon = variant !== "admin";
     const normalizedUserType = normalizeUserType(user?.user_metadata?.user_type);
+    const navbarHeightClass = isPublic
+        ? `${isScrolled ? "bg-white/70 backdrop-blur-sm" : "bg-white/40 backdrop-blur-[2px]"} h-[52px] md:h-[56px]`
+        : variant === "admin"
+            ? "bg-white/90 shadow-sm border-b border-[#dddfe2]/50 h-[60px] md:h-[64px]"
+            : "bg-white/90 shadow-sm border-b border-[#dddfe2]/50 h-[56px] md:h-[58px]";
     const dashboardHref = variant === "admin" || (!isPublic && normalizedUserType === "admin")
         ? "/admin"
         : normalizedUserType === "employer"
@@ -65,11 +70,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
 
     return (
         <nav
-            className={`sticky top-0 z-50 backdrop-blur-md ${
-                isPublic
-                    ? `${isScrolled ? "bg-white/70 backdrop-blur-sm" : "bg-white/40 backdrop-blur-[2px]"} h-[52px] md:h-[56px]`
-                    : "bg-white/90 shadow-sm border-b border-[#dddfe2]/50 h-[68px]"
-            }`}
+            className={`sticky top-0 z-50 backdrop-blur-md ${navbarHeightClass}`}
         >
             <div className="w-full px-3 md:px-8 lg:px-10 h-full flex items-center justify-between relative">
                 {/* Left: Logo */}
@@ -100,7 +101,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                                 alt="Workers United"
                                 width={859}
                                 height={63}
-                                className={`h-auto object-contain shrink-0 transition-opacity ${isPublic ? "w-[122px] md:w-[168px]" : "w-[132px] md:w-[158px]"}`}
+                                className={`h-auto object-contain shrink-0 transition-opacity ${isPublic ? "w-[122px] md:w-[168px]" : "w-[118px] md:w-[142px]"}`}
                                 priority
                             />
                         )}
@@ -130,7 +131,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United Logo"
                             width={112}
                             height={112}
-                            className="h-12 w-12 object-contain md:h-14 md:w-14"
+                            className={`object-contain ${isPublic ? "h-12 w-12 md:h-14 md:w-14" : "h-8 w-8 md:h-9 md:w-9"}`}
                             priority
                         />
                     </Link>

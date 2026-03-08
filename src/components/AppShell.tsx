@@ -138,7 +138,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 {/* Mobile Backdrop */}
                 {!isDesktop && sidebarExpanded && (
                     <div
-                        className="fixed inset-x-0 bottom-0 top-[68px] bg-black/35 z-[54] backdrop-blur-sm transition-opacity"
+                        className="fixed inset-x-0 bottom-0 top-[56px] bg-black/35 z-[54] backdrop-blur-sm transition-opacity"
                         onClick={() => setIsOpen(false)}
                     />
                 )}
@@ -146,8 +146,8 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 {/* SIDEBAR (Desktop + Mobile Drawer/Thin Sidebar) */}
                 <aside className={`
                     fixed left-0 z-[55] transition-all duration-300 ease-in-out px-2 lg:px-0
-                    top-[74px] bottom-3 pt-0 pb-0
-                    lg:left-4 lg:top-[80px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
+                    top-[62px] bottom-3 pt-0 pb-0
+                    lg:left-4 lg:top-[70px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
                     ${sidebarWidthClass}
                 `}>
                     <div className="flex h-full flex-col items-center overflow-hidden rounded-[14px] border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-[14px] lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
@@ -156,7 +156,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className={`flex-1 min-w-0 w-full pb-10 pt-2 sm:pt-6 animate-fade-in-up transition-all duration-300 px-2.5 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
+                <main className={`flex-1 min-w-0 w-full pb-10 pt-1 sm:pt-4 animate-fade-in-up transition-all duration-300 px-2.5 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
                     {isAdminPreview && (
                         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-900 md:flex-row md:items-center md:justify-between">
                             <div>
