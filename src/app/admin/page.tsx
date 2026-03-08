@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertTriangle, BarChart3, Building2, ChevronRight, FileSearch, ListOrdered, MessageSquareMore, ShieldCheck, User, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, ChevronRight, FileSearch, ListOrdered, MailX, MessageSquareMore, ShieldCheck, User, Users } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
+import { getAdminExceptionSnapshot } from "@/lib/admin-exceptions";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
-import { isReportablePaymentProfile } from "@/lib/reporting";
+import { hasKnownInvalidOnlyEmailDomain, hasKnownTypoEmailDomain, isLikelyUndeliverableEmailError, isReportablePaymentProfile } from "@/lib/reporting";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { pickCanonicalWorkerRecord } from "@/lib/workers";
 
 export default async function AdminDashboard() {
     const supabase = await createClient();
@@ -27,6 +29,10 @@ export default async function AdminDashboard() {
     }
 
     const admin = createAdminClient();
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     const [
         { data: workersRaw },
         allAuthUsers,
@@ -36,18 +42,32 @@ export default async function AdminDashboard() {
         { data: documents },
         { data: payments },
         { data: supportConversations },
+        { data: failedEmails },
+        exceptionSnapshot,
     ] = await Promise.all([
         admin.from("candidates").select("id, profile_id, status, queue_joined_at, admin_approved, created_at, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas, family_data"),
         getAllAuthUsers(admin),
-        admin.from("profiles").select("id, full_name, email"),
+        admin.from("profiles").select("id, full_name, email, user_type"),
         admin.from("employers").select("id, profile_id, company_name, status, created_at"),
         admin.from("agencies").select("id, profile_id, display_name, legal_name, status, contact_email, created_at"),
         admin.from("candidate_documents").select("user_id, document_type, status"),
         admin.from("payments").select("id, amount, amount_cents, status, payment_type, paid_at, profile_id"),
         admin.from("conversations").select("id, status, type, last_message_at, created_at").eq("type", "support"),
+        admin.from("email_queue").select("user_id, recipient_email, error_message, created_at, status").gte("created_at", ninetyDaysAgo.toISOString()).range(0, 1999),
+        getAdminExceptionSnapshot(),
     ]);
 
-    const workers = workersRaw || [];
+    const workerGroups = new Map<string, any[]>();
+    for (const workerRow of workersRaw || []) {
+        if (!workerRow?.profile_id) continue;
+        const current = workerGroups.get(workerRow.profile_id) || [];
+        current.push(workerRow);
+        workerGroups.set(workerRow.profile_id, current);
+    }
+    const workers = Array.from(workerGroups.values())
+        .map((rows) => pickCanonicalWorkerRecord(rows))
+        .filter(Boolean) as any[];
+    const workerMap = new Map(workers.map((worker: any) => [worker.profile_id, worker]));
     const profileMap = new Map((profiles || []).map((entry: any) => [entry.id, entry]));
     const docsByUser = new Map<string, Array<{ user_id: string; document_type: string; status: string | null }>>();
     for (const doc of documents || []) {
@@ -62,9 +82,6 @@ export default async function AdminDashboard() {
         return acc;
     }, {});
 
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const workerAuthUsers = allAuthUsers.filter((entry: any) => !["employer", "admin", "agency"].includes(entry.user_metadata?.user_type));
     const totalWorkers = workerAuthUsers.length || workers.length;
     const totalEmployers = employers?.length || 0;
@@ -78,7 +95,7 @@ export default async function AdminDashboard() {
     for (const worker of workers) {
         const result = getWorkerCompletion({
             profile: profileMap.get(worker.profile_id) || null,
-            candidate: worker,
+            worker,
             documents: docsByUser.get(worker.profile_id) || [],
         });
         completionTotal += result.completion;
@@ -111,6 +128,24 @@ export default async function AdminDashboard() {
     const pendingEmployers = (employers || []).filter((employer: any) => employer.status === "PENDING");
     const manualReviewDocs = (documents || []).filter((document: any) => document.status === "manual_review").length;
     const rejectedDocs = (documents || []).filter((document: any) => document.status === "rejected").length;
+    const invalidEmailProfileIds = new Set<string>();
+    const profileIdByEmail = new Map((profiles || []).map((entry: any) => [entry.email?.trim().toLowerCase(), entry.id]));
+
+    for (const profileEntry of profiles || []) {
+        if (normalizeUserType((profileEntry as any).user_type) === "admin") continue;
+        if (hasKnownTypoEmailDomain((profileEntry as any).email) || hasKnownInvalidOnlyEmailDomain((profileEntry as any).email)) {
+            invalidEmailProfileIds.add((profileEntry as any).id);
+        }
+    }
+
+    for (const failedEmail of failedEmails || []) {
+        const recipientEmail = (failedEmail as any).recipient_email?.trim().toLowerCase();
+        const linkedProfileId = (failedEmail as any).user_id || (recipientEmail ? profileIdByEmail.get(recipientEmail) : null);
+        if (!linkedProfileId) continue;
+        if (isLikelyUndeliverableEmailError((failedEmail as any).error_message)) {
+            invalidEmailProfileIds.add(linkedProfileId);
+        }
+    }
 
     const queueWorkers = workers
         .filter((worker: any) => worker.status === "IN_QUEUE" && worker.queue_joined_at)
@@ -134,7 +169,7 @@ export default async function AdminDashboard() {
         .sort((left: any, right: any) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
         .slice(0, 6)
         .map((entry: any) => {
-            const worker = workers.find((candidate: any) => candidate.profile_id === entry.id);
+            const worker = workerMap.get(entry.id);
             return {
                 id: entry.id,
                 name: profileMap.get(entry.id)?.full_name || entry.user_metadata?.full_name || "Unknown",
@@ -174,6 +209,8 @@ export default async function AdminDashboard() {
         { href: "/admin/queue", label: "Queue", meta: `${statusCounts.IN_QUEUE || 0} in queue`, icon: <ListOrdered size={18} /> },
         { href: "/admin/jobs", label: "Jobs", meta: "job requests and matching", icon: <ChevronRight size={18} /> },
         { href: "/admin/inbox", label: "Inbox", meta: `${waitingOnSupportThreads} waiting on support`, icon: <MessageSquareMore size={18} /> },
+        { href: "/admin/exceptions", label: "Exceptions", meta: `${exceptionSnapshot.totalSignals} live signals`, icon: <AlertTriangle size={18} /> },
+        { href: "/admin/email-health", label: "Email Health", meta: `${invalidEmailProfileIds.size} flagged`, icon: <MailX size={18} /> },
         { href: "/admin/analytics", label: "Analytics", meta: "charts and funnel", icon: <BarChart3 size={18} /> },
     ];
 
@@ -272,7 +309,9 @@ export default async function AdminDashboard() {
                     <ActionCard href="/admin/review" title="Manual Document Review" value={manualReviewDocs} meta={`${rejectedDocs} rejected documents`} tone={manualReviewDocs > 0 || rejectedDocs > 0 ? "warning" : "neutral"} />
                     <ActionCard href="/admin/queue" title="Queue Risk" value={urgentQueueWorkers.length} meta="Workers inside the 30-day refund window" tone={urgentQueueWorkers.length > 0 ? "danger" : "neutral"} />
                     <ActionCard href="/admin/analytics" title="Payments Pending" value={pendingEntryPayments} meta="Entry fee sessions not completed yet" tone={pendingEntryPayments > 0 ? "warning" : "neutral"} />
+                    <ActionCard href="/admin/exceptions" title="Exceptions" value={exceptionSnapshot.totalSignals} meta="Cross-system signals needing action" tone={exceptionSnapshot.totalSignals > 0 ? "warning" : "neutral"} />
                     <ActionCard href="/admin/inbox" title="Support Inbox" value={waitingOnSupportThreads} meta={`${supportInboxThreads} live support threads`} tone={waitingOnSupportThreads > 0 ? "warning" : "neutral"} />
+                    <ActionCard href="/admin/email-health" title="Invalid Emails" value={invalidEmailProfileIds.size} meta="Profiles with typo domains or undeliverable sends" tone={invalidEmailProfileIds.size > 0 ? "warning" : "neutral"} />
                     <ActionCard href="/admin/workers" title="Registrations This Month" value={registrationsThisMonth} meta={`${totalWorkers} total worker accounts`} tone="neutral" />
                 </section>
 

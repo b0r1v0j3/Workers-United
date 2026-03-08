@@ -4,8 +4,10 @@ import {
     LayoutDashboard,
     Users,
     Building2,
+    AlertTriangle,
     Settings,
     Mail,
+    MailX,
     MessageSquareMore,
     Briefcase,
     User,
@@ -39,6 +41,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
         return window.innerWidth >= 1024;
     });
     const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     // Close sidebar on mobile when route changes
     useEffect(() => {
@@ -84,6 +87,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
     const sidebarExpanded = isAdminPreview && typeof window !== "undefined" && window.innerWidth >= 1024
         ? true
         : isOpen;
+    const inspectId = searchParams.get("inspect");
     const previewLabel = pathname?.startsWith("/profile/agency")
         ? "Agency Workspace Preview"
         : pathname?.startsWith("/profile/employer")
@@ -91,9 +95,14 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
             : pathname?.startsWith("/profile/worker")
                 ? "Worker Profile Preview"
                 : "Profile Preview";
+    const previewMessage = pathname?.startsWith("/profile/agency")
+        ? inspectId
+            ? "You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow."
+            : "You are previewing the agency workspace structure as admin. The add-worker modal opens for inspection only and does not persist preview data."
+        : "You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.";
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-montserrat">
+        <div className="min-h-screen bg-[#f5f5f4] flex flex-col font-montserrat">
             {/* Fixed Navbar */}
             <UnifiedNavbar
                 variant={variant}
@@ -130,14 +139,14 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className={`flex-1 max-w-[1000px] mx-auto w-full pb-10 animate-fade-in-up transition-all duration-300 px-3 sm:px-6 ${sidebarExpanded ? 'pl-[84px] lg:pl-3 lg:ml-[280px]' : 'pl-[84px] lg:pl-3 lg:ml-[68px]'}`}>
+                <main className="flex-1 min-w-0 w-full pb-10 animate-fade-in-up transition-all duration-300 px-3 pl-[84px] sm:px-6 lg:ml-[280px] lg:pl-6 lg:pr-8">
                     {isAdminPreview && (
                         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-900 md:flex-row md:items-center md:justify-between">
                             <div>
                                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">Admin Preview Mode</div>
                                 <div className="mt-1 font-semibold">{previewLabel}</div>
                                 <p className="mt-1 text-blue-800/80">
-                                    You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.
+                                    {previewMessage}
                                 </p>
                             </div>
                             <Link
@@ -149,7 +158,9 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                         </div>
                     )}
                     {variant === 'admin' && <AdminBreadcrumbs />}
-                    {children}
+                    <div className="mx-auto w-full max-w-[1220px]">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>
@@ -243,8 +254,8 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                     <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Worker Workspace</div>
                     <SidebarLink href={withInspect("/profile/worker/documents")} icon={<FileText size={20} />} label="Documents" isCollapsed={isCollapsed} />
                     <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} />
-                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} disabled={isAdminPreview} />
-                    <SidebarLink href="/profile/worker/edit" icon={<Pencil size={20} />} label="Edit Profile" isCollapsed={isCollapsed} disabled={isAdminPreview} />
+                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} />
+                    <SidebarLink href={withInspect("/profile/worker/edit")} icon={<Pencil size={20} />} label="Edit Profile" isCollapsed={isCollapsed} />
                 </>
             )}
 
@@ -271,15 +282,6 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 </>
             )}
 
-            {isAdminPreview && (
-                <>
-                    <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Role Previews</div>
-                    <SidebarLink href={withInspect("/profile/worker")} icon={<User size={20} />} label="Worker Preview" isCollapsed={isCollapsed} />
-                    <SidebarLink href={withInspect("/profile/employer")} icon={<Building2 size={20} />} label="Employer Preview" isCollapsed={isCollapsed} />
-                    <SidebarLink href={withInspect("/profile/agency")} icon={<Users size={20} />} label="Agency Preview" isCollapsed={isCollapsed} />
-                </>
-            )}
-
             {variant === 'admin' && (
                 <>
                     <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" isCollapsed={isCollapsed} />
@@ -295,6 +297,8 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                     <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/exceptions" icon={<AlertTriangle size={20} />} label="Exceptions" isCollapsed={isCollapsed} />
+                    <SidebarLink href="/admin/email-health" icon={<MailX size={20} />} label="Email Health" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} />
                 </>
@@ -426,6 +430,8 @@ function AdminBreadcrumbs() {
         review: 'Document Review',
         analytics: 'Analytics',
         inbox: 'Inbox',
+        exceptions: 'Exceptions',
+        'email-health': 'Email Health',
         'email-preview': 'Email Preview',
         settings: 'Settings',
     };
