@@ -101,7 +101,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                                 alt="Workers United"
                                 width={859}
                                 height={63}
-                                className={`h-auto object-contain shrink-0 transition-opacity ${isPublic ? "w-[122px] md:w-[168px]" : "w-[118px] md:w-[142px]"}`}
+                                className={`h-auto object-contain shrink-0 transition-opacity ${isPublic ? "w-[122px] md:w-[168px]" : "w-[128px] md:w-[154px]"}`}
                                 priority
                             />
                         )}
@@ -131,7 +131,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United Logo"
                             width={112}
                             height={112}
-                            className={`object-contain ${isPublic ? "h-12 w-12 md:h-14 md:w-14" : "h-8 w-8 md:h-9 md:w-9"}`}
+                            className={`object-contain ${isPublic ? "h-12 w-12 md:h-14 md:w-14" : "h-9 w-9 md:h-10 md:w-10"}`}
                             priority
                         />
                     </Link>
