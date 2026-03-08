@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe, PRICES, getCheckoutSuccessUrl, getCheckoutCancelUrl, PaymentType } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAgencyOwnedWorker } from "@/lib/agencies";
+import { getAgencyOwnedWorker, getAgencyWorkerName } from "@/lib/agencies";
 import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { normalizeUserType } from "@/lib/domain";
@@ -99,12 +99,26 @@ export async function POST(request: NextRequest) {
         }
 
         const requesterRole = normalizeUserType(profile.user_type || user.user_metadata?.user_type);
-        let paymentOwnerProfileId = user.id;
+        let paymentOwnerProfileId: string | null = user.id;
         let paymentOwnerEmail = profile.email || user.email || "";
         let paymentOwnerName = profile.full_name || user.user_metadata?.full_name || "Worker";
         let paymentRowClient = supabase;
         let agencyTargetWorkerId: string | null = null;
         let isAgencyPayingForWorker = false;
+        let agencyWorkerRecordForCheckout: {
+            id: string;
+            entry_fee_paid: boolean | null;
+            status: string | null;
+            job_search_active: boolean | null;
+            queue_joined_at: string | null;
+            updated_at: string | null;
+            phone: string | null;
+            nationality: string | null;
+            current_country: string | null;
+            preferred_job: string | null;
+            submitted_full_name: string | null;
+            submitted_email: string | null;
+        } | null = null;
 
         // For confirmation fee, verify offer exists and is pending
         let offer = null;
@@ -143,62 +157,111 @@ export async function POST(request: NextRequest) {
                 }
 
                 const { worker } = await getAgencyOwnedWorker(admin, user.id, targetWorkerId);
-                if (!worker?.profile_id) {
-                    return NextResponse.json({ error: "Claimed worker not found" }, { status: 404 });
+                if (!worker?.id) {
+                    return NextResponse.json({ error: "Agency worker not found" }, { status: 404 });
                 }
 
-                paymentOwnerProfileId = worker.profile_id;
                 agencyTargetWorkerId = worker.id;
                 isAgencyPayingForWorker = true;
                 paymentRowClient = admin;
+                paymentOwnerProfileId = worker.profile_id || null;
 
-                const { data: targetProfile, error: targetProfileError } = await admin
-                    .from("profiles")
-                    .select("email, full_name")
-                    .eq("id", paymentOwnerProfileId)
-                    .maybeSingle();
+                paymentOwnerName = getAgencyWorkerName({
+                    submitted_full_name: worker.submitted_full_name,
+                });
+                paymentOwnerEmail = worker.submitted_email || paymentOwnerEmail;
 
-                if (targetProfileError) {
-                    console.error("Target worker profile fetch error:", targetProfileError);
-                    return NextResponse.json({ error: "Failed to load worker payment profile" }, { status: 500 });
+                if (paymentOwnerProfileId) {
+                    const { data: targetProfile, error: targetProfileError } = await admin
+                        .from("profiles")
+                        .select("email, full_name")
+                        .eq("id", paymentOwnerProfileId)
+                        .maybeSingle();
+
+                    if (targetProfileError) {
+                        console.error("Target worker profile fetch error:", targetProfileError);
+                        return NextResponse.json({ error: "Failed to load worker payment profile" }, { status: 500 });
+                    }
+
+                    paymentOwnerEmail = targetProfile?.email || paymentOwnerEmail;
+                    paymentOwnerName = targetProfile?.full_name || paymentOwnerName;
                 }
 
-                paymentOwnerEmail = targetProfile?.email || paymentOwnerEmail;
-                paymentOwnerName = targetProfile?.full_name || paymentOwnerName;
+                const { data: agencyWorkerRecord, error: agencyWorkerRecordError } = await admin
+                    .from("worker_onboarding")
+                    .select("id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, submitted_full_name, submitted_email")
+                    .eq("id", worker.id)
+                    .maybeSingle();
+
+                if (agencyWorkerRecordError || !agencyWorkerRecord) {
+                    console.error("Agency worker checkout fetch error:", agencyWorkerRecordError);
+                    return NextResponse.json({ error: "Failed to load agency worker state" }, { status: 500 });
+                }
+
+                agencyWorkerRecordForCheckout = agencyWorkerRecord;
             }
 
             // Guard against duplicate checkout creation when payment is already completed.
-            const { data: existingCompletedPayment } = await admin
-                .from("payments")
-                .select("id")
-                .eq("payment_type", "entry_fee")
-                .in("status", ["completed", "paid"])
-                .or(`user_id.eq.${paymentOwnerProfileId},profile_id.eq.${paymentOwnerProfileId}`)
-                .limit(1)
-                .maybeSingle();
+            if (paymentOwnerProfileId) {
+                const { data: existingCompletedPayment } = await admin
+                    .from("payments")
+                    .select("id")
+                    .eq("payment_type", "entry_fee")
+                    .in("status", ["completed", "paid"])
+                    .or(`user_id.eq.${paymentOwnerProfileId},profile_id.eq.${paymentOwnerProfileId}`)
+                    .limit(1)
+                    .maybeSingle();
 
-            if (existingCompletedPayment) {
-                return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
+                if (existingCompletedPayment) {
+                    return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
+                }
+            } else if (agencyTargetWorkerId) {
+                const { data: existingAgencyWorkerPayment, error: existingAgencyWorkerPaymentError } = await admin
+                    .from("payments")
+                    .select("id, status")
+                    .eq("payment_type", "entry_fee")
+                    .contains("metadata", { target_worker_id: agencyTargetWorkerId })
+                    .in("status", ["pending", "completed", "paid"])
+                    .limit(1)
+                    .maybeSingle();
+
+                if (existingAgencyWorkerPaymentError) {
+                    console.error("Agency worker payment lookup error:", existingAgencyWorkerPaymentError);
+                    return NextResponse.json({ error: "Failed to check existing worker payments" }, { status: 500 });
+                }
+
+                if (existingAgencyWorkerPayment?.status === "pending") {
+                    return NextResponse.json({ error: "Entry fee payment is already pending" }, { status: 400 });
+                }
+
+                if (existingAgencyWorkerPayment?.status === "completed" || existingAgencyWorkerPayment?.status === "paid") {
+                    return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
+                }
             }
 
             const {
                 data: initialWorkerRecord,
                 error: workerRecordError,
-            } = await loadCanonicalWorkerRecord(
-                admin,
-                paymentOwnerProfileId,
-                "id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job"
-            );
-            let workerRecord = initialWorkerRecord;
+            } = paymentOwnerProfileId
+                ? await loadCanonicalWorkerRecord(
+                    admin,
+                    paymentOwnerProfileId,
+                    "id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job"
+                )
+                : { data: null, error: null };
+            let workerRecord = paymentOwnerProfileId ? initialWorkerRecord : agencyWorkerRecordForCheckout;
 
-            if (workerRecordError) {
+            if (paymentOwnerProfileId && workerRecordError) {
                 console.error("Worker record fetch error:", workerRecordError);
                 return NextResponse.json({ error: "Failed to check worker status" }, { status: 500 });
             }
 
             if (!workerRecord) {
                 if (isAgencyPayingForWorker) {
-                    return NextResponse.json({ error: "Worker profile is not linked yet" }, { status: 400 });
+                    return NextResponse.json({ error: "Agency worker record is missing" }, { status: 400 });
+                }
+                if (!paymentOwnerProfileId) {
+                    return NextResponse.json({ error: "Target worker profile is missing" }, { status: 400 });
                 }
 
                 await admin
@@ -281,6 +344,7 @@ export async function POST(request: NextRequest) {
                             paid_by_profile_id: user.id,
                             paid_by_role: "agency",
                             target_worker_id: agencyTargetWorkerId,
+                            target_worker_name: paymentOwnerName,
                         }
                         : {}),
                 },
@@ -328,7 +392,7 @@ export async function POST(request: NextRequest) {
                 user_id: user.id,
                 payment_type: type,
                 offer_id: offerId || "",
-                target_profile_id: paymentOwnerProfileId,
+                target_profile_id: paymentOwnerProfileId || "",
                 target_worker_id: agencyTargetWorkerId || "",
                 paid_by_profile_id: isAgencyPayingForWorker ? user.id : "",
                 agency_checkout: isAgencyPayingForWorker ? "true" : "",

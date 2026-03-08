@@ -180,15 +180,10 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                     missingFields: completionResult.missingFields,
                     verifiedDocuments,
                     documents: documents || [],
-                    claimPath: claimed || !workerRecord.submitted_email
-                        ? null
-                        : `/signup?type=worker&claim=${workerRecord.id}`,
-                    claimLabel: claimed
-                        ? "Claimed by worker"
-                        : workerRecord.submitted_email
-                            ? "Ready to claim"
-                            : "Worker email required before claim",
-                    paymentLabel: claimed ? hasPaidEntryFee ? "Paid" : hasPendingEntryFee ? "Pending" : "Not paid" : "Awaiting claim",
+                    accessLabel: claimed
+                        ? "Worker account ready"
+                        : "Managed by agency",
+                    paymentLabel: hasPaidEntryFee ? "Paid" : hasPendingEntryFee ? "Pending" : "Not paid",
                 }}
                 readOnlyPreview={userType === "admin"}
             />

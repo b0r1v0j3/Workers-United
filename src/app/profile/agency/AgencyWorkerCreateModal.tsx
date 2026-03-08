@@ -492,8 +492,8 @@ export default function AgencyWorkerCreateModal({
                                 {readOnlyPreview
                                     ? "Inspect the full worker form here without leaving the workspace. Changes are discarded when you close this preview."
                                     : workerId
-                                        ? "Update this worker draft here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications or a claim link."
-                                        : "Fill the full worker form here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications or a claim link."}
+                                        ? "Update this worker draft here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications."
+                                        : "Fill the full worker form here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications."}
                             </p>
                         </div>
 
@@ -539,8 +539,8 @@ export default function AgencyWorkerCreateModal({
                             {readOnlyPreview
                                 ? "Email and phone are optional. This preview shows the real worker intake structure without creating preview rows or drafts."
                                 : workerId
-                                    ? "Email and phone are optional. Edit them only if this worker should receive notifications or a claim link."
-                                    : "Email and phone are optional. Add them only if the worker should receive notifications or a claim link."}
+                                    ? "Email and phone are optional. Edit them only if this worker should receive notifications."
+                                    : "Email and phone are optional. Add them only if the worker should receive notifications."}
                         </div>
 
                         <Section title="Identity">
@@ -551,7 +551,7 @@ export default function AgencyWorkerCreateModal({
                                 <Field label="Last name">
                                     <input className={inputClass} value={form.lastName} onChange={(event) => updateField("lastName", event.target.value)} />
                                 </Field>
-                                <Field label="Email" helper="Optional. Use it only if the worker should receive notifications or a claim link.">
+                                <Field label="Email" helper="Optional. Use it only if the worker should receive notifications.">
                                     <input className={inputClass} type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} />
                                 </Field>
                                 <Field label="Phone" helper="Optional. Use it only if the worker should receive WhatsApp or phone notifications.">

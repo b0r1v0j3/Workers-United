@@ -192,13 +192,11 @@ export default async function AgencyProfilePage({
             isPostEntryFeeWorkerStatus(worker.status) ||
             workerPayments.some((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
         const hasPendingEntryFee = workerPayments.some((payment) => payment.payment_type === "entry_fee" && payment.status === "pending");
-        const paymentState = claimed
-            ? hasPaidEntryFee
-                ? "paid"
-                : hasPendingEntryFee
-                    ? "pending"
-                    : "not_paid"
-            : "awaiting_claim";
+        const paymentState = hasPaidEntryFee
+            ? "paid"
+            : hasPendingEntryFee
+                ? "pending"
+                : "not_paid";
 
         return {
             id: worker.id,
@@ -211,23 +209,14 @@ export default async function AgencyProfilePage({
             status: worker.status || "NEW",
             completion,
             claimed,
-            claimLabel: claimed
-                ? "Claimed"
-                : worker.submitted_email
-                    ? "Invite ready"
-                    : "Add email first",
-            claimPath: claimed || !worker.id || !worker.submitted_email
-                ? null
-                : `/signup?type=worker&claim=${worker.id}`,
+            accessLabel: claimed ? "Worker account ready" : "Managed by agency",
             verifiedDocuments,
-            documentsLabel: claimed ? `${verifiedDocuments}/3 verified` : "Awaiting claim",
+            documentsLabel: claimed ? `${verifiedDocuments}/3 verified` : "Not uploaded",
             paymentLabel: paymentState === "paid"
                 ? "Paid"
                 : paymentState === "pending"
                     ? "Pending"
-                    : paymentState === "not_paid"
-                        ? "Not paid"
-                    : "Awaiting claim",
+                    : "Not paid",
             paymentState,
             createdAt: worker.updated_at || null,
             updatedAt: worker.updated_at || null,

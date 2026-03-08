@@ -22,6 +22,15 @@ function assertNoDbError(error: { message: string } | null, context: string): vo
     }
 }
 
+function getMetadataValue(value: string | null | undefined): string | null {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
 export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const admin = createAdminClient();
@@ -41,20 +50,21 @@ export async function POST(request: NextRequest) {
         }
 
         const session = await stripe.checkout.sessions.retrieve(sessionId);
-        const sessionUserId = session.metadata?.user_id;
+        const sessionUserId = getMetadataValue(session.metadata?.user_id);
         const paymentType = session.metadata?.payment_type || "entry_fee";
-        const paymentId = session.metadata?.payment_id;
-        const offerId = session.metadata?.offer_id;
-        const targetProfileId = session.metadata?.target_profile_id || sessionUserId;
-        const paidByProfileId = session.metadata?.paid_by_profile_id || sessionUserId;
-        const targetWorkerId = session.metadata?.target_worker_id || null;
+        const paymentId = getMetadataValue(session.metadata?.payment_id);
+        const offerId = getMetadataValue(session.metadata?.offer_id);
+        const targetProfileId = getMetadataValue(session.metadata?.target_profile_id);
+        const paidByProfileId = getMetadataValue(session.metadata?.paid_by_profile_id) || sessionUserId;
+        const targetWorkerId = getMetadataValue(session.metadata?.target_worker_id);
+        const activitySubjectId = targetProfileId || paidByProfileId || sessionUserId;
 
         if (!sessionUserId || sessionUserId !== user.id) {
             return NextResponse.json({ error: "Session does not belong to current user" }, { status: 403 });
         }
 
-        if (!targetProfileId) {
-            return NextResponse.json({ error: "Missing target profile" }, { status: 400 });
+        if (!targetProfileId && !targetWorkerId) {
+            return NextResponse.json({ error: "Missing target worker" }, { status: 400 });
         }
 
         if (session.payment_status !== "paid") {
@@ -126,52 +136,86 @@ export async function POST(request: NextRequest) {
 
         if (paymentType === "entry_fee") {
             const nowIso = new Date().toISOString();
-            const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord(
-                admin,
-                targetProfileId,
-                "id, status, queue_joined_at, phone, updated_at, entry_fee_paid, job_search_active, nationality, current_country, preferred_job"
-            );
-            assertNoDbError(existingWorkerRecordError, "Failed to load worker record after payment");
+            if (targetProfileId) {
+                const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord(
+                    admin,
+                    targetProfileId,
+                    "id, status, queue_joined_at, phone, updated_at, entry_fee_paid, job_search_active, nationality, current_country, preferred_job"
+                );
+                assertNoDbError(existingWorkerRecordError, "Failed to load worker record after payment");
 
-            if (!existingWorkerRecord) {
-                const { error: workerRecordUpsertError } = await admin
+                if (!existingWorkerRecord) {
+                    const { error: workerRecordUpsertError } = await admin
+                        .from("worker_onboarding")
+                        .upsert(
+                            {
+                                profile_id: targetProfileId,
+                                entry_fee_paid: true,
+                                status: "IN_QUEUE",
+                                queue_joined_at: nowIso,
+                                job_search_active: true,
+                                job_search_activated_at: nowIso,
+                            },
+                            { onConflict: "profile_id" }
+                        );
+                    assertNoDbError(workerRecordUpsertError, "Failed to create missing worker record");
+                } else {
+                    const updatePayload: Record<string, unknown> = {
+                        entry_fee_paid: true,
+                        job_search_active: true,
+                        job_search_activated_at: nowIso,
+                    };
+
+                    if (!existingWorkerRecord.queue_joined_at) {
+                        updatePayload.queue_joined_at = nowIso;
+                    }
+
+                    const nextStatus = resolveWorkerStatusAfterEntryFee(existingWorkerRecord.status);
+                    if (existingWorkerRecord.status !== nextStatus) {
+                        updatePayload.status = nextStatus;
+                    }
+
+                    const { error: workerRecordUpdateError } = await admin
+                        .from("worker_onboarding")
+                        .update(updatePayload)
+                        .eq("profile_id", targetProfileId);
+                    assertNoDbError(workerRecordUpdateError, "Failed to update worker record after payment");
+                }
+            } else if (targetWorkerId) {
+                const { data: agencyWorkerRecord, error: agencyWorkerRecordError } = await admin
                     .from("worker_onboarding")
-                    .upsert(
-                        {
-                            profile_id: targetProfileId,
-                            entry_fee_paid: true,
-                            status: "IN_QUEUE",
-                            queue_joined_at: nowIso,
-                            job_search_active: true,
-                            job_search_activated_at: nowIso,
-                        },
-                        { onConflict: "profile_id" }
-                    );
-                assertNoDbError(workerRecordUpsertError, "Failed to create missing worker record");
-            } else {
+                    .select("id, status, queue_joined_at")
+                    .eq("id", targetWorkerId)
+                    .maybeSingle();
+                assertNoDbError(agencyWorkerRecordError, "Failed to load agency worker after payment");
+
+                if (!agencyWorkerRecord) {
+                    throw new Error("Agency worker not found");
+                }
+
                 const updatePayload: Record<string, unknown> = {
                     entry_fee_paid: true,
                     job_search_active: true,
                     job_search_activated_at: nowIso,
                 };
 
-                if (!existingWorkerRecord.queue_joined_at) {
+                if (!agencyWorkerRecord.queue_joined_at) {
                     updatePayload.queue_joined_at = nowIso;
                 }
 
-                const nextStatus = resolveWorkerStatusAfterEntryFee(existingWorkerRecord.status);
-                if (existingWorkerRecord.status !== nextStatus) {
+                const nextStatus = resolveWorkerStatusAfterEntryFee(agencyWorkerRecord.status);
+                if (agencyWorkerRecord.status !== nextStatus) {
                     updatePayload.status = nextStatus;
                 }
 
-                const { error: workerRecordUpdateError } = await admin
+                const { error: agencyWorkerUpdateError } = await admin
                     .from("worker_onboarding")
                     .update(updatePayload)
-                    .eq("profile_id", targetProfileId);
-                assertNoDbError(workerRecordUpdateError, "Failed to update worker record after payment");
+                    .eq("id", targetWorkerId);
+                assertNoDbError(agencyWorkerUpdateError, "Failed to update agency worker after payment");
             }
 
-            await logServerActivity(targetProfileId, "payment_completed", "payment", {
+            await logServerActivity(activitySubjectId, "payment_completed", "payment", {
                 type: "entry_fee",
                 amount: 9,
                 source: "confirm-session-route",
@@ -181,34 +225,36 @@ export async function POST(request: NextRequest) {
             });
 
             // Send email fallback if webhook didn't send one yet
-            const { data: existingPaymentEmail } = await admin
-                .from("email_queue")
-                .select("id")
-                .eq("user_id", targetProfileId)
-                .eq("email_type", "payment_success")
-                .in("status", ["pending", "sent"])
-                .maybeSingle();
+            if (targetProfileId) {
+                const { data: existingPaymentEmail } = await admin
+                    .from("email_queue")
+                    .select("id")
+                    .eq("user_id", targetProfileId)
+                    .eq("email_type", "payment_success")
+                    .in("status", ["pending", "sent"])
+                    .maybeSingle();
 
-            if (!existingPaymentEmail?.id) {
-                const [{ data: profile }, { data: workerRecord }] = await Promise.all([
-                    admin.from("profiles").select("full_name, email").eq("id", targetProfileId).maybeSingle(),
-                    loadCanonicalWorkerRecord(admin, targetProfileId, "id, phone, updated_at").then((result) => ({
-                        data: result.data,
-                    })),
-                ]);
+                if (!existingPaymentEmail?.id) {
+                    const [{ data: profile }, { data: workerRecord }] = await Promise.all([
+                        admin.from("profiles").select("full_name, email").eq("id", targetProfileId).maybeSingle(),
+                        loadCanonicalWorkerRecord(admin, targetProfileId, "id, phone, updated_at").then((result) => ({
+                            data: result.data,
+                        })),
+                    ]);
 
-                const recipientEmail = profile?.email || session.customer_email || "";
-                if (recipientEmail) {
-                    await queueEmail(
-                        admin,
-                        targetProfileId,
-                        "payment_success",
-                        recipientEmail,
-                        profile?.full_name || "Worker",
-                        { amount: "$9" },
-                        undefined,
-                        workerRecord?.phone || undefined
-                    );
+                    const recipientEmail = profile?.email || session.customer_email || "";
+                    if (recipientEmail) {
+                        await queueEmail(
+                            admin,
+                            targetProfileId,
+                            "payment_success",
+                            recipientEmail,
+                            profile?.full_name || "Worker",
+                            { amount: "$9" },
+                            undefined,
+                            workerRecord?.phone || undefined
+                        );
+                    }
                 }
             }
 
@@ -220,10 +266,13 @@ export async function POST(request: NextRequest) {
         }
 
         if (paymentType === "confirmation_fee" && offerId) {
+            if (!targetProfileId) {
+                return NextResponse.json({ error: "Confirmation fee requires a linked worker profile" }, { status: 400 });
+            }
             await finalizeConfirmationFeeOffer(admin, targetProfileId, offerId);
         }
 
-        await logServerActivity(targetProfileId, "payment_completed", "payment", {
+        await logServerActivity(activitySubjectId, "payment_completed", "payment", {
             type: paymentType,
             amount,
             source: "confirm-session-route",
