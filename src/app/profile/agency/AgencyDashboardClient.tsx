@@ -1,23 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
-    Users,
-    UserPlus,
     BadgeCheck,
+    Building2,
     CreditCard,
     FileCheck2,
-    Search,
-    Building2,
     Link2,
-    Plus,
+    Loader2,
     Pencil,
+    Plus,
+    Search,
+    Trash2,
+    UserPlus,
+    Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 
 const surfaceClass = "rounded-[28px] border border-[#e7e7e5] bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
+
+type PaymentState = "awaiting_claim" | "not_paid" | "pending" | "paid";
 
 export interface AgencyDashboardProps {
     agency: {
@@ -47,6 +52,8 @@ export interface AgencyDashboardProps {
         verifiedDocuments: number;
         documentsLabel: string;
         paymentLabel: string;
+        paymentState: PaymentState;
+        createdAt: string | null;
         updatedAt: string | null;
     }>;
     readOnlyPreview?: boolean;
@@ -54,6 +61,25 @@ export interface AgencyDashboardProps {
 }
 
 type DashboardWorker = AgencyDashboardProps["workers"][number];
+
+type DeleteDialogState = {
+    workerIds: string[];
+    workerNames: string[];
+    includesClaimedAccount: boolean;
+} | null;
+
+function formatDate(value: string | null) {
+    if (!value) {
+        return "Unknown";
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return "Unknown";
+    }
+
+    return parsed.toLocaleDateString("en-GB");
+}
 
 export default function AgencyDashboardClient({
     agency,
@@ -66,6 +92,10 @@ export default function AgencyDashboardClient({
     const [search, setSearch] = useState("");
     const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
     const [selectedWorker, setSelectedWorker] = useState<{ id: string; name: string } | null>(null);
+    const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
+    const [payingWorkerId, setPayingWorkerId] = useState<string | null>(null);
+    const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const filteredWorkers = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -83,9 +113,23 @@ export default function AgencyDashboardClient({
                 worker.preferredJob || "",
                 worker.status,
                 worker.claimLabel,
+                worker.paymentLabel,
+                formatDate(worker.createdAt),
             ].some((value) => value.toLowerCase().includes(query))
         );
     }, [search, workers]);
+
+    const visibleWorkerIds = useMemo(() => filteredWorkers.map((worker) => worker.id), [filteredWorkers]);
+    const selectedWorkers = useMemo(
+        () => workers.filter((worker) => selectedWorkerIds.includes(worker.id)),
+        [selectedWorkerIds, workers]
+    );
+    const allVisibleSelected = visibleWorkerIds.length > 0 && visibleWorkerIds.every((workerId) => selectedWorkerIds.includes(workerId));
+    const columnCount = readOnlyPreview ? 9 : 10;
+
+    useEffect(() => {
+        setSelectedWorkerIds((current) => current.filter((workerId) => workers.some((worker) => worker.id === workerId)));
+    }, [workers]);
 
     function openNewWorkerModal() {
         setSelectedWorker(null);
@@ -105,6 +149,122 @@ export default function AgencyDashboardClient({
     function handleLiveSave() {
         closeWorkerModal();
         router.refresh();
+    }
+
+    function toggleWorkerSelection(workerId: string, checked: boolean) {
+        setSelectedWorkerIds((current) =>
+            checked
+                ? current.includes(workerId)
+                    ? current
+                    : [...current, workerId]
+                : current.filter((id) => id !== workerId)
+        );
+    }
+
+    function toggleVisibleWorkers(checked: boolean) {
+        setSelectedWorkerIds((current) => {
+            if (checked) {
+                return Array.from(new Set([...current, ...visibleWorkerIds]));
+            }
+            return current.filter((workerId) => !visibleWorkerIds.includes(workerId));
+        });
+    }
+
+    function openDeleteDialog(targetWorkers: DashboardWorker[]) {
+        if (readOnlyPreview || targetWorkers.length === 0) {
+            return;
+        }
+
+        setDeleteDialog({
+            workerIds: targetWorkers.map((worker) => worker.id),
+            workerNames: targetWorkers.map((worker) => worker.name),
+            includesClaimedAccount: targetWorkers.some((worker) => worker.claimed),
+        });
+    }
+
+    async function handlePay(worker: DashboardWorker) {
+        if (readOnlyPreview) {
+            toast.error("Preview mode does not open payments.");
+            return;
+        }
+
+        if (worker.paymentState !== "not_paid") {
+            return;
+        }
+
+        setPayingWorkerId(worker.id);
+        try {
+            const response = await fetch("/api/stripe/create-checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    type: "entry_fee",
+                    targetWorkerId: worker.id,
+                    successPath: "/profile/agency",
+                    cancelPath: "/profile/agency",
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "Could not open checkout.");
+            }
+
+            if (!data.checkoutUrl) {
+                throw new Error("Checkout link is missing.");
+            }
+
+            window.location.href = data.checkoutUrl;
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Could not open checkout.");
+        } finally {
+            setPayingWorkerId(null);
+        }
+    }
+
+    async function confirmDelete() {
+        if (!deleteDialog) {
+            return;
+        }
+
+        setIsDeleting(true);
+        const failedNames: string[] = [];
+
+        try {
+            for (let index = 0; index < deleteDialog.workerIds.length; index += 1) {
+                const workerId = deleteDialog.workerIds[index];
+                const workerName = deleteDialog.workerNames[index] || "Worker";
+
+                const response = await fetch(`/api/agency/workers/${workerId}`, {
+                    method: "DELETE",
+                });
+
+                if (!response.ok) {
+                    const data = await response.json().catch(() => null);
+                    failedNames.push(data?.error ? `${workerName} (${data.error})` : workerName);
+                }
+            }
+
+            if (failedNames.length === deleteDialog.workerIds.length) {
+                toast.error("Could not delete the selected workers.");
+                return;
+            }
+
+            if (failedNames.length > 0) {
+                toast.error(`Deleted some workers, but ${failedNames.length} failed.`);
+            } else {
+                toast.success(
+                    deleteDialog.workerIds.length === 1
+                        ? "Worker deleted."
+                        : `${deleteDialog.workerIds.length} workers deleted.`
+                );
+            }
+
+            setSelectedWorkerIds((current) => current.filter((workerId) => !deleteDialog.workerIds.includes(workerId)));
+            setDeleteDialog(null);
+            router.refresh();
+        } finally {
+            setIsDeleting(false);
+        }
     }
 
     return (
@@ -141,7 +301,7 @@ export default function AgencyDashboardClient({
                         <div className="max-w-2xl">
                             <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">Workers</h2>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                Email and phone are optional. Add them only if the worker should receive notifications or a claim link.
+                                Email and phone are optional. Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
                             </p>
                         </div>
 
@@ -167,12 +327,52 @@ export default function AgencyDashboardClient({
                         </div>
                     </div>
 
+                    {!readOnlyPreview && workers.length > 0 ? (
+                        <div className="mt-5 flex flex-col gap-3 rounded-[24px] border border-[#ececec] bg-[#fafafa] px-4 py-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-[#111827]">
+                                        {selectedWorkers.length > 0
+                                            ? `${selectedWorkers.length} worker${selectedWorkers.length === 1 ? "" : "s"} selected`
+                                            : "Select workers to delete them in one action."}
+                                    </p>
+                                    <p className="mt-1 text-xs leading-relaxed text-[#6b7280]">
+                                        Bulk payment is intentionally locked. Each Job Finder checkout still belongs to one worker only.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => openDeleteDialog(selectedWorkers)}
+                                    disabled={selectedWorkers.length === 0 || isDeleting}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#f3d7d7] bg-white px-4 py-3 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
+                                >
+                                    {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                    Delete selected
+                                </button>
+                            </div>
+                        </div>
+                    ) : null}
+
                     <div className="mt-6 overflow-hidden rounded-[24px] border border-[#ececec]">
                         <div className="overflow-x-auto">
                             <table className="min-w-full border-collapse">
                                 <thead className="bg-[#fafafa]">
                                     <tr className="border-b border-[#ececec] text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">
+                                        {!readOnlyPreview ? (
+                                            <th className="w-14 px-5 py-4">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={allVisibleSelected}
+                                                    onChange={(event) => toggleVisibleWorkers(event.target.checked)}
+                                                    className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
+                                                    aria-label="Select visible workers"
+                                                />
+                                            </th>
+                                        ) : null}
+                                        <th className="w-16 px-5 py-4">#</th>
                                         <th className="px-5 py-4">Worker</th>
+                                        <th className="px-5 py-4">Created</th>
                                         <th className="px-5 py-4">Contact</th>
                                         <th className="px-5 py-4">Completion</th>
                                         <th className="px-5 py-4">Documents</th>
@@ -184,7 +384,7 @@ export default function AgencyDashboardClient({
                                 <tbody className="bg-white">
                                     {filteredWorkers.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-14">
+                                            <td colSpan={columnCount} className="px-6 py-14">
                                                 <div className="flex flex-col items-center justify-center text-center">
                                                     <div className="flex h-16 w-16 items-center justify-center rounded-[24px] border border-[#ececec] bg-[#fafafa] text-[#111111]">
                                                         <UserPlus size={28} />
@@ -197,13 +397,20 @@ export default function AgencyDashboardClient({
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredWorkers.map((worker) => (
+                                        filteredWorkers.map((worker, index) => (
                                             <WorkerTableRow
                                                 key={worker.id}
                                                 worker={worker}
+                                                index={index + 1}
                                                 inspectProfileId={inspectProfileId}
+                                                isDeleting={isDeleting}
+                                                isPaying={payingWorkerId === worker.id}
+                                                isSelected={selectedWorkerIds.includes(worker.id)}
                                                 readOnlyPreview={readOnlyPreview}
                                                 onEdit={openEditWorkerModal}
+                                                onPay={handlePay}
+                                                onDelete={() => openDeleteDialog([worker])}
+                                                onToggleSelected={toggleWorkerSelection}
                                             />
                                         ))
                                     )}
@@ -223,11 +430,52 @@ export default function AgencyDashboardClient({
                 onClose={closeWorkerModal}
                 onLiveSave={handleLiveSave}
             />
+
+            {deleteDialog && typeof document !== "undefined"
+                ? createPortal(
+                    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-[rgba(15,23,42,0.18)] p-4 backdrop-blur-sm">
+                        <div className="w-full max-w-md rounded-[28px] border border-[#e5e7eb] bg-white p-6 shadow-[0_34px_100px_-54px_rgba(15,23,42,0.38)]">
+                            <h3 className="text-xl font-semibold text-[#111827]">
+                                {deleteDialog.workerIds.length === 1 ? "Delete worker?" : `Delete ${deleteDialog.workerIds.length} workers?`}
+                            </h3>
+                            <p className="mt-3 text-sm leading-relaxed text-[#6b7280]">
+                                {deleteDialog.includesClaimedAccount
+                                    ? "This selection includes claimed worker accounts. Deleting them also removes the linked account, profile, documents, and payment history."
+                                    : "This deletes the selected draft workers from the agency workspace."}
+                            </p>
+                            <div className="mt-4 rounded-2xl border border-[#ececec] bg-[#fafafa] px-4 py-3 text-sm text-[#111827]">
+                                {deleteDialog.workerNames.slice(0, 3).join(", ")}
+                                {deleteDialog.workerNames.length > 3 ? ` and ${deleteDialog.workerNames.length - 3} more` : ""}
+                            </div>
+                            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setDeleteDialog(null)}
+                                    disabled={isDeleting}
+                                    className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => void confirmDelete()}
+                                    disabled={isDeleting}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#b91c1c] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#991b1b] disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                    {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                    {deleteDialog.workerIds.length === 1 ? "Delete worker" : "Delete workers"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )
+                : null}
         </>
     );
 }
 
-function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+function StatCard({ label, value, icon }: { label: string; value: number; icon: ReactNode }) {
     return (
         <div className="rounded-2xl border border-[#ececec] bg-[#fafafa] px-4 py-3">
             <div className="mb-2 flex items-center justify-between text-[#9ca3af]">
@@ -241,14 +489,28 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
 
 function WorkerTableRow({
     worker,
+    index,
     inspectProfileId,
+    isDeleting,
+    isPaying,
+    isSelected,
     readOnlyPreview,
     onEdit,
+    onPay,
+    onDelete,
+    onToggleSelected,
 }: {
     worker: DashboardWorker;
+    index: number;
     inspectProfileId: string | null;
+    isDeleting: boolean;
+    isPaying: boolean;
+    isSelected: boolean;
     readOnlyPreview: boolean;
     onEdit: (worker: DashboardWorker) => void;
+    onPay: (worker: DashboardWorker) => void;
+    onDelete: () => void;
+    onToggleSelected: (workerId: string, checked: boolean) => void;
 }) {
     const statusClass = worker.claimed
         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -269,12 +531,33 @@ function WorkerTableRow({
         }
     }
 
+    const payButtonLabel = worker.paymentState === "paid"
+        ? "Paid"
+        : worker.paymentState === "pending"
+            ? "Pending"
+            : worker.paymentState === "awaiting_claim"
+                ? "Claim first"
+                : "Pay $9";
+
     return (
         <tr className="border-b border-[#f1f1ef] transition hover:bg-[#fcfcfc]">
+            {!readOnlyPreview ? (
+                <td className="px-5 py-4 align-top">
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(event) => onToggleSelected(worker.id, event.target.checked)}
+                        className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
+                        aria-label={`Select ${worker.name}`}
+                    />
+                </td>
+            ) : null}
+            <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{index}</td>
             <td className="px-5 py-4 align-top">
                 <div className="font-semibold text-[#111827]">{worker.name}</div>
                 <div className="mt-1 text-sm text-[#6b7280]">{worker.preferredJob || "No preferred job yet"}</div>
             </td>
+            <td className="px-5 py-4 align-top text-sm text-[#111827]">{formatDate(worker.createdAt)}</td>
             <td className="px-5 py-4 align-top text-sm text-[#6b7280]">
                 <div>{worker.email || "No email yet"}</div>
                 <div className="mt-1">{worker.phone || "No phone yet"}</div>
@@ -292,6 +575,16 @@ function WorkerTableRow({
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     <button
                         type="button"
+                        onClick={() => void onPay(worker)}
+                        disabled={readOnlyPreview || isPaying || worker.paymentState !== "not_paid"}
+                        className="inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
+                    >
+                        {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                        {payButtonLabel}
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={() => onEdit(worker)}
                         className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
                     >
@@ -299,7 +592,19 @@ function WorkerTableRow({
                         Edit
                     </button>
 
-                    {!worker.claimed && (!readOnlyPreview || Boolean(inspectProfileId)) && (
+                    {!readOnlyPreview ? (
+                        <button
+                            type="button"
+                            onClick={onDelete}
+                            disabled={isDeleting}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#f3d7d7] bg-white px-3 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                            <Trash2 size={14} />
+                            Delete
+                        </button>
+                    ) : null}
+
+                    {!worker.claimed && (!readOnlyPreview || Boolean(inspectProfileId)) ? (
                         <button
                             type="button"
                             onClick={handleCopyClaimLink}
@@ -309,7 +614,7 @@ function WorkerTableRow({
                             <Link2 size={14} />
                             Claim link
                         </button>
-                    )}
+                    ) : null}
                 </div>
             </td>
         </tr>
