@@ -151,11 +151,11 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                     lg:left-4 lg:top-[80px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
                     ${sidebarWidthClass}
                 `}>
-                    <div className="flex h-full flex-col items-center overflow-hidden rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-2xl lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
+                    <div className="flex h-full flex-col items-center overflow-hidden rounded-[14px] border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-[14px] lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
                         {/* Mobile Header with Close Button (only when open) */}
                         <div className={`flex justify-between items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
                             <h2 className="font-bold text-lg text-gray-900">Menu</h2>
-                            <button onClick={() => setIsOpen(false)} className="p-2 bg-gray-200 rounded-full text-gray-600">
+                            <button onClick={() => setIsOpen(false)} className="rounded-[12px] bg-gray-200 p-2 text-gray-600">
                                 <X size={20} />
                             </button>
                         </div>
@@ -165,7 +165,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className={`flex-1 min-w-0 w-full pb-10 pt-3 sm:pt-6 animate-fade-in-up transition-all duration-300 px-3 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
+                <main className={`flex-1 min-w-0 w-full pb-10 pt-2 sm:pt-6 animate-fade-in-up transition-all duration-300 px-2.5 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
                     {isAdminPreview && (
                         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-900 md:flex-row md:items-center md:justify-between">
                             <div>
@@ -177,7 +177,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                             </div>
                             <Link
                                 href="/admin"
-                                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                className="inline-flex items-center justify-center rounded-[12px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                             >
                                 Back to Admin
                             </Link>
@@ -277,7 +277,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
             {onMenuToggle && (
                 <button
                     onClick={onMenuToggle}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent`}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent`}
                     aria-label="Toggle Menu"
                 >
                     <div className="w-6 h-6 flex items-center justify-center shrink-0 transition-colors text-slate-400 group-hover:text-slate-600">
@@ -364,7 +364,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                         e.preventDefault();
                         setShowLogoutConfirm(true);
                     }}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-red-50 hover:text-red-600 font-medium`}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-red-50 hover:text-red-600 font-medium`}
                     title={isCollapsed ? "Logout" : undefined}
                 >
                     <div className="w-6 h-6 flex items-center justify-center shrink-0 transition-colors text-slate-400 group-hover:text-red-500">
@@ -379,19 +379,19 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
             {showLogoutConfirm && typeof document !== "undefined"
                 ? createPortal(
                     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-in zoom-in-95 duration-200">
+                        <div className="w-full max-w-sm rounded-[14px] bg-white p-6 shadow-xl animate-in zoom-in-95 duration-200">
                             <h3 className="mb-2 text-xl font-bold text-gray-900">Log Out</h3>
                             <p className="mb-6 font-medium text-gray-600">Are you sure you want to log out from your account?</p>
                             <div className="flex flex-col justify-end gap-3 sm:flex-row">
                                 <button
                                     onClick={() => setShowLogoutConfirm(false)}
-                                    className="w-full rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 sm:w-auto"
+                                    className="w-full rounded-[12px] bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 sm:w-auto"
                                 >
                                     Cancel
                                 </button>
                                 <a
                                     href="/auth/signout"
-                                    className="w-full rounded-xl bg-red-600 px-4 py-2 text-center text-sm font-semibold !text-white shadow-sm shadow-red-200 transition-colors hover:bg-red-700 sm:w-auto"
+                                    className="w-full rounded-[12px] bg-red-600 px-4 py-2 text-center text-sm font-semibold !text-white shadow-sm shadow-red-200 transition-colors hover:bg-red-700 sm:w-auto"
                                 >
                                     Log Out
                                 </a>
@@ -435,7 +435,7 @@ function SidebarLink({
         return (
             <div
                 title={isCollapsed ? `${label} (disabled in admin preview)` : undefined}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-300 cursor-not-allowed`}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-300 cursor-not-allowed`}
             >
                 <div className="w-6 h-6 flex items-center justify-center shrink-0 text-slate-300">
                     {icon}
@@ -450,7 +450,7 @@ function SidebarLink({
             href={href}
             aria-current={isActive ? "page" : undefined}
             title={isCollapsed ? label : undefined}
-            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-transparent transition-all duration-200 group relative overflow-hidden w-full ${isCollapsed ? 'justify-center' : 'justify-start'} ${isActive
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] border border-transparent transition-all duration-200 group relative overflow-hidden w-full ${isCollapsed ? 'justify-center' : 'justify-start'} ${isActive
                 ? toneStyles.active
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}

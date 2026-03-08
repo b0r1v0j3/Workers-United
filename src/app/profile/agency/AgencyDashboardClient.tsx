@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 
-const surfaceClass = "rounded-2xl border border-[#e7e7e5] bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
+const surfaceClass = "rounded-[14px] border border-[#e7e7e5] bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
 
 type PaymentState = "awaiting_claim" | "not_paid" | "pending" | "paid";
 
@@ -270,8 +270,8 @@ export default function AgencyDashboardClient({
     return (
         <>
             <div className="space-y-6">
-                <section className={`${surfaceClass} px-5 py-5 sm:px-6 sm:py-6`}>
-                    <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                <section className={`${surfaceClass} px-4 py-4 sm:px-6 sm:py-6`}>
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                         <div className="max-w-2xl">
                             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
                                 <Building2 size={14} />
@@ -296,7 +296,7 @@ export default function AgencyDashboardClient({
                     </div>
                 </section>
 
-                <section className={`${surfaceClass} overflow-hidden px-5 py-5 sm:px-6 sm:py-6`}>
+                <section className={`${surfaceClass} overflow-hidden px-4 py-4 sm:px-6 sm:py-6`}>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div className="max-w-2xl">
                             <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">Workers</h2>
@@ -309,7 +309,7 @@ export default function AgencyDashboardClient({
                             <label className="relative block w-full sm:w-[260px]">
                                 <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
                                 <input
-                                    className="w-full rounded-2xl border border-[#e5e7eb] bg-[#fafafa] py-3 pl-11 pr-4 text-sm text-[#111827] outline-none transition focus:border-[#111111]"
+                                    className="w-full rounded-[14px] border border-[#e5e7eb] bg-[#fafafa] py-3 pl-11 pr-4 text-sm text-[#111827] outline-none transition focus:border-[#111111]"
                                     placeholder="Search workers"
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
@@ -319,7 +319,7 @@ export default function AgencyDashboardClient({
                             <button
                                 type="button"
                                 onClick={openNewWorkerModal}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#111111] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d]"
+                                className="inline-flex items-center justify-center gap-2 rounded-[14px] bg-[#111111] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d]"
                             >
                                 <Plus size={16} />
                                 Add worker
@@ -328,7 +328,7 @@ export default function AgencyDashboardClient({
                     </div>
 
                     {!readOnlyPreview && workers.length > 0 ? (
-                        <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-[#ececec] bg-[#fafafa] px-4 py-4">
+                        <div className="mt-4 flex flex-col gap-3 rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-4">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <p className="text-sm font-semibold text-[#111827]">
@@ -345,7 +345,7 @@ export default function AgencyDashboardClient({
                                     type="button"
                                     onClick={() => openDeleteDialog(selectedWorkers)}
                                     disabled={selectedWorkers.length === 0 || isDeleting}
-                                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#f3d7d7] bg-white px-4 py-3 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
+                                    className="inline-flex items-center justify-center gap-2 rounded-[14px] border border-[#f3d7d7] bg-white px-4 py-3 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
                                 >
                                     {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                     Delete selected
@@ -354,7 +354,7 @@ export default function AgencyDashboardClient({
                         </div>
                     ) : null}
 
-                    <div className="mt-6 overflow-hidden rounded-2xl border border-[#ececec]">
+                    <div className="mt-5 overflow-hidden rounded-[14px] border border-[#ececec]">
                         <div className="overflow-x-auto">
                             <table className="min-w-full border-collapse">
                                 <thead className="bg-[#fafafa]">
@@ -386,7 +386,7 @@ export default function AgencyDashboardClient({
                                         <tr>
                                             <td colSpan={columnCount} className="px-6 py-14">
                                                 <div className="flex flex-col items-center justify-center text-center">
-                                                    <div className="flex h-16 w-16 items-center justify-center rounded-[24px] border border-[#ececec] bg-[#fafafa] text-[#111111]">
+                                                    <div className="flex h-16 w-16 items-center justify-center rounded-[16px] border border-[#ececec] bg-[#fafafa] text-[#111111]">
                                                         <UserPlus size={28} />
                                                     </div>
                                                     <h3 className="mt-4 text-lg font-semibold text-[#111827]">No workers yet</h3>
@@ -434,7 +434,7 @@ export default function AgencyDashboardClient({
             {deleteDialog && typeof document !== "undefined"
                 ? createPortal(
                     <div className="fixed inset-0 z-[140] flex items-center justify-center bg-[rgba(15,23,42,0.18)] p-4 backdrop-blur-sm">
-                        <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_34px_100px_-54px_rgba(15,23,42,0.38)]">
+                        <div className="w-full max-w-md rounded-[14px] border border-[#e5e7eb] bg-white p-6 shadow-[0_34px_100px_-54px_rgba(15,23,42,0.38)]">
                             <h3 className="text-xl font-semibold text-[#111827]">
                                 {deleteDialog.workerIds.length === 1 ? "Delete worker?" : `Delete ${deleteDialog.workerIds.length} workers?`}
                             </h3>
@@ -443,7 +443,7 @@ export default function AgencyDashboardClient({
                                     ? "This selection includes claimed worker accounts. Deleting them also removes the linked account, profile, documents, and payment history."
                                     : "This deletes the selected draft workers from the agency workspace."}
                             </p>
-                            <div className="mt-4 rounded-2xl border border-[#ececec] bg-[#fafafa] px-4 py-3 text-sm text-[#111827]">
+                            <div className="mt-4 rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-3 text-sm text-[#111827]">
                                 {deleteDialog.workerNames.slice(0, 3).join(", ")}
                                 {deleteDialog.workerNames.length > 3 ? ` and ${deleteDialog.workerNames.length - 3} more` : ""}
                             </div>
@@ -452,7 +452,7 @@ export default function AgencyDashboardClient({
                                     type="button"
                                     onClick={() => setDeleteDialog(null)}
                                     disabled={isDeleting}
-                                    className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="rounded-[14px] border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     Cancel
                                 </button>
@@ -460,7 +460,7 @@ export default function AgencyDashboardClient({
                                     type="button"
                                     onClick={() => void confirmDelete()}
                                     disabled={isDeleting}
-                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#b91c1c] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#991b1b] disabled:cursor-not-allowed disabled:opacity-70"
+                                    className="inline-flex items-center justify-center gap-2 rounded-[14px] bg-[#b91c1c] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#991b1b] disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                     {deleteDialog.workerIds.length === 1 ? "Delete worker" : "Delete workers"}
@@ -477,7 +477,7 @@ export default function AgencyDashboardClient({
 
 function StatCard({ label, value, icon }: { label: string; value: number; icon: ReactNode }) {
     return (
-        <div className="min-w-[96px] rounded-2xl border border-[#ececec] bg-[#fafafa] px-4 py-3 sm:min-w-0">
+        <div className="min-w-[96px] rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-3 sm:min-w-0">
             <div className="mb-2 flex items-center justify-between text-[#9ca3af]">
                 {icon}
                 <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">{label}</span>
