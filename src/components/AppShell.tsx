@@ -25,6 +25,7 @@ import UnifiedNavbar from "./UnifiedNavbar";
 import { normalizeUserType } from "@/lib/domain";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 type AppShellVariant = "public" | "dashboard" | "admin";
@@ -368,28 +369,31 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 </button>
             </div>
             {/* Logout Confirmation Modal */}
-            {showLogoutConfirm && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in zoom-in-95 duration-200">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Log Out</h3>
-                        <p className="text-gray-600 mb-6 font-medium">Are you sure you want to log out from your account?</p>
-                        <div className="flex justify-end gap-3 flex-col sm:flex-row">
-                            <button
-                                onClick={() => setShowLogoutConfirm(false)}
-                                className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors w-full sm:w-auto"
-                            >
-                                Cancel
-                            </button>
-                            <a
-                                href="/auth/signout"
-                                className="px-4 py-2 text-sm font-semibold !text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors text-center w-full sm:w-auto shadow-sm shadow-red-200"
-                            >
-                                Log Out
-                            </a>
+            {showLogoutConfirm && typeof document !== "undefined"
+                ? createPortal(
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-in zoom-in-95 duration-200">
+                            <h3 className="mb-2 text-xl font-bold text-gray-900">Log Out</h3>
+                            <p className="mb-6 font-medium text-gray-600">Are you sure you want to log out from your account?</p>
+                            <div className="flex flex-col justify-end gap-3 sm:flex-row">
+                                <button
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                    className="w-full rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 sm:w-auto"
+                                >
+                                    Cancel
+                                </button>
+                                <a
+                                    href="/auth/signout"
+                                    className="w-full rounded-xl bg-red-600 px-4 py-2 text-center text-sm font-semibold !text-white shadow-sm shadow-red-200 transition-colors hover:bg-red-700 sm:w-auto"
+                                >
+                                    Log Out
+                                </a>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </div>,
+                    document.body
+                )
+                : null}
         </div>
     );
 }
