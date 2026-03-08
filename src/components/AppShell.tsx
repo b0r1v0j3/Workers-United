@@ -262,7 +262,15 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
         ? "Dashboard"
         : isAdminPreview
             ? "Back to Admin"
+            : userType === "agency"
+                ? "Agency Workers"
             : "Overview";
+    const homeIcon = userType === "agency" && !isAdminPreview && variant !== "admin"
+        ? <Users size={20} />
+        : <LayoutDashboard size={20} />;
+    const homeTone: SidebarTone = userType === "agency" && !isAdminPreview && variant !== "admin"
+        ? "emerald"
+        : "blue";
     return (
         <div className="flex h-full min-h-0 w-full flex-col items-center gap-1.5 overflow-y-auto lg:items-stretch">
             {/* Toggle Button Inside Box */}
@@ -282,10 +290,10 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
 
             <SidebarLink
                 href={homeHref}
-                icon={<LayoutDashboard size={20} />}
+                icon={homeIcon}
                 label={homeLabel}
                 isCollapsed={isCollapsed}
-                tone="blue"
+                tone={homeTone}
                 queryTab={variant !== "admin" && !isAdminPreview && userType === "employer" ? "company" : undefined}
             />
 
@@ -314,7 +322,6 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
             {isAgencyWorkspace && (
                 <>
                     <div className={`px-3 pt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Agency Workspace</div>
-                    <SidebarLink href={withInspect("/profile/agency")} icon={<Users size={20} />} label="Agency Workers" isCollapsed={isCollapsed} tone="emerald" />
                     {pathname?.startsWith("/profile/agency/workers/") && (
                         <SidebarLink
                             href={withInspect(pathname)}
