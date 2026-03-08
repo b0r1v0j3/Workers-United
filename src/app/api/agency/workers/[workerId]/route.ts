@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAgencyOwnedWorker, getAgencySchemaState } from "@/lib/agencies";
 import { normalizeAgencyWorkerPayload } from "@/lib/agency-worker-payload";
 import { normalizeUserType } from "@/lib/domain";
+import { deleteUserData } from "@/lib/user-management";
 
 interface RouteContext {
     params: Promise<{ workerId: string }>;
@@ -171,6 +172,61 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("[AgencyWorker PATCH] Error:", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+}
+
+export async function DELETE(_request: NextRequest, context: RouteContext) {
+    try {
+        const { workerId } = await context.params;
+        const supabase = await createClient();
+        const admin = createAdminClient();
+
+        const schemaState = await getAgencySchemaState(admin);
+        if (!schemaState.ready) {
+            return NextResponse.json({ error: "Agency workspace setup is not active yet." }, { status: 503 });
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { data: profile } = await admin
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        const userType = normalizeUserType(profile?.user_type || user.user_metadata?.user_type);
+        if (userType !== "agency") {
+            return NextResponse.json({ error: "Agency access required" }, { status: 403 });
+        }
+
+        const { agency, worker } = await getAgencyOwnedWorker(admin, user.id, workerId);
+        if (!agency || !worker) {
+            return NextResponse.json({ error: "Worker not found" }, { status: 404 });
+        }
+
+        if (worker.profile_id) {
+            await deleteUserData(admin, worker.profile_id);
+            return NextResponse.json({ success: true, deletedClaimedAccount: true });
+        }
+
+        const { error: deleteError } = await admin
+            .from("worker_onboarding")
+            .delete()
+            .eq("id", worker.id)
+            .eq("agency_id", agency.id);
+
+        if (deleteError) {
+            console.error("[AgencyWorker DELETE] Worker delete failed:", deleteError);
+            return NextResponse.json({ error: "Failed to delete worker" }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, deletedClaimedAccount: false });
+    } catch (error) {
+        console.error("[AgencyWorker DELETE] Error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

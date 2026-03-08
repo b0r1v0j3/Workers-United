@@ -26,6 +26,7 @@ interface AgencyWorkerQueryRow {
     current_country: string | null;
     preferred_job: string | null;
     status: string | null;
+    created_at: string | null;
     updated_at: string | null;
     queue_joined_at: string | null;
     entry_fee_paid: boolean | null;
@@ -107,6 +108,7 @@ export default async function AgencyProfilePage({
                 current_country,
                 preferred_job,
                 status,
+                created_at,
                 updated_at,
                 queue_joined_at,
                 entry_fee_paid,
@@ -192,6 +194,13 @@ export default async function AgencyProfilePage({
             isPostEntryFeeWorkerStatus(worker.status) ||
             workerPayments.some((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
         const hasPendingEntryFee = workerPayments.some((payment) => payment.payment_type === "entry_fee" && payment.status === "pending");
+        const paymentState = claimed
+            ? hasPaidEntryFee
+                ? "paid"
+                : hasPendingEntryFee
+                    ? "pending"
+                    : "not_paid"
+            : "awaiting_claim";
 
         return {
             id: worker.id,
@@ -214,7 +223,15 @@ export default async function AgencyProfilePage({
                 : `/signup?type=worker&claim=${worker.id}`,
             verifiedDocuments,
             documentsLabel: claimed ? `${verifiedDocuments}/3 verified` : "Awaiting claim",
-            paymentLabel: claimed ? hasPaidEntryFee ? "Paid" : hasPendingEntryFee ? "Pending" : "Not paid" : "Awaiting claim",
+            paymentLabel: paymentState === "paid"
+                ? "Paid"
+                : paymentState === "pending"
+                    ? "Pending"
+                    : paymentState === "not_paid"
+                        ? "Not paid"
+                        : "Awaiting claim",
+            paymentState,
+            createdAt: worker.created_at || worker.updated_at || null,
             updatedAt: worker.updated_at || null,
         };
     });
