@@ -18,7 +18,6 @@ import {
     FileText,
     Pencil,
     Plus,
-    X,
 } from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
@@ -152,13 +151,6 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                     ${sidebarWidthClass}
                 `}>
                     <div className="flex h-full flex-col items-center overflow-hidden rounded-[14px] border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-[14px] lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
-                        {/* Mobile Header with Close Button (only when open) */}
-                        <div className={`flex justify-end items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
-                            <button onClick={() => setIsOpen(false)} className="rounded-[12px] bg-gray-200 p-2 text-gray-600">
-                                <X size={20} />
-                            </button>
-                        </div>
-
                         <SidebarContent user={user} variant={variant} isCollapsed={!sidebarExpanded} onMenuToggle={handleMenuToggle} />
                     </div>
                 </aside>
