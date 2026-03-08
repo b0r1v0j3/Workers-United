@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 08.03.2026 (Worker `candidate -> worker` cutover je završen end-to-end: live public schema više ne izlaže `candidates` / `candidate_documents`, `contract_data` koristi samo `worker_*` override kolone, jedini preostali storage bucket je `worker-docs`, auth signup trigger sada upisuje direktno u kanonski `workers`, worker workspace shell je vizuelno poravnat, a Brain/ops monitoring sada ispravno parsira dnevni report, šalje exception mail, razlikuje platform-side WhatsApp template kvar od nedostavljivog broja/zemlje i `system-smoke` više ne proglašava opcioni degradirani servis potpuno zdravim.)
+> **Poslednje ažuriranje:** 08.03.2026 (Worker `candidate -> worker` cutover je završen end-to-end: live public schema više ne izlaže `candidates` / `candidate_documents`, `contract_data` koristi samo `worker_*` override kolone, jedini preostali storage bucket je `worker-docs`, auth signup trigger sada upisuje direktno u kanonski `workers`, worker workspace shell je vizuelno poravnat, worker overview kartice sada prate isti blaži radius ritam kao sidebar, a sidebar logout je zakucan za dno bez mrtvog prostora; Brain/ops monitoring takođe ispravno parsira dnevni report, šalje exception mail, razlikuje platform-side WhatsApp template kvar od nedostavljivog broja/zemlje i `system-smoke` više ne proglašava opcioni degradirani servis potpuno zdravim.)
 
 ---
 
@@ -271,6 +271,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Workspace shell polish pass 10: sidebar unutrašnji layout sada koristi punu visinu pa je `Logout` stvarno zalepljen za dno bez praznog repa ispod, a worker overview surface kartice (`hero`, support, info) više ne koriste agresivniji custom radius nego isti blaži `rounded-2xl` ritam kao workspace shell — 08.03.2026
 - [x] Ops monitoring precision pass: `api/health` sada proverava Stripe/SMTP/WhatsApp/n8n paralelno, klasifikuje WhatsApp template failove na platform-side (`template/config/provider`) vs recipient-side (`undeliverable` / country restriction), a `system-smoke` više diže lažno `healthy` stanje kada je opcioni servis stvarno `degraded`; dodati su i test guardovi za smoke evaluator i WhatsApp health klasifikaciju — 08.03.2026
 - [x] Brain + ops monitoring hardening: `brain-monitor` sada robustno parsira OpenAI Responses JSON, upisuje stvarni `structured_report` objekat umesto raw output niza, pravilno obeležava email delivery rezultat i razume `retry_email` akcije koje vraćaju `email_ids`; `api/health` i `system-smoke` više ne kriju recent WhatsApp template failove, pa je današnji Brain exception run ručno ponovo pokrenut i uspešno poslat mailom — 08.03.2026
 - [x] Workspace shell polish pass 9: uklonjen je suvišni `Signed in as` profil blok iz workspace sidebara, pa leva kolona ostaje čista navigacija bez dupliranja identiteta koji već postoji u header-u — 08.03.2026

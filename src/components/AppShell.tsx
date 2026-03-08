@@ -150,7 +150,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                     lg:top-[80px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
                     ${sidebarWidthClass}
                 `}>
-                    <div className="h-full overflow-y-auto p-2 lg:p-4 bg-white lg:bg-white/50 backdrop-blur-sm border border-gray-200 lg:border-white/60 shadow-sm rounded-xl lg:rounded-2xl flex flex-col items-center lg:items-stretch">
+                    <div className="flex h-full flex-col items-center overflow-hidden rounded-xl border border-gray-200 bg-white p-2 shadow-sm backdrop-blur-sm lg:rounded-2xl lg:border-white/60 lg:bg-white/50 lg:p-4 lg:items-stretch">
                         {/* Mobile Header with Close Button (only when open) */}
                         <div className={`flex justify-between items-center mb-6 lg:hidden px-4 w-full ${!isOpen && 'hidden'}`}>
                             <h2 className="font-bold text-lg text-gray-900">Menu</h2>
@@ -263,7 +263,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
             ? "Back to Admin"
             : "Overview";
     return (
-        <div className="space-y-1.5 w-full flex flex-col items-center lg:items-stretch">
+        <div className="flex h-full min-h-0 w-full flex-col items-center gap-1.5 overflow-y-auto lg:items-stretch">
             {/* Toggle Button Inside Box */}
             {onMenuToggle && (
                 <button
