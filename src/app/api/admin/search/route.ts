@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeUserType } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
+import { createTypedAdminClient } from "@/lib/supabase/admin";
+import { pickCanonicalWorkerRecord } from "@/lib/workers";
+
+type WorkerSearchRow = {
+    id: string;
+    profile_id: string | null;
+    status: string | null;
+    passport_number: string | null;
+    preferred_job: string | null;
+    entry_fee_paid: boolean | null;
+    queue_joined_at: string | null;
+    updated_at: string | null;
+};
 
 export async function GET(req: Request) {
     try {
@@ -29,12 +42,12 @@ export async function GET(req: Request) {
             return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
         }
 
-        const adminClient = createAdminClient();
+        const adminClient = createTypedAdminClient();
 
         // Perform parallel searches. We use ilike for case-insensitive partial match
         const [
             { data: profiles },
-            { data: candidates },
+            { data: workerPassportMatches },
             { data: employers }
         ] = await Promise.all([
             adminClient.from("profiles")
@@ -42,7 +55,7 @@ export async function GET(req: Request) {
                 .or(`full_name.ilike.%${q}%,email.ilike.%${q}%`)
                 .limit(10),
             adminClient.from("candidates")
-                .select("id, profile_id, status, passport_number, preferred_job")
+                .select("id, profile_id, status, passport_number, preferred_job, entry_fee_paid, queue_joined_at, updated_at")
                 .ilike("passport_number", `%${q}%`)
                 .limit(10),
             adminClient.from("employers")
@@ -55,59 +68,71 @@ export async function GET(req: Request) {
 
         // Map employers
         if (employers) {
-            employers.forEach((e) => {
+            employers.forEach((employer) => {
                 results.push({
-                    id: e.profile_id,
+                    id: employer.profile_id || employer.id,
                     type: "Employer",
-                    title: e.company_name,
-                    subtitle: e.tax_id || e.status,
+                    title: employer.company_name || "Employer",
+                    subtitle: employer.tax_id || employer.status || "Employer account",
                     link: `/admin/employers` // Basic link, no specific employer param yet
                 });
             });
         }
 
-        // Map candidates found via passport_number
-        const candidateProfileIds = new Set(candidates?.map((c) => c.profile_id) || []);
+        // Map worker rows found via passport_number
+        const workerProfileIds = new Set(
+            (workerPassportMatches || [])
+                .map((worker) => worker.profile_id)
+                .filter((profileId): profileId is string => Boolean(profileId))
+        );
 
-        // Add candidates found via name/email
-        const allCandidateIds = new Set([...candidateProfileIds]);
+        // Add worker profiles found via name/email
+        const allWorkerProfileIds = new Set([...workerProfileIds]);
         profiles?.forEach((p) => {
-            if (p.user_type !== "admin" && p.user_type !== "employer") {
-                allCandidateIds.add(p.id);
+            if (normalizeUserType(p.user_type) === "worker") {
+                allWorkerProfileIds.add(p.id);
             }
         });
 
-        if (allCandidateIds.size > 0) {
-            // Get candidate data for these profiles
-            const idsList = Array.from(allCandidateIds);
-            const { data: matchedCandidates } = await adminClient
+        if (allWorkerProfileIds.size > 0) {
+            const idsList = Array.from(allWorkerProfileIds);
+            const { data: matchedWorkerRows } = await adminClient
                 .from("candidates")
-                .select("id, profile_id, status, preferred_job")
+                .select("id, profile_id, status, preferred_job, entry_fee_paid, queue_joined_at, updated_at")
                 .in("profile_id", idsList.length > 0 ? idsList : ["__none__"])
                 .limit(20);
 
-            // Get profile data for these candidates if not already fetched
-            // To simplify, we'll refetch profiles for the specific candidate IDs
             const { data: matchedProfiles } = await adminClient
                 .from("profiles")
                 .select("id, full_name, email")
                 .in("id", idsList.length > 0 ? idsList : ["__none__"]);
 
-            matchedCandidates?.forEach((c) => {
-                const p = matchedProfiles?.find((prof) => prof.id === c.profile_id);
+            const workerRowsByProfileId = new Map<string, WorkerSearchRow[]>();
+            for (const workerRow of (matchedWorkerRows || []) as WorkerSearchRow[]) {
+                if (!workerRow.profile_id) continue;
+                const current = workerRowsByProfileId.get(workerRow.profile_id) || [];
+                current.push(workerRow);
+                workerRowsByProfileId.set(workerRow.profile_id, current);
+            }
+
+            Array.from(workerRowsByProfileId.values())
+                .map((rows) => pickCanonicalWorkerRecord(rows))
+                .filter((worker): worker is WorkerSearchRow => Boolean(worker))
+                .forEach((worker) => {
+                const profileEntry = matchedProfiles?.find((profile) => profile.id === worker?.profile_id);
                 results.push({
-                    id: c.profile_id,
+                    id: worker.profile_id || worker.id,
                     type: "Worker",
-                    title: p?.full_name || p?.email || "Unknown",
-                    subtitle: `${c.preferred_job || "No job"} • ${c.status}`,
-                    link: `/admin/workers/${c.profile_id}`
+                    title: profileEntry?.full_name || profileEntry?.email || "Unknown",
+                    subtitle: `${worker.preferred_job || "No job"} • ${worker.status || "NEW"}`,
+                    link: `/admin/workers/${worker.profile_id || worker.id}`
                 });
             });
         }
 
         // Add matching employers from profiles search if company name didn't match
         profiles?.forEach((p) => {
-            if (p.user_type === "employer") {
+            if (normalizeUserType(p.user_type) === "employer") {
                 // Ignore if we already added it via employers search
                 if (!employers?.find(e => e.profile_id === p.id)) {
                     results.push({
@@ -122,7 +147,9 @@ export async function GET(req: Request) {
         });
 
         // Remove duplicates and limit
-        const uniqueResults = Array.from(new Map(results.map(item => [item.id, item])).values()).slice(0, 10);
+        const uniqueResults = Array.from(
+            new Map(results.map((item) => [`${item.type}:${item.id}`, item])).values()
+        ).slice(0, 10);
 
         return NextResponse.json({ success: true, results: uniqueResults });
     } catch (e: any) {

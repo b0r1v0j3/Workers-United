@@ -5,6 +5,19 @@ import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import JobsMatchClient from "./JobsMatchClient";
+import { pickCanonicalWorkerRecord } from "@/lib/workers";
+
+type QueueWorkerRow = {
+    id: string;
+    profile_id: string | null;
+    status: string | null;
+    preferred_job: string | null;
+    nationality: string | null;
+    phone: string | null;
+    queue_joined_at: string | null;
+    updated_at: string | null;
+    entry_fee_paid: boolean | null;
+};
 
 export default async function AdminJobsPage() {
     const supabase = await createClient();
@@ -66,14 +79,26 @@ export default async function AdminJobsPage() {
         employer: job.employer_id ? employerMap.get(job.employer_id) || null : null,
     }));
 
-    // Get all IN_QUEUE candidates for matching
-    const { data: queueCandidatesRaw } = await adminClient
+    // Get all IN_QUEUE worker rows for matching
+    const { data: queueWorkerRowsRaw } = await adminClient
         .from("candidates")
-        .select("id, profile_id, status, preferred_job, nationality, phone, queue_joined_at")
+        .select("id, profile_id, status, preferred_job, nationality, phone, queue_joined_at, updated_at, entry_fee_paid")
         .eq("status", "IN_QUEUE");
 
-    const profileIds = (queueCandidatesRaw || [])
-        .map((candidate) => candidate.profile_id)
+    const workerRowsByProfileId = new Map<string, QueueWorkerRow[]>();
+    for (const workerRow of (queueWorkerRowsRaw || []) as QueueWorkerRow[]) {
+        if (!workerRow.profile_id) continue;
+        const current = workerRowsByProfileId.get(workerRow.profile_id) || [];
+        current.push(workerRow);
+        workerRowsByProfileId.set(workerRow.profile_id, current);
+    }
+
+    const queuedWorkers = Array.from(workerRowsByProfileId.values())
+        .map((rows) => pickCanonicalWorkerRecord(rows))
+        .filter((worker): worker is QueueWorkerRow => Boolean(worker));
+
+    const profileIds = queuedWorkers
+        .map((worker) => worker.profile_id)
         .filter((profileId): profileId is string => Boolean(profileId));
 
     const { data: queueProfiles } = profileIds.length > 0
@@ -85,9 +110,9 @@ export default async function AdminJobsPage() {
 
     const profileMap = new Map((queueProfiles || []).map((profile) => [profile.id, profile]));
 
-    const queueCandidates = (queueCandidatesRaw || []).map((candidate) => ({
-        ...candidate,
-        profiles: candidate.profile_id ? profileMap.get(candidate.profile_id) || null : null,
+    const queueWorkers = queuedWorkers.map((worker) => ({
+        ...worker,
+        profiles: worker.profile_id ? profileMap.get(worker.profile_id) || null : null,
     }));
     const openJobsCount = jobRequests.filter((job) => (job.status || "").toLowerCase() === "open").length;
     const openEmployerCount = new Set(jobRequests.map((job) => job.employer_id).filter(Boolean)).size;
@@ -102,7 +127,7 @@ export default async function AdminJobsPage() {
                     description="Select an open job request, compare it against the live worker queue, and move only through employer-job pairs that already exist inside Workers United."
                     metrics={[
                         { label: "Open Jobs", value: openJobsCount, meta: `${jobRequests.length} total loaded` },
-                        { label: "Queue", value: queueCandidates.length, meta: "Workers available for matching" },
+                        { label: "Queue", value: queueWorkers.length, meta: "Workers available for matching" },
                         { label: "Employers", value: openEmployerCount, meta: "Employers with loaded jobs" },
                         { label: "Markets", value: destinationCount, meta: "Destination countries in current jobs" },
                     ]}
@@ -126,7 +151,7 @@ export default async function AdminJobsPage() {
                     />
                 </section>
 
-                <JobsMatchClient jobs={jobRequests} queue={queueCandidates} />
+                <JobsMatchClient jobs={jobRequests} queue={queueWorkers} />
             </div>
         </AppShell>
     );
