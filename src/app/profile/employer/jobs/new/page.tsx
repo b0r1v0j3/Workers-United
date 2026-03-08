@@ -1,7 +1,7 @@
-import CreateJobClient from "./CreateJobClient";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default function CreateJobPage() {
-    return <CreateJobClient />;
+    redirect("/profile/employer?tab=post-job");
 }

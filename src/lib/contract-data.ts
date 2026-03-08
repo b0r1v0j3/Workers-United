@@ -3,13 +3,13 @@ import type { Database, Json, Tables, TablesInsert } from "@/lib/database.types"
 import type { ContractDataForDocs } from "@/lib/pdf-generator";
 
 type DBClient = SupabaseClient<Database>;
-type WorkerRecord = Tables<"candidates">;
-type WorkerDocument = Tables<"candidate_documents">;
+type WorkerRecord = Tables<"worker_onboarding">;
+type WorkerDocument = Tables<"worker_documents">;
 type ContractDataRow = Tables<"contract_data">;
 type Employer = Tables<"employers">;
 type JobRequest = Tables<"job_requests">;
-type Match = Tables<"matches">;
 type Profile = Tables<"profiles">;
+type MatchSummary = Pick<Tables<"matches">, "id" | "worker_id" | "employer_id" | "status">;
 
 type OfferWithJobRequest = {
     id: string;
@@ -19,11 +19,9 @@ type OfferWithJobRequest = {
 };
 
 export interface ContractBuildResult {
-    match: Match;
+    match: MatchSummary;
     worker: WorkerRecord;
     workerProfile: Profile | null;
-    candidate: WorkerRecord;
-    candidateProfile: Profile | null;
     employer: Employer;
     employerProfile: Profile | null;
     jobRequest: JobRequest;
@@ -154,23 +152,23 @@ function buildPersistedContractDataPayload(
 
     return {
         match_id: build.match.id,
-        candidate_passport_issue_date: toIsoDate(
-            build.storedContractData?.candidate_passport_issue_date ||
+        worker_passport_issue_date: toIsoDate(
+            build.storedContractData?.worker_passport_issue_date ||
             passportOcr.date_of_issue ||
             build.worker.passport_issue_date
         ),
-        candidate_passport_issuer: asText(
-            build.storedContractData?.candidate_passport_issuer ||
+        worker_passport_issuer: asText(
+            build.storedContractData?.worker_passport_issuer ||
             passportOcr.issuing_authority ||
             build.worker.passport_issued_by
         ),
-        candidate_place_of_birth: asText(
-            build.storedContractData?.candidate_place_of_birth ||
+        worker_place_of_birth: asText(
+            build.storedContractData?.worker_place_of_birth ||
             passportOcr.place_of_birth ||
             build.worker.birth_city
         ),
-        candidate_gender: asText(
-            build.storedContractData?.candidate_gender ||
+        worker_gender: asText(
+            build.storedContractData?.worker_gender ||
             passportExtracted.gender ||
             passportOcr.gender ||
             build.worker.gender
@@ -219,29 +217,29 @@ function buildContractDocumentPayload(build: Omit<ContractBuildResult, "contract
     const signingDate = toIsoDate(build.storedContractData?.signing_date) || toIsoDate(new Date()) || startDate;
 
     return {
-        candidate_full_name: asText(passportExtracted.full_name) || build.workerProfile?.full_name || "",
-        candidate_passport_number: asText(passportExtracted.passport_number) || build.worker.passport_number || "",
-        candidate_nationality: asText(passportExtracted.nationality) || build.worker.nationality || build.worker.citizenship || "",
-        candidate_date_of_birth: toIsoDate(passportExtracted.date_of_birth) || build.worker.date_of_birth || "",
-        candidate_passport_expiry: toIsoDate(passportExtracted.expiry_date) || build.worker.passport_expiry_date || "",
-        candidate_address: getWorkerAddress(build.worker),
-        candidate_passport_issue_date: toIsoDate(
-            build.storedContractData?.candidate_passport_issue_date ||
+        worker_full_name: asText(passportExtracted.full_name) || build.workerProfile?.full_name || "",
+        worker_passport_number: asText(passportExtracted.passport_number) || build.worker.passport_number || "",
+        worker_nationality: asText(passportExtracted.nationality) || build.worker.nationality || build.worker.citizenship || "",
+        worker_date_of_birth: toIsoDate(passportExtracted.date_of_birth) || build.worker.date_of_birth || "",
+        worker_passport_expiry: toIsoDate(passportExtracted.expiry_date) || build.worker.passport_expiry_date || "",
+        worker_address: getWorkerAddress(build.worker),
+        worker_passport_issue_date: toIsoDate(
+            build.storedContractData?.worker_passport_issue_date ||
             passportOcr.date_of_issue ||
             build.worker.passport_issue_date
         ),
-        candidate_passport_issuer: asText(
-            build.storedContractData?.candidate_passport_issuer ||
+        worker_passport_issuer: asText(
+            build.storedContractData?.worker_passport_issuer ||
             passportOcr.issuing_authority ||
             build.worker.passport_issued_by
         ),
-        candidate_place_of_birth: asText(
-            build.storedContractData?.candidate_place_of_birth ||
+        worker_place_of_birth: asText(
+            build.storedContractData?.worker_place_of_birth ||
             passportOcr.place_of_birth ||
             build.worker.birth_city
         ),
-        candidate_gender: asText(
-            build.storedContractData?.candidate_gender ||
+        worker_gender: asText(
+            build.storedContractData?.worker_gender ||
             passportExtracted.gender ||
             passportOcr.gender ||
             build.worker.gender
@@ -293,7 +291,7 @@ export async function buildContractDataForMatch(
 ): Promise<ContractBuildResult> {
     const { data: match, error: matchError } = await supabase
         .from("matches")
-        .select("id, candidate_id, employer_id, status")
+        .select("id, worker_id, employer_id, status")
         .eq("id", matchId)
         .maybeSingle();
 
@@ -302,7 +300,7 @@ export async function buildContractDataForMatch(
     }
 
     const currentMatch = requireValue(match, "Match not found");
-    const workerId = requireValue(currentMatch.candidate_id, "Match is missing worker reference");
+    const workerId = requireValue(currentMatch.worker_id, "Match is missing worker reference");
     const employerId = requireValue(currentMatch.employer_id, "Match is missing employer reference");
 
     const [
@@ -312,7 +310,7 @@ export async function buildContractDataForMatch(
         offerResult,
     ] = await Promise.all([
         supabase
-            .from("candidates")
+            .from("worker_onboarding")
             .select("*")
             .eq("id", workerId)
             .maybeSingle(),
@@ -350,7 +348,7 @@ export async function buildContractDataForMatch(
                     updated_at
                 )
             `)
-            .eq("candidate_id", workerId)
+            .eq("worker_id", workerId)
             .in("status", ["accepted", "pending"])
             .limit(10),
     ]);
@@ -395,7 +393,7 @@ export async function buildContractDataForMatch(
             ? supabase.from("profiles").select("id, full_name, email, first_name, last_name, user_type, created_at").eq("id", employer.profile_id).maybeSingle()
             : Promise.resolve({ data: null, error: null }),
         worker.profile_id
-            ? supabase.from("candidate_documents").select("*").eq("user_id", worker.profile_id)
+            ? supabase.from("worker_documents").select("*").eq("user_id", worker.profile_id)
             : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -424,8 +422,6 @@ export async function buildContractDataForMatch(
         match: currentMatch,
         worker,
         workerProfile: workerProfileResult.data || null,
-        candidate: worker,
-        candidateProfile: workerProfileResult.data || null,
         employer,
         employerProfile: employerProfileResult.data || null,
         jobRequest,

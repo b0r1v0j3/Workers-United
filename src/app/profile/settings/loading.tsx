@@ -2,35 +2,32 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
     return (
-        <div className="min-h-screen bg-[#f0f2f5]">
-            <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#dddfe2] h-[62px]">
-                <div className="max-w-[1100px] mx-auto px-4 h-full flex items-center justify-between">
-                    <Skeleton className="h-8 w-32" />
-                    <div className="flex items-center gap-3">
-                        <Skeleton className="h-4 w-24 hidden sm:block" />
-                        <Skeleton className="h-9 w-9 rounded-full" />
-                    </div>
-                </div>
-            </nav>
+        <div className="min-h-screen bg-[#f5f5f4] font-montserrat">
+            <div className="sticky top-0 z-40 h-[68px] border-b border-[#dddfe2]/50 bg-white/90 shadow-sm" />
 
-            <div className="max-w-[900px] mx-auto px-4 py-6">
-                <Skeleton className="h-8 w-48 mb-4" />
-                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-5">
-                    <div className="space-y-4">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 rounded-lg border border-gray-100">
-                                <div className="flex items-center gap-3">
-                                    <Skeleton className="h-5 w-5 rounded" />
-                                    <div className="space-y-1">
-                                        <Skeleton className="h-4 w-36" />
-                                        <Skeleton className="h-3 w-24" />
-                                    </div>
-                                </div>
-                                <Skeleton className="h-8 w-20 rounded-lg" />
-                            </div>
-                        ))}
+            <div className="mx-auto flex w-full max-w-[1920px]">
+                <aside className="hidden w-[280px] px-2 py-3 lg:block">
+                    <div className="h-[calc(100vh-100px)] rounded-2xl border border-white/60 bg-white/50 p-4 shadow-sm backdrop-blur-sm">
+                        <Skeleton className="mb-4 h-10 w-full rounded-xl" />
+                        <Skeleton className="mb-3 h-12 w-full rounded-xl" />
+                        <Skeleton className="mb-8 h-16 w-full rounded-2xl" />
+                        <div className="space-y-3">
+                            <Skeleton className="h-10 w-full rounded-xl" />
+                            <Skeleton className="h-10 w-full rounded-xl" />
+                            <Skeleton className="h-10 w-full rounded-xl" />
+                            <Skeleton className="h-10 w-full rounded-xl" />
+                        </div>
                     </div>
-                </div>
+                </aside>
+
+                <main className="flex-1 px-3 pb-10 pt-6 sm:px-6 lg:ml-[280px] lg:pl-6 lg:pr-8">
+                    <div className="mx-auto w-full max-w-[900px] space-y-6">
+                        <Skeleton className="h-40 w-full rounded-[28px]" />
+                        <Skeleton className="h-48 w-full rounded-[26px]" />
+                        <Skeleton className="h-44 w-full rounded-[26px]" />
+                        <Skeleton className="h-60 w-full rounded-[26px]" />
+                    </div>
+                </main>
             </div>
         </div>
     );

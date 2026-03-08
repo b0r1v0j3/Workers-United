@@ -3,23 +3,65 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { saveBrainFactsDedup } from "@/lib/brain-memory";
+import { loadCanonicalWorkerRecord, pickCanonicalWorkerRecord } from "@/lib/workers";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
 // Handles:
 // 1. GET  — Webhook verification (hub.challenge)
-// 2. POST — Inbound messages + delivery status updates → GPT-4o-mini AI
+// 2. POST — Inbound messages + delivery status updates → intent router + GPT-5 mini AI
 //
-// Architecture: User → WhatsApp → Meta → Vercel → GPT-4o-mini → Vercel → WhatsApp
+// Architecture: User → WhatsApp → Meta → Vercel → intent router → GPT-5 mini → Vercel → WhatsApp
 // All AI processing happens directly via OpenAI API (no middleware).
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "";
 const APP_SECRET = process.env.META_APP_SECRET || "";
-const CONVERSATION_HISTORY_LIMIT = 100; // Number of past messages to send for context
+const ROUTER_HISTORY_LIMIT = 8;
+const RESPONSE_HISTORY_LIMIT = 12;
+const BRAIN_MEMORY_LIMIT = 8;
+const WHATSAPP_ROUTER_MODEL = process.env.WHATSAPP_ROUTER_MODEL || "gpt-5-mini";
+const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "gpt-5-mini";
 const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+38166299444")
     .split(",")
     .map((phone) => normalizePhone(phone))
     .filter(Boolean);
+
+type WhatsAppIntent =
+    | "job_intent"
+    | "price"
+    | "documents"
+    | "support"
+    | "status"
+    | "general"
+    | "off_topic";
+
+interface WhatsAppRouterDecision {
+    intent: WhatsAppIntent;
+    language: string;
+    confidence: "high" | "medium" | "low";
+    reason: string;
+}
+
+interface WhatsAppWorkerRecord {
+    id: string;
+    profile_id: string | null;
+    status: string | null;
+    queue_position: number | null;
+    preferred_job: string | null;
+    desired_countries: string[] | null;
+    refund_deadline: string | null;
+    refund_eligible: boolean | null;
+    entry_fee_paid: boolean | null;
+    admin_approved: boolean | null;
+    queue_joined_at: string | null;
+    nationality: string | null;
+    current_country: string | null;
+    gender: string | null;
+    experience_years: number | null;
+    updated_at: string | null;
+    phone: string | null;
+    marital_status: string | null;
+}
 
 function normalizePhone(rawPhone: string): string {
     const digits = rawPhone.replace(/\D/g, "");
@@ -133,24 +175,29 @@ export async function POST(request: NextRequest) {
                 const normalizedPhone = normalizePhone(phoneNumber);
 
                 // ─── Fetch user profile (multi-layer phone lookup) ────────
-                const candidateSelect = `
+                const workerRecordSelect = `
                     id, profile_id, status, queue_position, preferred_job, 
                     desired_countries, refund_deadline, refund_eligible,
                     entry_fee_paid, admin_approved, queue_joined_at,
                     nationality, current_country, gender, experience_years,
+                    updated_at,
                     phone, marital_status
                 `;
 
-                // Layer 1: Direct phone match in candidates table
-                let { data: candidate } = await supabase
-                    .from("candidates")
-                    .select(candidateSelect)
+                // Layer 1: Direct phone match in worker onboarding
+                const { data: matchedWorkers } = await supabase
+                    .from("worker_onboarding")
+                    .select(workerRecordSelect)
                     .or(`phone.eq.${normalizedPhone},phone.eq.${phoneNumber}`)
-                    .maybeSingle();
+                    .order("updated_at", { ascending: false })
+                    .limit(25);
+                let workerRecord = pickCanonicalWorkerRecord<WhatsAppWorkerRecord>(
+                    (matchedWorkers || []) as WhatsAppWorkerRecord[]
+                );
 
                 // Layer 2: If not found, search auth users by phone in metadata
-                // (covers Google OAuth users who have phone in user_metadata but not in candidates)
-                if (!candidate) {
+                // (covers Google OAuth users who have phone in user_metadata but not in worker_onboarding yet)
+                if (!workerRecord) {
                     const phoneDigits = phoneNumber.replace(/\D/g, "");
                     const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
                     const matchedUser = authData?.users?.find(u => {
@@ -161,35 +208,35 @@ export async function POST(request: NextRequest) {
                     });
 
                     if (matchedUser) {
-                        // Found auth user — look up their candidate record by profile_id
-                        const { data: linkedCandidate } = await supabase
-                            .from("candidates")
-                            .select(candidateSelect)
-                            .eq("profile_id", matchedUser.id)
-                            .maybeSingle();
+                        // Found auth user — look up their worker record by profile_id
+                        const { data: linkedWorkerRecord } = await loadCanonicalWorkerRecord<WhatsAppWorkerRecord>(
+                            supabase,
+                            matchedUser.id,
+                            workerRecordSelect
+                        );
 
-                        if (linkedCandidate) {
-                            candidate = linkedCandidate;
-                            // Backfill phone in candidates table so future lookups are instant
+                        if (linkedWorkerRecord) {
+                            workerRecord = linkedWorkerRecord;
+                            // Backfill phone in the worker onboarding table so future lookups are instant
                             await supabase
-                                .from("candidates")
+                                .from("worker_onboarding")
                                 .update({ phone: normalizedPhone })
-                                .eq("id", linkedCandidate.id);
+                                .eq("id", linkedWorkerRecord.id);
                         }
                     }
                 }
 
-                const { data: profile } = candidate?.profile_id
+                const { data: profile } = workerRecord?.profile_id
                     ? await supabase
                         .from("profiles")
                         .select("full_name, email, user_type, created_at")
-                        .eq("id", candidate.profile_id)
+                        .eq("id", workerRecord.profile_id)
                         .single()
                     : { data: null };
 
                 // ─── Log inbound message ────────────────────────────────
                 await supabase.from("whatsapp_messages").insert({
-                    user_id: candidate?.profile_id || null,
+                    user_id: workerRecord?.profile_id || null,
                     phone_number: normalizedPhone,
                     direction: "inbound",
                     message_type: messageType,
@@ -200,10 +247,10 @@ export async function POST(request: NextRequest) {
 
                 // Log to activity tracking
                 await logServerActivity(
-                    candidate?.profile_id || "anonymous",
+                    workerRecord?.profile_id || "anonymous",
                     "whatsapp_message_received",
                     "documents",
-                    { phone: normalizedPhone, message_type: messageType, content_preview: content.substring(0, 100), is_registered: !!candidate }
+                    { phone: normalizedPhone, message_type: messageType, content_preview: content.substring(0, 100), is_registered: !!workerRecord }
                 );
                 // ─── Admin Phone Detection ────────────────────────────────
                 const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
@@ -230,13 +277,13 @@ export async function POST(request: NextRequest) {
                                 await adminClient.from("brain_memory")
                                     .update({ content: newFact, confidence: 1.0 })
                                     .eq("id", matches[0].id);
-                                await sendWhatsAppText(normalizedPhone, `✅ Ispravljeno!\n\nStaro: ${matches[0].content}\nNovo: ${newFact}\n\nConfidence: 1.0 (admin verified)`, candidate?.profile_id);
+                                await sendWhatsAppText(normalizedPhone, `✅ Ispravljeno!\n\nStaro: ${matches[0].content}\nNovo: ${newFact}\n\nConfidence: 1.0 (admin verified)`, workerRecord?.profile_id || undefined);
                             } else {
                                 // No match found, add as new fact
                                 await saveBrainFactsDedup(adminClient, [
                                     { category: "faq", content: newFact, confidence: 1.0 },
                                 ]);
-                                await sendWhatsAppText(normalizedPhone, `✅ Nisam našao staru činjenicu, dodao novu:\n${newFact}`, candidate?.profile_id);
+                                await sendWhatsAppText(normalizedPhone, `✅ Nisam našao staru činjenicu, dodao novu:\n${newFact}`, workerRecord?.profile_id || undefined);
                             }
                             return NextResponse.json({ status: "ok" });
                         }
@@ -251,7 +298,7 @@ export async function POST(request: NextRequest) {
                         await saveBrainFactsDedup(adminClient, [
                             { category, content: fact, confidence: 1.0 },
                         ]);
-                        await sendWhatsAppText(normalizedPhone, `🧠 Zapamćeno!\n[${category}] ${fact}\nConfidence: 1.0`, candidate?.profile_id);
+                        await sendWhatsAppText(normalizedPhone, `🧠 Zapamćeno!\n[${category}] ${fact}\nConfidence: 1.0`, workerRecord?.profile_id || undefined);
                         return NextResponse.json({ status: "ok" });
                     }
 
@@ -265,9 +312,9 @@ export async function POST(request: NextRequest) {
 
                         if (matches && matches.length > 0) {
                             await adminClient.from("brain_memory").delete().eq("id", matches[0].id);
-                            await sendWhatsAppText(normalizedPhone, `🗑️ Obrisano:\n[${matches[0].category}] ${matches[0].content}`, candidate?.profile_id);
+                            await sendWhatsAppText(normalizedPhone, `🗑️ Obrisano:\n[${matches[0].category}] ${matches[0].content}`, workerRecord?.profile_id || undefined);
                         } else {
-                            await sendWhatsAppText(normalizedPhone, `❌ Nisam našao činjenicu sa: "${search}"`, candidate?.profile_id);
+                            await sendWhatsAppText(normalizedPhone, `❌ Nisam našao činjenicu sa: "${search}"`, workerRecord?.profile_id || undefined);
                         }
                         return NextResponse.json({ status: "ok" });
                     }
@@ -282,141 +329,75 @@ export async function POST(request: NextRequest) {
                         ).join("\n");
                         await sendWhatsAppText(normalizedPhone,
                             `🧠 Brain Memory (${(allMemory || []).length} facts):\n\n${list || "(prazno)"}`,
-                            candidate?.profile_id
+                            workerRecord?.profile_id || undefined
                         );
                         return NextResponse.json({ status: "ok" });
                     }
                 }
 
-                // ─── Direct OpenAI AI Brain ──────────────────────────────
+                // ─── Intent-routed OpenAI AI Brain ───────────────────────
                 let aiResponse: string | null = null;
                 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
                 if (OPENAI_API_KEY) {
                     try {
-                        // 1. Fetch conversation history (last 10 messages)
-                        const historyMessages = await (async () => {
-                            try {
-                                const { data } = await supabase
-                                    .from("whatsapp_messages")
-                                    .select("direction, content, created_at")
-                                    .eq("phone_number", normalizedPhone)
-                                    .order("created_at", { ascending: false })
-                                    .limit(CONVERSATION_HISTORY_LIMIT);
-                                return (data || []).reverse();
-                            } catch { return []; }
-                        })();
+                        const [historyMessages, brainMemory, businessFacts] = await Promise.all([
+                            loadConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
+                            loadBrainMemory(supabase),
+                            (async () => {
+                                try {
+                                    const { getBusinessFactsForAI } = await import("@/lib/platform-config");
+                                    return await getBusinessFactsForAI();
+                                } catch {
+                                    return "";
+                                }
+                            })(),
+                        ]);
 
-                        const conversationHistoryText = historyMessages.length > 0
-                            ? historyMessages.map(m => `${m.direction === "inbound" ? "User" : "You"}: ${m.content}`).join("\n")
-                            : "(No previous messages — this is a new conversation)";
-
-                        // 2. Fetch brain memory (learned facts)
-                        const brainMemory = await (async () => {
-                            try {
-                                const { data } = await supabase
-                                    .from("brain_memory")
-                                    .select("category, content, confidence")
-                                    .order("confidence", { ascending: false })
-                                    .limit(20);
-                                return data || [];
-                            } catch { return []; }
-                        })();
-
-                        const brainMemoryText = brainMemory.length > 0
-                            ? brainMemory.map(m => `- [${m.category}] ${m.content} (confidence: ${m.confidence})`).join("\n")
-                            : "(No learned facts yet)";
-
-                        // 3. Fetch business facts (formatted for AI)
-                        const businessFacts = await (async () => {
-                            try {
-                                const { getBusinessFactsForAI } = await import("@/lib/platform-config");
-                                return await getBusinessFactsForAI();
-                            } catch { return ""; }
-                        })();
-
-                        const userName = profile?.full_name?.split(" ")[0] || "there";
-
-                        // 4. Build system prompt with ALL context
-                        const systemPrompt = `You are the official WhatsApp AI assistant for Workers United — a legal international hiring and visa support company that helps workers find jobs across Europe.
-
-BUSINESS FACTS (verified, use these for accurate answers):
-${businessFacts || "No config available"}
-- Industries we cover: Construction, Manufacturing, Agriculture, Hospitality, Transportation, Retail, Food Processing, Warehousing & Logistics, Cleaning Services, Driving
-- We offer jobs across Europe — we do NOT specify individual countries. When a worker pays and joins, we find them the best available position wherever it may be.
-- Support email: contact@workersunited.eu (ALWAYS mention this when asked about support/contact)
-
-YOUR PERSONALITY:
-- Professional but warm and friendly
-- Always helpful and encouraging  
-- Keep responses concise (max 2-3 short paragraphs)
-- Use emojis occasionally to be friendly
-
-CRITICAL LANGUAGE RULES (NEVER violate):
-- You MUST be able to communicate fluently in ANY language.
-- Initially, you can assume the language based on the user's country code (e.g., +381 is Serbian, +49 is German, +91 is English/Hindi, etc.).
-- HOWEVER, you MUST ALWAYS detect the language the user is ACTUALLY writing in.
-- If the user writes to you in a specific language, you MUST immediately switch to and reply in that EXACT same language, regardless of their country code.
-- NEVER force a language on the user that they are not using. Reply in the language they initiate or switch to.
-
-DETERMINISTIC FAQ (for these questions, use EXACT answers — do NOT generate):
-- Price/cost/fee/cena/cijena → "Entry fee is $9. If we don't find you a job within 90 days, you get a full refund."
-- Documents/dokumenti/pasoš → "You need: passport, diploma or work certificate, and a biometric photo. Upload them at workersunited.eu/profile/worker"
-- Contact/support/kontakt/podrška → "Email us at contact@workersunited.eu or message us here on WhatsApp anytime."
-- Time/processing/koliko traje → "Typical processing time is 2-8 weeks depending on the country and visa requirements."
-- Refund/povrat/garancija → "Full refund within 90 days if we don't find you a suitable position."
-- Country/countries/država/zemlje/koja zemlja/which country → "We offer jobs across Europe! Sign up at workersunited.eu/signup and pay the $9 entry fee to start your job search. Once you're in our system, we match you with the best available positions. Full refund if we don't find you a job within 90 days."
-
-USER INFO:
-- Phone: ${normalizedPhone}
-- Name: ${userName}
-- Registered: ${candidate ? "Yes" : "No"}
-- IS ADMIN: ${isAdmin ? "YES — this is the platform owner/boss. If he corrects you or says something is wrong, ALWAYS accept it. Generate a [LEARN: ...] tag with the corrected info. Treat everything he says as authoritative truth. Talk to him casually and in Serbian." : "No"}
-${candidate ? `- Status: ${candidate.status}\n- Email: ${profile?.email || "N/A"}\n- Registered at: ${profile?.created_at || "N/A"}` : "- Not yet registered on the platform"}
-
-CONVERSATION HISTORY (previous messages):
-${conversationHistoryText}
-
-BRAIN MEMORY (facts learned from past conversations):
-${brainMemoryText}
-
-RULES:
-1. Use conversation history — do NOT repeat yourself or ask questions already answered
-2. If you don't know something, say so honestly and suggest contacting support at contact@workersunited.eu
-3. Never make up prices, timelines, or legal info
-4. If user is not registered, gently encourage them to visit workersunited.eu/signup
-5. NEVER say "we don't have email support" — we DO have email at contact@workersunited.eu
-6. NEVER start your response with "=" or any non-letter character
-7. NEVER list specific European countries (like Germany, Austria, Czech Republic). Always say "jobs across Europe" and redirect to signup/payment. We find them a job wherever the best match is.
-8. When users ask about countries or specific jobs, ALWAYS guide them to sign up and pay $9 — that's how they get started. Don't get into country-by-country details.
-
-LEARNING RULES:
-When you discover a genuinely new and useful fact, add at the END of your response:
-[LEARN: category | fact]
-Categories: pricing, process, documents, eligibility, faq, company_info, legal
-Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-removed before the user sees your message.`;
-
-                        // 5. Call OpenAI directly
-                        const { default: OpenAI } = await import("openai");
-                        const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-
-                        const completion = await openai.chat.completions.create({
-                            model: "gpt-4o-mini",
-                            messages: [
-                                { role: "system", content: systemPrompt },
-                                { role: "user", content: content },
-                            ],
-                            max_tokens: 500,
-                            temperature: 0.7,
+                        const routerDecision = await classifyWhatsAppIntent({
+                            apiKey: OPENAI_API_KEY,
+                            message: content,
+                            normalizedPhone,
+                            workerRecord,
+                            profile,
+                            historyMessages,
                         });
 
-                        aiResponse = completion.choices[0]?.message?.content || null;
-                        console.log("[WhatsApp] 🧠 GPT-4o-mini response:", aiResponse?.substring(0, 200));
+                        await logServerActivity(
+                            workerRecord?.profile_id || "anonymous",
+                            "whatsapp_router_decision",
+                            "documents",
+                            {
+                                phone: normalizedPhone,
+                                intent: routerDecision.intent,
+                                language: routerDecision.language,
+                                confidence: routerDecision.confidence,
+                                reason: routerDecision.reason,
+                                model: WHATSAPP_ROUTER_MODEL,
+                            }
+                        );
 
+                        aiResponse = await generateWhatsAppReply({
+                            apiKey: OPENAI_API_KEY,
+                            message: content,
+                            normalizedPhone,
+                            workerRecord,
+                            profile,
+                            isAdmin,
+                            businessFacts,
+                            brainMemory,
+                            historyMessages,
+                            routerDecision,
+                        });
+
+                        console.log(
+                            `[WhatsApp] 🧠 ${WHATSAPP_RESPONSE_MODEL} (${routerDecision.intent}) response:`,
+                            aiResponse?.substring(0, 200)
+                        );
                     } catch (aiError) {
                         console.error("[WhatsApp] OpenAI error:", aiError);
                         await logServerActivity(
-                            candidate?.profile_id || "anonymous",
+                            workerRecord?.profile_id || "anonymous",
                             "whatsapp_openai_failed",
                             "error",
                             { phone: normalizedPhone, error: aiError instanceof Error ? aiError.message : "unknown" },
@@ -440,7 +421,7 @@ Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-
                     cleanResponse = aiResponse.replace(learnRegex, "").replace(/\n{3,}/g, "\n\n").trim();
 
                     // Save learnings to brain_memory in Supabase
-                    if (learnings.length > 0) {
+                    if (learnings.length > 0 && isAdmin) {
                         try {
                             const admin = createAdminClient();
                             const learningSaveStats = await saveBrainFactsDedup(
@@ -461,12 +442,12 @@ Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-
                 }
 
                 // Send reply via Vercel (using our existing WhatsApp token)
-                const replyText = cleanResponse || await getFallbackResponse(content, candidate, profile);
+                const replyText = cleanResponse || await getFallbackResponse(content, workerRecord, profile);
                 if (replyText) {
-                    await sendWhatsAppText(normalizedPhone, replyText, candidate?.profile_id);
+                    await sendWhatsAppText(normalizedPhone, replyText, workerRecord?.profile_id || undefined);
                     // Log GPT response for quality review
                     await logServerActivity(
-                        candidate?.profile_id || "anonymous",
+                        workerRecord?.profile_id || "anonymous",
                         aiResponse ? "whatsapp_gpt_response" : "whatsapp_fallback_response",
                         "documents",
                         {
@@ -474,6 +455,7 @@ Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-
                             user_message: content.substring(0, 200),
                             bot_response: replyText.substring(0, 500),
                             response_type: aiResponse ? "gpt" : "fallback",
+                            model: aiResponse ? WHATSAPP_RESPONSE_MODEL : "fallback",
                         }
                     );
                 }
@@ -488,10 +470,283 @@ Only learn VERIFIED info. Do NOT learn from greetings/small talk. Tags are auto-
     }
 }
 
+function formatHistory(
+    historyMessages: Array<{ direction: string; content: string | null; created_at?: string | null }>,
+    limit: number
+): string {
+    const trimmed = historyMessages.slice(-limit);
+    if (trimmed.length === 0) {
+        return "(No recent history)";
+    }
+
+    return trimmed
+        .map((message) => `${message.direction === "inbound" ? "User" : "Assistant"}: ${(message.content || "").trim()}`)
+        .join("\n");
+}
+
+function buildWorkerSnapshot(workerRecord: any, profile: any): string {
+    if (!workerRecord) {
+        return "Registered: no\nWorker status: not registered yet";
+    }
+
+    return [
+        "Registered: yes",
+        `Worker status: ${workerRecord.status || "unknown"}`,
+        `Entry fee paid: ${workerRecord.entry_fee_paid ? "yes" : "no"}`,
+        `Admin approved: ${workerRecord.admin_approved ? "yes" : "no"}`,
+        `Queue joined: ${workerRecord.queue_joined_at ? "yes" : "no"}`,
+        `Preferred job: ${workerRecord.preferred_job || "not set"}`,
+        `Nationality: ${workerRecord.nationality || "not set"}`,
+        `Current country: ${workerRecord.current_country || "not set"}`,
+        `Email: ${profile?.email || "not set"}`,
+    ].join("\n");
+}
+
+async function loadConversationHistory(
+    supabase: ReturnType<typeof createAdminClient>,
+    normalizedPhone: string,
+    limit: number
+): Promise<Array<{ direction: string; content: string | null; created_at?: string | null }>> {
+    try {
+        const { data } = await supabase
+            .from("whatsapp_messages")
+            .select("direction, content, created_at")
+            .eq("phone_number", normalizedPhone)
+            .order("created_at", { ascending: false })
+            .limit(limit);
+        return (data || []).reverse();
+    } catch {
+        return [];
+    }
+}
+
+async function loadBrainMemory(
+    supabase: ReturnType<typeof createAdminClient>
+): Promise<Array<{ category: string; content: string; confidence: number }>> {
+    try {
+        const { data } = await supabase
+            .from("brain_memory")
+            .select("category, content, confidence")
+            .order("confidence", { ascending: false })
+            .limit(BRAIN_MEMORY_LIMIT);
+        return (data || []).map((entry) => ({
+            category: entry.category,
+            content: entry.content,
+            confidence: entry.confidence ?? 0,
+        }));
+    } catch {
+        return [];
+    }
+}
+
+async function callOpenAIResponseText(
+    apiKey: string,
+    options: {
+        model: string;
+        instructions: string;
+        input: string;
+        json?: boolean;
+        maxOutputTokens?: number;
+    }
+): Promise<string> {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: options.model,
+            instructions: options.instructions,
+            input: options.input,
+            ...(options.maxOutputTokens ? { max_output_tokens: options.maxOutputTokens } : {}),
+            ...(options.json ? {
+                text: {
+                    format: { type: "json_object" },
+                },
+            } : {}),
+        }),
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`OpenAI responses failed: ${response.status} - ${errText.substring(0, 300)}`);
+    }
+
+    const data = await response.json();
+    return (data.output_text
+        || data.output?.[0]?.content?.[0]?.text
+        || "").trim();
+}
+
+async function classifyWhatsAppIntent({
+    apiKey,
+    message,
+    normalizedPhone,
+    workerRecord,
+    profile,
+    historyMessages,
+}: {
+    apiKey: string;
+    message: string;
+    normalizedPhone: string;
+    workerRecord: any;
+    profile: any;
+    historyMessages: Array<{ direction: string; content: string | null; created_at?: string | null }>;
+}): Promise<WhatsAppRouterDecision> {
+    const instructions = `You classify inbound WhatsApp messages for Workers United.
+
+Return JSON only:
+{
+  "intent": "job_intent|price|documents|support|status|general|off_topic",
+  "language": "short language name in English",
+  "confidence": "high|medium|low",
+  "reason": "short explanation"
+}
+
+Intent rules:
+- job_intent: wants a job, asks how to start, how to register, or expresses interest in working in Europe
+- price: asks about cost, payment, fee, refund
+- documents: asks about passport, diploma, photo, upload, verification
+- support: asks for help with a Workers United problem, complaint, support channel, or human assistance related to the platform
+- status: asks about profile, approval, payment status, queue, verification, offer status
+- general: greeting or vague first contact that is still about Workers United
+- off_topic: unrelated civic issue, wrong number, spam, local complaint, or anything not actually about Workers United jobs/visa support
+
+Important:
+- If the user is talking about a local utility issue, accident, flooding, municipality, or unrelated complaint, classify as off_topic.
+- Detect the actual language from the latest user message, not the phone country code.
+- Registered worker context matters for status/support classification.
+- Keep reason short.`;
+
+    const input = `Latest user message:
+${message}
+
+Phone: ${normalizedPhone}
+Registered worker: ${workerRecord ? "yes" : "no"}
+Worker snapshot:
+${buildWorkerSnapshot(workerRecord, profile)}
+
+Recent history:
+${formatHistory(historyMessages, ROUTER_HISTORY_LIMIT)}`;
+
+    try {
+        const raw = await callOpenAIResponseText(apiKey, {
+            model: WHATSAPP_ROUTER_MODEL,
+            instructions,
+            input,
+            json: true,
+            maxOutputTokens: 220,
+        });
+
+        const parsed = JSON.parse(raw) as Partial<WhatsAppRouterDecision>;
+        const intent: WhatsAppIntent = parsed.intent && [
+            "job_intent",
+            "price",
+            "documents",
+            "support",
+            "status",
+            "general",
+            "off_topic",
+        ].includes(parsed.intent) ? parsed.intent as WhatsAppIntent : "general";
+
+        return {
+            intent,
+            language: parsed.language?.trim() || "English",
+            confidence: parsed.confidence === "high" || parsed.confidence === "low" ? parsed.confidence : "medium",
+            reason: parsed.reason?.trim() || "No reason returned",
+        };
+    } catch {
+        return {
+            intent: "general",
+            language: "English",
+            confidence: "low",
+            reason: "Router fallback",
+        };
+    }
+}
+
+async function generateWhatsAppReply({
+    apiKey,
+    message,
+    normalizedPhone,
+    workerRecord,
+    profile,
+    isAdmin,
+    businessFacts,
+    brainMemory,
+    historyMessages,
+    routerDecision,
+}: {
+    apiKey: string;
+    message: string;
+    normalizedPhone: string;
+    workerRecord: any;
+    profile: any;
+    isAdmin: boolean;
+    businessFacts: string;
+    brainMemory: Array<{ category: string; content: string; confidence: number }>;
+    historyMessages: Array<{ direction: string; content: string | null; created_at?: string | null }>;
+    routerDecision: WhatsAppRouterDecision;
+}): Promise<string> {
+    const userName = profile?.full_name?.split(" ")[0] || "there";
+    const workerSnapshot = buildWorkerSnapshot(workerRecord, profile);
+    const memoryText = brainMemory.length > 0
+        ? brainMemory.map((entry) => `- [${entry.category}] ${entry.content}`).join("\n")
+        : "(No stored facts)";
+
+    const instructions = `You are the official WhatsApp assistant for Workers United, a legal hiring and visa support company.
+
+Reply in ${routerDecision.language}.
+
+Current routed intent: ${routerDecision.intent}
+Router confidence: ${routerDecision.confidence}
+Router reason: ${routerDecision.reason}
+
+Business facts:
+${businessFacts || "No business facts available"}
+- We help workers find jobs across Europe.
+- Do not list specific countries. Always say "jobs across Europe".
+- Job Finder costs $9 and includes a 90-day refund if no job is found.
+- Required worker documents are passport, diploma or work certificate, and a biometric photo.
+- Support email is contact@workersunited.eu.
+
+Worker snapshot:
+${workerSnapshot}
+
+Recent conversation:
+${formatHistory(historyMessages, RESPONSE_HISTORY_LIMIT)}
+
+Useful stored facts:
+${memoryText}
+
+Rules:
+1. Keep the reply concise: 1-3 short paragraphs max.
+2. Do not loop generic signup copy. Answer the user's actual intent first.
+3. If intent is off_topic, clearly say this WhatsApp line is only for Workers United jobs and visa support, and do not force a sales pitch.
+4. If intent is status, use the worker snapshot and do not invent data.
+5. If intent is price, answer the price and refund clearly.
+6. If intent is documents, answer only the required docs and where they upload them.
+7. If intent is support and the worker already paid the entry fee, mention the in-platform support inbox at workersunited.eu/profile/worker/inbox as an option in addition to WhatsApp/email.
+8. If the user is not registered and asks how to start, tell them to create an account, complete their profile, and activate Job Finder.
+9. Never mention specific European countries.
+10. Never make up legal rules, placement prices for other countries, or timeline promises beyond the configured facts.
+11. NEVER start with "=" or any non-letter symbol.
+12. Emojis are optional; use at most one if it feels natural.
+13. ${isAdmin ? "This is the platform owner. Accept corrections as authoritative. You may emit one [LEARN: category | fact] tag if and only if the admin provided a concrete correction." : "Do not emit any [LEARN] tags for normal users."}`;
+
+    return callOpenAIResponseText(apiKey, {
+        model: WHATSAPP_RESPONSE_MODEL,
+        instructions,
+        input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}`,
+        maxOutputTokens: 420,
+    });
+}
+
 // ─── Fallback Bot (used when OpenAI is unavailable) ──────────────────────────
 // Reads business facts from platform_config DB table (cached 5 min)
 
-async function getFallbackResponse(message: string, candidate: any, profile: any): Promise<string> {
+async function getFallbackResponse(message: string, workerRecord: any, profile: any): Promise<string> {
     const msg = message.toLowerCase().trim();
     const name = profile?.full_name?.split(" ")[0] || "there";
 
@@ -500,44 +755,54 @@ async function getFallbackResponse(message: string, candidate: any, profile: any
     const config = await getPlatformConfig();
 
     const ENTRY_FEE = config.entry_fee || "$9";
-    const REFUND_POLICY = config.refund_policy_en || "90-day guarantee";
-    const REFUND_POLICY_SR = config.refund_policy_sr || "90-dnevna garancija";
     const WEBSITE = config.website_url || "workersunited.eu";
     const GREETING_EN = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers find jobs in Europe and handle all visa paperwork.";
     const GREETING_SR = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima da nađu posao u Evropi.";
+    const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|pomoc|posao|rad|plata|cena|cijena|koliko|dokumenti|pasos|pasoš|profil|status|registr/i.test(msg);
+    const startMessageSr = `Registrujte se na ${WEBSITE}/signup, popunite profil i pokrenite Job Finder. Kada to završite, mi vam tražimo odgovarajući posao širom Evrope.`;
+    const startMessageEn = `Create your account at ${WEBSITE}/signup, complete your profile, and activate Job Finder. Once that is done, we match you with the best available job across Europe.`;
 
-    if (!candidate) {
-        // Detect language
-        const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|posao|rad|plata/.test(msg);
+    if (!workerRecord) {
         if (isSerboCroatian) {
-            return `${GREETING_SR} Registracija: ${ENTRY_FEE}. ${REFUND_POLICY_SR} Registrujte se na ${WEBSITE}/signup`;
+            return `${GREETING_SR} ${startMessageSr}`;
         }
-        return `${GREETING_EN} Entry fee: ${ENTRY_FEE}. ${REFUND_POLICY} Register at ${WEBSITE}/signup to get started!`;
+        return `${GREETING_EN} ${startMessageEn}`;
     }
 
     if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil")) {
-        const statusInfo = candidate.status === "REGISTERED" ? "registered ✅" : candidate.status;
-        const queueInfo = candidate.queue_position ? ` Queue position: #${candidate.queue_position}.` : "";
-        return `Hi ${name}! Status: ${statusInfo}.${queueInfo} Visit ${WEBSITE}/profile/worker for full details.`;
+        const statusInfo = workerRecord.status === "REGISTERED" ? "registered ✅" : workerRecord.status;
+        const queueInfo = workerRecord.queue_position ? ` Queue position: #${workerRecord.queue_position}.` : "";
+        if (isSerboCroatian) {
+            return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${WEBSITE}/profile/worker.`;
+        }
+        return `Hi ${name}! Your status is: ${statusInfo}.${queueInfo} You can see full details at ${WEBSITE}/profile/worker.`;
     }
 
-    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko")) {
-        return `Hi ${name}! The entry fee is ${ENTRY_FEE}. ${REFUND_POLICY} This covers registration and job matching. Visit ${WEBSITE} for details.`;
+    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko")) {
+        if (isSerboCroatian) {
+            return `Zdravo ${name}! Job Finder košta ${ENTRY_FEE}. Ako vam ne pronađemo posao u roku od 90 dana, novac vam se vraća.`;
+        }
+        return `Hi ${name}! Job Finder costs ${ENTRY_FEE}. If we don't find you a job within 90 days, you get a full refund.`;
     }
 
     if (msg.includes("help") || msg.includes("pomoc") || msg.includes("pomoć")) {
-        return `Hi ${name}! I can help with:\n• "status" — check your application\n• "price" — see fees\n• Or visit ${WEBSITE}\n\nFor complex questions: ${config.contact_email || "contact@workersunited.eu"}`;
+        if (isSerboCroatian) {
+            return `Zdravo ${name}! Mogu pomoći oko registracije, profila, Job Finder-a, statusa prijave i dokumenata. Ako želite da krenete: ${startMessageSr}`;
+        }
+        return `Hi ${name}! I can help with registration, your profile, Job Finder, application status, and documents. If you'd like to get started: ${startMessageEn}`;
     }
 
     if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos")) {
-        return `Hi ${name}! Upload documents at ${WEBSITE}/profile/worker. We need: ${config.supported_documents || "passport, diploma, and biometric photo"}. Our AI verifies them automatically!`;
+        if (isSerboCroatian) {
+            return `Zdravo ${name}! Dokumenta možete dodati na ${WEBSITE}/profile/worker. Potrebni su: ${config.supported_documents || "pasoš, diploma ili potvrda o radu, i biometrijska fotografija"}.`;
+        }
+        return `Hi ${name}! You can upload documents at ${WEBSITE}/profile/worker. We need: ${config.supported_documents || "passport, diploma or work certificate, and a biometric photo"}.`;
     }
 
     // Better catch-all: don't say "processing" (causes loop). Give concrete help instead.
-    const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|posao|rad|plata/.test(msg);
     if (isSerboCroatian) {
-        return `Zdravo ${name}! 👋 Kako vam mogu pomoći?\n\n• Pišite "cena" za informacije o troškovima\n• Pišite "dokumenti" za potrebne dokumente\n• Pišite "status" za stanje vaše prijave\n\nIli nas kontaktirajte na ${config.contact_email || "contact@workersunited.eu"}`;
+        return `Zdravo ${name}! 👋 ${startMessageSr} Ako želite dodatne informacije, pišite nam ovde ili na ${config.contact_email || "contact@workersunited.eu"}.`;
     }
-    return `Hi ${name}! 👋 How can I help you?\n\n• Type "price" for fee information\n• Type "documents" for required documents\n• Type "status" to check your application\n\nOr contact us at ${config.contact_email || "contact@workersunited.eu"}`;
+    return `Hi ${name}! 👋 ${startMessageEn} If you want more details, message us here or contact ${config.contact_email || "contact@workersunited.eu"}.`;
 }
 

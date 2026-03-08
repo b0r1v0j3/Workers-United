@@ -1,11 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTypedAdminClient } from "@/lib/supabase/admin";
 
 // ─── Brain Data Collector ───────────────────────────────────────────────────
 // Collects ALL system data for AI brain analysis (o1-pro / Claude / Gemini)
 // Called by Brain Monitor cron to generate system health & improvement reports
 //
 // Auth: Requires CRON_SECRET bearer token (same as cron jobs)
+
+const approvedLikeStatuses = new Set([
+    "APPROVED",
+    "IN_QUEUE",
+    "OFFER_PENDING",
+    "OFFER_ACCEPTED",
+    "VISA_PROCESS_STARTED",
+    "VISA_APPROVED",
+    "PLACED",
+]);
+
+const successfulPaymentStatuses = new Set(["completed", "paid"]);
+const paymentTrackingActions = [
+    "payment_click",
+    "checkout_session_create_attempt",
+    "checkout_session_created",
+    "payment_completed",
+    "payment_failed",
+];
+
+function normalizePhone(value: string | null | undefined): string {
+    return value ? value.replace(/\D/g, "") : "";
+}
+
+function toTimestamp(value: string | null | undefined): number {
+    return value ? new Date(value).getTime() : 0;
+}
 
 export async function GET(request: NextRequest) {
     // Auth check
@@ -15,114 +42,204 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = createAdminClient();
+    const supabase = createTypedAdminClient();
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // ─── PERF-001 fix: All queries run in parallel via Promise.all ──────
     const [
-        { data: allProfiles },
-        { data: candidates },
-        { data: documents },
-        { data: payments },
-        { data: emails },
-        { data: whatsappMsgs },
-        { data: employerData },
-        { data: jobRequests },
-        { data: matches },
-        { data: offers },
+        profilesResult,
+        workerRowsResult,
+        documentsResult,
+        paymentsResult,
+        emailsResult,
+        whatsappResult,
+        employersResult,
+        jobRequestsResult,
+        matchesResult,
+        offersResult,
     ] = await Promise.all([
         supabase.from("profiles").select("id, user_type, full_name, created_at"),
-        supabase.from("candidates").select("id, profile_id, status, entry_fee_paid, queue_joined_at, created_at"),
-        supabase.from("candidate_documents").select("user_id, document_type, status, created_at, verified_at"),
-        supabase.from("payments").select("user_id, payment_type, status, amount, paid_at, created_at"),
-        supabase.from("email_queue").select("id, email_type, status, error_message, recipient, created_at").gte("created_at", monthAgo.toISOString()),
+        supabase.from("worker_onboarding").select("id, profile_id, status, entry_fee_paid, queue_joined_at, phone"),
+        supabase.from("worker_documents").select("user_id, document_type, status, created_at, verified_at"),
+        supabase.from("payments").select("user_id, payment_type, status, amount, amount_cents, paid_at"),
+        supabase.from("email_queue").select("id, email_type, status, error_message, recipient_email, created_at").gte("created_at", monthAgo.toISOString()),
         supabase.from("whatsapp_messages").select("direction, status, content, created_at, phone_number").gte("created_at", monthAgo.toISOString()).order("created_at", { ascending: false }),
         supabase.from("employers").select("id, status, country, industry, created_at"),
-        supabase.from("job_requests").select("id, status, industry, country, positions_available, created_at"),
-        supabase.from("matches").select("id, status, created_at"),
-        supabase.from("offers").select("id, status, created_at"),
+        supabase.from("job_requests").select("id, status, industry, destination_country, positions_count, created_at"),
+        supabase.from("matches").select("id, status, worker_id, employer_id"),
+        supabase.from("offers").select("id, status, worker_id, job_request_id"),
     ]);
 
+    const queryErrors = [
+        ["profiles", profilesResult.error],
+        ["worker_onboarding", workerRowsResult.error],
+        ["worker_documents", documentsResult.error],
+        ["payments", paymentsResult.error],
+        ["email_queue", emailsResult.error],
+        ["whatsapp_messages", whatsappResult.error],
+        ["employers", employersResult.error],
+        ["job_requests", jobRequestsResult.error],
+        ["matches", matchesResult.error],
+        ["offers", offersResult.error],
+    ]
+        .filter(([, error]) => Boolean(error))
+        .map(([label, error]) => {
+            const detail = typeof error === "string" ? error : error?.message;
+            return `${label}: ${detail || "unknown error"}`;
+        });
+
+    if (queryErrors.length > 0) {
+        console.error("[Brain Collect] Query errors:", queryErrors.join("; "));
+        return NextResponse.json(
+            {
+                error: "Brain collect query failed",
+                details: queryErrors,
+            },
+            { status: 500 }
+        );
+    }
+
+    const allProfiles = profilesResult.data || [];
+    const workerRows = workerRowsResult.data || [];
+    const documents = documentsResult.data || [];
+    const payments = paymentsResult.data || [];
+    const emails = emailsResult.data || [];
+    const whatsappMsgs = whatsappResult.data || [];
+    const employerData = employersResult.data || [];
+    const jobRequests = jobRequestsResult.data || [];
+    const matches = matchesResult.data || [];
+    const offers = offersResult.data || [];
+
     // ─── 1. User Statistics ─────────────────────────────────────────────
-    const workers = (allProfiles || []).filter(p => p.user_type === "worker");
-    const employerProfiles = (allProfiles || []).filter(p => p.user_type === "employer");
-    const newUsersThisWeek = (allProfiles || []).filter(p =>
-        new Date(p.created_at) >= weekAgo
+    const workers = allProfiles.filter(p => p.user_type === "worker");
+    const newUsersThisWeek = allProfiles.filter(p =>
+        p.created_at && new Date(p.created_at) >= weekAgo
     );
     // NOTE: totalEmployers uses employers table (not profiles) to match employers.total
     // This prevents the metric inconsistency flagged in Brain report (SEC-001)
+    const profileCreatedAtById = new Map(
+        workers.map(worker => [worker.id, worker.created_at || null])
+    );
+    const workerRecordProfileIds = new Set(
+        workerRows.map(workerRecord => workerRecord.profile_id).filter(Boolean)
+    );
 
     // ─── 2. Worker Onboarding Statuses ──────────────────────────────────
     const statusBreakdown: Record<string, number> = {};
-    (candidates || []).forEach(c => {
-        statusBreakdown[c.status] = (statusBreakdown[c.status] || 0) + 1;
+    workerRows.forEach(workerRecord => {
+        const statusKey = workerRecord.status || "UNKNOWN";
+        statusBreakdown[statusKey] = (statusBreakdown[statusKey] || 0) + 1;
     });
 
-    const progressedCount = (candidates || []).filter(c => c.status && c.status !== "NEW").length;
-    const paidCount = (candidates || []).filter(c => c.entry_fee_paid).length;
-    const inQueueCount = (candidates || []).filter(c => c.status === "IN_QUEUE").length;
+    const progressedCount = workerRows.filter(workerRecord => workerRecord.status && workerRecord.status !== "NEW").length;
+    const paidCount = workerRows.filter(workerRecord => workerRecord.entry_fee_paid).length;
+    const inQueueCount = workerRows.filter(workerRecord => workerRecord.status === "IN_QUEUE").length;
 
     // ─── 3. Document Verification Stats ─────────────────────────────────
     const docStats = {
-        total: (documents || []).length,
-        verified: (documents || []).filter(d => d.status === "verified").length,
-        pending: (documents || []).filter(d => d.status === "pending").length,
-        rejected: (documents || []).filter(d => d.status === "rejected").length,
+        total: documents.length,
+        verified: documents.filter(d => d.status === "verified").length,
+        pending: documents.filter(d => d.status === "pending").length,
+        rejected: documents.filter(d => d.status === "rejected").length,
         byType: {} as Record<string, { verified: number; pending: number; rejected: number }>,
     };
-    (documents || []).forEach(d => {
-        if (!docStats.byType[d.document_type]) {
-            docStats.byType[d.document_type] = { verified: 0, pending: 0, rejected: 0 };
+    documents.forEach(d => {
+        const documentType = d.document_type || "unknown";
+        if (!docStats.byType[documentType]) {
+            docStats.byType[documentType] = { verified: 0, pending: 0, rejected: 0 };
         }
-        if (d.status === "verified") docStats.byType[d.document_type].verified++;
-        if (d.status === "pending") docStats.byType[d.document_type].pending++;
-        if (d.status === "rejected") docStats.byType[d.document_type].rejected++;
+        if (d.status === "verified") docStats.byType[documentType].verified++;
+        if (d.status === "pending") docStats.byType[documentType].pending++;
+        if (d.status === "rejected") docStats.byType[documentType].rejected++;
+    });
+
+    const documentsByUserId = new Map<string, typeof documents>();
+    documents.forEach(document => {
+        const userId = document.user_id;
+        if (!userId) return;
+        if (!documentsByUserId.has(userId)) {
+            documentsByUserId.set(userId, []);
+        }
+        documentsByUserId.get(userId)?.push(document);
     });
 
     // ─── 4. Payment Stats ───────────────────────────────────────────────
     const paymentStats = {
-        total: (payments || []).length,
-        successful: (payments || []).filter(p => p.status === "completed" || p.status === "paid").length,
-        failed: (payments || []).filter(p => p.status === "failed").length,
-        totalRevenue: (payments || [])
-            .filter(p => p.status === "completed" || p.status === "paid")
-            .reduce((sum, p) => sum + (p.amount || 0), 0),
-        thisWeek: (payments || []).filter(p => p.paid_at && new Date(p.paid_at) >= weekAgo).length,
+        total: payments.length,
+        successful: payments.filter(p => successfulPaymentStatuses.has(p.status || "")).length,
+        failed: payments.filter(p => p.status === "failed").length,
+        totalRevenue: payments
+            .filter(p => successfulPaymentStatuses.has(p.status || ""))
+            .reduce((sum, p) => {
+                const amount = typeof p.amount === "number"
+                    ? p.amount
+                    : (p.amount_cents || 0) / 100;
+                return sum + amount;
+            }, 0),
+        thisWeek: payments.filter(p => p.paid_at && new Date(p.paid_at) >= weekAgo).length,
     };
 
+    const paymentEvents = await (async () => {
+        try {
+            const { data, error } = await supabase
+                .from("user_activity")
+                .select("action, status, details, user_id, created_at")
+                .gte("created_at", monthAgo.toISOString())
+                .in("action", paymentTrackingActions)
+                .order("created_at", { ascending: false })
+                .limit(1000);
+
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.warn("[Brain Collect] Payment activity unavailable:", error);
+            return [];
+        }
+    })();
+
+    const paymentsByUserId = new Map<string, typeof payments>();
+    payments.forEach(payment => {
+        const userId = payment.user_id;
+        if (!userId) return;
+        if (!paymentsByUserId.has(userId)) {
+            paymentsByUserId.set(userId, []);
+        }
+        paymentsByUserId.get(userId)?.push(payment);
+    });
+
     // ─── 5. Email Queue Stats ───────────────────────────────────────────
-    const failedEmails = (emails || []).filter(e => e.status === "failed" || e.error_message);
+    const failedEmails = emails.filter(e => e.status === "failed" || e.error_message);
     const emailStats = {
-        totalThisMonth: (emails || []).length,
-        sent: (emails || []).filter(e => e.status === "sent").length,
+        totalThisMonth: emails.length,
+        sent: emails.filter(e => e.status === "sent").length,
         failed: failedEmails.length,
-        pending: (emails || []).filter(e => e.status === "pending").length,
+        pending: emails.filter(e => e.status === "pending").length,
         byType: {} as Record<string, number>,
         // Individual failed emails with IDs for targeted retry (Brain Issues #8/#12/#14)
         recentFailedEmails: failedEmails.slice(0, 20).map(e => ({
             email_id: e.id,
             email_type: e.email_type,
-            recipient: e.recipient,
+            recipient: e.recipient_email,
             error_message: e.error_message?.substring(0, 200),
             created_at: e.created_at,
             retryable: !e.error_message?.includes("invalid") && !e.error_message?.includes("bounce"),
         })),
     };
-    (emails || []).forEach(e => {
+    emails.forEach(e => {
         emailStats.byType[e.email_type] = (emailStats.byType[e.email_type] || 0) + 1;
     });
 
     // ─── 6. WhatsApp Chatbot Stats ──────────────────────────────────────
     const chatbotStats = {
-        totalMessages: (whatsappMsgs || []).length,
-        inbound: (whatsappMsgs || []).filter(m => m.direction === "inbound").length,
-        outbound: (whatsappMsgs || []).filter(m => m.direction === "outbound").length,
-        failed: (whatsappMsgs || []).filter(m => m.status === "failed").length,
-        uniqueUsers: new Set((whatsappMsgs || []).map(m => m.phone_number)).size,
-        thisWeek: (whatsappMsgs || []).filter(m => new Date(m.created_at) >= weekAgo).length,
-        recentConversations: (whatsappMsgs || []).slice(0, 50).map(m => ({
+        totalMessages: whatsappMsgs.length,
+        inbound: whatsappMsgs.filter(m => m.direction === "inbound").length,
+        outbound: whatsappMsgs.filter(m => m.direction === "outbound").length,
+        failed: whatsappMsgs.filter(m => m.status === "failed").length,
+        uniqueUsers: new Set(whatsappMsgs.map(m => m.phone_number)).size,
+        thisWeek: whatsappMsgs.filter(m => toTimestamp(m.created_at) >= weekAgo.getTime()).length,
+        recentConversations: whatsappMsgs.slice(0, 50).map(m => ({
             direction: m.direction,
             content: m.content?.substring(0, 500),
             timestamp: m.created_at,
@@ -131,13 +248,13 @@ export async function GET(request: NextRequest) {
 
     // ─── 7. Employer Stats ──────────────────────────────────────────────
     const employerStats = {
-        total: (employerData || []).length,
-        verified: (employerData || []).filter(e => e.status === "VERIFIED").length,
-        pending: (employerData || []).filter(e => e.status === "PENDING").length,
+        total: employerData.length,
+        verified: employerData.filter(e => e.status === "VERIFIED").length,
+        pending: employerData.filter(e => e.status === "PENDING").length,
         byCountry: {} as Record<string, number>,
         byIndustry: {} as Record<string, number>,
     };
-    (employerData || []).forEach(e => {
+    employerData.forEach(e => {
         if (e.country) employerStats.byCountry[e.country] = (employerStats.byCountry[e.country] || 0) + 1;
         if (e.industry) employerStats.byIndustry[e.industry] = (employerStats.byIndustry[e.industry] || 0) + 1;
     });
@@ -149,9 +266,9 @@ export async function GET(request: NextRequest) {
         adminApproved: progressedCount,
         entryFeePaid: paidCount,
         inQueue: inQueueCount,
-        matched: (matches || []).length,
-        offersSent: (offers || []).length,
-        offersAccepted: (offers || []).filter(o => o.status === "accepted").length,
+        matched: matches.length,
+        offersSent: offers.length,
+        offersAccepted: offers.filter(o => o.status === "accepted").length,
         conversionRate: workers.length > 0
             ? `${Math.round((paidCount / workers.length) * 100)}%`
             : "0%",
@@ -159,62 +276,89 @@ export async function GET(request: NextRequest) {
 
     // ─── 9b. Per-User Funnel Stage Timestamps (Self-Improvement #1) ─────
     // Codex requested event-level funnel timestamps to diagnose WHERE users stall
-    const funnelTimestamps = (candidates || []).slice(0, 50).map(c => {
-        const candidateDocs = (documents || [])
-            .filter(d => d.user_id === c.profile_id)
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        const verifiedDocs = candidateDocs.filter(d => d.status === "verified");
-        const candidatePayments = (payments || []).filter(p =>
-            p.user_id === c.profile_id &&
+    const funnelTimestamps = workerRows.slice(0, 50).map(workerRecord => {
+        const registeredAt = workerRecord.profile_id ? profileCreatedAtById.get(workerRecord.profile_id) || null : null;
+        const workerDocs = [...(documentsByUserId.get(workerRecord.profile_id || "") || [])]
+            .sort((a, b) => toTimestamp(a.created_at) - toTimestamp(b.created_at));
+        const verifiedDocs = workerDocs.filter(d => d.status === "verified");
+        const workerPayments = (paymentsByUserId.get(workerRecord.profile_id || "") || []).filter(p =>
+            p.user_id === workerRecord.profile_id &&
             p.payment_type === "entry_fee" &&
-            (p.status === "completed" || p.status === "paid") &&
+            successfulPaymentStatuses.has(p.status || "") &&
             p.paid_at
         );
 
         return {
-            worker_record_id: c.id,
-            registered_at: c.created_at,
-            first_doc_uploaded: candidateDocs.length > 0 ? candidateDocs[0]?.created_at : null,
+            worker_record_id: workerRecord.id,
+            registered_at: registeredAt,
+            first_doc_uploaded: workerDocs.length > 0 ? workerDocs[0]?.created_at : null,
             docs_verified_at: verifiedDocs.length > 0 ? verifiedDocs[verifiedDocs.length - 1]?.verified_at : null,
-            admin_approved: approvedLikeStatuses.has(c.status || ""),
-            payment_at: c.entry_fee_paid ? candidatePayments[0]?.paid_at || "paid (date unknown)" : null,
-            queue_joined_at: c.queue_joined_at,
-            current_status: c.status,
-            days_since_registration: Math.floor((now.getTime() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+            admin_approved: approvedLikeStatuses.has(workerRecord.status || ""),
+            payment_at: workerRecord.entry_fee_paid ? workerPayments[0]?.paid_at || "paid (date unknown)" : null,
+            queue_joined_at: workerRecord.queue_joined_at,
+            current_status: workerRecord.status,
+            days_since_registration: registeredAt
+                ? Math.floor((now.getTime() - new Date(registeredAt).getTime()) / (1000 * 60 * 60 * 24))
+                : null,
         };
     });
 
     // ─── 9c. Payment Attempt Telemetry (Self-Improvement #1) ─────────────
     // Track ALL payment attempts (not just successful) to diagnose checkout drop-off
+    const checkoutCreateAttempts = paymentEvents.filter(event => event.action === "checkout_session_create_attempt").length;
+    const checkoutSessionsCreated = paymentEvents.filter(event => event.action === "checkout_session_created").length;
+    const paymentClicks = paymentEvents.filter(event => event.action === "payment_click").length;
+    const paymentCompletedEvents = paymentEvents.filter(event => event.action === "payment_completed").length;
+    const paymentFailedEvents = paymentEvents.filter(event => event.action === "payment_failed").length;
+    const totalPaymentAttempts = Math.max(checkoutCreateAttempts, checkoutSessionsCreated, paymentClicks, payments.length);
+    const completedPayments = Math.max(
+        payments.filter(p => successfulPaymentStatuses.has(p.status || "")).length,
+        paymentCompletedEvents
+    );
+    const failedPayments = Math.max(
+        payments.filter(p => p.status === "failed").length,
+        paymentFailedEvents
+    );
     const paymentTelemetry = {
-        totalAttempts: (payments || []).length,
-        successful: (payments || []).filter(p => p.status === "completed" || p.status === "paid").length,
-        failed: (payments || []).filter(p => p.status === "failed").length,
-        pending: (payments || []).filter(p => p.status === "pending" || p.status === "created").length,
-        abandoned: (payments || []).filter(p => p.status === "abandoned" || p.status === "expired").length,
-        conversionRate: (payments || []).length > 0
-            ? `${Math.round(((payments || []).filter(p => p.status === "completed" || p.status === "paid").length / (payments || []).length) * 100)}%`
+        totalAttempts: totalPaymentAttempts,
+        checkoutCreateAttempts,
+        checkoutSessionsCreated,
+        paymentClicks,
+        successful: completedPayments,
+        failed: failedPayments,
+        pending: payments.filter(p => p.status === "pending" || p.status === "created").length,
+        abandoned: payments.filter(p => p.status === "abandoned" || p.status === "expired").length,
+        dataSource: paymentEvents.length > 0 ? "payments + user_activity" : "payments",
+        conversionRate: totalPaymentAttempts > 0
+            ? `${Math.round((completedPayments / totalPaymentAttempts) * 100)}%`
             : "No attempts",
-        recentAttempts: (payments || []).slice(0, 20).map(p => ({
-            type: p.payment_type,
-            status: p.status,
-            amount: p.amount,
-            created_at: p.created_at,
-            paid_at: p.paid_at,
-        })),
+        recentAttempts: paymentEvents.length > 0
+            ? paymentEvents.slice(0, 20).map(event => ({
+                action: event.action,
+                status: event.status,
+                created_at: event.created_at,
+                user_id: event.user_id,
+                details: event.details,
+            }))
+            : payments.slice(0, 20).map(payment => ({
+                action: "payment_record",
+                status: payment.status,
+                user_id: payment.user_id,
+                amount: typeof payment.amount === "number" ? payment.amount : (payment.amount_cents || 0) / 100,
+                paid_at: payment.paid_at,
+            })),
     };
 
     // ─── 9d. User Stall Detection — WHERE is each user stuck? ────────────
-    const candidateProfileIds = new Set((candidates || []).map(c => c.profile_id));
     const stalls = {
-        no_worker_record: workers.filter(w => !candidateProfileIds.has(w.id)).length,
-        no_docs_uploaded: (candidates || []).filter(c => {
-            const userDocs = (documents || []).filter(d => d.user_id === c.profile_id);
-            return c.status === "NEW" && userDocs.length === 0;
+        no_worker_record: workers.filter(workerProfile => !workerRecordProfileIds.has(workerProfile.id)).length,
+        no_docs_uploaded: workerRows.filter(workerRecord => {
+            const userDocs = documentsByUserId.get(workerRecord.profile_id || "") || [];
+            return workerRecord.status === "NEW" && userDocs.length === 0;
         }).length,
-        docs_pending_verification: (documents || []).filter(d => d.status === "pending" || d.status === "verifying").length,
-        not_admin_approved: (candidates || []).filter(c => c.status !== "NEW" && !approvedLikeStatuses.has(c.status || "") && !c.entry_fee_paid).length,
-        approved_not_paid: (candidates || []).filter(c => approvedLikeStatuses.has(c.status || "") && !c.entry_fee_paid).length,
+        docs_pending_verification: documents.filter(d => d.status === "pending" || d.status === "verifying").length,
+        not_admin_approved: workerRows.filter(workerRecord => workerRecord.status !== "NEW" && !approvedLikeStatuses.has(workerRecord.status || "") && !workerRecord.entry_fee_paid).length,
+        approved_not_paid: workerRows.filter(workerRecord => approvedLikeStatuses.has(workerRecord.status || "") && !workerRecord.entry_fee_paid).length,
         summary: "",
     };
     const topBottleneck = Object.entries(stalls)
@@ -224,13 +368,13 @@ export async function GET(request: NextRequest) {
 
     // ─── 9e. Email Bounce Patterns — learn from delivery failures ────────
     const bouncePatterns: Record<string, number> = {};
-    (emails || []).filter(e => e.status === "failed" && e.error_message).forEach(e => {
-        const domain = (e.recipient || "")?.split("@")[1]?.toLowerCase();
+    emails.filter(e => e.status === "failed" && e.error_message).forEach(e => {
+        const domain = (e.recipient_email || "")?.split("@")[1]?.toLowerCase();
         if (domain) bouncePatterns[domain] = (bouncePatterns[domain] || 0) + 1;
     });
 
     // ─── 10. System Health Indicators ───────────────────────────────────
-    const failedWhatsApp = (whatsappMsgs || []).filter(m => m.status === "failed");
+    const failedWhatsApp = whatsappMsgs.filter(m => m.status === "failed");
 
     const health = {
         emailDeliveryRate: emailStats.totalThisMonth > 0
@@ -257,7 +401,7 @@ export async function GET(request: NextRequest) {
         },
         users: {
             totalWorkers: workers.length,
-            totalEmployers: (employerData || []).length,
+            totalEmployers: employerData.length,
             newThisWeek: newUsersThisWeek.length,
             statusBreakdown,
         },
@@ -267,16 +411,17 @@ export async function GET(request: NextRequest) {
         chatbot: chatbotStats,
         employers: employerStats,
         jobRequests: {
-            total: (jobRequests || []).length,
-            open: (jobRequests || []).filter(j => j.status === "open" || j.status === "active").length,
+            total: jobRequests.length,
+            open: jobRequests.filter(j => j.status === "open" || j.status === "active").length,
         },
         matches: {
-            total: (matches || []).length,
-            thisWeek: (matches || []).filter(m => new Date(m.created_at) >= weekAgo).length,
+            total: matches.length,
+            thisWeek: null,
+            timeTrackingAvailable: false,
         },
         offers: {
-            total: (offers || []).length,
-            accepted: (offers || []).filter(o => o.status === "accepted").length,
+            total: offers.length,
+            accepted: offers.filter(o => o.status === "accepted").length,
         },
         funnel,
         funnelTimestamps,
@@ -411,8 +556,7 @@ export async function GET(request: NextRequest) {
             try {
                 const { getAllAuthUsers } = await import("@/lib/supabase/admin");
                 const allAuthUsers = await getAllAuthUsers(supabase);
-                const profileIds = new Set((allProfiles || []).map(p => p.id));
-                const candidateProfileIds = new Set((candidates || []).map(c => c.profile_id));
+                const profileIds = new Set(allProfiles.map(p => p.id));
 
                 const unconfirmedUsers = allAuthUsers.filter((u: any) => !u.email_confirmed_at);
                 const noUserType = allAuthUsers.filter((u: any) => !u.user_metadata?.user_type);
@@ -420,7 +564,7 @@ export async function GET(request: NextRequest) {
                     u.user_metadata?.user_type === "worker" && !profileIds.has(u.id)
                 );
                 const workersWithoutWorkerOnboarding = allAuthUsers.filter((u: any) =>
-                    u.user_metadata?.user_type === "worker" && !candidateProfileIds.has(u.id)
+                    u.user_metadata?.user_type === "worker" && !workerRecordProfileIds.has(u.id)
                 );
 
                 // Users registered in last 7 days who never completed profile
@@ -428,7 +572,7 @@ export async function GET(request: NextRequest) {
                     const createdAt = new Date(u.created_at);
                     const isRecent = createdAt >= weekAgo;
                     const isWorker = u.user_metadata?.user_type === "worker";
-                    const hasNoWorkerOnboarding = !candidateProfileIds.has(u.id);
+                    const hasNoWorkerOnboarding = !workerRecordProfileIds.has(u.id);
                     return isRecent && isWorker && hasNoWorkerOnboarding;
                 });
 
@@ -488,34 +632,25 @@ export async function GET(request: NextRequest) {
                     .from("whatsapp_messages")
                     .select("phone_number")
                     .eq("direction", "inbound");
-                const uniqueWaPhones = new Set((waPhones || []).map(p => p.phone_number));
+                const uniqueWaPhones = new Set(
+                    (waPhones || [])
+                        .map(p => normalizePhone(p.phone_number))
+                        .filter(Boolean)
+                );
 
-                // Workers who paid (have profiles with phone numbers)
-                const { data: paidCandidates } = await supabase
-                    .from("candidates")
-                    .select("profile_id")
-                    .eq("entry_fee_paid", true);
-
-                // Get phone numbers of paid users
-                const paidIds = (paidCandidates || []).map(c => c.profile_id);
-                let paidPhones: string[] = [];
-                if (paidIds.length > 0) {
-                    const { data: profiles } = await supabase
-                        .from("profiles")
-                        .select("phone")
-                        .in("id", paidIds)
-                        .not("phone", "is", null);
-                    paidPhones = (profiles || []).map(p => p.phone).filter(Boolean);
-                }
+                const paidWorkers = workerRows.filter(workerRecord => workerRecord.entry_fee_paid && Boolean(workerRecord.phone));
+                const paidPhones = paidWorkers
+                    .map(workerRecord => normalizePhone(workerRecord.phone))
+                    .filter(Boolean);
 
                 // How many WhatsApp users converted to paying
                 const convertedFromWa = paidPhones.filter(phone =>
-                    uniqueWaPhones.has(phone) || uniqueWaPhones.has(phone?.replace("+", ""))
+                    uniqueWaPhones.has(phone)
                 ).length;
 
                 return {
                     totalWhatsAppContacts: uniqueWaPhones.size,
-                    totalPaidUsers: paidIds.length,
+                    totalPaidUsers: paidWorkers.length,
                     convertedFromWhatsApp: convertedFromWa,
                     conversionRate: uniqueWaPhones.size > 0
                         ? `${((convertedFromWa / uniqueWaPhones.size) * 100).toFixed(1)}%`
@@ -527,12 +662,3 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(report);
 }
-    const approvedLikeStatuses = new Set([
-        "APPROVED",
-        "IN_QUEUE",
-        "OFFER_PENDING",
-        "OFFER_ACCEPTED",
-        "VISA_PROCESS_STARTED",
-        "VISA_APPROVED",
-        "PLACED",
-    ]);

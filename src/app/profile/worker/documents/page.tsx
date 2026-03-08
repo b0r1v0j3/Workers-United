@@ -44,13 +44,13 @@ export default async function DocumentsPage({
 
     // Fetch documents
     const { data: documents } = await dataClient
-        .from("candidate_documents")
+        .from("worker_documents")
         .select("document_type, status, reject_reason")
         .eq("user_id", targetProfileId);
 
     return (
         <DocumentsClient
-            candidateId={targetProfileId}
+            workerProfileId={targetProfileId}
             email={profile?.email || user.email || ""}
             documents={documents || []}
             readOnlyPreview={isAdminPreview}

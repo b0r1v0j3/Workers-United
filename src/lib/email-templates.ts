@@ -5,6 +5,7 @@ export type EmailType =
     | "welcome"
     | "profile_complete"
     | "payment_success"
+    | "checkout_recovery"
     | "job_offer"
     | "offer_reminder"
     | "refund_approved"
@@ -55,6 +56,8 @@ export interface TemplateData {
     todoList?: string;
     daysLeft?: number;
     isEmployer?: boolean;
+    recoveryStep?: number;
+    paymentId?: string;
     // Document review
     approved?: boolean;
     docType?: string;
@@ -80,6 +83,8 @@ const buttonStyle = `
     transition: all 0.3s ease;
     text-align: center;
 `;
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
 
 // Helper to wrap content in the Monochrome Apple Header design
 const wrapModernTemplate = (content: string, title: string = "Workers United", subtitle: string = ""): string => `
@@ -141,6 +146,19 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
 </body>
 </html>
 `;
+
+function getCheckoutRecoveryStatusMessage(step: number | undefined, amount: string) {
+    const safeAmount = amount || "$9";
+
+    switch (step) {
+        case 2:
+            return `Your ${safeAmount} Job Finder payment is still waiting. Return to your Workers United dashboard to activate job search and unlock support.`;
+        case 3:
+            return `Your previous ${safeAmount} Job Finder checkout expired. Open your Workers United dashboard to start a fresh checkout and continue where you left off.`;
+        default:
+            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Return to your Workers United dashboard to activate job search.`;
+    }
+}
 
 export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemplate {
     const name = escapeHtml(data.name || "friend");
@@ -272,6 +290,68 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                 `, "Payment Confirmed", "Good luck!")
             };
+
+        case "checkout_recovery": {
+            const recoveryStep = data.recoveryStep === 2 || data.recoveryStep === 3 ? data.recoveryStep : 1;
+            const amount = data.amount || "$9";
+
+            const recoverySubjectMap: Record<1 | 2 | 3, string> = {
+                1: "Finish activating Job Finder",
+                2: "Your Job Finder activation is still waiting",
+                3: "Your previous Job Finder checkout expired",
+            };
+
+            const recoveryTitleMap: Record<1 | 2 | 3, string> = {
+                1: "Finish your Job Finder activation",
+                2: "You're one step away from entering the queue",
+                3: "Open a fresh checkout and continue",
+            };
+
+            const recoveryBodyMap: Record<1 | 2 | 3, string> = {
+                1: `You opened the ${amount} Job Finder checkout but did not finish the payment yet. Return to your dashboard and continue when you're ready.`,
+                2: `Your profile is still waiting for the ${amount} Job Finder payment. Once it is confirmed, your worker profile enters the active queue and support unlocks inside the platform.`,
+                3: `Your earlier ${amount} checkout is no longer active. Open your dashboard to start a fresh checkout and continue exactly where you left off.`,
+            };
+
+            const recoveryNoteMap: Record<1 | 2 | 3, string> = {
+                1: "Your profile stays exactly as it is. Nothing needs to be filled again.",
+                2: "If we do not find you a job within 90 days, the entry fee is refunded.",
+                3: "Only the old checkout expired. Your profile and documents stay saved in your account.",
+            };
+
+            return {
+                subject: recoverySubjectMap[recoveryStep],
+                html: wrapModernTemplate(`
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <img src="https://img.icons8.com/ios/100/000000/bank-card-back-side.png" width="80" height="80" alt="Checkout reminder" style="margin-bottom: 20px;">
+                        <h1 style="margin:0; color:#1D1D1F; font-size: 26px; font-weight: 700;">${recoveryTitleMap[recoveryStep]}</h1>
+                        <p style="font-size: 16px; color: #515154; margin-top: 10px;">${firstName}, your profile is ready to continue.</p>
+                    </div>
+
+                    <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 20px; text-align: center;">
+                        ${recoveryBodyMap[recoveryStep]}
+                    </p>
+
+                    <div style="background:#F5F5F7; border-radius:16px; padding:24px; margin:30px 0; border: 1px solid #E5E5EA; text-align:center;">
+                        <div style="font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:10px;">
+                            Job Finder activation
+                        </div>
+                        <div style="font-size:40px; font-weight:800; color:#111111; letter-spacing:-1px; margin-bottom:8px;">
+                            ${amount}
+                        </div>
+                        <div style="font-size:15px; color:#515154;">
+                            ${recoveryNoteMap[recoveryStep]}
+                        </div>
+                    </div>
+
+                    <div style="text-align:center; margin-top:40px;">
+                        <a href="${BASE_URL}/profile/worker" style="${buttonStyle}">
+                            Open dashboard
+                        </a>
+                    </div>
+                `, "Finish your activation", recoverySubjectMap[recoveryStep])
+            };
+        }
 
         case "job_offer":
             return {
@@ -706,6 +786,14 @@ export async function queueEmail(
                     break;
                 case "payment_success":
                     await wa.sendPaymentConfirmed(recipientPhone, firstName, templateData.amount || "$9", userId);
+                    break;
+                case "checkout_recovery":
+                    await wa.sendStatusUpdate(
+                        recipientPhone,
+                        firstName,
+                        getCheckoutRecoveryStatusMessage(templateData.recoveryStep, templateData.amount || "$9"),
+                        userId
+                    );
                     break;
                 case "document_expiring":
                     await wa.sendDocumentReminder(recipientPhone, firstName, templateData.documentType || "document", templateData.expirationDate || "", userId);

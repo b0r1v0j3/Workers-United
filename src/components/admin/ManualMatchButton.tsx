@@ -13,7 +13,7 @@ interface Job {
     employer: { company_name: string } | null;
 }
 
-export default function ManualMatchButton({ candidateId }: { candidateId: string }) {
+export default function ManualMatchButton({ workerRecordId }: { workerRecordId: string }) {
     const [open, setOpen] = useState(false);
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(false);
@@ -40,7 +40,7 @@ export default function ManualMatchButton({ candidateId }: { candidateId: string
             const res = await fetch("/api/admin/manual-match", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ candidateId, jobRequestId: jobId }),
+                body: JSON.stringify({ workerId: workerRecordId, jobRequestId: jobId }),
             });
             const data = await res.json();
             if (!res.ok) {

@@ -21,9 +21,23 @@ export const PRICES = {
 
 export type PaymentType = "entry_fee" | "confirmation_fee";
 
-export function getCheckoutSuccessUrl(type: PaymentType, offerId?: string): string {
+function buildRedirectUrl(path: string, paymentState: "success" | "cancelled", includeSessionId: boolean): string {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const url = new URL(path, baseUrl);
+    url.searchParams.set("payment", paymentState);
+    if (includeSessionId) {
+        url.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
+    }
+    return url.toString();
+}
+
+export function getCheckoutSuccessUrl(type: PaymentType, offerId?: string, overridePath?: string | null): string {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const sessionParam = "session_id={CHECKOUT_SESSION_ID}";
+
+    if (overridePath) {
+        return buildRedirectUrl(overridePath, "success", true);
+    }
 
     switch (type) {
         case "entry_fee":
@@ -37,8 +51,12 @@ export function getCheckoutSuccessUrl(type: PaymentType, offerId?: string): stri
     }
 }
 
-export function getCheckoutCancelUrl(type: PaymentType, offerId?: string): string {
+export function getCheckoutCancelUrl(type: PaymentType, offerId?: string, overridePath?: string | null): string {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+    if (overridePath) {
+        return buildRedirectUrl(overridePath, "cancelled", false);
+    }
 
     switch (type) {
         case "entry_fee":

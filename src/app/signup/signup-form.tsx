@@ -8,7 +8,16 @@ import { toast } from "sonner";
 import { Check, Circle, ShieldCheck } from "lucide-react";
 
 interface SignupFormProps {
-    userType: "worker" | "employer";
+    userType: "worker" | "employer" | "agency";
+    claimContext?: {
+        workerId: string;
+        workerName: string;
+        workerEmail: string | null;
+        agencyName: string | null;
+        claimed: boolean;
+        claimable: boolean;
+        reason: "ok" | "already_claimed" | "missing_email";
+    } | null;
 }
 
 const COMMON_DOMAINS: Record<string, string> = {
@@ -32,7 +41,7 @@ function trackEvent(action: string, details?: Record<string, unknown>) {
     }).catch(() => { }); // best-effort only
 }
 
-export function SignupForm({ userType }: SignupFormProps) {
+export function SignupForm({ userType, claimContext = null }: SignupFormProps) {
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [companyName, setCompanyName] = useState("");
@@ -43,10 +52,25 @@ export function SignupForm({ userType }: SignupFormProps) {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const router = useRouter();
+    const claimEmailLocked = Boolean(claimContext?.claimable && claimContext.workerEmail);
+    const claimDisabled = claimContext ? !claimContext.claimable : false;
 
     useEffect(() => {
-        trackEvent("signup_page_view", { userType });
-    }, [userType]);
+        if (claimContext?.workerName) {
+            setFullName((current) => current || claimContext.workerName);
+        }
+        if (claimContext?.workerEmail) {
+            setEmail((current) => current || claimContext.workerEmail || "");
+        }
+    }, [claimContext]);
+
+    useEffect(() => {
+        trackEvent("signup_page_view", {
+            userType,
+            claimable: claimContext?.claimable || false,
+            claimReason: claimContext?.reason || null,
+        });
+    }, [claimContext?.claimable, claimContext?.reason, userType]);
 
     const passwordChecks = useMemo(() => ({
         minLength: password.length >= 8,
@@ -98,13 +122,16 @@ export function SignupForm({ userType }: SignupFormProps) {
 
     const handleGoogleSignup = async () => {
         setGoogleLoading(true);
-        trackEvent("signup_google_click", { userType });
+        trackEvent("signup_google_click", {
+            userType,
+            claimWorkerId: claimContext?.workerId || null,
+        });
 
         const supabase = createClient();
         const { error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: {
-                redirectTo: `${window.location.origin}/auth/callback?user_type=${userType}`,
+                redirectTo: `${window.location.origin}/auth/callback?user_type=${userType}${claimContext?.workerId ? `&claim_worker_id=${claimContext.workerId}` : ""}`,
             },
         });
 
@@ -149,8 +176,9 @@ export function SignupForm({ userType }: SignupFormProps) {
                     emailRedirectTo: `${window.location.origin}/auth/callback`,
                     data: {
                         full_name: fullName.trim(),
-                        company_name: userType === "employer" ? companyName.trim() : null,
+                        company_name: userType === "employer" || userType === "agency" ? companyName.trim() : null,
                         user_type: userType,
+                        claimed_worker_id: claimContext?.workerId || null,
                         gdpr_consent: true,
                         gdpr_consent_at: new Date().toISOString(),
                     },
@@ -170,6 +198,21 @@ export function SignupForm({ userType }: SignupFormProps) {
             }
 
             if (data.session) {
+                if (claimContext?.workerId) {
+                    const claimResponse = await fetch("/api/agency/claim", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ workerId: claimContext.workerId }),
+                    });
+                    const claimData = await claimResponse.json().catch(() => null);
+
+                    if (!claimResponse.ok) {
+                        toast.error(claimData?.error || "Account created, but worker claim could not be completed.");
+                    } else if (claimData?.reason === "linked" || claimData?.reason === "already_linked") {
+                        toast.success("Your agency-submitted worker profile is now linked.");
+                    }
+                }
+
                 fetch("/api/queue-user-email", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -178,7 +221,13 @@ export function SignupForm({ userType }: SignupFormProps) {
                 trackEvent("signup_success", { userType, authMethod: "email" });
             }
 
-            router.push(userType === "employer" ? "/profile/employer" : "/profile/worker");
+            router.push(
+                userType === "employer"
+                    ? "/profile/employer"
+                    : userType === "agency"
+                        ? "/profile/agency"
+                        : "/profile/worker"
+            );
             router.refresh();
         } catch (err: unknown) {
             if (err instanceof Error) {
@@ -218,10 +267,10 @@ export function SignupForm({ userType }: SignupFormProps) {
                     <h2 className="text-2xl font-semibold tracking-tight text-[#18181b]">Check your email</h2>
                     <p className="mt-3 text-sm leading-relaxed text-[#52525b]">
                         We&apos;ve sent a confirmation link to <strong className="font-semibold text-[#18181b]">{email}</strong>.
-                        Open your inbox and click the link to activate your account.
+                        Open your inbox and click the link to activate your account{claimContext?.workerId ? " and claim your worker profile" : ""}.
                     </p>
 
-                    <LinkButton href="/login" label="Go to sign in" />
+                    <LinkButton href="/login" label="Go to Sign In" />
                 </div>
             </div>
         );
@@ -229,10 +278,30 @@ export function SignupForm({ userType }: SignupFormProps) {
 
     return (
         <div className="space-y-5">
+            {claimContext ? (
+                <div className={`rounded-2xl border px-4 py-3 text-sm ${
+                    claimContext.claimable
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : "border-amber-200 bg-amber-50 text-amber-900"
+                }`}>
+                    {claimContext.claimable ? (
+                        <p>
+                            You&apos;re claiming <strong>{claimContext.workerName}</strong>
+                            {claimContext.agencyName ? ` from ${claimContext.agencyName}` : ""}.
+                            {claimContext.workerEmail ? ` Use ${claimContext.workerEmail} for this account.` : ""}
+                        </p>
+                    ) : claimContext.reason === "already_claimed" ? (
+                        <p>This worker profile has already been claimed. You can still create a separate worker account.</p>
+                    ) : (
+                        <p>This worker profile cannot be claimed yet because the agency has not entered the worker email address.</p>
+                    )}
+                </div>
+            ) : null}
+
             <button
                 type="button"
                 onClick={handleGoogleSignup}
-                disabled={googleLoading}
+                disabled={googleLoading || claimDisabled}
                 className="group flex w-full items-center justify-center gap-3 rounded-2xl border border-[#e4e4df] bg-white px-5 py-3.5 text-[15px] font-medium text-[#18181b] shadow-[0_16px_35px_-28px_rgba(15,23,42,0.25)] transition hover:border-[#d2d2cc] hover:bg-[#f8f8f6] disabled:cursor-not-allowed disabled:opacity-60"
             >
                 {googleLoading ? (
@@ -255,19 +324,20 @@ export function SignupForm({ userType }: SignupFormProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
                 <InputField
                     id="fullName"
-                    label={userType === "employer" ? "Contact Person Name" : "Full Name"}
+                    label={userType === "worker" ? "Full Name" : "Contact Person Name"}
                     value={fullName}
                     onChange={setFullName}
-                    placeholder={userType === "employer" ? "John Smith" : "John Doe"}
+                    placeholder={userType === "worker" ? "John Doe" : "John Smith"}
+                    readOnly={Boolean(claimContext?.claimable && claimContext.workerName)}
                 />
 
-                {userType === "employer" && (
+                {(userType === "employer" || userType === "agency") && (
                     <InputField
                         id="companyName"
-                        label="Company Name"
+                        label={userType === "agency" ? "Agency Name" : "Company Name"}
                         value={companyName}
                         onChange={setCompanyName}
-                        placeholder="Your Company Ltd."
+                        placeholder={userType === "agency" ? "Your Agency Name" : "Your Company Ltd."}
                     />
                 )}
 
@@ -278,9 +348,10 @@ export function SignupForm({ userType }: SignupFormProps) {
                         type="email"
                         value={email}
                         onChange={setEmail}
-                        placeholder={userType === "employer" ? "hr@company.com" : "you@example.com"}
+                        placeholder={userType === "worker" ? "you@example.com" : "contact@example.com"}
                         invalid={Boolean(emailValidation.error)}
                         warning={!emailValidation.error && Boolean(emailValidation.suggestion)}
+                        readOnly={claimEmailLocked}
                     />
                     {emailValidation.error && email && (
                         <p className="px-1 text-xs font-medium text-red-500">{emailValidation.error}</p>
@@ -359,7 +430,7 @@ export function SignupForm({ userType }: SignupFormProps) {
 
                 <button
                     type="submit"
-                    disabled={!canSubmit}
+                    disabled={!canSubmit || claimDisabled}
                     className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#111111_0%,#27272a_100%)] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {loading ? (
@@ -369,7 +440,9 @@ export function SignupForm({ userType }: SignupFormProps) {
                         </>
                     ) : (
                         <>
-                            Create {userType === "employer" ? "employer" : "worker"} account
+                            {claimContext?.claimable
+                                ? "Claim worker account"
+                                : `Create ${userType === "employer" ? "employer" : userType === "agency" ? "agency" : "worker"} account`}
                         </>
                     )}
                 </button>
@@ -395,6 +468,7 @@ interface InputFieldProps {
     minLength?: number;
     invalid?: boolean;
     warning?: boolean;
+    readOnly?: boolean;
 }
 
 function InputField({
@@ -407,6 +481,7 @@ function InputField({
     minLength,
     invalid = false,
     warning = false,
+    readOnly = false,
 }: InputFieldProps) {
     const tone = invalid
         ? "border-red-300 focus:border-red-400 focus:ring-red-100"
@@ -426,8 +501,9 @@ function InputField({
                 onChange={(e) => onChange(e.target.value)}
                 minLength={minLength}
                 required
+                readOnly={readOnly}
                 placeholder={placeholder}
-                className={`w-full rounded-2xl border bg-[#f8f8f6] px-4 py-3 text-[15px] text-[#18181b] outline-none transition placeholder:text-[#a1a1aa] focus:bg-white focus:ring-2 ${tone}`}
+                className={`w-full rounded-2xl border bg-[#f8f8f6] px-4 py-3 text-[15px] text-[#18181b] outline-none transition placeholder:text-[#a1a1aa] focus:bg-white focus:ring-2 ${readOnly ? "cursor-not-allowed opacity-80" : ""} ${tone}`}
             />
         </div>
     );

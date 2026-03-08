@@ -12,7 +12,7 @@ import { pickCanonicalWorkerRecord } from "@/lib/workers";
 
 type ProfileRow = Pick<Tables<"profiles">, "id" | "email" | "full_name" | "user_type" | "created_at">;
 type WorkerRow = Pick<
-    Tables<"candidates">,
+    Tables<"worker_onboarding">,
     | "id"
     | "profile_id"
     | "status"
@@ -34,7 +34,7 @@ type WorkerRow = Pick<
     | "lives_abroad"
     | "previous_visas"
 >;
-type DocumentRow = Pick<Tables<"candidate_documents">, "user_id" | "document_type" | "status" | "updated_at" | "created_at">;
+type DocumentRow = Pick<Tables<"worker_documents">, "user_id" | "document_type" | "status" | "updated_at" | "created_at">;
 type PaymentRow = Pick<
     Tables<"payments">,
     | "id"
@@ -52,7 +52,7 @@ type JobRequestRow = Pick<
     Tables<"job_requests">,
     "id" | "title" | "status" | "created_at" | "employer_id" | "positions_count" | "positions_filled"
 >;
-type OfferRow = Pick<Tables<"offers">, "id" | "job_request_id" | "candidate_id" | "status">;
+type OfferRow = Pick<Tables<"offers">, "id" | "job_request_id" | "worker_id" | "status">;
 type EmailQueueRow = Pick<
     Tables<"email_queue">,
     "id" | "user_id" | "recipient_email" | "status" | "error_message" | "created_at" | "email_type"
@@ -279,16 +279,16 @@ export async function getAdminExceptionSnapshot() {
     ] = await Promise.all([
         admin.from("profiles").select("id, email, full_name, user_type, created_at"),
         admin
-            .from("candidates")
+            .from("worker_onboarding")
             .select("id, profile_id, status, updated_at, entry_fee_paid, job_search_active, queue_joined_at, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas")
             .not("profile_id", "is", null)
             .order("updated_at", { ascending: false }),
-        admin.from("candidate_documents").select("user_id, document_type, status, updated_at, created_at"),
+        admin.from("worker_documents").select("user_id, document_type, status, updated_at, created_at"),
         admin.from("payments").select("id, profile_id, status, payment_type, stripe_checkout_session_id, deadline_at, metadata, paid_at"),
         admin.from("employers").select("id, profile_id, company_name, status, created_at"),
         admin.from("agencies").select("id, profile_id, display_name, legal_name, status, created_at"),
         admin.from("job_requests").select("id, title, status, created_at, employer_id, positions_count, positions_filled"),
-        admin.from("offers").select("id, job_request_id, candidate_id, status"),
+        admin.from("offers").select("id, job_request_id, worker_id, status"),
         admin
             .from("email_queue")
             .select("id, user_id, recipient_email, status, error_message, created_at, email_type")
@@ -348,6 +348,7 @@ export async function getAdminExceptionSnapshot() {
 
     const docsByUser = new Map<string, DocumentRow[]>();
     for (const document of typedDocuments) {
+        if (!document.user_id) continue;
         const current = docsByUser.get(document.user_id) || [];
         current.push(document);
         docsByUser.set(document.user_id, current);
@@ -515,7 +516,11 @@ export async function getAdminExceptionSnapshot() {
         const completionResult = getWorkerCompletion({
             profile,
             worker,
-            documents: workerDocuments,
+            documents: workerDocuments
+                .filter((document) => Boolean(document.document_type))
+                .map((document) => ({
+                    document_type: document.document_type as string,
+                })),
         });
 
         const hasCompletedEntryFee = completedEntryFeeProfiles.has(profile.id)

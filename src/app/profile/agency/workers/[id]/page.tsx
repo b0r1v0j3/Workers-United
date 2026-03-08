@@ -51,7 +51,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
     }
 
     const { data: workerRecord, error: workerError } = await admin
-        .from("candidates")
+        .from("worker_onboarding")
         .select(`
             id,
             profile_id,
@@ -83,8 +83,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
             passport_issue_date,
             passport_expiry_date,
             lives_abroad,
-            previous_visas,
-            profiles:profiles!candidates_profile_id_fkey(full_name, email)
+            previous_visas
         `)
         .eq("id", id)
         .eq("agency_id", agency.id)
@@ -94,11 +93,19 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
         redirect(agencyDashboardHref);
     }
 
+    const { data: linkedProfile } = workerRecord.profile_id
+        ? await admin
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", workerRecord.profile_id)
+            .maybeSingle()
+        : { data: null as { full_name: string | null; email: string | null } | null };
+
     const claimed = isAgencyWorkerClaimed(workerRecord);
     const profileId = workerRecord.profile_id || null;
     const { data: documents } = claimed && profileId
         ? await admin
-            .from("candidate_documents")
+            .from("worker_documents")
             .select("document_type, status, reject_reason")
             .eq("user_id", profileId)
         : { data: [] as Array<{ document_type: string; status: string | null; reject_reason: string | null }> };
@@ -112,7 +119,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
 
     const completionResult = getWorkerCompletion({
         profile: { full_name: getAgencyWorkerName(workerRecord) },
-        candidate: workerRecord,
+        worker: workerRecord,
         documents: documents || [],
     }, { phoneOptional: true });
 
@@ -136,8 +143,14 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                     id: workerRecord.id,
                     profileId,
                     claimed,
-                    fullName: getAgencyWorkerName(workerRecord),
-                    email: getAgencyWorkerEmail(workerRecord) || "",
+                    fullName: getAgencyWorkerName({
+                        submitted_full_name: workerRecord.submitted_full_name,
+                        profiles: linkedProfile,
+                    }),
+                    email: getAgencyWorkerEmail({
+                        submitted_email: workerRecord.submitted_email,
+                        profiles: linkedProfile,
+                    }) || "",
                     phone: workerRecord.phone || "",
                     nationality: workerRecord.nationality || "",
                     currentCountry: workerRecord.current_country || "",

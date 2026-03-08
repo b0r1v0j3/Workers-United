@@ -19,12 +19,12 @@ export async function POST(request: NextRequest) {
         const userEmail = user.email || "";
 
         // Lookup phone number for WhatsApp dual-send
-        const { data: candidate } = await supabase
-            .from("candidates")
+        const { data: workerRecord } = await supabase
+            .from("worker_onboarding")
             .select("phone")
             .eq("profile_id", user.id)
             .maybeSingle();
-        const phone = candidate?.phone || undefined;
+        const phone = workerRecord?.phone || undefined;
 
         // Queue the appropriate email based on type
         switch (emailType) {

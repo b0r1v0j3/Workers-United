@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
+import { normalizeUserType } from "@/lib/domain";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient();
@@ -18,7 +19,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
     const isOwner = isGodModeUser(user.email);
 
-    if (profile?.user_type !== 'admin' && !isOwner) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== 'admin' && metadataType !== "admin" && !isOwner) {
         redirect("/profile");
     }
 

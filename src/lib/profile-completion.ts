@@ -54,9 +54,25 @@ export interface ProfileCompletionResult {
     completedFields: number;
 }
 
+interface WorkerCompletionOptions {
+    phoneOptional?: boolean;
+}
+
+interface WorkerSpouseData {
+    first_name?: string | null;
+    last_name?: string | null;
+    dob?: string | null;
+}
+
+interface WorkerFamilyData {
+    spouse?: WorkerSpouseData | null;
+    children?: unknown[] | null;
+    [key: string]: unknown;
+}
+
 interface WorkerData {
     profile: { full_name?: string | null } | null;
-    candidate: {
+    worker?: {
         phone?: string | null;
         nationality?: string | null;
         current_country?: string | null;
@@ -71,12 +87,9 @@ interface WorkerData {
         passport_issued_by?: string | null;
         passport_issue_date?: string | null;
         passport_expiry_date?: string | null;
-        lives_abroad?: boolean | null;
-        previous_visas?: boolean | null;
-        family_data?: {
-            spouse?: { first_name?: string; last_name?: string; dob?: string } | null;
-            children?: any[] | null;
-        } | null;
+        lives_abroad?: string | boolean | null;
+        previous_visas?: string | boolean | null;
+        family_data?: unknown;
     } | null;
     documents: { document_type: string }[];
 }
@@ -99,47 +112,57 @@ interface EmployerData {
 
 // ─── Main Functions ──────────────────────────────────────────────
 
-export function getWorkerCompletion(data: WorkerData): ProfileCompletionResult {
-    const { profile, candidate, documents } = data;
+export function getWorkerCompletion(data: WorkerData, options: WorkerCompletionOptions = {}): ProfileCompletionResult {
+    const { profile, documents } = data;
+    const worker = data.worker ?? null;
     const docTypes = (documents || []).map(d => d.document_type);
+    const familyData = worker?.family_data && typeof worker.family_data === "object" && !Array.isArray(worker.family_data)
+        ? worker.family_data as WorkerFamilyData
+        : null;
 
     // Fields where `false` is a valid user answer (they chose "No")
     const BOOLEAN_ANSWER_FIELDS = new Set(['lives_abroad', 'previous_visas']);
 
-    const fields: Record<string, any> = {
+    const fields: Record<string, unknown> = {
         full_name: profile?.full_name,
-        phone: candidate?.phone,
-        nationality: candidate?.nationality,
-        current_country: candidate?.current_country,
-        preferred_job: candidate?.preferred_job,
-        gender: candidate?.gender,
-        date_of_birth: candidate?.date_of_birth,
-        birth_country: candidate?.birth_country,
-        birth_city: candidate?.birth_city,
-        citizenship: candidate?.citizenship,
-        marital_status: candidate?.marital_status,
-        passport_number: candidate?.passport_number,
-        passport_issued_by: candidate?.passport_issued_by,
-        passport_issue_date: candidate?.passport_issue_date,
-        passport_expiry_date: candidate?.passport_expiry_date,
-        lives_abroad: candidate?.lives_abroad,
-        previous_visas: candidate?.previous_visas,
+        nationality: worker?.nationality,
+        current_country: worker?.current_country,
+        preferred_job: worker?.preferred_job,
+        gender: worker?.gender,
+        date_of_birth: worker?.date_of_birth,
+        birth_country: worker?.birth_country,
+        birth_city: worker?.birth_city,
+        citizenship: worker?.citizenship,
+        marital_status: worker?.marital_status,
+        passport_number: worker?.passport_number,
+        passport_issued_by: worker?.passport_issued_by,
+        passport_issue_date: worker?.passport_issue_date,
+        passport_expiry_date: worker?.passport_expiry_date,
+        lives_abroad: worker?.lives_abroad,
+        previous_visas: worker?.previous_visas,
         passport_doc: docTypes.includes("passport"),
         biometric_photo_doc: docTypes.includes("biometric_photo"),
         diploma_doc: docTypes.includes("diploma"),
     };
 
+    if (!options.phoneOptional) {
+        fields.phone = worker?.phone;
+    }
+
     // Conditional: married workers must have spouse data
-    const isMarried = candidate?.marital_status?.toLowerCase() === 'married';
+    const isMarried = worker?.marital_status?.toLowerCase() === 'married';
     if (isMarried) {
-        const spouse = candidate?.family_data?.spouse;
+        const spouse = familyData?.spouse;
         fields.spouse_data = !!(spouse?.first_name && spouse?.last_name);
     }
 
     // For boolean answer fields, `false` counts as filled (user answered "No")
     // For everything else, use truthiness (so passport_doc: false = not uploaded)
-    const isFieldFilled = (key: string, value: any): boolean => {
+    const isFieldFilled = (key: string, value: unknown): boolean => {
         if (BOOLEAN_ANSWER_FIELDS.has(key)) {
+            if (typeof value === "string") {
+                return value.trim().length > 0;
+            }
             return value !== null && value !== undefined;
         }
         return !!value;

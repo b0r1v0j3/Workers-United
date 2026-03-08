@@ -31,28 +31,28 @@ export async function GET() {
         // Fetch all matches with contract_data
         const { data: contracts } = await admin
             .from("contract_data")
-            .select("match_id, candidate_full_name, generated_at, generated_documents");
+            .select("match_id, generated_at, generated_documents");
 
-        // Fetch all matches to get candidate IDs
+        // Fetch all matches to get worker record IDs
         const matchIds = (contracts || []).map(c => c.match_id);
 
         const { data: matches } = await admin
             .from("matches")
-            .select("id, candidate_id, employer_id, status")
+            .select("id, worker_id, employer_id, status")
             .in("id", matchIds.length > 0 ? matchIds : ["__none__"]);
 
-        const candidateIds = (matches || []).map(m => m.candidate_id);
+        const workerRecordIds = (matches || []).map(m => m.worker_id);
 
-        const { data: candidates } = await admin
-            .from("candidates")
+        const { data: workerRecords } = await admin
+            .from("worker_onboarding")
             .select("id, profile_id")
-            .in("id", candidateIds.length > 0 ? candidateIds : ["__none__"]);
+            .in("id", workerRecordIds.length > 0 ? workerRecordIds : ["__none__"]);
 
-        const candidateMap = new Map((candidates || []).map(c => [c.id, c]));
+        const workerRecordMap = new Map((workerRecords || []).map(workerRecord => [workerRecord.id, workerRecord]));
         const matchMap = new Map((matches || []).map(m => [m.id, m]));
 
         // Get profile IDs for names
-        const profileIds = (candidates || []).map(c => c.profile_id);
+        const profileIds = (workerRecords || []).map(workerRecord => workerRecord.profile_id);
         const { data: profiles } = await admin
             .from("profiles")
             .select("id, full_name, email")
@@ -62,7 +62,7 @@ export async function GET() {
 
         // Also fetch uploaded docs count per worker
         const { data: uploadedDocs } = await admin
-            .from("candidate_documents")
+            .from("worker_documents")
             .select("user_id, document_type, status")
             .in("user_id", profileIds.length > 0 ? profileIds : ["__none__"]);
 
@@ -77,16 +77,16 @@ export async function GET() {
         // Build the response
         const workers = (contracts || []).map(contract => {
             const match = matchMap.get(contract.match_id);
-            const candidate = match ? candidateMap.get(match.candidate_id) : null;
-            const profile = candidate ? profileMap.get(candidate.profile_id) : null;
-            const docs = candidate ? docsByUser.get(candidate.profile_id) : null;
+            const workerRecord = match ? workerRecordMap.get(match.worker_id) : null;
+            const profile = workerRecord ? profileMap.get(workerRecord.profile_id) : null;
+            const docs = workerRecord ? docsByUser.get(workerRecord.profile_id) : null;
             const generatedDocs = contract.generated_documents || {};
             const generatedCount = Object.keys(generatedDocs).length;
 
             return {
                 matchId: contract.match_id,
-                profileId: candidate?.profile_id || null,
-                name: contract.candidate_full_name || profile?.full_name || "Unknown",
+                profileId: workerRecord?.profile_id || null,
+                name: profile?.full_name || "Unknown",
                 email: profile?.email || null,
                 matchStatus: match?.status || "unknown",
                 generatedAt: contract.generated_at,

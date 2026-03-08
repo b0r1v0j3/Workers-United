@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
 import { createAdminClient } from "@/lib/supabase/admin";
 import JSZip from "jszip";
+import { getWorkerDocumentPublicUrl } from "@/lib/worker-documents";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
         // Fetch all matches with contract_data that have generated documents
         const matchQuery = admin
             .from("contract_data")
-            .select("*, matches!inner(id, candidate_id, employer_id)")
+            .select("*, matches!inner(id, worker_id, employer_id)")
             .not("generated_documents", "is", null);
 
         const { data: contracts, error: fetchError } = await matchQuery;
@@ -50,33 +51,33 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "No generated documents found" }, { status: 404 });
         }
 
-        // Get candidate IDs from matches
-        const candidateIds = contracts
-            .map((c: any) => c.matches?.candidate_id)
+        // Get worker record IDs from matches
+        const workerRecordIds = contracts
+            .map((c: any) => c.matches?.worker_id)
             .filter(Boolean);
 
-        // Fetch candidate info
-        const { data: candidates } = await admin
-            .from("candidates")
+        // Fetch worker records
+        const { data: workerRecords } = await admin
+            .from("worker_onboarding")
             .select("id, profile_id")
-            .in("id", candidateIds.length > 0 ? candidateIds : ["__none__"]);
+            .in("id", workerRecordIds.length > 0 ? workerRecordIds : ["__none__"]);
 
-        const candidateProfileIds = (candidates || []).map(c => c.profile_id);
+        const workerProfileIds = (workerRecords || []).map((workerRecord) => workerRecord.profile_id);
 
         // Fetch profiles for names
         const { data: profiles } = await admin
             .from("profiles")
             .select("id, full_name")
-            .in("id", candidateProfileIds.length > 0 ? candidateProfileIds : ["__none__"]);
+            .in("id", workerProfileIds.length > 0 ? workerProfileIds : ["__none__"]);
 
         const profileMap = new Map((profiles || []).map(p => [p.id, p]));
-        const candidateMap = new Map((candidates || []).map(c => [c.id, c]));
+        const workerRecordMap = new Map((workerRecords || []).map((workerRecord) => [workerRecord.id, workerRecord]));
 
         // Fetch worker uploaded documents (passport, photo, diploma)
         const { data: workerDocs } = await admin
-            .from("candidate_documents")
+            .from("worker_documents")
             .select("*")
-            .in("user_id", candidateProfileIds.length > 0 ? candidateProfileIds : ["__none__"])
+            .in("user_id", workerProfileIds.length > 0 ? workerProfileIds : ["__none__"])
             .in("document_type", ["passport", "biometric_photo", "diploma"]);
 
         const docsByUser = new Map<string, any[]>();
@@ -90,16 +91,16 @@ export async function POST(request: NextRequest) {
         const zip = new JSZip();
 
         for (const contract of contracts) {
-            const candidateId = contract.matches?.candidate_id;
-            const candidate = candidateMap.get(candidateId);
-            if (!candidate) continue;
+            const workerRecordId = contract.matches?.worker_id;
+            const workerRecord = workerRecordMap.get(workerRecordId);
+            if (!workerRecord) continue;
 
             // Filter by specific worker IDs if provided
-            if (workerIds.length > 0 && !workerIds.includes(candidate.profile_id)) {
+            if (workerIds.length > 0 && !workerIds.includes(workerRecord.profile_id)) {
                 continue;
             }
 
-            const profileData = profileMap.get(candidate.profile_id);
+            const profileData = profileMap.get(workerRecord.profile_id);
             const folderName = (profileData?.full_name || "Unknown")
                 .toUpperCase()
                 .replace(/[^\p{L}\p{N}\s]/gu, "")
@@ -132,13 +133,14 @@ export async function POST(request: NextRequest) {
                 });
 
             // 2. Fetch all uploaded documents in parallel
-            const userDocs = docsByUser.get(candidate.profile_id) || [];
+            const userDocs = docsByUser.get(workerRecord.profile_id) || [];
 
             const uploadedFetches = userDocs
                 .filter(doc => doc.storage_path)
                 .map(async (doc) => {
                     try {
-                        const fileUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/candidate-docs/${doc.storage_path}`;
+                        const fileUrl = getWorkerDocumentPublicUrl(doc.storage_path);
+                        if (!fileUrl) return;
                         const response = await fetch(fileUrl);
                         if (response.ok) {
                             const buffer = await response.arrayBuffer();

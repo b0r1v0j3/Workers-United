@@ -1,0 +1,150 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getAgencyOwnedWorker, getAgencySchemaState } from "@/lib/agencies";
+import { normalizeUserType } from "@/lib/domain";
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from "@/lib/constants";
+import { logServerActivity } from "@/lib/activityLoggerServer";
+import { checkRateLimit, standardLimiter } from "@/lib/rate-limit";
+import { sanitizeStorageFileName } from "@/lib/workers";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+
+const ALLOWED_DOC_TYPES = new Set(["passport", "biometric_photo", "diploma"]);
+
+interface RouteContext {
+    params: Promise<{ workerId: string }>;
+}
+
+export async function POST(request: NextRequest, context: RouteContext) {
+    const blocked = checkRateLimit(request, standardLimiter);
+    if (blocked) {
+        return blocked;
+    }
+
+    try {
+        const { workerId } = await context.params;
+        const supabase = await createClient();
+        const admin = createAdminClient();
+
+        const schemaState = await getAgencySchemaState(admin);
+        if (!schemaState.ready) {
+            return NextResponse.json({ error: "Agency workspace setup is not active yet." }, { status: 503 });
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { data: profile } = await admin
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        if (normalizeUserType(profile?.user_type || user.user_metadata?.user_type) !== "agency") {
+            return NextResponse.json({ error: "Agency access required" }, { status: 403 });
+        }
+
+        const { worker } = await getAgencyOwnedWorker(admin, user.id, workerId);
+        if (!worker) {
+            return NextResponse.json({ error: "Worker not found" }, { status: 404 });
+        }
+
+        if (!worker.profile_id) {
+            return NextResponse.json({ error: "Worker must claim the profile before documents can be uploaded." }, { status: 400 });
+        }
+
+        const formData = await request.formData();
+        const docTypeRaw = formData.get("docType");
+        const fileEntry = formData.get("file");
+        const docType = typeof docTypeRaw === "string" ? docTypeRaw.trim() : "";
+
+        if (!ALLOWED_DOC_TYPES.has(docType)) {
+            return NextResponse.json({ error: "Unsupported document type" }, { status: 400 });
+        }
+
+        if (!fileEntry || typeof fileEntry === "string") {
+            return NextResponse.json({ error: "File is required" }, { status: 400 });
+        }
+
+        if (fileEntry.size > MAX_FILE_SIZE_BYTES) {
+            return NextResponse.json({ error: `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.` }, { status: 400 });
+        }
+
+        const nowIso = new Date().toISOString();
+        const sanitizedFileName = sanitizeStorageFileName(fileEntry.name || `${docType}.bin`, docType);
+        const storagePath = `${worker.profile_id}/${docType}/${Date.now()}_${sanitizedFileName}`;
+
+        const { data: existingDocument, error: existingDocumentError } = await admin
+            .from("worker_documents")
+            .select("storage_path")
+            .eq("user_id", worker.profile_id)
+            .eq("document_type", docType)
+            .maybeSingle();
+
+        if (existingDocumentError) {
+            console.error("[AgencyWorkerDocuments] Existing document lookup failed:", existingDocumentError);
+            return NextResponse.json({ error: "Failed to load worker document state" }, { status: 500 });
+        }
+
+        const fileBuffer = Buffer.from(await fileEntry.arrayBuffer());
+        const { error: uploadError } = await admin.storage
+            .from(WORKER_DOCUMENTS_BUCKET)
+            .upload(storagePath, fileBuffer, {
+                contentType: fileEntry.type || undefined,
+            });
+
+        if (uploadError) {
+            console.error("[AgencyWorkerDocuments] Storage upload failed:", uploadError);
+            return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });
+        }
+
+        const { error: upsertError } = await admin
+            .from("worker_documents")
+            .upsert({
+                user_id: worker.profile_id,
+                document_type: docType,
+                storage_path: storagePath,
+                status: "uploaded",
+                reject_reason: null,
+                verified_at: null,
+                extracted_data: null,
+                ocr_json: null,
+                updated_at: nowIso,
+            }, { onConflict: "user_id,document_type" });
+
+        if (upsertError) {
+            await admin.storage.from(WORKER_DOCUMENTS_BUCKET).remove([storagePath]);
+            console.error("[AgencyWorkerDocuments] Document record upsert failed:", upsertError);
+            return NextResponse.json({ error: "Failed to save document metadata" }, { status: 500 });
+        }
+
+        if (existingDocument?.storage_path && existingDocument.storage_path !== storagePath) {
+            const { error: removeError } = await admin.storage
+                .from(WORKER_DOCUMENTS_BUCKET)
+                .remove([existingDocument.storage_path]);
+
+            if (removeError) {
+                console.warn("[AgencyWorkerDocuments] Previous document cleanup failed:", removeError);
+            }
+        }
+
+        await logServerActivity(worker.profile_id, "document_uploaded_server", "documents", {
+            doc_type: docType,
+            uploaded_by_agency: true,
+            agency_profile_id: user.id,
+            worker_id: worker.id,
+        });
+
+        return NextResponse.json({
+            success: true,
+            docType,
+            profileId: worker.profile_id,
+            storagePath,
+        });
+    } catch (error) {
+        console.error("[AgencyWorkerDocuments] Error:", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+}

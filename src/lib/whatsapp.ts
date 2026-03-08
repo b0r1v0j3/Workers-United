@@ -59,6 +59,10 @@ interface SendResult {
     error?: string;
 }
 
+interface SendAttemptResult extends SendResult {
+    errorData?: any;
+}
+
 // ─── Environment helpers ────────────────────────────────────────────────────
 
 function getConfig() {
@@ -86,6 +90,143 @@ function normalizePhone(phone: string): string {
     return cleaned;
 }
 
+function buildTemplateComponents(options: SendTemplateOptions): TemplateComponent[] {
+    const components: TemplateComponent[] = [];
+
+    if (options.headerParams && options.headerParams.length > 0) {
+        components.push({
+            type: "header",
+            parameters: options.headerParams.map(text => ({ type: "text" as const, text })),
+        });
+    }
+
+    if (options.bodyParams && options.bodyParams.length > 0) {
+        components.push({
+            type: "body",
+            parameters: options.bodyParams.map(text => ({ type: "text" as const, text })),
+        });
+    }
+
+    if (options.buttonParams && options.buttonParams.length > 0) {
+        options.buttonParams.forEach((btn, index) => {
+            components.push({
+                type: "button",
+                sub_type: "url",
+                index,
+                parameters: [{ type: "text" as const, text: btn.url }],
+            });
+        });
+    }
+
+    return components;
+}
+
+function buildTemplateContent(options: SendTemplateOptions): string {
+    const body = options.bodyParams?.join(", ") || "";
+    const button = options.buttonParams?.map((btn) => btn.url).join(", ");
+    const buttonNote = button ? ` [buttons: ${button}]` : "";
+    return `[Template: ${options.templateName}] ${body}${buttonNote}`.trim();
+}
+
+function dedupeTemplateVariants(variants: SendTemplateOptions[]): SendTemplateOptions[] {
+    const seen = new Set<string>();
+    return variants.filter((variant) => {
+        const key = JSON.stringify({
+            templateName: variant.templateName,
+            bodyParams: variant.bodyParams || [],
+            headerParams: variant.headerParams || [],
+            buttonParams: variant.buttonParams || [],
+        });
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function buildTemplateFallbackVariants(options: SendTemplateOptions): SendTemplateOptions[] {
+    const baseWithoutButtons = options.buttonParams?.length
+        ? { ...options, buttonParams: undefined }
+        : null;
+
+    const variants: SendTemplateOptions[] = [];
+
+    if (baseWithoutButtons) {
+        variants.push(baseWithoutButtons);
+    }
+
+    switch (options.templateName) {
+        case "status_update":
+            if (baseWithoutButtons) {
+                variants.push({
+                    ...baseWithoutButtons,
+                    bodyParams: options.bodyParams?.slice(-1),
+                });
+            }
+            break;
+        case "profile_incomplete":
+            if (baseWithoutButtons) {
+                variants.push({
+                    ...baseWithoutButtons,
+                    bodyParams: options.bodyParams?.slice(0, 2),
+                });
+                variants.push({
+                    ...baseWithoutButtons,
+                    bodyParams: options.bodyParams?.slice(0, 1),
+                });
+            }
+            break;
+        case "payment_confirmed":
+            if (baseWithoutButtons && options.bodyParams && options.bodyParams.length > 1) {
+                variants.push({
+                    ...baseWithoutButtons,
+                    bodyParams: [options.bodyParams[1], options.bodyParams[0]],
+                });
+            }
+            break;
+        default:
+            break;
+    }
+
+    return dedupeTemplateVariants(variants);
+}
+
+async function attemptTemplateSend(
+    config: NonNullable<ReturnType<typeof getConfig>>,
+    to: string,
+    options: SendTemplateOptions
+): Promise<SendAttemptResult> {
+    const languageCode = options.languageCode || "en";
+    const components = buildTemplateComponents(options);
+    const payload = {
+        messaging_product: "whatsapp",
+        to: to.replace("+", ""),
+        type: "template",
+        template: {
+            name: options.templateName,
+            language: { code: languageCode },
+            ...(components.length > 0 ? { components } : {}),
+        },
+    };
+
+    const response = await fetch(`${GRAPH_API_BASE}/${config.phoneNumberId}/messages`, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${config.token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMsg = errorData?.error?.message || `HTTP ${response.status}`;
+        return { success: false, error: errorMsg, errorData };
+    }
+
+    const data: WhatsAppApiResponse = await response.json();
+    return { success: true, messageId: data.messages?.[0]?.id };
+}
+
 // ─── Send template message ──────────────────────────────────────────────────
 
 /**
@@ -102,98 +243,58 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
     }
 
     const to = normalizePhone(options.to);
-    const languageCode = options.languageCode || "en";
-
-    // Build template components
-    const components: TemplateComponent[] = [];
-
-    // Header parameters (if any)
-    if (options.headerParams && options.headerParams.length > 0) {
-        components.push({
-            type: "header",
-            parameters: options.headerParams.map(text => ({ type: "text" as const, text })),
-        });
-    }
-
-    // Body parameters (if any)
-    if (options.bodyParams && options.bodyParams.length > 0) {
-        components.push({
-            type: "body",
-            parameters: options.bodyParams.map(text => ({ type: "text" as const, text })),
-        });
-    }
-
-    // Button parameters (dynamic URLs)
-    if (options.buttonParams && options.buttonParams.length > 0) {
-        options.buttonParams.forEach((btn, index) => {
-            components.push({
-                type: "button",
-                sub_type: "url",
-                index,
-                parameters: [{ type: "text" as const, text: btn.url }],
-            });
-        });
-    }
-
-    const payload = {
-        messaging_product: "whatsapp",
-        to: to.replace("+", ""), // Meta API wants digits without +
-        type: "template",
-        template: {
-            name: options.templateName,
-            language: { code: languageCode },
-            ...(components.length > 0 ? { components } : {}),
-        },
-    };
 
     try {
-        const response = await fetch(
-            `${GRAPH_API_BASE}/${config.phoneNumberId}/messages`,
-            {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${config.token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
+        let attemptedOptions = options;
+        let sendResult = await attemptTemplateSend(config, to, options);
+
+        if (!sendResult.success && sendResult.error?.includes("(#132018)")) {
+            for (const fallbackOptions of buildTemplateFallbackVariants(options)) {
+                const fallbackResult = await attemptTemplateSend(config, to, fallbackOptions);
+                if (fallbackResult.success) {
+                    attemptedOptions = fallbackOptions;
+                    sendResult = fallbackResult;
+                    console.warn("[WhatsApp] Template recovered via fallback variant:", {
+                        templateName: options.templateName,
+                        originalBodyCount: options.bodyParams?.length || 0,
+                        fallbackBodyCount: fallbackOptions.bodyParams?.length || 0,
+                        droppedButtons: !!options.buttonParams?.length && !fallbackOptions.buttonParams?.length,
+                    });
+                    break;
+                }
+
+                sendResult = fallbackResult;
             }
-        );
+        }
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            const errorMsg = errorData?.error?.message || `HTTP ${response.status}`;
-            console.error("[WhatsApp] Template send failed:", errorMsg, errorData);
-
-            // Log failed attempt
+        if (!sendResult.success) {
+            console.error("[WhatsApp] Template send failed:", sendResult.error, sendResult.errorData);
             await logMessage({
                 userId: options.userId,
                 phoneNumber: to,
                 direction: "outbound",
                 messageType: "template",
-                content: `[Template: ${options.templateName}] ${options.bodyParams?.join(", ") || ""}`,
-                templateName: options.templateName,
+                content: buildTemplateContent(attemptedOptions),
+                templateName: attemptedOptions.templateName,
                 status: "failed",
+                errorMessage: sendResult.error,
             });
 
-            return { success: false, error: errorMsg };
+            return { success: false, error: sendResult.error };
         }
 
-        const data: WhatsAppApiResponse = await response.json();
-        const messageId = data.messages?.[0]?.id;
-
-        // Log successful send
         await logMessage({
             userId: options.userId,
             phoneNumber: to,
             direction: "outbound",
             messageType: "template",
-            content: `[Template: ${options.templateName}] ${options.bodyParams?.join(", ") || ""}`,
-            templateName: options.templateName,
-            wamid: messageId,
+            content: buildTemplateContent(attemptedOptions),
+            templateName: attemptedOptions.templateName,
+            wamid: sendResult.messageId,
             status: "sent",
         });
 
-        return { success: true, messageId };
+        return { success: true, messageId: sendResult.messageId };
     } catch (error: any) {
         console.error("[WhatsApp] Send error:", error);
 
@@ -202,9 +303,10 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
             phoneNumber: to,
             direction: "outbound",
             messageType: "template",
-            content: `[Template: ${options.templateName}] FAILED: ${error.message}`,
+            content: `${buildTemplateContent(options)} FAILED: ${error.message}`,
             templateName: options.templateName,
             status: "failed",
+            errorMessage: error.message,
         });
 
         return { success: false, error: error.message };
@@ -253,6 +355,15 @@ export async function sendWhatsAppText(
             const errorData = await response.json().catch(() => null);
             const errorMsg = errorData?.error?.message || `HTTP ${response.status}`;
             console.error("[WhatsApp] Text send failed:", errorMsg);
+            await logMessage({
+                userId,
+                phoneNumber: phone,
+                direction: "outbound",
+                messageType: "text",
+                content: text,
+                status: "failed",
+                errorMessage: errorMsg,
+            });
             return { success: false, error: errorMsg };
         }
 
@@ -272,6 +383,15 @@ export async function sendWhatsAppText(
         return { success: true, messageId };
     } catch (error: any) {
         console.error("[WhatsApp] Text send error:", error);
+        await logMessage({
+            userId,
+            phoneNumber: phone,
+            direction: "outbound",
+            messageType: "text",
+            content: text,
+            status: "failed",
+            errorMessage: error.message,
+        });
         return { success: false, error: error.message };
     }
 }
@@ -287,6 +407,7 @@ interface LogMessageParams {
     templateName?: string;
     wamid?: string;
     status: string;
+    errorMessage?: string;
 }
 
 async function logMessage(params: LogMessageParams): Promise<void> {
@@ -301,6 +422,7 @@ async function logMessage(params: LogMessageParams): Promise<void> {
             template_name: params.templateName || null,
             wamid: params.wamid || null,
             status: params.status,
+            error_message: params.errorMessage || null,
         });
     } catch (err) {
         // Logging failure should never break message sending

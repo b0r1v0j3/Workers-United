@@ -54,7 +54,7 @@ export async function GET(req: Request) {
                 .select("id, full_name, email, user_type")
                 .or(`full_name.ilike.%${q}%,email.ilike.%${q}%`)
                 .limit(10),
-            adminClient.from("candidates")
+            adminClient.from("worker_onboarding")
                 .select("id, profile_id, status, passport_number, preferred_job, entry_fee_paid, queue_joined_at, updated_at")
                 .ilike("passport_number", `%${q}%`)
                 .limit(10),
@@ -97,7 +97,7 @@ export async function GET(req: Request) {
         if (allWorkerProfileIds.size > 0) {
             const idsList = Array.from(allWorkerProfileIds);
             const { data: matchedWorkerRows } = await adminClient
-                .from("candidates")
+                .from("worker_onboarding")
                 .select("id, profile_id, status, preferred_job, entry_fee_paid, queue_joined_at, updated_at")
                 .in("profile_id", idsList.length > 0 ? idsList : ["__none__"])
                 .limit(20);

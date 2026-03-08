@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAgencyOwnedClaimedWorkerByProfileId } from "@/lib/agencies";
+import { normalizeUserType } from "@/lib/domain";
 import { isGodModeUser } from "@/lib/godmode";
-import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumentBounds, fetchImageAsBase64 } from "@/lib/gemini";
+import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumentBounds, fetchImageAsBase64 } from "@/lib/document-ai";
 import sharp from "sharp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { checkRateLimit, strictLimiter } from "@/lib/rate-limit";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
 export async function POST(request: Request) {
     // Rate limit: 10 requests per minute per IP (AI verification is expensive)
@@ -14,7 +18,19 @@ export async function POST(request: Request) {
 
     try {
         const supabase = await createClient();
-        const { candidateId, docType } = await request.json();
+        const { workerId, docType } = await request.json() as {
+            workerId?: string;
+            docType?: string;
+        };
+        const requestedWorkerProfileId =
+            typeof workerId === "string" && workerId.trim()
+                ? workerId.trim()
+                : null;
+        const normalizedDocType = typeof docType === "string" ? docType.trim() : "";
+
+        if (!requestedWorkerProfileId || !normalizedDocType) {
+            return NextResponse.json({ success: false, error: "workerId and docType are required" }, { status: 400 });
+        }
 
         // Auth check: must be logged in
         const { data: { user } } = await supabase.auth.getUser();
@@ -22,42 +38,58 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
 
-        // IDOR fix: check if user is admin; if not, force candidateId to authenticated user
-        let isAdmin = false;
+        const adminClient = createAdminClient();
         const { data: profile } = await supabase
             .from("profiles")
             .select("user_type")
             .eq("id", user.id)
             .single();
 
-        if (profile?.user_type === "admin" || isGodModeUser(user.email)) {
-            isAdmin = true;
-        }
+        const normalizedUserType = normalizeUserType(profile?.user_type || user.user_metadata?.user_type);
+        const isAdmin = normalizedUserType === "admin" || isGodModeUser(user.email);
+        let isAgencyOwnedVerification = false;
+        let targetWorkerProfileId = user.id;
 
-        // Non-admin users can ONLY verify their own documents
-        const safeCandidateId = isAdmin ? candidateId : user.id;
+        if (isAdmin) {
+            targetWorkerProfileId = requestedWorkerProfileId;
+        } else if (normalizedUserType === "agency") {
+            if (requestedWorkerProfileId === user.id) {
+                return NextResponse.json({ success: false, error: "Use a claimed worker profile for agency verification" }, { status: 400 });
+            }
+
+            const { worker } = await getAgencyOwnedClaimedWorkerByProfileId(adminClient, user.id, requestedWorkerProfileId);
+            if (!worker) {
+                return NextResponse.json({ success: false, error: "Worker access denied" }, { status: 403 });
+            }
+
+            targetWorkerProfileId = requestedWorkerProfileId;
+            isAgencyOwnedVerification = true;
+        } else if (requestedWorkerProfileId !== user.id) {
+            return NextResponse.json({ success: false, error: "Worker access denied" }, { status: 403 });
+        }
 
         // Use admin client for storage/DB ops when admin is acting on another user's docs
         // This bypasses RLS which would block cross-user storage operations
-        const storageClient = isAdmin ? createAdminClient() : supabase;
+        const storageClient = isAdmin || isAgencyOwnedVerification ? adminClient : supabase;
+        const readClient = isAdmin || isAgencyOwnedVerification ? adminClient : supabase;
 
         // 1. Fetch document data
-        const { data: document, error: fetchError } = await supabase
-            .from("candidate_documents")
+        const { data: document, error: fetchError } = await readClient
+            .from("worker_documents")
             .select("*")
-            .eq("user_id", safeCandidateId)
-            .eq("document_type", docType)
+            .eq("user_id", targetWorkerProfileId)
+            .eq("document_type", normalizedDocType)
             .single();
 
         if (fetchError || !document) {
             console.error("[Verify] Document not found:", fetchError);
-            await logServerActivity(safeCandidateId, "verify_document_not_found", "documents", { doc_type: docType, error: fetchError?.message }, "error");
+            await logServerActivity(targetWorkerProfileId, "verify_document_not_found", "documents", { doc_type: normalizedDocType, error: fetchError?.message }, "error");
             return NextResponse.json({ success: false, error: "Document not found" }, { status: 404 });
         }
 
         // 2. Get a signed URL for the uploaded document (short TTL for security)
-        const { data: urlData } = await supabase.storage
-            .from("candidate-docs")
+        const { data: urlData } = await storageClient.storage
+            .from(WORKER_DOCUMENTS_BUCKET)
             .createSignedUrl(document.storage_path, 600);
 
         if (!urlData?.signedUrl) {
@@ -81,24 +113,24 @@ export async function POST(request: Request) {
                 // Replace PDF with JPEG in storage
                 const jpegPath = document.storage_path.replace(/\.pdf$/i, '.jpg');
                 await storageClient.storage
-                    .from("candidate-docs")
+                    .from(WORKER_DOCUMENTS_BUCKET)
                     .upload(jpegPath, jpegBuffer, {
                         contentType: 'image/jpeg',
                         upsert: true
                     });
 
                 // Delete old PDF
-                await storageClient.storage.from("candidate-docs").remove([document.storage_path]);
+                await storageClient.storage.from(WORKER_DOCUMENTS_BUCKET).remove([document.storage_path]);
 
                 // Update DB with new path
-                await storageClient.from("candidate_documents")
+                await storageClient.from("worker_documents")
                     .update({ storage_path: jpegPath, updated_at: new Date().toISOString() })
-                    .eq("user_id", safeCandidateId)
-                    .eq("document_type", docType);
+                    .eq("user_id", targetWorkerProfileId)
+                    .eq("document_type", normalizedDocType);
 
                 // Refresh URL
-                const { data: jpegUrlData } = await supabase.storage
-                    .from("candidate-docs")
+                const { data: jpegUrlData } = await storageClient.storage
+                    .from(WORKER_DOCUMENTS_BUCKET)
                     .createSignedUrl(jpegPath, 600);
                 imageUrl = jpegUrlData?.signedUrl || imageUrl;
             }
@@ -108,7 +140,7 @@ export async function POST(request: Request) {
 
         // 2.6. Smart auto-crop + auto-rotate: detect document boundaries and rotation
         try {
-            const bounds = await detectDocumentBounds(imageUrl, docType);
+            const bounds = await detectDocumentBounds(imageUrl, normalizedDocType);
             const needsRotation = bounds.found && bounds.rotationDegrees && bounds.rotationDegrees !== 0;
             const needsCropping = bounds.found && bounds.crop;
 
@@ -149,26 +181,26 @@ export async function POST(request: Request) {
                 const processedBuffer = await pipeline.jpeg({ quality: 92 }).toBuffer();
 
                 // Get current storage path (may have changed from PDF conversion)
-                const { data: currentDoc } = await supabase
-                    .from("candidate_documents")
+                const { data: currentDoc } = await readClient
+                    .from("worker_documents")
                     .select("storage_path")
-                    .eq("user_id", safeCandidateId)
-                    .eq("document_type", docType)
+                    .eq("user_id", targetWorkerProfileId)
+                    .eq("document_type", normalizedDocType)
                     .single();
 
                 const storagePath = currentDoc?.storage_path || document.storage_path;
 
                 // Replace in storage
                 await storageClient.storage
-                    .from("candidate-docs")
+                    .from(WORKER_DOCUMENTS_BUCKET)
                     .update(storagePath, processedBuffer, {
                         contentType: 'image/jpeg',
                         upsert: true
                     });
 
                 // Refresh URL
-                const { data: newUrlData } = await supabase.storage
-                    .from("candidate-docs")
+                const { data: newUrlData } = await storageClient.storage
+                    .from(WORKER_DOCUMENTS_BUCKET)
                     .createSignedUrl(storagePath, 600);
                 imageUrl = newUrlData?.signedUrl || imageUrl;
             }
@@ -183,7 +215,7 @@ export async function POST(request: Request) {
         let qualityIssues: string[] = [];
 
         try {
-            switch (docType) {
+            switch (normalizedDocType) {
                 case 'passport': {
                     const result = await extractPassportData(imageUrl);
 
@@ -228,15 +260,15 @@ export async function POST(request: Request) {
 
                         // Cross-check passport number: OCR vs manually entered
                         if (status !== 'rejected') {
-                            const { data: candidate } = await supabase
-                                .from("candidates")
-                                .select("passport_number")
-                                .eq("user_id", safeCandidateId)
-                                .single();
+                            const { data: workerRecord } = await loadCanonicalWorkerRecord(
+                                readClient,
+                                targetWorkerProfileId,
+                                "id, passport_number, updated_at"
+                            );
 
-                            if (candidate?.passport_number && result.data.passport_number) {
+                            if (workerRecord?.passport_number && result.data.passport_number) {
                                 const ocrNum = result.data.passport_number.replace(/\s/g, '').toUpperCase();
-                                const manualNum = candidate.passport_number.replace(/\s/g, '').toUpperCase();
+                                const manualNum = workerRecord.passport_number.replace(/\s/g, '').toUpperCase();
                                 if (ocrNum !== manualNum) {
                                     status = 'manual_review';
                                     qualityIssues.push(`Passport number mismatch: scanned="${ocrNum}" vs entered="${manualNum}"`);
@@ -321,7 +353,7 @@ export async function POST(request: Request) {
 
         } catch (aiError) {
             console.error("[Verify] AI processing error:", aiError);
-            await logServerActivity(safeCandidateId, "verify_ai_error", "documents", { doc_type: docType, error: aiError instanceof Error ? aiError.message : "Unknown" }, "error");
+            await logServerActivity(targetWorkerProfileId, "verify_ai_error", "documents", { doc_type: normalizedDocType, error: aiError instanceof Error ? aiError.message : "Unknown" }, "error");
             // If AI fails, mark for manual review rather than outright rejection
             status = 'manual_review';
             rejectReason = "AI verification temporarily unavailable";
@@ -333,17 +365,17 @@ export async function POST(request: Request) {
             // Keep the file in storage for admin review — do NOT delete
             // Update DB record to rejected so user can re-upload (upsert will overwrite)
             await storageClient
-                .from("candidate_documents")
+                .from("worker_documents")
                 .update({
                     status: 'rejected',
                     reject_reason: rejectReason,
                     ocr_json: ocrJson,
                     updated_at: new Date().toISOString()
                 })
-                .eq("user_id", safeCandidateId)
-                .eq("document_type", docType);
+                .eq("user_id", targetWorkerProfileId)
+                .eq("document_type", normalizedDocType);
 
-            await logServerActivity(safeCandidateId, "document_rejected_server", "documents", { doc_type: docType, reason: rejectReason, quality_issues: qualityIssues }, "warning");
+            await logServerActivity(targetWorkerProfileId, "document_rejected_server", "documents", { doc_type: normalizedDocType, reason: rejectReason, quality_issues: qualityIssues }, "warning");
 
             return NextResponse.json({
                 success: false,
@@ -364,7 +396,7 @@ export async function POST(request: Request) {
         };
 
         // Save structured extracted data for passport
-        if (docType === 'passport' && ocrJson && status === 'verified') {
+        if (normalizedDocType === 'passport' && ocrJson && status === 'verified') {
             updateData.extracted_data = {
                 full_name: ocrJson.full_name || '',
                 surname: ocrJson.surname || '',
@@ -380,44 +412,44 @@ export async function POST(request: Request) {
         }
 
         const { error: updateError } = await storageClient
-            .from("candidate_documents")
+            .from("worker_documents")
             .update(updateData)
-            .eq("user_id", safeCandidateId)
-            .eq("document_type", docType);
+            .eq("user_id", targetWorkerProfileId)
+            .eq("document_type", normalizedDocType);
 
         if (updateError) {
             console.error("[Verify] Database update error:", updateError);
             throw updateError;
         }
 
-        await logServerActivity(safeCandidateId, "document_verified_server", "documents", { doc_type: docType, status, has_quality_issues: qualityIssues.length > 0 });
+        await logServerActivity(targetWorkerProfileId, "document_verified_server", "documents", { doc_type: normalizedDocType, status, has_quality_issues: qualityIssues.length > 0 });
 
-        // Auto-check: if all 3 docs are verified, update candidate status to VERIFIED
+        // Auto-check: if all 3 docs are verified, update worker status to VERIFIED
         if (status === 'verified') {
             try {
-                const { data: allDocs } = await supabase
-                    .from("candidate_documents")
+                const { data: allDocs } = await readClient
+                    .from("worker_documents")
                     .select("document_type, status")
-                    .eq("user_id", safeCandidateId);
+                    .eq("user_id", targetWorkerProfileId);
 
                 const verifiedTypes = new Set((allDocs || []).filter(d => d.status === 'verified').map(d => d.document_type));
                 const allThreeVerified = verifiedTypes.has('passport') && verifiedTypes.has('biometric_photo') && verifiedTypes.has('diploma');
 
                 if (allThreeVerified) {
-                    // Update candidate status
-                    await storageClient.from("candidates").update({
+                    // Update worker status
+                    await storageClient.from("worker_onboarding").update({
                         status: 'VERIFIED',
-                    }).eq('profile_id', safeCandidateId);
+                    }).eq('profile_id', targetWorkerProfileId);
 
-                    await logServerActivity(safeCandidateId, "all_documents_verified", "documents", { message: "All 3 documents verified — worker status updated to VERIFIED" });
+                    await logServerActivity(targetWorkerProfileId, "all_documents_verified", "documents", { message: "All 3 documents verified — worker status updated to VERIFIED" });
 
                     // Notify admin via email
                     try {
-                        const { data: userProfile } = await supabase.from("profiles").select("full_name, email").eq("id", safeCandidateId).single();
+                        const { data: userProfile } = await readClient.from("profiles").select("full_name, email").eq("id", targetWorkerProfileId).single();
                         const { queueEmail } = await import("@/lib/email-templates");
                         await queueEmail(
                             storageClient,
-                            safeCandidateId,
+                            targetWorkerProfileId,
                             "admin_update",
                             process.env.ADMIN_EMAIL || "contact@workersunited.eu",
                             "Workers United Admin",

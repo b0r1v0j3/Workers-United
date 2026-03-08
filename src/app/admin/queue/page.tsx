@@ -52,7 +52,7 @@ export default async function AdminQueuePage() {
         .eq("status", "pending");
 
     const { data: workerQueueRowsRaw } = await adminClient
-        .from("candidates")
+        .from("worker_onboarding")
         .select(`
             id,
             profile_id,

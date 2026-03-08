@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
         if (action === "approve") {
             // Set to verified
-            await admin.from("candidate_documents").update({
+            await admin.from("worker_documents").update({
                 status: "verified",
                 reject_reason: null,
                 verified_at: new Date().toISOString(),
@@ -44,12 +44,12 @@ export async function POST(request: Request) {
                 admin_id: user.id,
             });
 
-            // Check if all 3 docs are now verified → update candidate status
-            const { data: allDocs } = await admin.from("candidate_documents")
+            // Check if all 3 docs are now verified → update worker status
+            const { data: allDocs } = await admin.from("worker_documents")
                 .select("document_type, status").eq("user_id", userId);
             const verifiedTypes = new Set((allDocs || []).filter(d => d.status === "verified").map(d => d.document_type));
             if (verifiedTypes.has("passport") && verifiedTypes.has("biometric_photo") && verifiedTypes.has("diploma")) {
-                await admin.from("candidates").update({ status: "VERIFIED" }).eq("profile_id", userId);
+                await admin.from("worker_onboarding").update({ status: "VERIFIED" }).eq("profile_id", userId);
                 await logServerActivity(userId, "all_documents_verified", "documents", { via: "admin_review" });
             }
 
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
         } else if (action === "reject") {
             // Set to rejected with admin feedback
-            await admin.from("candidate_documents").update({
+            await admin.from("worker_documents").update({
                 status: "rejected",
                 reject_reason: feedback || "Document not accepted by admin.",
                 updated_at: new Date().toISOString(),

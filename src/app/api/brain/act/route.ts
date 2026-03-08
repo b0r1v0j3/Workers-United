@@ -116,14 +116,14 @@ export async function POST(request: NextRequest) {
             }
 
             // ─── Update User Status ────────────────────────────────────
-            case "update_candidate_status": {
+            case "update_worker_status": {
                 const { profile_id, status } = params;
                 if (!profile_id || !status) {
                     return NextResponse.json({ error: "profile_id and status required" }, { status: 400 });
                 }
 
                 const { error } = await supabase
-                    .from("candidates")
+                    .from("worker_onboarding")
                     .update({ status })
                     .eq("profile_id", profile_id);
 

@@ -8,13 +8,13 @@ import { createClient } from "@/lib/supabase/client";
 
 interface OfferClientProps {
     offer: any;
-    candidate: any;
+    workerRecord: any;
     isExpired: boolean;
     expiresAt: string;
 }
 
-export default function OfferClient({ offer, candidate, isExpired, expiresAt }: OfferClientProps) {
-    const [hasSigned, setHasSigned] = useState(!!candidate.signature_url);
+export default function OfferClient({ offer, workerRecord, isExpired, expiresAt }: OfferClientProps) {
+    const [hasSigned, setHasSigned] = useState(!!workerRecord.signature_url);
     const [signing, setSigning] = useState(false);
     const [confirming, setConfirming] = useState(false);
 
@@ -34,11 +34,11 @@ export default function OfferClient({ offer, candidate, isExpired, expiresAt }: 
         try {
             const supabase = createClient();
 
-            // Save signature to candidate record
+            // Save signature to the worker onboarding record
             await supabase
-                .from("candidates")
+                .from("worker_onboarding")
                 .update({ signature_url: signatureData })
-                .eq("id", candidate.id);
+                .eq("id", workerRecord.id);
 
             // Also log it via API
             await fetch("/api/signatures", {

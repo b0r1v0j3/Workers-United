@@ -4,8 +4,10 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Briefcase, HardHat } from "lucide-react";
+import { Briefcase, HardHat, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { ensureAgencyRecord, getAgencySchemaState } from "@/lib/agencies";
+import { ensureWorkerRecord } from "@/lib/workers";
 
 export default function SelectRolePage() {
     const [loading, setLoading] = useState<string | null>(null);
@@ -13,7 +15,7 @@ export default function SelectRolePage() {
     const router = useRouter();
     const supabase = createClient();
 
-    const handleSelectRole = async (role: "worker" | "employer") => {
+    const handleSelectRole = async (role: "worker" | "employer" | "agency") => {
         setLoading(role);
         setError(null);
 
@@ -73,20 +75,28 @@ export default function SelectRolePage() {
                 }
 
                 router.push("/profile/employer");
-            } else {
-                // Create candidate record for workers
-                const { data: existingCandidate } = await supabase
-                    .from("candidates")
-                    .select("id")
-                    .eq("profile_id", user.id)
-                    .maybeSingle();
-
-                if (!existingCandidate) {
-                    await supabase.from("candidates").insert({
-                        profile_id: user.id,
-                        status: "NEW",
-                    });
+            } else if (role === "agency") {
+                const agencySchemaState = await getAgencySchemaState(supabase);
+                if (!agencySchemaState.ready) {
+                    setError("Agency workspace setup is not active yet. Please try again later.");
+                    setLoading(null);
+                    return;
                 }
+
+                await ensureAgencyRecord(supabase, {
+                    userId: user.id,
+                    email: user.email,
+                    fullName: user.user_metadata?.full_name,
+                    agencyName: user.user_metadata?.company_name,
+                });
+
+                router.push("/profile/agency");
+            } else {
+                await ensureWorkerRecord(supabase, {
+                    userId: user.id,
+                    email: user.email,
+                    fullName: user.user_metadata?.full_name,
+                });
 
                 router.push("/profile/worker");
             }
@@ -115,7 +125,7 @@ export default function SelectRolePage() {
             </div>
 
             {/* Role Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl w-full">
                 {/* Worker Card */}
                 <button
                     onClick={() => handleSelectRole("worker")}
@@ -163,9 +173,39 @@ export default function SelectRolePage() {
                         </div>
                     )}
                 </button>
+
+                {/* Agency Card */}
+                <button
+                    onClick={() => handleSelectRole("agency")}
+                    disabled={loading !== null}
+                    className="group bg-white rounded-2xl p-8 shadow-sm border border-transparent hover:border-[#7c3aed] hover:shadow-lg transition-all duration-200 text-left disabled:opacity-60 disabled:pointer-events-none"
+                >
+                    <div className="w-14 h-14 bg-violet-50 rounded-xl flex items-center justify-center mb-5 group-hover:bg-violet-100 transition-colors">
+                        <Building2 className="w-7 h-7 text-[#7c3aed]" />
+                    </div>
+                    <h2 className="text-xl font-bold text-[#1e293b] mb-2">I&apos;m an Agency</h2>
+                    <p className="text-[#64748b] text-sm leading-relaxed">
+                        Manage worker profiles submitted through your agency and track their progress in one dashboard.
+                    </p>
+                    {loading === "agency" && (
+                        <div className="mt-4 flex items-center gap-2 text-[#7c3aed] text-sm font-semibold">
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Setting up your dashboard...
+                        </div>
+                    )}
+                </button>
             </div>
 
             {/* Footer note */}
+            {error && (
+                <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+                    {error}
+                </div>
+            )}
+
             <p className="mt-8 text-[#94a3b8] text-xs text-center max-w-md">
                 By continuing, you agree to our{" "}
                 <a href="/terms" className="text-[#2563EB] hover:underline">Terms of Service</a>

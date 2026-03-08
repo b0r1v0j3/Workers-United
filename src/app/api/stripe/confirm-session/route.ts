@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { queueEmail } from "@/lib/email-templates";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { resolveWorkerStatusAfterEntryFee } from "@/lib/worker-status";
+import { finalizeConfirmationFeeOffer } from "@/lib/offer-finalization";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
     apiVersion: "2024-04-10",
@@ -43,9 +45,16 @@ export async function POST(request: NextRequest) {
         const paymentType = session.metadata?.payment_type || "entry_fee";
         const paymentId = session.metadata?.payment_id;
         const offerId = session.metadata?.offer_id;
+        const targetProfileId = session.metadata?.target_profile_id || sessionUserId;
+        const paidByProfileId = session.metadata?.paid_by_profile_id || sessionUserId;
+        const targetWorkerId = session.metadata?.target_worker_id || null;
 
         if (!sessionUserId || sessionUserId !== user.id) {
             return NextResponse.json({ error: "Session does not belong to current user" }, { status: 403 });
+        }
+
+        if (!targetProfileId) {
+            return NextResponse.json({ error: "Missing target profile" }, { status: 400 });
         }
 
         if (session.payment_status !== "paid") {
@@ -73,15 +82,19 @@ export async function POST(request: NextRequest) {
         };
 
         const paymentPayload = {
-            user_id: user.id,
-            profile_id: user.id,
+            user_id: targetProfileId,
+            profile_id: targetProfileId,
             payment_type: paymentType,
             amount,
             amount_cents: expectedAmountCents,
             status: "completed",
             stripe_checkout_session_id: session.id,
             paid_at: new Date().toISOString(),
-            metadata: paymentMetadata,
+            metadata: {
+                ...paymentMetadata,
+                paid_by_profile_id: paidByProfileId || null,
+                target_worker_id: targetWorkerId || null,
+            },
         };
 
         if (paymentId) {
@@ -113,18 +126,19 @@ export async function POST(request: NextRequest) {
 
         if (paymentType === "entry_fee") {
             const nowIso = new Date().toISOString();
-            const { data: existingCandidate } = await admin
-                .from("candidates")
-                .select("status, queue_joined_at, phone")
-                .eq("profile_id", user.id)
-                .maybeSingle();
+            const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord(
+                admin,
+                targetProfileId,
+                "id, status, queue_joined_at, phone, updated_at, entry_fee_paid, job_search_active, nationality, current_country, preferred_job"
+            );
+            assertNoDbError(existingWorkerRecordError, "Failed to load worker record after payment");
 
-            if (!existingCandidate) {
-                const { error: candidateUpsertError } = await admin
-                    .from("candidates")
+            if (!existingWorkerRecord) {
+                const { error: workerRecordUpsertError } = await admin
+                    .from("worker_onboarding")
                     .upsert(
                         {
-                            profile_id: user.id,
+                            profile_id: targetProfileId,
                             entry_fee_paid: true,
                             status: "IN_QUEUE",
                             queue_joined_at: nowIso,
@@ -133,7 +147,7 @@ export async function POST(request: NextRequest) {
                         },
                         { onConflict: "profile_id" }
                     );
-                assertNoDbError(candidateUpsertError, "Failed to create missing candidate");
+                assertNoDbError(workerRecordUpsertError, "Failed to create missing worker record");
             } else {
                 const updatePayload: Record<string, unknown> = {
                     entry_fee_paid: true,
@@ -141,55 +155,59 @@ export async function POST(request: NextRequest) {
                     job_search_activated_at: nowIso,
                 };
 
-                if (!existingCandidate.queue_joined_at) {
+                if (!existingWorkerRecord.queue_joined_at) {
                     updatePayload.queue_joined_at = nowIso;
                 }
 
-                const nextStatus = resolveWorkerStatusAfterEntryFee(existingCandidate.status);
-                if (existingCandidate.status !== nextStatus) {
+                const nextStatus = resolveWorkerStatusAfterEntryFee(existingWorkerRecord.status);
+                if (existingWorkerRecord.status !== nextStatus) {
                     updatePayload.status = nextStatus;
                 }
 
-                const { error: candidateUpdateError } = await admin
-                    .from("candidates")
+                const { error: workerRecordUpdateError } = await admin
+                    .from("worker_onboarding")
                     .update(updatePayload)
-                    .eq("profile_id", user.id);
-                assertNoDbError(candidateUpdateError, "Failed to update candidate after payment");
+                    .eq("profile_id", targetProfileId);
+                assertNoDbError(workerRecordUpdateError, "Failed to update worker record after payment");
             }
 
-            await logServerActivity(user.id, "payment_completed", "payment", {
+            await logServerActivity(targetProfileId, "payment_completed", "payment", {
                 type: "entry_fee",
                 amount: 9,
                 source: "confirm-session-route",
                 stripe_session_id: session.id,
+                paid_by_profile_id: paidByProfileId || null,
+                target_worker_id: targetWorkerId,
             });
 
             // Send email fallback if webhook didn't send one yet
             const { data: existingPaymentEmail } = await admin
                 .from("email_queue")
                 .select("id")
-                .eq("user_id", user.id)
+                .eq("user_id", targetProfileId)
                 .eq("email_type", "payment_success")
                 .in("status", ["pending", "sent"])
                 .maybeSingle();
 
             if (!existingPaymentEmail?.id) {
-                const [{ data: profile }, { data: candidate }] = await Promise.all([
-                    admin.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
-                    admin.from("candidates").select("phone").eq("profile_id", user.id).maybeSingle(),
+                const [{ data: profile }, { data: workerRecord }] = await Promise.all([
+                    admin.from("profiles").select("full_name, email").eq("id", targetProfileId).maybeSingle(),
+                    loadCanonicalWorkerRecord(admin, targetProfileId, "id, phone, updated_at").then((result) => ({
+                        data: result.data,
+                    })),
                 ]);
 
-                const recipientEmail = session.customer_email || profile?.email || "";
+                const recipientEmail = profile?.email || session.customer_email || "";
                 if (recipientEmail) {
                     await queueEmail(
                         admin,
-                        user.id,
+                        targetProfileId,
                         "payment_success",
                         recipientEmail,
                         profile?.full_name || "Worker",
                         { amount: "$9" },
                         undefined,
-                        candidate?.phone || undefined
+                        workerRecord?.phone || undefined
                     );
                 }
             }
@@ -202,24 +220,15 @@ export async function POST(request: NextRequest) {
         }
 
         if (paymentType === "confirmation_fee" && offerId) {
-            const { error: offerUpdateError } = await admin
-                .from("offers")
-                .update({ status: "accepted", accepted_at: new Date().toISOString() })
-                .eq("id", offerId);
-            assertNoDbError(offerUpdateError, "Failed to accept offer");
-
-            const { error: candidateStatusError } = await admin
-                .from("candidates")
-                .update({ status: "OFFER_ACCEPTED" })
-                .eq("profile_id", user.id);
-            assertNoDbError(candidateStatusError, "Failed to update worker status after confirmation fee");
+            await finalizeConfirmationFeeOffer(admin, targetProfileId, offerId);
         }
 
-        await logServerActivity(user.id, "payment_completed", "payment", {
+        await logServerActivity(targetProfileId, "payment_completed", "payment", {
             type: paymentType,
             amount,
             source: "confirm-session-route",
             stripe_session_id: session.id,
+            paid_by_profile_id: paidByProfileId || null,
         });
 
         return NextResponse.json({ state: "paid", paymentType });

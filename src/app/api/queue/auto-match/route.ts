@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "All positions already filled" }, { status: 400 });
         }
 
-        // Find eligible candidates in FIFO order
-        const { data: candidates, error: candidatesError } = await admin
-            .from("candidates")
+        // Find eligible workers in FIFO order
+        const { data: workerRows, error: workerRowsError } = await admin
+            .from("worker_onboarding")
             .select(`
         *,
         profiles(*)
@@ -70,11 +70,11 @@ export async function POST(request: NextRequest) {
             .order("queue_position", { ascending: true })
             .limit(positionsToFill);
 
-        if (candidatesError) {
+        if (workerRowsError) {
             return NextResponse.json({ error: "Failed to fetch workers" }, { status: 500 });
         }
 
-        if (!candidates || candidates.length === 0) {
+        if (!workerRows || workerRows.length === 0) {
             return NextResponse.json({
                 success: true,
                 message: "No eligible workers in queue",
@@ -82,52 +82,52 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Filter out candidates with existing offers for this job
+        // Filter out workers with existing offers for this job
         const { data: existingOffers } = await admin
             .from("offers")
-            .select("candidate_id")
+            .select("worker_id")
             .eq("job_request_id", jobRequestId);
 
-        const existingCandidateIds = new Set(existingOffers?.map(o => o.candidate_id) || []);
-        const eligibleCandidates = candidates.filter(c => !existingCandidateIds.has(c.id));
+        const existingWorkerRecordIds = new Set(existingOffers?.map(o => o.worker_id) || []);
+        const eligibleWorkerRows = workerRows.filter(workerRow => !existingWorkerRecordIds.has(workerRow.id));
 
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 24);
 
         const matchedOffers = [];
 
-        for (const candidate of eligibleCandidates) {
+        for (const workerRow of eligibleWorkerRows) {
             // Create offer
             const { data: offer, error: offerError } = await admin
                 .from("offers")
                 .insert({
                     job_request_id: jobRequestId,
-                    candidate_id: candidate.id,
-                    queue_position_at_offer: candidate.queue_position,
+                    worker_id: workerRow.id,
+                    queue_position_at_offer: workerRow.queue_position,
                     expires_at: expiresAt.toISOString(),
                 })
                 .select()
                 .single();
 
             if (offerError) {
-                console.error("Failed to create offer for candidate:", candidate.id, offerError);
+                console.error("Failed to create offer for worker:", workerRow.id, offerError);
                 continue;
             }
 
-            // Update candidate status
+            // Update worker status
             await admin
-                .from("candidates")
+                .from("worker_onboarding")
                 .update({ status: "OFFER_PENDING" })
-                .eq("id", candidate.id);
+                .eq("id", workerRow.id);
 
             matchedOffers.push(offer);
 
             // Send notification
-            if (candidate.profiles?.email) {
+            if (workerRow.profiles?.email) {
                 try {
                     await sendOfferNotification({
-                        candidateEmail: candidate.profiles.email,
-                        candidateName: candidate.profiles.full_name || "Worker",
+                        workerEmail: workerRow.profiles.email,
+                        workerName: workerRow.profiles.full_name || "Worker",
                         jobTitle: jobRequest.title,
                         companyName: jobRequest.employers?.company_name || "Employer",
                         country: jobRequest.destination_country,
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
             matchedCount: matchedOffers.length,
             offers: matchedOffers.map(o => ({
                 id: o.id,
-                candidateId: o.candidate_id,
+                workerRecordId: o.worker_id,
                 expiresAt: o.expires_at,
             })),
         });
