@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
-    BadgeCheck,
     Building2,
     CreditCard,
     FileCheck2,
@@ -31,7 +30,6 @@ export interface AgencyDashboardProps {
     };
     stats: {
         totalWorkers: number;
-        claimedWorkers: number;
         readyWorkers: number;
         paidWorkers: number;
         draftWorkers: number;
@@ -413,9 +411,8 @@ export default function AgencyDashboardClient({
                             </p>
                         </div>
 
-                        <div className="grid grid-flow-col auto-cols-[minmax(96px,1fr)] gap-3 overflow-x-auto pb-1 sm:grid-cols-5 sm:grid-flow-row sm:auto-cols-auto sm:overflow-visible sm:pb-0">
+                        <div className="grid grid-flow-col auto-cols-[minmax(96px,1fr)] gap-3 overflow-x-auto pb-1 sm:grid-cols-4 sm:grid-flow-row sm:auto-cols-auto sm:overflow-visible sm:pb-0">
                             <StatCard label="Total" value={stats.totalWorkers} icon={<Users size={18} />} />
-                            <StatCard label="Accounts" value={stats.claimedWorkers} icon={<BadgeCheck size={18} />} />
                             <StatCard label="Ready" value={stats.readyWorkers} icon={<FileCheck2 size={18} />} />
                             <StatCard label="Paid" value={stats.paidWorkers} icon={<CreditCard size={18} />} />
                             <StatCard label="Drafts" value={stats.draftWorkers} icon={<UserPlus size={18} />} />
