@@ -131,7 +131,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
                             alt="Workers United Logo"
                             width={112}
                             height={112}
-                            className={`object-contain ${isPublic ? "h-12 w-12 md:h-14 md:w-14" : "h-9 w-9 md:h-10 md:w-10"}`}
+                            className={`object-contain ${isPublic ? "h-12 w-12 md:h-14 md:w-14" : "h-10 w-10 md:h-11 md:w-11"}`}
                             priority
                         />
                     </Link>
