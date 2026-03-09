@@ -121,7 +121,7 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
         case "PROFILE_COMPLETE":
         case "VERIFIED":
         case "APPROVED":
-            return { label: "Ready for payment", detail: "Everything is ready for the $9 Job Finder fee.", tone: "blue" };
+            return { label: "Ready to pay", detail: "Everything is ready for the $9 Job Finder fee.", tone: "blue" };
         default:
             break;
     }
@@ -131,23 +131,23 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     }
 
     if (worker.paymentState === "paid") {
-        return { label: "Payment complete", detail: "Waiting to move this worker into the queue.", tone: "emerald" };
+        return { label: "Paid", detail: "Entry fee is paid and waiting for the next worker step.", tone: "emerald" };
     }
 
     if (worker.completion === 100 && worker.verifiedDocuments >= 3) {
-        return { label: "Ready for payment", detail: "Profile and documents are complete.", tone: "blue" };
+        return { label: "Ready to pay", detail: "Profile and documents are complete.", tone: "blue" };
     }
 
     if (worker.verifiedDocuments > 0) {
         return {
-            label: "Documents in progress",
+            label: "Profile incomplete",
             detail: `${worker.verifiedDocuments}/3 documents verified so far.`,
             tone: "blue",
         };
     }
 
     if (worker.completion > 0) {
-        return { label: "Profile in progress", detail: `${worker.completion}% complete so far.`, tone: "slate" };
+        return { label: "Profile incomplete", detail: `${worker.completion}% complete so far.`, tone: "slate" };
     }
 
     return { label: "Draft", detail: "Agency has started this worker profile.", tone: "slate" };
@@ -582,12 +582,7 @@ function WorkerTableRow({
     onToggleSelected: (workerId: string, checked: boolean) => void;
 }) {
     const phase = resolveWorkerPhase(worker);
-
-    const payButtonLabel = worker.paymentState === "paid"
-        ? "Paid"
-        : worker.paymentState === "pending"
-            ? "Pending"
-            : "Pay $9";
+    const showPayButton = !readOnlyPreview && worker.paymentState === "not_paid";
 
     return (
         <tr className="border-b border-[#f1f1ef] transition hover:bg-[#fcfcfc]">
@@ -610,7 +605,20 @@ function WorkerTableRow({
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{formatDate(worker.createdAt)}</td>
             <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{worker.completion}%</td>
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.documentsLabel}</td>
-            <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.paymentLabel}</td>
+            <td className="px-5 py-4 align-top">
+                <div className="text-sm text-[#111827]">{worker.paymentLabel}</div>
+                {showPayButton ? (
+                    <button
+                        type="button"
+                        onClick={() => void onPay(worker)}
+                        disabled={isPaying}
+                        className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
+                    >
+                        {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                        Pay $9
+                    </button>
+                ) : null}
+            </td>
             <td className="px-5 py-4 align-top">
                 <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
                     {phase.label}
@@ -619,16 +627,6 @@ function WorkerTableRow({
             </td>
             <td className="px-5 py-4 align-top">
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                    <button
-                        type="button"
-                        onClick={() => void onPay(worker)}
-                        disabled={readOnlyPreview || isPaying || worker.paymentState !== "not_paid"}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
-                    >
-                        {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                        {payButtonLabel}
-                    </button>
-
                     <button
                         type="button"
                         onClick={() => onEdit(worker)}
