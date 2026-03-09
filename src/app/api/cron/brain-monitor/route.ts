@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/mailer";
+import {
+    prepareBrainFactsForStorage,
+    pruneInvalidBrainFacts,
+    saveBrainFactsDedup,
+} from "@/lib/brain-memory";
 
 // ─── Brain Monitor ──────────────────────────────────────────────────────────
 // Autonomous AI that monitors platform health, creates GitHub Issues for bugs,
@@ -186,6 +191,7 @@ export async function GET(request: Request) {
 
         const aiData = await aiRes.json();
         const analysis = parseBrainAnalysis(aiData);
+        analysis.brainFacts = prepareBrainFactsForStorage(analysis.brainFacts || []);
         results.aiAnalyzed = true;
 
         // ─── Step 3: Create GitHub Issues ────────────────────────────────
@@ -288,31 +294,14 @@ export async function GET(request: Request) {
         // ─── Step 7: Write learned facts to brain_memory ─────────────────
         // IMPORTANT: system_stats are NEVER stored — they go stale and mislead the bot.
         // Live stats are served fresh via /api/brain/collect in the system prompt.
+        const removedUnsafeFacts = await pruneInvalidBrainFacts(supabase);
+        if (removedUnsafeFacts > 0) {
+            console.log(`[Brain] 🧹 Removed ${removedUnsafeFacts} invalid pricing facts from memory`);
+        }
+
         if (analysis.brainFacts && analysis.brainFacts.length > 0) {
-            const BLOCKED_CATEGORIES = ["system_stats", "stats"];
-            const safeFacts = analysis.brainFacts.filter(
-                (f: { category: string }) => !BLOCKED_CATEGORIES.includes(f.category)
-            );
-            const skipped = analysis.brainFacts.length - safeFacts.length;
-            if (skipped > 0) console.log(`[Brain] ⏭️ Skipped ${skipped} system_stats facts (live data only)`);
-
-            for (const fact of safeFacts) {
-                // Check if similar fact already exists
-                const { data: existing } = await supabase
-                    .from("brain_memory")
-                    .select("id")
-                    .eq("content", fact.content)
-                    .limit(1);
-
-                if (!existing || existing.length === 0) {
-                    await supabase.from("brain_memory").insert({
-                        category: fact.category,
-                        content: fact.content,
-                        confidence: 0.95, // System-analyzed = high confidence
-                    });
-                }
-            }
-            console.log(`[Brain] 🧠 Codex learned ${safeFacts.length} new facts`);
+            const stats = await saveBrainFactsDedup(supabase, analysis.brainFacts);
+            console.log(`[Brain] 🧠 Codex learned ${stats.inserted} new facts (${stats.updated} upgraded, ${stats.skipped} skipped)`);
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -432,6 +421,8 @@ Rules:
 8. 0 admin approvals / 0 payments / 0 queued is EXPECTED for an early-stage platform — it is NOT a bug
 9. You now have funnelTimestamps data showing per-user stage timing — use it to find WHERE users stall
 10. You now have paymentTelemetry showing failed/abandoned checkout attempts — analyze drop-off
+11. Pricing is strict: workers pay the $9 entry fee and the placement fee after a job is found. Employers never pay platform fees.
+12. NEVER say or imply that the employer pays the placement fee. If you mention the placement fee, state that it is worker-paid.
 
 ## Auto-Remediation powers:
 - retry_email is the ONLY action that auto-executes without human review
