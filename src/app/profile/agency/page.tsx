@@ -333,7 +333,6 @@ export default async function AgencyProfilePage({
 
     const stats: AgencyDashboardProps["stats"] = {
         totalWorkers: workerRows.length,
-        claimedWorkers: workerRows.filter((worker) => worker.claimed).length,
         readyWorkers: workerRows.filter((worker) => worker.completion === 100 && worker.verifiedDocuments >= 3).length,
         paidWorkers: workerRows.filter((worker) => worker.paymentState === "paid").length,
         draftWorkers: workerRows.filter((worker) => !worker.claimed).length,
