@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import AppShell from "@/components/AppShell";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUserType } from "@/lib/domain";
 import WorkerInboxClient from "./WorkerInboxClient";
@@ -22,5 +23,9 @@ export default async function WorkerInboxPage() {
         redirect("/profile/agency");
     }
 
-    return <WorkerInboxClient readOnlyPreview={userType === "admin"} />;
+    return (
+        <AppShell user={user} variant="dashboard">
+            <WorkerInboxClient readOnlyPreview={userType === "admin"} />
+        </AppShell>
+    );
 }

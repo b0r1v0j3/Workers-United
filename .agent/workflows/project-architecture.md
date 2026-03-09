@@ -245,7 +245,7 @@ User (Browser)
 |---|---|
 | `src/app/profile/worker/page.tsx` | Worker profile landing; supports read-only admin inspect of a real worker via `?inspect=<profile_id>` and loads worker data through the canonical worker helper instead of assuming a unique physical worker row |
 | `src/app/profile/worker/DashboardClient.tsx` | Clean worker overview surface with payment CTA/state and support unlock explanation; sidebar remains the navigation source for Documents/Queue/Support/Edit |
-| `src/app/profile/worker/inbox/page.tsx` | Worker support inbox route |
+| `src/app/profile/worker/inbox/page.tsx` | Worker support inbox route; now renders inside the shared `AppShell` instead of a standalone page |
 | `src/app/profile/worker/inbox/WorkerInboxClient.tsx` | Thin worker wrapper around the shared support inbox client; keeps worker-specific payment lock behavior |
 | `src/app/profile/worker/edit/` | Single-page profile edit form; app-layer state now uses `workerRecord` naming instead of local `candidate` aliases, while save path still reuses canonical worker lookup so an existing worker no longer inserts duplicate worker rows when drift already exists |
 | `src/app/profile/worker/documents/` | Document upload (passport, diploma, photo); the client flow now uses `workerProfileId` as the canonical prop for the worker document owner and verification/request-review payloads are fully workerId-first; also supports read-only admin inspect of the target worker documents |
@@ -264,8 +264,8 @@ User (Browser)
 |---|---|
 | `src/app/profile/agency/page.tsx` | Agency workspace entry; loads real agency workers, supports generic admin structure preview without fake persisted drafts, and allows real agency inspect via `?inspect=<profile_id>` without role drift |
 | `src/app/profile/agency/AgencyDashboardClient.tsx` | Single-board agency dashboard: clean workers table, header search + the only `Add worker` CTA, modal-based add/edit flow that keeps the dashboard mounted, and generic admin preview that uses the same real layout without local fake-data storage |
-| `src/app/profile/agency/inbox/page.tsx` | Agency support inbox route; always unlocked for agencies, while admin inspect stays read-only |
-| `src/components/messaging/SupportInboxClient.tsx` | Shared worker/agency support inbox UI with audience-specific copy, locked states, and admin preview mode |
+| `src/app/profile/agency/inbox/page.tsx` | Agency support inbox route; always unlocked for agencies, admin inspect stays read-only, and the page now reuses the shared `AppShell` workspace navigation |
+| `src/components/messaging/SupportInboxClient.tsx` | Shared worker/agency support inbox UI with audience-specific copy, locked states, admin preview mode, and the same neutral workspace styling used by dashboard surfaces |
 
 ### Admin / Data Surfaces
 | File | Role |
