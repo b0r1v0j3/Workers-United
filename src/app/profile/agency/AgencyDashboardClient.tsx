@@ -104,8 +104,6 @@ export default function AgencyDashboardClient({
         return workers.filter((worker) =>
             [
                 worker.name,
-                worker.email || "",
-                worker.phone || "",
                 worker.nationality || "",
                 worker.currentCountry || "",
                 worker.preferredJob || "",
@@ -123,7 +121,7 @@ export default function AgencyDashboardClient({
         [selectedWorkerIds, workers]
     );
     const allVisibleSelected = visibleWorkerIds.length > 0 && visibleWorkerIds.every((workerId) => selectedWorkerIds.includes(workerId));
-    const columnCount = readOnlyPreview ? 9 : 10;
+    const columnCount = readOnlyPreview ? 8 : 9;
 
     useEffect(() => {
         setSelectedWorkerIds((current) => current.filter((workerId) => workers.some((worker) => worker.id === workerId)));
@@ -299,7 +297,7 @@ export default function AgencyDashboardClient({
                         <div className="max-w-2xl">
                             <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">Workers</h2>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                Email and phone are optional. Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
+                                Manage every worker from one table. Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
                             </p>
                         </div>
 
@@ -371,7 +369,6 @@ export default function AgencyDashboardClient({
                                         <th className="w-16 px-5 py-4">#</th>
                                         <th className="px-5 py-4">Worker</th>
                                         <th className="px-5 py-4">Saved</th>
-                                        <th className="px-5 py-4">Contact</th>
                                         <th className="px-5 py-4">Completion</th>
                                         <th className="px-5 py-4">Documents</th>
                                         <th className="px-5 py-4">Payment</th>
@@ -536,10 +533,6 @@ function WorkerTableRow({
                 <div className="mt-1 text-sm text-[#6b7280]">{worker.preferredJob || "No preferred job yet"}</div>
             </td>
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{formatDate(worker.createdAt)}</td>
-            <td className="px-5 py-4 align-top text-sm text-[#6b7280]">
-                <div>{worker.email || "No email yet"}</div>
-                <div className="mt-1">{worker.phone || "No phone yet"}</div>
-            </td>
             <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{worker.completion}%</td>
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.documentsLabel}</td>
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.paymentLabel}</td>
