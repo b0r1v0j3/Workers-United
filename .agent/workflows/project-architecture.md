@@ -56,7 +56,7 @@ Workers-United/
 │   │   │   ├── page.tsx       # Auto-redirect (/profile → worker, employer, or agency)
 │   │   │   ├── worker/        # Worker workspace in shared AppShell with simplified `Overview / Documents / Queue / Support` language; overview no longer duplicates Documents/Queue/Support cards in the main canvas, main content is a single primary column, worker overview/queue now use `worker`/`workerRecord` as canonical local naming, and admin can inspect real worker data via `?inspect=<profile_id>` in read-only preview
 │   │   │   ├── employer/      # Canonical employer workspace in shared AppShell; `jobs*` routes redirect back into employer tabs, company/job content now lives in a single primary column without duplicate helper panels, and admin can inspect real employer workspaces via `?inspect=<profile_id>`
-│   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action and a neutral white/gray modal intake. Generic admin preview uses the same real layout in inspect-only mode (no fake persisted drafts), while `?inspect=<profile_id>` opens the real agency workspace without changing the admin role
+│   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action and a neutral white/gray modal intake, plus always-unlocked agency support at `/profile/agency/inbox`. Generic admin preview uses the same real layout in inspect-only mode (no fake persisted drafts), while `?inspect=<profile_id>` opens the real agency workspace without changing the admin role
 │   │   │   └── settings/      # GDPR: delete account, export data
 │   │   ├── admin/
 │   │   │   ├── page.tsx       # Admin operations dashboard (stats, action cards, pipeline, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
@@ -97,14 +97,14 @@ Workers-United/
 │   │   └── terms/             # Terms & conditions page
 │   ├── proxy.ts                # ← CSRF + auth guard (profile, admin, API routes)
 │   ├── components/
-│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), inspect-query preservation across admin previews, safe routing back to /admin, direct `Exceptions` + `Email Health` admin navigation, a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
+│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), agency `Support` nav linked to `/profile/agency/inbox`, inspect-query preservation across admin previews, safe routing back to /admin, direct `Exceptions` + `Email Health` admin navigation, a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
 │   │   ├── CookieConsent.tsx   # GDPR cookie banner
 │   │   ├── AgencySetupRequired.tsx # Graceful setup-required card when agency migration is missing
-│   │   ├── messaging/         # Shared conversation thread UI
+│   │   ├── messaging/         # Shared conversation thread UI, including the shared worker/agency support inbox client
 │   │   ├── DocumentWizard.tsx  # Document upload flow; verify requests now send only canonical `workerId`
 │   │   ├── DocumentGenerator.tsx # Admin: generate 4 DOCX visa docs
 │   │   ├── SignaturePad.tsx    # Digital signature component
@@ -197,7 +197,7 @@ User (Browser)
 2. For Google OAuth from signup page: `user_type` is passed via URL param and set in metadata; the live auth metadata-sync trigger then aligns `profiles.user_type` plus the canonical worker/employer row after callback
 3. For Google OAuth from login page (first time): user is redirected to `/auth/select-role` to choose worker/employer/agency
 4. Agency-submitted worker drafts can be claimed via `/signup?type=worker&claim=<worker-record-id>`; callback/API links the draft to the real worker auth/profile only when the worker signs up with the same invited email, and the claim token resolves against the canonical worker record id
-5. Claimed or draft agency workers can be managed from `/profile/agency/workers/[id]`, where the agency can fill almost the full worker profile (`identity/contact/citizenship/family/preferences/passport`), while keeping `email` and `phone` optional contact channels; the same page also handles document upload/replacement, manual review requests, and the `$9` Job Finder payment for claimed workers
+5. Claimed or draft agency workers can be managed from `/profile/agency/workers/[id]`, where the agency can fill almost the full worker profile (`identity/contact/citizenship/family/preferences/passport`), while keeping `email` and `phone` optional contact channels; the same page also handles document upload/replacement, manual review requests, and the `$9` Job Finder payment for agency-managed workers
 6. Generic admin access to `/profile/agency` is now a true structure preview: it never provisions an agency row or downgrades the admin role, and it opens the same add-worker modal and table layout without persisting fake preview drafts between refreshes
 7. Admin access to `/profile/worker` and `/profile/employer` remains read-only preview only, while `/profile/agency?inspect=<profile_id>` opens the real target agency workspace with admin authority attached to that agency instead of overloading the admin's own role records
 8. Employer workspace is now canonical at `/profile/employer`; legacy `/profile/employer/jobs` and `/profile/employer/jobs/new` immediately redirect into `?tab=jobs` and `?tab=post-job`
@@ -221,10 +221,11 @@ User (Browser)
 ### Messaging Flow (Support v1)
 1. Supabase migration `20260306234500_messaging_foundation.sql` creates `conversations`, `conversation_participants`, `conversation_messages`, and `conversation_flags`
 2. Worker opens `/profile/worker/inbox` after a successful `$9` payment
-3. `/api/conversations/support` checks the payment gate and auto-creates a single worker support thread on first access
-4. Worker and admin exchange messages through `/api/conversations/[conversationId]/messages`
-5. Admin reads and replies from `/admin/inbox`; the admin dashboard and sidebar link there directly
-6. Contact information stays hidden; worker/employer direct chat is still future work and must unlock only after `accepted offer + placement fee paid`
+3. Agency opens `/profile/agency/inbox` at any time; agency support is always unlocked and does not depend on worker payment state
+4. `/api/conversations/support` checks the payment gate only for workers and auto-creates a single support thread per worker/employer/agency account on first access
+5. Worker/agency and admin exchange messages through `/api/conversations/[conversationId]/messages`
+6. Admin reads and replies from `/admin/inbox`; the admin dashboard and sidebar link there directly
+7. Contact information stays hidden; worker/employer direct chat is still future work and must unlock only after `accepted offer + placement fee paid`
 
 ---
 
@@ -234,7 +235,7 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/layout.tsx` | Root layout — loads Montserrat font, GodModeWrapper, CookieConsent |
-| `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, keeps only `Back to Admin` plus the current role navigation inside preview workspaces, and uses a wider neutral dashboard canvas |
+| `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, exposes agency `Support` directly in the shared shell, keeps only `Back to Admin` plus the current role navigation inside preview workspaces, and uses a wider neutral dashboard canvas |
 | `src/components/DocumentWizard.tsx` | Worker document upload flow; upload keys now pass through `sanitizeStorageFileName()` so camera-style filenames like `IMG_...~2.jpg` cannot break Supabase Storage with `Invalid key`, and the UI resolves the canonical `worker-docs` bucket through a shared worker-first helper |
 | `src/lib/worker-documents.ts` | Shared worker-first wrapper for the canonical `worker-docs` bucket, plus public URL builder used by verify/admin/contracts/reminder/delete flows |
 | `src/components/UnifiedNavbar.tsx` | Top navigation bar (logo, links, user menu); dashboard logo routes by role and surfaces `Admin Preview` when admin is viewing worker/employer/agency workspaces |
@@ -245,7 +246,7 @@ User (Browser)
 | `src/app/profile/worker/page.tsx` | Worker profile landing; supports read-only admin inspect of a real worker via `?inspect=<profile_id>` and loads worker data through the canonical worker helper instead of assuming a unique physical worker row |
 | `src/app/profile/worker/DashboardClient.tsx` | Clean worker overview surface with payment CTA/state and support unlock explanation; sidebar remains the navigation source for Documents/Queue/Support/Edit |
 | `src/app/profile/worker/inbox/page.tsx` | Worker support inbox route |
-| `src/app/profile/worker/inbox/WorkerInboxClient.tsx` | Worker support inbox client; loads support thread, enforces locked state pre-payment |
+| `src/app/profile/worker/inbox/WorkerInboxClient.tsx` | Thin worker wrapper around the shared support inbox client; keeps worker-specific payment lock behavior |
 | `src/app/profile/worker/edit/` | Single-page profile edit form; app-layer state now uses `workerRecord` naming instead of local `candidate` aliases, while save path still reuses canonical worker lookup so an existing worker no longer inserts duplicate worker rows when drift already exists |
 | `src/app/profile/worker/documents/` | Document upload (passport, diploma, photo); the client flow now uses `workerProfileId` as the canonical prop for the worker document owner and verification/request-review payloads are fully workerId-first; also supports read-only admin inspect of the target worker documents |
 | `src/app/profile/worker/queue/` | Queue status page; also supports read-only admin inspect of the target worker payment/queue state |
@@ -263,6 +264,8 @@ User (Browser)
 |---|---|
 | `src/app/profile/agency/page.tsx` | Agency workspace entry; loads real agency workers, supports generic admin structure preview without fake persisted drafts, and allows real agency inspect via `?inspect=<profile_id>` without role drift |
 | `src/app/profile/agency/AgencyDashboardClient.tsx` | Single-board agency dashboard: clean workers table, header search + the only `Add worker` CTA, modal-based add/edit flow that keeps the dashboard mounted, and generic admin preview that uses the same real layout without local fake-data storage |
+| `src/app/profile/agency/inbox/page.tsx` | Agency support inbox route; always unlocked for agencies, while admin inspect stays read-only |
+| `src/components/messaging/SupportInboxClient.tsx` | Shared worker/agency support inbox UI with audience-specific copy, locked states, and admin preview mode |
 
 ### Admin / Data Surfaces
 | File | Role |

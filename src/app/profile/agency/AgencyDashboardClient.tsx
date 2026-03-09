@@ -200,7 +200,11 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
         };
     }
 
-    return { label: "Not paid yet", detail: "Agency can start Job Finder by paying the $9 entry fee.", tone: "slate" };
+    return {
+        label: "Not paid yet",
+        detail: "Agency can start Job Finder by paying the $9 entry fee. Support is already open in the agency inbox.",
+        tone: "slate",
+    };
 }
 
 export default function AgencyDashboardClient({
@@ -402,7 +406,7 @@ export default function AgencyDashboardClient({
                             </div>
                             <h1 className="text-[2rem] font-semibold tracking-tight text-[#111827] sm:text-3xl">{agency.displayName}</h1>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                One place for every worker profile. Create and edit the full worker form from here without leaving the agency workspace.
+                                One place for every worker profile. Create and edit the full worker form here, then use agency support anytime without leaving the workspace.
                             </p>
                             <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#9ca3af]">
                                 {agency.contactEmail}
@@ -424,7 +428,7 @@ export default function AgencyDashboardClient({
                         <div className="max-w-2xl">
                             <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">Workers</h2>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                Manage every worker from one board. Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
+                                Manage every worker from one board. Agency support stays unlocked the whole time, and Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
                             </p>
                         </div>
 
