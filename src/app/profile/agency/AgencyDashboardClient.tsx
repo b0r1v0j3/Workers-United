@@ -592,6 +592,38 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
     );
 }
 
+function CompletionMeter({ value }: { value: number }) {
+    const safeValue = Math.max(0, Math.min(100, value));
+
+    return (
+        <div>
+            <div className="flex items-end justify-between gap-3">
+                <div className="text-2xl font-semibold tracking-tight text-[#111827]">{safeValue}%</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">
+                    {safeValue === 100 ? "Ready" : "In progress"}
+                </div>
+            </div>
+
+            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#e9ecef]">
+                <div
+                    className={`h-full rounded-full transition-all ${
+                        safeValue === 100
+                            ? "bg-emerald-500"
+                            : safeValue >= 60
+                                ? "bg-[#111111]"
+                                : safeValue >= 30
+                                    ? "bg-amber-500"
+                                    : "bg-[#9ca3af]"
+                    }`}
+                    style={{ width: `${safeValue}%` }}
+                />
+            </div>
+
+            <div className="mt-2 text-xs text-[#6b7280]">Profile completion</div>
+        </div>
+    );
+}
+
 function FieldTile({
     label,
     children,
@@ -670,8 +702,7 @@ function WorkerCardRow({
                 </FieldTile>
 
                 <FieldTile label="Completion" className="min-h-[116px]">
-                    <div className="text-2xl font-semibold tracking-tight text-[#111827]">{worker.completion}%</div>
-                    <div className="mt-2 text-xs text-[#6b7280]">Profile completion</div>
+                    <CompletionMeter value={worker.completion} />
                 </FieldTile>
 
                 <FieldTile label="Documents" className="min-h-[116px]">
