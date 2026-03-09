@@ -211,7 +211,7 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
     const biometricInputRef = useRef<HTMLInputElement | null>(null);
     const diplomaInputRef = useRef<HTMLInputElement | null>(null);
     const hasWorkerAccount = initialWorker.claimed && Boolean(initialWorker.profileId);
-    const canStartEntryPayment = initialWorker.paymentLabel === "Not paid";
+    const canStartEntryPayment = initialWorker.paymentLabel !== "Paid";
 
     useEffect(() => {
         const paymentState = searchParams.get("payment");
@@ -734,7 +734,6 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
                             </button>
                         )}
                         {readOnlyPreview && <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">Payments are disabled in admin preview.</p>}
-                        {initialWorker.paymentLabel === "Pending" && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-[#f3e3b0] bg-[#fff8df] px-4 py-3 text-sm text-[#7a5b00]"><Clock3 size={16} />Payment is already pending for this worker.</p>}
                         {initialWorker.paymentLabel === "Paid" && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 size={16} />Job Finder access is active for this worker.</p>}
                     </aside>
 

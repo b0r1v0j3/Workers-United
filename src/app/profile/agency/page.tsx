@@ -320,11 +320,7 @@ export default async function AgencyProfilePage({
             accessLabel: claimed ? "Worker account ready" : "Managed by agency",
             verifiedDocuments,
             documentsLabel: claimed ? `${verifiedDocuments}/3 verified` : "Not uploaded",
-            paymentLabel: paymentState === "paid"
-                ? "Paid"
-                : paymentState === "pending"
-                    ? "Checkout open"
-                    : "Pay $9",
+            paymentLabel: paymentState === "paid" ? "Paid" : "Pay $9",
             paymentState,
             paymentPendingUntil: latestActivePendingEntryFee?.deadline_at || null,
             queueJoinedAt: worker.queue_joined_at || null,

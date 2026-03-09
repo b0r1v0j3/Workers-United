@@ -7,7 +7,6 @@ import {
     BadgeCheck,
     Building2,
     CheckCircle2,
-    Clock3,
     CreditCard,
     FileCheck2,
     Loader2,
@@ -167,16 +166,6 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
             return { label: "Needs update", detail: "Profile or documents need corrections.", tone: "red" };
         default:
             break;
-    }
-
-    if (worker.paymentState === "pending") {
-        return {
-            label: "Checkout open",
-            detail: worker.paymentPendingUntil
-                ? `Stripe checkout is open until ${formatDate(worker.paymentPendingUntil)}.`
-                : "Stripe checkout has been opened but not completed yet.",
-            tone: "amber",
-        };
     }
 
     if (worker.paymentState === "paid") {
@@ -534,7 +523,7 @@ export default function AgencyDashboardClient({
                                 <tbody>
                                     {filteredWorkers.map((worker, index) => {
                                         const phase = resolveWorkerPhase(worker);
-                                        const showPayButton = !readOnlyPreview && worker.paymentState === "not_paid";
+                                        const showPayButton = !readOnlyPreview && worker.paymentState !== "paid";
 
                                         return (
                                             <tr key={worker.id} className="border-b border-[#ececec] last:border-b-0">
@@ -603,20 +592,9 @@ export default function AgencyDashboardClient({
                                                             <CheckCircle2 size={14} />
                                                             Paid
                                                         </div>
-                                                    ) : (
-                                                        <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
-                                                            <Clock3 size={14} />
-                                                            Checkout open
-                                                        </div>
-                                                    )}
+                                                    ) : null}
 
-                                                    {worker.paymentState === "pending" ? (
-                                                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
-                                                            {worker.paymentPendingUntil
-                                                                ? `Open until ${formatDate(worker.paymentPendingUntil)}`
-                                                                : "Checkout has been opened but not completed yet."}
-                                                        </div>
-                                                    ) : worker.paymentState === "paid" ? (
+                                                    {worker.paymentState === "paid" ? (
                                                         <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
                                                             {worker.entryFeePaidAt
                                                                 ? `Paid on ${formatDate(worker.entryFeePaidAt)}`
