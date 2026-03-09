@@ -53,6 +53,9 @@ export interface AgencyDashboardProps {
         documentsLabel: string;
         paymentLabel: string;
         paymentState: PaymentState;
+        queueJoinedAt: string | null;
+        entryFeePaidAt: string | null;
+        refundStatus: string | null;
         createdAt: string | null;
         updatedAt: string | null;
     }>;
@@ -98,8 +101,47 @@ function formatDate(value: string | null) {
     return parsed.toLocaleDateString("en-GB");
 }
 
+function getElapsedDays(value: string | null) {
+    if (!value) {
+        return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+
+    return Math.max(0, Math.floor((Date.now() - parsed.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+function formatWaitingLabel(days: number | null) {
+    if (days === null) {
+        return "Waiting to enter queue";
+    }
+    if (days === 0) {
+        return "Waiting <1 day";
+    }
+    return `Waiting ${days} day${days === 1 ? "" : "s"}`;
+}
+
 function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     const normalizedStatus = (worker.status || "").toUpperCase();
+    const normalizedRefundStatus = (worker.refundStatus || "").toLowerCase();
+    const activeQueueDate = worker.queueJoinedAt || worker.entryFeePaidAt || null;
+    const elapsedDays = getElapsedDays(activeQueueDate);
+
+    if (normalizedRefundStatus === "completed") {
+        return { label: "Refunded", detail: "The $9 Job Finder fee has already been refunded.", tone: "red" };
+    }
+
+    if (
+        normalizedStatus === "REFUND_FLAGGED"
+        || normalizedRefundStatus === "requested"
+        || normalizedRefundStatus === "pending"
+        || normalizedRefundStatus === "review"
+    ) {
+        return { label: "Refund requested", detail: "Refund is currently being reviewed.", tone: "red" };
+    }
 
     switch (normalizedStatus) {
         case "PLACED":
@@ -111,19 +153,17 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
         case "OFFER_ACCEPTED":
             return { label: "Offer accepted", detail: "Offer is accepted and moving to visa steps.", tone: "orange" };
         case "OFFER_PENDING":
-            return { label: "Offer pending", detail: "Waiting for the worker to review the offer.", tone: "orange" };
+            return { label: "Job offered", detail: "A job offer is waiting for the worker decision.", tone: "orange" };
         case "IN_QUEUE":
-            return { label: "In queue", detail: "Job Finder is actively searching for a match.", tone: "amber" };
-        case "REFUND_FLAGGED":
-            return { label: "Refund review", detail: "The entry fee refund is being reviewed.", tone: "red" };
+            return {
+                label: formatWaitingLabel(elapsedDays),
+                detail: activeQueueDate
+                    ? `Job Finder has been active since ${formatDate(activeQueueDate)}.`
+                    : "Job Finder is actively searching for a match.",
+                tone: "amber",
+            };
         case "REJECTED":
             return { label: "Needs update", detail: "Profile or documents need corrections.", tone: "red" };
-        case "PENDING_APPROVAL":
-            return { label: "Under review", detail: "Workers United is reviewing this worker.", tone: "blue" };
-        case "PROFILE_COMPLETE":
-        case "VERIFIED":
-        case "APPROVED":
-            return { label: "Ready to pay", detail: "Everything is ready for the $9 Job Finder fee.", tone: "blue" };
         default:
             break;
     }
@@ -133,26 +173,16 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     }
 
     if (worker.paymentState === "paid") {
-        return { label: "Paid", detail: "Entry fee is paid and waiting for the next worker step.", tone: "emerald" };
-    }
-
-    if (worker.completion === 100 && worker.verifiedDocuments >= 3) {
-        return { label: "Ready to pay", detail: "Profile and documents are complete.", tone: "blue" };
-    }
-
-    if (worker.verifiedDocuments > 0) {
         return {
-            label: "Profile incomplete",
-            detail: `${worker.verifiedDocuments}/3 documents verified so far.`,
-            tone: "blue",
+            label: formatWaitingLabel(elapsedDays),
+            detail: activeQueueDate
+                ? `Payment is confirmed and the worker has been active since ${formatDate(activeQueueDate)}.`
+                : "Payment is confirmed. Queue activation is syncing.",
+            tone: "emerald",
         };
     }
 
-    if (worker.completion > 0) {
-        return { label: "Profile incomplete", detail: `${worker.completion}% complete so far.`, tone: "slate" };
-    }
-
-    return { label: "Draft", detail: "Agency has started this worker profile.", tone: "slate" };
+    return { label: "Awaiting payment", detail: "Job Finder has not been paid yet.", tone: "slate" };
 }
 
 export default function AgencyDashboardClient({

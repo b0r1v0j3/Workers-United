@@ -35,6 +35,20 @@ interface AgencyWorkerQueryRow {
     submitted_email: string | null;
 }
 
+type PaymentQueryRow = {
+    profile_id: string | null;
+    payment_type: string | null;
+    status: string | null;
+    paid_at: string | null;
+    refund_status: string | null;
+    metadata: Record<string, unknown> | null;
+};
+
+function getPaymentMetadataString(payment: PaymentQueryRow, key: string) {
+    const value = payment.metadata?.[key];
+    return typeof value === "string" && value.trim() ? value : null;
+}
+
 export default async function AgencyProfilePage({
     searchParams,
 }: {
@@ -125,6 +139,7 @@ export default async function AgencyProfilePage({
     }
 
     const workers: AgencyWorkerQueryRow[] = workersRaw || [];
+    const workerIds = workers.map((worker) => worker.id);
     const claimedProfileIds = workers
         .map((worker) => worker.profile_id)
         .filter((profileId): profileId is string => Boolean(profileId));
@@ -143,12 +158,21 @@ export default async function AgencyProfilePage({
             .in("user_id", claimedProfileIds)
         : { data: [] as Array<{ user_id: string; document_type: string; status: string | null }> };
 
-    const { data: payments } = claimedProfileIds.length > 0
+    const { data: profilePayments } = claimedProfileIds.length > 0
         ? await admin
             .from("payments")
-            .select("profile_id, payment_type, status")
+            .select("profile_id, payment_type, status, paid_at, refund_status, metadata")
+            .eq("payment_type", "entry_fee")
             .in("profile_id", claimedProfileIds)
-        : { data: [] as Array<{ profile_id: string | null; payment_type: string | null; status: string | null }> };
+        : { data: [] as PaymentQueryRow[] };
+
+    const { data: agencyTargetPayments } = workerIds.length > 0
+        ? await admin
+            .from("payments")
+            .select("profile_id, payment_type, status, paid_at, refund_status, metadata")
+            .eq("payment_type", "entry_fee")
+            .contains("metadata", { paid_by_profile_id: targetAgencyProfileId })
+        : { data: [] as PaymentQueryRow[] };
 
     const docsByUser = new Map<string, Array<{ user_id: string; document_type: string; status: string | null }>>();
     for (const doc of documents || []) {
@@ -157,12 +181,21 @@ export default async function AgencyProfilePage({
         docsByUser.set(doc.user_id, current);
     }
 
-    const paymentsByProfile = new Map<string, Array<{ profile_id: string | null; payment_type: string | null; status: string | null }>>();
-    for (const payment of payments || []) {
+    const paymentsByProfile = new Map<string, PaymentQueryRow[]>();
+    for (const payment of profilePayments || []) {
         if (!payment.profile_id) continue;
         const current = paymentsByProfile.get(payment.profile_id) || [];
         current.push(payment);
         paymentsByProfile.set(payment.profile_id, current);
+    }
+
+    const paymentsByWorkerId = new Map<string, PaymentQueryRow[]>();
+    for (const payment of agencyTargetPayments || []) {
+        const targetWorkerId = getPaymentMetadataString(payment, "target_worker_id");
+        if (!targetWorkerId || !workerIds.includes(targetWorkerId)) continue;
+        const current = paymentsByWorkerId.get(targetWorkerId) || [];
+        current.push(payment);
+        paymentsByWorkerId.set(targetWorkerId, current);
     }
 
     const profilesById = new Map(
@@ -187,13 +220,22 @@ export default async function AgencyProfilePage({
             documents: workerDocuments,
         }, { phoneOptional: true }).completion;
 
-        const workerPayments = claimed && profileId ? paymentsByProfile.get(profileId) || [] : [];
+        const workerPayments = [
+            ...(claimed && profileId ? paymentsByProfile.get(profileId) || [] : []),
+            ...(paymentsByWorkerId.get(worker.id) || []),
+        ];
         const hasPaidEntryFee =
             !!worker.entry_fee_paid ||
             !!worker.job_search_active ||
             isPostEntryFeeWorkerStatus(worker.status) ||
             workerPayments.some((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
         const hasPendingEntryFee = workerPayments.some((payment) => payment.payment_type === "entry_fee" && payment.status === "pending");
+        const latestCompletedEntryFee = workerPayments.find((payment) =>
+            payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || "")
+        );
+        const latestRefundSignal = workerPayments.find((payment) =>
+            payment.payment_type === "entry_fee" && payment.refund_status
+        );
         const paymentState = hasPaidEntryFee
             ? "paid"
             : hasPendingEntryFee
@@ -220,6 +262,9 @@ export default async function AgencyProfilePage({
                     ? "Pending"
                     : "Not paid",
             paymentState,
+            queueJoinedAt: worker.queue_joined_at || null,
+            entryFeePaidAt: latestCompletedEntryFee?.paid_at || null,
+            refundStatus: latestRefundSignal?.refund_status || null,
             createdAt: worker.created_at || worker.updated_at || null,
             updatedAt: worker.updated_at || null,
         };
