@@ -40,6 +40,7 @@ type PaymentQueryRow = {
     payment_type: string | null;
     status: string | null;
     paid_at: string | null;
+    deadline_at: string | null;
     refund_status: string | null;
     metadata: Record<string, unknown> | null;
 };
@@ -47,6 +48,54 @@ type PaymentQueryRow = {
 function getPaymentMetadataString(payment: PaymentQueryRow, key: string) {
     const value = payment.metadata?.[key];
     return typeof value === "string" && value.trim() ? value : null;
+}
+
+function isFutureDate(value: string | null) {
+    if (!value) {
+        return false;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return false;
+    }
+
+    return parsed.getTime() > Date.now();
+}
+
+function isRecentDate(value: string | null, windowMs: number) {
+    if (!value) {
+        return false;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return false;
+    }
+
+    const ageMs = Date.now() - parsed.getTime();
+    return ageMs >= 0 && ageMs <= windowMs;
+}
+
+function pickLatestPayment(
+    payments: PaymentQueryRow[],
+    predicate: (payment: PaymentQueryRow) => boolean,
+    getTimestamp: (payment: PaymentQueryRow) => string | null
+) {
+    return payments.reduce<PaymentQueryRow | null>((latest, payment) => {
+        if (!predicate(payment)) {
+            return latest;
+        }
+
+        if (!latest) {
+            return payment;
+        }
+
+        const latestTime = new Date(getTimestamp(latest) || 0).getTime();
+        const paymentTime = new Date(getTimestamp(payment) || 0).getTime();
+
+        return paymentTime > latestTime ? payment : latest;
+    }, null);
 }
 
 export default async function AgencyProfilePage({
@@ -161,7 +210,7 @@ export default async function AgencyProfilePage({
     const { data: profilePayments } = claimedProfileIds.length > 0
         ? await admin
             .from("payments")
-            .select("profile_id, payment_type, status, paid_at, refund_status, metadata")
+            .select("profile_id, payment_type, status, paid_at, deadline_at, refund_status, metadata")
             .eq("payment_type", "entry_fee")
             .in("profile_id", claimedProfileIds)
         : { data: [] as PaymentQueryRow[] };
@@ -169,7 +218,7 @@ export default async function AgencyProfilePage({
     const { data: agencyTargetPayments } = workerIds.length > 0
         ? await admin
             .from("payments")
-            .select("profile_id, payment_type, status, paid_at, refund_status, metadata")
+            .select("profile_id, payment_type, status, paid_at, deadline_at, refund_status, metadata")
             .eq("payment_type", "entry_fee")
             .contains("metadata", { paid_by_profile_id: targetAgencyProfileId })
         : { data: [] as PaymentQueryRow[] };
@@ -224,18 +273,33 @@ export default async function AgencyProfilePage({
             ...(claimed && profileId ? paymentsByProfile.get(profileId) || [] : []),
             ...(paymentsByWorkerId.get(worker.id) || []),
         ];
+        const latestCompletedEntryFee = pickLatestPayment(
+            workerPayments,
+            (payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""),
+            (payment) => payment.paid_at
+        );
+        const latestActivePendingEntryFee = pickLatestPayment(
+            workerPayments,
+            (payment) =>
+                payment.payment_type === "entry_fee"
+                && payment.status === "pending"
+                && (
+                    isFutureDate(payment.deadline_at)
+                    || isRecentDate(getPaymentMetadataString(payment, "checkout_started_at"), 72 * 60 * 60 * 1000)
+                ),
+            (payment) => payment.deadline_at || getPaymentMetadataString(payment, "checkout_started_at")
+        );
+        const latestRefundSignal = pickLatestPayment(
+            workerPayments,
+            (payment) => payment.payment_type === "entry_fee" && Boolean(payment.refund_status),
+            (payment) => payment.paid_at || payment.deadline_at
+        );
         const hasPaidEntryFee =
             !!worker.entry_fee_paid ||
             !!worker.job_search_active ||
             isPostEntryFeeWorkerStatus(worker.status) ||
             workerPayments.some((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
-        const hasPendingEntryFee = workerPayments.some((payment) => payment.payment_type === "entry_fee" && payment.status === "pending");
-        const latestCompletedEntryFee = workerPayments.find((payment) =>
-            payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || "")
-        );
-        const latestRefundSignal = workerPayments.find((payment) =>
-            payment.payment_type === "entry_fee" && payment.refund_status
-        );
+        const hasPendingEntryFee = !!latestActivePendingEntryFee;
         const paymentState = hasPaidEntryFee
             ? "paid"
             : hasPendingEntryFee
@@ -259,9 +323,10 @@ export default async function AgencyProfilePage({
             paymentLabel: paymentState === "paid"
                 ? "Paid"
                 : paymentState === "pending"
-                    ? "Pending"
-                    : "Not paid",
+                    ? "Checkout open"
+                    : "Pay $9",
             paymentState,
+            paymentPendingUntil: latestActivePendingEntryFee?.deadline_at || null,
             queueJoinedAt: worker.queue_joined_at || null,
             entryFeePaidAt: latestCompletedEntryFee?.paid_at || null,
             refundStatus: latestRefundSignal?.refund_status || null,
@@ -274,7 +339,7 @@ export default async function AgencyProfilePage({
         totalWorkers: workerRows.length,
         claimedWorkers: workerRows.filter((worker) => worker.claimed).length,
         readyWorkers: workerRows.filter((worker) => worker.completion === 100 && worker.verifiedDocuments >= 3).length,
-        paidWorkers: workerRows.filter((worker) => worker.paymentLabel === "Paid").length,
+        paidWorkers: workerRows.filter((worker) => worker.paymentState === "paid").length,
         draftWorkers: workerRows.filter((worker) => !worker.claimed).length,
     };
 
