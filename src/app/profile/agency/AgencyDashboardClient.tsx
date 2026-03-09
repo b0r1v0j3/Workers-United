@@ -613,7 +613,9 @@ function WorkerTableRow({
             <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{index}</td>
             <td className="px-5 py-4 align-top">
                 <div className="font-semibold text-[#111827]">{worker.name}</div>
-                <div className="mt-1 text-sm text-[#6b7280]">{worker.preferredJob || "No preferred job yet"}</div>
+                {worker.preferredJob ? (
+                    <div className="mt-1 text-sm text-[#6b7280]">{worker.preferredJob}</div>
+                ) : null}
             </td>
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{formatDate(worker.createdAt)}</td>
             <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{worker.completion}%</td>
