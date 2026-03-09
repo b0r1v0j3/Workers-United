@@ -53,6 +53,7 @@ export interface AgencyDashboardProps {
         documentsLabel: string;
         paymentLabel: string;
         paymentState: PaymentState;
+        paymentPendingUntil: string | null;
         queueJoinedAt: string | null;
         entryFeePaidAt: string | null;
         refundStatus: string | null;
@@ -169,20 +170,36 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     }
 
     if (worker.paymentState === "pending") {
-        return { label: "Payment pending", detail: "Waiting for Stripe to confirm the payment.", tone: "amber" };
+        return {
+            label: "Checkout open",
+            detail: worker.paymentPendingUntil
+                ? `Stripe checkout is open until ${formatDate(worker.paymentPendingUntil)}.`
+                : "Stripe checkout has been opened but not completed yet.",
+            tone: "amber",
+        };
     }
 
     if (worker.paymentState === "paid") {
+        if (normalizedStatus === "IN_QUEUE") {
+            return {
+                label: formatWaitingLabel(elapsedDays),
+                detail: activeQueueDate
+                    ? `Job Finder has been active since ${formatDate(activeQueueDate)}.`
+                    : "Job Finder payment is confirmed and the worker is waiting for a match.",
+                tone: "emerald",
+            };
+        }
+
         return {
-            label: formatWaitingLabel(elapsedDays),
-            detail: activeQueueDate
-                ? `Payment is confirmed and the worker has been active since ${formatDate(activeQueueDate)}.`
-                : "Payment is confirmed. Queue activation is syncing.",
+            label: "Paid",
+            detail: worker.entryFeePaidAt
+                ? `Job Finder was paid on ${formatDate(worker.entryFeePaidAt)}.`
+                : "Job Finder payment is confirmed.",
             tone: "emerald",
         };
     }
 
-    return { label: "Awaiting payment", detail: "Job Finder has not been paid yet.", tone: "slate" };
+    return { label: "Not paid yet", detail: "Agency can start Job Finder by paying the $9 entry fee.", tone: "slate" };
 }
 
 export default function AgencyDashboardClient({
@@ -220,6 +237,7 @@ export default function AgencyDashboardClient({
                 worker.accessLabel,
                 worker.paymentLabel,
                 formatDate(worker.createdAt),
+                formatDate(worker.paymentPendingUntil),
             ].some((value) => value.toLowerCase().includes(query));
         });
     }, [search, workers]);
@@ -230,7 +248,6 @@ export default function AgencyDashboardClient({
         [selectedWorkerIds, workers]
     );
     const allVisibleSelected = visibleWorkerIds.length > 0 && visibleWorkerIds.every((workerId) => selectedWorkerIds.includes(workerId));
-    const columnCount = readOnlyPreview ? 8 : 9;
 
     useEffect(() => {
         setSelectedWorkerIds((current) => current.filter((workerId) => workers.some((worker) => worker.id === workerId)));
@@ -406,7 +423,7 @@ export default function AgencyDashboardClient({
                         <div className="max-w-2xl">
                             <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">Workers</h2>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                Manage every worker from one table. Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
+                                Manage every worker from one board. Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
                             </p>
                         </div>
 
@@ -435,15 +452,31 @@ export default function AgencyDashboardClient({
                     {!readOnlyPreview && workers.length > 0 ? (
                         <div className="mt-4 flex flex-col gap-3 rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-4">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-[#111827]">
-                                        {selectedWorkers.length > 0
-                                            ? `${selectedWorkers.length} worker${selectedWorkers.length === 1 ? "" : "s"} selected`
-                                            : "Select workers to delete them in one action."}
-                                    </p>
-                                    <p className="mt-1 text-xs leading-relaxed text-[#6b7280]">
-                                        Bulk payment is intentionally locked. Each Job Finder checkout still belongs to one worker only.
-                                    </p>
+                                <div className="flex items-start gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={allVisibleSelected}
+                                        onChange={(event) => toggleVisibleWorkers(event.target.checked)}
+                                        className="mt-1 h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
+                                        aria-label="Select visible workers"
+                                    />
+
+                                    <div>
+                                        <p className="text-sm font-semibold text-[#111827]">
+                                            {selectedWorkers.length > 0
+                                                ? `${selectedWorkers.length} worker${selectedWorkers.length === 1 ? "" : "s"} selected`
+                                                : "Select visible workers to delete them in one action."}
+                                        </p>
+                                        <p className="mt-1 text-xs leading-relaxed text-[#6b7280]">
+                                            Bulk payment stays locked. Each Job Finder checkout still belongs to one worker only.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-[#9ca3af]">
+                                        {allVisibleSelected ? "All visible selected" : `${visibleWorkerIds.length} visible`}
+                                    </span>
                                 </div>
 
                                 <button
@@ -459,78 +492,36 @@ export default function AgencyDashboardClient({
                         </div>
                     ) : null}
 
-                    <div className="mt-5 overflow-hidden rounded-[14px] border border-[#ececec]">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-[1180px] w-full table-fixed border-collapse">
-                                <colgroup>
-                                    {!readOnlyPreview ? <col className="w-14" /> : null}
-                                    <col className="w-16" />
-                                    <col className="w-[260px]" />
-                                    <col className="w-[120px]" />
-                                    <col className="w-[120px]" />
-                                    <col className="w-[150px]" />
-                                    <col className="w-[230px]" />
-                                    <col className="w-[150px]" />
-                                    <col className="w-[170px]" />
-                                </colgroup>
-                                <thead className="bg-[#fafafa]">
-                                    <tr className="border-b border-[#ececec] text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">
-                                        {!readOnlyPreview ? (
-                                            <th className="w-14 px-5 py-4">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={allVisibleSelected}
-                                                    onChange={(event) => toggleVisibleWorkers(event.target.checked)}
-                                                    className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
-                                                    aria-label="Select visible workers"
-                                                />
-                                            </th>
-                                        ) : null}
-                                        <th className="w-16 px-5 py-4">#</th>
-                                        <th className="px-5 py-4">Worker</th>
-                                        <th className="px-5 py-4">Added</th>
-                                        <th className="px-5 py-4">Completion</th>
-                                        <th className="px-5 py-4">Documents</th>
-                                        <th className="border-l border-[#ececec] px-6 py-4">Status</th>
-                                        <th className="px-5 py-4">Payment</th>
-                                        <th className="border-l border-[#ececec] px-6 py-4 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white">
-                                    {filteredWorkers.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={columnCount} className="px-6 py-14">
-                                                <div className="flex flex-col items-center justify-center text-center">
-                                                    <div className="flex h-16 w-16 items-center justify-center rounded-[16px] border border-[#ececec] bg-[#fafafa] text-[#111111]">
-                                                        <UserPlus size={28} />
-                                                    </div>
-                                                    <h3 className="mt-4 text-lg font-semibold text-[#111827]">No workers yet</h3>
-                                                    <p className="mt-2 max-w-md text-sm leading-relaxed text-[#6b7280]">
-                                                        Use the Add worker button above to open the full worker form without leaving this workspace.
-                                                    </p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredWorkers.map((worker, index) => (
-                                            <WorkerTableRow
-                                                key={worker.id}
-                                                worker={worker}
-                                                index={index + 1}
-                                                isDeleting={isDeleting}
-                                                isPaying={payingWorkerId === worker.id}
-                                                isSelected={selectedWorkerIds.includes(worker.id)}
-                                                readOnlyPreview={readOnlyPreview}
-                                                onEdit={openEditWorkerModal}
-                                                onPay={handlePay}
-                                                onDelete={() => openDeleteDialog([worker])}
-                                                onToggleSelected={toggleWorkerSelection}
-                                            />
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div className="mt-5 space-y-4">
+                        {filteredWorkers.length === 0 ? (
+                            <div className="rounded-[14px] border border-[#ececec] bg-white px-6 py-14">
+                                <div className="flex flex-col items-center justify-center text-center">
+                                    <div className="flex h-16 w-16 items-center justify-center rounded-[16px] border border-[#ececec] bg-[#fafafa] text-[#111111]">
+                                        <UserPlus size={28} />
+                                    </div>
+                                    <h3 className="mt-4 text-lg font-semibold text-[#111827]">No workers yet</h3>
+                                    <p className="mt-2 max-w-md text-sm leading-relaxed text-[#6b7280]">
+                                        Use the Add worker button above to open the full worker form without leaving this workspace.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            filteredWorkers.map((worker, index) => (
+                                <WorkerCardRow
+                                    key={worker.id}
+                                    worker={worker}
+                                    index={index + 1}
+                                    isDeleting={isDeleting}
+                                    isPaying={payingWorkerId === worker.id}
+                                    isSelected={selectedWorkerIds.includes(worker.id)}
+                                    readOnlyPreview={readOnlyPreview}
+                                    onEdit={openEditWorkerModal}
+                                    onPay={handlePay}
+                                    onDelete={() => openDeleteDialog([worker])}
+                                    onToggleSelected={toggleWorkerSelection}
+                                />
+                            ))
+                        )}
                     </div>
                 </section>
             </div>
@@ -601,7 +592,24 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
     );
 }
 
-function WorkerTableRow({
+function FieldTile({
+    label,
+    children,
+    className = "",
+}: {
+    label: string;
+    children: ReactNode;
+    className?: string;
+}) {
+    return (
+        <div className={`rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-4 ${className}`.trim()}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">{label}</div>
+            <div className="mt-3">{children}</div>
+        </div>
+    );
+}
+
+function WorkerCardRow({
     worker,
     index,
     isDeleting,
@@ -626,11 +634,15 @@ function WorkerTableRow({
 }) {
     const phase = resolveWorkerPhase(worker);
     const showPayButton = !readOnlyPreview && worker.paymentState === "not_paid";
+    const rowGridClass = readOnlyPreview
+        ? "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,2.1fr)_minmax(110px,0.9fr)_minmax(100px,0.8fr)_minmax(150px,1fr)_minmax(240px,1.35fr)_minmax(170px,1fr)_minmax(180px,1fr)]"
+        : "grid gap-3 md:grid-cols-2 xl:grid-cols-[72px_minmax(0,2.1fr)_minmax(110px,0.9fr)_minmax(100px,0.8fr)_minmax(150px,1fr)_minmax(240px,1.35fr)_minmax(170px,1fr)_minmax(180px,1fr)]";
 
     return (
-        <tr className="border-b border-[#f1f1ef] transition hover:bg-[#fcfcfc]">
+        <div className="rounded-[14px] border border-[#ececec] bg-white p-4 shadow-[0_20px_60px_-54px_rgba(15,23,42,0.22)]">
+            <div className={rowGridClass}>
             {!readOnlyPreview ? (
-                <td className="px-5 py-4 align-top">
+                    <FieldTile label="Select" className="flex min-h-[116px] items-center justify-center">
                     <input
                         type="checkbox"
                         checked={isSelected}
@@ -638,72 +650,113 @@ function WorkerTableRow({
                         className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
                         aria-label={`Select ${worker.name}`}
                     />
-                </td>
-            ) : null}
-            <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{index}</td>
-            <td className="px-5 py-4 align-top">
-                <div className="font-semibold text-[#111827]">{worker.name}</div>
-                {worker.preferredJob ? (
-                    <div className="mt-1 text-sm text-[#6b7280]">{worker.preferredJob}</div>
+                    </FieldTile>
                 ) : null}
-            </td>
-            <td className="px-5 py-4 align-top text-sm text-[#111827]">{formatDate(worker.createdAt)}</td>
-            <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{worker.completion}%</td>
-            <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.documentsLabel}</td>
-            <td className="border-l border-[#f3f4f6] px-6 py-4 align-top">
-                <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
-                    {phase.label}
-                </div>
-                <div className="mt-2 max-w-[200px] text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
-            </td>
-            <td className="px-5 py-4 align-top">
-                {showPayButton ? (
-                    <button
-                        type="button"
-                        onClick={() => void onPay(worker)}
-                        disabled={isPaying}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
-                    >
-                        {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                        Pay $9
-                    </button>
-                ) : worker.paymentState === "paid" ? (
-                    <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                        <CheckCircle2 size={14} />
-                        Paid
-                    </div>
-                ) : (
-                    <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
-                        <Clock3 size={14} />
-                        Pending
-                    </div>
-                )}
-            </td>
-            <td className="border-l border-[#f3f4f6] px-6 py-4 align-top">
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                    <button
-                        type="button"
-                        onClick={() => onEdit(worker)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
-                    >
-                        <Pencil size={14} />
-                        Edit
-                    </button>
 
-                    {!readOnlyPreview ? (
+                <FieldTile label="Worker" className="min-h-[116px]">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="font-semibold text-[#111827]">{worker.name}</div>
+                        <div className="rounded-full border border-[#e5e7eb] bg-white px-2.5 py-1 text-xs font-semibold text-[#6b7280]">
+                            #{index}
+                        </div>
+                    </div>
+                {worker.preferredJob ? (
+                    <div className="mt-2 text-sm text-[#6b7280]">{worker.preferredJob}</div>
+                ) : null}
+                </FieldTile>
+
+                <FieldTile label="Added" className="min-h-[116px]">
+                    <div className="text-sm font-semibold text-[#111827]">{formatDate(worker.createdAt)}</div>
+                </FieldTile>
+
+                <FieldTile label="Completion" className="min-h-[116px]">
+                    <div className="text-2xl font-semibold tracking-tight text-[#111827]">{worker.completion}%</div>
+                    <div className="mt-2 text-xs text-[#6b7280]">Profile completion</div>
+                </FieldTile>
+
+                <FieldTile label="Documents" className="min-h-[116px]">
+                    <div className="text-sm font-semibold text-[#111827]">{worker.documentsLabel}</div>
+                    <div className="mt-2 text-xs text-[#6b7280]">
+                        {worker.verifiedDocuments > 0
+                            ? `${worker.verifiedDocuments} verified`
+                            : "No verified documents yet"}
+                    </div>
+                </FieldTile>
+
+                <FieldTile label="Status" className="min-h-[116px]">
+                    <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
+                        {phase.label}
+                    </div>
+                    <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
+                </FieldTile>
+
+                <FieldTile label="Payment" className="min-h-[116px]">
+                    {showPayButton ? (
                         <button
                             type="button"
-                            onClick={onDelete}
-                            disabled={isDeleting}
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#f3d7d7] bg-white px-3 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
+                            onClick={() => void onPay(worker)}
+                            disabled={isPaying}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
                         >
-                            <Trash2 size={14} />
-                            Delete
+                            {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                            Pay $9
                         </button>
-                    ) : null}
+                    ) : worker.paymentState === "paid" ? (
+                        <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                            <CheckCircle2 size={14} />
+                            Paid
+                        </div>
+                    ) : (
+                        <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
+                            <Clock3 size={14} />
+                            Checkout open
+                        </div>
+                    )}
 
-                </div>
-            </td>
-        </tr>
+                    {worker.paymentState === "pending" ? (
+                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
+                            {worker.paymentPendingUntil
+                                ? `Open until ${formatDate(worker.paymentPendingUntil)}`
+                                : "Checkout has been opened but not completed yet."}
+                        </div>
+                    ) : worker.paymentState === "paid" ? (
+                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
+                            {worker.entryFeePaidAt
+                                ? `Paid on ${formatDate(worker.entryFeePaidAt)}`
+                                : "Job Finder payment is confirmed."}
+                        </div>
+                    ) : (
+                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
+                            Agency can start Job Finder from here.
+                        </div>
+                    )}
+                </FieldTile>
+
+                <FieldTile label="Action" className="min-h-[116px]">
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => onEdit(worker)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
+                        >
+                            <Pencil size={14} />
+                            Edit
+                        </button>
+
+                        {!readOnlyPreview ? (
+                            <button
+                                type="button"
+                                onClick={onDelete}
+                                disabled={isDeleting}
+                                className="inline-flex items-center gap-2 rounded-xl border border-[#f3d7d7] bg-white px-3 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                                <Trash2 size={14} />
+                                Delete
+                            </button>
+                        ) : null}
+                    </div>
+                </FieldTile>
+            </div>
+        </div>
     );
 }
