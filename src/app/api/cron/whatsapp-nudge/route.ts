@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendWhatsAppTemplate } from "@/lib/whatsapp";
+import { sendProfileIncomplete } from "@/lib/whatsapp";
 import { isInternalOrTestEmail } from "@/lib/reporting";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 
@@ -107,17 +107,13 @@ export async function GET(request: Request) {
             const name = profile?.full_name?.split(" ")[0] || "there";
 
             try {
-                const sendResult = await sendWhatsAppTemplate({
-                    to: phone,
-                    templateName: "profile_incomplete",
-                    bodyParams: [
-                        name,
-                        "almost ready",
-                        "complete your registration and join the job queue"
-                    ],
-                    buttonParams: [{ type: "url", url: "/profile/worker" }],
-                    userId: workerRecord.profile_id || undefined,
-                });
+                const sendResult = await sendProfileIncomplete(
+                    phone,
+                    name,
+                    "almost ready",
+                    "complete your registration and join the job queue",
+                    workerRecord.profile_id || undefined
+                );
 
                 if (sendResult.success) {
                     results.nudged++;
