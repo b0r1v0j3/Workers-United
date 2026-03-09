@@ -66,6 +66,23 @@ type DeleteDialogState = {
     includesClaimedAccount: boolean;
 } | null;
 
+type WorkerPhaseTone = "slate" | "blue" | "amber" | "orange" | "emerald" | "red";
+
+type WorkerPhase = {
+    label: string;
+    detail: string;
+    tone: WorkerPhaseTone;
+};
+
+const WORKER_PHASE_TONE_STYLES: Record<WorkerPhaseTone, string> = {
+    slate: "border-slate-200 bg-slate-50 text-slate-700",
+    blue: "border-blue-200 bg-blue-50 text-blue-700",
+    amber: "border-amber-200 bg-amber-50 text-amber-700",
+    orange: "border-orange-200 bg-orange-50 text-orange-700",
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    red: "border-red-200 bg-red-50 text-red-700",
+};
+
 function formatDate(value: string | null) {
     if (!value) {
         return "Unknown";
@@ -77,6 +94,63 @@ function formatDate(value: string | null) {
     }
 
     return parsed.toLocaleDateString("en-GB");
+}
+
+function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
+    const normalizedStatus = (worker.status || "").toUpperCase();
+
+    switch (normalizedStatus) {
+        case "PLACED":
+            return { label: "Placed", detail: "Worker has been successfully placed.", tone: "emerald" };
+        case "VISA_APPROVED":
+            return { label: "Visa approved", detail: "Visa approval is complete.", tone: "emerald" };
+        case "VISA_PROCESS_STARTED":
+            return { label: "Visa in process", detail: "Visa case is currently being handled.", tone: "emerald" };
+        case "OFFER_ACCEPTED":
+            return { label: "Offer accepted", detail: "Offer is accepted and moving to visa steps.", tone: "orange" };
+        case "OFFER_PENDING":
+            return { label: "Offer pending", detail: "Waiting for the worker to review the offer.", tone: "orange" };
+        case "IN_QUEUE":
+            return { label: "In queue", detail: "Job Finder is actively searching for a match.", tone: "amber" };
+        case "REFUND_FLAGGED":
+            return { label: "Refund review", detail: "The entry fee refund is being reviewed.", tone: "red" };
+        case "REJECTED":
+            return { label: "Needs update", detail: "Profile or documents need corrections.", tone: "red" };
+        case "PENDING_APPROVAL":
+            return { label: "Under review", detail: "Workers United is reviewing this worker.", tone: "blue" };
+        case "PROFILE_COMPLETE":
+        case "VERIFIED":
+        case "APPROVED":
+            return { label: "Ready for payment", detail: "Everything is ready for the $9 Job Finder fee.", tone: "blue" };
+        default:
+            break;
+    }
+
+    if (worker.paymentState === "pending") {
+        return { label: "Payment pending", detail: "Waiting for Stripe to confirm the payment.", tone: "amber" };
+    }
+
+    if (worker.paymentState === "paid") {
+        return { label: "Payment complete", detail: "Waiting to move this worker into the queue.", tone: "emerald" };
+    }
+
+    if (worker.completion === 100 && worker.verifiedDocuments >= 3) {
+        return { label: "Ready for payment", detail: "Profile and documents are complete.", tone: "blue" };
+    }
+
+    if (worker.verifiedDocuments > 0) {
+        return {
+            label: "Documents in progress",
+            detail: `${worker.verifiedDocuments}/3 documents verified so far.`,
+            tone: "blue",
+        };
+    }
+
+    if (worker.completion > 0) {
+        return { label: "Profile in progress", detail: `${worker.completion}% complete so far.`, tone: "slate" };
+    }
+
+    return { label: "Draft", detail: "Agency has started this worker profile.", tone: "slate" };
 }
 
 export default function AgencyDashboardClient({
@@ -101,18 +175,21 @@ export default function AgencyDashboardClient({
             return workers;
         }
 
-        return workers.filter((worker) =>
-            [
+        return workers.filter((worker) => {
+            const phase = resolveWorkerPhase(worker);
+            return [
                 worker.name,
                 worker.nationality || "",
                 worker.currentCountry || "",
                 worker.preferredJob || "",
                 worker.status,
+                phase.label,
+                phase.detail,
                 worker.accessLabel,
                 worker.paymentLabel,
                 formatDate(worker.createdAt),
-            ].some((value) => value.toLowerCase().includes(query))
-        );
+            ].some((value) => value.toLowerCase().includes(query));
+        });
     }, [search, workers]);
 
     const visibleWorkerIds = useMemo(() => filteredWorkers.map((worker) => worker.id), [filteredWorkers]);
@@ -504,9 +581,7 @@ function WorkerTableRow({
     onDelete: () => void;
     onToggleSelected: (workerId: string, checked: boolean) => void;
 }) {
-    const statusClass = worker.claimed
-        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-        : "border-slate-200 bg-slate-50 text-slate-700";
+    const phase = resolveWorkerPhase(worker);
 
     const payButtonLabel = worker.paymentState === "paid"
         ? "Paid"
@@ -537,10 +612,10 @@ function WorkerTableRow({
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.documentsLabel}</td>
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.paymentLabel}</td>
             <td className="px-5 py-4 align-top">
-                <div className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusClass}`}>
-                    {worker.claimed ? "Account ready" : "Agency managed"}
+                <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
+                    {phase.label}
                 </div>
-                <div className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">{worker.accessLabel}</div>
+                <div className="mt-2 max-w-[180px] text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
             </td>
             <td className="px-5 py-4 align-top">
                 <div className="flex flex-wrap items-center justify-end gap-2">
