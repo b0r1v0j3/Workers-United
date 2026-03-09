@@ -26,6 +26,7 @@ interface AgencyWorkerQueryRow {
     current_country: string | null;
     preferred_job: string | null;
     status: string | null;
+    created_at: string | null;
     updated_at: string | null;
     queue_joined_at: string | null;
     entry_fee_paid: boolean | null;
@@ -107,6 +108,7 @@ export default async function AgencyProfilePage({
                 current_country,
                 preferred_job,
                 status,
+                created_at,
                 updated_at,
                 queue_joined_at,
                 entry_fee_paid,
@@ -115,7 +117,7 @@ export default async function AgencyProfilePage({
                 submitted_email
             `)
             .eq("agency_id", agencyId)
-            .order("updated_at", { ascending: false })
+            .order("created_at", { ascending: false })
         : { data: [] as AgencyWorkerQueryRow[], error: null };
 
     if (workersError) {
@@ -218,7 +220,7 @@ export default async function AgencyProfilePage({
                     ? "Pending"
                     : "Not paid",
             paymentState,
-            createdAt: worker.updated_at || null,
+            createdAt: worker.created_at || worker.updated_at || null,
             updatedAt: worker.updated_at || null,
         };
     });
