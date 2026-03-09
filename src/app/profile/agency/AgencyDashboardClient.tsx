@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
     BadgeCheck,
     Building2,
+    CheckCircle2,
+    Clock3,
     CreditCard,
     FileCheck2,
     Loader2,
@@ -606,18 +608,27 @@ function WorkerTableRow({
             <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{worker.completion}%</td>
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.documentsLabel}</td>
             <td className="px-5 py-4 align-top">
-                <div className="text-sm text-[#111827]">{worker.paymentLabel}</div>
                 {showPayButton ? (
                     <button
                         type="button"
                         onClick={() => void onPay(worker)}
                         disabled={isPaying}
-                        className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
+                        className="inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
                     >
                         {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                         Pay $9
                     </button>
-                ) : null}
+                ) : worker.paymentState === "paid" ? (
+                    <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                        <CheckCircle2 size={14} />
+                        Paid
+                    </div>
+                ) : (
+                    <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
+                        <Clock3 size={14} />
+                        Pending
+                    </div>
+                )}
             </td>
             <td className="px-5 py-4 align-top">
                 <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
