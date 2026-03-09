@@ -271,6 +271,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Agency workspace table cleanup: `Contact` kolona je uklonjena iz `/profile/agency` worker board-a zajedno sa pratećim copy-jem o email/phone poljima, pa agency lista sada ostaje fokusirana na worker, `Saved`, completion, documents, payment, status i akcije bez suvišnog kontaktnog polja — 09.03.2026
 - [x] Workspace header branding pass 2: centrirana non-public logo-ikona u `UnifiedNavbar` je dodatno povećana još jednu stepenicu posle prvog balance passa, tako da je branding jasniji i na mobilnom i na desktop workspace header-u bez vraćanja debelog shell-a — 09.03.2026
 - [x] Workspace header branding balance pass: posle slimming passa, dashboard/profile `UnifiedNavbar` je dobio veći left wordmark i veću centriranu logo-ikonu za non-public workspace-e, tako da header ostaje tanak ali brend više nije vizuelno presitan — 09.03.2026
 - [x] Workspace header slimming pass: dashboard/profile header više ne koristi stari previsoki `68px` shell i preveliku centriranu logo-ikonu; `UnifiedNavbar` je stanjio non-public header, smanjio dashboard wordmark/logo mere, a `AppShell` je poravnao backdrop/sidebar/main top offsete na novu nižu visinu bez preklapanja — 09.03.2026
