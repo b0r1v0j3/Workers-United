@@ -431,7 +431,18 @@ export default function AgencyDashboardClient({
 
                     <div className="mt-5 overflow-hidden rounded-[14px] border border-[#ececec]">
                         <div className="overflow-x-auto">
-                            <table className="min-w-full border-collapse">
+                            <table className="min-w-[1180px] w-full table-fixed border-collapse">
+                                <colgroup>
+                                    {!readOnlyPreview ? <col className="w-14" /> : null}
+                                    <col className="w-16" />
+                                    <col className="w-[260px]" />
+                                    <col className="w-[120px]" />
+                                    <col className="w-[120px]" />
+                                    <col className="w-[150px]" />
+                                    <col className="w-[230px]" />
+                                    <col className="w-[150px]" />
+                                    <col className="w-[170px]" />
+                                </colgroup>
                                 <thead className="bg-[#fafafa]">
                                     <tr className="border-b border-[#ececec] text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">
                                         {!readOnlyPreview ? (
@@ -450,9 +461,9 @@ export default function AgencyDashboardClient({
                                         <th className="px-5 py-4">Added</th>
                                         <th className="px-5 py-4">Completion</th>
                                         <th className="px-5 py-4">Documents</th>
+                                        <th className="border-l border-[#ececec] px-6 py-4">Status</th>
                                         <th className="px-5 py-4">Payment</th>
-                                        <th className="px-5 py-4">Status</th>
-                                        <th className="px-5 py-4 text-right">Action</th>
+                                        <th className="border-l border-[#ececec] px-6 py-4 text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white">
@@ -607,6 +618,12 @@ function WorkerTableRow({
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{formatDate(worker.createdAt)}</td>
             <td className="px-5 py-4 align-top text-sm font-semibold text-[#111827]">{worker.completion}%</td>
             <td className="px-5 py-4 align-top text-sm text-[#111827]">{worker.documentsLabel}</td>
+            <td className="border-l border-[#f3f4f6] px-6 py-4 align-top">
+                <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
+                    {phase.label}
+                </div>
+                <div className="mt-2 max-w-[200px] text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
+            </td>
             <td className="px-5 py-4 align-top">
                 {showPayButton ? (
                     <button
@@ -630,13 +647,7 @@ function WorkerTableRow({
                     </div>
                 )}
             </td>
-            <td className="px-5 py-4 align-top">
-                <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
-                    {phase.label}
-                </div>
-                <div className="mt-2 max-w-[180px] text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
-            </td>
-            <td className="px-5 py-4 align-top">
+            <td className="border-l border-[#f3f4f6] px-6 py-4 align-top">
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     <button
                         type="button"
