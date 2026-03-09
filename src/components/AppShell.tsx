@@ -317,6 +317,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                             tone="rose"
                         />
                     )}
+                    <SidebarLink href={withInspect("/profile/agency/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} tone="violet" />
                     <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" />
                 </>
             )}
