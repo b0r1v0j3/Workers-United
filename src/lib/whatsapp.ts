@@ -37,7 +37,7 @@ type TemplateParameter =
     | { type: "text"; text: string }
     | { type: "image"; image: { link: string } };
 
-interface SendTemplateOptions {
+export interface SendTemplateOptions {
     to: string;             // phone number in international format (e.g. "+381641234567")
     templateName: WhatsAppTemplateName;
     languageCode?: string;  // default "en"
@@ -126,6 +126,19 @@ function buildTemplateContent(options: SendTemplateOptions): string {
     const button = options.buttonParams?.map((btn) => btn.url).join(", ");
     const buttonNote = button ? ` [buttons: ${button}]` : "";
     return `[Template: ${options.templateName}] ${body}${buttonNote}`.trim();
+}
+
+export function normalizeTemplateOptions(options: SendTemplateOptions): SendTemplateOptions {
+    switch (options.templateName) {
+        case "profile_incomplete":
+            // Meta currently accepts the approved profile_incomplete variant without a CTA button.
+            // Stripping buttons here avoids the guaranteed first-pass (#132018) failure before fallback recovery.
+            return options.buttonParams?.length
+                ? { ...options, buttonParams: undefined }
+                : options;
+        default:
+            return options;
+    }
 }
 
 function dedupeTemplateVariants(variants: SendTemplateOptions[]): SendTemplateOptions[] {
@@ -242,23 +255,24 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
         return { success: false, error: "WhatsApp not configured (missing WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID)" };
     }
 
-    const to = normalizePhone(options.to);
+    const normalizedOptions = normalizeTemplateOptions(options);
+    const to = normalizePhone(normalizedOptions.to);
 
     try {
-        let attemptedOptions = options;
-        let sendResult = await attemptTemplateSend(config, to, options);
+        let attemptedOptions = normalizedOptions;
+        let sendResult = await attemptTemplateSend(config, to, normalizedOptions);
 
         if (!sendResult.success && sendResult.error?.includes("(#132018)")) {
-            for (const fallbackOptions of buildTemplateFallbackVariants(options)) {
+            for (const fallbackOptions of buildTemplateFallbackVariants(normalizedOptions)) {
                 const fallbackResult = await attemptTemplateSend(config, to, fallbackOptions);
                 if (fallbackResult.success) {
                     attemptedOptions = fallbackOptions;
                     sendResult = fallbackResult;
                     console.warn("[WhatsApp] Template recovered via fallback variant:", {
-                        templateName: options.templateName,
-                        originalBodyCount: options.bodyParams?.length || 0,
+                        templateName: normalizedOptions.templateName,
+                        originalBodyCount: normalizedOptions.bodyParams?.length || 0,
                         fallbackBodyCount: fallbackOptions.bodyParams?.length || 0,
-                        droppedButtons: !!options.buttonParams?.length && !fallbackOptions.buttonParams?.length,
+                        droppedButtons: !!normalizedOptions.buttonParams?.length && !fallbackOptions.buttonParams?.length,
                     });
                     break;
                 }
@@ -299,12 +313,12 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
         console.error("[WhatsApp] Send error:", error);
 
         await logMessage({
-            userId: options.userId,
+            userId: normalizedOptions.userId,
             phoneNumber: to,
             direction: "outbound",
             messageType: "template",
-            content: `${buildTemplateContent(options)} FAILED: ${error.message}`,
-            templateName: options.templateName,
+            content: `${buildTemplateContent(normalizedOptions)} FAILED: ${error.message}`,
+            templateName: normalizedOptions.templateName,
             status: "failed",
             errorMessage: error.message,
         });
@@ -507,7 +521,6 @@ export async function sendProfileIncomplete(phone: string, name: string, complet
         to: phone,
         templateName: "profile_incomplete",
         bodyParams: [name, completion, missingFields],
-        buttonParams: [{ type: "url", url: "/profile/worker/edit" }],
         userId,
     });
 }
