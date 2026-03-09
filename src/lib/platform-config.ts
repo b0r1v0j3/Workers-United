@@ -104,6 +104,7 @@ export async function getBusinessFactsForAI(): Promise<string> {
         `Refund policy: ${c.refund_policy_en || "90-day refund if no job offer"}`,
         `Placement fee (Serbia): ${c.placement_fee_serbia || "$190"}`,
         `Employer fee: ${c.employer_fee || "Free"}`,
+        "Pricing rule: workers pay the $9 entry fee and any placement fee; employers never pay platform fees.",
         `Processing time: ${c.processing_time || "2-8 weeks"}`,
         `Required documents: ${c.supported_documents || "passport, diploma, biometric photo"}`,
         `Contact: ${c.contact_email || "contact@workersunited.eu"}`,
