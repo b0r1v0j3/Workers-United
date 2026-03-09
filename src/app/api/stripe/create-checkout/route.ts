@@ -26,6 +26,14 @@ function normalizeRelativePath(value: unknown): string | null {
     return trimmed;
 }
 
+function sortByNewestDeadlineFirst<T extends { deadline_at?: string | null }>(payments: T[]) {
+    return [...payments].sort((left, right) => {
+        const leftTime = left.deadline_at ? new Date(left.deadline_at).getTime() : 0;
+        const rightTime = right.deadline_at ? new Date(right.deadline_at).getTime() : 0;
+        return rightTime - leftTime;
+    });
+}
+
 export async function POST(request: NextRequest) {
     let userIdForLog: string | null = null;
 
@@ -216,26 +224,55 @@ export async function POST(request: NextRequest) {
                     return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
                 }
             } else if (agencyTargetWorkerId) {
-                const { data: existingAgencyWorkerPayment, error: existingAgencyWorkerPaymentError } = await admin
+                const { data: existingAgencyWorkerPayments, error: existingAgencyWorkerPaymentError } = await admin
                     .from("payments")
-                    .select("id, status")
+                    .select("id, status, deadline_at, stripe_checkout_session_id, metadata")
                     .eq("payment_type", "entry_fee")
                     .contains("metadata", { target_worker_id: agencyTargetWorkerId })
                     .in("status", ["pending", "completed", "paid"])
-                    .limit(1)
-                    .maybeSingle();
+                    .limit(10);
 
                 if (existingAgencyWorkerPaymentError) {
                     console.error("Agency worker payment lookup error:", existingAgencyWorkerPaymentError);
                     return NextResponse.json({ error: "Failed to check existing worker payments" }, { status: 500 });
                 }
 
-                if (existingAgencyWorkerPayment?.status === "pending") {
-                    return NextResponse.json({ error: "Entry fee payment is already pending" }, { status: 400 });
-                }
+                const existingAgencyWorkerPayment = sortByNewestDeadlineFirst(existingAgencyWorkerPayments || [])[0];
 
                 if (existingAgencyWorkerPayment?.status === "completed" || existingAgencyWorkerPayment?.status === "paid") {
                     return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
+                }
+
+                if (existingAgencyWorkerPayment?.status === "pending" && existingAgencyWorkerPayment.stripe_checkout_session_id) {
+                    try {
+                        const existingSession = await stripe.checkout.sessions.retrieve(existingAgencyWorkerPayment.stripe_checkout_session_id);
+                        if (existingSession.payment_status === "paid") {
+                            return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
+                        }
+
+                        if (existingSession.status === "open" && existingSession.url) {
+                            await logServerActivity(user.id, "checkout_session_reused", "payment", {
+                                type,
+                                payment_id: existingAgencyWorkerPayment.id,
+                                target_worker_id: agencyTargetWorkerId,
+                                stripe_session_id: existingSession.id,
+                            });
+
+                            return NextResponse.json({
+                                checkoutUrl: existingSession.url,
+                                sessionId: existingSession.id,
+                                reused: true,
+                            });
+                        }
+                    } catch (sessionLookupError) {
+                        await logServerActivity(user.id, "checkout_session_reuse_failed", "payment", {
+                            type,
+                            payment_id: existingAgencyWorkerPayment.id,
+                            target_worker_id: agencyTargetWorkerId,
+                            stripe_session_id: existingAgencyWorkerPayment.stripe_checkout_session_id,
+                            error: sessionLookupError instanceof Error ? sessionLookupError.message : String(sessionLookupError),
+                        }, "warning");
+                    }
                 }
             }
 

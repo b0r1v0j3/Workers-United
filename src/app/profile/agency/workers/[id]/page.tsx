@@ -183,7 +183,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                     accessLabel: claimed
                         ? "Worker account ready"
                         : "Managed by agency",
-                    paymentLabel: hasPaidEntryFee ? "Paid" : hasPendingEntryFee ? "Pending" : "Not paid",
+                    paymentLabel: hasPaidEntryFee ? "Paid" : "Not paid",
                 }}
                 readOnlyPreview={userType === "admin"}
             />
