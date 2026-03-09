@@ -203,7 +203,7 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
 
     return {
         label: "Not paid yet",
-        detail: "Agency can start Job Finder by paying the $9 entry fee. Support is already open in the agency inbox.",
+        detail: "Agency can start Job Finder by paying the $9 entry fee.",
         tone: "slate",
     };
 }
@@ -644,7 +644,9 @@ export default function AgencyDashboardClient({
                                                                 disabled={isDeleting}
                                                                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f3d7d7] bg-white px-3 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
                                                             >
-                                                                <Trash2 size={14} />
+                                                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#fff1f2] text-[#be123c]">
+                                                                    <Trash2 size={13} strokeWidth={2.3} />
+                                                                </span>
                                                                 Delete
                                                             </button>
                                                         ) : null}
