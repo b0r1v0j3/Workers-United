@@ -492,9 +492,9 @@ export default function AgencyDashboardClient({
                         </div>
                     ) : null}
 
-                    <div className="mt-5 space-y-4">
+                    <div className="mt-5 overflow-x-auto rounded-[14px] border border-[#ececec] bg-white">
                         {filteredWorkers.length === 0 ? (
-                            <div className="rounded-[14px] border border-[#ececec] bg-white px-6 py-14">
+                            <div className="px-6 py-14">
                                 <div className="flex flex-col items-center justify-center text-center">
                                     <div className="flex h-16 w-16 items-center justify-center rounded-[16px] border border-[#ececec] bg-[#fafafa] text-[#111111]">
                                         <UserPlus size={28} />
@@ -506,21 +506,154 @@ export default function AgencyDashboardClient({
                                 </div>
                             </div>
                         ) : (
-                            filteredWorkers.map((worker, index) => (
-                                <WorkerCardRow
-                                    key={worker.id}
-                                    worker={worker}
-                                    index={index + 1}
-                                    isDeleting={isDeleting}
-                                    isPaying={payingWorkerId === worker.id}
-                                    isSelected={selectedWorkerIds.includes(worker.id)}
-                                    readOnlyPreview={readOnlyPreview}
-                                    onEdit={openEditWorkerModal}
-                                    onPay={handlePay}
-                                    onDelete={() => openDeleteDialog([worker])}
-                                    onToggleSelected={toggleWorkerSelection}
-                                />
-                            ))
+                            <table className="min-w-[1180px] w-full border-collapse">
+                                <thead className="bg-[#fafafa]">
+                                    <tr className="border-b border-[#ececec]">
+                                        {!readOnlyPreview ? (
+                                            <th className="w-12 border-r border-[#f1f1ef] px-4 py-4 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={allVisibleSelected}
+                                                    onChange={(event) => toggleVisibleWorkers(event.target.checked)}
+                                                    className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
+                                                    aria-label="Select visible workers"
+                                                />
+                                            </th>
+                                        ) : null}
+                                        <th className="w-12 border-r border-[#f1f1ef] px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">#</th>
+                                        <th className="min-w-[220px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Worker</th>
+                                        <th className="min-w-[110px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Added</th>
+                                        <th className="min-w-[180px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Completion</th>
+                                        <th className="min-w-[150px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Documents</th>
+                                        <th className="min-w-[230px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Status</th>
+                                        <th className="min-w-[170px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Payment</th>
+                                        <th className="min-w-[150px] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Action</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {filteredWorkers.map((worker, index) => {
+                                        const phase = resolveWorkerPhase(worker);
+                                        const showPayButton = !readOnlyPreview && worker.paymentState === "not_paid";
+
+                                        return (
+                                            <tr key={worker.id} className="border-b border-[#ececec] last:border-b-0">
+                                                {!readOnlyPreview ? (
+                                                    <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                        <div className="flex justify-center pt-1">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedWorkerIds.includes(worker.id)}
+                                                                onChange={(event) => toggleWorkerSelection(worker.id, event.target.checked)}
+                                                                className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
+                                                                aria-label={`Select ${worker.name}`}
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                ) : null}
+
+                                                <td className="border-r border-[#f7f7f6] px-3 py-5 align-top">
+                                                    <div className="pt-1 text-sm font-semibold text-[#111827]">{index + 1}</div>
+                                                </td>
+
+                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                    <div className="text-[1.05rem] font-semibold leading-snug text-[#111827]">{worker.name}</div>
+                                                    {worker.preferredJob ? (
+                                                        <div className="mt-2 text-sm text-[#6b7280]">{worker.preferredJob}</div>
+                                                    ) : null}
+                                                </td>
+
+                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                    <div className="pt-1 text-sm font-semibold text-[#111827]">{formatDate(worker.createdAt)}</div>
+                                                </td>
+
+                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                    <CompletionMeter value={worker.completion} compact />
+                                                </td>
+
+                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                    <div className="pt-1 text-sm font-semibold text-[#111827]">{worker.documentsLabel}</div>
+                                                    <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
+                                                        {worker.verifiedDocuments > 0
+                                                            ? `${worker.verifiedDocuments} verified`
+                                                            : "No verified documents yet"}
+                                                    </div>
+                                                </td>
+
+                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                    <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
+                                                        {phase.label}
+                                                    </div>
+                                                    <div className="mt-3 text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
+                                                </td>
+
+                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                    {showPayButton ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void handlePay(worker)}
+                                                            disabled={payingWorkerId === worker.id}
+                                                            className="inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
+                                                        >
+                                                            {payingWorkerId === worker.id ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                                                            Pay $9
+                                                        </button>
+                                                    ) : worker.paymentState === "paid" ? (
+                                                        <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                                                            <CheckCircle2 size={14} />
+                                                            Paid
+                                                        </div>
+                                                    ) : (
+                                                        <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
+                                                            <Clock3 size={14} />
+                                                            Checkout open
+                                                        </div>
+                                                    )}
+
+                                                    {worker.paymentState === "pending" ? (
+                                                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
+                                                            {worker.paymentPendingUntil
+                                                                ? `Open until ${formatDate(worker.paymentPendingUntil)}`
+                                                                : "Checkout has been opened but not completed yet."}
+                                                        </div>
+                                                    ) : worker.paymentState === "paid" ? (
+                                                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
+                                                            {worker.entryFeePaidAt
+                                                                ? `Paid on ${formatDate(worker.entryFeePaidAt)}`
+                                                                : "Job Finder payment is confirmed."}
+                                                        </div>
+                                                    ) : null}
+                                                </td>
+
+                                                <td className="px-4 py-5 align-top">
+                                                    <div className="flex flex-col gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditWorkerModal(worker)}
+                                                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
+                                                        >
+                                                            <Pencil size={14} />
+                                                            Edit
+                                                        </button>
+
+                                                        {!readOnlyPreview ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openDeleteDialog([worker])}
+                                                                disabled={isDeleting}
+                                                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f3d7d7] bg-white px-3 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                                Delete
+                                                            </button>
+                                                        ) : null}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         )}
                     </div>
                 </section>
@@ -592,19 +725,21 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
     );
 }
 
-function CompletionMeter({ value }: { value: number }) {
+function CompletionMeter({ value, compact = false }: { value: number; compact?: boolean }) {
     const safeValue = Math.max(0, Math.min(100, value));
 
     return (
         <div>
             <div className="flex items-end justify-between gap-3">
-                <div className="text-2xl font-semibold tracking-tight text-[#111827]">{safeValue}%</div>
+                <div className={compact ? "text-xl font-semibold tracking-tight text-[#111827]" : "text-2xl font-semibold tracking-tight text-[#111827]"}>
+                    {safeValue}%
+                </div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">
                     {safeValue === 100 ? "Ready" : "In progress"}
                 </div>
             </div>
 
-            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#e9ecef]">
+            <div className={compact ? "mt-2 h-2 overflow-hidden rounded-full bg-[#e9ecef]" : "mt-3 h-2.5 overflow-hidden rounded-full bg-[#e9ecef]"}>
                 <div
                     className={`h-full rounded-full transition-all ${
                         safeValue === 100
@@ -619,175 +754,7 @@ function CompletionMeter({ value }: { value: number }) {
                 />
             </div>
 
-            <div className="mt-2 text-xs text-[#6b7280]">Profile completion</div>
-        </div>
-    );
-}
-
-function FieldTile({
-    label,
-    children,
-    className = "",
-}: {
-    label: string;
-    children: ReactNode;
-    className?: string;
-}) {
-    return (
-        <div className={`rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-4 ${className}`.trim()}>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">{label}</div>
-            <div className="mt-3">{children}</div>
-        </div>
-    );
-}
-
-function WorkerCardRow({
-    worker,
-    index,
-    isDeleting,
-    isPaying,
-    isSelected,
-    readOnlyPreview,
-    onEdit,
-    onPay,
-    onDelete,
-    onToggleSelected,
-}: {
-    worker: DashboardWorker;
-    index: number;
-    isDeleting: boolean;
-    isPaying: boolean;
-    isSelected: boolean;
-    readOnlyPreview: boolean;
-    onEdit: (worker: DashboardWorker) => void;
-    onPay: (worker: DashboardWorker) => void;
-    onDelete: () => void;
-    onToggleSelected: (workerId: string, checked: boolean) => void;
-}) {
-    const phase = resolveWorkerPhase(worker);
-    const showPayButton = !readOnlyPreview && worker.paymentState === "not_paid";
-    const rowGridClass = readOnlyPreview
-        ? "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,2.1fr)_minmax(110px,0.9fr)_minmax(100px,0.8fr)_minmax(150px,1fr)_minmax(240px,1.35fr)_minmax(170px,1fr)_minmax(180px,1fr)]"
-        : "grid gap-3 md:grid-cols-2 xl:grid-cols-[72px_minmax(0,2.1fr)_minmax(110px,0.9fr)_minmax(100px,0.8fr)_minmax(150px,1fr)_minmax(240px,1.35fr)_minmax(170px,1fr)_minmax(180px,1fr)]";
-
-    return (
-        <div className="rounded-[14px] border border-[#ececec] bg-white p-4 shadow-[0_20px_60px_-54px_rgba(15,23,42,0.22)]">
-            <div className={rowGridClass}>
-            {!readOnlyPreview ? (
-                    <FieldTile label="Select" className="flex min-h-[116px] items-center justify-center">
-                    <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(event) => onToggleSelected(worker.id, event.target.checked)}
-                        className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
-                        aria-label={`Select ${worker.name}`}
-                    />
-                    </FieldTile>
-                ) : null}
-
-                <FieldTile label="Worker" className="min-h-[116px]">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="font-semibold text-[#111827]">{worker.name}</div>
-                        <div className="rounded-full border border-[#e5e7eb] bg-white px-2.5 py-1 text-xs font-semibold text-[#6b7280]">
-                            #{index}
-                        </div>
-                    </div>
-                {worker.preferredJob ? (
-                    <div className="mt-2 text-sm text-[#6b7280]">{worker.preferredJob}</div>
-                ) : null}
-                </FieldTile>
-
-                <FieldTile label="Added" className="min-h-[116px]">
-                    <div className="text-sm font-semibold text-[#111827]">{formatDate(worker.createdAt)}</div>
-                </FieldTile>
-
-                <FieldTile label="Completion" className="min-h-[116px]">
-                    <CompletionMeter value={worker.completion} />
-                </FieldTile>
-
-                <FieldTile label="Documents" className="min-h-[116px]">
-                    <div className="text-sm font-semibold text-[#111827]">{worker.documentsLabel}</div>
-                    <div className="mt-2 text-xs text-[#6b7280]">
-                        {worker.verifiedDocuments > 0
-                            ? `${worker.verifiedDocuments} verified`
-                            : "No verified documents yet"}
-                    </div>
-                </FieldTile>
-
-                <FieldTile label="Status" className="min-h-[116px]">
-                    <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
-                        {phase.label}
-                    </div>
-                    <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
-                </FieldTile>
-
-                <FieldTile label="Payment" className="min-h-[116px]">
-                    {showPayButton ? (
-                        <button
-                            type="button"
-                            onClick={() => void onPay(worker)}
-                            disabled={isPaying}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#6b7280]"
-                        >
-                            {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                            Pay $9
-                        </button>
-                    ) : worker.paymentState === "paid" ? (
-                        <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                            <CheckCircle2 size={14} />
-                            Paid
-                        </div>
-                    ) : (
-                        <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
-                            <Clock3 size={14} />
-                            Checkout open
-                        </div>
-                    )}
-
-                    {worker.paymentState === "pending" ? (
-                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
-                            {worker.paymentPendingUntil
-                                ? `Open until ${formatDate(worker.paymentPendingUntil)}`
-                                : "Checkout has been opened but not completed yet."}
-                        </div>
-                    ) : worker.paymentState === "paid" ? (
-                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
-                            {worker.entryFeePaidAt
-                                ? `Paid on ${formatDate(worker.entryFeePaidAt)}`
-                                : "Job Finder payment is confirmed."}
-                        </div>
-                    ) : (
-                        <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
-                            Agency can start Job Finder from here.
-                        </div>
-                    )}
-                </FieldTile>
-
-                <FieldTile label="Action" className="min-h-[116px]">
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onClick={() => onEdit(worker)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
-                        >
-                            <Pencil size={14} />
-                            Edit
-                        </button>
-
-                        {!readOnlyPreview ? (
-                            <button
-                                type="button"
-                                onClick={onDelete}
-                                disabled={isDeleting}
-                                className="inline-flex items-center gap-2 rounded-xl border border-[#f3d7d7] bg-white px-3 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
-                            >
-                                <Trash2 size={14} />
-                                Delete
-                            </button>
-                        ) : null}
-                    </div>
-                </FieldTile>
-            </div>
+            {!compact ? <div className="mt-2 text-xs text-[#6b7280]">Profile completion</div> : null}
         </div>
     );
 }
