@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
     BadgeCheck,
     Building2,
-    CheckCircle2,
     CreditCard,
     FileCheck2,
     Loader2,
@@ -775,18 +774,13 @@ function AgencyPaymentCard({
 }) {
     if (state === "paid") {
         return (
-            <div className="relative w-[116px] overflow-hidden rounded-[18px] border border-emerald-200 bg-gradient-to-tr from-emerald-50 to-emerald-100 px-3 py-3 text-left text-emerald-900 shadow-[0_18px_35px_-30px_rgba(16,185,129,0.45)]">
-                <div className="flex items-start justify-between gap-2">
-                    <div className="flex h-6 w-9 items-center justify-center rounded-[8px] bg-emerald-200/90 text-emerald-700">
-                        <CheckCircle2 size={12} />
-                    </div>
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Paid</span>
+            <div className="inline-flex min-w-[112px] flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-emerald-800 shadow-[0_12px_30px_-24px_rgba(16,185,129,0.4)]">
+                <div className="inline-flex items-center gap-2 text-sm font-semibold">
+                    <CreditCard size={14} />
+                    Paid
                 </div>
-                <div className="mt-4">
-                    <div className="text-base font-semibold leading-none">Confirmed</div>
-                    <div className="mt-1 text-[10px] font-medium text-emerald-700/80">
-                        {paidAt ? formatDate(paidAt) : "Payment saved"}
-                    </div>
+                <div className="mt-1 text-[11px] font-medium text-emerald-700">
+                    {paidAt ? formatDate(paidAt) : "Confirmed"}
                 </div>
             </div>
         );
@@ -797,38 +791,10 @@ function AgencyPaymentCard({
             type="button"
             onClick={onClick}
             disabled={loading}
-            className="group relative w-[116px] overflow-hidden rounded-[18px] border border-[#2f2f2f] bg-gradient-to-tr from-[#111111] to-[#2a2a2a] px-3 py-3 text-left text-white shadow-[0_22px_40px_-32px_rgba(15,23,42,0.5)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-30px_rgba(15,23,42,0.58)] disabled:cursor-not-allowed disabled:opacity-80 disabled:hover:translate-y-0"
+            className="inline-flex min-w-[112px] items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_-26px_rgba(15,23,42,0.48)] transition hover:bg-[#232323] disabled:cursor-not-allowed disabled:opacity-70"
         >
-            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-50 pointer-events-none" />
-            <div className="relative z-10 flex items-start justify-between gap-2">
-                <div className="relative flex h-6 w-9 items-center justify-center overflow-hidden rounded-[8px] bg-gradient-to-br from-amber-200 to-yellow-500">
-                    <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-black/15" />
-                    <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-black/15" />
-                </div>
-                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55">Job Finder</span>
-            </div>
-            <div className="relative z-10 mt-4 flex items-end justify-between gap-2">
-                <div>
-                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">Start</div>
-                    <div className="mt-1 font-mono text-[1.1rem] font-semibold leading-none">
-                        {loading ? "..." : "$9"}
-                    </div>
-                </div>
-                <div className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold text-white/90 transition-colors group-hover:bg-white/15">
-                    {loading ? (
-                        <span className="inline-flex items-center gap-1">
-                            <Loader2 size={10} className="animate-spin" />
-                            Opening
-                        </span>
-                    ) : (
-                        <span className="inline-flex items-center gap-1">
-                            <CreditCard size={10} />
-                            Pay
-                        </span>
-                    )}
-                </div>
-            </div>
-            <div className="absolute -bottom-8 -right-8 h-20 w-20 rounded-full bg-white/5 blur-xl pointer-events-none transition-colors duration-300 group-hover:bg-white/10" />
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+            {loading ? "Opening..." : "Pay $9"}
         </button>
     );
 }
