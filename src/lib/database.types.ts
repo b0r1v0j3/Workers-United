@@ -195,6 +195,10 @@ export type Database = {
       }
       contract_data: {
         Row: {
+          candidate_gender: string | null
+          candidate_passport_issue_date: string | null
+          candidate_passport_issuer: string | null
+          candidate_place_of_birth: string | null
           contact_email: string | null
           contact_phone: string | null
           employer_apr_number: string | null
@@ -217,6 +221,10 @@ export type Database = {
           worker_place_of_birth: string | null
         }
         Insert: {
+          candidate_gender?: string | null
+          candidate_passport_issue_date?: string | null
+          candidate_passport_issuer?: string | null
+          candidate_place_of_birth?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           employer_apr_number?: string | null
@@ -239,6 +247,10 @@ export type Database = {
           worker_place_of_birth?: string | null
         }
         Update: {
+          candidate_gender?: string | null
+          candidate_passport_issue_date?: string | null
+          candidate_passport_issuer?: string | null
+          candidate_place_of_birth?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           employer_apr_number?: string | null
@@ -543,6 +555,13 @@ export type Database = {
             foreignKeyName: "documents_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "worker_onboarding"
             referencedColumns: ["id"]
           },
@@ -819,6 +838,13 @@ export type Database = {
             foreignKeyName: "matches_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "worker_onboarding"
             referencedColumns: ["id"]
           },
@@ -859,6 +885,13 @@ export type Database = {
             columns: ["job_request_id"]
             isOneToOne: false
             referencedRelation: "job_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
             referencedColumns: ["id"]
           },
           {
@@ -1154,6 +1187,7 @@ export type Database = {
           citizenship: string | null
           claimed_by_worker_at: string | null
           country: string | null
+          created_at: string
           current_country: string | null
           cv_url: string | null
           date_of_birth: string | null
@@ -1217,6 +1251,7 @@ export type Database = {
           citizenship?: string | null
           claimed_by_worker_at?: string | null
           country?: string | null
+          created_at?: string
           current_country?: string | null
           cv_url?: string | null
           date_of_birth?: string | null
@@ -1280,6 +1315,7 @@ export type Database = {
           citizenship?: string | null
           claimed_by_worker_at?: string | null
           country?: string | null
+          created_at?: string
           current_country?: string | null
           cv_url?: string | null
           date_of_birth?: string | null
@@ -1363,7 +1399,7 @@ export type Database = {
       }
     }
     Views: {
-      worker_onboarding: {
+      candidates: {
         Row: {
           address: string | null
           admin_approved: boolean | null
@@ -1377,6 +1413,7 @@ export type Database = {
           citizenship: string | null
           claimed_by_worker_at: string | null
           country: string | null
+          created_at: string | null
           current_country: string | null
           cv_url: string | null
           date_of_birth: string | null
@@ -1440,6 +1477,7 @@ export type Database = {
           citizenship?: string | null
           claimed_by_worker_at?: string | null
           country?: string | null
+          created_at?: string | null
           current_country?: string | null
           cv_url?: string | null
           date_of_birth?: string | null
@@ -1503,6 +1541,231 @@ export type Database = {
           citizenship?: string | null
           claimed_by_worker_at?: string | null
           country?: string | null
+          created_at?: string | null
+          current_country?: string | null
+          cv_url?: string | null
+          date_of_birth?: string | null
+          desired_countries?: Json | null
+          desired_industries?: string[] | null
+          diploma_url?: string | null
+          education_level?: string | null
+          entry_fee_paid?: boolean | null
+          experience_years?: number | null
+          family_data?: Json | null
+          father_name?: string | null
+          gender?: string | null
+          id?: string | null
+          job_search_activated_at?: string | null
+          job_search_active?: boolean | null
+          languages?: string[] | null
+          lives_abroad?: string | null
+          maiden_name?: string | null
+          marital_status?: string | null
+          mother_name?: string | null
+          nationality?: string | null
+          onboarding_completed?: boolean | null
+          original_citizenship?: string | null
+          passport_expiry_date?: string | null
+          passport_issue_date?: string | null
+          passport_issued_by?: string | null
+          passport_number?: string | null
+          passport_url?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          preferred_country?: string | null
+          preferred_job?: string | null
+          previous_visas?: string | null
+          profile_id?: string | null
+          profile_validation_status?: string | null
+          queue_joined_at?: string | null
+          queue_position?: number | null
+          refund_deadline?: string | null
+          refund_eligible?: boolean | null
+          rejection_count?: number | null
+          signature_agreed_at?: string | null
+          signature_url?: string | null
+          source_type?: string | null
+          status?: string | null
+          submitted_by_profile_id?: string | null
+          submitted_email?: string | null
+          submitted_full_name?: string | null
+          updated_at?: string | null
+          validation_issues?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_admin_approved_by_fkey"
+            columns: ["admin_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidates_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidates_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidates_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_onboarding: {
+        Row: {
+          address: string | null
+          admin_approved: boolean | null
+          admin_approved_at: string | null
+          admin_approved_by: string | null
+          agency_id: string | null
+          agency_notes: string | null
+          application_data: Json | null
+          birth_city: string | null
+          birth_country: string | null
+          citizenship: string | null
+          claimed_by_worker_at: string | null
+          country: string | null
+          created_at: string | null
+          current_country: string | null
+          cv_url: string | null
+          date_of_birth: string | null
+          desired_countries: Json | null
+          desired_industries: string[] | null
+          diploma_url: string | null
+          education_level: string | null
+          entry_fee_paid: boolean | null
+          experience_years: number | null
+          family_data: Json | null
+          father_name: string | null
+          gender: string | null
+          id: string | null
+          job_search_activated_at: string | null
+          job_search_active: boolean | null
+          languages: string[] | null
+          lives_abroad: string | null
+          maiden_name: string | null
+          marital_status: string | null
+          mother_name: string | null
+          nationality: string | null
+          onboarding_completed: boolean | null
+          original_citizenship: string | null
+          passport_expiry_date: string | null
+          passport_issue_date: string | null
+          passport_issued_by: string | null
+          passport_number: string | null
+          passport_url: string | null
+          phone: string | null
+          photo_url: string | null
+          preferred_country: string | null
+          preferred_job: string | null
+          previous_visas: string | null
+          profile_id: string | null
+          profile_validation_status: string | null
+          queue_joined_at: string | null
+          queue_position: number | null
+          refund_deadline: string | null
+          refund_eligible: boolean | null
+          rejection_count: number | null
+          signature_agreed_at: string | null
+          signature_url: string | null
+          source_type: string | null
+          status: string | null
+          submitted_by_profile_id: string | null
+          submitted_email: string | null
+          submitted_full_name: string | null
+          updated_at: string | null
+          validation_issues: Json | null
+        }
+        Insert: {
+          address?: string | null
+          admin_approved?: boolean | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          agency_id?: string | null
+          agency_notes?: string | null
+          application_data?: Json | null
+          birth_city?: string | null
+          birth_country?: string | null
+          citizenship?: string | null
+          claimed_by_worker_at?: string | null
+          country?: string | null
+          created_at?: string | null
+          current_country?: string | null
+          cv_url?: string | null
+          date_of_birth?: string | null
+          desired_countries?: Json | null
+          desired_industries?: string[] | null
+          diploma_url?: string | null
+          education_level?: string | null
+          entry_fee_paid?: boolean | null
+          experience_years?: number | null
+          family_data?: Json | null
+          father_name?: string | null
+          gender?: string | null
+          id?: string | null
+          job_search_activated_at?: string | null
+          job_search_active?: boolean | null
+          languages?: string[] | null
+          lives_abroad?: string | null
+          maiden_name?: string | null
+          marital_status?: string | null
+          mother_name?: string | null
+          nationality?: string | null
+          onboarding_completed?: boolean | null
+          original_citizenship?: string | null
+          passport_expiry_date?: string | null
+          passport_issue_date?: string | null
+          passport_issued_by?: string | null
+          passport_number?: string | null
+          passport_url?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          preferred_country?: string | null
+          preferred_job?: string | null
+          previous_visas?: string | null
+          profile_id?: string | null
+          profile_validation_status?: string | null
+          queue_joined_at?: string | null
+          queue_position?: number | null
+          refund_deadline?: string | null
+          refund_eligible?: boolean | null
+          rejection_count?: number | null
+          signature_agreed_at?: string | null
+          signature_url?: string | null
+          source_type?: string | null
+          status?: string | null
+          submitted_by_profile_id?: string | null
+          submitted_email?: string | null
+          submitted_full_name?: string | null
+          updated_at?: string | null
+          validation_issues?: Json | null
+        }
+        Update: {
+          address?: string | null
+          admin_approved?: boolean | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          agency_id?: string | null
+          agency_notes?: string | null
+          application_data?: Json | null
+          birth_city?: string | null
+          birth_country?: string | null
+          citizenship?: string | null
+          claimed_by_worker_at?: string | null
+          country?: string | null
+          created_at?: string | null
           current_country?: string | null
           cv_url?: string | null
           date_of_birth?: string | null
@@ -1608,6 +1871,10 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_employer: { Args: never; Returns: boolean }
+      sync_auth_user_profile_from_metadata: {
+        Args: { p_email: string; p_raw_user_meta_data: Json; p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
