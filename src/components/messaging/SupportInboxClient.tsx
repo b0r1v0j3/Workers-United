@@ -71,7 +71,7 @@ const SUPPORT_COPY: Record<
     agency: {
         pill: "Agency Support",
         title: "Workers United agency support",
-        description: "Ask for help with worker setup, document collection, payments, queue status, or any issue across your agency workspace. Support stays open for agencies at all times.",
+        description: "Ask for help with worker setup, documents, payments, queue movement, or any issue across your agency workspace. Agency support is always open.",
         loading: "Loading agency support...",
         unavailableTitle: "Agency support is unavailable right now",
         unavailableDescription: "The agency support thread could not be loaded. Refresh the page or try again in a moment.",
@@ -174,13 +174,13 @@ export default function SupportInboxClient({
     if (readOnlyPreview) {
         return (
             <div className="space-y-6">
-                <section className="rounded-[28px] border border-blue-200 bg-blue-50 p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">
+                <section className="rounded-[14px] border border-[#dbeafe] bg-[#eff6ff] p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-[#bfdbfe] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1d4ed8]">
                         <LifeBuoy size={14} />
                         Support Preview
                     </div>
                     <h1 className="mt-4 text-2xl font-semibold text-[#18181b]">{copy.previewTitle}</h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e]">
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#475569]">
                         {copy.previewDescription}
                     </p>
                     <div className="mt-5">
@@ -198,15 +198,15 @@ export default function SupportInboxClient({
 
     return (
         <div className="space-y-6">
-            <section className="rounded-[28px] border border-[#e8e5de] bg-[linear-gradient(135deg,#fcfbf7_0%,#f2eee4_100%)] p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.35)]">
+            <section className="rounded-[14px] border border-[#e7e7e5] bg-white p-6 shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-[#dfdbd0] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b675d]">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
                             <LifeBuoy size={14} />
                             {copy.pill}
                         </div>
                         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-[#18181b]">{copy.title}</h1>
-                        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e]">
+                        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6b7280]">
                             {copy.description}
                         </p>
                     </div>
@@ -214,7 +214,7 @@ export default function SupportInboxClient({
                         type="button"
                         onClick={() => void loadConversation("refresh")}
                         disabled={loading || refreshing}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-[#d8d2c6] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:border-[#bfb7a7] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-[14px] border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {refreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                         Refresh
@@ -223,16 +223,16 @@ export default function SupportInboxClient({
             </section>
 
             {loading ? (
-                <div className="flex min-h-[420px] items-center justify-center rounded-[28px] border border-[#e7e5e4] bg-white">
-                    <div className="flex items-center gap-3 text-sm font-medium text-[#57534e]">
+                <div className="flex min-h-[420px] items-center justify-center rounded-[14px] border border-[#e7e7e5] bg-white">
+                    <div className="flex items-center gap-3 text-sm font-medium text-[#6b7280]">
                         <Loader2 size={18} className="animate-spin" />
                         {copy.loading}
                     </div>
                 </div>
             ) : !data ? (
-                <section className="rounded-[28px] border border-[#e7e5e4] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
+                <section className="rounded-[14px] border border-[#e7e7e5] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
                     <h2 className="text-2xl font-semibold text-[#18181b]">{copy.unavailableTitle}</h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e]">
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6b7280]">
                         {copy.unavailableDescription}
                     </p>
                     <div className="mt-5">
@@ -246,12 +246,12 @@ export default function SupportInboxClient({
                     </div>
                 </section>
             ) : !data.access.allowed ? (
-                <section className="rounded-[28px] border border-[#e7e5e4] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
+                <section className="rounded-[14px] border border-[#e7e7e5] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
                         <LockKeyhole size={22} />
                     </div>
                     <h2 className="mt-5 text-2xl font-semibold text-[#18181b]">{copy.lockedTitle}</h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e]">
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6b7280]">
                         {data?.access.reason || copy.lockedDescription}
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
@@ -264,7 +264,7 @@ export default function SupportInboxClient({
                         {copy.secondaryHref && copy.secondaryLabel ? (
                             <Link
                                 href={copy.secondaryHref}
-                                className="inline-flex items-center rounded-2xl border border-[#dedad1] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:border-[#bfb7a7]"
+                                className="inline-flex items-center rounded-2xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:bg-[#fafafa]"
                             >
                                 {copy.secondaryLabel}
                             </Link>

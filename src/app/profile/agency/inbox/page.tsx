@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import AppShell from "@/components/AppShell";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeUserType } from "@/lib/domain";
 import SupportInboxClient from "@/components/messaging/SupportInboxClient";
@@ -26,5 +27,9 @@ export default async function AgencyInboxPage() {
         redirect("/profile/agency");
     }
 
-    return <SupportInboxClient audience="agency" readOnlyPreview={userType === "admin"} />;
+    return (
+        <AppShell user={user} variant="dashboard">
+            <SupportInboxClient audience="agency" readOnlyPreview={userType === "admin"} />
+        </AppShell>
+    );
 }
