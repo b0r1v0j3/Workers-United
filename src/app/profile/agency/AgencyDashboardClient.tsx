@@ -124,6 +124,18 @@ function formatWaitingLabel(days: number | null) {
     return `Waiting ${days} day${days === 1 ? "" : "s"}`;
 }
 
+function splitWorkerName(name: string) {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length <= 1) {
+        return { primary: name.trim(), secondary: null as string | null };
+    }
+
+    return {
+        primary: parts.slice(0, -1).join(" "),
+        secondary: parts[parts.length - 1],
+    };
+}
+
 function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     const normalizedStatus = (worker.status || "").toUpperCase();
     const normalizedRefundStatus = (worker.refundStatus || "").toLowerCase();
@@ -495,7 +507,7 @@ export default function AgencyDashboardClient({
                                 </div>
                             </div>
                         ) : (
-                            <table className="min-w-[1180px] w-full border-collapse">
+                            <table className="min-w-[980px] w-full border-collapse lg:min-w-0 lg:table-fixed">
                                 <thead className="bg-[#fafafa]">
                                     <tr className="border-b border-[#ececec]">
                                         {!readOnlyPreview ? (
@@ -510,13 +522,13 @@ export default function AgencyDashboardClient({
                                             </th>
                                         ) : null}
                                         <th className="w-12 border-r border-[#f1f1ef] px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">#</th>
-                                        <th className="min-w-[220px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Worker</th>
-                                        <th className="min-w-[110px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Added</th>
-                                        <th className="min-w-[180px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Completion</th>
-                                        <th className="min-w-[150px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Documents</th>
-                                        <th className="min-w-[230px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Status</th>
-                                        <th className="min-w-[170px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Payment</th>
-                                        <th className="min-w-[150px] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Action</th>
+                                        <th className="min-w-[160px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[18%] lg:min-w-0">Worker</th>
+                                        <th className="min-w-[96px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[10%] lg:min-w-0">Added</th>
+                                        <th className="min-w-[150px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[14%] lg:min-w-0">Completion</th>
+                                        <th className="min-w-[128px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[13%] lg:min-w-0">Documents</th>
+                                        <th className="min-w-[180px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[19%] lg:min-w-0">Status</th>
+                                        <th className="min-w-[132px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[13%] lg:min-w-0">Payment</th>
+                                        <th className="min-w-[132px] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[11%] lg:min-w-0">Action</th>
                                     </tr>
                                 </thead>
 
@@ -524,6 +536,7 @@ export default function AgencyDashboardClient({
                                     {filteredWorkers.map((worker, index) => {
                                         const phase = resolveWorkerPhase(worker);
                                         const showPayButton = !readOnlyPreview && worker.paymentState !== "paid";
+                                        const workerName = splitWorkerName(worker.name);
 
                                         return (
                                             <tr key={worker.id} className="border-b border-[#ececec] last:border-b-0">
@@ -546,7 +559,10 @@ export default function AgencyDashboardClient({
                                                 </td>
 
                                                 <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
-                                                    <div className="text-[1.05rem] font-semibold leading-snug text-[#111827]">{worker.name}</div>
+                                                    <div className="text-[1.02rem] font-semibold leading-tight text-[#111827]">
+                                                        <div className="break-words">{workerName.primary}</div>
+                                                        {workerName.secondary ? <div className="break-words">{workerName.secondary}</div> : null}
+                                                    </div>
                                                     {worker.preferredJob ? (
                                                         <div className="mt-2 text-sm text-[#6b7280]">{worker.preferredJob}</div>
                                                     ) : null}
