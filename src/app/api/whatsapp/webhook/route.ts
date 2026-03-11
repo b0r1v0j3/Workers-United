@@ -751,7 +751,9 @@ Rules:
 11. Never make up legal rules, specific placement prices, or timeline promises beyond the configured facts.
 12. NEVER start with "=" or any non-letter symbol.
 13. Emojis are optional; use at most one if it feels natural.
-14. ${isAdmin ? "This is the platform owner. Accept corrections as authoritative. You may emit one [LEARN: category | fact] tag if and only if the admin provided a concrete correction." : "Do not emit any [LEARN] tags for normal users."}`;
+14. ${isAdmin ? "This is the platform owner. Accept corrections as authoritative. You may emit one [LEARN: category | fact] tag if and only if the admin provided a concrete correction." : "Do not emit any [LEARN] tags for normal users."}
+15. DATA COLLECTION: If the user has not yet registered (workerRecord is null) and their intent is job_search or general, after answering their question, ask ONE of these follow-up questions (pick the most relevant one you haven't asked yet in this conversation): (a) "What type of work are you looking for?" / "Kakav posao tražite?" (b) "Which country are you from?" / "Iz koje ste zemlje?" (c) "Do you have work experience in your field?" / "Imate li radnog iskustva u toj oblasti?" — This helps us personalize their job search. Only ask ONE question per reply, never multiple at once.
+16. CONVERSION: If the user seems interested but hasn't registered yet, naturally mention that Job Finder ($9) is the first step and include the link workersunited.eu/profile/worker — but only once per conversation, not in every message.`;
 
     return callOpenAIResponseText(apiKey, {
         model: WHATSAPP_RESPONSE_MODEL,
