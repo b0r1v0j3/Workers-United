@@ -574,9 +574,25 @@ async function callOpenAIResponseText(
     }
 
     const data = await response.json();
-    return (data.output_text
-        || data.output?.[0]?.content?.[0]?.text
-        || "").trim();
+    // GPT-5-mini returns reasoning block at output[0] and message at output[1]
+    // We need to find the message block with actual text content
+    const outputText = data.output_text
+        || (() => {
+            const outputs = data.output || [];
+            for (const item of outputs) {
+                if (item.type === "message" && item.content?.[0]?.text) {
+                    return item.content[0].text;
+                }
+            }
+            // Fallback: try first item with content
+            for (const item of outputs) {
+                if (item.content?.[0]?.text) {
+                    return item.content[0].text;
+                }
+            }
+            return "";
+        })();
+    return (outputText || "").trim();
 }
 
 async function classifyWhatsAppIntent({
@@ -636,7 +652,7 @@ ${formatHistory(historyMessages, ROUTER_HISTORY_LIMIT)}`;
             instructions,
             input,
             json: true,
-            maxOutputTokens: 220,
+            maxOutputTokens: 1024,
         });
 
         const parsed = JSON.parse(raw) as Partial<WhatsAppRouterDecision>;
@@ -739,7 +755,7 @@ Rules:
         model: WHATSAPP_RESPONSE_MODEL,
         instructions,
         input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}`,
-        maxOutputTokens: 420,
+        maxOutputTokens: 4096,
     });
 }
 
