@@ -675,7 +675,7 @@ ${formatHistory(historyMessages, ROUTER_HISTORY_LIMIT)}`;
     } catch {
         return {
             intent: "general",
-            language: "English",
+            language: message.match(/[\u0400-\u04FF\u0100-\u017Fčćžšđ]/i) ? "Serbian" : "English",
             confidence: "low",
             reason: "Router fallback",
         };
@@ -713,7 +713,7 @@ async function generateWhatsAppReply({
 
     const instructions = `You are the official WhatsApp assistant for Workers United, a legal hiring and visa support company.
 
-Reply in ${routerDecision.language}.
+IMPORTANT: You MUST reply in ${routerDecision.language}. Always match the language of the user's message. If they write in Serbian, reply in Serbian. If they write in English, reply in English. Never switch to a different language.
 
 Current routed intent: ${routerDecision.intent}
 Router confidence: ${routerDecision.confidence}
@@ -726,6 +726,7 @@ ${businessFacts || "No business facts available"}
 - Job Finder costs $9 and includes a 90-day refund if no job is found.
 - Required worker documents are passport, diploma or work certificate, and a biometric photo.
 - Support email is contact@workersunited.eu.
+- Do NOT suggest emailing support unless the user specifically asks for human help or has a complex problem that cannot be resolved via WhatsApp. Handle questions directly in this chat.
 
 Worker snapshot:
 ${workerSnapshot}
