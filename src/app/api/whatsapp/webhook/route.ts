@@ -335,6 +335,35 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
+                // ─── WhatsApp Onboarding Flow (before GPT) ───────────────
+                // Detect language from router or simple heuristic
+                const quickLang = /[\u0900-\u097F]/.test(content) ? "hi"
+                    : /[\u0600-\u06FF]/.test(content) ? "ar"
+                    : /[čćžšđ]/i.test(content) ? "sr"
+                    : "en";
+
+                const onboardingReply = await handleWhatsAppOnboarding(
+                    supabase,
+                    normalizedPhone,
+                    content,
+                    workerRecord,
+                    quickLang
+                );
+
+                if (onboardingReply !== null) {
+                    await sendWhatsAppText(normalizedPhone, onboardingReply, workerRecord?.profile_id || undefined);
+                    await supabase.from("whatsapp_messages").insert({
+                        user_id: null,
+                        phone_number: normalizedPhone,
+                        direction: "outbound",
+                        message_type: "text",
+                        content: onboardingReply,
+                        status: "sent",
+                        template_name: "onboarding_flow",
+                    });
+                    return NextResponse.json({ status: "ok" });
+                }
+
                 // ─── Intent-routed OpenAI AI Brain ───────────────────────
                 let aiResponse: string | null = null;
                 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -826,3 +855,259 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
     return `Hi ${name}! 👋 ${startMessageEn} If you want more details, message us here or contact ${config.contact_email || "contact@workersunited.eu"}.`;
 }
 
+
+// ─── WhatsApp Onboarding Flow ─────────────────────────────────────────────────
+// Guides unregistered users through profile completion step by step in their language.
+// State is stored in whatsapp_onboarding_state table.
+
+const ONBOARDING_STEPS = [
+    "ask_start",       // Ask if they want to fill profile via WhatsApp
+    "full_name",       // First and last name
+    "country_origin",  // Country of origin / nationality
+    "current_country", // Country they currently live in
+    "job_type",        // Type of job they are looking for
+    "experience",      // Years of experience
+    "education",       // Education level
+    "done",            // Summary + link to complete registration
+] as const;
+
+type OnboardingStep = typeof ONBOARDING_STEPS[number];
+
+interface OnboardingState {
+    phone_number: string;
+    current_step: OnboardingStep;
+    collected_data: Record<string, string>;
+    language: string;
+}
+
+// Translations for onboarding questions
+const ONBOARDING_TRANSLATIONS: Record<string, Record<string, string>> = {
+    ask_start: {
+        en: "Would you like to fill in your profile right here on WhatsApp? I'll guide you step by step — it only takes 2 minutes. Just reply *Yes* to start, or *No* if you prefer to do it on the website.",
+        sr: "Želite li da popunite profil odmah ovde na WhatsApp-u? Vodiću vas korak po korak — traje samo 2 minuta. Odgovorite *Da* da počnete, ili *Ne* ako wolite na sajtu.",
+        hi: "क्या आप यहाँ WhatsApp पर अपना प्रोफ़ाइल भरना चाहते हैं? मैं आपको चरण दर चरण मार्गदर्शन करूँगा — इसमें केवल 2 मिनट लगते हैं। शुरू करने के लिए *हाँ* लिखें।",
+        ar: "هل تريد ملء ملفك الشخصي هنا على WhatsApp؟ سأرشدك خطوة بخطوة — يستغرق الأمر دقيقتين فقط. اكتب *نعم* للبدء.",
+        fr: "Souhaitez-vous remplir votre profil ici sur WhatsApp? Je vous guiderai étape par étape — cela ne prend que 2 minutes. Répondez *Oui* pour commencer.",
+        pt: "Gostaria de preencher seu perfil aqui no WhatsApp? Vou guiá-lo passo a passo — leva apenas 2 minutos. Responda *Sim* para começar.",
+    },
+    full_name: {
+        en: "Great! Let's start. What is your *full name* (first and last name)?",
+        sr: "Odlično! Počnimo. Koje je vaše *puno ime i prezime*?",
+        hi: "बढ़िया! चलिए शुरू करते हैं। आपका *पूरा नाम* क्या है (पहला और अंतिम नाम)?",
+        ar: "رائع! لنبدأ. ما هو *اسمك الكامل* (الاسم الأول والأخير)؟",
+        fr: "Super! Commençons. Quel est votre *nom complet* (prénom et nom)?",
+        pt: "Ótimo! Vamos começar. Qual é o seu *nome completo* (primeiro e último nome)?",
+    },
+    country_origin: {
+        en: "What is your *country of origin* (nationality)?",
+        sr: "Koja je vaša *zemlja porekla* (nacionalnost)?",
+        hi: "आपका *मूल देश* (राष्ट्रीयता) क्या है?",
+        ar: "ما هي *بلدك الأصلي* (الجنسية)؟",
+        fr: "Quel est votre *pays d'origine* (nationalité)?",
+        pt: "Qual é o seu *país de origem* (nacionalidade)?",
+    },
+    current_country: {
+        en: "Which *country do you currently live in*?",
+        sr: "U kojoj *zemlji trenutno živite*?",
+        hi: "आप वर्तमान में किस *देश में रहते हैं*?",
+        ar: "في أي *بلد تعيش حاليًا*؟",
+        fr: "Dans quel *pays vivez-vous actuellement*?",
+        pt: "Em qual *país você mora atualmente*?",
+    },
+    job_type: {
+        en: "What *type of work* are you looking for? (e.g. construction, hospitality, cleaning, factory, IT, etc.)",
+        sr: "Kakav *posao tražite*? (npr. građevina, ugostiteljstvo, čišćenje, fabrika, IT, itd.)",
+        hi: "आप किस *प्रकार का काम* ढूंढ रहे हैं? (जैसे निर्माण, आतिथ्य, सफाई, कारखाना, आईटी, आदि)",
+        ar: "ما نوع *العمل الذي تبحث عنه*؟ (مثل البناء، الضيافة، التنظيف، المصنع، تقنية المعلومات، إلخ)",
+        fr: "Quel *type de travail* recherchez-vous? (ex: construction, hôtellerie, nettoyage, usine, IT, etc.)",
+        pt: "Que *tipo de trabalho* você está procurando? (ex: construção, hotelaria, limpeza, fábrica, TI, etc.)",
+    },
+    experience: {
+        en: "How many *years of experience* do you have in that field?",
+        sr: "Koliko *godina iskustva* imate u toj oblasti?",
+        hi: "उस क्षेत्र में आपके पास कितने *साल का अनुभव* है?",
+        ar: "كم *سنة من الخبرة* لديك في هذا المجال؟",
+        fr: "Combien d'*années d'expérience* avez-vous dans ce domaine?",
+        pt: "Quantos *anos de experiência* você tem nessa área?",
+    },
+    education: {
+        en: "What is your *highest level of education*? (e.g. primary school, high school, bachelor's, master's, PhD)",
+        sr: "Koji je vaš *najviši nivo obrazovanja*? (npr. osnovna škola, srednja škola, fakultet, master, doktorat)",
+        hi: "आपकी *उच्चतम शिक्षा* क्या है? (जैसे प्राथमिक, हाई स्कूल, स्नातक, मास्टर, पीएचडी)",
+        ar: "ما هو *أعلى مستوى تعليمي* لديك؟ (مثل ابتدائي، ثانوي، بكالوريوس، ماجستير، دكتوراه)",
+        fr: "Quel est votre *niveau d'études le plus élevé*? (ex: primaire, lycée, licence, master, doctorat)",
+        pt: "Qual é o seu *nível de escolaridade mais alto*? (ex: ensino fundamental, médio, graduação, mestrado, doutorado)",
+    },
+};
+
+function getOnboardingQuestion(step: OnboardingStep, language: string): string {
+    const langKey = language.toLowerCase().startsWith("sr") || language.toLowerCase().includes("serb") || language.toLowerCase().includes("croat") || language.toLowerCase().includes("bosnian") ? "sr"
+        : language.toLowerCase().startsWith("hi") || language.toLowerCase().includes("hindi") || language.toLowerCase().includes("nepali") ? "hi"
+        : language.toLowerCase().startsWith("ar") || language.toLowerCase().includes("arab") ? "ar"
+        : language.toLowerCase().startsWith("fr") || language.toLowerCase().includes("french") ? "fr"
+        : language.toLowerCase().startsWith("pt") || language.toLowerCase().includes("portug") ? "pt"
+        : "en";
+
+    return ONBOARDING_TRANSLATIONS[step]?.[langKey] || ONBOARDING_TRANSLATIONS[step]?.["en"] || "";
+}
+
+function isYesResponse(msg: string): boolean {
+    const lower = msg.toLowerCase().trim();
+    return ["yes", "da", "da!", "yes!", "yep", "sure", "ok", "okay", "haan", "ha", "نعم", "oui", "sim", "ja", "ano", "oo", "हाँ", "हां"].some(y => lower === y || lower.startsWith(y + " ") || lower.startsWith(y + "."));
+}
+
+function isNoResponse(msg: string): boolean {
+    const lower = msg.toLowerCase().trim();
+    return ["no", "ne", "nope", "nahi", "la", "non", "não", "nein", "hindi", "नहीं", "لا"].some(n => lower === n || lower.startsWith(n + " ") || lower.startsWith(n + "."));
+}
+
+async function getOnboardingState(supabase: any, phone: string): Promise<OnboardingState | null> {
+    const { data } = await supabase
+        .from("whatsapp_onboarding_state")
+        .select("*")
+        .eq("phone_number", phone)
+        .single();
+    return data || null;
+}
+
+async function saveOnboardingState(supabase: any, phone: string, step: OnboardingStep, collectedData: Record<string, string>, language: string): Promise<void> {
+    await supabase
+        .from("whatsapp_onboarding_state")
+        .upsert({
+            phone_number: phone,
+            current_step: step,
+            collected_data: collectedData,
+            language,
+            updated_at: new Date().toISOString(),
+        }, { onConflict: "phone_number" });
+}
+
+async function clearOnboardingState(supabase: any, phone: string): Promise<void> {
+    await supabase
+        .from("whatsapp_onboarding_state")
+        .delete()
+        .eq("phone_number", phone);
+}
+
+async function saveCandidateFromOnboarding(supabase: any, phone: string, data: Record<string, string>): Promise<void> {
+    const adminClient = createAdminClient();
+    await adminClient
+        .from("candidates")
+        .insert({
+            phone,
+            submitted_full_name: data.full_name || null,
+            nationality: data.country_origin || null,
+            current_country: data.current_country || null,
+            preferred_job: data.job_type || null,
+            experience_years: data.experience ? parseInt(data.experience) || null : null,
+            education_level: data.education || null,
+            source_type: "whatsapp_onboarding",
+            application_data: { collected_via: "whatsapp", language: data.language || "en", raw: data },
+            created_at: new Date().toISOString(),
+        });
+}
+
+// Main onboarding handler — returns reply string or null if not in onboarding flow
+export async function handleWhatsAppOnboarding(
+    supabase: any,
+    phone: string,
+    message: string,
+    workerRecord: any,
+    detectedLanguage: string
+): Promise<string | null> {
+    // Only handle unregistered users
+    if (workerRecord) return null;
+
+    const state = await getOnboardingState(supabase, phone);
+    const lang = state?.language || detectedLanguage || "en";
+
+    // If no state and message seems like a greeting/question — offer onboarding
+    if (!state) {
+        const lower = message.toLowerCase().trim();
+        const isGreetingOrQuestion = lower.length < 100 && (
+            /^(hi|hello|hey|good|salam|zdravo|merhaba|bonjour|hola|ciao|namaste|ola|salut|sawubona|hej)/i.test(lower) ||
+            /\?$/.test(lower) ||
+            /(job|work|posao|rad|buscando|emploi|trabaj|lavoro)/i.test(lower)
+        );
+
+        if (isGreetingOrQuestion) {
+            // Offer onboarding after a short delay — store "ask_start" state
+            await saveOnboardingState(supabase, phone, "ask_start", {}, detectedLanguage);
+            // Return null — let GPT handle the main reply, onboarding offer will be appended
+            return null;
+        }
+        return null;
+    }
+
+    // Handle ask_start step
+    if (state.current_step === "ask_start") {
+        if (isYesResponse(message)) {
+            await saveOnboardingState(supabase, phone, "full_name", {}, lang);
+            return getOnboardingQuestion("full_name", lang);
+        } else if (isNoResponse(message)) {
+            await clearOnboardingState(supabase, phone);
+            return lang.startsWith("sr") || lang.includes("serb")
+                ? "Nema problema! Možete se registrovati na workersunited.eu/profile/worker kada budete spremni. Tu sam ako imate pitanja."
+                : "No problem! You can register at workersunited.eu/profile/worker whenever you're ready. I'm here if you have any questions.";
+        }
+        // Not yes/no — let GPT handle it, but keep state
+        return null;
+    }
+
+    // Handle data collection steps
+    const collected = { ...state.collected_data };
+
+    if (state.current_step === "full_name") {
+        collected.full_name = message.trim();
+        await saveOnboardingState(supabase, phone, "country_origin", collected, lang);
+        return getOnboardingQuestion("country_origin", lang);
+    }
+
+    if (state.current_step === "country_origin") {
+        collected.country_origin = message.trim();
+        await saveOnboardingState(supabase, phone, "current_country", collected, lang);
+        return getOnboardingQuestion("current_country", lang);
+    }
+
+    if (state.current_step === "current_country") {
+        collected.current_country = message.trim();
+        await saveOnboardingState(supabase, phone, "job_type", collected, lang);
+        return getOnboardingQuestion("job_type", lang);
+    }
+
+    if (state.current_step === "job_type") {
+        collected.job_type = message.trim();
+        await saveOnboardingState(supabase, phone, "experience", collected, lang);
+        return getOnboardingQuestion("experience", lang);
+    }
+
+    if (state.current_step === "experience") {
+        collected.experience = message.trim();
+        await saveOnboardingState(supabase, phone, "education", collected, lang);
+        return getOnboardingQuestion("education", lang);
+    }
+
+    if (state.current_step === "education") {
+        collected.education = message.trim();
+        collected.language = lang;
+
+        // Save to candidates table
+        try {
+            await saveCandidateFromOnboarding(supabase, phone, collected);
+        } catch (e) {
+            console.warn("[Onboarding] Could not save candidate:", e);
+        }
+
+        // Clear onboarding state
+        await clearOnboardingState(supabase, phone);
+
+        // Final message
+        const name = collected.full_name?.split(" ")[0] || "";
+        if (lang.startsWith("sr") || lang.includes("serb")) {
+            return `Odlično, ${name}! Vaš profil je sačuvan. Poslednji korak je da se registrujete na sajtu i aktivirate Job Finder za samo $9 — i mi počinjemo da tražimo posao za vas u Evropi.\n\n👉 workersunited.eu/profile/worker\n\nAko imate pitanja, tu sam!`;
+        }
+        return `Great, ${name}! Your profile has been saved. The last step is to register on our website and activate Job Finder for just $9 — and we'll start finding you a job across Europe.\n\n👉 workersunited.eu/profile/worker\n\nIf you have any questions, I'm here!`;
+    }
+
+    return null;
+}
