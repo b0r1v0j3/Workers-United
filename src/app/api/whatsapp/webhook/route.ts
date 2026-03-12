@@ -171,6 +171,18 @@ export async function POST(request: NextRequest) {
                     content = `[${messageType} message]`;
                 }
 
+                // ─── Deduplication: skip if this wamid was already processed ──
+                const { data: existingMsg } = await supabase
+                    .from("whatsapp_messages")
+                    .select("id")
+                    .eq("wamid", wamid)
+                    .eq("direction", "inbound")
+                    .maybeSingle();
+                if (existingMsg) {
+                    console.log(`[Webhook] Duplicate wamid ${wamid} — skipping`);
+                    continue;
+                }
+
                 // Normalize phone for DB lookup (add + prefix)
                 const normalizedPhone = normalizePhone(phoneNumber);
 
