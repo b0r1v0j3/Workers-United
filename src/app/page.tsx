@@ -80,13 +80,13 @@ export default function Home() {
                     </ul>
                   </article>
 
-                  <article className="absolute right-0 top-[110px] z-20 w-[78%] rotate-[4deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-4 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
+                  <article className="absolute right-0 top-[110px] z-10 w-[78%] rotate-[4deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-4 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
                     <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4b5563]">Employer_Request.doc</p>
                     <h3 className="text-base font-semibold text-[#111827]">Role requirements</h3>
                     <p className="mt-2 text-xs leading-relaxed text-[#4b5563]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
                   </article>
 
-                  <article className="absolute bottom-0 left-[11%] z-10 w-[78%] rotate-[-2deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-4 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
+                  <article className="absolute bottom-0 left-[11%] z-20 w-[78%] rotate-[-2deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-4 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
                     <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa_File.pdf</p>
                     <h3 className="text-base font-semibold text-[#111827]">Operational handover</h3>
                     <p className="mt-2 text-xs leading-relaxed text-[#475569]">
@@ -141,13 +141,13 @@ export default function Home() {
                   </ul>
                 </article>
 
-                <article className="absolute right-0 top-[160px] z-20 w-[82%] rotate-[4deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-6 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
+                <article className="absolute right-0 top-[160px] z-10 w-[82%] rotate-[4deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-6 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4b5563]">Employer_Request.doc</p>
                   <h3 className="text-xl font-semibold text-[#111827]">Role requirements</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[#4b5563]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
                 </article>
 
-                <article className="absolute bottom-0 left-[9%] z-10 w-[82%] rotate-[-2deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-6 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
+                <article className="absolute bottom-0 left-[9%] z-20 w-[82%] rotate-[-2deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-6 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa_File.pdf</p>
                   <h3 className="text-xl font-semibold text-[#111827]">Operational handover</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[#475569]">
