@@ -857,19 +857,47 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
 
 
 // ─── WhatsApp Onboarding Flow ─────────────────────────────────────────────────
-// Guides unregistered users through profile completion step by step in their language.
-// State is stored in whatsapp_onboarding_state table.
+// Mirrors the exact fields in the worker profile form (ProfileClient.tsx).
+// Guides unregistered users step by step in their own language.
+// State is stored in the whatsapp_onboarding_state table.
+//
+// Profile fields covered:
+//   Personal:  first_name, last_name, gender, marital_status, nationality,
+//              date_of_birth, birth_country, birth_city, citizenship,
+//              father_name, mother_name, current_country, address
+//   Family:    has_spouse → spouse details, has_children → children details
+//   Passport:  passport_number, passport_issued_by, passport_issue_date,
+//              passport_expiry_date, lives_abroad, previous_visas
+//   Job prefs: preferred_job (WORKER_INDUSTRIES), desired_countries (EUROPEAN_COUNTRIES + "Any")
+// ──────────────────────────────────────────────────────────────────────────────
 
 const ONBOARDING_STEPS = [
-    "ask_start",         // Ask if they want to fill profile via WhatsApp
-    "full_name",         // First and last name
-    "country_origin",    // Country of origin / nationality
-    "current_country",   // Country they currently live in
-    "job_type",          // Type of job they are looking for (or "any")
-    "preferred_country", // Which country they want to work in (or "any")
-    "experience",        // Years of experience
-    "education",         // Education level
-    "done",              // Summary + link to complete registration
+    "ask_start",            // Offer to fill profile via WhatsApp
+    "full_name",            // First + Last name
+    "gender",               // Male / Female
+    "marital_status",       // Single / Married / Divorced / Widowed / Separated
+    "date_of_birth",        // DD/MM/YYYY
+    "nationality",          // e.g. Serbian
+    "birth_country",        // Country of birth
+    "birth_city",           // City of birth
+    "citizenship",          // Current citizenship
+    "father_name",          // Father's first name (optional)
+    "mother_name",          // Mother's first name (optional)
+    "current_country",      // Where they live now
+    "address",              // Full address (optional)
+    "lives_abroad",         // Yes / No
+    "previous_visas",       // Yes / No
+    "passport_number",      // Passport number
+    "passport_issued_by",   // Issuing authority
+    "passport_issue_date",  // DD/MM/YYYY
+    "passport_expiry_date", // DD/MM/YYYY
+    "has_spouse",           // Yes / No
+    "spouse_details",       // If yes: first name, last name, DOB, birth country, birth city (one message)
+    "has_children",         // Yes / No
+    "children_details",     // If yes: collect children one by one
+    "preferred_job",        // Industry from WORKER_INDUSTRIES
+    "desired_countries",    // European countries or "Any"
+    "done",                 // Summary + link
 ] as const;
 
 type OnboardingStep = typeof ONBOARDING_STEPS[number];
@@ -881,31 +909,98 @@ interface OnboardingState {
     language: string;
 }
 
-// Translations for onboarding questions
-const ONBOARDING_TRANSLATIONS: Record<string, Record<string, string>> = {
+// ─── Translations ─────────────────────────────────────────────────────────────
+// Keys: en, sr, hi, ar, fr, pt
+type LangKey = "en" | "sr" | "hi" | "ar" | "fr" | "pt";
+
+const T: Record<string, Record<LangKey, string>> = {
     ask_start: {
-        en: "Would you like to fill in your profile right here on WhatsApp? I'll guide you step by step — it only takes 2 minutes. Just reply *Yes* to start, or *No* if you prefer to do it on the website.",
-        sr: "Želite li da popunite profil odmah ovde na WhatsApp-u? Vodiću vas korak po korak — traje samo 2 minuta. Odgovorite *Da* da počnete, ili *Ne* ako wolite na sajtu.",
-        hi: "क्या आप यहाँ WhatsApp पर अपना प्रोफ़ाइल भरना चाहते हैं? मैं आपको चरण दर चरण मार्गदर्शन करूँगा — इसमें केवल 2 मिनट लगते हैं। शुरू करने के लिए *हाँ* लिखें।",
-        ar: "هل تريد ملء ملفك الشخصي هنا على WhatsApp؟ سأرشدك خطوة بخطوة — يستغرق الأمر دقيقتين فقط. اكتب *نعم* للبدء.",
-        fr: "Souhaitez-vous remplir votre profil ici sur WhatsApp? Je vous guiderai étape par étape — cela ne prend que 2 minutes. Répondez *Oui* pour commencer.",
-        pt: "Gostaria de preencher seu perfil aqui no WhatsApp? Vou guiá-lo passo a passo — leva apenas 2 minutos. Responda *Sim* para começar.",
+        en: "Would you like to fill in your worker profile right here on WhatsApp? I'll guide you step by step — it only takes a few minutes. Reply *Yes* to start, or *No* to do it on the website.",
+        sr: "Želite li da popunite radnički profil odmah ovde na WhatsApp-u? Vodiću vas korak po korak — traje samo nekoliko minuta. Odgovorite *Da* da počnete, ili *Ne* ako wolite na sajtu.",
+        hi: "क्या आप यहाँ WhatsApp पर अपना वर्कर प्रोफ़ाइल भरना चाहते हैं? मैं आपको चरण दर चरण मार्गदर्शन करूँगा। शुरू करने के लिए *हाँ* लिखें।",
+        ar: "هل تريد ملء ملف العامل الخاص بك هنا على WhatsApp؟ سأرشدك خطوة بخطوة. اكتب *نعم* للبدء.",
+        fr: "Souhaitez-vous remplir votre profil de travailleur ici sur WhatsApp? Je vous guiderai étape par étape. Répondez *Oui* pour commencer.",
+        pt: "Gostaria de preencher seu perfil de trabalhador aqui no WhatsApp? Vou guiá-lo passo a passo. Responda *Sim* para começar.",
     },
     full_name: {
-        en: "Great! Let's start. What is your *full name* (first and last name)?",
-        sr: "Odlično! Počnimo. Koje je vaše *puno ime i prezime*?",
-        hi: "बढ़िया! चलिए शुरू करते हैं। आपका *पूरा नाम* क्या है (पहला और अंतिम नाम)?",
-        ar: "رائع! لنبدأ. ما هو *اسمك الكامل* (الاسم الأول والأخير)؟",
-        fr: "Super! Commençons. Quel est votre *nom complet* (prénom et nom)?",
-        pt: "Ótimo! Vamos começar. Qual é o seu *nome completo* (primeiro e último nome)?",
+        en: "What is your *full name*? (First name and last name, e.g. John Smith)",
+        sr: "Koje je vaše *puno ime i prezime*? (npr. Marko Marković)",
+        hi: "आपका *पूरा नाम* क्या है? (पहला और अंतिम नाम, जैसे Rahul Sharma)",
+        ar: "ما هو *اسمك الكامل*؟ (الاسم الأول والأخير، مثل Ahmed Ali)",
+        fr: "Quel est votre *nom complet*? (Prénom et nom, ex. Jean Dupont)",
+        pt: "Qual é o seu *nome completo*? (Primeiro e último nome, ex. João Silva)",
     },
-    country_origin: {
-        en: "What is your *country of origin* (nationality)?",
-        sr: "Koja je vaša *zemlja porekla* (nacionalnost)?",
-        hi: "आपका *मूल देश* (राष्ट्रीयता) क्या है?",
-        ar: "ما هي *بلدك الأصلي* (الجنسية)؟",
-        fr: "Quel est votre *pays d'origine* (nationalité)?",
-        pt: "Qual é o seu *país de origem* (nacionalidade)?",
+    gender: {
+        en: "What is your *gender*?\n\nReply: *Male* or *Female*",
+        sr: "Koji je vaš *pol*?\n\nOdgovorite: *Muški* ili *Ženski*",
+        hi: "आपका *लिंग* क्या है?\n\nलिखें: *पुरुष* या *महिला*",
+        ar: "ما هو *جنسك*؟\n\nاكتب: *ذكر* أو *أنثى*",
+        fr: "Quel est votre *genre*?\n\nRépondez: *Homme* ou *Femme*",
+        pt: "Qual é o seu *gênero*?\n\nResponda: *Masculino* ou *Feminino*",
+    },
+    marital_status: {
+        en: "What is your *marital status*?\n\nOptions:\n1 - Single\n2 - Married\n3 - Divorced\n4 - Widowed\n5 - Separated\n\nReply with the number or the word.",
+        sr: "Koji je vaš *bračni status*?\n\nOpcije:\n1 - Slobodan/na\n2 - Oženjen/Udata\n3 - Razveden/a\n4 - Udovac/Udovica\n5 - Razdvojen/a\n\nOdgovorite brojem ili rečju.",
+        hi: "आपकी *वैवाहिक स्थिति* क्या है?\n\nविकल्प:\n1 - अविवाहित\n2 - विवाहित\n3 - तलाकशुदा\n4 - विधवा/विधुर\n5 - अलग\n\nनंबर या शब्द से जवाब दें।",
+        ar: "ما هي *حالتك الاجتماعية*؟\n\nالخيارات:\n1 - أعزب/عزباء\n2 - متزوج/ة\n3 - مطلق/ة\n4 - أرمل/ة\n5 - منفصل/ة\n\nاكتب الرقم أو الكلمة.",
+        fr: "Quel est votre *statut matrimonial*?\n\nOptions:\n1 - Célibataire\n2 - Marié(e)\n3 - Divorcé(e)\n4 - Veuf/Veuve\n5 - Séparé(e)\n\nRépondez avec le numéro ou le mot.",
+        pt: "Qual é o seu *estado civil*?\n\nOpções:\n1 - Solteiro/a\n2 - Casado/a\n3 - Divorciado/a\n4 - Viúvo/a\n5 - Separado/a\n\nResponda com o número ou a palavra.",
+    },
+    date_of_birth: {
+        en: "What is your *date of birth*? (Format: DD/MM/YYYY, e.g. 15/06/1990)",
+        sr: "Koji je vaš *datum rođenja*? (Format: DD/MM/GGGG, npr. 15/06/1990)",
+        hi: "आपकी *जन्म तिथि* क्या है? (प्रारूप: DD/MM/YYYY, जैसे 15/06/1990)",
+        ar: "ما هو *تاريخ ميلادك*؟ (الصيغة: DD/MM/YYYY، مثل 15/06/1990)",
+        fr: "Quelle est votre *date de naissance*? (Format: JJ/MM/AAAA, ex. 15/06/1990)",
+        pt: "Qual é a sua *data de nascimento*? (Formato: DD/MM/AAAA, ex. 15/06/1990)",
+    },
+    nationality: {
+        en: "What is your *nationality*? (e.g. Serbian, Indian, Moroccan)",
+        sr: "Koja je vaša *nacionalnost*? (npr. Srpska, Bosanska, Hrvatska)",
+        hi: "आपकी *राष्ट्रीयता* क्या है? (जैसे Indian, Nepali, Bangladeshi)",
+        ar: "ما هي *جنسيتك*؟ (مثل سوري، مصري، مغربي)",
+        fr: "Quelle est votre *nationalité*? (ex. Française, Marocaine, Algérienne)",
+        pt: "Qual é a sua *nacionalidade*? (ex. Brasileira, Portuguesa, Angolana)",
+    },
+    birth_country: {
+        en: "In which *country were you born*?",
+        sr: "U kojoj *zemlji ste rođeni*?",
+        hi: "आप किस *देश में पैदा हुए थे*?",
+        ar: "في أي *بلد وُلدت*؟",
+        fr: "Dans quel *pays êtes-vous né(e)*?",
+        pt: "Em qual *país você nasceu*?",
+    },
+    birth_city: {
+        en: "In which *city were you born*?",
+        sr: "U kom *gradu ste rođeni*?",
+        hi: "आप किस *शहर में पैदा हुए थे*?",
+        ar: "في أي *مدينة وُلدت*؟",
+        fr: "Dans quelle *ville êtes-vous né(e)*?",
+        pt: "Em qual *cidade você nasceu*?",
+    },
+    citizenship: {
+        en: "What is your *current citizenship* (the country whose passport you hold)?",
+        sr: "Koje je vaše *trenutno državljanstvo* (zemlja čiji pasoš posedujete)?",
+        hi: "आपकी *वर्तमान नागरिकता* क्या है (आप किस देश का पासपोर्ट रखते हैं)?",
+        ar: "ما هي *جنسيتك الحالية* (البلد الذي تحمل جواز سفره)؟",
+        fr: "Quelle est votre *nationalité actuelle* (le pays dont vous avez le passeport)?",
+        pt: "Qual é a sua *cidadania atual* (o país cujo passaporte você possui)?",
+    },
+    father_name: {
+        en: "What is your *father's first name*? (Optional — reply *Skip* to skip)",
+        sr: "Koje je *ime vašeg oca*? (Opciono — odgovorite *Preskoči* za preskakanje)",
+        hi: "आपके *पिता का नाम* क्या है? (वैकल्पिक — *Skip* लिखें छोड़ने के लिए)",
+        ar: "ما هو *اسم والدك*؟ (اختياري — اكتب *تخطي* للتخطي)",
+        fr: "Quel est le *prénom de votre père*? (Optionnel — répondez *Passer* pour ignorer)",
+        pt: "Qual é o *nome do seu pai*? (Opcional — responda *Pular* para pular)",
+    },
+    mother_name: {
+        en: "What is your *mother's first name*? (Optional — reply *Skip* to skip)",
+        sr: "Koje je *ime vaše majke*? (Opciono — odgovorite *Preskoči* za preskakanje)",
+        hi: "आपकी *माँ का नाम* क्या है? (वैकल्पिक — *Skip* लिखें छोड़ने के लिए)",
+        ar: "ما هو *اسم والدتك*؟ (اختياري — اكتب *تخطي* للتخطي)",
+        fr: "Quel est le *prénom de votre mère*? (Optionnel — répondez *Passer* pour ignorer)",
+        pt: "Qual é o *nome da sua mãe*? (Opcional — responda *Pular* para pular)",
     },
     current_country: {
         en: "Which *country do you currently live in*?",
@@ -915,60 +1010,197 @@ const ONBOARDING_TRANSLATIONS: Record<string, Record<string, string>> = {
         fr: "Dans quel *pays vivez-vous actuellement*?",
         pt: "Em qual *país você mora atualmente*?",
     },
-    job_type: {
-        en: "What *type of work* are you looking for?\n\nExamples: construction, hospitality, cleaning, factory, IT, agriculture, driving, warehouse...\n\nOr reply *Any* — the more open you are, the higher your chances of getting hired! 💪",
-        sr: "Kakav *posao tražite*?\n\nPrimeri: građevina, ugostiteljstvo, čišćenje, fabrika, IT, poljoprivreda, vozač, magacin...\n\nIli odgovorite *Bilo koji* — što ste otvoreniji, veće su šanse da dobijete posao! 💪",
-        hi: "आप किस *प्रकार का काम* ढूंढ रहे हैं?\n\nउदाहरण: निर्माण, आतिथ्य, सफाई, कारखाना, आईटी, कृषि, ड्राइविंग...\n\nया *कोई भी* लिखें — जितने खुले रहेंगे, नौकरी मिलने की संभावना उतनी अधिक! 💪",
-        ar: "ما نوع *العمل الذي تبحث عنه*؟\n\nأمثلة: البناء، الضيافة، التنظيف، المصنع، تقنية المعلومات، الزراعة، السياقة...\n\nأو اكتب *أي عمل* — كلما كنت أكثر مرونة، زادت فرصك في الحصول على وظيفة! 💪",
-        fr: "Quel *type de travail* recherchez-vous?\n\nExemples: construction, hôtellerie, nettoyage, usine, IT, agriculture, conduite...\n\nOu répondez *N'importe lequel* — plus vous êtes flexible, plus vos chances sont élevées! 💪",
-        pt: "Que *tipo de trabalho* você está procurando?\n\nExemplos: construção, hotelaria, limpeza, fábrica, TI, agricultura, motorista...\n\nOu responda *Qualquer um* — quanto mais aberto você for, maiores são suas chances! 💪",
+    address: {
+        en: "What is your *full address*? (Street, city, postal code — Optional, reply *Skip* to skip)",
+        sr: "Koja je vaša *puna adresa*? (Ulica, grad, poštanski broj — Opciono, odgovorite *Preskoči*)",
+        hi: "आपका *पूरा पता* क्या है? (सड़क, शहर, पिन कोड — वैकल्पिक, *Skip* लिखें छोड़ने के लिए)",
+        ar: "ما هو *عنوانك الكامل*؟ (الشارع، المدينة، الرمز البريدي — اختياري، اكتب *تخطي*)",
+        fr: "Quelle est votre *adresse complète*? (Rue, ville, code postal — Optionnel, répondez *Passer*)",
+        pt: "Qual é o seu *endereço completo*? (Rua, cidade, CEP — Opcional, responda *Pular*)",
     },
-    preferred_country: {
-        en: "Which *country in Europe* would you like to work in?\n\nOptions: Germany, Netherlands, Austria, Sweden, Norway, Denmark, Belgium, Switzerland, France, Italy, Spain...\n\nOr reply *Any country* — we strongly recommend this! Candidates open to all countries get jobs *much faster*. 🌍",
-        sr: "U kojoj *evropskoj zemlji* biste želeli da radite?\n\nOpcije: Nemačka, Holandija, Austrija, Švedska, Norveška, Danska, Belgija, Švajcarska, Francuska, Italija, Španija...\n\nIli odgovorite *Bilo koja zemlja* — toplo preporučujemo! Kandidati koji su otvoreni za sve zemlje dobijaju posao *mnogo brže*. 🌍",
-        hi: "आप यूरोप के किस *देश में काम* करना चाहते हैं?\n\nविकल्प: जर्मनी, नीदरलैंड, ऑस्ट्रिया, स्वीडन, नॉर्वे, डेनमार्क, बेल्जियम, स्विट्जरलैंड...\n\nया *कोई भी देश* लिखें — हम इसकी दृढ़ता से सिफारिश करते हैं! सभी देशों के लिए खुले उम्मीदवारों को नौकरी *बहुत तेज़* मिलती है। 🌍",
-        ar: "في أي *دولة أوروبية* تريد العمل؟\n\nالخيارات: ألمانيا، هولندا، النمسا، السويد، النرويج، الدنمارك، بلجيكا، سويسرا، فرنسا، إيطاليا، إسبانيا...\n\nأو اكتب *أي دولة* — نوصي بذلك بشدة! المرشحون المنفتحون على جميع الدول يحصلون على وظائف *أسرع بكثير*. 🌍",
-        fr: "Dans quel *pays d'Europe* souhaitez-vous travailler?\n\nOptions: Allemagne, Pays-Bas, Autriche, Suède, Norvège, Danemark, Belgique, Suisse, France, Italie, Espagne...\n\nOu répondez *N'importe quel pays* — nous le recommandons vivement! Les candidats ouverts à tous les pays trouvent un emploi *beaucoup plus vite*. 🌍",
-        pt: "Em qual *país da Europa* você gostaria de trabalhar?\n\nOpções: Alemanha, Holanda, Áustria, Suécia, Noruega, Dinamarca, Bélgica, Suíça, França, Itália, Espanha...\n\nOu responda *Qualquer país* — recomendamos fortemente! Candidatos abertos a todos os países conseguem emprego *muito mais rápido*. 🌍",
+    lives_abroad: {
+        en: "Do you *currently live outside your home country*?\n\nReply: *Yes* or *No*",
+        sr: "Da li trenutno *živite van svoje matične zemlje*?\n\nOdgovorite: *Da* ili *Ne*",
+        hi: "क्या आप वर्तमान में *अपने मूल देश के बाहर रहते हैं*?\n\nलिखें: *हाँ* या *नहीं*",
+        ar: "هل تعيش حاليًا *خارج بلدك الأصلي*؟\n\nاكتب: *نعم* أو *لا*",
+        fr: "Vivez-vous actuellement *en dehors de votre pays d'origine*?\n\nRépondez: *Oui* ou *Non*",
+        pt: "Você mora atualmente *fora do seu país de origem*?\n\nResponda: *Sim* ou *Não*",
     },
-    experience: {
-        en: "How many *years of experience* do you have in that field?",
-        sr: "Koliko *godina iskustva* imate u toj oblasti?",
-        hi: "उस क्षेत्र में आपके पास कितने *साल का अनुभव* है?",
-        ar: "كم *سنة من الخبرة* لديك في هذا المجال؟",
-        fr: "Combien d'*années d'expérience* avez-vous dans ce domaine?",
-        pt: "Quantos *anos de experiência* você tem nessa área?",
+    previous_visas: {
+        en: "Have you had *any visas in the last 3 years*? (e.g. Schengen, work visa, tourist visa)\n\nReply: *Yes* or *No*",
+        sr: "Da li ste imali *bilo kakve vize u poslednjih 3 godine*? (npr. Šengen, radna viza, turistička viza)\n\nOdgovorite: *Da* ili *Ne*",
+        hi: "क्या आपके पास *पिछले 3 वर्षों में कोई वीज़ा* था? (जैसे शेंगेन, वर्क वीज़ा, टूरिस्ट वीज़ा)\n\nलिखें: *हाँ* या *नहीं*",
+        ar: "هل حصلت على *أي تأشيرات في السنوات الثلاث الماضية*؟ (مثل شنغن، تأشيرة عمل، تأشيرة سياحية)\n\nاكتب: *نعم* أو *لا*",
+        fr: "Avez-vous eu *des visas au cours des 3 dernières années*? (ex. Schengen, visa de travail, visa touristique)\n\nRépondez: *Oui* ou *Non*",
+        pt: "Você teve *algum visto nos últimos 3 anos*? (ex. Schengen, visto de trabalho, visto turístico)\n\nResponda: *Sim* ou *Não*",
     },
-    education: {
-        en: "What is your *highest level of education*? (e.g. primary school, high school, bachelor's, master's, PhD)",
-        sr: "Koji je vaš *najviši nivo obrazovanja*? (npr. osnovna škola, srednja škola, fakultet, master, doktorat)",
-        hi: "आपकी *उच्चतम शिक्षा* क्या है? (जैसे प्राथमिक, हाई स्कूल, स्नातक, मास्टर, पीएचडी)",
-        ar: "ما هو *أعلى مستوى تعليمي* لديك؟ (مثل ابتدائي، ثانوي، بكالوريوس، ماجستير، دكتوراه)",
-        fr: "Quel est votre *niveau d'études le plus élevé*? (ex: primaire, lycée, licence, master, doctorat)",
-        pt: "Qual é o seu *nível de escolaridade mais alto*? (ex: ensino fundamental, médio, graduação, mestrado, doutorado)",
+    passport_number: {
+        en: "What is your *passport number*? (e.g. AB1234567)",
+        sr: "Koji je vaš *broj pasoša*? (npr. AB1234567)",
+        hi: "आपका *पासपोर्ट नंबर* क्या है? (जैसे AB1234567)",
+        ar: "ما هو *رقم جواز سفرك*؟ (مثل AB1234567)",
+        fr: "Quel est votre *numéro de passeport*? (ex. AB1234567)",
+        pt: "Qual é o seu *número de passaporte*? (ex. AB1234567)",
+    },
+    passport_issued_by: {
+        en: "Who *issued your passport*? (The authority or ministry that issued it, e.g. Ministry of Interior, Police Department)",
+        sr: "Ko je *izdao vaš pasoš*? (Organ koji ga je izdao, npr. MUP, Policijska uprava)",
+        hi: "आपका पासपोर्ट *किसने जारी किया*? (जैसे गृह मंत्रालय, पुलिस विभाग)",
+        ar: "من *أصدر جواز سفرك*؟ (الجهة التي أصدرته، مثل وزارة الداخلية)",
+        fr: "Qui a *émis votre passeport*? (L'autorité qui l'a émis, ex. Ministère de l'Intérieur)",
+        pt: "Quem *emitiu seu passaporte*? (A autoridade que o emitiu, ex. Ministério do Interior)",
+    },
+    passport_issue_date: {
+        en: "What is the *issue date* of your passport? (Format: DD/MM/YYYY, e.g. 10/03/2020)",
+        sr: "Koji je *datum izdavanja* vašeg pasoša? (Format: DD/MM/GGGG, npr. 10/03/2020)",
+        hi: "आपके पासपोर्ट की *जारी करने की तारीख* क्या है? (प्रारूप: DD/MM/YYYY, जैसे 10/03/2020)",
+        ar: "ما هو *تاريخ إصدار* جواز سفرك؟ (الصيغة: DD/MM/YYYY، مثل 10/03/2020)",
+        fr: "Quelle est la *date d'émission* de votre passeport? (Format: JJ/MM/AAAA, ex. 10/03/2020)",
+        pt: "Qual é a *data de emissão* do seu passaporte? (Formato: DD/MM/AAAA, ex. 10/03/2020)",
+    },
+    passport_expiry_date: {
+        en: "What is the *expiry date* of your passport? (Format: DD/MM/YYYY, e.g. 10/03/2030)",
+        sr: "Koji je *datum isteka* vašeg pasoša? (Format: DD/MM/GGGG, npr. 10/03/2030)",
+        hi: "आपके पासपोर्ट की *समाप्ति तिथि* क्या है? (प्रारूप: DD/MM/YYYY, जैसे 10/03/2030)",
+        ar: "ما هو *تاريخ انتهاء صلاحية* جواز سفرك؟ (الصيغة: DD/MM/YYYY، مثل 10/03/2030)",
+        fr: "Quelle est la *date d'expiration* de votre passeport? (Format: JJ/MM/AAAA, ex. 10/03/2030)",
+        pt: "Qual é a *data de validade* do seu passaporte? (Formato: DD/MM/AAAA, ex. 10/03/2030)",
+    },
+    has_spouse: {
+        en: "Do you have a *spouse or partner*?\n\nReply: *Yes* or *No*",
+        sr: "Da li imate *supružnika ili partnera*?\n\nOdgovorite: *Da* ili *Ne*",
+        hi: "क्या आपका *जीवनसाथी या साथी* है?\n\nलिखें: *हाँ* या *नहीं*",
+        ar: "هل لديك *زوج/ة أو شريك*؟\n\nاكتب: *نعم* أو *لا*",
+        fr: "Avez-vous un(e) *conjoint(e) ou partenaire*?\n\nRépondez: *Oui* ou *Non*",
+        pt: "Você tem um(a) *cônjuge ou parceiro(a)*?\n\nResponda: *Sim* ou *Não*",
+    },
+    spouse_details: {
+        en: "Please provide your spouse's details in this format:\n*First name, Last name, DD/MM/YYYY (date of birth), Country of birth, City of birth*\n\nExample: Maria, Smith, 20/04/1992, Serbia, Belgrade",
+        sr: "Molim vas unesite podatke o supružniku u ovom formatu:\n*Ime, Prezime, DD/MM/GGGG (datum rođenja), Zemlja rođenja, Grad rođenja*\n\nPrimer: Marija, Marković, 20/04/1992, Srbija, Beograd",
+        hi: "कृपया अपने जीवनसाथी का विवरण इस प्रारूप में दें:\n*पहला नाम, अंतिम नाम, DD/MM/YYYY (जन्म तिथि), जन्म देश, जन्म शहर*\n\nउदाहरण: Priya, Sharma, 20/04/1992, India, Mumbai",
+        ar: "يرجى تقديم تفاصيل زوجك/ـتك بهذا التنسيق:\n*الاسم الأول، اسم العائلة، DD/MM/YYYY (تاريخ الميلاد)، بلد الميلاد، مدينة الميلاد*\n\nمثال: فاطمة، أحمد، 20/04/1992، سوريا، دمشق",
+        fr: "Veuillez fournir les détails de votre conjoint(e) dans ce format:\n*Prénom, Nom, JJ/MM/AAAA (date de naissance), Pays de naissance, Ville de naissance*\n\nExemple: Marie, Dupont, 20/04/1992, France, Paris",
+        pt: "Por favor, forneça os detalhes do seu cônjuge neste formato:\n*Primeiro nome, Sobrenome, DD/MM/AAAA (data de nascimento), País de nascimento, Cidade de nascimento*\n\nExemplo: Maria, Silva, 20/04/1992, Brasil, São Paulo",
+    },
+    has_children: {
+        en: "Do you have *children*?\n\nReply: *Yes* or *No*",
+        sr: "Da li imate *dece*?\n\nOdgovorite: *Da* ili *Ne*",
+        hi: "क्या आपके *बच्चे* हैं?\n\nलिखें: *हाँ* या *नहीं*",
+        ar: "هل لديك *أطفال*؟\n\nاكتب: *نعم* أو *لا*",
+        fr: "Avez-vous des *enfants*?\n\nRépondez: *Oui* ou *Non*",
+        pt: "Você tem *filhos*?\n\nResponda: *Sim* ou *Não*",
+    },
+    children_details: {
+        en: "Please list your children, one per line, in this format:\n*First name, Last name, DD/MM/YYYY*\n\nExample:\nAna, Smith, 05/09/2010\nLuka, Smith, 12/03/2015\n\nWhen done, reply *Done*.",
+        sr: "Molim vas navedite svoju decu, jedno po liniji, u ovom formatu:\n*Ime, Prezime, DD/MM/GGGG*\n\nPrimer:\nAna, Marković, 05/09/2010\nLuka, Marković, 12/03/2015\n\nKada završite, odgovorite *Gotovo*.",
+        hi: "कृपया अपने बच्चों की सूची दें, प्रत्येक पंक्ति में एक, इस प्रारूप में:\n*पहला नाम, अंतिम नाम, DD/MM/YYYY*\n\nउदाहरण:\nAanya, Sharma, 05/09/2010\nRohan, Sharma, 12/03/2015\n\nसमाप्त होने पर *Done* लिखें।",
+        ar: "يرجى سرد أطفالك، واحد في كل سطر، بهذا التنسيق:\n*الاسم الأول، اسم العائلة، DD/MM/YYYY*\n\nمثال:\nسارة، أحمد، 05/09/2010\nعمر، أحمد، 12/03/2015\n\nعند الانتهاء، اكتب *تم*.",
+        fr: "Veuillez lister vos enfants, un par ligne, dans ce format:\n*Prénom, Nom, JJ/MM/AAAA*\n\nExemple:\nLéa, Dupont, 05/09/2010\nThéo, Dupont, 12/03/2015\n\nQuand vous avez terminé, répondez *Terminé*.",
+        pt: "Por favor, liste seus filhos, um por linha, neste formato:\n*Primeiro nome, Sobrenome, DD/MM/AAAA*\n\nExemplo:\nAna, Silva, 05/09/2010\nLucas, Silva, 12/03/2015\n\nQuando terminar, responda *Concluído*.",
+    },
+    preferred_job: {
+        en: "What *type of work* are you looking for?\n\nOptions:\n1 - Construction\n2 - Manufacturing\n3 - Agriculture\n4 - Hospitality\n5 - Transportation\n6 - Retail\n7 - Food Processing\n8 - Warehousing & Logistics\n9 - Cleaning Services\n10 - Driving\n11 - *Any* (open to all — higher chances! 💪)\n\nReply with the number or the name.",
+        sr: "Kakav *posao tražite*?\n\nOpcije:\n1 - Građevina\n2 - Industrija/Fabrika\n3 - Poljoprivreda\n4 - Ugostiteljstvo\n5 - Transport\n6 - Maloprodaja\n7 - Prehrambena industrija\n8 - Magacin i logistika\n9 - Čišćenje\n10 - Vozač\n11 - *Bilo koji* (otvoren za sve — veće šanse! 💪)\n\nOdgovorite brojem ili imenom.",
+        hi: "आप किस *प्रकार का काम* ढूंढ रहे हैं?\n\nविकल्प:\n1 - निर्माण\n2 - विनिर्माण/कारखाना\n3 - कृषि\n4 - आतिथ्य\n5 - परिवहन\n6 - खुदरा\n7 - खाद्य प्रसंस्करण\n8 - वेयरहाउसिंग\n9 - सफाई\n10 - ड्राइविंग\n11 - *कोई भी* (सभी के लिए खुला — अधिक संभावनाएं! 💪)\n\nनंबर या नाम से जवाब दें।",
+        ar: "ما نوع *العمل الذي تبحث عنه*؟\n\nالخيارات:\n1 - البناء\n2 - التصنيع/المصنع\n3 - الزراعة\n4 - الضيافة\n5 - النقل\n6 - التجزئة\n7 - معالجة الأغذية\n8 - المستودعات واللوجستيات\n9 - خدمات التنظيف\n10 - القيادة\n11 - *أي عمل* (منفتح على الكل — فرص أكبر! 💪)\n\nاكتب الرقم أو الاسم.",
+        fr: "Quel *type de travail* recherchez-vous?\n\nOptions:\n1 - Construction\n2 - Fabrication/Usine\n3 - Agriculture\n4 - Hôtellerie\n5 - Transport\n6 - Commerce de détail\n7 - Transformation alimentaire\n8 - Entreposage & Logistique\n9 - Services de nettoyage\n10 - Conduite\n11 - *N'importe lequel* (ouvert à tout — plus de chances! 💪)\n\nRépondez avec le numéro ou le nom.",
+        pt: "Que *tipo de trabalho* você está procurando?\n\nOpções:\n1 - Construção\n2 - Manufatura/Fábrica\n3 - Agricultura\n4 - Hotelaria\n5 - Transporte\n6 - Varejo\n7 - Processamento de alimentos\n8 - Armazenagem & Logística\n9 - Serviços de limpeza\n10 - Motorista\n11 - *Qualquer um* (aberto a tudo — mais chances! 💪)\n\nResponda com o número ou o nome.",
+    },
+    desired_countries: {
+        en: "Which *European countries* would you like to work in?\n\nYou can name specific countries (e.g. Germany, Netherlands, Austria) or reply *Any country* — we strongly recommend this! Candidates open to all countries get jobs *much faster*. 🌍",
+        sr: "U kojim *evropskim zemljama* biste želeli da radite?\n\nMožete navesti konkretne zemlje (npr. Nemačka, Holandija, Austrija) ili odgovoriti *Bilo koja zemlja* — toplo preporučujemo! Kandidati otvoreni za sve zemlje dobijaju posao *mnogo brže*. 🌍",
+        hi: "आप यूरोप के किन *देशों में काम* करना चाहते हैं?\n\nआप विशिष्ट देशों के नाम ले सकते हैं (जैसे Germany, Netherlands, Austria) या *Any country* लिखें — हम इसकी दृढ़ता से सिफारिश करते हैं! 🌍",
+        ar: "في أي *دول أوروبية* تريد العمل؟\n\nيمكنك ذكر دول محددة (مثل ألمانيا، هولندا، النمسا) أو اكتب *أي دولة* — نوصي بذلك بشدة! المرشحون المنفتحون يحصلون على وظائف *أسرع بكثير*. 🌍",
+        fr: "Dans quels *pays européens* souhaitez-vous travailler?\n\nVous pouvez nommer des pays spécifiques (ex. Allemagne, Pays-Bas, Autriche) ou répondre *N'importe quel pays* — nous le recommandons vivement! 🌍",
+        pt: "Em quais *países europeus* você gostaria de trabalhar?\n\nVocê pode nomear países específicos (ex. Alemanha, Holanda, Áustria) ou responder *Qualquer país* — recomendamos fortemente! 🌍",
     },
 };
 
-function getOnboardingQuestion(step: OnboardingStep, language: string): string {
-    const langKey = language.toLowerCase().startsWith("sr") || language.toLowerCase().includes("serb") || language.toLowerCase().includes("croat") || language.toLowerCase().includes("bosnian") ? "sr"
-        : language.toLowerCase().startsWith("hi") || language.toLowerCase().includes("hindi") || language.toLowerCase().includes("nepali") ? "hi"
-        : language.toLowerCase().startsWith("ar") || language.toLowerCase().includes("arab") ? "ar"
-        : language.toLowerCase().startsWith("fr") || language.toLowerCase().includes("french") ? "fr"
-        : language.toLowerCase().startsWith("pt") || language.toLowerCase().includes("portug") ? "pt"
-        : "en";
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-    return ONBOARDING_TRANSLATIONS[step]?.[langKey] || ONBOARDING_TRANSLATIONS[step]?.["en"] || "";
+function getLangKey(language: string): LangKey {
+    const l = language.toLowerCase();
+    if (l.startsWith("sr") || l.includes("serb") || l.includes("croat") || l.includes("bosnian") || l.includes("montenegrin")) return "sr";
+    if (l.startsWith("hi") || l.includes("hindi") || l.includes("nepali") || l.includes("bengali")) return "hi";
+    if (l.startsWith("ar") || l.includes("arab")) return "ar";
+    if (l.startsWith("fr") || l.includes("french")) return "fr";
+    if (l.startsWith("pt") || l.includes("portug") || l.includes("brazil")) return "pt";
+    return "en";
 }
 
-function isYesResponse(msg: string): boolean {
-    const lower = msg.toLowerCase().trim();
-    return ["yes", "da", "da!", "yes!", "yep", "sure", "ok", "okay", "haan", "ha", "نعم", "oui", "sim", "ja", "ano", "oo", "हाँ", "हां"].some(y => lower === y || lower.startsWith(y + " ") || lower.startsWith(y + "."));
+function getQ(step: string, language: string): string {
+    const lk = getLangKey(language);
+    return T[step]?.[lk] || T[step]?.["en"] || "";
 }
 
-function isNoResponse(msg: string): boolean {
-    const lower = msg.toLowerCase().trim();
-    return ["no", "ne", "nope", "nahi", "la", "non", "não", "nein", "hindi", "नहीं", "لا"].some(n => lower === n || lower.startsWith(n + " ") || lower.startsWith(n + "."));
+function isYes(msg: string): boolean {
+    const l = msg.toLowerCase().trim();
+    return /^(yes|da|da!|yep|sure|ok|okay|haan|ha|نعم|oui|sim|ja|ano|oo|हाँ|हां|gotovo|done|terminé|concluído|تم)/.test(l);
 }
+
+function isNo(msg: string): boolean {
+    const l = msg.toLowerCase().trim();
+    return /^(no|ne|nope|nahi|la|non|não|nein|hindi|नहीं|لا)/.test(l);
+}
+
+function isSkip(msg: string): boolean {
+    const l = msg.toLowerCase().trim();
+    return /^(skip|preskoči|preskoci|pular|passer|تخطي|छोड़|skip)/.test(l);
+}
+
+// Map numbered/worded marital status answer to English value
+function parseMaritalStatus(msg: string): string {
+    const l = msg.toLowerCase().trim();
+    if (l === "1" || /single|slobodan|slobodna|celibataire|solteiro|solteira|أعزب|عزباء|अविवाहित/.test(l)) return "Single";
+    if (l === "2" || /married|oženjen|udata|marié|casado|casada|متزوج|विवाहित/.test(l)) return "Married";
+    if (l === "3" || /divorced|razveden|razvedena|divorcé|divorciado|مطلق|तलाकशुदा/.test(l)) return "Divorced";
+    if (l === "4" || /widow|udovac|udovica|veuf|viúvo|viúva|أرمل|विधवा|विधुर/.test(l)) return "Widowed";
+    if (l === "5" || /separat|razdvojen|séparé|separado|منفصل|अलग/.test(l)) return "Separated";
+    return msg.trim();
+}
+
+// Map numbered/worded gender answer to English value
+function parseGender(msg: string): string {
+    const l = msg.toLowerCase().trim();
+    if (l === "1" || /male|muški|muski|homme|masculino|ذكر|पुरुष/.test(l)) return "Male";
+    if (l === "2" || /female|ženski|zenski|femme|feminino|أنثى|महिला/.test(l)) return "Female";
+    return msg.trim();
+}
+
+// Map numbered job type to English value
+function parseJobType(msg: string): string {
+    const map: Record<string, string> = {
+        "1": "Construction", "2": "Manufacturing", "3": "Agriculture",
+        "4": "Hospitality", "5": "Transportation", "6": "Retail",
+        "7": "Food Processing", "8": "Warehousing & Logistics",
+        "9": "Cleaning Services", "10": "Driving", "11": "Any",
+    };
+    const l = msg.toLowerCase().trim();
+    if (map[l]) return map[l];
+    // Fuzzy match
+    if (/građevin|constru|bau/.test(l)) return "Construction";
+    if (/manufactur|fabrik|industri/.test(l)) return "Manufacturing";
+    if (/agri|poljopriv|farm/.test(l)) return "Agriculture";
+    if (/hospitality|ugostiteljst|hotel/.test(l)) return "Hospitality";
+    if (/transport/.test(l)) return "Transportation";
+    if (/retail|maloprod/.test(l)) return "Retail";
+    if (/food|prehrambena/.test(l)) return "Food Processing";
+    if (/warehouse|magacin|logistik/.test(l)) return "Warehousing & Logistics";
+    if (/clean|čišćenje|ciscenje/.test(l)) return "Cleaning Services";
+    if (/driv|vozač|vozac/.test(l)) return "Driving";
+    if (/any|bilo koji|bilo koja/.test(l)) return "Any";
+    return msg.trim();
+}
+
+// Parse desired countries from free text
+function parseDesiredCountries(msg: string): string[] {
+    const l = msg.toLowerCase().trim();
+    if (/any|bilo koja|n'importe|qualquer|أي دولة|कोई भी देश/.test(l)) return ["Any"];
+    // Split by comma or newline and clean up
+    return msg.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+}
+
+// ─── Supabase helpers ─────────────────────────────────────────────────────────
 
 async function getOnboardingState(supabase: any, phone: string): Promise<OnboardingState | null> {
     const { data } = await supabase
@@ -998,26 +1230,106 @@ async function clearOnboardingState(supabase: any, phone: string): Promise<void>
         .eq("phone_number", phone);
 }
 
-async function saveCandidateFromOnboarding(supabase: any, phone: string, data: Record<string, string>): Promise<void> {
+// Save collected data into the workers table (upsert by phone)
+async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Record<string, string>): Promise<void> {
     const adminClient = createAdminClient();
-    await adminClient
-        .from("candidates")
-        .insert({
-            phone,
-            submitted_full_name: data.full_name || null,
-            nationality: data.country_origin || null,
-            current_country: data.current_country || null,
-            preferred_job: data.job_type || null,
-            preferred_country: data.preferred_country || null,
-            experience_years: data.experience ? parseInt(data.experience) || null : null,
-            education_level: data.education || null,
-            source_type: "whatsapp_onboarding",
-            application_data: { collected_via: "whatsapp", language: data.language || "en", raw: data },
-            created_at: new Date().toISOString(),
-        });
+
+    // Parse date_of_birth DD/MM/YYYY → YYYY-MM-DD
+    function parseDate(raw: string | undefined): string | null {
+        if (!raw) return null;
+        const m = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+        if (!m) return null;
+        return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    }
+
+    // Parse children from multiline text
+    function parseChildren(raw: string | undefined): any[] {
+        if (!raw) return [];
+        return raw.split("\n").map(line => {
+            const parts = line.split(",").map(s => s.trim());
+            return {
+                first_name: parts[0] || "",
+                last_name: parts[1] || "",
+                dob: parseDate(parts[2]) || parts[2] || "",
+            };
+        }).filter(c => c.first_name);
+    }
+
+    // Parse spouse from comma-separated text
+    function parseSpouse(raw: string | undefined): any | null {
+        if (!raw) return null;
+        const parts = raw.split(",").map(s => s.trim());
+        return {
+            first_name: parts[0] || "",
+            last_name: parts[1] || "",
+            dob: parseDate(parts[2]) || parts[2] || "",
+            birth_country: parts[3] || "",
+            birth_city: parts[4] || "",
+        };
+    }
+
+    const familyData: any = {};
+    if (data.has_spouse === "Yes" && data.spouse_details) {
+        familyData.spouse = parseSpouse(data.spouse_details);
+    }
+    if (data.has_children === "Yes" && data.children_details) {
+        familyData.children = parseChildren(data.children_details);
+    }
+
+    const desiredCountries = data.desired_countries
+        ? data.desired_countries.split("|").map(s => s.trim()).filter(Boolean)
+        : [];
+
+    // Try to find existing worker record by phone
+    const { data: existing } = await adminClient
+        .from("workers")
+        .select("id")
+        .eq("phone", phone)
+        .single();
+
+    const record: any = {
+        phone,
+        nationality: data.nationality || null,
+        date_of_birth: parseDate(data.date_of_birth) || null,
+        birth_country: data.birth_country || null,
+        birth_city: data.birth_city || null,
+        citizenship: data.citizenship || null,
+        father_name: data.father_name || null,
+        mother_name: data.mother_name || null,
+        current_country: data.current_country || null,
+        address: data.address || null,
+        lives_abroad: data.lives_abroad || null,
+        previous_visas: data.previous_visas || null,
+        passport_number: data.passport_number || null,
+        passport_issued_by: data.passport_issued_by || null,
+        passport_issue_date: parseDate(data.passport_issue_date) || null,
+        passport_expiry_date: parseDate(data.passport_expiry_date) || null,
+        gender: data.gender || null,
+        marital_status: data.marital_status || null,
+        preferred_job: data.preferred_job || null,
+        desired_countries: desiredCountries.length > 0 ? desiredCountries : null,
+        family_data: Object.keys(familyData).length > 0 ? familyData : null,
+        source_type: "whatsapp_onboarding",
+        application_data: { collected_via: "whatsapp", language: data.language || "en" },
+        updated_at: new Date().toISOString(),
+    };
+
+    // Also set full_name on profile if we have it
+    if (data.full_name) {
+        record.submitted_full_name = data.full_name;
+    }
+
+    if (existing?.id) {
+        await adminClient.from("workers").update(record).eq("id", existing.id);
+    } else {
+        record.created_at = new Date().toISOString();
+        await adminClient.from("workers").insert(record);
+    }
 }
 
-// Main onboarding handler — returns reply string or null if not in onboarding flow
+// ─── Main onboarding handler ──────────────────────────────────────────────────
+// Returns reply string, or null if not in onboarding flow (let GPT handle it).
+
 export async function handleWhatsAppOnboarding(
     supabase: any,
     phone: string,
@@ -1025,104 +1337,265 @@ export async function handleWhatsAppOnboarding(
     workerRecord: any,
     detectedLanguage: string
 ): Promise<string | null> {
-    // Only handle unregistered users
-    if (workerRecord) return null;
+    // Only handle unregistered/incomplete users
+    if (workerRecord?.onboarding_completed) return null;
 
     const state = await getOnboardingState(supabase, phone);
     const lang = state?.language || detectedLanguage || "en";
 
-    // If no state and message seems like a greeting/question — offer onboarding
+    // ── No state yet: offer onboarding on greeting/job-related messages ──
     if (!state) {
         const lower = message.toLowerCase().trim();
-        const isGreetingOrQuestion = lower.length < 100 && (
-            /^(hi|hello|hey|good|salam|zdravo|merhaba|bonjour|hola|ciao|namaste|ola|salut|sawubona|hej)/i.test(lower) ||
+        const isGreeting = lower.length < 120 && (
+            /^(hi|hello|hey|good|salam|zdravo|merhaba|bonjour|hola|ciao|namaste|ola|salut|hej|merhaba|selam)/i.test(lower) ||
             /\?$/.test(lower) ||
-            /(job|work|posao|rad|buscando|emploi|trabaj|lavoro)/i.test(lower)
+            /(job|work|posao|rad|emploi|trabaj|lavoro|visa|europe|evropa)/i.test(lower)
         );
-
-        if (isGreetingOrQuestion) {
-            // Offer onboarding after a short delay — store "ask_start" state
+        if (isGreeting) {
             await saveOnboardingState(supabase, phone, "ask_start", {}, detectedLanguage);
-            // Return null — let GPT handle the main reply, onboarding offer will be appended
-            return null;
         }
-        return null;
+        return null; // Let GPT handle the actual reply
     }
 
-    // Handle ask_start step
-    if (state.current_step === "ask_start") {
-        if (isYesResponse(message)) {
-            await saveOnboardingState(supabase, phone, "full_name", {}, lang);
-            return getOnboardingQuestion("full_name", lang);
-        } else if (isNoResponse(message)) {
-            await clearOnboardingState(supabase, phone);
-            return lang.startsWith("sr") || lang.includes("serb")
-                ? "Nema problema! Možete se registrovati na workersunited.eu/profile/worker kada budete spremni. Tu sam ako imate pitanja."
-                : "No problem! You can register at workersunited.eu/profile/worker whenever you're ready. I'm here if you have any questions.";
-        }
-        // Not yes/no — let GPT handle it, but keep state
-        return null;
-    }
-
-    // Handle data collection steps
     const collected = { ...state.collected_data };
+    const step = state.current_step;
 
-    if (state.current_step === "full_name") {
+    // ── ask_start ──
+    if (step === "ask_start") {
+        if (isYes(message)) {
+            await saveOnboardingState(supabase, phone, "full_name", {}, lang);
+            return getQ("full_name", lang);
+        }
+        if (isNo(message)) {
+            await clearOnboardingState(supabase, phone);
+            const lk = getLangKey(lang);
+            const msgs: Record<LangKey, string> = {
+                en: "No problem! You can fill in your profile at workersunited.eu/profile/worker whenever you're ready. I'm here if you have questions.",
+                sr: "Nema problema! Profil možete popuniti na workersunited.eu/profile/worker kada budete spremni. Tu sam ako imate pitanja.",
+                hi: "कोई बात नहीं! आप workersunited.eu/profile/worker पर जाकर अपना प्रोफ़ाइल भर सकते हैं। कोई सवाल हो तो बताएं।",
+                ar: "لا بأس! يمكنك ملء ملفك الشخصي على workersunited.eu/profile/worker متى كنت مستعدًا.",
+                fr: "Pas de problème! Vous pouvez remplir votre profil sur workersunited.eu/profile/worker quand vous êtes prêt.",
+                pt: "Sem problema! Você pode preencher seu perfil em workersunited.eu/profile/worker quando estiver pronto.",
+            };
+            return msgs[lk];
+        }
+        return null; // Let GPT handle unexpected replies
+    }
+
+    // ── full_name ──
+    if (step === "full_name") {
         collected.full_name = message.trim();
-        await saveOnboardingState(supabase, phone, "country_origin", collected, lang);
-        return getOnboardingQuestion("country_origin", lang);
+        await saveOnboardingState(supabase, phone, "gender", collected, lang);
+        return getQ("gender", lang);
     }
 
-    if (state.current_step === "country_origin") {
-        collected.country_origin = message.trim();
+    // ── gender ──
+    if (step === "gender") {
+        collected.gender = parseGender(message);
+        await saveOnboardingState(supabase, phone, "marital_status", collected, lang);
+        return getQ("marital_status", lang);
+    }
+
+    // ── marital_status ──
+    if (step === "marital_status") {
+        collected.marital_status = parseMaritalStatus(message);
+        await saveOnboardingState(supabase, phone, "date_of_birth", collected, lang);
+        return getQ("date_of_birth", lang);
+    }
+
+    // ── date_of_birth ──
+    if (step === "date_of_birth") {
+        collected.date_of_birth = message.trim();
+        await saveOnboardingState(supabase, phone, "nationality", collected, lang);
+        return getQ("nationality", lang);
+    }
+
+    // ── nationality ──
+    if (step === "nationality") {
+        collected.nationality = message.trim();
+        await saveOnboardingState(supabase, phone, "birth_country", collected, lang);
+        return getQ("birth_country", lang);
+    }
+
+    // ── birth_country ──
+    if (step === "birth_country") {
+        collected.birth_country = message.trim();
+        await saveOnboardingState(supabase, phone, "birth_city", collected, lang);
+        return getQ("birth_city", lang);
+    }
+
+    // ── birth_city ──
+    if (step === "birth_city") {
+        collected.birth_city = message.trim();
+        await saveOnboardingState(supabase, phone, "citizenship", collected, lang);
+        return getQ("citizenship", lang);
+    }
+
+    // ── citizenship ──
+    if (step === "citizenship") {
+        collected.citizenship = message.trim();
+        await saveOnboardingState(supabase, phone, "father_name", collected, lang);
+        return getQ("father_name", lang);
+    }
+
+    // ── father_name (optional) ──
+    if (step === "father_name") {
+        if (!isSkip(message)) collected.father_name = message.trim();
+        await saveOnboardingState(supabase, phone, "mother_name", collected, lang);
+        return getQ("mother_name", lang);
+    }
+
+    // ── mother_name (optional) ──
+    if (step === "mother_name") {
+        if (!isSkip(message)) collected.mother_name = message.trim();
         await saveOnboardingState(supabase, phone, "current_country", collected, lang);
-        return getOnboardingQuestion("current_country", lang);
+        return getQ("current_country", lang);
     }
 
-    if (state.current_step === "current_country") {
+    // ── current_country ──
+    if (step === "current_country") {
         collected.current_country = message.trim();
-        await saveOnboardingState(supabase, phone, "job_type", collected, lang);
-        return getOnboardingQuestion("job_type", lang);
+        await saveOnboardingState(supabase, phone, "address", collected, lang);
+        return getQ("address", lang);
     }
 
-    if (state.current_step === "job_type") {
-        collected.job_type = message.trim();
-        await saveOnboardingState(supabase, phone, "preferred_country", collected, lang);
-        return getOnboardingQuestion("preferred_country", lang);
+    // ── address (optional) ──
+    if (step === "address") {
+        if (!isSkip(message)) collected.address = message.trim();
+        await saveOnboardingState(supabase, phone, "lives_abroad", collected, lang);
+        return getQ("lives_abroad", lang);
     }
 
-    if (state.current_step === "preferred_country") {
-        collected.preferred_country = message.trim();
-        await saveOnboardingState(supabase, phone, "experience", collected, lang);
-        return getOnboardingQuestion("experience", lang);
+    // ── lives_abroad ──
+    if (step === "lives_abroad") {
+        collected.lives_abroad = isYes(message) ? "Yes" : "No";
+        await saveOnboardingState(supabase, phone, "previous_visas", collected, lang);
+        return getQ("previous_visas", lang);
     }
 
-    if (state.current_step === "experience") {
-        collected.experience = message.trim();
-        await saveOnboardingState(supabase, phone, "education", collected, lang);
-        return getOnboardingQuestion("education", lang);
+    // ── previous_visas ──
+    if (step === "previous_visas") {
+        collected.previous_visas = isYes(message) ? "Yes" : "No";
+        await saveOnboardingState(supabase, phone, "passport_number", collected, lang);
+        return getQ("passport_number", lang);
     }
 
-    if (state.current_step === "education") {
-        collected.education = message.trim();
+    // ── passport_number ──
+    if (step === "passport_number") {
+        collected.passport_number = message.trim().toUpperCase();
+        await saveOnboardingState(supabase, phone, "passport_issued_by", collected, lang);
+        return getQ("passport_issued_by", lang);
+    }
+
+    // ── passport_issued_by ──
+    if (step === "passport_issued_by") {
+        collected.passport_issued_by = message.trim();
+        await saveOnboardingState(supabase, phone, "passport_issue_date", collected, lang);
+        return getQ("passport_issue_date", lang);
+    }
+
+    // ── passport_issue_date ──
+    if (step === "passport_issue_date") {
+        collected.passport_issue_date = message.trim();
+        await saveOnboardingState(supabase, phone, "passport_expiry_date", collected, lang);
+        return getQ("passport_expiry_date", lang);
+    }
+
+    // ── passport_expiry_date ──
+    if (step === "passport_expiry_date") {
+        collected.passport_expiry_date = message.trim();
+        await saveOnboardingState(supabase, phone, "has_spouse", collected, lang);
+        return getQ("has_spouse", lang);
+    }
+
+    // ── has_spouse ──
+    if (step === "has_spouse") {
+        collected.has_spouse = isYes(message) ? "Yes" : "No";
+        if (collected.has_spouse === "Yes") {
+            await saveOnboardingState(supabase, phone, "spouse_details", collected, lang);
+            return getQ("spouse_details", lang);
+        } else {
+            await saveOnboardingState(supabase, phone, "has_children", collected, lang);
+            return getQ("has_children", lang);
+        }
+    }
+
+    // ── spouse_details ──
+    if (step === "spouse_details") {
+        collected.spouse_details = message.trim();
+        await saveOnboardingState(supabase, phone, "has_children", collected, lang);
+        return getQ("has_children", lang);
+    }
+
+    // ── has_children ──
+    if (step === "has_children") {
+        collected.has_children = isYes(message) ? "Yes" : "No";
+        if (collected.has_children === "Yes") {
+            await saveOnboardingState(supabase, phone, "children_details", collected, lang);
+            return getQ("children_details", lang);
+        } else {
+            await saveOnboardingState(supabase, phone, "preferred_job", collected, lang);
+            return getQ("preferred_job", lang);
+        }
+    }
+
+    // ── children_details ──
+    if (step === "children_details") {
+        // Accumulate lines until user says "Done"
+        const isDone = /^(done|gotovo|terminé|concluído|تم|готово)/i.test(message.trim());
+        const existing = collected.children_details || "";
+        if (!isDone) {
+            collected.children_details = existing ? existing + "\n" + message.trim() : message.trim();
+            await saveOnboardingState(supabase, phone, "children_details", collected, lang);
+            // Confirm and ask for more or done
+            const lk = getLangKey(lang);
+            const moreMsg: Record<LangKey, string> = {
+                en: "Got it! Add another child or reply *Done* when finished.",
+                sr: "Primljeno! Dodajte još jedno dete ili odgovorite *Gotovo* kada završite.",
+                hi: "समझ गया! एक और बच्चा जोड़ें या समाप्त होने पर *Done* लिखें।",
+                ar: "تم! أضف طفلاً آخر أو اكتب *تم* عند الانتهاء.",
+                fr: "Reçu! Ajoutez un autre enfant ou répondez *Terminé* quand vous avez fini.",
+                pt: "Entendido! Adicione outro filho ou responda *Concluído* quando terminar.",
+            };
+            return moreMsg[lk];
+        }
+        await saveOnboardingState(supabase, phone, "preferred_job", collected, lang);
+        return getQ("preferred_job", lang);
+    }
+
+    // ── preferred_job ──
+    if (step === "preferred_job") {
+        collected.preferred_job = parseJobType(message);
+        await saveOnboardingState(supabase, phone, "desired_countries", collected, lang);
+        return getQ("desired_countries", lang);
+    }
+
+    // ── desired_countries ──
+    if (step === "desired_countries") {
+        const countries = parseDesiredCountries(message);
+        collected.desired_countries = countries.join("|");
         collected.language = lang;
 
-        // Save to candidates table
+        // Save to workers table
         try {
-            await saveCandidateFromOnboarding(supabase, phone, collected);
+            await saveWorkerFromOnboarding(supabase, phone, collected);
         } catch (e) {
-            console.warn("[Onboarding] Could not save candidate:", e);
+            console.warn("[Onboarding] Could not save worker:", e);
         }
 
-        // Clear onboarding state
         await clearOnboardingState(supabase, phone);
 
-        // Final message
         const name = collected.full_name?.split(" ")[0] || "";
-        if (lang.startsWith("sr") || lang.includes("serb")) {
-            return `Odlično, ${name}! Vaš profil je sačuvan. Poslednji korak je da se registrujete na sajtu i aktivirate Job Finder za samo $9 — i mi počinjemo da tražimo posao za vas u Evropi.\n\n👉 workersunited.eu/profile/worker\n\nAko imate pitanja, tu sam!`;
-        }
-        return `Great, ${name}! Your profile has been saved. The last step is to register on our website and activate Job Finder for just $9 — and we'll start finding you a job across Europe.\n\n👉 workersunited.eu/profile/worker\n\nIf you have any questions, I'm here!`;
+        const lk = getLangKey(lang);
+        const finalMsg: Record<LangKey, string> = {
+            en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder for just $9* — then we start searching for your job across Europe!\n\n👉 workersunited.eu/profile/worker\n\nWe'll also need your documents (passport photo, diploma/work certificate, biometric photo) — you can upload them on the website. If you have any questions, I'm here!`,
+            sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder za samo $9* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 workersunited.eu/profile/worker\n\nTreba nam i vaša dokumentacija (fotografija pasoša, diploma/potvrda o radu, biometrijska fotografija) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
+            hi: `धन्यवाद, ${name}! 🎉 आपका प्रोफ़ाइल सहेज लिया गया है।\n\nअंतिम चरण है वेबसाइट पर रजिस्टर करना और *Job Finder केवल $9 में* सक्रिय करना — फिर हम पूरे यूरोप में आपके लिए नौकरी खोजना शुरू करते हैं!\n\n👉 workersunited.eu/profile/worker`,
+            ar: `شكراً، ${name}! 🎉 تم حفظ ملفك الشخصي.\n\nالخطوة الأخيرة هي التسجيل على الموقع وتفعيل *Job Finder مقابل $9 فقط* — ثم نبدأ في البحث عن وظيفة لك في جميع أنحاء أوروبا!\n\n👉 workersunited.eu/profile/worker`,
+            fr: `Merci, ${name}! 🎉 Votre profil a été sauvegardé.\n\nLa dernière étape est de vous inscrire sur le site et d'activer *Job Finder pour seulement $9* — puis nous commençons à chercher votre emploi dans toute l'Europe!\n\n👉 workersunited.eu/profile/worker`,
+            pt: `Obrigado, ${name}! 🎉 Seu perfil foi salvo.\n\nO último passo é se registrar no site e ativar o *Job Finder por apenas $9* — então começamos a procurar seu emprego em toda a Europa!\n\n👉 workersunited.eu/profile/worker`,
+        };
+        return finalMsg[lk];
     }
 
     return null;
