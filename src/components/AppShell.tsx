@@ -324,22 +324,19 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
 
             {variant === 'admin' && (
                 <>
+                    <div className={`px-3 pt-1 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${isCollapsed ? 'hidden' : 'block'}`}>People</div>
                     <SidebarLink href="/admin/workers" icon={<Users size={20} />} label="Workers" isCollapsed={isCollapsed} tone="emerald" />
                     <SidebarLink href="/admin/employers" icon={<Building2 size={20} />} label="Employers" isCollapsed={isCollapsed} tone="blue" />
                     <SidebarLink href="/admin/agencies" icon={<Users size={20} />} label="Agencies" isCollapsed={isCollapsed} tone="violet" />
-                    <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Previews</div>
-                    <SidebarLink href="/profile/worker" icon={<User size={20} />} label="Preview Worker" isCollapsed={isCollapsed} tone="blue" />
-                    <SidebarLink href="/profile/employer" icon={<Building2 size={20} />} label="Preview Employer" isCollapsed={isCollapsed} tone="blue" />
-                    <SidebarLink href="/profile/agency" icon={<Users size={20} />} label="Preview Agency" isCollapsed={isCollapsed} tone="blue" />
-                    <div className={`px-3 pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>Operations</div>
+                    <div className={`px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${isCollapsed ? 'hidden' : 'block'}`}>Work</div>
                     <SidebarLink href="/admin/jobs" icon={<Briefcase size={20} />} label="Jobs" isCollapsed={isCollapsed} tone="amber" />
                     <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} tone="amber" />
                     <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" isCollapsed={isCollapsed} tone="rose" />
-                    <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} tone="blue" />
                     <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} tone="violet" />
+                    <div className={`px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${isCollapsed ? 'hidden' : 'block'}`}>System</div>
+                    <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} tone="blue" />
                     <SidebarLink href="/admin/exceptions" icon={<AlertTriangle size={20} />} label="Exceptions" isCollapsed={isCollapsed} tone="red" />
                     <SidebarLink href="/admin/email-health" icon={<MailX size={20} />} label="Email Health" isCollapsed={isCollapsed} tone="red" />
-                    <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Email Preview" isCollapsed={isCollapsed} tone="blue" />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} tone="slate" />
                 </>
             )}
