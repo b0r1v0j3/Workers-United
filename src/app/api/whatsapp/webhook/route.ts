@@ -15,6 +15,7 @@ import crypto from "crypto";
 // All AI processing happens directly via OpenAI API (no middleware).
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "";
+const STRIPE_PAYMENT_LINK = process.env.STRIPE_JOB_FINDER_PAYMENT_LINK || "https://buy.stripe.com/fZueVcdG1bglfgr1nc0ZW00";
 const APP_SECRET = process.env.META_APP_SECRET || "";
 const ROUTER_HISTORY_LIMIT = 8;
 const RESPONSE_HISTORY_LIMIT = 12;
@@ -433,23 +434,36 @@ export async function POST(request: NextRequest) {
                                 brainMemory: empBrainMemory,
                                 language: quickLang,
                             });
-                            if (employerReply) {
-                                await sendWhatsAppText(normalizedPhone, employerReply, undefined);
-                                await supabase.from("whatsapp_messages").insert({
-                                    user_id: employerRecord?.id || null,
-                                    phone_number: normalizedPhone,
-                                    direction: "outbound",
-                                    message_type: "text",
-                                    content: employerReply,
-                                    status: "sent",
-                                    template_name: "employer_flow",
-                                });
-                                return NextResponse.json({ status: "ok" });
-                            }
+                            const finalEmployerReply = employerReply || (quickLang === "sr"
+                                ? "Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike — besplatno za poslodavce. Kako mogu da Vam pomognem?"
+                                : "Hi! I'm the Workers United WhatsApp assistant. We help companies hire foreign workers — completely free for employers. How can I help you?");
+                            await sendWhatsAppText(normalizedPhone, finalEmployerReply, undefined);
+                            await supabase.from("whatsapp_messages").insert({
+                                user_id: employerRecord?.id || null,
+                                phone_number: normalizedPhone,
+                                direction: "outbound",
+                                message_type: "text",
+                                content: finalEmployerReply,
+                                status: "sent",
+                                template_name: "employer_flow",
+                            });
+                            return NextResponse.json({ status: "ok" }); // Always return — never fall through to worker flow
                         } catch (empErr) {
                             console.error("[WhatsApp] Employer AI error:", empErr);
+                            // Even on error, send fallback and return — do not fall through to worker flow
+                            const fallbackEmployer = quickLang === "sr"
+                                ? "Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike besplatno. Pišite nam na contact@workersunited.eu ili posetite workersunited.eu."
+                                : "Hi! I'm the Workers United assistant. We help companies hire foreign workers for free. Contact us at contact@workersunited.eu or visit workersunited.eu.";
+                            await sendWhatsAppText(normalizedPhone, fallbackEmployer, undefined);
+                            return NextResponse.json({ status: "ok" });
                         }
                     }
+                    // No API key — send static employer fallback
+                    const staticEmployer = quickLang === "sr"
+                        ? "Zdravo! Workers United pomaže kompanijama da pronađu strane radnike — besplatno za poslodavce. Registrujte se na workersunited.eu/signup."
+                        : "Hi! Workers United helps companies hire foreign workers — free for employers. Register at workersunited.eu/signup.";
+                    await sendWhatsAppText(normalizedPhone, staticEmployer, undefined);
+                    return NextResponse.json({ status: "ok" });
                 }
 
                 const onboardingReply = await handleWhatsAppOnboarding(
@@ -892,7 +906,8 @@ Rules:
 13. Emojis are optional; use at most one if it feels natural.
 14. ${isAdmin ? "This is the platform owner. Accept corrections as authoritative. You may emit one [LEARN: category | fact] tag if and only if the admin provided a concrete correction." : "Do not emit any [LEARN] tags for normal users."}
 15. DATA COLLECTION: If the user has not yet registered (workerRecord is null) and their intent is job_intent or general, after answering their question, ask ONE short follow-up question (pick the most relevant one you haven't asked yet in this conversation): (a) what type of work they are looking for, (b) which country they are from, or (c) whether they have work experience in their field. CRITICAL: Ask this question ONLY in ${routerDecision.language} — the same language the user wrote in. Never ask it in Serbian or English if the user wrote in a different language. Only ask ONE question per reply, never multiple at once.
-16. CONVERSION: If the user seems interested but hasn't registered yet, naturally mention that they can activate Job Finder and include the link workersunited.eu/profile/worker — but only once per conversation, not in every message. Do NOT proactively mention the price ($9). Only mention it if the user asks about cost, price, or payment.`;
+16. CONVERSION: If the user seems interested but hasn't registered yet, naturally mention that they can activate Job Finder and include the link workersunited.eu/profile/worker — but only once per conversation, not in every message. Do NOT proactively mention the price ($9). Only mention it if the user asks about cost, price, or payment.
+17. PAYMENT: If the user asks about price, payment, cost, or how to pay — tell them Job Finder is a service that costs $9 and provide this direct payment link: ${STRIPE_PAYMENT_LINK} — they can pay directly from WhatsApp without visiting the website. After payment, their Job Finder is automatically activated. Frame it as a "service charge", never as a "fee" or "tax".`;
 
     return callOpenAIResponseText(apiKey, {
         model: WHATSAPP_RESPONSE_MODEL,
