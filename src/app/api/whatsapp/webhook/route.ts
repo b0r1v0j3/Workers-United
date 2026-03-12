@@ -861,14 +861,15 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
 // State is stored in whatsapp_onboarding_state table.
 
 const ONBOARDING_STEPS = [
-    "ask_start",       // Ask if they want to fill profile via WhatsApp
-    "full_name",       // First and last name
-    "country_origin",  // Country of origin / nationality
-    "current_country", // Country they currently live in
-    "job_type",        // Type of job they are looking for
-    "experience",      // Years of experience
-    "education",       // Education level
-    "done",            // Summary + link to complete registration
+    "ask_start",         // Ask if they want to fill profile via WhatsApp
+    "full_name",         // First and last name
+    "country_origin",    // Country of origin / nationality
+    "current_country",   // Country they currently live in
+    "job_type",          // Type of job they are looking for (or "any")
+    "preferred_country", // Which country they want to work in (or "any")
+    "experience",        // Years of experience
+    "education",         // Education level
+    "done",              // Summary + link to complete registration
 ] as const;
 
 type OnboardingStep = typeof ONBOARDING_STEPS[number];
@@ -915,12 +916,20 @@ const ONBOARDING_TRANSLATIONS: Record<string, Record<string, string>> = {
         pt: "Em qual *país você mora atualmente*?",
     },
     job_type: {
-        en: "What *type of work* are you looking for? (e.g. construction, hospitality, cleaning, factory, IT, etc.)",
-        sr: "Kakav *posao tražite*? (npr. građevina, ugostiteljstvo, čišćenje, fabrika, IT, itd.)",
-        hi: "आप किस *प्रकार का काम* ढूंढ रहे हैं? (जैसे निर्माण, आतिथ्य, सफाई, कारखाना, आईटी, आदि)",
-        ar: "ما نوع *العمل الذي تبحث عنه*؟ (مثل البناء، الضيافة، التنظيف، المصنع، تقنية المعلومات، إلخ)",
-        fr: "Quel *type de travail* recherchez-vous? (ex: construction, hôtellerie, nettoyage, usine, IT, etc.)",
-        pt: "Que *tipo de trabalho* você está procurando? (ex: construção, hotelaria, limpeza, fábrica, TI, etc.)",
+        en: "What *type of work* are you looking for?\n\nExamples: construction, hospitality, cleaning, factory, IT, agriculture, driving, warehouse...\n\nOr reply *Any* — the more open you are, the higher your chances of getting hired! 💪",
+        sr: "Kakav *posao tražite*?\n\nPrimeri: građevina, ugostiteljstvo, čišćenje, fabrika, IT, poljoprivreda, vozač, magacin...\n\nIli odgovorite *Bilo koji* — što ste otvoreniji, veće su šanse da dobijete posao! 💪",
+        hi: "आप किस *प्रकार का काम* ढूंढ रहे हैं?\n\nउदाहरण: निर्माण, आतिथ्य, सफाई, कारखाना, आईटी, कृषि, ड्राइविंग...\n\nया *कोई भी* लिखें — जितने खुले रहेंगे, नौकरी मिलने की संभावना उतनी अधिक! 💪",
+        ar: "ما نوع *العمل الذي تبحث عنه*؟\n\nأمثلة: البناء، الضيافة، التنظيف، المصنع، تقنية المعلومات، الزراعة، السياقة...\n\nأو اكتب *أي عمل* — كلما كنت أكثر مرونة، زادت فرصك في الحصول على وظيفة! 💪",
+        fr: "Quel *type de travail* recherchez-vous?\n\nExemples: construction, hôtellerie, nettoyage, usine, IT, agriculture, conduite...\n\nOu répondez *N'importe lequel* — plus vous êtes flexible, plus vos chances sont élevées! 💪",
+        pt: "Que *tipo de trabalho* você está procurando?\n\nExemplos: construção, hotelaria, limpeza, fábrica, TI, agricultura, motorista...\n\nOu responda *Qualquer um* — quanto mais aberto você for, maiores são suas chances! 💪",
+    },
+    preferred_country: {
+        en: "Which *country in Europe* would you like to work in?\n\nOptions: Germany, Netherlands, Austria, Sweden, Norway, Denmark, Belgium, Switzerland, France, Italy, Spain...\n\nOr reply *Any country* — we strongly recommend this! Candidates open to all countries get jobs *much faster*. 🌍",
+        sr: "U kojoj *evropskoj zemlji* biste želeli da radite?\n\nOpcije: Nemačka, Holandija, Austrija, Švedska, Norveška, Danska, Belgija, Švajcarska, Francuska, Italija, Španija...\n\nIli odgovorite *Bilo koja zemlja* — toplo preporučujemo! Kandidati koji su otvoreni za sve zemlje dobijaju posao *mnogo brže*. 🌍",
+        hi: "आप यूरोप के किस *देश में काम* करना चाहते हैं?\n\nविकल्प: जर्मनी, नीदरलैंड, ऑस्ट्रिया, स्वीडन, नॉर्वे, डेनमार्क, बेल्जियम, स्विट्जरलैंड...\n\nया *कोई भी देश* लिखें — हम इसकी दृढ़ता से सिफारिश करते हैं! सभी देशों के लिए खुले उम्मीदवारों को नौकरी *बहुत तेज़* मिलती है। 🌍",
+        ar: "في أي *دولة أوروبية* تريد العمل؟\n\nالخيارات: ألمانيا، هولندا، النمسا، السويد، النرويج، الدنمارك، بلجيكا، سويسرا، فرنسا، إيطاليا، إسبانيا...\n\nأو اكتب *أي دولة* — نوصي بذلك بشدة! المرشحون المنفتحون على جميع الدول يحصلون على وظائف *أسرع بكثير*. 🌍",
+        fr: "Dans quel *pays d'Europe* souhaitez-vous travailler?\n\nOptions: Allemagne, Pays-Bas, Autriche, Suède, Norvège, Danemark, Belgique, Suisse, France, Italie, Espagne...\n\nOu répondez *N'importe quel pays* — nous le recommandons vivement! Les candidats ouverts à tous les pays trouvent un emploi *beaucoup plus vite*. 🌍",
+        pt: "Em qual *país da Europa* você gostaria de trabalhar?\n\nOpções: Alemanha, Holanda, Áustria, Suécia, Noruega, Dinamarca, Bélgica, Suíça, França, Itália, Espanha...\n\nOu responda *Qualquer país* — recomendamos fortemente! Candidatos abertos a todos os países conseguem emprego *muito mais rápido*. 🌍",
     },
     experience: {
         en: "How many *years of experience* do you have in that field?",
@@ -999,6 +1008,7 @@ async function saveCandidateFromOnboarding(supabase: any, phone: string, data: R
             nationality: data.country_origin || null,
             current_country: data.current_country || null,
             preferred_job: data.job_type || null,
+            preferred_country: data.preferred_country || null,
             experience_years: data.experience ? parseInt(data.experience) || null : null,
             education_level: data.education || null,
             source_type: "whatsapp_onboarding",
@@ -1077,6 +1087,12 @@ export async function handleWhatsAppOnboarding(
 
     if (state.current_step === "job_type") {
         collected.job_type = message.trim();
+        await saveOnboardingState(supabase, phone, "preferred_country", collected, lang);
+        return getOnboardingQuestion("preferred_country", lang);
+    }
+
+    if (state.current_step === "preferred_country") {
+        collected.preferred_country = message.trim();
         await saveOnboardingState(supabase, phone, "experience", collected, lang);
         return getOnboardingQuestion("experience", lang);
     }
