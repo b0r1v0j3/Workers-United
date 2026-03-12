@@ -876,7 +876,7 @@ Business facts:
 ${businessFacts || "No business facts available"}
 - We operate across entire Europe, connecting verified workers with verified employers.
 - We handle the complete process: documentation verification, contract creation, visa support, embassy communication, airport pickup, and ongoing support (residence extensions, etc).
-- Job Finder is a service that costs $9 USD. It includes a 90-day job match guarantee — if no job is found within 90 days, the full amount is refunded. NEVER call it a fee or tax — it is a service.
+- Job Finder is a service that costs $9 USD. It includes a 90-day job match guarantee — if no job is found within 90 days, the full amount is refunded. NEVER call it a fee or tax — it is a service. CRITICAL LANGUAGE RULE: In Serbian, ALWAYS say 'naknada za uslugu' or 'servisna naknada'. NEVER EVER say 'ulazna taksa', 'taksa', 'ulazna naknada', or any variation with 'taksa'.
 - Required worker documents: passport, diploma or work certificate, and a biometric photo.
 - Support email: contact@workersunited.eu.
 - Do NOT suggest emailing support unless the user specifically asks for human help or has a complex problem. Handle questions directly in this chat.
@@ -1059,7 +1059,8 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
         if (fallbackLang === 'sr') return `Zdravo ${name}! Job Finder košta ${ENTRY_FEE}. Ako vam ne pronađemo posao u roku od 90 dana, novac vam se vraća.`;
         if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder को शुल्क ${ENTRY_FEE} हो। ९० दिनभित्र काम नपाए पूरा फिर्ता।`;
         if (fallbackLang === 'ar') return `مرحباً ${name}! تكلفة Job Finder هي ${ENTRY_FEE}. إذا لم نجد لك وظيفة خلال 90 يومًا، ستحصل على استرداد كامل.`;
-        return `Hi ${name}! Job Finder costs ${ENTRY_FEE}. If we don't find you a job within 90 days, you get a full refund.`;
+        if (fallbackLang === 'sr') return `Zdravo ${name}! Job Finder je usluga koja košta ${ENTRY_FEE}. Ako ne pronađemo posao u roku od 90 dana, naknada za uslugu se vraća u potpunosti.`;
+        return `Hi ${name}! Job Finder is a service that costs ${ENTRY_FEE}. If we don't find you a job within 90 days, you get a full refund.`;
     }
 
     if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز")) {
