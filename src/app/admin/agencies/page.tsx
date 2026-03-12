@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import { Building2, BadgeCheck, Mail, MapPin, Users } from "lucide-react";
+import { DeleteUserButton } from "@/components/DeleteUserButton";
 
 type AgencySummary = {
     id: string;
@@ -170,16 +171,19 @@ export default async function AgenciesPage() {
                                             <MetricChip label="Claimed" value={agency.claimedWorkers} />
                                             <MetricChip label="Drafts" value={agency.draftWorkers} />
                                         </div>
-                                        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
                                             <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                                                 {agency.status || "active"}
                                             </span>
-                                            <Link
-                                                href={`/profile/agency?inspect=${agency.profile_id}`}
-                                                className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
-                                            >
-                                                Inspect workspace
-                                            </Link>
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={`/profile/agency?inspect=${agency.profile_id}`}
+                                                    className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+                                                >
+                                                    Inspect workspace
+                                                </Link>
+                                                <DeleteUserButton userId={agency.profile_id} userName={agency.display_name || agency.legal_name || "this agency"} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

@@ -7,6 +7,7 @@ import AppShell from "@/components/AppShell";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import { getEmployerCompletion } from "@/lib/profile-completion";
 import { Building2, Briefcase, Globe, MapPin, Phone, Users } from "lucide-react";
+import { DeleteUserButton } from "@/components/DeleteUserButton";
 
 export default async function EmployersPage() {
     const supabase = await createClient();
@@ -151,6 +152,7 @@ export default async function EmployersPage() {
                                         >
                                             Inspect workspace
                                         </Link>
+                                        <DeleteUserButton userId={employer.profile_id} userName={employer.company_name || "this employer"} />
                                     </div>
                                 </div>
                             </div>
