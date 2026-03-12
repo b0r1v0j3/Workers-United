@@ -69,27 +69,27 @@ export default function Home() {
                 <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-[#141414] md:text-6xl">
                   We run hiring like a clean stack of documents, not chaos.
                 </h1>
-                <div className="relative mt-5 h-[300px] w-full md:hidden">
-                  <article className="absolute left-2 top-3 w-[86%] rotate-[-6deg] rounded-3xl border border-[#e2d8cd] bg-[#fff7ee] p-4 shadow-[0_22px_35px_-28px_rgba(15,23,42,0.18)]">
+                <div className="relative mt-5 h-[340px] w-full md:hidden">
+                  <article className="absolute left-0 top-0 w-[78%] rotate-[-5deg] rounded-3xl border border-[#e2d8cd] bg-[#fff7ee] p-4 shadow-[0_22px_35px_-28px_rgba(15,23,42,0.18)]">
                     <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Worker_Profile.md</p>
-                    <h3 className="text-lg font-semibold text-[#111827]">Identity + readiness</h3>
+                    <h3 className="text-base font-semibold text-[#111827]">Identity + readiness</h3>
                     <ul className="mt-2 space-y-1.5 text-xs text-[#4b5563]">
-                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Passport verified</li>
-                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Profile completion tracked</li>
-                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Queue eligibility clear</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> Passport verified</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> Profile completion tracked</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> Queue eligibility clear</li>
                     </ul>
                   </article>
 
-                  <article className="absolute right-0 top-[122px] z-20 w-[80%] rotate-[5deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-4 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
+                  <article className="absolute right-0 top-[110px] z-20 w-[78%] rotate-[4deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-4 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
                     <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4b5563]">Employer_Request.doc</p>
-                    <h3 className="text-lg font-semibold text-[#111827]">Role requirements</h3>
+                    <h3 className="text-base font-semibold text-[#111827]">Role requirements</h3>
                     <p className="mt-2 text-xs leading-relaxed text-[#4b5563]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
                   </article>
 
-                  <article className="absolute -bottom-3 left-[9%] z-10 w-[84%] rotate-[-1deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-5 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
-                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa_File.pdf</p>
-                    <h3 className="text-xl font-semibold text-[#111827]">Operational handover</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[#475569]">
+                  <article className="absolute bottom-0 left-[11%] z-10 w-[78%] rotate-[-2deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-4 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa_File.pdf</p>
+                    <h3 className="text-base font-semibold text-[#111827]">Operational handover</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-[#475569]">
                       Once confirmed, we handle the document workflow to move from match to legal arrival.
                     </p>
                   </article>
@@ -130,24 +130,24 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="relative hidden h-[420px] animate-in fade-in slide-in-from-right-5 duration-700 md:block md:h-[500px]">
-                <article className="absolute left-2 top-4 w-[86%] rotate-[-6deg] rounded-3xl border border-[#e2d8cd] bg-[#fff7ee] p-5 shadow-[0_22px_35px_-28px_rgba(15,23,42,0.18)] md:p-6">
+              <div className="relative hidden h-[480px] animate-in fade-in slide-in-from-right-5 duration-700 md:block">
+                <article className="absolute left-0 top-0 w-[82%] rotate-[-5deg] rounded-3xl border border-[#e2d8cd] bg-[#fff7ee] p-6 shadow-[0_22px_35px_-28px_rgba(15,23,42,0.18)]">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Worker_Profile.md</p>
                   <h3 className="text-xl font-semibold text-[#111827]">Identity + readiness</h3>
                   <ul className="mt-3 space-y-2 text-sm text-[#4b5563]">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Passport verified</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Profile completion tracked</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Queue eligibility clear</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> Passport verified</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> Profile completion tracked</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> Queue eligibility clear</li>
                   </ul>
                 </article>
 
-                <article className="absolute right-0 top-[188px] z-20 w-[80%] rotate-[5deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-5 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)] md:p-6">
+                <article className="absolute right-0 top-[160px] z-20 w-[82%] rotate-[4deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-6 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4b5563]">Employer_Request.doc</p>
                   <h3 className="text-xl font-semibold text-[#111827]">Role requirements</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[#4b5563]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
                 </article>
 
-                <article className="absolute bottom-[24px] left-[9%] z-10 w-[84%] rotate-[-1deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-5 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)] md:p-6">
+                <article className="absolute bottom-0 left-[9%] z-10 w-[82%] rotate-[-2deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-6 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa_File.pdf</p>
                   <h3 className="text-xl font-semibold text-[#111827]">Operational handover</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[#475569]">
