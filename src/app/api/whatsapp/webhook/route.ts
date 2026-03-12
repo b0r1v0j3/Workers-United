@@ -1056,10 +1056,9 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
     }
 
     if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر")) {
-        if (fallbackLang === 'sr') return `Zdravo ${name}! Job Finder košta ${ENTRY_FEE}. Ako vam ne pronađemo posao u roku od 90 dana, novac vam se vraća.`;
-        if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder को शुल्क ${ENTRY_FEE} हो। ९० दिनभित्र काम नपाए पूरा फिर्ता।`;
-        if (fallbackLang === 'ar') return `مرحباً ${name}! تكلفة Job Finder هي ${ENTRY_FEE}. إذا لم نجد لك وظيفة خلال 90 يومًا، ستحصل على استرداد كامل.`;
-        if (fallbackLang === 'sr') return `Zdravo ${name}! Job Finder je usluga koja košta ${ENTRY_FEE}. Ako ne pronađemo posao u roku od 90 dana, naknada za uslugu se vraća u potpunosti.`;
+        if (fallbackLang === 'sr') return `Zdravo ${name}! Servisna naknada za Job Finder je ${ENTRY_FEE}. Ako ne pronađemo posao u roku od 90 dana, naknada se vraća u potpunosti. Plati ovde: ${STRIPE_PAYMENT_LINK}`;
+        if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder को शुल्क ${ENTRY_FEE} हो। ९० दिनभित्र काम नपाए पूरा फिर्ता। यहाँ भुक्तानी गर्नुहोस्: ${STRIPE_PAYMENT_LINK}`;
+        if (fallbackLang === 'ar') return `مرحباً ${name}! رسوم خدمة Job Finder هي ${ENTRY_FEE}. إذا لم نجد لك وظيفة خلال 90 يومًا، ستحصل على استرداد كامل. ادفع هنا: ${STRIPE_PAYMENT_LINK}`;
         return `Hi ${name}! Job Finder is a service that costs ${ENTRY_FEE}. If we don't find you a job within 90 days, you get a full refund.`;
     }
 
