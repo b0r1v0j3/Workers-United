@@ -33,7 +33,54 @@ type WhatsAppIntent =
     | "support"
     | "status"
     | "general"
-    | "off_topic";
+    | "off_topic"
+    | "employer_inquiry"
+    | "employer_hiring"
+    | "employer_support";
+
+// European country codes (Serbia + EU/EEA/Balkans)
+const EUROPEAN_COUNTRY_CODES = [
+    "381", // Serbia
+    "43",  // Austria
+    "32",  // Belgium
+    "359", // Bulgaria
+    "385", // Croatia
+    "357", // Cyprus
+    "420", // Czech Republic
+    "45",  // Denmark
+    "372", // Estonia
+    "358", // Finland
+    "33",  // France
+    "49",  // Germany
+    "30",  // Greece
+    "36",  // Hungary
+    "353", // Ireland
+    "39",  // Italy
+    "371", // Latvia
+    "370", // Lithuania
+    "352", // Luxembourg
+    "356", // Malta
+    "31",  // Netherlands
+    "47",  // Norway
+    "48",  // Poland
+    "351", // Portugal
+    "40",  // Romania
+    "421", // Slovakia
+    "386", // Slovenia
+    "34",  // Spain
+    "46",  // Sweden
+    "41",  // Switzerland
+    "44",  // UK
+    "387", // Bosnia
+    "382", // Montenegro
+    "389", // North Macedonia
+    "355", // Albania
+];
+
+function isEuropeanPhone(phone: string): boolean {
+    const digits = phone.replace(/\D/g, "");
+    return EUROPEAN_COUNTRY_CODES.some(code => digits.startsWith(code));
+}
 
 interface WhatsAppRouterDecision {
     intent: WhatsAppIntent;
@@ -267,6 +314,20 @@ export async function POST(request: NextRequest) {
                 // ─── Admin Phone Detection ────────────────────────────────
                 const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
 
+                // ─── Employer Detection ───────────────────────────────────
+                // European phones that are NOT registered workers → potential employers
+                const isEuropean = isEuropeanPhone(normalizedPhone);
+                const isRegisteredWorker = !!workerRecord;
+
+                // Check if this phone is a registered employer in DB
+                const { data: employerRecord } = await supabase
+                    .from("employers")
+                    .select("id, company_name, contact_name, status")
+                    .or(`phone.eq.${normalizedPhone},contact_phone.eq.${normalizedPhone}`)
+                    .maybeSingle();
+                const isLikelyEmployer = isEuropean && !isRegisteredWorker && !isAdmin;
+                const isEmployer = !!employerRecord || isLikelyEmployer;
+
                 // ─── Admin Commands (direct brain control via WhatsApp) ───
                 if (isAdmin) {
                     const adminClient = createAdminClient();
@@ -353,6 +414,43 @@ export async function POST(request: NextRequest) {
                     : /[\u0600-\u06FF]/.test(content) ? "ar"
                     : /[čćžšđ]/i.test(content) ? "sr"
                     : "en";
+
+                // ─── Employer WhatsApp Flow ───────────────────────────────
+                if (isEmployer) {
+                    const OPENAI_API_KEY_EMP = process.env.OPENAI_API_KEY;
+                    if (OPENAI_API_KEY_EMP) {
+                        try {
+                            const [empHistory, empBrainMemory] = await Promise.all([
+                                loadConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
+                                loadBrainMemory(supabase),
+                            ]);
+                            const employerReply = await generateEmployerWhatsAppReply({
+                                apiKey: OPENAI_API_KEY_EMP,
+                                message: content,
+                                normalizedPhone,
+                                employerRecord,
+                                historyMessages: empHistory,
+                                brainMemory: empBrainMemory,
+                                language: quickLang,
+                            });
+                            if (employerReply) {
+                                await sendWhatsAppText(normalizedPhone, employerReply, undefined);
+                                await supabase.from("whatsapp_messages").insert({
+                                    user_id: employerRecord?.id || null,
+                                    phone_number: normalizedPhone,
+                                    direction: "outbound",
+                                    message_type: "text",
+                                    content: employerReply,
+                                    status: "sent",
+                                    template_name: "employer_flow",
+                                });
+                                return NextResponse.json({ status: "ok" });
+                            }
+                        } catch (empErr) {
+                            console.error("[WhatsApp] Employer AI error:", empErr);
+                        }
+                    }
+                }
 
                 const onboardingReply = await handleWhatsAppOnboarding(
                     supabase,
@@ -801,6 +899,86 @@ Rules:
         instructions,
         input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}`,
         maxOutputTokens: 4096,
+    });
+}
+
+// ─── Employer WhatsApp AI Handler ─────────────────────────────────────────────
+// Handles inbound messages from European phone numbers (potential/registered employers)
+
+async function generateEmployerWhatsAppReply({
+    apiKey,
+    message,
+    normalizedPhone,
+    employerRecord,
+    historyMessages,
+    brainMemory,
+    language,
+}: {
+    apiKey: string;
+    message: string;
+    normalizedPhone: string;
+    employerRecord: any;
+    historyMessages: Array<{ direction: string; content: string | null; created_at?: string | null }>;
+    brainMemory: Array<{ category: string; content: string; confidence: number }>;
+    language: string;
+}): Promise<string> {
+    const isRegistered = !!employerRecord;
+    const companyName = employerRecord?.company_name || "";
+    const contactName = employerRecord?.contact_name || "";
+    const memoryText = brainMemory.length > 0
+        ? brainMemory.map(e => `- [${e.category}] ${e.content}`).join("\n")
+        : "(No stored facts)";
+
+    const langName = language === "sr" ? "Serbian" : "English";
+
+    const instructions = `You are the official WhatsApp assistant for Workers United, a legal worker placement company operating across Europe.
+
+You are speaking with a POTENTIAL EMPLOYER or REGISTERED EMPLOYER — someone who wants to HIRE workers, not find a job.
+
+IMPORTANT: Reply in ${langName}. Always match the language of the employer's message. If they write in Serbian, reply in Serbian. If English, reply in English.
+
+Employer context:
+- Phone: ${normalizedPhone}
+- Registered employer: ${isRegistered ? "YES" : "NO (new contact)"}
+${isRegistered ? `- Company: ${companyName}\n- Contact: ${contactName}\n- Status: ${employerRecord?.status || "unknown"}` : ""}
+
+About Workers United (for employers):
+- We connect verified employers with pre-screened foreign workers ready to work in Europe
+- Workers come from Serbia, Bosnia, Nepal, India, Bangladesh, Morocco, Philippines and other countries
+- We handle EVERYTHING: worker selection, contracts, work permits, visa applications, embassy communication, airport pickup, and ongoing support during employment
+- The service is COMPLETELY FREE for employers — workers pay a placement fee, not the companies
+- Employers register at workersunited.eu/signup, post a job request, and we match them with suitable candidates
+- Typical worker profiles: construction workers, factory workers, drivers, hospitality staff, cleaners, warehouse workers, agricultural workers, welders, electricians
+- We guarantee fully legal contracts and compliance with local labor law
+- Typical placement time: 2-6 weeks after employer approval
+- We currently have 194+ verified workers available
+
+Recent conversation:
+${formatHistory(historyMessages, 10)}
+
+Stored facts:
+${memoryText}
+
+Rules:
+1. Keep replies concise and professional — 2-3 short paragraphs max.
+2. If the employer asks about workers or hiring, explain the process clearly and warmly.
+3. If they ask about cost/price: the service is COMPLETELY FREE for employers. Workers pay a placement fee.
+4. If they ask about available workers: mention 194+ verified workers across various sectors.
+5. If they ask about specific worker types (e.g. "do you have welders?"), confirm availability and invite them to register to see profiles.
+6. If they ask how to start: register at workersunited.eu/signup and post a job request — takes 5 minutes.
+7. If they ask about timeline: typically 2-6 weeks from job posting to worker arrival.
+8. If they ask about legal compliance: we handle all permits, visas, and contracts — fully legal and compliant.
+9. If they seem interested, naturally invite them to register: workersunited.eu/signup
+10. NEVER mention the worker placement fee ($9) — that is irrelevant for employers.
+11. Be warm, professional, and treat them as a valued business partner.
+12. Do NOT ask them if they are looking for a job — they are employers.
+13. If they ask about a specific number of workers (e.g. "I need 10 workers"), acknowledge the request and ask what type of work and when they need them.`;
+
+    return callOpenAIResponseText(apiKey, {
+        model: WHATSAPP_RESPONSE_MODEL,
+        instructions,
+        input: `Phone: ${normalizedPhone}\nLatest message:\n${message}`,
+        maxOutputTokens: 2048,
     });
 }
 
