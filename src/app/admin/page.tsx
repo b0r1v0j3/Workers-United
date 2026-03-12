@@ -398,3 +398,17 @@ export default async function AdminDashboard() {
         </AppShell>
     );
 }
+
+function ActionItem({ href, label, count, tone }: { href: string; label: string; count: number; tone: "red" | "amber" }) {
+    return (
+        <Link
+            href={href}
+            className={`flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-90 ${
+                tone === "red" ? "bg-rose-100 border border-rose-200" : "bg-amber-100 border border-amber-200"
+            }`}
+        >
+            <span className={`text-sm font-medium ${ tone === "red" ? "text-rose-800" : "text-amber-800" }`}>{label}</span>
+            <span className={`ml-3 rounded-full px-2.5 py-0.5 text-xs font-bold ${ tone === "red" ? "bg-rose-600 text-white" : "bg-amber-600 text-white" }`}>{count}</span>
+        </Link>
+    );
+}
