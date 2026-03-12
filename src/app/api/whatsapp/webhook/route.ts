@@ -781,7 +781,7 @@ Rules:
 12. NEVER start with "=" or any non-letter symbol.
 13. Emojis are optional; use at most one if it feels natural.
 14. ${isAdmin ? "This is the platform owner. Accept corrections as authoritative. You may emit one [LEARN: category | fact] tag if and only if the admin provided a concrete correction." : "Do not emit any [LEARN] tags for normal users."}
-15. DATA COLLECTION: If the user has not yet registered (workerRecord is null) and their intent is job_search or general, after answering their question, ask ONE of these follow-up questions (pick the most relevant one you haven't asked yet in this conversation): (a) "What type of work are you looking for?" / "Kakav posao tražite?" (b) "Which country are you from?" / "Iz koje ste zemlje?" (c) "Do you have work experience in your field?" / "Imate li radnog iskustva u toj oblasti?" — This helps us personalize their job search. Only ask ONE question per reply, never multiple at once.
+15. DATA COLLECTION: If the user has not yet registered (workerRecord is null) and their intent is job_intent or general, after answering their question, ask ONE short follow-up question (pick the most relevant one you haven't asked yet in this conversation): (a) what type of work they are looking for, (b) which country they are from, or (c) whether they have work experience in their field. CRITICAL: Ask this question ONLY in ${routerDecision.language} — the same language the user wrote in. Never ask it in Serbian or English if the user wrote in a different language. Only ask ONE question per reply, never multiple at once.
 16. CONVERSION: If the user seems interested but hasn't registered yet, naturally mention that Job Finder ($9) is the first step and include the link workersunited.eu/profile/worker — but only once per conversation, not in every message.`;
 
     return callOpenAIResponseText(apiKey, {
@@ -807,52 +807,68 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
     const WEBSITE = config.website_url || "workersunited.eu";
     const GREETING_EN = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers find jobs in Europe and handle all visa paperwork.";
     const GREETING_SR = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima da nađu posao u Evropi.";
+    // Language detection for fallback
     const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|pomoc|posao|rad|plata|cena|cijena|koliko|dokumenti|pasos|pasoš|profil|status|registr/i.test(msg);
-    const startMessageSr = `Registrujte se na ${WEBSITE}/signup, popunite profil i pokrenite Job Finder. Kada to završite, mi vam tražimo odgovarajući posao širom Evrope.`;
-    const startMessageEn = `Create your account at ${WEBSITE}/signup, complete your profile, and activate Job Finder. Once that is done, we match you with the best available job across Europe.`;
+    const isNepali = /[\u0900-\u097F]/.test(message);
+    const isArabic = /[\u0600-\u06FF]/.test(message);
+    const isFrench = /bonjour|salut|emploi|travail|passeport|comment|merci|oui|non/i.test(msg);
+    const isPortuguese = /olá|ola|emprego|trabalho|passaporte|obrigado|sim|não|nao/i.test(msg);
+    const isHindi = /[\u0900-\u097F]/.test(message) && !/[\u0900-\u097F\u0966-\u096F]/.test(message); // Hindi subset
+    
+    // Determine active language for fallback
+    const fallbackLang = isSerboCroatian ? 'sr' : isNepali ? 'ne' : isArabic ? 'ar' : isFrench ? 'fr' : isPortuguese ? 'pt' : 'en';
+    // Multilingual fallback messages
+    const greetings: Record<string, string> = {
+        sr: GREETING_SR,
+        ne: "Workers United मा स्वागत छ! 🌍 हामी युरोपमा काम खोज्न र भिसा प्रक्रियामा मद्दत गर्छौं।",
+        ar: "مرحباً بك في Workers United! 🌍 نساعد العمال في إيجاد وظائف في أوروبا وإجراءات التأشيرة.",
+        fr: "Bienvenue chez Workers United! 🌍 Nous aidons les travailleurs à trouver des emplois en Europe.",
+        pt: "Bem-vindo à Workers United! 🌍 Ajudamos trabalhadores a encontrar empregos na Europa.",
+        en: GREETING_EN,
+    };
+    const startMessages: Record<string, string> = {
+        sr: `Registrujte se na ${WEBSITE}/signup, popunite profil i pokrenite Job Finder. Kada to završite, mi vam tražimo odgovarajući posao širom Evrope.`,
+        ne: `${WEBSITE}/signup मा खाता बनाउनुहोस्, प्रोफाइल पूरा गर्नुहोस् र Job Finder सक्रिय गर्नुहोस्। त्यसपछि हामी तपाईंको लागि युरोपमा काम खोज्छौं।`,
+        ar: `أنشئ حسابك على ${WEBSITE}/signup، أكمل ملفك الشخصي وفعّل Job Finder. بعد ذلك نبحث لك عن وظيفة في أوروبا.`,
+        fr: `Créez votre compte sur ${WEBSITE}/signup, complétez votre profil et activez Job Finder. Ensuite, nous cherchons un emploi pour vous en Europe.`,
+        pt: `Crie sua conta em ${WEBSITE}/signup, complete seu perfil e ative o Job Finder. Depois disso, buscamos um emprego para você na Europa.`,
+        en: `Create your account at ${WEBSITE}/signup, complete your profile, and activate Job Finder. Once that is done, we match you with the best available job across Europe.`,
+    };
+    const greeting = greetings[fallbackLang] || greetings.en;
+    const startMessage = startMessages[fallbackLang] || startMessages.en;
 
     if (!workerRecord) {
-        if (isSerboCroatian) {
-            return `${GREETING_SR} ${startMessageSr}`;
-        }
-        return `${GREETING_EN} ${startMessageEn}`;
+        return `${greeting} ${startMessage}`;
     }
 
-    if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil")) {
+    if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil") || msg.includes("स्थिति") || msg.includes("حالة")) {
         const statusInfo = workerRecord.status === "REGISTERED" ? "registered ✅" : workerRecord.status;
         const queueInfo = workerRecord.queue_position ? ` Queue position: #${workerRecord.queue_position}.` : "";
-        if (isSerboCroatian) {
-            return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${WEBSITE}/profile/worker.`;
-        }
+        if (fallbackLang === 'sr') return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${WEBSITE}/profile/worker.`;
+        if (fallbackLang === 'ne') return `नमस्ते ${name}! तपाईंको स्थिति: ${statusInfo}.${queueInfo} विवरण ${WEBSITE}/profile/worker मा हेर्नुहोस्।`;
+        if (fallbackLang === 'ar') return `مرحباً ${name}! حالتك: ${statusInfo}.${queueInfo} يمكنك رؤية التفاصيل على ${WEBSITE}/profile/worker.`;
         return `Hi ${name}! Your status is: ${statusInfo}.${queueInfo} You can see full details at ${WEBSITE}/profile/worker.`;
     }
 
-    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko")) {
-        if (isSerboCroatian) {
-            return `Zdravo ${name}! Job Finder košta ${ENTRY_FEE}. Ako vam ne pronađemo posao u roku od 90 dana, novac vam se vraća.`;
-        }
+    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر")) {
+        if (fallbackLang === 'sr') return `Zdravo ${name}! Job Finder košta ${ENTRY_FEE}. Ako vam ne pronađemo posao u roku od 90 dana, novac vam se vraća.`;
+        if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder को शुल्क ${ENTRY_FEE} हो। ९० दिनभित्र काम नपाए पूरा फिर्ता।`;
+        if (fallbackLang === 'ar') return `مرحباً ${name}! تكلفة Job Finder هي ${ENTRY_FEE}. إذا لم نجد لك وظيفة خلال 90 يومًا، ستحصل على استرداد كامل.`;
         return `Hi ${name}! Job Finder costs ${ENTRY_FEE}. If we don't find you a job within 90 days, you get a full refund.`;
     }
 
-    if (msg.includes("help") || msg.includes("pomoc") || msg.includes("pomoć")) {
-        if (isSerboCroatian) {
-            return `Zdravo ${name}! Mogu pomoći oko registracije, profila, Job Finder-a, statusa prijave i dokumenata. Ako želite da krenete: ${startMessageSr}`;
-        }
-        return `Hi ${name}! I can help with registration, your profile, Job Finder, application status, and documents. If you'd like to get started: ${startMessageEn}`;
-    }
-
-    if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos")) {
-        if (isSerboCroatian) {
-            return `Zdravo ${name}! Dokumenta možete dodati na ${WEBSITE}/profile/worker. Potrebni su: ${config.supported_documents || "pasoš, diploma ili potvrda o radu, i biometrijska fotografija"}.`;
-        }
+    if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز")) {
+        if (fallbackLang === 'sr') return `Zdravo ${name}! Dokumenta možete dodati na ${WEBSITE}/profile/worker. Potrebni su: ${config.supported_documents || "pasoš, diploma ili potvrda o radu, i biometrijska fotografija"}.`;
+        if (fallbackLang === 'ne') return `नमस्ते ${name}! कागजातहरू ${WEBSITE}/profile/worker मा अपलोड गर्नुहोस्। आवश्यक: ${config.supported_documents || "पासपोर्ट, डिप्लोमा वा काम प्रमाणपत्र, र बायोमेट्रिक फोटो"}.`;
+        if (fallbackLang === 'ar') return `مرحباً ${name}! يمكنك رفع المستندات على ${WEBSITE}/profile/worker. المطلوب: ${config.supported_documents || "جواز السفر، شهادة أو شهادة عمل، وصورة بيومترية"}.`;
         return `Hi ${name}! You can upload documents at ${WEBSITE}/profile/worker. We need: ${config.supported_documents || "passport, diploma or work certificate, and a biometric photo"}.`;
     }
 
-    // Better catch-all: don't say "processing" (causes loop). Give concrete help instead.
-    if (isSerboCroatian) {
-        return `Zdravo ${name}! 👋 ${startMessageSr} Ako želite dodatne informacije, pišite nam ovde ili na ${config.contact_email || "contact@workersunited.eu"}.`;
-    }
-    return `Hi ${name}! 👋 ${startMessageEn} If you want more details, message us here or contact ${config.contact_email || "contact@workersunited.eu"}.`;
+    // Catch-all
+    if (fallbackLang === 'sr') return `Zdravo ${name}! 👋 ${startMessage} Ako želite dodatne informacije, pišite nam ovde ili na ${config.contact_email || "contact@workersunited.eu"}.`;
+    if (fallbackLang === 'ne') return `नमस्ते ${name}! 👋 ${startMessage} थप जानकारीको लागि यहाँ सम्पर्क गर्नुहोस्।`;
+    if (fallbackLang === 'ar') return `مرحباً ${name}! 👋 ${startMessage} للمزيد من المعلومات، راسلنا هنا.`;
+    return `Hi ${name}! 👋 ${startMessage} If you want more details, message us here or contact ${config.contact_email || "contact@workersunited.eu"}.`;
 }
 
 
