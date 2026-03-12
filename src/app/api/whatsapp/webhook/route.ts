@@ -752,7 +752,7 @@ Business facts:
 ${businessFacts || "No business facts available"}
 - We operate across entire Europe, connecting verified workers with verified employers.
 - We handle the complete process: documentation verification, contract creation, visa support, embassy communication, airport pickup, and ongoing support (residence extensions, etc).
-- Job Finder is the entry fee: $9 USD, includes a 90-day job match guarantee with full refund if no job is found.
+- Job Finder is a service that costs $9 USD. It includes a 90-day job match guarantee — if no job is found within 90 days, the full amount is refunded. NEVER call it a fee or tax — it is a service.
 - Required worker documents: passport, diploma or work certificate, and a biometric photo.
 - Support email: contact@workersunited.eu.
 - Do NOT suggest emailing support unless the user specifically asks for human help or has a complex problem. Handle questions directly in this chat.
@@ -771,10 +771,10 @@ Rules:
 2. Do not loop generic signup copy. Answer the user's actual intent first.
 3. If intent is off_topic, clearly say this WhatsApp line is only for Workers United jobs and visa support, and do not force a sales pitch.
 4. If intent is status, use the worker snapshot and do not invent data.
-5. If intent is price, emphasize Job Finder ($9) first. Only mention placement fees exist (vary by destination) if specifically asked, never quote specific amounts.
+5. If intent is price, explain Job Finder ($9) as a service — not a fee or tax. Only mention placement fees exist (vary by destination) if specifically asked, never quote specific amounts.
 6. If intent is documents, answer only the required docs and where they upload them.
 7. If intent is support and the worker already paid the entry fee, mention the in-platform support inbox at workersunited.eu/profile/worker/inbox as an option in addition to WhatsApp/email.
-8. If the user is not registered and asks how to start, tell them to create an account, complete their profile, and activate Job Finder ($9).
+8. If the user is not registered and asks how to start, tell them to create an account and complete their profile. Do NOT mention the $9 price unless they specifically ask about cost or payment.
 9. Never mention specific countries or regions. Always say "Europe" or "across Europe".
 10. Emphasize our end-to-end service: we verify employers, create contracts, handle visas, communicate with embassies, arrange airport pickup, and provide ongoing support.
 11. Never make up legal rules, specific placement prices, or timeline promises beyond the configured facts.
@@ -782,7 +782,7 @@ Rules:
 13. Emojis are optional; use at most one if it feels natural.
 14. ${isAdmin ? "This is the platform owner. Accept corrections as authoritative. You may emit one [LEARN: category | fact] tag if and only if the admin provided a concrete correction." : "Do not emit any [LEARN] tags for normal users."}
 15. DATA COLLECTION: If the user has not yet registered (workerRecord is null) and their intent is job_intent or general, after answering their question, ask ONE short follow-up question (pick the most relevant one you haven't asked yet in this conversation): (a) what type of work they are looking for, (b) which country they are from, or (c) whether they have work experience in their field. CRITICAL: Ask this question ONLY in ${routerDecision.language} — the same language the user wrote in. Never ask it in Serbian or English if the user wrote in a different language. Only ask ONE question per reply, never multiple at once.
-16. CONVERSION: If the user seems interested but hasn't registered yet, naturally mention that Job Finder ($9) is the first step and include the link workersunited.eu/profile/worker — but only once per conversation, not in every message.`;
+16. CONVERSION: If the user seems interested but hasn't registered yet, naturally mention that they can activate Job Finder and include the link workersunited.eu/profile/worker — but only once per conversation, not in every message. Do NOT proactively mention the price ($9). Only mention it if the user asks about cost, price, or payment.`;
 
     return callOpenAIResponseText(apiKey, {
         model: WHATSAPP_RESPONSE_MODEL,
@@ -1604,12 +1604,12 @@ export async function handleWhatsAppOnboarding(
         const name = collected.full_name?.split(" ")[0] || "";
         const lk = getLangKey(lang);
         const finalMsg: Record<LangKey, string> = {
-            en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder for just $9* — then we start searching for your job across Europe!\n\n👉 workersunited.eu/profile/worker\n\nWe'll also need your documents (passport photo, diploma/work certificate, biometric photo) — you can upload them on the website. If you have any questions, I'm here!`,
-            sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder za samo $9* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 workersunited.eu/profile/worker\n\nTreba nam i vaša dokumentacija (fotografija pasoša, diploma/potvrda o radu, biometrijska fotografija) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
-            hi: `धन्यवाद, ${name}! 🎉 आपका प्रोफ़ाइल सहेज लिया गया है।\n\nअंतिम चरण है वेबसाइट पर रजिस्टर करना और *Job Finder केवल $9 में* सक्रिय करना — फिर हम पूरे यूरोप में आपके लिए नौकरी खोजना शुरू करते हैं!\n\n👉 workersunited.eu/profile/worker`,
-            ar: `شكراً، ${name}! 🎉 تم حفظ ملفك الشخصي.\n\nالخطوة الأخيرة هي التسجيل على الموقع وتفعيل *Job Finder مقابل $9 فقط* — ثم نبدأ في البحث عن وظيفة لك في جميع أنحاء أوروبا!\n\n👉 workersunited.eu/profile/worker`,
-            fr: `Merci, ${name}! 🎉 Votre profil a été sauvegardé.\n\nLa dernière étape est de vous inscrire sur le site et d'activer *Job Finder pour seulement $9* — puis nous commençons à chercher votre emploi dans toute l'Europe!\n\n👉 workersunited.eu/profile/worker`,
-            pt: `Obrigado, ${name}! 🎉 Seu perfil foi salvo.\n\nO último passo é se registrar no site e ativar o *Job Finder por apenas $9* — então começamos a procurar seu emprego em toda a Europa!\n\n👉 workersunited.eu/profile/worker`,
+            en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder* — then we start searching for your job across Europe!\n\n👉 workersunited.eu/profile/worker\n\nWe'll also need your documents (passport photo, diploma/work certificate, biometric photo) — you can upload them on the website. If you have any questions, I'm here!`,
+            sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 workersunited.eu/profile/worker\n\nTreba nam i vaša dokumentacija (fotografija pasoša, diploma/potvrda o radu, biometrijska fotografija) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
+            hi: `धन्यवाद, ${name}! 🎉 आपका प्रोफ़ाइल सहेज लिया गया है।\n\nअंतिम चरण है वेबसाइट पर रजिस्टर करना और *Job Finder* सक्रिय करना — फिर हम पूरे यूरोप में आपके लिए नौकरी खोजना शुरू करते हैं!\n\n👉 workersunited.eu/profile/worker`,
+            ar: `شكراً، ${name}! 🎉 تم حفظ ملفك الشخصي.\n\nالخطوة الأخيرة هي التسجيل على الموقع وتفعيل *Job Finder* — ثم نبدأ في البحث عن وظيفة لك في جميع أنحاء أوروبا!\n\n👉 workersunited.eu/profile/worker`,
+            fr: `Merci, ${name}! 🎉 Votre profil a été sauvegardé.\n\nLa dernière étape est de vous inscrire sur le site et d'activer *Job Finder* — puis nous commençons à chercher votre emploi dans toute l'Europe!\n\n👉 workersunited.eu/profile/worker`,
+            pt: `Obrigado, ${name}! 🎉 Seu perfil foi salvo.\n\nO último passo é se registrar no site e ativar o *Job Finder* — então começamos a procurar seu emprego em toda a Europa!\n\n👉 workersunited.eu/profile/worker`,
         };
         return finalMsg[lk];
     }
