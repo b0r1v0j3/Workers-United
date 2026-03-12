@@ -337,6 +337,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                     <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} tone="blue" />
                     <SidebarLink href="/admin/exceptions" icon={<AlertTriangle size={20} />} label="Exceptions" isCollapsed={isCollapsed} tone="red" />
                     <SidebarLink href="/admin/email-health" icon={<MailX size={20} />} label="Email Health" isCollapsed={isCollapsed} tone="red" />
+                    <SidebarLink href="/admin/whatsapp-blast" icon={<MessageSquareMore size={20} />} label="WA Blast" isCollapsed={isCollapsed} tone="emerald" />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} tone="slate" />
                 </>
             )}
@@ -467,6 +468,7 @@ function AdminBreadcrumbs() {
         exceptions: 'Exceptions',
         'email-health': 'Email Health',
         'email-preview': 'Email Preview',
+        'whatsapp-blast': 'WhatsApp Blast',
         settings: 'Settings',
     };
 
