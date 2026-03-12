@@ -235,11 +235,7 @@ export async function POST(req: NextRequest) {
     for (const recipient of recipients) {
       try {
         const html = buildCampaignHtml(recipient.company_name, language);
-        await sendEmail({
-          to: recipient.email,
-          subject,
-          html,
-        });
+        await sendEmail(recipient.email, subject, html);
 
         await supabase
           .from("outreach_campaigns")
