@@ -206,6 +206,13 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                         newUploads.diploma?.status === 'verified') {
                         setIsComplete(true);
                         toast.success("All sandbox documents verified.");
+
+                        // Check if full profile is now 100% and send notifications
+                        try {
+                            fetch("/api/check-profile-completion", { method: "POST" });
+                        } catch {
+                            // Non-critical
+                        }
                     }
 
                     return newUploads;

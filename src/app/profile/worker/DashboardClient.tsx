@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import {
     Briefcase,
     Calendar,
+    CheckCircle2,
     FileText,
     Globe,
     MapPin,
@@ -41,6 +42,8 @@ interface WorkerRecord {
     passport_issued_by?: string | null;
     passport_issue_date?: string | null;
     passport_expiry_date?: string | null;
+    queue_joined_at?: string | null;
+    entry_fee_paid?: boolean | null;
 }
 
 interface WorkerDocument {
@@ -64,6 +67,7 @@ interface DashboardClientProps {
     documents: WorkerDocument[];
     pendingOffers: PendingOffer[];
     profileCompletion: number;
+    missingFields: string[];
     isReady: boolean;
     inQueue: boolean;
     hasPaidEntryFee: boolean;
@@ -79,6 +83,7 @@ export default function DashboardClient({
     documents = [],
     pendingOffers = [],
     profileCompletion,
+    missingFields = [],
     isReady,
     inQueue,
     hasPaidEntryFee,
@@ -89,7 +94,8 @@ export default function DashboardClient({
     const displayName = profile?.full_name || worker?.profiles?.full_name || user.user_metadata?.full_name || "Worker";
     const activeOfferCount = pendingOffers.length;
     const verifiedDocuments = documents.filter((document) => document.status === "verified").length;
-    const canStartPayment = !readOnlyPreview && !hasPaidEntryFee && !inQueue;
+    const canStartPayment = !readOnlyPreview && !hasPaidEntryFee && !inQueue && profileCompletion === 100;
+    const profileIncomplete = !readOnlyPreview && !hasPaidEntryFee && !inQueue && profileCompletion < 100;
     const paymentPendingActivation = hasPaidEntryFee && !inQueue;
     const supportUnlocked = hasPaidEntryFee || inQueue;
     const workspaceStatus = readOnlyPreview
@@ -100,12 +106,22 @@ export default function DashboardClient({
                 ? "In Queue"
                 : hasPaidEntryFee
                     ? "Paid"
-                    : isReady
+                    : profileCompletion === 100
                         ? "Ready"
                         : "Incomplete";
     const workspaceSummary = readOnlyPreview
         ? "Review the worker workspace structure without changing your admin role."
         : "Keep your profile complete, verify documents, activate Job Finder, and follow your queue status in one workspace.";
+
+    // 90-day refund countdown (for paid workers)
+    const queueJoinedDate = worker?.queue_joined_at ? new Date(worker.queue_joined_at) : null;
+    const nowMs = Date.now();
+    const rawDaysElapsed = queueJoinedDate
+        ? Math.floor((nowMs - queueJoinedDate.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+    const daysElapsed = Math.min(90, Math.max(0, rawDaysElapsed));
+    const daysRemaining = Math.max(0, 90 - daysElapsed);
+    const refundProgressPercent = Math.min(100, Math.max(0, Math.round((daysElapsed / 90) * 100)));
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -115,7 +131,7 @@ export default function DashboardClient({
                 spread: 70,
                 origin: { y: 0.6 },
             });
-            toast.success("Profile 100% Complete!");
+            toast.success("Profile 100% Complete! You can now activate Job Finder.");
             sessionStorage.setItem("celebrated_profile", "true");
         }
     }, [profileCompletion]);
@@ -175,51 +191,173 @@ export default function DashboardClient({
 
             <section className="space-y-6">
                     <div className={surfaceClass}>
-                        <div className="flex flex-col items-center justify-center gap-6 text-center">
-                            <div className="flex flex-col items-center">
-                                <h3 className="text-xl font-semibold tracking-tight text-[#18181b]">
-                                    {activeOfferCount > 0
-                                        ? "You have an active offer"
-                                        : inQueue
-                                            ? "You're in the queue"
-                                            : paymentPendingActivation
-                                                ? "Payment received"
-                                                : "Activate Job Finder"}
-                                </h3>
-                                <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
-                                    {activeOfferCount > 0
-                                        ? "Review your pending offer from the queue page and decide whether to move forward."
-                                        : inQueue
-                                            ? "We are actively looking for the best employer match for your profile."
-                                            : paymentPendingActivation
-                                                ? "Your payment is confirmed. We are activating your queue status now."
-                                                : "Pay a one-time $9 fee to join our active worker queue. We then search for the best job match for you."}
-                                </p>
-                            </div>
-
-                            {readOnlyPreview ? (
-                                <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
-                                    Read-only admin preview
+                        {/* ─── Profile Incomplete: Show Progress Ring ─── */}
+                        {profileIncomplete && (
+                            <div className="flex flex-col items-center justify-center gap-6 text-center py-4">
+                                <ProfileProgressRing percent={profileCompletion} />
+                                <div className="flex flex-col items-center">
+                                    <h3 className="text-xl font-semibold tracking-tight text-[#18181b]">
+                                        Complete Your Profile
+                                    </h3>
+                                    <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
+                                        Fill in all required fields to unlock Job Finder. Once your profile reaches 100%, you can activate the service and start receiving job matches.
+                                    </p>
                                 </div>
-                            ) : inQueue || paymentPendingActivation || activeOfferCount > 0 ? (
+
+                                {missingFields.length > 0 && (
+                                    <div className="w-full max-w-sm">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9ca3af] mb-3">Missing fields</p>
+                                        <div className="flex flex-wrap gap-2 justify-center">
+                                            {missingFields.slice(0, 8).map((field) => (
+                                                <span
+                                                    key={field}
+                                                    className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800"
+                                                >
+                                                    {field}
+                                                </span>
+                                            ))}
+                                            {missingFields.length > 8 && (
+                                                <span className="inline-flex items-center rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-xs font-medium text-[#6b7280]">
+                                                    +{missingFields.length - 8} more
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <Link
+                                    href="/profile/worker/edit"
+                                    className="inline-flex items-center justify-center rounded-xl bg-[#111111] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[#27272a]"
+                                >
+                                    Complete Profile
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* ─── Profile 100%: Show Payment Card ─── */}
+                        {canStartPayment && (
+                            <div className="flex flex-col items-center justify-center gap-6 text-center">
+                                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                                    <CheckCircle2 size={32} className="text-emerald-600" />
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <h3 className="text-xl font-semibold tracking-tight text-[#18181b]">
+                                        Activate Job Finder
+                                    </h3>
+                                    <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
+                                        Your profile is complete. Pay a one-time $9 fee to activate personalized European job matching with visa guidance, interview prep, and a 90-day money-back guarantee.
+                                    </p>
+                                </div>
+
+                                {readOnlyPreview ? (
+                                    <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                                        Read-only admin preview
+                                    </div>
+                                ) : (
+                                    <PayToJoinButton
+                                        displayName={displayName}
+                                        source="worker_overview"
+                                    />
+                                )}
+
+                                <div className="flex items-center justify-center gap-1.5 px-1 text-center text-[11px] font-medium text-[#71717a] sm:text-xs">
+                                    <Shield size={14} className="shrink-0 text-[#9ca3af]" />
+                                    <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer is found in 90 days</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ─── Has Offer ─── */}
+                        {activeOfferCount > 0 && (
+                            <div className="flex flex-col items-center justify-center gap-6 text-center">
+                                <div className="flex flex-col items-center">
+                                    <h3 className="text-xl font-semibold tracking-tight text-[#18181b]">
+                                        You have an active offer
+                                    </h3>
+                                    <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
+                                        Review your pending offer from the queue page and decide whether to move forward.
+                                    </p>
+                                </div>
                                 <Link
                                     href="/profile/worker/queue"
                                     className="inline-flex items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-5 py-2.5 text-sm font-semibold text-[#18181b] shadow-sm transition hover:bg-[#fafafa]"
                                 >
                                     Open Queue
                                 </Link>
-                            ) : (
-                                        <PayToJoinButton
-                                            displayName={displayName}
-                                            source="worker_overview"
-                                        />
-                            )}
-                        </div>
+                            </div>
+                        )}
 
-                        {canStartPayment && (
-                            <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-[#e5e7eb] px-1 pt-4 text-center text-[11px] font-medium text-[#71717a] sm:text-xs">
-                                <Shield size={14} className="shrink-0 text-[#9ca3af]" />
-                                <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer is found in 90 days</span>
+                        {/* ─── In Queue or Payment Pending: Show Refund Countdown ─── */}
+                        {(inQueue || paymentPendingActivation) && activeOfferCount === 0 && (
+                            <div className="py-2">
+                                <div className="text-center">
+                                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2">
+                                            <path d="M20 6L9 17l-5-5" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-xl font-semibold tracking-tight text-[#18181b] mb-2">
+                                        {paymentPendingActivation ? "Payment Received" : "You're in the Queue"}
+                                    </h3>
+                                    <p className="text-sm leading-relaxed text-[#52525b] max-w-2xl mx-auto">
+                                        {paymentPendingActivation
+                                            ? "Your payment is confirmed. We are activating your queue status now."
+                                            : "We are actively matching your profile with employers. You will receive an offer within 90 days, or your payment is refunded in full."}
+                                    </p>
+                                </div>
+
+                                {inQueue && queueJoinedDate && (
+                                    <>
+                                        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                                                <p className="text-xs uppercase tracking-wide text-emerald-700 font-semibold">Day</p>
+                                                <p className="text-2xl font-bold text-emerald-800">{daysElapsed}</p>
+                                                <p className="text-xs text-emerald-700">of 90</p>
+                                            </div>
+                                            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center">
+                                                <p className="text-xs uppercase tracking-wide text-blue-700 font-semibold">Remaining</p>
+                                                <p className="text-2xl font-bold text-blue-800">{daysRemaining}</p>
+                                                <p className="text-xs text-blue-700">days to guarantee deadline</p>
+                                            </div>
+                                            <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-center">
+                                                <p className="text-xs uppercase tracking-wide text-violet-700 font-semibold">Progress</p>
+                                                <p className="text-2xl font-bold text-violet-800">{refundProgressPercent}%</p>
+                                                <p className="text-xs text-violet-700">of matching window</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-5">
+                                            <div className="flex items-center justify-between text-xs font-semibold text-[#65676b] mb-2">
+                                                <span>90-day matching window</span>
+                                                <span>{refundProgressPercent}% elapsed</span>
+                                            </div>
+                                            <div className="w-full h-3 rounded-full bg-gray-100 border border-gray-200 overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-blue-500 to-violet-500 transition-all duration-700"
+                                                    style={{ width: `${refundProgressPercent}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="mt-4 flex justify-center">
+                                    <Link
+                                        href="/profile/worker/queue"
+                                        className="inline-flex items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-5 py-2.5 text-sm font-semibold text-[#18181b] shadow-sm transition hover:bg-[#fafafa]"
+                                    >
+                                        Open Queue
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ─── Admin Preview ─── */}
+                        {readOnlyPreview && !canStartPayment && (
+                            <div className="flex flex-col items-center justify-center gap-4 text-center">
+                                <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                                    Read-only admin preview
+                                </div>
                             </div>
                         )}
 
@@ -315,6 +453,53 @@ export default function DashboardClient({
                         </div>
                     )}
             </section>
+        </div>
+    );
+}
+
+/* ─── Profile Progress Ring ─── */
+function ProfileProgressRing({ percent }: { percent: number }) {
+    const size = 140;
+    const strokeWidth = 10;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (percent / 100) * circumference;
+
+    const getColor = () => {
+        if (percent >= 80) return "#10B981";
+        if (percent >= 50) return "#3B82F6";
+        if (percent >= 25) return "#F59E0B";
+        return "#EF4444";
+    };
+
+    return (
+        <div className="relative inline-flex items-center justify-center">
+            <svg width={size} height={size} className="-rotate-90">
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke="#f3f4f6"
+                    strokeWidth={strokeWidth}
+                />
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke={getColor()}
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    className="transition-all duration-1000 ease-out"
+                />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-bold text-[#18181b]">{percent}%</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]">Complete</span>
+            </div>
         </div>
     );
 }

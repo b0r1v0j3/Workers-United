@@ -525,6 +525,17 @@ export default function ProfilePage({
             toast.success("Profile saved successfully!");
             if (!adminTestMode) {
                 await fetchProfile();
+
+                // Check if profile just hit 100% and send notifications
+                try {
+                    const completionRes = await fetch("/api/check-profile-completion", { method: "POST" });
+                    const completionData = await completionRes.json();
+                    if (completionData.notificationSent) {
+                        toast.success("Congratulations! Your profile is 100% complete. Check your email for next steps!", { duration: 8000 });
+                    }
+                } catch {
+                    // Non-critical — don't block the save flow
+                }
             }
         } catch (err) {
             logError("profile_save_failed", "profile", err);

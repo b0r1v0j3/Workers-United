@@ -144,7 +144,7 @@ export default async function WorkerProfilePage({
     const inQueue = workerRecord?.status === "IN_QUEUE";
 
     // Calculate profile completion using shared function
-    const { completion: profileCompletion } = getWorkerCompletion({
+    const { completion: profileCompletion, missingFields } = getWorkerCompletion({
         profile, worker: workerRecord, documents: documents || []
     });
     const isReady = profileCompletion === 100 && verifiedCount >= 3;
@@ -167,6 +167,7 @@ export default async function WorkerProfilePage({
             documents={documents || []}
             pendingOffers={pendingOffers || []}
             profileCompletion={profileCompletion}
+            missingFields={missingFields}
             isReady={isReady}
             inQueue={inQueue}
             hasPaidEntryFee={hasPaidEntryFee}
