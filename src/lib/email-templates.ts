@@ -224,33 +224,51 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "profile_complete":
             return {
-                subject: "You're Verified!",
+                subject: "Profile 100% Complete — Activate Job Finder!",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/ios/100/000000/verified-account.png" width="80" height="80" alt="Verified" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Verification Complete!</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">Your documents are approved.</p>
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Congratulations, ${firstName}!</h1>
+                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">Your profile is now 100% complete.</p>
                     </div>
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
-                        Great news, ${firstName}! Your profile is now 100% verified. You are officially ready to enter our job matching queue.
+                        You are officially ready to activate our Job Finder service. We will match your profile with employers across Europe and find you the best opportunity.
                     </p>
                     
                     <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
-                        <h3 style="margin:0 0 10px; font-size:22px; color: white;">Activate Job Search</h3>
-                        <p style="margin:0 0 25px; opacity:0.9; font-size: 16px; color: #E5E5EA;">One-time entry fee</p>
+                        <h3 style="margin:0 0 10px; font-size:22px; color: white;">Activate Job Finder</h3>
+                        <p style="margin:0 0 25px; opacity:0.9; font-size: 16px; color: #E5E5EA;">One-time service fee</p>
                         <div style="font-size:56px; font-weight:800; margin-bottom: 15px; letter-spacing: -2px; color: white;">$9</div>
                         <div style="background: #333333; display: inline-block; padding: 6px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; color: white;">
                             90-day money-back guarantee
                         </div>
                     </div>
+
+                    <div style="background:#F5F5F7; border-radius:12px; padding:20px; margin:20px 0; border: 1px solid #E5E5EA;">
+                        <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">What You Get</h3>
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
+                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">Personalized employer matching</td>
+                            </tr>
+                            <tr>
+                                <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
+                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">Visa guidance and interview prep</td>
+                            </tr>
+                            <tr>
+                                <td width="30" style="vertical-align: top;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
+                                <td style="color: #1D1D1F; font-size: 14px;">Full refund if no offer in 90 days</td>
+                            </tr>
+                        </table>
+                    </div>
                     
-                    <div style="text-align:center; margin-top:20px;">
-                        <a href="https://workersunited.eu/profile/worker" style="color: #111111; text-decoration: none; font-weight: 600; font-size: 15px;">
-                             Go to Dashboard &rarr;
+                    <div style="text-align:center; margin-top:30px;">
+                        <a href="https://workersunited.eu/profile/worker" style="${buttonStyle}">
+                            Activate Job Finder
                         </a>
                     </div>
-                `, "Profile Verified", "Ready to start?")
+                `, "Profile Complete!", "You're ready to activate Job Finder.")
             };
 
         case "payment_success":

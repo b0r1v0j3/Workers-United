@@ -195,6 +195,9 @@ export async function POST(request: NextRequest) {
             offer = offerData;
         }
 
+        // Worker record for pre-filling Stripe checkout (populated in entry_fee block)
+        let workerRecord: any = null;
+
         // For entry fee, allow payment for all worker profiles
         if (type === "entry_fee") {
             if (targetWorkerId) {
@@ -321,10 +324,10 @@ export async function POST(request: NextRequest) {
                 ? await loadCanonicalWorkerRecord(
                     admin,
                     paymentOwnerProfileId,
-                    "id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job"
+                    "id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, address"
                 )
                 : { data: null, error: null };
-            let workerRecord = paymentOwnerProfileId ? initialWorkerRecord : agencyWorkerRecordForCheckout;
+            workerRecord = paymentOwnerProfileId ? initialWorkerRecord : agencyWorkerRecordForCheckout;
 
             if (paymentOwnerProfileId && workerRecordError) {
                 console.error("Worker record fetch error:", workerRecordError);
@@ -356,7 +359,7 @@ export async function POST(request: NextRequest) {
                 } = await loadCanonicalWorkerRecord(
                     admin,
                     paymentOwnerProfileId,
-                    "id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job"
+                    "id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, address"
                 );
 
                 if (repairedWorkerRecordError) {
@@ -435,10 +438,17 @@ export async function POST(request: NextRequest) {
         // Create Stripe checkout session
         const priceConfig = type === "entry_fee" ? PRICES.ENTRY_FEE : PRICES.CONFIRMATION_FEE;
 
+        // Build Stripe Checkout session with pre-filled worker data for better Radar scoring
+        const workerPhone = (workerRecord as any)?.phone || "";
+        const workerCountry = (workerRecord as any)?.current_country || (workerRecord as any)?.nationality || "";
+        const workerAddress = (workerRecord as any)?.address || "";
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             mode: "payment",
-            customer_email: user.email,
+            customer_email: paymentOwnerEmail || user.email,
+            phone_number_collection: { enabled: true },
+            billing_address_collection: "required",
             line_items: [
                 {
                     price_data: {
@@ -446,13 +456,11 @@ export async function POST(request: NextRequest) {
                         product_data: {
                             name: type === "entry_fee"
                                 ? isAgencyPayingForWorker
-                                    ? `Workers United - Job Finder for ${paymentOwnerName}`
-                                    : "Workers United - Queue Entry Fee"
-                                : "Workers United - Position Confirmation",
+                                    ? `Job Finder Service for ${paymentOwnerName}`
+                                    : "Job Finder Service — Workers United"
+                                : "Position Confirmation — Workers United",
                             description: type === "entry_fee"
-                                ? isAgencyPayingForWorker
-                                    ? "Activate job search for an agency-submitted worker"
-                                    : "Join the active worker queue"
+                                ? "Personalized European job matching with visa guidance, interview prep, and 90-day money-back guarantee."
                                 : `Confirm your position for: ${offer?.job_requests?.title || "Job Opportunity"}`,
                         },
                         unit_amount: priceConfig.amount,
@@ -471,6 +479,17 @@ export async function POST(request: NextRequest) {
                 target_worker_id: agencyTargetWorkerId || "",
                 paid_by_profile_id: isAgencyPayingForWorker ? user.id : "",
                 agency_checkout: isAgencyPayingForWorker ? "true" : "",
+                worker_name: paymentOwnerName,
+                worker_country: workerCountry,
+            },
+            payment_intent_data: {
+                description: `Job Finder Service for ${paymentOwnerName}`,
+                metadata: {
+                    worker_name: paymentOwnerName,
+                    worker_email: paymentOwnerEmail,
+                    worker_phone: workerPhone,
+                    worker_country: workerCountry,
+                },
             },
         });
 
