@@ -79,6 +79,7 @@ interface AgencyWorkerClientProps {
         paymentLabel: string;
     };
     readOnlyPreview?: boolean;
+    adminTestMode?: boolean;
 }
 
 const inputClass = "w-full rounded-2xl border border-[#e4e4df] bg-white px-4 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#111111]";
@@ -150,7 +151,11 @@ function getDocumentState(status: string | null | undefined) {
     }
 }
 
-export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = false }: AgencyWorkerClientProps) {
+export default function AgencyWorkerClient({
+    initialWorker,
+    readOnlyPreview = false,
+    adminTestMode = false,
+}: AgencyWorkerClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const workerPath = `/profile/agency/workers/${initialWorker.id}`;
@@ -210,13 +215,24 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
     const passportInputRef = useRef<HTMLInputElement | null>(null);
     const biometricInputRef = useRef<HTMLInputElement | null>(null);
     const diplomaInputRef = useRef<HTMLInputElement | null>(null);
-    const hasWorkerAccount = initialWorker.claimed && Boolean(initialWorker.profileId);
+    const hasWorkerAccount = adminTestMode || (initialWorker.claimed && Boolean(initialWorker.profileId));
     const canStartEntryPayment = initialWorker.paymentLabel !== "Paid";
 
     useEffect(() => {
         const paymentState = searchParams.get("payment");
+        if (paymentState !== "sandbox_success") {
+            return;
+        }
+
+        toast.success("Sandbox payment completed. Worker is now marked as paid.");
+        router.replace(workerPath);
+        router.refresh();
+    }, [router, searchParams, workerPath]);
+
+    useEffect(() => {
+        const paymentState = searchParams.get("payment");
         const sessionId = searchParams.get("session_id");
-        if (paymentState !== "success" || !sessionId || handledPaymentSessionsRef.current.has(sessionId)) return;
+        if (adminTestMode || paymentState !== "success" || !sessionId || handledPaymentSessionsRef.current.has(sessionId)) return;
         handledPaymentSessionsRef.current.add(sessionId);
         let cancelled = false;
 
@@ -244,7 +260,7 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
 
         void confirmAgencyPayment();
         return () => { cancelled = true; };
-    }, [router, searchParams, workerPath]);
+    }, [adminTestMode, router, searchParams, workerPath]);
 
     useEffect(() => {
         const paymentState = searchParams.get("payment");
@@ -377,10 +393,10 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
             return;
         }
         const file = fileList?.[0] || null;
-        const targetProfileId = initialWorker.profileId;
         const inputRef = getInputRef(docType);
         if (inputRef.current) inputRef.current.value = "";
-        if (!file || !targetProfileId) return;
+        if (!file) return;
+        if (!adminTestMode && !initialWorker.profileId) return;
         if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
             toast.error(`File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
             return;
@@ -395,15 +411,19 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
             const uploadData = await uploadResponse.json();
             if (!uploadResponse.ok) throw new Error(uploadData.error || "Failed to upload document.");
 
-            const verifyResponse = await fetch("/api/verify-document", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ workerId: targetProfileId, docType }),
-            });
-            const verifyData = await verifyResponse.json();
-            if (!verifyResponse.ok) throw new Error(verifyData.error || "Failed to verify document.");
-            if (verifyData.success) toast.success(verifyData.message || `${getDocumentLabel(docType)} verified successfully.`);
-            else toast.error(verifyData.message || verifyData.error || `${getDocumentLabel(docType)} needs attention.`);
+            if (adminTestMode) {
+                toast.success(uploadData.message || `${getDocumentLabel(docType)} uploaded in sandbox.`);
+            } else {
+                const verifyResponse = await fetch("/api/verify-document", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ workerId: initialWorker.profileId, docType }),
+                });
+                const verifyData = await verifyResponse.json();
+                if (!verifyResponse.ok) throw new Error(verifyData.error || "Failed to verify document.");
+                if (verifyData.success) toast.success(verifyData.message || `${getDocumentLabel(docType)} verified successfully.`);
+                else toast.error(verifyData.message || verifyData.error || `${getDocumentLabel(docType)} needs attention.`);
+            }
             router.refresh();
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Failed to upload document.");
@@ -415,6 +435,10 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
     async function handleManualReview(docType: AgencyDocType) {
         if (readOnlyPreview) {
             toast.info("Admin preview is read-only.");
+            return;
+        }
+        if (adminTestMode) {
+            toast.info("Sandbox uploads are auto-verified, so manual review is not needed here.");
             return;
         }
         if (!initialWorker.profileId) return;
@@ -773,11 +797,12 @@ export default function AgencyWorkerClient({ initialWorker, readOnlyPreview = fa
                                         {document?.reject_reason && <p className="mt-3 rounded-2xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-rose-800">{document.reject_reason}</p>}
                                         {!hasWorkerAccount ? <p className="mt-3 text-sm text-[#7c6f5d]">Document upload and verification become available once this worker has their own platform account.</p> : readOnlyPreview ? <p className="mt-3 text-sm text-blue-800">Document actions are disabled in admin preview.</p> : (
                                             <div className="mt-4 flex flex-col gap-2">
+                                                {adminTestMode ? <p className="text-sm text-[#7c6f5d]">Sandbox uploads go into isolated admin test storage and auto-verify immediately for mobile flow testing.</p> : null}
                                                 <button type="button" onClick={() => getInputRef(documentDefinition.key).current?.click()} disabled={isUploading || isReviewing} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#ddd6c8] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3] disabled:cursor-not-allowed disabled:opacity-60">
                                                     {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                                                     {isUploading ? "Uploading..." : document ? "Replace document" : "Upload document"}
                                                 </button>
-                                                {document?.status === "rejected" && (
+                                                {!adminTestMode && document?.status === "rejected" && (
                                                     <button type="button" onClick={() => void handleManualReview(documentDefinition.key)} disabled={isUploading || isReviewing} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#f0d9a8] bg-[#fff8df] px-4 py-3 text-sm font-semibold text-[#7a5b00] transition hover:bg-[#fff3c1] disabled:cursor-not-allowed disabled:opacity-60">
                                                         {isReviewing ? <Loader2 size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
                                                         {isReviewing ? "Sending..." : "Request manual review"}

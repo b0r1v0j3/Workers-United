@@ -3,6 +3,8 @@ import AppShell from "@/components/AppShell";
 import AgencySetupRequired from "@/components/AgencySetupRequired";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { buildAdminTestUser, getAdminTestSession, getAdminTestWorkspaceHref } from "@/lib/admin-test-mode";
+import { getAdminTestAgencyWorkspace } from "@/lib/admin-test-data";
 import {
     ensureAgencyRecord,
     getAgencyRecordByProfileId,
@@ -106,13 +108,92 @@ export default async function AgencyProfilePage({
     const supabase = await createClient();
     const admin = createAdminClient();
     const params = await searchParams;
-
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
+    const user = session.user;
     if (!user) {
         redirect("/login");
     }
 
-    const userType = normalizeUserType(user.user_metadata?.user_type);
+    if (session.activePersona) {
+        if (session.activePersona.role !== "agency") {
+            redirect(getAdminTestWorkspaceHref(session.activePersona.role));
+        }
+
+        const sandboxWorkspace = await getAdminTestAgencyWorkspace(admin, session.activePersona.id);
+        const workerRows: AgencyDashboardProps["workers"] = sandboxWorkspace.workers.map((worker) => {
+            const workerDocuments = sandboxWorkspace.documents.filter((document) => document.agency_worker_id === worker.id);
+            const verifiedDocuments = workerDocuments.filter((document) => document.status === "verified").length;
+            const completion = getWorkerCompletion({
+                profile: { full_name: worker.full_name || "Sandbox worker" },
+                worker,
+                documents: workerDocuments,
+            }, { phoneOptional: true }).completion;
+            const hasPaidEntryFee =
+                !!worker.entry_fee_paid ||
+                !!worker.job_search_active ||
+                isPostEntryFeeWorkerStatus(worker.status);
+
+            return {
+                id: worker.id,
+                name: worker.full_name || "Sandbox worker",
+                email: worker.email || null,
+                phone: worker.phone || null,
+                nationality: worker.nationality || null,
+                currentCountry: worker.current_country || null,
+                preferredJob: worker.preferred_job || null,
+                status: worker.status || "NEW",
+                completion,
+                claimed: false,
+                accessLabel: "Sandbox agency worker",
+                verifiedDocuments,
+                documentsLabel: verifiedDocuments > 0 ? `${verifiedDocuments}/3 verified` : "Not uploaded",
+                paymentLabel: hasPaidEntryFee ? "Paid" : "Pay $9",
+                paymentState: hasPaidEntryFee ? "paid" : "not_paid",
+                paymentPendingUntil: null,
+                queueJoinedAt: worker.queue_joined_at || null,
+                entryFeePaidAt: worker.queue_joined_at || null,
+                refundStatus: null,
+                createdAt: worker.created_at || worker.updated_at || null,
+                updatedAt: worker.updated_at || null,
+            };
+        });
+
+        const stats: AgencyDashboardProps["stats"] = {
+            totalWorkers: workerRows.length,
+            readyWorkers: workerRows.filter((worker) => worker.completion === 100 && worker.verifiedDocuments >= 3).length,
+            paidWorkers: workerRows.filter((worker) => worker.paymentState === "paid").length,
+            draftWorkers: workerRows.length,
+        };
+
+        return (
+            <AppShell
+                user={buildAdminTestUser(user, {
+                    persona: session.activePersona,
+                    displayName: sandboxWorkspace.agency?.display_name || session.activePersona.label,
+                    email: sandboxWorkspace.agency?.contact_email || session.ownerProfile?.email || user.email,
+                })}
+                variant="dashboard"
+                adminTestMode={{
+                    active: true,
+                    role: "agency",
+                    label: session.activePersona.label,
+                }}
+            >
+                <AgencyDashboardClient
+                    agency={{
+                        displayName: sandboxWorkspace.agency?.display_name || sandboxWorkspace.agency?.legal_name || session.activePersona.label,
+                        contactEmail: sandboxWorkspace.agency?.contact_email || session.ownerProfile?.email || user.email || "",
+                    }}
+                    stats={stats}
+                    workers={workerRows}
+                    readOnlyPreview={false}
+                    inspectProfileId={null}
+                />
+            </AppShell>
+        );
+    }
+
+    const userType = normalizeUserType(session.liveUserType || user.user_metadata?.user_type);
     if (userType === "employer") {
         redirect("/profile/employer");
     }
@@ -131,6 +212,9 @@ export default async function AgencyProfilePage({
 
     const isAdminPreview = userType === "admin";
     const inspectProfileId = isAdminPreview ? params?.inspect?.trim() || null : null;
+    if (isAdminPreview && !inspectProfileId) {
+        redirect("/admin");
+    }
     const targetAgencyProfileId = inspectProfileId || user.id;
 
     const { data: profile } = await admin

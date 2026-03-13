@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { normalizeUserType } from "@/lib/domain";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { buildAdminTestUser, getAdminTestSession, getAdminTestWorkspaceHref } from "@/lib/admin-test-mode";
+import { getAdminTestWorkerWorkspace } from "@/lib/admin-test-data";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
@@ -15,16 +17,66 @@ export default async function WorkerProfilePage({
     searchParams: Promise<{ inspect?: string }>;
 }) {
     const supabase = await createClient();
+    const admin = createAdminClient();
     const params = await searchParams;
-
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
+    const user = session.user;
 
     if (!user) {
         redirect("/login");
     }
 
+    if (session.activePersona) {
+        if (session.activePersona.role !== "worker") {
+            redirect(getAdminTestWorkspaceHref(session.activePersona.role));
+        }
+
+        const workspace = await getAdminTestWorkerWorkspace(admin, session.activePersona.id);
+        const sandboxWorker = workspace.worker;
+        const sandboxDocuments = workspace.documents.map((document) => ({
+            document_type: document.document_type,
+            status: document.status,
+            reject_reason: document.reject_reason,
+        }));
+        const sandboxProfile = {
+            id: session.activePersona.id,
+            email: sandboxWorker?.email || session.ownerProfile?.email || user.email || "",
+            full_name: sandboxWorker?.full_name || session.activePersona.label,
+            user_type: "worker",
+        };
+        const verifiedDocs = sandboxDocuments.filter((document) => document.status === "verified");
+        const profileCompletion = getWorkerCompletion({
+            profile: sandboxProfile,
+            worker: sandboxWorker,
+            documents: sandboxDocuments,
+        }).completion;
+        const hasPaidEntryFee =
+            !!sandboxWorker?.entry_fee_paid ||
+            !!sandboxWorker?.job_search_active ||
+            isPostEntryFeeWorkerStatus(sandboxWorker?.status);
+
+        return (
+            <DashboardClient
+                user={buildAdminTestUser(user, {
+                    persona: session.activePersona,
+                    displayName: sandboxProfile.full_name,
+                    email: sandboxProfile.email,
+                })}
+                profile={sandboxProfile}
+                worker={sandboxWorker}
+                documents={sandboxDocuments}
+                pendingOffers={[]}
+                profileCompletion={profileCompletion}
+                isReady={profileCompletion === 100 && verifiedDocs.length >= 3}
+                inQueue={sandboxWorker?.status === "IN_QUEUE"}
+                hasPaidEntryFee={hasPaidEntryFee}
+                readOnlyPreview={false}
+            />
+        );
+    }
+
     // Redirect employers to employer profile (admin can access for testing)
-    const userType = normalizeUserType(user.user_metadata?.user_type);
+    const userType = normalizeUserType(session.liveUserType || user.user_metadata?.user_type);
     if (userType === 'employer') {
         redirect("/profile/employer");
     }
@@ -33,8 +85,11 @@ export default async function WorkerProfilePage({
     }
     const isAdminPreview = userType === "admin";
     const inspectProfileId = isAdminPreview ? params?.inspect?.trim() || null : null;
+    if (isAdminPreview && !inspectProfileId) {
+        redirect("/admin");
+    }
     const targetProfileId = inspectProfileId || user.id;
-    const dataClient = inspectProfileId ? createAdminClient() : supabase;
+    const dataClient = inspectProfileId ? admin : supabase;
 
     // Fetch profile
     const { data: profile } = await dataClient

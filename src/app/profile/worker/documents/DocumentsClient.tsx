@@ -8,9 +8,10 @@ interface DocumentsClientProps {
     email: string;
     documents: any[];
     readOnlyPreview?: boolean;
+    adminTestMode?: boolean;
 }
 
-export default function DocumentsClient({ workerProfileId, email, documents, readOnlyPreview = false }: DocumentsClientProps) {
+export default function DocumentsClient({ workerProfileId, email, documents, readOnlyPreview = false, adminTestMode = false }: DocumentsClientProps) {
 
     const getDocStatus = (type: string) => {
         const doc = documents.find(d => d.document_type === type);
@@ -33,9 +34,13 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                     <div className="mb-6">
                         <h3 className="font-semibold text-gray-900 text-xl">Upload Documents</h3>
-                        <p className="text-gray-500 mt-1">Please ensure all documents are clear and readable.</p>
+                        <p className="text-gray-500 mt-1">
+                            {adminTestMode
+                                ? "Sandbox uploads are auto-verified so you can inspect the mobile document flow quickly."
+                                : "Please ensure all documents are clear and readable."}
+                        </p>
                     </div>
-                    <DocumentWizard workerProfileId={workerProfileId} email={email} />
+                    <DocumentWizard workerProfileId={workerProfileId} email={email} adminTestMode={adminTestMode} />
                 </div>
             )}
 

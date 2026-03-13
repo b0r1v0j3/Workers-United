@@ -6,7 +6,6 @@ import {
     Building2,
     AlertTriangle,
     Settings,
-    Mail,
     MailX,
     MessageSquareMore,
     Briefcase,
@@ -29,13 +28,20 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 type AppShellVariant = "public" | "dashboard" | "admin";
 
+interface AdminTestModeState {
+    active: boolean;
+    role: "worker" | "employer" | "agency";
+    label: string;
+}
+
 interface AppShellProps {
     children: React.ReactNode;
     user: SupabaseUser | null;
     variant?: AppShellVariant;
+    adminTestMode?: AdminTestModeState | null;
 }
 
-export default function AppShell({ children, user, variant = "dashboard" }: AppShellProps) {
+export default function AppShell({ children, user, variant = "dashboard", adminTestMode = null }: AppShellProps) {
     const [isDesktop, setIsDesktop] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
@@ -100,21 +106,26 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
     }, [isDesktop]);
 
     const normalizedUserType = normalizeUserType(user?.user_metadata?.user_type);
-    const isAdminPreview = normalizedUserType === "admin" && variant !== "admin";
-    const sidebarExpanded = isAdminPreview && isDesktop ? true : isOpen;
+    const isAdminTestMode = !!adminTestMode?.active && variant !== "admin";
+    const isAdminPreview = !isAdminTestMode && normalizedUserType === "admin" && variant !== "admin";
+    const sidebarExpanded = (isAdminPreview || isAdminTestMode) && isDesktop ? true : isOpen;
     const inspectId = searchParams.get("inspect");
-    const previewLabel = pathname?.startsWith("/profile/agency")
-        ? "Agency Workspace Preview"
-        : pathname?.startsWith("/profile/employer")
-            ? "Employer Profile Preview"
-            : pathname?.startsWith("/profile/worker")
-                ? "Worker Profile Preview"
-                : "Profile Preview";
-    const previewMessage = pathname?.startsWith("/profile/agency")
-        ? inspectId
-            ? "You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow."
-            : "You are previewing the agency workspace structure as admin. The add-worker modal opens for inspection only and does not persist preview data."
-        : "You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.";
+    const previewLabel = isAdminTestMode
+        ? `${adminTestMode.label} Sandbox`
+        : pathname?.startsWith("/profile/agency")
+            ? "Agency Workspace Preview"
+            : pathname?.startsWith("/profile/employer")
+                ? "Employer Profile Preview"
+                : pathname?.startsWith("/profile/worker")
+                    ? "Worker Profile Preview"
+                    : "Profile Preview";
+    const previewMessage = isAdminTestMode
+        ? "You are testing this workspace with isolated sandbox data. Profile edits, document uploads, job requests, and test payments stay outside live worker, employer, and agency records."
+        : pathname?.startsWith("/profile/agency")
+            ? inspectId
+                ? "You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow."
+                : "You are previewing the agency workspace structure as admin. The add-worker modal opens for inspection only and does not persist preview data."
+            : "You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.";
     const sidebarWidthClass = sidebarExpanded ? "w-72 lg:w-[264px]" : "w-[60px] lg:w-[68px]";
     const mainOffsetClass = isDesktop
         ? sidebarExpanded
@@ -122,7 +133,7 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
             : "lg:ml-[84px]"
         : "pl-[72px]";
     const handleMenuToggle = () => {
-        if (isAdminPreview && isDesktop) return;
+        if ((isAdminPreview || isAdminTestMode) && isDesktop) return;
         setIsOpen((current) => !current);
     };
 
@@ -151,24 +162,38 @@ export default function AppShell({ children, user, variant = "dashboard" }: AppS
                     ${sidebarWidthClass}
                 `}>
                     <div className="flex h-full flex-col items-center overflow-hidden rounded-[14px] border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-[14px] lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
-                        <SidebarContent user={user} variant={variant} isCollapsed={!sidebarExpanded} onMenuToggle={handleMenuToggle} />
+                        <SidebarContent user={user} variant={variant} isCollapsed={!sidebarExpanded} onMenuToggle={handleMenuToggle} adminTestMode={adminTestMode} />
                     </div>
                 </aside>
 
                 {/* MAIN CONTENT */}
                 <main className={`flex-1 min-w-0 w-full pb-10 pt-1 sm:pt-4 animate-fade-in-up transition-all duration-300 px-2.5 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
-                    {isAdminPreview && (
-                        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-900 md:flex-row md:items-center md:justify-between">
+                    {(isAdminPreview || isAdminTestMode) && (
+                        <div className={`mb-4 flex flex-col gap-3 rounded-2xl px-4 py-4 text-sm md:flex-row md:items-center md:justify-between ${
+                            isAdminTestMode
+                                ? "border border-amber-200 bg-amber-50 text-amber-950"
+                                : "border border-blue-100 bg-blue-50 text-blue-900"
+                        }`}>
                             <div>
-                                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">Admin Preview Mode</div>
+                                <div className={`text-[11px] font-bold uppercase tracking-[0.18em] ${
+                                    isAdminTestMode ? "text-amber-700" : "text-blue-600"
+                                }`}>
+                                    {isAdminTestMode ? "Admin Sandbox Mode" : "Admin Preview Mode"}
+                                </div>
                                 <div className="mt-1 font-semibold">{previewLabel}</div>
-                                <p className="mt-1 text-blue-800/80">
+                                <p className={`mt-1 ${
+                                    isAdminTestMode ? "text-amber-900/80" : "text-blue-800/80"
+                                }`}>
                                     {previewMessage}
                                 </p>
                             </div>
                             <Link
                                 href="/admin"
-                                className="inline-flex items-center justify-center rounded-[12px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                className={`inline-flex items-center justify-center rounded-[12px] px-4 py-2.5 text-sm font-semibold text-white transition ${
+                                    isAdminTestMode
+                                        ? "bg-amber-700 hover:bg-amber-800"
+                                        : "bg-blue-600 hover:bg-blue-700"
+                                }`}
                             >
                                 Back to Admin
                             </Link>
@@ -189,6 +214,7 @@ interface SidebarContentProps {
     variant: AppShellVariant;
     isCollapsed: boolean;
     onMenuToggle?: () => void;
+    adminTestMode?: AdminTestModeState | null;
 }
 
 type SidebarTone = "blue" | "emerald" | "amber" | "violet" | "rose" | "slate" | "red";
@@ -224,11 +250,12 @@ const SIDEBAR_TONE_STYLES: Record<SidebarTone, { active: string; icon: string }>
     },
 };
 
-function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarContentProps) {
+function SidebarContent({ user, variant, isCollapsed, onMenuToggle, adminTestMode = null }: SidebarContentProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const userType = normalizeUserType(user?.user_metadata?.user_type) || "worker";
-    const isAdminPreview = userType === "admin" && variant !== "admin";
+    const isAdminTestMode = !!adminTestMode?.active && variant !== "admin";
+    const isAdminPreview = !isAdminTestMode && userType === "admin" && variant !== "admin";
     const isWorkerWorkspace = variant !== "admin" && (userType === "worker" || (isAdminPreview && pathname?.startsWith("/profile/worker")));
     const isEmployerWorkspace = variant !== "admin" && (userType === "employer" || (isAdminPreview && pathname?.startsWith("/profile/employer")));
     const isAgencyWorkspace = variant !== "admin" && (userType === "agency" || (isAdminPreview && pathname?.startsWith("/profile/agency")));
@@ -292,9 +319,9 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 <>
                     <SidebarLink href={withInspect("/profile/worker/documents")} icon={<FileText size={20} />} label="Documents" isCollapsed={isCollapsed} tone="emerald" />
                     <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} tone="amber" />
-                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} tone="violet" />
+                    <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} tone="violet" disabled={isAdminTestMode} />
                     <SidebarLink href={withInspect("/profile/worker/edit")} icon={<Pencil size={20} />} label="Edit Profile" isCollapsed={isCollapsed} tone="rose" />
-                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" disabled={isAdminTestMode} />
                 </>
             )}
 
@@ -302,7 +329,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                 <>
                     <SidebarLink href={withInspect("/profile/employer?tab=jobs")} icon={<Briefcase size={20} />} label="Job Requests" isCollapsed={isCollapsed} tone="emerald" queryTab="jobs" />
                     <SidebarLink href={withInspect("/profile/employer?tab=post-job")} icon={<Plus size={20} />} label="New Job Request" isCollapsed={isCollapsed} tone="violet" queryTab="post-job" />
-                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" disabled={isAdminTestMode} />
                 </>
             )}
 
@@ -317,8 +344,8 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle }: SidebarCon
                             tone="rose"
                         />
                     )}
-                    <SidebarLink href={withInspect("/profile/agency/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} tone="violet" />
-                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href={withInspect("/profile/agency/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} tone="violet" disabled={isAdminTestMode} />
+                    <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" disabled={isAdminTestMode} />
                 </>
             )}
 
@@ -419,7 +446,7 @@ function SidebarLink({
     if (disabled) {
         return (
             <div
-                title={isCollapsed ? `${label} (disabled in admin preview)` : undefined}
+                title={isCollapsed ? `${label} (disabled in admin sandbox)` : undefined}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-300 cursor-not-allowed`}
             >
                 <div className="w-6 h-6 flex items-center justify-center shrink-0 text-slate-300">

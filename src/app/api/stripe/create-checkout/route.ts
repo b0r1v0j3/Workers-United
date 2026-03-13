@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAgencyOwnedWorker, getAgencyWorkerName } from "@/lib/agencies";
 import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import { getAdminTestSession } from "@/lib/admin-test-mode";
+import { markAdminTestAgencyWorkerEntryFeePaid, markAdminTestWorkerEntryFeePaid } from "@/lib/admin-test-data";
 import { normalizeUserType } from "@/lib/domain";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
@@ -24,6 +26,11 @@ function normalizeRelativePath(value: unknown): string | null {
     }
 
     return trimmed;
+}
+
+function appendPaymentState(path: string, payment: string): string {
+    const separator = path.includes("?") ? "&" : "?";
+    return `${path}${separator}payment=${payment}`;
 }
 
 function sortByNewestDeadlineFirst<T extends { deadline_at?: string | null }>(payments: T[]) {
@@ -69,6 +76,37 @@ export async function POST(request: NextRequest) {
 
         const normalizedSuccessPath = normalizeRelativePath(successPath);
         const normalizedCancelPath = normalizeRelativePath(cancelPath);
+        const adminTestSession = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
+
+        if (adminTestSession.activePersona) {
+            if (type !== "entry_fee") {
+                return NextResponse.json({ error: "Sandbox checkout only supports the $9 entry fee flow." }, { status: 400 });
+            }
+
+            if (adminTestSession.activePersona.role === "worker") {
+                await markAdminTestWorkerEntryFeePaid(admin, adminTestSession.activePersona.id);
+                const targetPath = normalizedSuccessPath || "/profile/worker/queue";
+                return NextResponse.json({
+                    checkoutUrl: appendPaymentState(targetPath, "sandbox_success"),
+                    sandbox: true,
+                });
+            }
+
+            if (adminTestSession.activePersona.role === "agency") {
+                if (!targetWorkerId) {
+                    return NextResponse.json({ error: "Sandbox agency payments require a worker target." }, { status: 400 });
+                }
+
+                await markAdminTestAgencyWorkerEntryFeePaid(admin, adminTestSession.activePersona.id, targetWorkerId);
+                const targetPath = normalizedSuccessPath || "/profile/agency";
+                return NextResponse.json({
+                    checkoutUrl: appendPaymentState(targetPath, "sandbox_success"),
+                    sandbox: true,
+                });
+            }
+
+            return NextResponse.json({ error: "Employer sandbox does not have a payment flow." }, { status: 400 });
+        }
 
         await logServerActivity(user.id, "checkout_session_create_attempt", "payment", {
             type,
