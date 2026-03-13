@@ -45,11 +45,11 @@ export default async function WorkerProfilePage({
             user_type: "worker",
         };
         const verifiedDocs = sandboxDocuments.filter((document) => document.status === "verified");
-        const profileCompletion = getWorkerCompletion({
+        const { completion: profileCompletion, missingFields: sandboxMissingFields } = getWorkerCompletion({
             profile: sandboxProfile,
             worker: sandboxWorker,
             documents: sandboxDocuments,
-        }).completion;
+        });
         const hasPaidEntryFee =
             !!sandboxWorker?.entry_fee_paid ||
             !!sandboxWorker?.job_search_active ||
@@ -67,6 +67,7 @@ export default async function WorkerProfilePage({
                 documents={sandboxDocuments}
                 pendingOffers={[]}
                 profileCompletion={profileCompletion}
+                missingFields={sandboxMissingFields}
                 isReady={profileCompletion === 100 && verifiedDocs.length >= 3}
                 inQueue={sandboxWorker?.status === "IN_QUEUE"}
                 hasPaidEntryFee={hasPaidEntryFee}
