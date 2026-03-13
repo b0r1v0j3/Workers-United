@@ -120,12 +120,15 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
                     ? "Worker Profile Preview"
                     : "Profile Preview";
     const previewMessage = isAdminTestMode
-        ? "You are testing this workspace with isolated sandbox data. Profile edits, document uploads, job requests, and test payments stay outside live worker, employer, and agency records."
+        ? "You are testing this workspace with isolated sandbox data."
         : pathname?.startsWith("/profile/agency")
             ? inspectId
                 ? "You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow."
                 : "You are previewing the agency workspace structure as admin. The add-worker modal opens for inspection only and does not persist preview data."
             : "You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.";
+    const previewMessageDetail = isAdminTestMode
+        ? "Profile edits, document uploads, job requests, and test payments stay outside live worker, employer, and agency records."
+        : null;
     const desktopSidebarWidthClass = sidebarExpanded ? "lg:w-[264px]" : "lg:w-[68px]";
     const mobileDrawerClass = !isDesktop && !sidebarExpanded ? "pointer-events-none" : "";
     const mobileDrawerStyle = !isDesktop
@@ -190,7 +193,7 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
                         </button>
                     )}
                     {(isAdminPreview || isAdminTestMode) && (
-                        <div className={`mb-4 flex flex-col gap-3 rounded-2xl px-4 py-4 text-sm md:flex-row md:items-center md:justify-between ${
+                        <div className={`mb-4 flex flex-col gap-3 rounded-2xl px-3.5 py-3.5 text-sm md:flex-row md:items-center md:justify-between md:px-4 md:py-4 ${
                             isAdminTestMode
                                 ? "border border-amber-200 bg-amber-50 text-amber-950"
                                 : "border border-blue-100 bg-blue-50 text-blue-900"
@@ -206,11 +209,12 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
                                     isAdminTestMode ? "text-amber-900/80" : "text-blue-800/80"
                                 }`}>
                                     {previewMessage}
+                                    {previewMessageDetail ? <span className="hidden sm:inline"> {previewMessageDetail}</span> : null}
                                 </p>
                             </div>
                             <Link
                                 href="/admin"
-                                className={`inline-flex items-center justify-center rounded-[12px] px-4 py-2.5 text-sm font-semibold text-white transition ${
+                                className={`inline-flex items-center justify-center rounded-[12px] px-4 py-2 text-sm font-semibold text-white transition md:py-2.5 ${
                                     isAdminTestMode
                                         ? "bg-amber-700 hover:bg-amber-800"
                                         : "bg-blue-600 hover:bg-blue-700"

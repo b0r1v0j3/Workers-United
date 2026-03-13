@@ -47,18 +47,34 @@ export default function CookieConsent() {
     if (!visible) return null;
 
     return (
-        <div className="fixed inset-x-0 bottom-0 z-[9999] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-0 sm:p-4 animate-slideUp">
-            <div className="mx-auto w-full max-w-3xl rounded-[22px] border border-[#dddfe2] bg-white p-3 shadow-2xl sm:rounded-[24px] sm:p-5">
-                <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+        <div className="fixed inset-x-0 bottom-0 z-[9999] px-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-0 sm:p-4 animate-slideUp">
+            <div className="mx-auto w-full max-w-3xl rounded-[20px] border border-[#dddfe2] bg-white p-2.5 shadow-2xl sm:rounded-[24px] sm:p-5">
+                <div className="flex items-center gap-2.5 sm:hidden">
+                    <p className="min-w-0 flex-1 text-[11px] leading-4 text-[#475569]">
+                        Essential cookies only for sign-in and site functionality.
+                        {" "}
+                        <Link href="/privacy-policy" className="font-semibold text-[#1877f2] hover:underline">
+                            Privacy Policy
+                        </Link>
+                    </p>
+                    <button
+                        onClick={handleAccept}
+                        className="h-10 shrink-0 whitespace-nowrap rounded-xl bg-[#1877f2] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1664d9]"
+                    >
+                        Got it
+                    </button>
+                </div>
+
+                <div className="hidden items-start gap-3 sm:flex sm:items-center sm:gap-4">
                     <Image
                         src="/cookie-icons8.png"
                         alt="Cookie icon"
                         width={56}
                         height={56}
-                        className="mt-0.5 h-8 w-8 shrink-0 sm:h-14 sm:w-14"
+                        className="mt-0.5 h-14 w-14 shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                        <p className="text-[12px] leading-4 text-[#475569] sm:text-sm sm:leading-relaxed">
+                        <p className="text-sm leading-relaxed text-[#475569]">
                             We only use essential cookies for sign-in and site functionality. No ads or tracking.
                             {" "}See our{" "}
                             <Link href="/privacy-policy" className="text-[#1877f2] font-semibold hover:underline">
@@ -68,7 +84,7 @@ export default function CookieConsent() {
                         </p>
                     </div>
                 </div>
-                <div className="mt-3 flex justify-end">
+                <div className="mt-3 hidden justify-end sm:flex">
                     <button
                         onClick={handleAccept}
                         className="min-w-[112px] whitespace-nowrap rounded-xl bg-[#1877f2] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1664d9] sm:px-6"
