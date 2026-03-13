@@ -622,7 +622,7 @@ export default function ProfilePage({
         );
     }
 
-    const inputClass = "w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
+    const inputClass = "min-w-0 w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
     const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
 
     return (
@@ -654,6 +654,7 @@ export default function ProfilePage({
                                             country={"rs"}
                                             value={formData.phone}
                                             onChange={(phone: string) => setFormData(prev => ({ ...prev, phone: '+' + phone }))}
+                                            containerClass="!w-full !max-w-full"
                                             inputClass={`${inputClass} !pl-12 !w-full`}
                                             buttonClass="!border-gray-300 !bg-gray-50 !rounded-l-md"
                                             disabled={readOnlyPreview || saving}
@@ -745,7 +746,7 @@ export default function ProfilePage({
                                         <label className={labelClass}>
                                             Date of Birth <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="grid grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                             <select
                                                 value={formData.dobDay}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, dobDay: e.target.value }))}
@@ -966,7 +967,7 @@ export default function ProfilePage({
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <label className={labelClass}>Date of Birth <span className="text-red-500">*</span></label>
-                                                <div className="grid grid-cols-3 gap-2">
+                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                                     <select value={spouseData.dobDay} onChange={(e) => setSpouseData(prev => ({ ...prev, dobDay: e.target.value }))} className={inputClass}>
                                                         <option value="">Day</option>
                                                         {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
@@ -1065,7 +1066,7 @@ export default function ProfilePage({
                                                     </div>
                                                     <div>
                                                         <label className={labelClass}>Date of Birth</label>
-                                                        <div className="grid grid-cols-3 gap-2">
+                                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                                             <select value={child.dobDay} onChange={(e) => updateChild(index, "dobDay", e.target.value)} className={inputClass}>
                                                                 <option value="">Day</option>
                                                                 {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
@@ -1142,7 +1143,7 @@ export default function ProfilePage({
                                         <label className={labelClass}>
                                             Issue Date <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="grid grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                             <select name="passport_issue_day" value={formData.passport_issue_day} onChange={handleChange} className={inputClass}>
                                                 <option value="">Day</option>
                                                 {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
@@ -1162,7 +1163,7 @@ export default function ProfilePage({
                                         <label className={labelClass}>
                                             Expiry Date <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="grid grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                             <select name="passport_expiry_day" value={formData.passport_expiry_day} onChange={handleChange} className={inputClass}>
                                                 <option value="">Day</option>
                                                 {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
@@ -1249,7 +1250,7 @@ export default function ProfilePage({
                                             <span className="text-sm font-medium text-gray-900">Any (Open to anywhere in Europe)</span>
                                         </label>
 
-                                        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 ${formData.desired_countries.includes("Any") ? "opacity-50 pointer-events-none" : ""}`}>
+                                        <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 ${formData.desired_countries.includes("Any") ? "opacity-50 pointer-events-none" : ""}`}>
                                             {EUROPEAN_COUNTRIES.map(country => (
                                                 <label key={country} className="flex items-center space-x-2">
                                                     <input

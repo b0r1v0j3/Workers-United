@@ -101,7 +101,7 @@ function createCompanyFormFromEmployer(employer: EmployerProfile | null): Compan
 }
 
 // ─── Shared styles ──────────────────────────────────────────────
-const inputClass = "w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] text-[#18181b] outline-none transition hover:bg-[#fafafa] focus:border-[#111111] focus:bg-white focus:ring-0";
+const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] text-[#18181b] outline-none transition hover:bg-[#fafafa] focus:border-[#111111] focus:bg-white focus:ring-0";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]";
 const surfaceClass = "rounded-[26px] border border-[#e5e7eb] bg-white p-6 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.18)]";
 
@@ -710,6 +710,7 @@ export default function EmployerProfilePage({
                                                         country={"rs"}
                                                         value={companyForm.contact_phone}
                                                         onChange={(phone: string) => setCompanyForm(prev => ({ ...prev, contact_phone: '+' + phone }))}
+                                                        containerClass="!w-full !max-w-full"
                                                         inputClass={`${inputClass} !pl-12 !w-full`}
                                                         buttonClass="!border-gray-200 !bg-gray-50 !rounded-l-xl"
                                                         enableSearch={true}
@@ -758,19 +759,19 @@ export default function EmployerProfilePage({
                                                 </div>
                                             )}
 
-                                            <div className="flex justify-end gap-3 border-t border-[#e5e7eb] pt-4">
+                                            <div className="flex flex-col-reverse gap-3 border-t border-[#e5e7eb] pt-4 sm:flex-row sm:justify-end">
                                                 {employer && !readOnlyPreview && (
-                                                    <button type="button" onClick={cancelEdit} className="rounded-2xl border border-[#d1d5db] px-6 py-3 font-semibold text-[#52525b] transition hover:bg-[#fafafa]">
+                                                    <button type="button" onClick={cancelEdit} className="w-full rounded-2xl border border-[#d1d5db] px-6 py-3 text-center font-semibold text-[#52525b] transition hover:bg-[#fafafa] sm:w-auto">
                                                         Cancel
                                                     </button>
                                                 )}
                                                 {readOnlyPreview ? (
-                                                    <div className="rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-[#475569]">
+                                                    <div className="w-full rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] px-4 py-3 text-center text-sm font-medium text-[#475569] sm:w-auto">
                                                         Company editing is disabled in admin preview.
                                                     </div>
                                                 ) : (
                                                     <button type="button" onClick={saveCompany} disabled={saving}
-                                                        className="flex items-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50">
+                                                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50 sm:w-auto">
                                                         {saving ? "Saving..." : "Save Changes"}
                                                     </button>
                                                 )}
@@ -852,7 +853,7 @@ export default function EmployerProfilePage({
                                         <textarea name="description" value={jobForm.description} onChange={handleJobChange} rows={3} className={`${inputClass} resize-none`} placeholder="Describe responsibilities, requirements..." />
                                     </div>
 
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
                                         <div>
                                             <label className={labelClass}>Positions <span className="text-red-500">*</span></label>
                                             <input type="number" name="positions_count" min={1} max={50} value={jobForm.positions_count} onChange={handleJobChange} className={inputClass} />
@@ -890,14 +891,14 @@ export default function EmployerProfilePage({
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-end border-t border-[#e5e7eb] pt-4">
+                                    <div className="flex flex-col gap-3 border-t border-[#e5e7eb] pt-4 sm:flex-row sm:justify-end">
                                         {readOnlyPreview ? (
-                                                <div className="rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-[#475569]">
+                                                <div className="w-full rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] px-4 py-3 text-center text-sm font-medium text-[#475569] sm:w-auto">
                                                 Job request creation is disabled in admin preview
                                             </div>
                                         ) : (
                                             <button type="button" onClick={submitJob} disabled={postingJob}
-                                                className="flex items-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50">
+                                                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111111] px-8 py-3 font-semibold text-white transition hover:bg-[#2b2b2b] disabled:opacity-50 sm:w-auto">
                                                 {postingJob ? (
                                                     <><div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div> Posting...</>
                                                 ) : <><Plus className="w-5 h-5" /> Create Job Request</>}

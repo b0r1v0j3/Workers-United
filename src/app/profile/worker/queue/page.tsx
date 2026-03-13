@@ -76,9 +76,9 @@ export default async function QueuePage({
                                     redirectPath="/profile/worker/queue"
                                     adminTestMode
                                 />
-                                <div className="mt-2 flex items-center justify-center gap-1.5 px-1 text-center text-[11px] font-medium text-gray-500 sm:text-xs">
-                                    <Shield size={14} className="shrink-0 text-gray-400" />
-                                    <span className="truncate sm:whitespace-nowrap">Sandbox only: no live charge, webhook, or live queue entry is created</span>
+                                <div className="mx-auto mt-2 flex max-w-xs items-start justify-center gap-1.5 px-1 text-center text-[11px] font-medium leading-relaxed text-gray-500 sm:max-w-none sm:items-center sm:text-xs">
+                                    <Shield size={14} className="mt-0.5 shrink-0 text-gray-400 sm:mt-0" />
+                                    <span className="min-w-0">Sandbox only: no live charge, webhook, or live queue entry is created</span>
                                 </div>
                             </div>
                         ) : paymentAcceptedNoOffer ? (
@@ -263,9 +263,9 @@ export default async function QueuePage({
                             ) : (
                                 <>
                                     <PayToJoinButton displayName={user.user_metadata?.full_name || "Worker"} />
-                                    <div className="mt-2 flex items-center justify-center gap-1.5 text-gray-500 text-[11px] sm:text-xs font-medium text-center px-1">
-                                        <Shield size={14} className="shrink-0 text-gray-400" />
-                                        <span className="truncate sm:whitespace-nowrap">100% money-back guarantee if no job offer in 90 days</span>
+                                    <div className="mx-auto mt-2 flex max-w-xs items-start justify-center gap-1.5 px-1 text-center text-[11px] font-medium leading-relaxed text-gray-500 sm:max-w-none sm:items-center sm:text-xs">
+                                        <Shield size={14} className="mt-0.5 shrink-0 text-gray-400 sm:mt-0" />
+                                        <span className="min-w-0">100% money-back guarantee if no job offer in 90 days</span>
                                     </div>
                                 </>
                             )}
@@ -385,9 +385,9 @@ function OfferCard({ offer, readOnlyPreview = false }: {
 
     return (
         <div className={`bg-white rounded-xl shadow-sm border-2 p-5 ${isUrgent ? 'border-red-400 bg-red-50' : 'border-emerald-400'}`}>
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <h3 className="text-lg font-bold text-[#050505]">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                    <h3 className="break-words text-lg font-bold text-[#050505]">
                         {offer.job_requests.title}
                     </h3>
                     <p className="text-[#65676b]">
@@ -395,7 +395,7 @@ function OfferCard({ offer, readOnlyPreview = false }: {
                     </p>
                 </div>
 
-                <div className={`text-right ${isUrgent ? 'text-red-600' : 'text-amber-600'}`}>
+                <div className={`shrink-0 sm:text-right ${isUrgent ? 'text-red-600' : 'text-amber-600'}`}>
                     <div className="text-2xl font-bold">
                         {hoursRemaining}h {minutesRemaining}m
                     </div>

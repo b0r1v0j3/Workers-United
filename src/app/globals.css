@@ -95,6 +95,7 @@
 
 html {
   background: var(--bg);
+  overflow-x: hidden;
 }
 
 body {
@@ -104,6 +105,38 @@ body {
   color: var(--text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.react-tel-input {
+  width: 100%;
+  max-width: 100%;
+}
+
+.react-tel-input .form-control {
+  width: 100% !important;
+  max-width: 100%;
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.react-tel-input .selected-flag {
+  width: 44px;
+  padding-left: 12px;
+}
+
+.react-tel-input .country-list {
+  width: min(320px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px);
+}
+
+.react-tel-input .country-list .search {
+  padding: 8px;
+}
+
+.react-tel-input .country-list .search-box {
+  width: 100%;
+  margin-left: 0;
 }
 
 a {

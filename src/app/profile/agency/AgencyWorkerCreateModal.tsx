@@ -11,9 +11,9 @@ import {
     WORLD_COUNTRIES,
 } from "@/lib/constants";
 
-const inputClass = "w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
+const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
-const sectionClass = "rounded-[28px] border border-[#ececec] bg-white p-6 shadow-[0_20px_60px_-52px_rgba(15,23,42,0.22)]";
+const sectionClass = "rounded-[24px] border border-[#ececec] bg-white p-4 shadow-[0_20px_60px_-52px_rgba(15,23,42,0.22)] sm:rounded-[28px] sm:p-6";
 
 type Child = { first_name: string; last_name: string; dob: string };
 type Spouse = { first_name: string; last_name: string; dob: string; birth_country: string; birth_city: string };
@@ -471,21 +471,21 @@ export default function AgencyWorkerCreateModal({
 
     return (
         <div
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(15,23,42,0.12)] px-4 py-5 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[120] flex items-stretch justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 backdrop-blur-[2px] sm:items-center sm:px-4 sm:py-5"
             onClick={requestClose}
         >
             <div
-                className="relative flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[34px] border border-[#e5e7eb] bg-white shadow-[0_44px_140px_-64px_rgba(15,23,42,0.35)]"
+                className="relative flex h-[100dvh] max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-none border border-[#e5e7eb] bg-white shadow-[0_44px_140px_-64px_rgba(15,23,42,0.35)] sm:h-[90vh] sm:max-h-[90vh] sm:rounded-[34px]"
                 onClick={(event) => event.stopPropagation()}
             >
-                <div className="border-b border-[#ececec] bg-white px-6 py-5">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="max-w-3xl">
+                <div className="border-b border-[#ececec] bg-white px-4 py-4 sm:px-6 sm:py-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 max-w-3xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
                                 {workerId ? <Pencil size={14} /> : <UserPlus size={14} />}
                                 {readOnlyPreview ? "Admin preview" : workerId ? "Edit worker" : "Add worker"}
                             </div>
-                            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111827]">
+                            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
                                 {workerId ? `Edit ${workerLabel || "worker"}` : "Add worker"}
                             </h2>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
@@ -497,9 +497,9 @@ export default function AgencyWorkerCreateModal({
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
                             {readOnlyPreview ? (
-                                <div className="inline-flex items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-sm font-semibold text-[#6b7280]">
+                                <div className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-sm font-semibold text-[#6b7280] sm:w-auto">
                                     Preview only
                                 </div>
                             ) : (
@@ -507,7 +507,7 @@ export default function AgencyWorkerCreateModal({
                                     type="button"
                                     onClick={() => void handleSave(false)}
                                     disabled={saving || loadingWorker}
-                                    className="inline-flex items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                     {workerId ? "Save changes" : "Save worker"}
@@ -516,7 +516,7 @@ export default function AgencyWorkerCreateModal({
                             <button
                                 type="button"
                                 onClick={requestClose}
-                                className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-[#111827] transition hover:bg-[#fafafa]"
+                                className="inline-flex h-12 w-12 self-end items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-[#111827] transition hover:bg-[#fafafa] sm:self-auto"
                                 aria-label="Close worker modal"
                             >
                                 <X size={18} />
@@ -525,7 +525,7 @@ export default function AgencyWorkerCreateModal({
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto bg-[#f7f7f6] px-6 py-6">
+                <div className="flex-1 overflow-y-auto bg-[#f7f7f6] px-4 py-4 sm:px-6 sm:py-6">
                     {loadingWorker ? (
                         <div className="flex h-full min-h-[420px] items-center justify-center">
                             <div className="inline-flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-5 py-4 text-sm font-semibold text-[#111827] shadow-sm">
@@ -835,20 +835,20 @@ export default function AgencyWorkerCreateModal({
                     )}
                 </div>
 
-                <div className="border-t border-[#ececec] bg-white px-6 py-4">
-                    <div className="mx-auto flex max-w-[920px] flex-wrap items-center justify-between gap-3">
-                        <div className="text-sm text-[#6b7280]">
+                <div className="border-t border-[#ececec] bg-white px-4 py-4 sm:px-6">
+                    <div className="mx-auto flex max-w-[920px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="max-w-2xl text-sm text-[#6b7280]">
                             {readOnlyPreview
                                 ? "This preview does not save draft workers."
                                 : workerId
                                     ? "Saving updates this worker draft and keeps you on the dashboard."
                                     : "Saving creates the worker draft and keeps you on the dashboard."}
                         </div>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 type="button"
                                 onClick={requestClose}
-                                className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
+                                className="w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-center text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] sm:w-auto"
                             >
                                 Close
                             </button>
@@ -857,7 +857,7 @@ export default function AgencyWorkerCreateModal({
                                     type="button"
                                     onClick={() => void handleSave(true)}
                                     disabled={saving || loadingWorker}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-[#111111] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:opacity-70"
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111111] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                     {workerId ? "Save changes and close" : "Save and close"}
@@ -870,11 +870,11 @@ export default function AgencyWorkerCreateModal({
 
             {showClosePrompt && (
                 <div
-                    className="absolute inset-0 z-[130] flex items-center justify-center bg-[rgba(15,23,42,0.12)] px-4 py-6"
+                    className="absolute inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6"
                     onClick={() => setShowClosePrompt(false)}
                 >
                     <div
-                        className="w-full max-w-md rounded-[28px] border border-[#e5e7eb] bg-white p-6 shadow-[0_28px_90px_-50px_rgba(15,23,42,0.35)]"
+                        className="w-full max-w-md rounded-t-[28px] border border-[#e5e7eb] bg-white p-5 shadow-[0_28px_90px_-50px_rgba(15,23,42,0.35)] sm:rounded-[28px] sm:p-6"
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className="flex items-start gap-3">
