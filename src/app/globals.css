@@ -145,6 +145,10 @@ a {
   transition: all 0.2s ease;
 }
 
+a[class*="text-white"] {
+  color: #fff !important;
+}
+
 /* =========================================
    UTILITY CLASSES & COMPONENTS
    ========================================= */
