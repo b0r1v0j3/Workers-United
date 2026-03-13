@@ -126,12 +126,19 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
                 ? "You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow."
                 : "You are previewing the agency workspace structure as admin. The add-worker modal opens for inspection only and does not persist preview data."
             : "You are viewing a role workspace safely in read-only mode. Use Back to Admin whenever you want to leave preview mode.";
-    const sidebarWidthClass = sidebarExpanded ? "w-72 lg:w-[264px]" : "w-[60px] lg:w-[68px]";
+    const desktopSidebarWidthClass = sidebarExpanded ? "lg:w-[264px]" : "lg:w-[68px]";
+    const mobileDrawerClass = !isDesktop && !sidebarExpanded ? "pointer-events-none" : "";
+    const mobileDrawerStyle = !isDesktop
+        ? {
+            transform: sidebarExpanded ? "translateX(0)" : "translateX(-120%)",
+            opacity: sidebarExpanded ? 1 : 0,
+        }
+        : undefined;
     const mainOffsetClass = isDesktop
         ? sidebarExpanded
             ? "lg:ml-[280px]"
             : "lg:ml-[84px]"
-        : "pl-[72px]";
+        : "pl-0";
     const handleMenuToggle = () => {
         if ((isAdminPreview || isAdminTestMode) && isDesktop) return;
         setIsOpen((current) => !current);
@@ -156,18 +163,32 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
 
                 {/* SIDEBAR (Desktop + Mobile Drawer/Thin Sidebar) */}
                 <aside className={`
-                    fixed left-0 z-[55] transition-all duration-300 ease-in-out px-2 lg:px-0
+                    fixed left-0 z-[55] w-[248px] max-w-[calc(100vw-1rem)] transition-all duration-300 ease-in-out px-2 lg:max-w-none lg:px-0
                     top-[62px] bottom-3 pt-0 pb-0
                     lg:left-4 lg:top-[70px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
-                    ${sidebarWidthClass}
-                `}>
+                    ${desktopSidebarWidthClass}
+                    ${mobileDrawerClass}
+                `}
+                    style={mobileDrawerStyle}
+                >
                     <div className="flex h-full flex-col items-center overflow-hidden rounded-[14px] border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-[14px] lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
                         <SidebarContent user={user} variant={variant} isCollapsed={!sidebarExpanded} onMenuToggle={handleMenuToggle} adminTestMode={adminTestMode} />
                     </div>
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className={`flex-1 min-w-0 w-full pb-10 pt-1 sm:pt-4 animate-fade-in-up transition-all duration-300 px-2.5 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
+                <main className={`flex-1 min-w-0 w-full pb-10 pt-3 sm:pt-4 animate-fade-in-up transition-all duration-300 px-3 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
+                    {!isDesktop && !sidebarExpanded && (
+                        <button
+                            onClick={handleMenuToggle}
+                            className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-[14px] border border-gray-200 bg-white text-slate-600 shadow-sm transition hover:border-gray-300 hover:text-slate-900"
+                            aria-label="Open menu"
+                        >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    )}
                     {(isAdminPreview || isAdminTestMode) && (
                         <div className={`mb-4 flex flex-col gap-3 rounded-2xl px-4 py-4 text-sm md:flex-row md:items-center md:justify-between ${
                             isAdminTestMode
