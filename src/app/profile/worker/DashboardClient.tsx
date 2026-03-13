@@ -13,6 +13,7 @@ import {
     Globe,
     MapPin,
     MessageSquareMore,
+    Pencil,
     Phone,
     Shield,
     User,
@@ -223,8 +224,9 @@ export default function DashboardClient({
 
                                 <Link
                                     href="/profile/worker/edit"
-                                    className="inline-flex items-center justify-center rounded-xl bg-[#111111] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[#27272a]"
+                                    className="inline-flex min-h-[56px] w-full max-w-[320px] items-center justify-center gap-2 rounded-2xl bg-[#111111] px-6 py-3 text-base font-semibold text-white shadow-[0_22px_45px_-30px_rgba(15,23,42,0.45)] transition hover:bg-[#27272a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2"
                                 >
+                                    <Pencil size={18} />
                                     Complete Profile
                                 </Link>
                             </div>
