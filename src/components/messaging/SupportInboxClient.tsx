@@ -89,6 +89,9 @@ const SUPPORT_COPY: Record<
     },
 };
 
+const mobileFlatSurfaceClass = "rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:p-6 sm:shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]";
+const mobileFlatHeroClass = "rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:p-6 sm:shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
+
 export default function SupportInboxClient({
     audience,
     readOnlyPreview = false,
@@ -174,7 +177,7 @@ export default function SupportInboxClient({
     if (readOnlyPreview) {
         return (
             <div className="space-y-6">
-                <section className="rounded-[14px] border border-[#dbeafe] bg-[#eff6ff] p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
+                <section className="rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-[14px] sm:border sm:border-[#dbeafe] sm:bg-[#eff6ff] sm:p-6 sm:shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
                     <div className="inline-flex items-center gap-2 rounded-full border border-[#bfdbfe] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1d4ed8]">
                         <LifeBuoy size={14} />
                         Support Preview
@@ -198,7 +201,7 @@ export default function SupportInboxClient({
 
     return (
         <div className="space-y-6">
-            <section className="rounded-[14px] border border-[#e7e7e5] bg-white p-6 shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]">
+            <section className={mobileFlatHeroClass}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
@@ -223,14 +226,14 @@ export default function SupportInboxClient({
             </section>
 
             {loading ? (
-                <div className="flex min-h-[420px] items-center justify-center rounded-[14px] border border-[#e7e7e5] bg-white">
+                <div className="flex min-h-[420px] items-center justify-center rounded-none border-0 bg-transparent sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white">
                     <div className="flex items-center gap-3 text-sm font-medium text-[#6b7280]">
                         <Loader2 size={18} className="animate-spin" />
                         {copy.loading}
                     </div>
                 </div>
             ) : !data ? (
-                <section className="rounded-[14px] border border-[#e7e7e5] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
+                <section className={mobileFlatSurfaceClass}>
                     <h2 className="text-2xl font-semibold text-[#18181b]">{copy.unavailableTitle}</h2>
                     <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6b7280]">
                         {copy.unavailableDescription}
@@ -246,7 +249,7 @@ export default function SupportInboxClient({
                     </div>
                 </section>
             ) : !data.access.allowed ? (
-                <section className="rounded-[14px] border border-[#e7e7e5] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.28)]">
+                <section className={mobileFlatSurfaceClass}>
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
                         <LockKeyhole size={22} />
                     </div>

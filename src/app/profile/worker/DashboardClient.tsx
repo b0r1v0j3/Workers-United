@@ -71,7 +71,7 @@ interface DashboardClientProps {
     readOnlyPreview?: boolean;
 }
 
-const surfaceClass = "rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_20px_45px_-36px_rgba(15,23,42,0.18)]";
+const surfaceClass = "rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_20px_45px_-36px_rgba(15,23,42,0.18)]";
 
 export default function DashboardClient({
     user,
@@ -160,7 +160,7 @@ export default function DashboardClient({
 
     return (
         <div className="space-y-6">
-            <section className="relative overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_70px_-52px_rgba(15,23,42,0.18)]">
+            <section className="relative overflow-visible rounded-none border-0 bg-transparent p-0 shadow-none sm:overflow-hidden sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_30px_70px_-52px_rgba(15,23,42,0.18)]">
                 <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-2xl">
                         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
@@ -183,7 +183,7 @@ export default function DashboardClient({
                         <MetricCard label="Status" value={workspaceStatus} />
                     </div>
                 </div>
-                <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-[#111111]/5 blur-3xl" />
+                <div className="pointer-events-none absolute -right-16 top-0 hidden h-40 w-40 rounded-full bg-[#111111]/5 blur-3xl sm:block" />
             </section>
 
             <section className="space-y-6">
