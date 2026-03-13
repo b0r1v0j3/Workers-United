@@ -13,9 +13,19 @@ interface UnifiedNavbarProps {
     variant: "public" | "dashboard" | "admin";
     user?: SupabaseUser | null;
     profileName?: string; // Full name from profiles table (takes priority)
+    onMenuToggle?: () => void;
+    showMobileMenuToggle?: boolean;
+    mobileMenuOpen?: boolean;
 }
 
-export default function UnifiedNavbar({ variant, user: userProp, profileName: profileNameProp }: UnifiedNavbarProps) {
+export default function UnifiedNavbar({
+    variant,
+    user: userProp,
+    profileName: profileNameProp,
+    onMenuToggle,
+    showMobileMenuToggle = false,
+    mobileMenuOpen = false,
+}: UnifiedNavbarProps) {
     const [clientUser, setClientUser] = useState<SupabaseUser | null>(userProp || null);
     const [clientProfileName, setClientProfileName] = useState(profileNameProp || "");
     const [isScrolled, setIsScrolled] = useState(false);
@@ -46,6 +56,7 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
     const profileName = profileNameProp || clientProfileName;
     const isPublic = variant === "public";
     const showCenteredLogoIcon = variant !== "admin";
+    const showMobileMenuButton = !isPublic && showMobileMenuToggle && typeof onMenuToggle === "function";
     const normalizedUserType = normalizeUserType(user?.user_metadata?.user_type);
     const navbarHeightClass = isPublic
         ? `${isScrolled ? "bg-white/70 backdrop-blur-sm" : "bg-white/40 backdrop-blur-[2px]"} h-[52px] md:h-[56px]`
@@ -74,8 +85,27 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
         >
             <div className="w-full px-3 md:px-8 lg:px-10 h-full flex items-center justify-between relative">
                 {/* Left: Logo */}
-                <div className="z-10 flex items-center gap-3">
-                    <Link href={isPublic ? "/" : dashboardHref} className="flex items-center gap-2.5 md:gap-3 hover:opacity-90 transition-opacity py-1">
+                <div className="z-10 flex items-center gap-2 md:gap-3">
+                    {showMobileMenuButton && (
+                        <button
+                            type="button"
+                            onClick={onMenuToggle}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-gray-200 bg-white text-slate-600 shadow-sm transition hover:border-gray-300 hover:text-slate-900 md:hidden"
+                            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                            aria-expanded={mobileMenuOpen}
+                        >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    )}
+
+                    <Link
+                        href={isPublic ? "/" : dashboardHref}
+                        className={`items-center gap-2.5 py-1 transition-opacity hover:opacity-90 md:gap-3 ${
+                            isPublic ? "flex" : "hidden md:flex"
+                        }`}
+                    >
                         {variant === "admin" ? (
                             <>
                                 <Image
@@ -109,12 +139,12 @@ export default function UnifiedNavbar({ variant, user: userProp, profileName: pr
 
                     {/* Context Badge (Admin/Employer) */}
                     {variant === "admin" && (
-                        <span className="bg-red-100 text-red-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                        <span className="hidden rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-700 md:inline-flex">
                             Admin
                         </span>
                     )}
                     {variant !== "admin" && !isPublic && normalizedUserType === "admin" && (
-                        <span className="bg-blue-100 text-blue-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                        <span className="hidden rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-blue-700 md:inline-flex">
                             Admin Preview
                         </span>
                     )}

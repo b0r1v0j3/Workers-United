@@ -153,6 +153,9 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
             <UnifiedNavbar
                 variant={variant}
                 user={user}
+                onMenuToggle={handleMenuToggle}
+                showMobileMenuToggle={variant !== "public"}
+                mobileMenuOpen={sidebarExpanded}
             />
 
             <div className="flex-1 flex max-w-[1920px] mx-auto w-full relative">
@@ -166,32 +169,28 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
 
                 {/* SIDEBAR (Desktop + Mobile Drawer/Thin Sidebar) */}
                 <aside className={`
-                    fixed left-0 z-[55] w-[248px] max-w-[calc(100vw-1rem)] transition-all duration-300 ease-in-out px-2 lg:max-w-none lg:px-0
-                    top-[62px] bottom-3 pt-0 pb-0
+                    fixed left-0 z-[55] w-[272px] max-w-[calc(100vw-0.75rem)] transition-all duration-300 ease-in-out px-0 lg:max-w-none lg:px-0
+                    top-[56px] bottom-0 pt-0 pb-0
                     lg:left-4 lg:top-[70px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
                     ${desktopSidebarWidthClass}
                     ${mobileDrawerClass}
                 `}
                     style={mobileDrawerStyle}
                 >
-                    <div className="flex h-full flex-col items-center overflow-hidden rounded-[14px] border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-[14px] lg:border-white/60 lg:bg-white/50 lg:p-3 lg:items-stretch">
-                        <SidebarContent user={user} variant={variant} isCollapsed={!sidebarExpanded} onMenuToggle={handleMenuToggle} adminTestMode={adminTestMode} />
+                    <div className="flex h-full flex-col items-stretch overflow-hidden border-r border-gray-200 bg-white px-3 py-3 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.35)] lg:rounded-[14px] lg:border lg:border-white/60 lg:bg-white/50 lg:px-3 lg:py-3 lg:shadow-sm lg:backdrop-blur-sm">
+                        <SidebarContent
+                            user={user}
+                            variant={variant}
+                            isCollapsed={!sidebarExpanded}
+                            onMenuToggle={handleMenuToggle}
+                            showInlineToggle={isDesktop}
+                            adminTestMode={adminTestMode}
+                        />
                     </div>
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className={`flex-1 min-w-0 w-full pb-10 pt-3 sm:pt-4 animate-fade-in-up transition-all duration-300 px-3 sm:px-6 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
-                    {!isDesktop && !sidebarExpanded && (
-                        <button
-                            onClick={handleMenuToggle}
-                            className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-[14px] border border-gray-200 bg-white text-slate-600 shadow-sm transition hover:border-gray-300 hover:text-slate-900"
-                            aria-label="Open menu"
-                        >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
-                    )}
+                <main className={`flex-1 min-w-0 w-full animate-fade-in-up px-3 pb-10 pt-2 transition-all duration-300 sm:px-6 sm:pt-4 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
                     {(isAdminPreview || isAdminTestMode) && (
                         <div className={`mb-4 flex flex-col gap-3 rounded-2xl px-3.5 py-3.5 text-sm md:flex-row md:items-center md:justify-between md:px-4 md:py-4 ${
                             isAdminTestMode
@@ -239,6 +238,7 @@ interface SidebarContentProps {
     variant: AppShellVariant;
     isCollapsed: boolean;
     onMenuToggle?: () => void;
+    showInlineToggle?: boolean;
     adminTestMode?: AdminTestModeState | null;
 }
 
@@ -275,7 +275,14 @@ const SIDEBAR_TONE_STYLES: Record<SidebarTone, { active: string; icon: string }>
     },
 };
 
-function SidebarContent({ user, variant, isCollapsed, onMenuToggle, adminTestMode = null }: SidebarContentProps) {
+function SidebarContent({
+    user,
+    variant,
+    isCollapsed,
+    onMenuToggle,
+    showInlineToggle = true,
+    adminTestMode = null,
+}: SidebarContentProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const userType = normalizeUserType(user?.user_metadata?.user_type) || "worker";
@@ -317,7 +324,7 @@ function SidebarContent({ user, variant, isCollapsed, onMenuToggle, adminTestMod
     return (
         <div className="flex h-full min-h-0 w-full flex-col items-center gap-1.5 overflow-y-auto lg:items-stretch">
             {/* Toggle Button Inside Box */}
-            {onMenuToggle && (
+            {onMenuToggle && showInlineToggle && (
                 <button
                     onClick={onMenuToggle}
                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 group w-full ${isCollapsed ? 'justify-center' : 'justify-start'} text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent`}
