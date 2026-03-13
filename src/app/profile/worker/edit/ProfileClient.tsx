@@ -642,7 +642,7 @@ export default function ProfilePage({
                                         <PhoneInput
                                             country={"rs"}
                                             value={formData.phone}
-                                            onChange={(phone) => setFormData(prev => ({ ...prev, phone: '+' + phone }))}
+                                            onChange={(phone: string) => setFormData(prev => ({ ...prev, phone: '+' + phone }))}
                                             inputClass={`${inputClass} !pl-12 !w-full`}
                                             buttonClass="!border-gray-300 !bg-gray-50 !rounded-l-md"
                                             disabled={readOnlyPreview || saving}

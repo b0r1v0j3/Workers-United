@@ -16,6 +16,11 @@ interface FileUpload {
     message: string;
 }
 
+interface ExistingDocumentStatus {
+    document_type: string;
+    status: FileUpload["status"] | null;
+}
+
 interface DocumentWizardProps {
     workerProfileId: string;
     email: string;
@@ -39,24 +44,26 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
     // Load existing document statuses on mount
     useEffect(() => {
         async function loadExistingDocs() {
-            const docs = adminTestMode
+            const docs: ExistingDocumentStatus[] = adminTestMode
                 ? await fetch("/api/admin/test-personas/worker", { cache: "no-store" })
                     .then(async (response) => {
                         const payload = await response.json();
-                        if (!response.ok) return [];
-                        return payload.documents || [];
+                        if (!response.ok || !Array.isArray(payload.documents)) {
+                            return [] as ExistingDocumentStatus[];
+                        }
+                        return payload.documents as ExistingDocumentStatus[];
                     })
                 : await supabase
                     .from("worker_documents")
                     .select("document_type, status")
                     .eq("user_id", workerProfileId)
-                    .then((result) => result.data || []);
+                    .then((result) => (result.data as ExistingDocumentStatus[] | null) || []);
 
             if (docs && docs.length > 0) {
                 const updates: Record<string, FileUpload> = { ...uploads };
                 let allVerified = true;
 
-                docs.forEach(doc => {
+                docs.forEach((doc: ExistingDocumentStatus) => {
                     if (doc.status === 'verified') {
                         updates[doc.document_type] = {
                             file: null,

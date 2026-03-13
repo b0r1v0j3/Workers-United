@@ -709,7 +709,7 @@ export default function EmployerProfilePage({
                                                     <PhoneInput
                                                         country={"rs"}
                                                         value={companyForm.contact_phone}
-                                                        onChange={(phone) => setCompanyForm(prev => ({ ...prev, contact_phone: '+' + phone }))}
+                                                        onChange={(phone: string) => setCompanyForm(prev => ({ ...prev, contact_phone: '+' + phone }))}
                                                         inputClass={`${inputClass} !pl-12 !w-full`}
                                                         buttonClass="!border-gray-200 !bg-gray-50 !rounded-l-xl"
                                                         enableSearch={true}
