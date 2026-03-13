@@ -4,6 +4,8 @@ import AppShell from "@/components/AppShell";
 import AgencySetupRequired from "@/components/AgencySetupRequired";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { buildAdminTestUser, getAdminTestSession, getAdminTestWorkspaceHref } from "@/lib/admin-test-mode";
+import { getAdminTestAgencyWorker, getAdminTestAgencyWorkerDocuments } from "@/lib/admin-test-data";
 import { getAgencyOwnedWorker, getAgencySchemaState, getAgencyWorkerEmail, getAgencyWorkerName, isAgencyWorkerClaimed } from "@/lib/agencies";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
@@ -22,17 +24,108 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
     const query = await searchParams;
     const supabase = await createClient();
     const admin = createAdminClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
+    const user = session.user;
     if (!user) {
         redirect("/login");
     }
 
-    const userType = normalizeUserType(user.user_metadata?.user_type);
+    if (session.activePersona) {
+        if (session.activePersona.role !== "agency") {
+            redirect(getAdminTestWorkspaceHref(session.activePersona.role));
+        }
+
+        const worker = await getAdminTestAgencyWorker(admin, session.activePersona.id, id);
+        if (!worker) {
+            redirect("/profile/agency");
+        }
+
+        const documents = await getAdminTestAgencyWorkerDocuments(admin, session.activePersona.id, id);
+        const completionResult = getWorkerCompletion({
+            profile: { full_name: worker.full_name || "Sandbox worker" },
+            worker,
+            documents,
+        }, { phoneOptional: true });
+        const verifiedDocuments = documents.filter((document) => document.status === "verified").length;
+        const hasPaidEntryFee =
+            !!worker.entry_fee_paid ||
+            !!worker.job_search_active ||
+            isPostEntryFeeWorkerStatus(worker.status);
+
+        return (
+            <AppShell
+                user={buildAdminTestUser(user, {
+                    persona: session.activePersona,
+                    displayName: session.activePersona.label,
+                    email: session.ownerProfile?.email || user.email,
+                })}
+                variant="dashboard"
+                adminTestMode={{
+                    active: true,
+                    role: "agency",
+                    label: session.activePersona.label,
+                }}
+            >
+                <div className="mb-4">
+                    <Link href="/profile/agency" className="text-sm font-semibold text-[#57534e] hover:text-[#18181b]">
+                        ← Back to agency dashboard
+                    </Link>
+                </div>
+
+                <AgencyWorkerClient
+                    initialWorker={{
+                        id: worker.id,
+                        profileId: null,
+                        claimed: false,
+                        fullName: worker.full_name || "Sandbox worker",
+                        email: worker.email || "",
+                        phone: worker.phone || "",
+                        nationality: worker.nationality || "",
+                        currentCountry: worker.current_country || "",
+                        preferredJob: worker.preferred_job || "",
+                        desiredCountries: worker.desired_countries || [],
+                        gender: worker.gender || "",
+                        maritalStatus: worker.marital_status || "",
+                        dateOfBirth: worker.date_of_birth || "",
+                        birthCountry: worker.birth_country || "",
+                        birthCity: worker.birth_city || "",
+                        citizenship: worker.citizenship || "",
+                        originalCitizenship: worker.original_citizenship || "",
+                        maidenName: worker.maiden_name || "",
+                        fatherName: worker.father_name || "",
+                        motherName: worker.mother_name || "",
+                        address: worker.address || "",
+                        familyData: worker.family_data,
+                        passportNumber: worker.passport_number || "",
+                        passportIssuedBy: worker.passport_issued_by || "",
+                        passportIssueDate: worker.passport_issue_date || "",
+                        passportExpiryDate: worker.passport_expiry_date || "",
+                        livesAbroad: worker.lives_abroad || "",
+                        previousVisas: worker.previous_visas || "",
+                        status: worker.status || "NEW",
+                        updatedAt: worker.updated_at || null,
+                        completion: completionResult.completion,
+                        missingFields: completionResult.missingFields,
+                        verifiedDocuments,
+                        documents,
+                        accessLabel: "Sandbox agency worker",
+                        paymentLabel: hasPaidEntryFee ? "Paid" : "Not paid",
+                    }}
+                    readOnlyPreview={false}
+                    adminTestMode
+                />
+            </AppShell>
+        );
+    }
+
+    const userType = normalizeUserType(session.liveUserType || user.user_metadata?.user_type);
     if (userType !== "agency" && userType !== "admin") {
         redirect(userType === "employer" ? "/profile/employer" : "/profile/worker");
     }
     const inspectProfileId = userType === "admin" ? query?.inspect?.trim() || null : null;
+    if (userType === "admin" && !inspectProfileId) {
+        redirect("/admin");
+    }
     const targetAgencyProfileId = inspectProfileId || user.id;
     const agencyDashboardHref = inspectProfileId ? `/profile/agency?inspect=${inspectProfileId}` : "/profile/agency";
 
@@ -128,7 +221,6 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
         !!workerRecord.entry_fee_paid ||
         isPostEntryFeeWorkerStatus(workerRecord.status) ||
         (payments || []).some((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
-    const hasPendingEntryFee = (payments || []).some((payment) => payment.payment_type === "entry_fee" && payment.status === "pending");
 
     return (
         <AppShell user={user} variant="dashboard">
@@ -186,6 +278,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                     paymentLabel: hasPaidEntryFee ? "Paid" : "Not paid",
                 }}
                 readOnlyPreview={userType === "admin"}
+                adminTestMode={false}
             />
         </AppShell>
     );

@@ -20,9 +20,10 @@ interface DocumentWizardProps {
     workerProfileId: string;
     email: string;
     onComplete?: () => void;
+    adminTestMode?: boolean;
 }
 
-export default function DocumentWizard({ workerProfileId, email, onComplete }: DocumentWizardProps) {
+export default function DocumentWizard({ workerProfileId, email, onComplete, adminTestMode = false }: DocumentWizardProps) {
     const supabase = createClient();
     const [uploads, setUploads] = useState<Record<string, FileUpload>>({
         passport: { file: null, status: "missing", message: "" },
@@ -38,10 +39,18 @@ export default function DocumentWizard({ workerProfileId, email, onComplete }: D
     // Load existing document statuses on mount
     useEffect(() => {
         async function loadExistingDocs() {
-            const { data: docs } = await supabase
-                .from("worker_documents")
-                .select("document_type, status")
-                .eq("user_id", workerProfileId);
+            const docs = adminTestMode
+                ? await fetch("/api/admin/test-personas/worker", { cache: "no-store" })
+                    .then(async (response) => {
+                        const payload = await response.json();
+                        if (!response.ok) return [];
+                        return payload.documents || [];
+                    })
+                : await supabase
+                    .from("worker_documents")
+                    .select("document_type, status")
+                    .eq("user_id", workerProfileId)
+                    .then((result) => result.data || []);
 
             if (docs && docs.length > 0) {
                 const updates: Record<string, FileUpload> = { ...uploads };
@@ -84,7 +93,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete }: D
             }
         }
         loadExistingDocs();
-    }, [workerProfileId]);
+    }, [adminTestMode, workerProfileId]);
 
     // Update status helper
     const updateStatus = (type: string, status: FileUpload["status"], message: string, file: File | null = null) => {
@@ -158,74 +167,112 @@ export default function DocumentWizard({ workerProfileId, email, onComplete }: D
                 }
             }
 
-            const fileName = `${Date.now()}_${sanitizeStorageFileName(uploadFile.name, type)}`;
-            const storagePath = `${workerProfileId}/${type}/${fileName}`;
+            if (adminTestMode) {
+                updateStatus(type, "uploaded", "Uploading to sandbox...", uploadFile);
+                const formData = new FormData();
+                formData.set("docType", type);
+                formData.set("file", uploadFile);
 
-            updateStatus(type, "uploaded", "Uploading...", uploadFile);
+                const response = await fetch("/api/admin/test-personas/worker/documents", {
+                    method: "POST",
+                    body: formData,
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || "Sandbox upload failed");
+                }
 
-            // Upload to the legacy worker-documents storage bucket
-            const { error: uploadError } = await supabase.storage
-                .from(WORKER_DOCUMENTS_BUCKET)
-                .upload(storagePath, uploadFile);
-
-            if (uploadError) throw uploadError;
-
-            // Upsert to the legacy worker-documents table
-            await supabase.from("worker_documents").upsert({
-                user_id: workerProfileId,
-                document_type: type,
-                storage_path: storagePath,
-                status: 'uploaded',
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id,document_type' });
-
-            // Set to verifying
-            logActivity("document_uploaded_to_storage", "documents", { doc_type: type, storage_path: storagePath });
-            updateStatus(type, "verifying", "Verifying with AI...");
-
-            await supabase.from("worker_documents").update({
-                status: 'verifying',
-                updated_at: new Date().toISOString()
-            }).eq('user_id', workerProfileId).eq('document_type', type);
-
-            // Trigger verification
-            const response = await fetch('/api/verify-document', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ workerId: workerProfileId, docType: type })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                logActivity("document_verified", "documents", { doc_type: type, status: result.status });
-                toast.success(`${type.replace('_', ' ')} verified successfully!`);
+                logActivity("document_verified", "documents", { doc_type: type, status: "verified", sandbox: true });
+                toast.success(`${type.replace('_', ' ')} verified in sandbox.`);
                 setUploads(prev => {
                     const newUploads = {
                         ...prev,
                         [type]: {
                             file: uploadFile,
-                            status: result.status,
-                            message: result.status === 'verified' ? '✓ Verified' : 'Verification failed.'
+                            status: "verified" as FileUpload["status"],
+                            message: "✓ Verified"
                         }
                     };
 
-                    // Check if ALL required docs are verified
                     if (newUploads.passport?.status === 'verified' &&
                         newUploads.biometric_photo?.status === 'verified' &&
                         newUploads.diploma?.status === 'verified') {
                         setIsComplete(true);
-                        toast.success("All documents verified! You're ready to proceed.");
+                        toast.success("All sandbox documents verified.");
                     }
 
                     return newUploads;
                 });
             } else {
-                // Show specific AI feedback to the user
-                const rejectionMessage = result.message || result.error || "Verification failed";
-                logActivity("document_rejected", "documents", { doc_type: type, reason: rejectionMessage, quality_issues: result.qualityIssues }, "warning");
-                toast.error(rejectionMessage);
-                updateStatus(type, "rejected", rejectionMessage);
+                const fileName = `${Date.now()}_${sanitizeStorageFileName(uploadFile.name, type)}`;
+                const storagePath = `${workerProfileId}/${type}/${fileName}`;
+
+                updateStatus(type, "uploaded", "Uploading...", uploadFile);
+
+                // Upload to the legacy worker-documents storage bucket
+                const { error: uploadError } = await supabase.storage
+                    .from(WORKER_DOCUMENTS_BUCKET)
+                    .upload(storagePath, uploadFile);
+
+                if (uploadError) throw uploadError;
+
+                // Upsert to the legacy worker-documents table
+                await supabase.from("worker_documents").upsert({
+                    user_id: workerProfileId,
+                    document_type: type,
+                    storage_path: storagePath,
+                    status: 'uploaded',
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id,document_type' });
+
+                // Set to verifying
+                logActivity("document_uploaded_to_storage", "documents", { doc_type: type, storage_path: storagePath });
+                updateStatus(type, "verifying", "Verifying with AI...");
+
+                await supabase.from("worker_documents").update({
+                    status: 'verifying',
+                    updated_at: new Date().toISOString()
+                }).eq('user_id', workerProfileId).eq('document_type', type);
+
+                // Trigger verification
+                const response = await fetch('/api/verify-document', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workerId: workerProfileId, docType: type })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    logActivity("document_verified", "documents", { doc_type: type, status: result.status });
+                    toast.success(`${type.replace('_', ' ')} verified successfully!`);
+                    setUploads(prev => {
+                        const newUploads = {
+                            ...prev,
+                            [type]: {
+                                file: uploadFile,
+                                status: result.status,
+                                message: result.status === 'verified' ? '✓ Verified' : 'Verification failed.'
+                            }
+                        };
+
+                        // Check if ALL required docs are verified
+                        if (newUploads.passport?.status === 'verified' &&
+                            newUploads.biometric_photo?.status === 'verified' &&
+                            newUploads.diploma?.status === 'verified') {
+                            setIsComplete(true);
+                            toast.success("All documents verified! You're ready to proceed.");
+                        }
+
+                        return newUploads;
+                    });
+                } else {
+                    // Show specific AI feedback to the user
+                    const rejectionMessage = result.message || result.error || "Verification failed";
+                    logActivity("document_rejected", "documents", { doc_type: type, reason: rejectionMessage, quality_issues: result.qualityIssues }, "warning");
+                    toast.error(rejectionMessage);
+                    updateStatus(type, "rejected", rejectionMessage);
+                }
             }
 
         } catch (err) {
@@ -277,6 +324,10 @@ export default function DocumentWizard({ workerProfileId, email, onComplete }: D
     }
 
     async function requestManualReview(type: string) {
+        if (adminTestMode) {
+            toast.info("Sandbox documents are already auto-verified.");
+            return;
+        }
         try {
             const res = await fetch('/api/documents/request-review', {
                 method: 'POST',

@@ -54,6 +54,12 @@ export default function QueueClientEffects() {
 
         void handleSuccess();
 
+        if (payment === "sandbox_success") {
+            confetti({ particleCount: 120, spread: 75, origin: { y: 0.6 } });
+            toast.success("Sandbox payment completed. Queue state is now active.");
+            window.history.replaceState({}, "", "/profile/worker/queue");
+        }
+
         if (payment === "cancelled") {
             toast.info("Payment cancelled. You can try again when you're ready.");
             window.history.replaceState({}, "", "/profile/worker/queue");
@@ -71,10 +77,12 @@ export function PayToJoinButton({
     displayName,
     source = "queue_page",
     redirectPath = "/profile/worker/queue",
+    adminTestMode = false,
 }: {
     displayName: string;
     source?: string;
     redirectPath?: string;
+    adminTestMode?: boolean;
 }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -84,11 +92,13 @@ export function PayToJoinButton({
         setError("");
 
         // Track the payment click
-        fetch("/api/track", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "payment_click", category: "funnel", details: { type: "entry_fee", source } }),
-        }).catch(() => { });
+        if (!adminTestMode) {
+            fetch("/api/track", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "payment_click", category: "funnel", details: { type: "entry_fee", source } }),
+            }).catch(() => { });
+        }
 
         try {
             const res = await fetch("/api/stripe/create-checkout", {

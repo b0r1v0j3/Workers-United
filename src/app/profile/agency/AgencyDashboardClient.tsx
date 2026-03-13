@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     Building2,
     CreditCard,
@@ -213,6 +213,7 @@ export default function AgencyDashboardClient({
     inspectProfileId = null,
 }: AgencyDashboardProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [search, setSearch] = useState("");
     const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
     const [selectedWorker, setSelectedWorker] = useState<{ id: string; name: string } | null>(null);
@@ -255,6 +256,17 @@ export default function AgencyDashboardClient({
     useEffect(() => {
         setSelectedWorkerIds((current) => current.filter((workerId) => workers.some((worker) => worker.id === workerId)));
     }, [workers]);
+
+    useEffect(() => {
+        const payment = searchParams.get("payment");
+        if (payment !== "sandbox_success") {
+            return;
+        }
+
+        toast.success("Sandbox payment completed. Worker is now marked as paid.");
+        router.replace("/profile/agency", { scroll: false });
+        router.refresh();
+    }, [router, searchParams]);
 
     function openNewWorkerModal() {
         setSelectedWorker(null);

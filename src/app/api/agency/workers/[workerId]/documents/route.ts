@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminTestSession } from "@/lib/admin-test-mode";
+import {
+    getAdminTestAgencyWorker,
+    uploadAdminTestAgencyWorkerDocument,
+} from "@/lib/admin-test-data";
 import { getAgencyOwnedWorker, getAgencySchemaState } from "@/lib/agencies";
 import { normalizeUserType } from "@/lib/domain";
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from "@/lib/constants";
@@ -25,13 +30,59 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const { workerId } = await context.params;
         const supabase = await createClient();
         const admin = createAdminClient();
+        const adminTestSession = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
+
+        if (!adminTestSession.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const formData = await request.formData();
+        const docTypeRaw = formData.get("docType");
+        const fileEntry = formData.get("file");
+        const docType = typeof docTypeRaw === "string" ? docTypeRaw.trim() : "";
+
+        if (!ALLOWED_DOC_TYPES.has(docType)) {
+            return NextResponse.json({ error: "Unsupported document type" }, { status: 400 });
+        }
+
+        if (!fileEntry || typeof fileEntry === "string") {
+            return NextResponse.json({ error: "File is required" }, { status: 400 });
+        }
+
+        if (fileEntry.size > MAX_FILE_SIZE_BYTES) {
+            return NextResponse.json({ error: `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.` }, { status: 400 });
+        }
+
+        if (adminTestSession.activePersona?.role === "agency" && adminTestSession.ownerProfile) {
+            const sandboxWorker = await getAdminTestAgencyWorker(admin, adminTestSession.activePersona.id, workerId);
+            if (!sandboxWorker) {
+                return NextResponse.json({ error: "Worker not found" }, { status: 404 });
+            }
+
+            const document = await uploadAdminTestAgencyWorkerDocument({
+                admin,
+                personaId: adminTestSession.activePersona.id,
+                ownerProfileId: adminTestSession.ownerProfile.id,
+                workerId,
+                docType,
+                file: fileEntry,
+            });
+
+            return NextResponse.json({
+                success: true,
+                sandbox: true,
+                docType,
+                document,
+                message: "Sandbox document uploaded and verified.",
+            });
+        }
 
         const schemaState = await getAgencySchemaState(admin);
         if (!schemaState.ready) {
             return NextResponse.json({ error: "Agency workspace setup is not active yet." }, { status: 503 });
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = adminTestSession.user;
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -53,23 +104,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
         if (!worker.profile_id) {
             return NextResponse.json({ error: "Worker must claim the profile before documents can be uploaded." }, { status: 400 });
-        }
-
-        const formData = await request.formData();
-        const docTypeRaw = formData.get("docType");
-        const fileEntry = formData.get("file");
-        const docType = typeof docTypeRaw === "string" ? docTypeRaw.trim() : "";
-
-        if (!ALLOWED_DOC_TYPES.has(docType)) {
-            return NextResponse.json({ error: "Unsupported document type" }, { status: 400 });
-        }
-
-        if (!fileEntry || typeof fileEntry === "string") {
-            return NextResponse.json({ error: "File is required" }, { status: 400 });
-        }
-
-        if (fileEntry.size > MAX_FILE_SIZE_BYTES) {
-            return NextResponse.json({ error: `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.` }, { status: 400 });
         }
 
         const nowIso = new Date().toISOString();

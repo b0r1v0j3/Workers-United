@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
-import { ensureWorkerRecord } from "@/lib/workers";
+import {
+    clearActiveAdminTestPersonaCookie,
+    getAdminTestSession,
+    getAdminTestWorkspaceHref,
+    setActiveAdminTestPersonaCookie,
+} from "@/lib/admin-test-mode";
+import { touchAdminTestPersona } from "@/lib/admin-test-data";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
+        const admin = createAdminClient();
+        const session = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = session.user;
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -20,6 +29,28 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const { action } = body;
+
+        const activateSandboxRole = async (role: "worker" | "employer" | "agency") => {
+            if (!session.canUseAdminTestMode) {
+                return NextResponse.json({ error: "Sandbox mode is not available." }, { status: 403 });
+            }
+
+            const persona = session.personas.find((entry) => entry.role === role) || null;
+            if (!persona) {
+                return NextResponse.json({ error: "Sandbox persona not found." }, { status: 404 });
+            }
+
+            await setActiveAdminTestPersonaCookie(persona.id);
+            await touchAdminTestPersona(admin, persona.id);
+
+            return NextResponse.json({
+                success: true,
+                action,
+                sandbox: true,
+                role,
+                href: getAdminTestWorkspaceHref(role),
+            });
+        };
 
         switch (action) {
             case "verify":
@@ -75,57 +106,23 @@ export async function POST(request: NextRequest) {
                 break;
 
             case "switch_to_employer":
-                // Create employer profile if not exists
-                const { data: existingEmployer } = await supabase
-                    .from("employers")
-                    .select("id")
-                    .eq("profile_id", user.id)
-                    .single();
-
-                if (!existingEmployer) {
-                    await supabase.from("employers").insert({
-                        profile_id: user.id,
-                        company_name: "Test Company",
-                        status: "PENDING"
-                    });
-                }
-
-                // Update user_metadata in auth
-                await supabase.auth.updateUser({
-                    data: { user_type: "employer" }
-                });
-
-                // Update profile to employer
-                await supabase
-                    .from("profiles")
-                    .update({ user_type: "employer" })
-                    .eq("id", user.id);
-                break;
+                return activateSandboxRole("employer");
 
             case "switch_to_worker":
-                // Update user_metadata in auth
-                await supabase.auth.updateUser({
-                    data: { user_type: "worker" }
-                });
+                return activateSandboxRole("worker");
 
-                await ensureWorkerRecord(supabase, {
-                    userId: user.id,
-                    email: user.email,
-                    fullName: user.user_metadata?.full_name,
-                });
-                break;
+            case "switch_to_agency":
+                return activateSandboxRole("agency");
 
             case "switch_to_admin":
-                // Update auth metadata
-                await supabase.auth.updateUser({
-                    data: { user_type: "admin" }
+                await clearActiveAdminTestPersonaCookie();
+                return NextResponse.json({
+                    success: true,
+                    action,
+                    sandbox: false,
+                    role: "admin",
+                    href: "/admin",
                 });
-                // Update profiles table
-                await supabase
-                    .from("profiles")
-                    .update({ user_type: "admin" })
-                    .eq("id", user.id);
-                break;
 
             default:
                 return NextResponse.json({ error: "Unknown action" }, { status: 400 });
@@ -158,8 +155,11 @@ async function getNextQueuePosition(supabase: SupabaseClient): Promise<number> {
 export async function GET() {
     try {
         const supabase = await createClient();
+        const admin = createAdminClient();
+        const session = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
 
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const user = session.user;
+        const authError = user ? null : true;
 
         if (authError || !user) {
             // Not logged in — normal for public pages, not an error
@@ -170,7 +170,8 @@ export async function GET() {
 
         return NextResponse.json({
             godMode: isGod,
-            email: user.email
+            email: user.email,
+            activePersonaRole: session.activePersona?.role || null,
         });
 
     } catch (error: unknown) {

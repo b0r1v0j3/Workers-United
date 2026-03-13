@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { normalizeUserType } from "@/lib/domain";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminTestSession, getAdminTestWorkspaceHref } from "@/lib/admin-test-mode";
+import { getAdminTestWorkerWorkspace } from "@/lib/admin-test-data";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
@@ -16,12 +18,143 @@ export default async function QueuePage({
     searchParams: Promise<{ inspect?: string }>;
 }) {
     const supabase = await createClient();
+    const admin = createAdminClient();
     const params = await searchParams;
-
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
+    const user = session.user;
     if (!user) redirect("/login");
 
-    const userType = normalizeUserType(user.user_metadata?.user_type);
+    if (session.activePersona) {
+        if (session.activePersona.role !== "worker") {
+            redirect(getAdminTestWorkspaceHref(session.activePersona.role));
+        }
+
+        const workspace = await getAdminTestWorkerWorkspace(admin, session.activePersona.id);
+        const workerRecord = workspace.worker;
+        if (!workerRecord) {
+            redirect("/profile/worker");
+        }
+
+        const hasPaidEntryFee =
+            !!workerRecord.entry_fee_paid ||
+            !!workerRecord.job_search_active ||
+            isPostEntryFeeWorkerStatus(workerRecord.status);
+        const hasPendingOffer = false;
+        const statusDriftWithoutOffer = workerRecord.status === "OFFER_PENDING" && !hasPendingOffer;
+        const paymentAcceptedNoOffer = hasPaidEntryFee && !hasPendingOffer;
+        const queueJoinedSource = workerRecord.queue_joined_at || null;
+        const queueJoinedDate = queueJoinedSource ? new Date(queueJoinedSource) : null;
+        const nowMs = new Date().getTime();
+        const rawDaysElapsed = queueJoinedDate
+            ? Math.floor((nowMs - queueJoinedDate.getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+        const daysElapsed = Math.min(90, Math.max(0, rawDaysElapsed));
+        const daysRemaining = Math.max(0, 90 - daysElapsed);
+        const progressPercent = Math.min(100, Math.max(0, Math.round((daysElapsed / 90) * 100)));
+        const refundEligibleDate = queueJoinedDate
+            ? new Date(queueJoinedDate.getTime() + (90 * 24 * 60 * 60 * 1000))
+            : null;
+
+        return (
+            <div className="w-full">
+                <QueueClientEffects />
+                <main className="w-full">
+                    <div className="mb-6 rounded-xl border border-[#dddfe2] bg-white p-6 shadow-sm">
+                        {!hasPaidEntryFee ? (
+                            <div className="relative z-10 flex flex-col items-center justify-center gap-6 py-8 text-center">
+                                <div className="flex flex-col items-center">
+                                    <h3 className="text-xl font-semibold tracking-tight text-gray-900">
+                                        Start Searching for Jobs
+                                    </h3>
+                                    <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                                        Sandbox payment marks Job Finder as active instantly, without opening Stripe or creating live payment rows.
+                                    </p>
+                                </div>
+                                <PayToJoinButton
+                                    displayName={workerRecord.full_name || session.activePersona.label}
+                                    source="admin_test_queue"
+                                    redirectPath="/profile/worker/queue"
+                                    adminTestMode
+                                />
+                                <div className="mt-2 flex items-center justify-center gap-1.5 px-1 text-center text-[11px] font-medium text-gray-500 sm:text-xs">
+                                    <Shield size={14} className="shrink-0 text-gray-400" />
+                                    <span className="truncate sm:whitespace-nowrap">Sandbox only: no live charge, webhook, or live queue entry is created</span>
+                                </div>
+                            </div>
+                        ) : paymentAcceptedNoOffer ? (
+                            <div className="py-2">
+                                <div className="text-center">
+                                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2">
+                                            <path d="M20 6L9 17l-5-5" />
+                                        </svg>
+                                    </div>
+                                    <h2 className="mb-2 text-xl font-semibold text-[#050505]">
+                                        Sandbox Payment Accepted
+                                    </h2>
+                                    <p className="mx-auto max-w-2xl text-[#65676b]">
+                                        Your worker sandbox is now marked as paid and active in the test queue so you can review the mobile UX after the payment step.
+                                    </p>
+                                </div>
+
+                                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Day</p>
+                                        <p className="text-2xl font-bold text-emerald-800">{daysElapsed}</p>
+                                        <p className="text-xs text-emerald-700">of 90</p>
+                                    </div>
+                                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Remaining</p>
+                                        <p className="text-2xl font-bold text-blue-800">{daysRemaining}</p>
+                                        <p className="text-xs text-blue-700">days to guarantee deadline</p>
+                                    </div>
+                                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-center">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Refund Eligibility</p>
+                                        <p className="text-sm font-bold text-violet-800 sm:text-base">
+                                            {refundEligibleDate ? refundEligibleDate.toLocaleDateString("en-GB") : "Calculating..."}
+                                        </p>
+                                        <p className="text-xs text-violet-700">sandbox guarantee window</p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5">
+                                    <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#65676b]">
+                                        <span>90-day matching window</span>
+                                        <span>{progressPercent}% elapsed</span>
+                                    </div>
+                                    <div className="h-3 w-full overflow-hidden rounded-full border border-gray-200 bg-gray-100">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-blue-500 to-violet-500 transition-all duration-700"
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mt-6 rounded-xl border border-[#b3d4fc] bg-[#e7f3ff] p-4 text-sm text-[#1877f2]">
+                                    <p>
+                                        <strong>Sandbox next step:</strong> use this state to inspect the paid queue experience on mobile without generating a real checkout session.
+                                    </p>
+                                </div>
+                                {statusDriftWithoutOffer && (
+                                    <p className="mt-3 text-center text-xs text-amber-700">
+                                        Sandbox status view is syncing. No active offer is currently pending.
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="py-4 text-center">
+                                <p className="text-[#65676b]">
+                                    Status: <strong>{workerRecord.status}</strong>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    const userType = normalizeUserType(session.liveUserType || user.user_metadata?.user_type);
     if (userType === "employer") {
         redirect("/profile/employer");
     }
@@ -30,8 +163,11 @@ export default async function QueuePage({
     }
     const isAdminPreview = userType === "admin";
     const inspectProfileId = isAdminPreview ? params?.inspect?.trim() || null : null;
+    if (isAdminPreview && !inspectProfileId) {
+        redirect("/admin");
+    }
     const targetProfileId = inspectProfileId || user.id;
-    const dataClient = inspectProfileId ? createAdminClient() : supabase;
+    const dataClient = inspectProfileId ? admin : supabase;
 
     // Get canonical worker record with queue info
     const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(

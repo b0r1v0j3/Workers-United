@@ -3,44 +3,57 @@
 import { useEffect, useState } from "react";
 import { GodModePanel } from "./GodModePanel";
 
+interface PersonaPayload {
+    id: string;
+    role: "worker" | "employer" | "agency";
+    label: string;
+    href: string;
+}
+
+interface GodModePayload {
+    available: boolean;
+    email?: string | null;
+    liveRole?: "worker" | "employer" | "agency" | "admin" | null;
+    personas?: PersonaPayload[];
+    activePersona?: PersonaPayload | null;
+}
+
 export function GodModeWrapper() {
-    const [godModeData, setGodModeData] = useState<{
-        godMode: boolean;
-        email: string;
-        role: "worker" | "employer" | "admin";
-    } | null>(null);
+    const [data, setData] = useState<GodModePayload | null>(null);
 
     useEffect(() => {
-        async function checkGodMode() {
+        let cancelled = false;
+
+        async function loadTestMode() {
             try {
-                const response = await fetch("/api/godmode");
-                const data = await response.json();
-
-                if (data.godMode) {
-                    // Get current role from profile
-                    const profileResponse = await fetch("/api/profile");
-                    const profileData = await profileResponse.json();
-
-                    setGodModeData({
-                        godMode: true,
-                        email: data.email,
-                        role: profileData.profile?.user_type || "worker"
-                    });
+                const response = await fetch("/api/admin/test-personas", { cache: "no-store" });
+                const payload = await response.json();
+                if (!cancelled) {
+                    setData(payload);
                 }
-            } catch (error) {
-                // Silently fail - user just won't see god mode
+            } catch {
+                if (!cancelled) {
+                    setData(null);
+                }
             }
         }
 
-        checkGodMode();
+        void loadTestMode();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
-    if (!godModeData?.godMode) return null;
+    if (!data?.available) {
+        return null;
+    }
 
     return (
         <GodModePanel
-            currentRole={godModeData.role}
-            userName={godModeData.email}
+            currentRole={data.activePersona?.role || "admin"}
+            userName={data.email || "Admin"}
+            activeLabel={data.activePersona?.label || null}
+            personas={data.personas || []}
         />
     );
 }

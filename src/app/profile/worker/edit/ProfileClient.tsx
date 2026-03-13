@@ -124,10 +124,12 @@ function parseDateToComponents(dateStr: string | null | undefined, prefix: strin
 
 export default function ProfilePage({
     readOnlyPreview = false,
+    adminTestMode = false,
     initialProfile = null,
     initialWorkerRecord = null,
 }: {
     readOnlyPreview?: boolean;
+    adminTestMode?: boolean;
     initialProfile?: Profile | null;
     initialWorkerRecord?: WorkerRecord | null;
 }) {
@@ -135,7 +137,7 @@ export default function ProfilePage({
     const searchParams = useSearchParams();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [workerRecord, setWorkerRecord] = useState<WorkerRecord | null>(null);
-    const [loading, setLoading] = useState(() => !(readOnlyPreview && initialProfile));
+    const [loading, setLoading] = useState(() => !((readOnlyPreview || adminTestMode) && initialProfile));
     const [saving, setSaving] = useState(false);
     // Removed error/success state as we use Toast now
 
@@ -294,8 +296,18 @@ export default function ProfilePage({
 
     const fetchProfile = useCallback(async () => {
         try {
-            if (readOnlyPreview && initialProfile) {
+            if ((readOnlyPreview || adminTestMode) && initialProfile) {
                 applyLoadedData(initialProfile, initialWorkerRecord);
+                return;
+            }
+
+            if (adminTestMode) {
+                const response = await fetch("/api/admin/test-personas/worker", { cache: "no-store" });
+                const payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload.error || "Failed to load worker sandbox.");
+                }
+                applyLoadedData(payload.profile, payload.worker);
                 return;
             }
 
@@ -322,7 +334,7 @@ export default function ProfilePage({
         } finally {
             setLoading(false);
         }
-    }, [applyLoadedData, initialProfile, initialWorkerRecord, readOnlyPreview, supabase]);
+    }, [adminTestMode, applyLoadedData, initialProfile, initialWorkerRecord, readOnlyPreview, supabase]);
 
     useEffect(() => {
         void fetchProfile();
@@ -343,15 +355,7 @@ export default function ProfilePage({
                 throw new Error("Phone number must start with + and country code (e.g., +381641234567)");
             }
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not authenticated");
-
             const full_name = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim();
-            const { error: profileErr } = await supabase
-                .from("profiles")
-                .update({ full_name })
-                .eq("id", user.id);
-            if (profileErr) throw new Error(profileErr.message);
 
             // Combine DOB
             let dateOfBirth: string | null = null;
@@ -425,51 +429,103 @@ export default function ProfilePage({
                 previous_visas: formData.previous_visas || null,
             };
 
-            if (workerRecord) {
-                const { error: updateErr } = await supabase
-                    .from("worker_onboarding")
-                    .update(workerRecordUpdates)
-                    .eq("id", workerRecord.id);
-                if (updateErr) throw new Error(updateErr.message);
-            } else {
-                const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord<WorkerRecordLookupRow>(
-                    supabase,
-                    user.id,
-                    "id, updated_at, entry_fee_paid, job_search_active, queue_joined_at, phone, nationality, current_country, preferred_job, status"
-                );
-
-                if (existingWorkerRecordError) {
-                    throw new Error(existingWorkerRecordError.message);
+            if (adminTestMode) {
+                const response = await fetch("/api/admin/test-personas/worker", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fullName: full_name,
+                        email: profile?.email || "",
+                        phone: formData.phone ? formData.phone.replace(/[\s\-()]/g, '') : null,
+                        nationality: formData.nationality || null,
+                        currentCountry: formData.current_country || null,
+                        preferredJob: formData.preferred_job || null,
+                        desiredCountries: formData.desired_countries,
+                        dateOfBirth,
+                        birthCountry: formData.birth_country || null,
+                        birthCity: formData.birth_city || null,
+                        citizenship: formData.citizenship || null,
+                        originalCitizenship: formData.original_citizenship_same
+                            ? (formData.citizenship || null)
+                            : (formData.original_citizenship || null),
+                        maidenName: formData.maiden_name || null,
+                        fatherName: formData.father_name || null,
+                        motherName: formData.mother_name || null,
+                        maritalStatus: formData.marital_status || null,
+                        gender: formData.gender || null,
+                        address: formData.address || null,
+                        familyData: (Object.keys(familyData).length > 0) ? familyData : null,
+                        passportNumber: formData.passport_number || null,
+                        passportIssuedBy: formData.passport_issued_by || null,
+                        passportIssueDate,
+                        passportExpiryDate,
+                        livesAbroad: formData.lives_abroad || null,
+                        previousVisas: formData.previous_visas || null,
+                    }),
+                });
+                const payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload.error || "Failed to save sandbox worker profile.");
                 }
+                applyLoadedData(payload.profile, payload.worker);
+            } else {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error("Not authenticated");
 
-                if (existingWorkerRecord?.id) {
-                    const { error: recoveredUpdateErr } = await supabase
+                const { error: profileErr } = await supabase
+                    .from("profiles")
+                    .update({ full_name })
+                    .eq("id", user.id);
+                if (profileErr) throw new Error(profileErr.message);
+
+                if (workerRecord) {
+                    const { error: updateErr } = await supabase
                         .from("worker_onboarding")
                         .update(workerRecordUpdates)
-                        .eq("id", existingWorkerRecord.id);
-                    if (recoveredUpdateErr) throw new Error(recoveredUpdateErr.message);
+                        .eq("id", workerRecord.id);
+                    if (updateErr) throw new Error(updateErr.message);
                 } else {
-                    const { error: insertErr } = await supabase
-                        .from("worker_onboarding")
-                        .insert({
-                            profile_id: user.id,
-                            ...workerRecordUpdates,
-                        });
-                    if (insertErr) throw new Error(insertErr.message);
-                }
-            }
+                    const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord<WorkerRecordLookupRow>(
+                        supabase,
+                        user.id,
+                        "id, updated_at, entry_fee_paid, job_search_active, queue_joined_at, phone, nationality, current_country, preferred_job, status"
+                    );
 
-            // Sync phone to Supabase Auth so it appears in Auth dashboard
-            const cleanPhone = formData.phone ? formData.phone.replace(/[\s\-()]/g, '') : null;
-            if (cleanPhone) {
-                await supabase.auth.updateUser({
-                    data: { phone: cleanPhone }
-                });
+                    if (existingWorkerRecordError) {
+                        throw new Error(existingWorkerRecordError.message);
+                    }
+
+                    if (existingWorkerRecord?.id) {
+                        const { error: recoveredUpdateErr } = await supabase
+                            .from("worker_onboarding")
+                            .update(workerRecordUpdates)
+                            .eq("id", existingWorkerRecord.id);
+                        if (recoveredUpdateErr) throw new Error(recoveredUpdateErr.message);
+                    } else {
+                        const { error: insertErr } = await supabase
+                            .from("worker_onboarding")
+                            .insert({
+                                profile_id: user.id,
+                                ...workerRecordUpdates,
+                            });
+                        if (insertErr) throw new Error(insertErr.message);
+                    }
+                }
+
+                // Sync phone to Supabase Auth so it appears in Auth dashboard
+                const cleanPhone = formData.phone ? formData.phone.replace(/[\s\-()]/g, '') : null;
+                if (cleanPhone) {
+                    await supabase.auth.updateUser({
+                        data: { phone: cleanPhone }
+                    });
+                }
             }
 
             logActivity("profile_saved", "profile", { is_new: !workerRecord, fields_filled: Object.keys(workerRecordUpdates).filter(k => (workerRecordUpdates as Record<string, unknown>)[k] != null).length });
             toast.success("Profile saved successfully!");
-            await fetchProfile();
+            if (!adminTestMode) {
+                await fetchProfile();
+            }
         } catch (err) {
             logError("profile_save_failed", "profile", err);
             toast.error(err instanceof Error ? err.message : "Failed to save");

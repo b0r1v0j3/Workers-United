@@ -142,9 +142,16 @@ function getEmployerTab(tab: string | null): TabType {
 export default function EmployerProfilePage({
     readOnlyPreview = false,
     inspectSnapshot = null,
+    adminTestMode = false,
+    initialSandboxState = null,
 }: {
     readOnlyPreview?: boolean;
     inspectSnapshot?: EmployerInspectSnapshot | null;
+    adminTestMode?: boolean;
+    initialSandboxState?: {
+        employer: EmployerProfile | null;
+        jobs: JobRequest[];
+    } | null;
 }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -190,11 +197,35 @@ export default function EmployerProfilePage({
 
     // ─── Fetch data ─────────────────────────────────────────────
     const fetchData = useCallback(async () => {
+        if (adminTestMode && initialSandboxState) {
+            setEmployer(initialSandboxState.employer);
+            setCompanyForm(createCompanyFormFromEmployer(initialSandboxState.employer));
+            setJobs(initialSandboxState.jobs);
+            setEditing(!initialSandboxState.employer);
+            setLoading(false);
+            return;
+        }
+
         if (readOnlyPreview && inspectSnapshot) {
             setEmployer(inspectSnapshot.employer);
             setCompanyForm(createCompanyFormFromEmployer(inspectSnapshot.employer));
             setJobs(inspectSnapshot.jobs);
             setEditing(false);
+            setLoading(false);
+            return;
+        }
+
+        if (adminTestMode) {
+            const response = await fetch("/api/admin/test-personas/employer", { cache: "no-store" });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || "Failed to load employer sandbox.");
+            }
+
+            setEmployer(payload.employer);
+            setCompanyForm(createCompanyFormFromEmployer(payload.employer));
+            setJobs(payload.jobs || []);
+            setEditing(!payload.employer);
             setLoading(false);
             return;
         }
@@ -230,7 +261,7 @@ export default function EmployerProfilePage({
             }
         }
         setLoading(false);
-    }, [supabase, router, readOnlyPreview, inspectSnapshot]);
+    }, [adminTestMode, initialSandboxState, inspectSnapshot, readOnlyPreview, router, supabase]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -265,7 +296,6 @@ export default function EmployerProfilePage({
         setSaving(true);
         setCompanyAlert(null);
         try {
-            if (!user) throw new Error("Not logged in");
             if (!companyForm.company_name.trim()) throw new Error("Company name is required");
             if (!companyForm.country.trim()) throw new Error("Country is required");
 
@@ -303,33 +333,35 @@ export default function EmployerProfilePage({
                 description: companyForm.description || null,
             };
 
-            if (employer) {
-                const { error } = await supabase.from("employers").update(data).eq("id", employer.id);
-                if (error) throw error;
+            if (adminTestMode) {
+                const response = await fetch("/api/admin/test-personas/employer", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.error || "Failed to save sandbox employer.");
             } else {
-                const { error: profileErr } = await supabase.from("profiles").upsert({
-                    id: user.id,
-                    email: user.email || "",
-                    full_name: user.user_metadata?.full_name || "",
-                    user_type: "employer",
-                }, { onConflict: "id" });
-                if (profileErr) throw profileErr;
+                if (!user) throw new Error("Not logged in");
+                if (employer) {
+                    const { error } = await supabase.from("employers").update(data).eq("id", employer.id);
+                    if (error) throw error;
+                } else {
+                    const { error: profileErr } = await supabase.from("profiles").upsert({
+                        id: user.id,
+                        email: user.email || "",
+                        full_name: user.user_metadata?.full_name || "",
+                        user_type: "employer",
+                    }, { onConflict: "id" });
+                    if (profileErr) throw profileErr;
 
-                const { error } = await supabase.from("employers")
-                    .insert({ ...data, profile_id: user.id, status: "PENDING" });
-                if (error) throw error;
+                    const { error } = await supabase.from("employers")
+                        .insert({ ...data, profile_id: user.id, status: "PENDING" });
+                    if (error) throw error;
+                }
             }
 
-            const { data: emp } = employer
-                ? await supabase.from("employers").select("*").eq("id", employer.id).maybeSingle()
-                : await supabase
-                    .from("employers")
-                    .select("*")
-                    .eq("profile_id", user.id)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-            if (emp) setEmployer(emp);
+            await fetchData();
 
             setCompanyAlert({ type: "success", msg: "Company info saved!" });
             setEditing(false);
@@ -366,28 +398,50 @@ export default function EmployerProfilePage({
             if (!jobForm.work_city.trim()) throw new Error("Work city is required");
             if (!jobForm.accommodation_address.trim()) throw new Error("Accommodation address is required by law");
 
-            const { error } = await supabase.from("job_requests").insert({
-                employer_id: employer!.id,
-                title: jobForm.title,
-                description: jobForm.description || null,
-                industry: jobForm.industry,
-                positions_count: parseInt(jobForm.positions_count) || 1,
-                salary_rsd: parseFloat(jobForm.salary_rsd) || 70000,
-                work_city: jobForm.work_city,
-                accommodation_address: jobForm.accommodation_address,
-                work_schedule: jobForm.work_schedule,
-                contract_duration_months: parseInt(jobForm.contract_duration_months) || 12,
-                experience_required_years: parseInt(jobForm.experience_required_years) || 0,
-                destination_country: companyForm.country || "Europe",
-                status: "open",
-            });
-            if (error) throw error;
+            if (adminTestMode) {
+                const response = await fetch("/api/admin/test-personas/employer/jobs", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        title: jobForm.title,
+                        description: jobForm.description || null,
+                        industry: jobForm.industry,
+                        positions_count: parseInt(jobForm.positions_count) || 1,
+                        salary_rsd: parseFloat(jobForm.salary_rsd) || 70000,
+                        work_city: jobForm.work_city,
+                        accommodation_address: jobForm.accommodation_address,
+                        work_schedule: jobForm.work_schedule,
+                        contract_duration_months: parseInt(jobForm.contract_duration_months) || 12,
+                        experience_required_years: parseInt(jobForm.experience_required_years) || 0,
+                        destination_country: companyForm.country || "Europe",
+                        status: "open",
+                    }),
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.error || "Failed to create sandbox job request.");
+            } else {
+                const { error } = await supabase.from("job_requests").insert({
+                    employer_id: employer!.id,
+                    title: jobForm.title,
+                    description: jobForm.description || null,
+                    industry: jobForm.industry,
+                    positions_count: parseInt(jobForm.positions_count) || 1,
+                    salary_rsd: parseFloat(jobForm.salary_rsd) || 70000,
+                    work_city: jobForm.work_city,
+                    accommodation_address: jobForm.accommodation_address,
+                    work_schedule: jobForm.work_schedule,
+                    contract_duration_months: parseInt(jobForm.contract_duration_months) || 12,
+                    experience_required_years: parseInt(jobForm.experience_required_years) || 0,
+                    destination_country: companyForm.country || "Europe",
+                    status: "open",
+                });
+                if (error) throw error;
+            }
             setJobForm({ ...emptyJob });
             setJobAlert({ type: "success", msg: "Job posted!" });
             setTimeout(() => setJobAlert(null), 3000);
 
-            const { data: jobData } = await supabase.from("job_requests").select("*").eq("employer_id", employer!.id).order("created_at", { ascending: false });
-            setJobs(jobData || []);
+            await fetchData();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             setJobAlert({ type: "error", msg: message });
@@ -421,22 +475,42 @@ export default function EmployerProfilePage({
         }
         setSavingJob(true); setEditJobError(null);
         try {
-            const { error } = await supabase.from("job_requests").update({
-                title: editJobForm.title,
-                description: editJobForm.description || null,
-                industry: editJobForm.industry,
-                positions_count: parseInt(editJobForm.positions_count) || 1,
-                salary_rsd: parseFloat(editJobForm.salary_rsd) || 70000,
-                work_city: editJobForm.work_city || null,
-                accommodation_address: editJobForm.accommodation_address || null,
-                work_schedule: editJobForm.work_schedule,
-                contract_duration_months: parseInt(editJobForm.contract_duration_months) || 12,
-                experience_required_years: parseInt(editJobForm.experience_required_years) || 0,
-            }).eq("id", editingJobId!);
-            if (error) throw error;
+            if (adminTestMode) {
+                const response = await fetch(`/api/admin/test-personas/employer/jobs/${editingJobId!}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        title: editJobForm.title,
+                        description: editJobForm.description || null,
+                        industry: editJobForm.industry,
+                        positions_count: parseInt(editJobForm.positions_count) || 1,
+                        salary_rsd: parseFloat(editJobForm.salary_rsd) || 70000,
+                        work_city: editJobForm.work_city || null,
+                        accommodation_address: editJobForm.accommodation_address || null,
+                        work_schedule: editJobForm.work_schedule,
+                        contract_duration_months: parseInt(editJobForm.contract_duration_months) || 12,
+                        experience_required_years: parseInt(editJobForm.experience_required_years) || 0,
+                    }),
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.error || "Failed to update sandbox job request.");
+            } else {
+                const { error } = await supabase.from("job_requests").update({
+                    title: editJobForm.title,
+                    description: editJobForm.description || null,
+                    industry: editJobForm.industry,
+                    positions_count: parseInt(editJobForm.positions_count) || 1,
+                    salary_rsd: parseFloat(editJobForm.salary_rsd) || 70000,
+                    work_city: editJobForm.work_city || null,
+                    accommodation_address: editJobForm.accommodation_address || null,
+                    work_schedule: editJobForm.work_schedule,
+                    contract_duration_months: parseInt(editJobForm.contract_duration_months) || 12,
+                    experience_required_years: parseInt(editJobForm.experience_required_years) || 0,
+                }).eq("id", editingJobId!);
+                if (error) throw error;
+            }
             setEditingJobId(null);
-            const { data: jobData } = await supabase.from("job_requests").select("*").eq("employer_id", employer!.id).order("created_at", { ascending: false });
-            setJobs(jobData || []);
+            await fetchData();
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Failed to save";
             setEditJobError(msg);
@@ -449,10 +523,23 @@ export default function EmployerProfilePage({
             return;
         }
         try {
-            await supabase.from("job_requests").delete().eq("id", jobId);
-            setJobs(prev => prev.filter(j => j.id !== jobId));
+            if (adminTestMode) {
+                const response = await fetch(`/api/admin/test-personas/employer/jobs/${jobId}`, {
+                    method: "DELETE",
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.error || "Failed to delete sandbox job request.");
+            } else {
+                await supabase.from("job_requests").delete().eq("id", jobId);
+                setJobs(prev => prev.filter(j => j.id !== jobId));
+            }
+            if (adminTestMode) {
+                await fetchData();
+            }
             setConfirmDeleteJobId(null);
-        } catch { /* ignore */ }
+        } catch (error) {
+            setJobAlert({ type: "error", msg: error instanceof Error ? error.message : "Failed to delete job." });
+        }
     };
 
     const completion = calculateCompletion(companyForm);
