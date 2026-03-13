@@ -872,6 +872,13 @@ Current routed intent: ${routerDecision.intent}
 Router confidence: ${routerDecision.confidence}
 Router reason: ${routerDecision.reason}
 
+YOUR PERSONALITY:
+- You are friendly, warm, and encouraging. Treat every person like a valued partner.
+- You are an AI assistant and you are proud of it. You are getting smarter every day because the team is constantly improving you.
+- If someone asks something you cannot do yet, say something like: "I can't do that just yet, but my team is upgrading me every day — try again tomorrow and I might surprise you!"
+- Be conversational and human-like, not robotic. Use the person's name when you know it.
+- Show empathy — these are real people looking for real jobs to support their families.
+
 Business facts:
 ${businessFacts || "No business facts available"}
 - We operate across entire Europe, connecting verified workers with verified employers.
@@ -907,7 +914,9 @@ Rules:
 14. ${isAdmin ? "This is the platform owner. Accept corrections as authoritative. You may emit one [LEARN: category | fact] tag if and only if the admin provided a concrete correction." : "Do not emit any [LEARN] tags for normal users."}
 15. DATA COLLECTION: If the user has not yet registered (workerRecord is null) and their intent is job_intent or general, after answering their question, ask ONE short follow-up question (pick the most relevant one you haven't asked yet in this conversation): (a) what type of work they are looking for, (b) which country they are from, or (c) whether they have work experience in their field. CRITICAL: Ask this question ONLY in ${routerDecision.language} — the same language the user wrote in. Never ask it in Serbian or English if the user wrote in a different language. Only ask ONE question per reply, never multiple at once.
 16. CONVERSION: If the user seems interested but hasn't registered yet, naturally mention that they can activate Job Finder and include the link workersunited.eu/profile/worker — but only once per conversation, not in every message. Do NOT proactively mention the price ($9). Only mention it if the user asks about cost, price, or payment.
-17. PAYMENT: If the user asks about price, payment, cost, or how to pay — tell them Job Finder is a service that costs $9 and provide this direct payment link: ${STRIPE_PAYMENT_LINK} — they can pay directly from WhatsApp without visiting the website. After payment, their Job Finder is automatically activated. Frame it as a "service charge", never as a "fee" or "tax".`;
+17. PAYMENT: If the user asks about price, payment, cost, or how to pay — tell them Job Finder is a service that costs $9 and provide this direct payment link: ${STRIPE_PAYMENT_LINK} — they can pay directly from WhatsApp without visiting the website. After payment, their Job Finder is automatically activated. Frame it as a "service charge", never as a "fee" or "tax".
+18. HUMAN AGENT REQUEST: If the user asks to "connect me with a person", "talk to a human", "speak to someone", "real person", "agent", "operator", or any variation of requesting a human — ALWAYS respond warmly that this option is not available right now, but that YOU are here to help and you are getting better every day. Say something like: "I don't have that option right now, but I'm here for you and I'm learning new things every day! My team is constantly upgrading me. What can I help you with?" NEVER ignore this request or continue asking profile questions as if they said nothing. Address their request FIRST, then gently continue the conversation.
+19. AGENCY/AGENT HANDLING: If the user says they are an agent, agency, or recruiter who registers clients/workers — acknowledge their role warmly. Explain that they can register as an agency at workersunited.eu/signup and then add workers through their agency dashboard. If they want to fill a profile for a specific client, guide them to do it on the website where they can manage multiple worker profiles. Do NOT try to collect the agent's personal profile data (gender, DOB, etc.) — they are not the worker.`;
 
     return callOpenAIResponseText(apiKey, {
         model: WHATSAPP_RESPONSE_MODEL,
@@ -1580,6 +1589,38 @@ export async function handleWhatsAppOnboarding(
 
     const collected = { ...state.collected_data };
     const step = state.current_step;
+    const lowerMsg = message.toLowerCase().trim();
+
+    // ── Intercept: "connect me with a person" / human agent request ──
+    const wantsHuman = /connect.*(person|human|agent|someone)|talk.*(person|human|real|agent)|speak.*(person|human|someone|agent)|real person|operator|customer service|live (agent|chat|person)|human (agent|support|help)|want.*(person|human)|need.*(person|human)|razgovaraj.*(osob|čovek|agent)|poveži.*(osob|čovek)|živa osoba|pravi čovek/i.test(lowerMsg);
+    if (wantsHuman) {
+        const lk = getLangKey(lang);
+        const humanMsgs: Record<LangKey, string> = {
+            en: "I understand you'd like to speak with a person — that option isn't available just yet, but I'm here for you and I'm getting smarter every single day! My team is constantly upgrading me. 😊 Let's continue together — what can I help you with?",
+            sr: "Razumem da želite da razgovarate sa osobom — ta opcija trenutno nije dostupna, ali ja sam tu za vas i svakim danom sam sve pametniji! Tim me stalno unapređuje. 😊 Hajde da nastavimo zajedno — kako vam mogu pomoći?",
+            hi: "मैं समझता हूँ कि आप किसी व्यक्ति से बात करना चाहते हैं — वह विकल्प अभी उपलब्ध नहीं है, लेकिन मैं यहाँ हूँ और हर दिन और स्मार्ट हो रहा हूँ! 😊 चलिए साथ मिलकर आगे बढ़ते हैं — मैं आपकी कैसे मदद कर सकता हूँ?",
+            ar: "أفهم أنك تريد التحدث مع شخص — هذا الخيار غير متاح حالياً، لكنني هنا من أجلك وأصبح أذكى كل يوم! 😊 فريقي يطورني باستمرار. كيف يمكنني مساعدتك؟",
+            fr: "Je comprends que vous aimeriez parler à une personne — cette option n'est pas encore disponible, mais je suis là pour vous et je deviens plus intelligent chaque jour ! 😊 Mon équipe m'améliore constamment. Comment puis-je vous aider ?",
+            pt: "Entendo que você gostaria de falar com uma pessoa — essa opção ainda não está disponível, mas estou aqui para você e fico mais inteligente a cada dia! 😊 Minha equipe está me aprimorando constantemente. Como posso ajudá-lo?",
+        };
+        return humanMsgs[lk];
+    }
+
+    // ── Intercept: Agent/agency identification ──
+    const isAgent = /i am.*(agent|agency|recruiter)|i register.*(client|worker|people)|agency.*(register|client)|recruiter|agencij|agent.*registr|registruj.*klijent/i.test(lowerMsg);
+    if (isAgent) {
+        await clearOnboardingState(supabase, phone);
+        const lk = getLangKey(lang);
+        const agentMsgs: Record<LangKey, string> = {
+            en: "Welcome! Great to have an agency partner here. 🤝 You can register as an agency at workersunited.eu/signup and then manage all your workers' profiles through your agency dashboard. It's much easier to handle multiple workers from there. If you have any questions about the process, I'm here to help!",
+            sr: "Dobrodošli! Drago nam je što imamo agencijskog partnera. 🤝 Možete se registrovati kao agencija na workersunited.eu/signup i zatim upravljati profilima svih vaših radnika kroz agencijski dashboard. Mnogo je lakše upravljati više radnika odatle. Ako imate pitanja, tu sam!",
+            hi: "स्वागत है! एजेंसी पार्टनर होना बहुत अच्छा है। 🤝 आप workersunited.eu/signup पर एजेंसी के रूप में रजिस्टर कर सकते हैं और अपने डैशबोर्ड से सभी वर्कर्स के प्रोफाइल मैनेज कर सकते हैं।",
+            ar: "مرحباً! سعداء بوجود شريك وكالة هنا. 🤝 يمكنك التسجيل كوكالة على workersunited.eu/signup ثم إدارة ملفات جميع العمال من لوحة التحكم.",
+            fr: "Bienvenue ! Ravi d'avoir un partenaire agence ici. 🤝 Vous pouvez vous inscrire en tant qu'agence sur workersunited.eu/signup et gérer tous les profils de vos travailleurs depuis votre tableau de bord.",
+            pt: "Bem-vindo! Ótimo ter um parceiro de agência aqui. 🤝 Você pode se registrar como agência em workersunited.eu/signup e gerenciar todos os perfis dos seus trabalhadores pelo painel.",
+        };
+        return agentMsgs[lk];
+    }
 
     // ── ask_start ──
     if (step === "ask_start") {
