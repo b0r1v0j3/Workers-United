@@ -16,7 +16,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Framework | **Next.js 16** (App Router) | TypeScript, React 19; production build now enforces TS errors again (no `ignoreBuildErrors`) |
 | Styling | **Tailwind CSS v4** + `globals.css` | PostCSS via `@tailwindcss/postcss` |
 | Font | **Montserrat** (Google Fonts) | Loaded in `src/app/layout.tsx` via `next/font` |
-| Auth | **Supabase Auth** | Email/password, Google OAuth, password reset; live auth triggers now keep `profiles` + canonical `workers`/`employers` in sync on both signup and later metadata role updates, without depending on the retired `candidates` alias |
+| Auth | **Supabase Auth** | Email/password, Google OAuth, password reset; live auth triggers now keep `profiles` + canonical `workers`/`employers` in sync on both signup and later metadata role updates, without depending on the retired `candidates` alias, while `/login` now finishes hash-based confirm/magic-link/recovery sessions and hands post-auth redirecting to a shared resolver |
 | Database | **Supabase (PostgreSQL)** | RLS policies, cron-triggered functions, in-platform messaging tables (`conversations*`); worker app-layer runtime reads/writes through `worker_onboarding` / `worker_documents`, live Supabase physically uses `workers` / `worker_documents`, `documents / matches / offers` carry only canonical `worker_id` FKs, `contract_data` worker overrides are `worker_*`, and the live public schema no longer exposes the old `candidates` / `candidate_documents` aliases |
 | Storage | **Supabase Storage** | Canonical and only active worker document bucket is `worker-docs`; runtime helpers resolve only `worker-docs`, while legacy `candidate-docs` and empty `documents` buckets are retired |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
@@ -50,7 +50,7 @@ Workers-United/
 │   │   ├── layout.tsx         # Root layout (Montserrat, GodMode, CookieConsent)
 │   │   ├── page.tsx           # Homepage (landing page)
 │   │   ├── globals.css        # Global styles
-│   │   ├── login/             # Login page
+│   │   ├── login/             # Login page + hash-session finalizer for email confirm/magic-link/recovery flows
 │   │   ├── signup/            # Signup page
 │   │   ├── profile/
 │   │   │   ├── page.tsx       # Auto-redirect (/profile → worker, employer, or agency)
@@ -72,9 +72,10 @@ Workers-United/
 │   │   │   ├── announcements/ # Bulk email sender
 │   │   │   ├── refunds/       # Refund management
 │   │   │   └── settings/      # Platform settings
-│   │   ├── api/               # API routes (25 total)
+│   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics, admin inbox support list; manual-match/re-verify are now fully workerId-first
+│   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail patch + document upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
 │   │   │   ├── cron/          # 9 cron jobs (see below)
@@ -91,7 +92,7 @@ Workers-United/
 │   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router/response flow)
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
 │   │   ├── auth/              # Auth callback + role selection
-│   │   │   ├── callback/     # OAuth/email callback handler + agency draft claim linking
+│   │   │   ├── callback/     # OAuth code callback + hash-link rescue redirect + agency draft claim linking
 │   │   │   └── select-role/  # Role picker for Google OAuth first-time users
 │   │   ├── privacy-policy/    # GDPR privacy policy page
 │   │   └── terms/             # Terms & conditions page
@@ -129,6 +130,7 @@ Workers-United/
 │   │   ├── reporting.ts       # Reporting filters + email hygiene helpers (exclude Codex/test/internal-orphan payments, typo correction suggestions, undeliverable error detection)
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
+│   │   ├── auth-redirect.ts   # Shared post-auth provisioning + role-aware redirect resolver for callback/hash login finalize flows
 │   │   ├── constants.ts       # Shared constants
 │   │   ├── workers.ts         # Canonical worker lookup + normalization helpers (duplicate-safe worker record selection over legacy physical worker table via `worker_onboarding`, phone normalization, storage filename sanitization)
 │   │   ├── godmode.ts         # GodMode utilities
@@ -196,15 +198,17 @@ User (Browser)
 1. User signs up (email/password OR Google OAuth) → Supabase creates auth user and the live `public.handle_new_user()` trigger provisions `profiles` plus canonical `workers`/`employers`
 2. For Google OAuth from signup page: `user_type` is passed via URL param and set in metadata; the live auth metadata-sync trigger then aligns `profiles.user_type` plus the canonical worker/employer row after callback
 3. For Google OAuth from login page (first time): user is redirected to `/auth/select-role` to choose worker/employer/agency
-4. Agency-submitted worker drafts can be claimed via `/signup?type=worker&claim=<worker-record-id>`; callback/API links the draft to the real worker auth/profile only when the worker signs up with the same invited email, and the claim token resolves against the canonical worker record id
-5. Claimed or draft agency workers can be managed from `/profile/agency/workers/[id]`, where the agency can fill almost the full worker profile (`identity/contact/citizenship/family/preferences/passport`), while keeping `email` and `phone` optional contact channels; the same page also handles document upload/replacement, manual review requests, and the `$9` Job Finder payment for agency-managed workers
-6. Generic admin access to `/profile/agency` is now a true structure preview: it never provisions an agency row or downgrades the admin role, and it opens the same add-worker modal and table layout without persisting fake preview drafts between refreshes
-7. Admin access to `/profile/worker` and `/profile/employer` remains read-only preview only, while `/profile/agency?inspect=<profile_id>` opens the real target agency workspace with admin authority attached to that agency instead of overloading the admin's own role records
-8. Employer workspace is now canonical at `/profile/employer`; legacy `/profile/employer/jobs` and `/profile/employer/jobs/new` immediately redirect into `?tab=jobs` and `?tab=post-job`
-9. On first login → user creates profile in the worker/employer domain; app-layer runtime talks to `worker_onboarding` / `worker_documents`, and the live public schema no longer exposes the removed `candidates` / `candidate_documents` aliases
-10. Document verification, manual review requests, and manual match admin flows now use canonical `workerId` only; the old legacy request shape is no longer active in app-layer runtime
-11. `profiles` table links auth user to their role
-12. Proxy (`src/proxy.ts`) checks auth state on protected routes
+4. Email confirmation, password recovery, and Supabase magic-link flows can land on `/login` with `#access_token=...`; `src/app/login/LoginClient.tsx` now restores that session client-side, and `POST /api/auth/finalize` reuses the shared post-auth resolver to return the correct workspace URL
+5. `/auth/callback` remains the code-exchange path for OAuth, but when there is no `code` it now forwards the browser back to `/login?mode=confirm|recovery` so the hash-session flow can finish instead of dumping users onto a dead auth error state
+6. Agency-submitted worker drafts can be claimed via `/signup?type=worker&claim=<worker-record-id>`; callback/API links the draft to the real worker auth/profile only when the worker signs up with the same invited email, and the claim token resolves against the canonical worker record id
+7. Claimed or draft agency workers can be managed from `/profile/agency/workers/[id]`, where the agency can fill almost the full worker profile (`identity/contact/citizenship/family/preferences/passport`), while keeping `email` and `phone` optional contact channels; the same page also handles document upload/replacement, manual review requests, and the `$9` Job Finder payment for agency-managed workers
+8. Generic admin access to `/profile/agency` is now a true structure preview: it never provisions an agency row or downgrades the admin role, and it opens the same add-worker modal and table layout without persisting fake preview drafts between refreshes
+9. Admin access to `/profile/worker` and `/profile/employer` remains read-only preview only, while `/profile/agency?inspect=<profile_id>` opens the real target agency workspace with admin authority attached to that agency instead of overloading the admin's own role records
+10. Employer workspace is now canonical at `/profile/employer`; legacy `/profile/employer/jobs` and `/profile/employer/jobs/new` immediately redirect into `?tab=jobs` and `?tab=post-job`
+11. On first login → user creates profile in the worker/employer domain; app-layer runtime talks to `worker_onboarding` / `worker_documents`, and the live public schema no longer exposes the removed `candidates` / `candidate_documents` aliases
+12. Document verification, manual review requests, and manual match admin flows now use canonical `workerId` only; the old legacy request shape is no longer active in app-layer runtime
+13. `profiles` table links auth user to their role
+14. Proxy (`src/proxy.ts`) checks auth state on protected routes
 
 ### Payment Flow
 1. Worker completes profile to 100% → gets verified
@@ -235,6 +239,7 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/layout.tsx` | Root layout — loads Montserrat font, GodModeWrapper, CookieConsent |
+| `src/app/login/LoginClient.tsx` | Login/auth recovery screen — handles classic login, request-reset, password update, and Supabase hash-session finalize for confirm/magic-link/recovery links |
 | `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, exposes agency `Support` directly in the shared shell, keeps only `Back to Admin` plus the current role navigation inside preview workspaces, and uses a wider neutral dashboard canvas |
 | `src/components/DocumentWizard.tsx` | Worker document upload flow; upload keys now pass through `sanitizeStorageFileName()` so camera-style filenames like `IMG_...~2.jpg` cannot break Supabase Storage with `Invalid key`, and the UI resolves the canonical `worker-docs` bucket through a shared worker-first helper |
 | `src/lib/worker-documents.ts` | Shared worker-first wrapper for the canonical `worker-docs` bucket, plus public URL builder used by verify/admin/contracts/reminder/delete flows |
@@ -251,6 +256,13 @@ User (Browser)
 | `src/app/profile/worker/documents/` | Document upload (passport, diploma, photo); the client flow now uses `workerProfileId` as the canonical prop for the worker document owner and verification/request-review payloads are fully workerId-first; also supports read-only admin inspect of the target worker documents |
 | `src/app/profile/worker/queue/` | Queue status page; also supports read-only admin inspect of the target worker payment/queue state |
 | `src/app/profile/worker/offers/[id]/` | Individual job offer details |
+
+### Auth & Redirect Flow
+| File | Role |
+|---|---|
+| `src/app/auth/callback/route.ts` | Server callback for OAuth/code-exchange auth; now also rescues non-code auth links by forwarding them to `/login?mode=confirm|recovery` instead of failing cold |
+| `src/app/api/auth/finalize/route.ts` | Finalize endpoint used after `LoginClient` restores a hash session; validates the user and returns the final role-aware workspace href |
+| `src/lib/auth-redirect.ts` | Shared post-auth provisioning/redirect engine used by both `/auth/callback` and `/api/auth/finalize` so admin/employer/agency/worker routing stays consistent |
 
 ### Employer Flow
 | File | Role |

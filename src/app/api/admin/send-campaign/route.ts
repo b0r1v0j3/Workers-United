@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "campaign and subject are required" }, { status: 400 });
     }
 
-    let query = supabase
+    const query = supabase
       .from("outreach_campaigns")
       .select("id, company_name, email, status")
       .eq("campaign", campaign)

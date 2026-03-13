@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,13 +9,124 @@ import { toast } from "sonner";
 import { ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
-    const supabase = createClient();
+    const [supabase] = useState(() => createClient());
+    const searchParams = useSearchParams();
+    const mode = searchParams.get("mode");
+    const authHash = useMemo(() => {
+        if (typeof window === "undefined") return null;
+        const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+        const hashParams = new URLSearchParams(hash);
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+
+        if (!accessToken || !refreshToken) {
+            return null;
+        }
+
+        return {
+            accessToken,
+            refreshToken,
+            hashType: hashParams.get("type"),
+        };
+    }, []);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [resetMode, setResetMode] = useState(false);
     const [resetSent, setResetSent] = useState(false);
+    const [authLinkState, setAuthLinkState] = useState<"idle" | "processing" | "recovery" | "error">("idle");
+    const [authLinkError, setAuthLinkError] = useState<string | null>(null);
+
+    const recoveryChecks = useMemo(() => ({
+        minLength: password.length >= 8,
+        hasUppercase: /[A-Z]/.test(password),
+        hasLowercase: /[a-z]/.test(password),
+        hasNumber: /[0-9]/.test(password),
+        hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+    }), [password]);
+
+    const recoveryPasswordReady = Object.values(recoveryChecks).every(Boolean);
+    const recoveryPasswordsMatch = password === confirmPassword;
+    const isRecoverySession = authLinkState === "recovery";
+    const isProcessingAuthLink = Boolean(authHash) && authLinkState === "idle";
+
+    useEffect(() => {
+        if (!authHash) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const finishSession = async () => {
+            const { error } = await supabase.auth.setSession({
+                access_token: authHash.accessToken,
+                refresh_token: authHash.refreshToken,
+            });
+
+            const cleanUrl = `${window.location.pathname}${window.location.search}`;
+            window.history.replaceState({}, document.title, cleanUrl);
+
+            if (cancelled) return;
+
+            if (error) {
+                setAuthLinkState("error");
+                setAuthLinkError(error.message);
+                toast.error(error.message);
+                return;
+            }
+
+            if (authHash.hashType === "recovery" || mode === "recovery") {
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+
+                if (cancelled) return;
+
+                setEmail(user?.email || "");
+                setPassword("");
+                setConfirmPassword("");
+                setResetMode(false);
+                setResetSent(false);
+                setAuthLinkState("recovery");
+                toast.success("Recovery session ready. Set your new password.");
+                return;
+            }
+
+            const response = await fetch("/api/auth/finalize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ accessToken: authHash.accessToken }),
+            });
+            const payload = await response.json().catch(() => null);
+
+            if (cancelled) return;
+
+            if (!response.ok) {
+                setAuthLinkState("error");
+                setAuthLinkError(payload?.error || "Could not complete sign-in.");
+                toast.error(payload?.error || "Could not complete sign-in.");
+                return;
+            }
+
+            const href = typeof payload?.href === "string" ? payload.href : "/profile";
+            toast.success(mode === "confirm" ? "Email confirmed." : "Signed in successfully.");
+            window.location.href = href;
+        };
+
+        finishSession().catch((error: unknown) => {
+            if (cancelled) return;
+            const message = error instanceof Error ? error.message : "Could not complete sign-in.";
+            setAuthLinkState("error");
+            setAuthLinkError(message);
+            toast.error(message);
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [authHash, mode, supabase]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,7 +155,7 @@ export default function LoginPage() {
         setLoading(true);
 
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+            redirectTo: `${window.location.origin}/login?mode=recovery`,
         });
 
         if (error) {
@@ -53,6 +165,33 @@ export default function LoginPage() {
             toast.success("Password reset link sent! Check your email inbox.");
         }
         setLoading(false);
+    };
+
+    const handlePasswordUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!recoveryPasswordReady) {
+            toast.error("Password does not meet all requirements.");
+            return;
+        }
+
+        if (!recoveryPasswordsMatch) {
+            toast.error("Passwords do not match.");
+            return;
+        }
+
+        setLoading(true);
+
+        const { error } = await supabase.auth.updateUser({ password });
+
+        if (error) {
+            toast.error(error.message);
+            setLoading(false);
+            return;
+        }
+
+        toast.success("Password updated successfully.");
+        window.location.href = "/profile";
     };
 
     const handleGoogleLogin = async () => {
@@ -87,16 +226,104 @@ export default function LoginPage() {
                                 </Link>
                             </div>
                             <h2 className="text-3xl font-semibold tracking-tight text-[#18181b]">
-                                {resetMode ? "Reset password" : "Sign In"}
+                                {isProcessingAuthLink
+                                    ? "Completing sign-in"
+                                    : isRecoverySession
+                                        ? "Choose a new password"
+                                        : resetMode
+                                            ? "Reset password"
+                                            : "Sign In"}
                             </h2>
                             <p className="mt-2 text-[15px] leading-relaxed text-[#52525b]">
-                                {resetMode
-                                    ? "Enter your email and we will send you a reset link."
-                                    : "Enter your email and password to access your account."}
+                                {isProcessingAuthLink
+                                    ? "Please wait while we restore your secure session."
+                                    : isRecoverySession
+                                        ? "Set a fresh password and continue to your workspace."
+                                        : resetMode
+                                            ? "Enter your email and we will send you a reset link."
+                                            : "Enter your email and password to access your account."}
                             </p>
                         </div>
 
-                        {resetMode ? (
+                        {authLinkError && (
+                            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                {authLinkError}
+                            </div>
+                        )}
+
+                        {!authHash && mode === "confirm" && authLinkState === "idle" && (
+                            <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                                If you just opened a confirmation email, wait a moment. If nothing happens, open the latest link again.
+                            </div>
+                        )}
+
+                        {!authHash && mode === "recovery" && authLinkState === "idle" && (
+                            <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                                Open the newest password reset email and use that link to continue.
+                            </div>
+                        )}
+
+                        {authLinkState === "processing" ? (
+                            <div className="rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-5 py-5 text-center">
+                                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[#d4d4d8] bg-white">
+                                    <Spinner className="h-5 w-5 text-[#18181b]" />
+                                </div>
+                                <p className="text-sm leading-relaxed text-[#52525b]">
+                                    We&apos;re securely restoring your session and preparing the right workspace.
+                                </p>
+                            </div>
+                        ) : isRecoverySession ? (
+                            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                    Password reset is ready for <strong>{email || "your account"}</strong>.
+                                </div>
+
+                                <InputField
+                                    id="newPassword"
+                                    label="New Password"
+                                    type="password"
+                                    value={password}
+                                    onChange={setPassword}
+                                    placeholder="••••••••"
+                                />
+
+                                <div className="grid grid-cols-1 gap-1 rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-3 py-2 sm:grid-cols-2">
+                                    <Rule met={recoveryChecks.minLength} label="8+ characters" />
+                                    <Rule met={recoveryChecks.hasUppercase} label="Uppercase (A-Z)" />
+                                    <Rule met={recoveryChecks.hasLowercase} label="Lowercase (a-z)" />
+                                    <Rule met={recoveryChecks.hasNumber} label="Number (0-9)" />
+                                    <Rule met={recoveryChecks.hasSpecial} label="Special (!@#$)" />
+                                </div>
+
+                                <InputField
+                                    id="confirmNewPassword"
+                                    label="Confirm New Password"
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={setConfirmPassword}
+                                    placeholder="••••••••"
+                                />
+
+                                {password && confirmPassword && !recoveryPasswordsMatch && (
+                                    <p className="px-1 text-xs font-medium text-red-500">Passwords do not match</p>
+                                )}
+
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#111111_0%,#27272a_100%)] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Spinner className="h-4 w-4 text-white" />
+                                            Updating password...
+                                        </>
+                                    ) : (
+                                        "Save new password"
+                                    )}
+                                </button>
+                            </form>
+                        ) : resetMode ? (
                             <form onSubmit={handleResetPassword} className="space-y-4">
                                 <InputField
                                     id="email"
@@ -270,6 +497,15 @@ function InputField({
                 placeholder={placeholder}
                 className="w-full rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-4 py-3 text-[15px] text-[#18181b] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#27272a] focus:bg-white focus:ring-2 focus:ring-zinc-100"
             />
+        </div>
+    );
+}
+
+function Rule({ met, label }: { met: boolean; label: string }) {
+    return (
+        <div className={`flex items-center gap-2 text-xs font-medium ${met ? "text-emerald-700" : "text-[#71717a]"}`}>
+            <span className={`h-2 w-2 rounded-full ${met ? "bg-emerald-500" : "bg-[#d4d4d8]"}`} />
+            {label}
         </div>
     );
 }

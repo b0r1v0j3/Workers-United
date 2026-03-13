@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
@@ -111,7 +111,7 @@ export default function DashboardClient({
 
     // 90-day refund countdown (for paid workers)
     const queueJoinedDate = worker?.queue_joined_at ? new Date(worker.queue_joined_at) : null;
-    const nowMs = Date.now();
+    const [nowMs] = useState(() => Date.now());
     const rawDaysElapsed = queueJoinedDate
         ? Math.floor((nowMs - queueJoinedDate.getTime()) / (1000 * 60 * 60 * 24))
         : 0;
