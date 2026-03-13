@@ -57,11 +57,7 @@ interface PendingOffer {
 }
 
 interface DashboardClientProps {
-    user: {
-        user_metadata?: {
-            full_name?: string | null;
-        } | null;
-    };
+    user: any;
     profile: WorkerProfile | null;
     worker: WorkerRecord | null;
     documents: WorkerDocument[];
