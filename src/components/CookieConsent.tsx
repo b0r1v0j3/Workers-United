@@ -17,6 +17,28 @@ export default function CookieConsent() {
         }
     }, []);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const root = document.documentElement;
+        const syncFloatingUi = () => {
+            const isMobile = window.innerWidth < 640;
+            const compactOffset = isMobile ? "1rem" : "7rem";
+            const defaultOffset = isMobile ? "1rem" : "1.5rem";
+            root.style.setProperty("--wu-floating-chat-offset", visible ? compactOffset : defaultOffset);
+            root.dataset.wuCookieVisible = visible && isMobile ? "true" : "false";
+        };
+
+        syncFloatingUi();
+        window.addEventListener("resize", syncFloatingUi);
+
+        return () => {
+            window.removeEventListener("resize", syncFloatingUi);
+            root.style.removeProperty("--wu-floating-chat-offset");
+            delete root.dataset.wuCookieVisible;
+        };
+    }, [visible]);
+
     const handleAccept = () => {
         localStorage.setItem("cookie_consent", new Date().toISOString());
         setVisible(false);
@@ -25,31 +47,35 @@ export default function CookieConsent() {
     if (!visible) return null;
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 animate-slideUp">
-            <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl border border-[#dddfe2] p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="flex items-start gap-3 flex-1">
+        <div className="fixed inset-x-0 bottom-0 z-[9999] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-0 sm:p-4 animate-slideUp">
+            <div className="mx-auto w-full max-w-3xl rounded-[22px] border border-[#dddfe2] bg-white p-3 shadow-2xl sm:rounded-[24px] sm:p-5">
+                <div className="flex items-start gap-3 sm:items-center sm:gap-4">
                     <Image
                         src="/cookie-icons8.png"
                         alt="Cookie icon"
                         width={56}
                         height={56}
-                        className="mt-0.5 h-14 w-14 shrink-0"
+                        className="mt-0.5 h-8 w-8 shrink-0 sm:h-14 sm:w-14"
                     />
-                    <p className="text-sm text-[#475569] leading-relaxed">
-                        We use essential cookies for authentication and site functionality. No tracking or advertising cookies are used.
-                        See our{" "}
-                        <Link href="/privacy-policy" className="text-[#1877f2] font-semibold hover:underline">
-                            Privacy Policy
-                        </Link>
-                        {" "}for details.
-                    </p>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[12px] leading-4 text-[#475569] sm:text-sm sm:leading-relaxed">
+                            We only use essential cookies for sign-in and site functionality. No ads or tracking.
+                            {" "}See our{" "}
+                            <Link href="/privacy-policy" className="text-[#1877f2] font-semibold hover:underline">
+                                Privacy Policy
+                            </Link>
+                            {" "}for details.
+                        </p>
+                    </div>
                 </div>
-                <button
-                    onClick={handleAccept}
-                    className="whitespace-nowrap px-6 py-2.5 rounded-lg bg-[#1877f2] text-white font-semibold text-sm hover:bg-[#1664d9] transition-colors shadow-sm"
-                >
-                    Got it
-                </button>
+                <div className="mt-3 flex justify-end">
+                    <button
+                        onClick={handleAccept}
+                        className="min-w-[112px] whitespace-nowrap rounded-xl bg-[#1877f2] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1664d9] sm:px-6"
+                    >
+                        Got it
+                    </button>
+                </div>
             </div>
 
             <style jsx>{`

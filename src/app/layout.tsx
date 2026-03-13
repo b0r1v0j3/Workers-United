@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { GodModeWrapper } from "@/components/GodModeWrapper";
@@ -60,6 +60,13 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-status-bar-style": "default",
     "theme-color": "#1877f2",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#1877f2",
 };
 
 export default function RootLayout({

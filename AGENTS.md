@@ -274,6 +274,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Mobile viewport readability pass: `src/components/AppShell.tsx` sada na telefonu skriva sidebar van canvasa umesto da ostavlja stalni levi rail, `src/app/layout.tsx` izvozi pravi `viewport` metadata blok (`device-width`, `initialScale`, `viewportFit`), a `src/components/CookieConsent.tsx` + `src/components/WhatsAppButton.tsx` koriste kompaktniji mobile cookie banner i privremeno sklanjaju floating WhatsApp dugme dok je banner otvoren, pa `login`, `signup` i worker workspace prvi ekran više ne deluju sabijeno i preklopljeno na 390px širini — 13.03.2026
 - [x] REVIZIJA auth hash-session hardening: ops sweep je otkrio da live email confirmation / magic-link / recovery hash linkovi završavaju na običnom `/login` bez sesije; `src/app/login/LoginClient.tsx` sada preuzima `access_token + refresh_token`, novi `src/app/api/auth/finalize/route.ts` završava role-aware redirect preko shared `src/lib/auth-redirect.ts`, `src/app/auth/callback/route.ts` ostaje code-based za OAuth ali hash flow vraća na `/login?mode=confirm|recovery`, a signup/reset redirecti sada ciljaju ekran koji ume da dovrši session end-to-end — 13.03.2026
 - [x] Agency hero stats cleanup: zbunjujuća `Accounts` kartica je uklonjena iz `/profile/agency`, pa hero sada prikazuje samo `Total`, `Ready`, `Paid` i `Drafts` bez dupliranja internog claimed signala koji nije bio jasan agencijama — 09.03.2026
 - [x] Agency payment CTA rollback pass: glossy payment card eksperiment je uklonjen iz `/profile/agency` i `Payment` kolona je vraćena na čist kompaktan `Pay $9` button, dok `Paid` ostaje miran zeleni confirmation state; refund info strip između hero sekcije i worker tabele ostaje kao jedini dodatni payment signal iznad liste — 09.03.2026
@@ -570,6 +571,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
    - worker, employer i agency moraju deliti isti mentalni model
    - isti shell, isti ritam sekcija, iste karte/status signali, manje slepih ruta
    - ukloniti unexplained ikonice, dead-end preview-je i vizuelni drift
+   - dodati kanonski mobile screenshot smoke (`login`, `signup`, worker dashboard/edit/documents`) da se novi overlay/shell regressions ne vraćaju posle svake UX izmene
 3. **Agency Operations**
    - agency kao pravi operativni kanal za unošenje worker-a
    - puni worker intake, `needs action`, bulk ops, status filteri, ownership jasnost
