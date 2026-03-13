@@ -173,7 +173,7 @@ export function SignupForm({ userType, claimContext = null }: SignupFormProps) {
                 email: email.trim().toLowerCase(),
                 password,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                    emailRedirectTo: `${window.location.origin}/login?mode=confirm`,
                     data: {
                         full_name: fullName.trim(),
                         company_name: userType === "employer" || userType === "agency" ? companyName.trim() : null,
