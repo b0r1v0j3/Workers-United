@@ -1592,34 +1592,56 @@ export async function handleWhatsAppOnboarding(
     const lowerMsg = message.toLowerCase().trim();
 
     // ── Intercept: "connect me with a person" / human agent request ──
-    const wantsHuman = /connect.*(person|human|agent|someone)|talk.*(person|human|real|agent)|speak.*(person|human|someone|agent)|real person|operator|customer service|live (agent|chat|person)|human (agent|support|help)|want.*(person|human)|need.*(person|human)|razgovaraj.*(osob|čovek|agent)|poveži.*(osob|čovek)|živa osoba|pravi čovek/i.test(lowerMsg);
+    const wantsHuman = /connect.*(person|human|agent|someone)|talk.*(person|human|real|agent)|speak.*(person|human|someone|agent)|real person|operator|customer service|live (agent|chat|person)|human (agent|support|help)|want.*(person|human)|need.*(person|human)|razgovaraj.*(osob|čovek|agent)|poveži.*(osob|čovek)|živa osoba|pravi čovek|personne|persona|kişi|ব্যক্তি|व्यक्ति|orang|người|人/i.test(lowerMsg);
     if (wantsHuman) {
-        const lk = getLangKey(lang);
-        const humanMsgs: Record<LangKey, string> = {
-            en: "I understand you'd like to speak with a person — that option isn't available just yet, but I'm here for you and I'm getting smarter every single day! My team is constantly upgrading me. 😊 Let's continue together — what can I help you with?",
-            sr: "Razumem da želite da razgovarate sa osobom — ta opcija trenutno nije dostupna, ali ja sam tu za vas i svakim danom sam sve pametniji! Tim me stalno unapređuje. 😊 Hajde da nastavimo zajedno — kako vam mogu pomoći?",
-            hi: "मैं समझता हूँ कि आप किसी व्यक्ति से बात करना चाहते हैं — वह विकल्प अभी उपलब्ध नहीं है, लेकिन मैं यहाँ हूँ और हर दिन और स्मार्ट हो रहा हूँ! 😊 चलिए साथ मिलकर आगे बढ़ते हैं — मैं आपकी कैसे मदद कर सकता हूँ?",
-            ar: "أفهم أنك تريد التحدث مع شخص — هذا الخيار غير متاح حالياً، لكنني هنا من أجلك وأصبح أذكى كل يوم! 😊 فريقي يطورني باستمرار. كيف يمكنني مساعدتك؟",
-            fr: "Je comprends que vous aimeriez parler à une personne — cette option n'est pas encore disponible, mais je suis là pour vous et je deviens plus intelligent chaque jour ! 😊 Mon équipe m'améliore constamment. Comment puis-je vous aider ?",
-            pt: "Entendo que você gostaria de falar com uma pessoa — essa opção ainda não está disponível, mas estou aqui para você e fico mais inteligente a cada dia! 😊 Minha equipe está me aprimorando constantemente. Como posso ajudá-lo?",
-        };
-        return humanMsgs[lk];
+        // Use GPT to generate response in ANY language the user is writing in
+        const apiKey = process.env.OPENAI_API_KEY || "";
+        try {
+            const humanReply = await callOpenAIResponseText(apiKey, {
+                model: WHATSAPP_RESPONSE_MODEL,
+                instructions: `You are a friendly WhatsApp assistant for Workers United. The user wants to talk to a human/real person. You MUST reply in ${lang} (the user's language). Your response must:
+1. Acknowledge their request warmly
+2. Explain that the option to talk to a human is not available right now
+3. Say that YOU are here to help and you are getting smarter every day because your team is constantly upgrading you
+4. Encourage them to try again tomorrow if something doesn't work today — you might surprise them!
+5. Ask what you can help them with
+6. Keep it to 2-3 sentences, warm and friendly tone
+7. You may use one emoji if it feels natural`,
+                input: message,
+            });
+            if (humanReply) return humanReply;
+        } catch (e) {
+            console.error("[WhatsApp] GPT human-request fallback error:", e);
+        }
+        // Fallback to English if GPT fails
+        return "I understand you'd like to speak with a person — that option isn't available just yet, but I'm here for you and I'm getting smarter every single day! My team is constantly upgrading me. 😊 What can I help you with?";
     }
 
     // ── Intercept: Agent/agency identification ──
-    const isAgent = /i am.*(agent|agency|recruiter)|i register.*(client|worker|people)|agency.*(register|client)|recruiter|agencij|agent.*registr|registruj.*klijent/i.test(lowerMsg);
+    const isAgent = /i am.*(agent|agency|recruiter)|i register.*(client|worker|people)|agency.*(register|client)|recruiter|agencij|agent.*registr|registruj.*klijent|agence|agenzia|ajans|এজেন্ট|एजेंट|agen/i.test(lowerMsg);
     if (isAgent) {
         await clearOnboardingState(supabase, phone);
-        const lk = getLangKey(lang);
-        const agentMsgs: Record<LangKey, string> = {
-            en: "Welcome! Great to have an agency partner here. 🤝 You can register as an agency at workersunited.eu/signup and then manage all your workers' profiles through your agency dashboard. It's much easier to handle multiple workers from there. If you have any questions about the process, I'm here to help!",
-            sr: "Dobrodošli! Drago nam je što imamo agencijskog partnera. 🤝 Možete se registrovati kao agencija na workersunited.eu/signup i zatim upravljati profilima svih vaših radnika kroz agencijski dashboard. Mnogo je lakše upravljati više radnika odatle. Ako imate pitanja, tu sam!",
-            hi: "स्वागत है! एजेंसी पार्टनर होना बहुत अच्छा है। 🤝 आप workersunited.eu/signup पर एजेंसी के रूप में रजिस्टर कर सकते हैं और अपने डैशबोर्ड से सभी वर्कर्स के प्रोफाइल मैनेज कर सकते हैं।",
-            ar: "مرحباً! سعداء بوجود شريك وكالة هنا. 🤝 يمكنك التسجيل كوكالة على workersunited.eu/signup ثم إدارة ملفات جميع العمال من لوحة التحكم.",
-            fr: "Bienvenue ! Ravi d'avoir un partenaire agence ici. 🤝 Vous pouvez vous inscrire en tant qu'agence sur workersunited.eu/signup et gérer tous les profils de vos travailleurs depuis votre tableau de bord.",
-            pt: "Bem-vindo! Ótimo ter um parceiro de agência aqui. 🤝 Você pode se registrar como agência em workersunited.eu/signup e gerenciar todos os perfis dos seus trabalhadores pelo painel.",
-        };
-        return agentMsgs[lk];
+        // Use GPT to generate response in ANY language the user is writing in
+        const apiKey = process.env.OPENAI_API_KEY || "";
+        try {
+            const agentReply = await callOpenAIResponseText(apiKey, {
+                model: WHATSAPP_RESPONSE_MODEL,
+                instructions: `You are a friendly WhatsApp assistant for Workers United. The user has identified themselves as an agent/agency/recruiter who registers workers. You MUST reply in ${lang} (the user's language). Your response must:
+1. Welcome them warmly as an agency partner
+2. Explain they can register as an agency at workersunited.eu/signup
+3. Tell them they can manage all their workers' profiles through the agency dashboard on the website
+4. Say it's much easier to handle multiple workers from the website dashboard
+5. Offer to help with any questions
+6. Keep it to 2-3 sentences, professional but warm tone
+7. You may use one emoji if it feels natural`,
+                input: message,
+            });
+            if (agentReply) return agentReply;
+        } catch (e) {
+            console.error("[WhatsApp] GPT agent-detection fallback error:", e);
+        }
+        // Fallback to English if GPT fails
+        return "Welcome! You can register as an agency at workersunited.eu/signup and manage all your workers' profiles through your agency dashboard. If you have any questions, I'm here to help! 🤝";
     }
 
     // ── ask_start ──
