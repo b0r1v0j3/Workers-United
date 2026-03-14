@@ -68,18 +68,15 @@ export default async function QueuePage({
                                         Start Searching for Jobs
                                     </h3>
                                     <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
-                                        Sandbox payment marks Job Finder as active instantly, without opening Stripe or creating live payment rows.
+                                        Sandbox queue preview now mirrors the real admin preview state, so you can inspect the unpaid worker layout without opening Stripe or simulating a charge.
                                     </p>
                                 </div>
-                                <PayToJoinButton
-                                    displayName={workerRecord.full_name || session.activePersona.label}
-                                    source="admin_test_queue"
-                                    redirectPath="/profile/worker/queue"
-                                    adminTestMode
-                                />
+                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                                    Preview only. Queue payment is disabled in sandbox view.
+                                </div>
                                 <div className="mx-auto mt-2 flex max-w-xs items-start justify-center gap-1.5 px-1 text-center text-[11px] font-medium leading-relaxed text-gray-500 sm:max-w-none sm:items-center sm:text-xs">
                                     <Shield size={14} className="mt-0.5 shrink-0 text-gray-400 sm:mt-0" />
-                                    <span className="min-w-0">Sandbox only: no live charge, webhook, or live queue entry is created</span>
+                                    <span className="min-w-0">Sandbox only: this unpaid view now matches the locked admin preview instead of exposing a fake pay button</span>
                                 </div>
                             </div>
                         ) : paymentAcceptedNoOffer ? (
