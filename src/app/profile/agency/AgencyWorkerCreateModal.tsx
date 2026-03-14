@@ -16,6 +16,7 @@ import {
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
+import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 
 const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
@@ -177,6 +178,14 @@ function formatDateInputValue(date: Date) {
     return localDate.toISOString().slice(0, 10);
 }
 
+function normalizeBooleanAnswer(value: string | null | undefined) {
+    if (!value) return "";
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "yes") return "Yes";
+    if (normalized === "no") return "No";
+    return value;
+}
+
 function normalizeFamilyData(value: AgencyWorkerModalPayload["familyData"] | null | undefined) {
     return {
         spouse: value?.spouse
@@ -228,8 +237,8 @@ function hydrateWorkerDetail(worker: AgencyWorkerDetail) {
         passportIssuedBy: worker.passport_issued_by || "",
         passportIssueDate: normalizeDateInput(worker.passport_issue_date),
         passportExpiryDate: normalizeDateInput(worker.passport_expiry_date),
-        livesAbroad: worker.lives_abroad || "",
-        previousVisas: worker.previous_visas || "",
+        livesAbroad: normalizeBooleanAnswer(worker.lives_abroad),
+        previousVisas: normalizeBooleanAnswer(worker.previous_visas),
     };
     const spouse = normalizedFamily.spouse || emptySpouse();
     const children = normalizedFamily.children;
@@ -597,8 +606,14 @@ export default function AgencyWorkerCreateModal({
                                 <Field label="Email" helper="Optional. Use it only if the worker should receive notifications.">
                                     <input className={inputClass} type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} />
                                 </Field>
-                                <Field label="Phone" helper="Optional. Use it only if the worker should receive WhatsApp or phone notifications.">
-                                    <input className={inputClass} placeholder="+381..." value={form.phone} onChange={(event) => updateField("phone", event.target.value)} />
+                                <Field label="Phone Number (WhatsApp)" helper="Optional. Use it only if the worker should receive WhatsApp or phone notifications. Do not type '0' before the number.">
+                                    <InternationalPhoneField
+                                        value={form.phone}
+                                        onChange={(phone) => updateField("phone", phone)}
+                                        inputClassName={inputClass}
+                                        buttonClassName="!border-[#e5e7eb] !bg-[#fafafa] !rounded-l-2xl"
+                                        disabled={saving || loadingWorker}
+                                    />
                                 </Field>
                                 <Field label="Nationality">
                                     <select className={inputClass} value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)}>
@@ -718,18 +733,18 @@ export default function AgencyWorkerCreateModal({
                                         onChange={(event) => updateField("passportExpiryDate", event.target.value)}
                                     />
                                 </Field>
-                                <Field label="Lives abroad">
+                                <Field label="Do you live outside your home country?">
                                     <select className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)}>
                                         <option value="">Select answer</option>
-                                        <option value="yes">Yes</option>
-                                        <option value="no">No</option>
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
                                     </select>
                                 </Field>
-                                <Field label="Previous visas in last 3 years">
+                                <Field label="Have you had any visas in the last 3 years?">
                                     <select className={inputClass} value={form.previousVisas} onChange={(event) => updateField("previousVisas", event.target.value)}>
                                         <option value="">Select answer</option>
-                                        <option value="yes">Yes</option>
-                                        <option value="no">No</option>
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
                                     </select>
                                 </Field>
                             </div>

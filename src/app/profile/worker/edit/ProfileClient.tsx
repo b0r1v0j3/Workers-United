@@ -12,8 +12,7 @@ import {
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
+import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import { logActivity, logError } from "@/lib/activityLogger";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
@@ -667,16 +666,12 @@ export default function ProfilePage({
                                         <label className={labelClass}>
                                             Phone Number (WhatsApp) <span className="text-red-500">*</span>
                                         </label>
-                                        <PhoneInput
-                                            country={"rs"}
+                                        <InternationalPhoneField
                                             value={formData.phone}
-                                            onChange={(phone: string) => setFormData(prev => ({ ...prev, phone: '+' + phone }))}
-                                            containerClass="!w-full !max-w-full"
-                                            inputClass={`${inputClass} !pl-12 !w-full`}
-                                            buttonClass="!border-gray-300 !bg-gray-50 !rounded-l-md"
+                                            onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
+                                            inputClassName={inputClass}
+                                            buttonClassName="!border-gray-300 !bg-gray-50 !rounded-l-md"
                                             disabled={readOnlyPreview || saving}
-                                            enableSearch={true}
-                                            searchPlaceholder="Search country..."
                                         />
                                         <p className="text-[11px] text-gray-500 mt-1">
                                             Do not type &apos;0&apos; before your number. If your number is 0601234567, just type 601234567.

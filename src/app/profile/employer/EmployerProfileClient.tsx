@@ -4,13 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import {
     Building2, MapPin, Globe, Phone, Calendar, FileText, Hash, Users,
     Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, Banknote
 } from "lucide-react";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
 
 // ─── Types ──────────────────────────────────────────────────────
 interface EmployerProfile {
@@ -708,15 +707,11 @@ export default function EmployerProfilePage({
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                 <div>
                                                     <label className={labelClass}>Contact Phone <span className="text-red-500">*</span></label>
-                                                    <PhoneInput
-                                                        country={"rs"}
+                                                    <InternationalPhoneField
                                                         value={companyForm.contact_phone}
-                                                        onChange={(phone: string) => setCompanyForm(prev => ({ ...prev, contact_phone: '+' + phone }))}
-                                                        containerClass="!w-full !max-w-full"
-                                                        inputClass={`${inputClass} !pl-12 !w-full`}
-                                                        buttonClass="!border-gray-200 !bg-gray-50 !rounded-l-xl"
-                                                        enableSearch={true}
-                                                        searchPlaceholder="Search country..."
+                                                        onChange={(phone) => setCompanyForm(prev => ({ ...prev, contact_phone: phone }))}
+                                                        inputClassName={inputClass}
+                                                        buttonClassName="!border-gray-200 !bg-gray-50 !rounded-l-xl"
                                                     />
                                                     <p className="text-[11px] text-gray-500 mt-1">
                                                         Do not type &apos;0&apos; before your number. If your number is 0601234567, just type 601234567.
