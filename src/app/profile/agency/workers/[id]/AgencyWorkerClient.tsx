@@ -7,12 +7,9 @@ import { BadgeCheck, CheckCircle2, CircleAlert, Clock3, CreditCard, FileCheck2, 
 import { EUROPEAN_COUNTRIES, GENDER_OPTIONS, MARITAL_STATUSES, MAX_FILE_SIZE_MB, WORKER_INDUSTRIES, WORLD_COUNTRIES } from "@/lib/constants";
 import {
     ALL_OPTION_VALUE,
-    getDesiredCountriesLabel,
-    getPreferredJobTriggerLabel,
-    MultiChoiceSheetField,
+    NativeDestinationSelectField,
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
-    SingleChoiceSheetField,
 } from "@/components/forms/PreferenceSheetField";
 
 type AgencyDocType = "passport" | "biometric_photo" | "diploma";
@@ -99,7 +96,6 @@ const documentDefinitions: Array<{ key: AgencyDocType; label: string; helper: st
     { key: "diploma", label: "Diploma", helper: "School or university diploma for visa processing." },
 ];
 const industryOptions = [
-    { value: ALL_OPTION_VALUE, label: "All industries", description: "Keep this worker open to any job industry." },
     ...WORKER_INDUSTRIES.filter((industry) => industry !== ALL_OPTION_VALUE).map((industry) => ({
         value: industry,
         label: industry,
@@ -237,7 +233,6 @@ export default function AgencyWorkerClient({
     const diplomaInputRef = useRef<HTMLInputElement | null>(null);
     const hasWorkerAccount = adminTestMode || (initialWorker.claimed && Boolean(initialWorker.profileId));
     const canStartEntryPayment = initialWorker.paymentLabel !== "Paid";
-    const pickerTriggerClass = `${inputClass} flex min-h-[52px] items-center justify-between gap-3 text-left`;
 
     useEffect(() => {
         const paymentState = searchParams.get("payment");
@@ -634,29 +629,33 @@ export default function AgencyWorkerClient({
                     <FormCard title="Job Preferences" description="Worker job target and country preferences.">
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label="Preferred Job">
-                                <SingleChoiceSheetField
-                                    buttonClassName={pickerTriggerClass}
-                                    panelTone="stone"
-                                    sheetTitle="Preferred job"
-                                    sheetDescription="Choose the worker's target industry, or leave them open to all industries."
-                                    triggerLabel={getPreferredJobTriggerLabel(form.preferredJob)}
+                                <select
+                                    className={inputClass}
                                     value={normalizePreferredJobValue(form.preferredJob, false)}
-                                    options={industryOptions}
-                                    onChange={(value) => updateField("preferredJob", value)}
-                                />
+                                    onChange={(event) => updateField("preferredJob", event.target.value)}
+                                >
+                                    <option value="">Select industries</option>
+                                    <option value={ALL_OPTION_VALUE}>All industries</option>
+                                    {industryOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
                             </Field>
                         </div>
                         <div className="mt-5">
                             <div className={labelClass}>Desired Countries</div>
-                            <MultiChoiceSheetField
+                            <NativeDestinationSelectField
                                 allLabel="All destinations"
-                                buttonClassName={pickerTriggerClass}
-                                panelTone="stone"
-                                sheetTitle="Preferred destinations"
-                                sheetDescription="Choose one or more European destinations for this worker."
-                                triggerLabel={getDesiredCountriesLabel(form.desiredCountries)}
-                                values={normalizeDesiredCountryValues(form.desiredCountries)}
+                                chipClassName="inline-flex items-center gap-2 rounded-full border border-[#e7e0d4] bg-white px-3 py-1.5 text-xs font-semibold text-[#18181b]"
+                                clearButtonClassName="inline-flex items-center rounded-full border border-[#e7e0d4] bg-[#faf8f3] px-3 py-1.5 text-xs font-semibold text-[#6b6357] transition hover:bg-white"
+                                emptyStateClassName="text-xs leading-relaxed text-[#6b6357]"
+                                optionLabel="Select destinations"
                                 options={destinationOptions}
+                                removeButtonClassName="transition hover:border-[#d8cfbf] hover:bg-[#faf8f3]"
+                                selectClassName={inputClass}
+                                values={normalizeDesiredCountryValues(form.desiredCountries)}
                                 onChange={(values) => updateField("desiredCountries", values)}
                             />
                         </div>

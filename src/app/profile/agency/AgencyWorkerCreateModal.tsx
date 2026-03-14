@@ -12,12 +12,9 @@ import {
 } from "@/lib/constants";
 import {
     ALL_OPTION_VALUE,
-    getDesiredCountriesLabel,
-    getPreferredJobTriggerLabel,
-    MultiChoiceSheetField,
+    NativeDestinationSelectField,
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
-    SingleChoiceSheetField,
 } from "@/components/forms/PreferenceSheetField";
 
 const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
@@ -358,7 +355,6 @@ export default function AgencyWorkerCreateModal({
     );
     const [initialPayload, setInitialPayload] = useState<AgencyWorkerModalPayload>(pristinePayload);
     const isDirty = JSON.stringify(payload) !== JSON.stringify(initialPayload);
-    const pickerTriggerClass = `${inputClass} flex min-h-[52px] items-center justify-between gap-3 text-left`;
     const modeLabel = readOnlyPreview ? "Admin preview" : workerId ? "Edit worker" : "Add worker";
     const footerCopy = standalone
         ? readOnlyPreview
@@ -387,13 +383,10 @@ export default function AgencyWorkerCreateModal({
         ? "fixed inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6"
         : "absolute inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6";
     const industryOptions = useMemo(
-        () => [
-            { value: ALL_OPTION_VALUE, label: "All industries", description: "Let the worker stay open to any job industry." },
-            ...WORKER_INDUSTRIES.filter((industry) => industry !== ALL_OPTION_VALUE).map((industry) => ({
+        () => WORKER_INDUSTRIES.filter((industry) => industry !== ALL_OPTION_VALUE).map((industry) => ({
                 value: industry,
                 label: industry,
             })),
-        ],
         []
     );
     const destinationOptions = useMemo(
@@ -712,16 +705,19 @@ export default function AgencyWorkerCreateModal({
 
                         <Section title="Job Preferences">
                             <Field label="Preferred job">
-                                <SingleChoiceSheetField
-                                    buttonClassName={pickerTriggerClass}
-                                    panelTone="neutral"
-                                    sheetTitle="Preferred job"
-                                    sheetDescription="Choose the worker's target industry. You can also keep them open to every industry."
-                                    triggerLabel={getPreferredJobTriggerLabel(form.preferredJob)}
+                                <select
+                                    className={inputClass}
                                     value={normalizePreferredJobValue(form.preferredJob, false)}
-                                    options={industryOptions}
-                                    onChange={(value) => updateField("preferredJob", value)}
-                                />
+                                    onChange={(event) => updateField("preferredJob", event.target.value)}
+                                >
+                                    <option value="">Select industries</option>
+                                    <option value={ALL_OPTION_VALUE}>All industries</option>
+                                    {industryOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
                             </Field>
 
                             <div className="mt-5">
@@ -729,15 +725,16 @@ export default function AgencyWorkerCreateModal({
                                     label="Preferred destinations"
                                     helper="Pick one or more destinations, or keep this worker open to all destinations in Europe."
                                 >
-                                    <MultiChoiceSheetField
+                                    <NativeDestinationSelectField
                                         allLabel="All destinations"
-                                        buttonClassName={pickerTriggerClass}
-                                        panelTone="neutral"
-                                        sheetTitle="Preferred destinations"
-                                        sheetDescription="Choose the European destinations this worker is open to."
-                                        triggerLabel={getDesiredCountriesLabel(form.desiredCountries)}
-                                        values={normalizeDesiredCountryValues(form.desiredCountries)}
+                                        chipClassName="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-semibold text-[#111827]"
+                                        clearButtonClassName="inline-flex items-center rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1.5 text-xs font-semibold text-[#6b7280] transition hover:bg-white"
+                                        emptyStateClassName="text-xs leading-relaxed text-[#6b7280]"
+                                        optionLabel="Select destinations"
                                         options={destinationOptions}
+                                        removeButtonClassName="transition hover:border-[#d1d5db] hover:bg-[#fafafa]"
+                                        selectClassName={inputClass}
+                                        values={normalizeDesiredCountryValues(form.desiredCountries)}
                                         onChange={(values) => updateField("desiredCountries", values)}
                                     />
                                 </Field>

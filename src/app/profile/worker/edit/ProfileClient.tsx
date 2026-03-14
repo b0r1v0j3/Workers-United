@@ -8,12 +8,9 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     ALL_OPTION_VALUE,
-    getDesiredCountriesLabel,
-    getPreferredJobTriggerLabel,
-    MultiChoiceSheetField,
+    NativeDestinationSelectField,
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
-    SingleChoiceSheetField,
 } from "@/components/forms/PreferenceSheetField";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -97,7 +94,6 @@ const PASSPORT_EXPIRY_YEARS = Array.from({ length: 11 }, (_, i) => currentYear +
 // Empty child template
 const EMPTY_CHILD = { last_name: "", first_name: "", dobDay: "", dobMonth: "", dobYear: "" };
 const workerIndustryOptions = [
-    { value: ALL_OPTION_VALUE, label: "All industries", description: "Stay open to any industry while the team searches for a match." },
     ...WORKER_INDUSTRIES.filter((industry) => industry !== ALL_OPTION_VALUE).map((industry) => ({
         value: industry,
         label: industry,
@@ -644,7 +640,6 @@ export default function ProfilePage({
 
     const inputClass = "min-w-0 w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
     const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
-    const pickerTriggerClass = `${inputClass} flex min-h-[46px] items-center justify-between gap-3 text-left`;
     const sectionCardClass = "relative overflow-hidden rounded-none border-0 bg-transparent shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-lg sm:border sm:border-gray-200 sm:bg-white sm:shadow-sm sm:before:hidden";
 
     return (
@@ -1239,16 +1234,18 @@ export default function ProfilePage({
                                     <label className={labelClass}>
                                         Preferred Job / Industry <span className="text-red-500">*</span>
                                     </label>
-                                    <SingleChoiceSheetField
-                                        buttonClassName={pickerTriggerClass}
-                                        panelTone="neutral"
-                                        sheetTitle="Preferred job"
-                                        sheetDescription="Choose your target industry or stay open to all industries."
-                                        triggerLabel={getPreferredJobTriggerLabel(formData.preferred_job)}
+                                    <select
+                                        name="preferred_job"
                                         value={normalizePreferredJobValue(formData.preferred_job, false)}
-                                        options={workerIndustryOptions}
-                                        onChange={(value) => setFormData(prev => ({ ...prev, preferred_job: value }))}
-                                    />
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                    >
+                                        <option value="">Select industries</option>
+                                        <option value={ALL_OPTION_VALUE}>All industries</option>
+                                        {workerIndustryOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div>
@@ -1256,15 +1253,16 @@ export default function ProfilePage({
                                         Preferred Destinations (Europe)
                                     </label>
 
-                                    <MultiChoiceSheetField
+                                    <NativeDestinationSelectField
                                         allLabel="All destinations"
-                                        buttonClassName={pickerTriggerClass}
-                                        panelTone="neutral"
-                                        sheetTitle="Preferred destinations"
-                                        sheetDescription="Choose one or more European destinations, or stay open to all destinations."
-                                        triggerLabel={getDesiredCountriesLabel(formData.desired_countries)}
-                                        values={normalizeDesiredCountryValues(formData.desired_countries)}
+                                        chipClassName="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+                                        clearButtonClassName="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:bg-white"
+                                        emptyStateClassName="text-[12px] text-gray-500"
+                                        optionLabel="Select destinations"
                                         options={destinationPreferenceOptions}
+                                        removeButtonClassName="transition hover:border-gray-300 hover:bg-gray-50"
+                                        selectClassName={inputClass}
+                                        values={normalizeDesiredCountryValues(formData.desired_countries)}
                                         onChange={(values) => setFormData(prev => ({ ...prev, desired_countries: values }))}
                                     />
                                     <p className="text-[12px] text-gray-500 mt-2">
