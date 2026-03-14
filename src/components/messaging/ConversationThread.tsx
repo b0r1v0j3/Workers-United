@@ -55,7 +55,7 @@ export default function ConversationThread({
     }
 
     return (
-        <div className="flex min-h-[560px] flex-col overflow-hidden rounded-none border-0 bg-transparent shadow-none sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:shadow-[0_20px_45px_-40px_rgba(15,23,42,0.28)]">
+        <div className="relative flex min-h-[560px] flex-col overflow-hidden rounded-none border-0 bg-transparent pt-5 shadow-none before:absolute before:left-2 before:right-2 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:pt-0 sm:shadow-[0_20px_45px_-40px_rgba(15,23,42,0.28)] sm:before:hidden">
             <div className="border-b border-[#f1f1ef] px-0 py-4 sm:px-6 sm:py-5">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Conversation</div>
                 <h2 className="mt-2 text-xl font-semibold text-[#18181b]">{title}</h2>
