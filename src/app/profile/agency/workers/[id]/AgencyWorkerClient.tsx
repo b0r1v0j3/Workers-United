@@ -8,7 +8,7 @@ import { EUROPEAN_COUNTRIES, GENDER_OPTIONS, MARITAL_STATUSES, MAX_FILE_SIZE_MB,
 import {
     ALL_OPTION_VALUE,
     getDesiredCountriesLabel,
-    getPreferredJobLabel,
+    getPreferredJobTriggerLabel,
     MultiChoiceSheetField,
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
@@ -189,7 +189,7 @@ export default function AgencyWorkerClient({
         phone: initialWorker.phone,
         nationality: initialWorker.nationality,
         currentCountry: initialWorker.currentCountry,
-        preferredJob: normalizePreferredJobValue(initialWorker.preferredJob, true),
+        preferredJob: normalizePreferredJobValue(initialWorker.preferredJob, false),
         desiredCountries: normalizeDesiredCountryValues(initialWorker.desiredCountries || []),
         gender: initialWorker.gender,
         maritalStatus: initialWorker.maritalStatus,
@@ -639,8 +639,8 @@ export default function AgencyWorkerClient({
                                     panelTone="stone"
                                     sheetTitle="Preferred job"
                                     sheetDescription="Choose the worker's target industry, or leave them open to all industries."
-                                    triggerLabel={getPreferredJobLabel(form.preferredJob)}
-                                    value={normalizePreferredJobValue(form.preferredJob, true)}
+                                    triggerLabel={getPreferredJobTriggerLabel(form.preferredJob)}
+                                    value={normalizePreferredJobValue(form.preferredJob, false)}
                                     options={industryOptions}
                                     onChange={(value) => updateField("preferredJob", value)}
                                 />

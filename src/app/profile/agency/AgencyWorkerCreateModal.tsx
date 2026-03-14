@@ -13,7 +13,7 @@ import {
 import {
     ALL_OPTION_VALUE,
     getDesiredCountriesLabel,
-    getPreferredJobLabel,
+    getPreferredJobTriggerLabel,
     MultiChoiceSheetField,
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
@@ -135,7 +135,7 @@ function emptyForm(): FormState {
         phone: "",
         nationality: "",
         currentCountry: "",
-        preferredJob: ALL_OPTION_VALUE,
+        preferredJob: "",
         desiredCountries: [],
         gender: "",
         maritalStatus: "",
@@ -207,7 +207,7 @@ function hydrateWorkerDetail(worker: AgencyWorkerDetail) {
         phone: worker.phone || "",
         nationality: worker.nationality || "",
         currentCountry: worker.current_country || "",
-        preferredJob: normalizePreferredJobValue(worker.preferred_job, true),
+        preferredJob: normalizePreferredJobValue(worker.preferred_job, false),
         desiredCountries: normalizeDesiredCountryValues(worker.desired_countries),
         gender: worker.gender || "",
         maritalStatus: worker.marital_status || "",
@@ -687,8 +687,8 @@ export default function AgencyWorkerCreateModal({
                                     panelTone="neutral"
                                     sheetTitle="Preferred job"
                                     sheetDescription="Choose the worker's target industry. You can also keep them open to every industry."
-                                    triggerLabel={getPreferredJobLabel(form.preferredJob)}
-                                    value={normalizePreferredJobValue(form.preferredJob, true)}
+                                    triggerLabel={getPreferredJobTriggerLabel(form.preferredJob)}
+                                    value={normalizePreferredJobValue(form.preferredJob, false)}
                                     options={industryOptions}
                                     onChange={(value) => updateField("preferredJob", value)}
                                 />
