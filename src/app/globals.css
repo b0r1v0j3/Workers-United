@@ -139,6 +139,23 @@ body {
   margin-left: 0;
 }
 
+input[type="date"] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  display: block;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: auto;
+}
+
 a {
   color: inherit;
   text-decoration: none;

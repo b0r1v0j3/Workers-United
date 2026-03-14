@@ -17,7 +17,7 @@ import {
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
 
-const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
+const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
 const sectionClass = "relative min-w-0 overflow-x-hidden rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[28px] sm:border sm:border-[#ececec] sm:bg-white sm:p-6 sm:shadow-[0_20px_60px_-52px_rgba(15,23,42,0.22)] sm:before:hidden";
 
