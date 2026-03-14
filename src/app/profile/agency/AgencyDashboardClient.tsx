@@ -141,7 +141,7 @@ function splitWorkerName(name: string) {
     };
 }
 
-const BOARD_ACTION_BUTTON_CLASS = "inline-flex h-[52px] w-[124px] items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition";
+const BOARD_ACTION_BUTTON_CLASS = "mx-auto flex h-[52px] w-[124px] items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition";
 
 function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     const normalizedStatus = (worker.status || "").toUpperCase();
@@ -663,8 +663,8 @@ export default function AgencyDashboardClient({
                                         <th className="min-w-[160px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[18%] lg:min-w-0">Worker</th>
                                         <th className="min-w-[96px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[10%] lg:min-w-0">Added</th>
                                         <th className="min-w-[150px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[14%] lg:min-w-0">Completion</th>
-                                        <th className="min-w-[128px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[13%] lg:min-w-0">Documents</th>
-                                        <th className="min-w-[132px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[13%] lg:min-w-0">Payment</th>
+                                        <th className="min-w-[156px] border-r border-[#f1f1ef] px-4 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[13%] lg:min-w-0">Documents</th>
+                                        <th className="min-w-[156px] border-r border-[#f1f1ef] px-4 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[13%] lg:min-w-0">Payment</th>
                                         <th className="min-w-[180px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[19%] lg:min-w-0">Status</th>
                                         <th className="min-w-[132px] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[11%] lg:min-w-0">Action</th>
                                     </tr>
@@ -721,39 +721,43 @@ export default function AgencyDashboardClient({
                                                 </td>
 
                                                 <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openWorkerDocuments(worker)}
-                                                        className={`${BOARD_ACTION_BUTTON_CLASS} border border-[#e5e7eb] bg-[#fafafa] text-[#111827] hover:bg-white`}
-                                                    >
-                                                        <Upload size={14} />
-                                                        {readOnlyPreview ? "Review docs" : "Upload docs"}
-                                                    </button>
+                                                    <div className="flex justify-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openWorkerDocuments(worker)}
+                                                            className={`${BOARD_ACTION_BUTTON_CLASS} border border-[#e5e7eb] bg-[#fafafa] text-[#111827] hover:bg-white`}
+                                                        >
+                                                            <Upload size={14} />
+                                                            {readOnlyPreview ? "Review docs" : "Upload docs"}
+                                                        </button>
+                                                    </div>
                                                 </td>
 
                                                 <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
-                                                    {showPayButton ? (
-                                                        <AgencyPaymentCard
-                                                            state="not_paid"
-                                                            loading={payingWorkerId === worker.id}
-                                                            onClick={() => void handlePay(worker)}
-                                                        />
-                                                    ) : worker.paymentState === "paid" ? (
-                                                        <AgencyPaymentCard
-                                                            state="paid"
-                                                            paidAt={worker.entryFeePaidAt}
-                                                        />
-                                                    ) : worker.paymentState === "pending" ? (
-                                                        <AgencyPaymentCard
-                                                            state="pending"
-                                                            paidAt={worker.paymentPendingUntil}
-                                                        />
-                                                    ) : (
-                                                        <AgencyPaymentCard
-                                                            state="locked"
-                                                            lockedReason={paymentUnlockState.reason}
-                                                        />
-                                                    )}
+                                                    <div className="flex justify-center">
+                                                        {showPayButton ? (
+                                                            <AgencyPaymentCard
+                                                                state="not_paid"
+                                                                loading={payingWorkerId === worker.id}
+                                                                onClick={() => void handlePay(worker)}
+                                                            />
+                                                        ) : worker.paymentState === "paid" ? (
+                                                            <AgencyPaymentCard
+                                                                state="paid"
+                                                                paidAt={worker.entryFeePaidAt}
+                                                            />
+                                                        ) : worker.paymentState === "pending" ? (
+                                                            <AgencyPaymentCard
+                                                                state="pending"
+                                                                paidAt={worker.paymentPendingUntil}
+                                                            />
+                                                        ) : (
+                                                            <AgencyPaymentCard
+                                                                state="locked"
+                                                                lockedReason={paymentUnlockState.reason}
+                                                            />
+                                                        )}
+                                                    </div>
                                                 </td>
 
                                                 <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
