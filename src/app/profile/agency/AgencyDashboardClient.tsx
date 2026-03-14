@@ -7,17 +7,20 @@ import {
     Building2,
     CreditCard,
     FileCheck2,
+    Lock,
     Loader2,
     Pencil,
     Plus,
     Search,
     Shield,
     Trash2,
+    Upload,
     UserPlus,
     Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getPreferredJobLabel } from "@/components/forms/PreferenceSheetField";
+import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 
 const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] sm:before:hidden";
@@ -45,6 +48,7 @@ export interface AgencyDashboardProps {
         preferredJob: string | null;
         status: string;
         completion: number;
+        adminApproved: boolean;
         claimed: boolean;
         accessLabel: string;
         verifiedDocuments: number;
@@ -140,6 +144,11 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     const normalizedRefundStatus = (worker.refundStatus || "").toLowerCase();
     const activeQueueDate = worker.queueJoinedAt || worker.entryFeePaidAt || null;
     const elapsedDays = getElapsedDays(activeQueueDate);
+    const unlockState = getEntryFeeUnlockState({
+        entry_fee_paid: worker.paymentState === "paid",
+        profile_completion: worker.completion,
+        admin_approved: worker.adminApproved,
+    });
 
     if (normalizedRefundStatus === "completed") {
         return { label: "Refunded", detail: "The $9 Job Finder fee has already been refunded.", tone: "red" };
@@ -179,6 +188,16 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
             break;
     }
 
+    if (worker.paymentState === "pending") {
+        return {
+            label: "Checkout open",
+            detail: worker.paymentPendingUntil
+                ? `A $9 Job Finder checkout is already open until ${formatDate(worker.paymentPendingUntil)}.`
+                : "A $9 Job Finder checkout is already open for this worker.",
+            tone: "blue",
+        };
+    }
+
     if (worker.paymentState === "paid") {
         if (normalizedStatus === "IN_QUEUE") {
             return {
@@ -199,9 +218,25 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
         };
     }
 
+    if (unlockState.reason === "needs_completion") {
+        return {
+            label: "Needs profile",
+            detail: "Complete all required worker details and documents before this profile can go to admin review.",
+            tone: "slate",
+        };
+    }
+
+    if (unlockState.reason === "pending_admin_review") {
+        return {
+            label: "Pending approval",
+            detail: "The profile is complete and now waiting for admin approval before Job Finder payment unlocks.",
+            tone: "blue",
+        };
+    }
+
     return {
         label: "Not paid yet",
-        detail: "Agency can start Job Finder by paying the $9 entry fee.",
+        detail: "Agency can start Job Finder by paying the $9 entry fee after admin approval.",
         tone: "slate",
     };
 }
@@ -290,14 +325,15 @@ export default function AgencyDashboardClient({
         return () => mediaQuery.removeListener(syncViewportMode);
     }, []);
 
-    function buildAgencyWorkerHref(path: string) {
+    function buildAgencyWorkerHref(path: string, hash?: string) {
         const params = new URLSearchParams();
         if (inspectProfileId) {
             params.set("inspect", inspectProfileId);
         }
 
         const query = params.toString();
-        return query ? `${path}?${query}` : path;
+        const basePath = query ? `${path}?${query}` : path;
+        return hash ? `${basePath}#${hash}` : basePath;
     }
 
     function openNewWorkerModal() {
@@ -318,6 +354,10 @@ export default function AgencyDashboardClient({
 
         setSelectedWorker({ id: worker.id, name: worker.name });
         setIsWorkerModalOpen(true);
+    }
+
+    function openWorkerDocuments(worker: DashboardWorker) {
+        router.push(buildAgencyWorkerHref(`/profile/agency/workers/${worker.id}`, "documents"));
     }
 
     function closeWorkerModal() {
@@ -367,7 +407,18 @@ export default function AgencyDashboardClient({
             return;
         }
 
-        if (worker.paymentState !== "not_paid") {
+        const unlockState = getEntryFeeUnlockState({
+            entry_fee_paid: worker.paymentState === "paid",
+            profile_completion: worker.completion,
+            admin_approved: worker.adminApproved,
+        });
+
+        if (worker.paymentState !== "not_paid" || !unlockState.allowed) {
+            toast.info(
+                unlockState.reason === "pending_admin_review"
+                    ? "This worker is waiting for admin approval before payment unlocks."
+                    : "Complete the worker profile and documents first."
+            );
             return;
         }
 
@@ -604,7 +655,12 @@ export default function AgencyDashboardClient({
                                 <tbody>
                                     {filteredWorkers.map((worker, index) => {
                                         const phase = resolveWorkerPhase(worker);
-                                        const showPayButton = !readOnlyPreview && worker.paymentState !== "paid";
+                                        const paymentUnlockState = getEntryFeeUnlockState({
+                                            entry_fee_paid: worker.paymentState === "paid",
+                                            profile_completion: worker.completion,
+                                            admin_approved: worker.adminApproved,
+                                        });
+                                        const showPayButton = !readOnlyPreview && worker.paymentState === "not_paid" && paymentUnlockState.allowed;
                                         const workerName = splitWorkerName(worker.name);
 
                                         return (
@@ -652,6 +708,14 @@ export default function AgencyDashboardClient({
                                                             ? `${worker.verifiedDocuments} verified`
                                                             : "No verified documents yet"}
                                                     </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openWorkerDocuments(worker)}
+                                                        className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-xs font-semibold text-[#111827] transition hover:bg-white"
+                                                    >
+                                                        <Upload size={13} />
+                                                        {readOnlyPreview ? "Review docs" : "Upload docs"}
+                                                    </button>
                                                 </td>
 
                                                 <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
@@ -673,7 +737,17 @@ export default function AgencyDashboardClient({
                                                             state="paid"
                                                             paidAt={worker.entryFeePaidAt}
                                                         />
-                                                    ) : null}
+                                                    ) : worker.paymentState === "pending" ? (
+                                                        <AgencyPaymentCard
+                                                            state="pending"
+                                                            paidAt={worker.paymentPendingUntil}
+                                                        />
+                                                    ) : (
+                                                        <AgencyPaymentCard
+                                                            state="locked"
+                                                            lockedReason={paymentUnlockState.reason}
+                                                        />
+                                                    )}
                                                 </td>
 
                                                 <td className="px-4 py-5 align-top">
@@ -819,11 +893,13 @@ function AgencyPaymentCard({
     loading = false,
     onClick,
     paidAt,
+    lockedReason,
 }: {
-    state: "not_paid" | "paid";
+    state: "not_paid" | "paid" | "pending" | "locked";
     loading?: boolean;
     onClick?: () => void;
     paidAt?: string | null;
+    lockedReason?: "already_paid" | "needs_completion" | "pending_admin_review" | "ready";
 }) {
     if (state === "paid") {
         return (
@@ -835,6 +911,37 @@ function AgencyPaymentCard({
                 <div className="mt-1 text-[11px] font-medium text-emerald-700">
                     {paidAt ? formatDate(paidAt) : "Confirmed"}
                 </div>
+            </div>
+        );
+    }
+
+    if (state === "pending") {
+        return (
+            <div className="inline-flex min-w-[112px] flex-col items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center text-blue-800 shadow-[0_12px_30px_-24px_rgba(59,130,246,0.35)]">
+                <div className="inline-flex items-center gap-2 text-sm font-semibold">
+                    <Loader2 size={14} className="animate-spin" />
+                    Pending
+                </div>
+                <div className="mt-1 text-[11px] font-medium text-blue-700">
+                    {paidAt ? `Until ${formatDate(paidAt)}` : "Checkout open"}
+                </div>
+            </div>
+        );
+    }
+
+    if (state === "locked") {
+        const detail =
+            lockedReason === "pending_admin_review"
+                ? "Admin review"
+                : "Complete first";
+
+        return (
+            <div className="inline-flex min-w-[112px] flex-col items-center justify-center rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-center text-[#57534e] shadow-[0_10px_24px_-26px_rgba(15,23,42,0.32)]">
+                <div className="inline-flex items-center gap-2 text-sm font-semibold text-[#18181b]">
+                    <Lock size={14} />
+                    Locked
+                </div>
+                <div className="mt-1 text-[11px] font-medium text-[#6b7280]">{detail}</div>
             </div>
         );
     }

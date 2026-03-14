@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAgencyOwnedClaimedWorkerByProfileId } from "@/lib/agencies";
+import { getAgencyOwnedClaimedWorkerByProfileId, getAgencyOwnedWorker } from "@/lib/agencies";
 import { normalizeUserType } from "@/lib/domain";
 import { isGodModeUser } from "@/lib/godmode";
 import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumentBounds, fetchImageAsBase64 } from "@/lib/document-ai";
 import sharp from "sharp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { checkRateLimit, strictLimiter } from "@/lib/rate-limit";
+import { getWorkerCompletion } from "@/lib/profile-completion";
+import { getPendingApprovalTargetStatus } from "@/lib/worker-review";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
@@ -22,13 +24,13 @@ export async function POST(request: Request) {
             workerId?: string;
             docType?: string;
         };
-        const requestedWorkerProfileId =
+        const requestedWorkerId =
             typeof workerId === "string" && workerId.trim()
                 ? workerId.trim()
                 : null;
         const normalizedDocType = typeof docType === "string" ? docType.trim() : "";
 
-        if (!requestedWorkerProfileId || !normalizedDocType) {
+        if (!requestedWorkerId || !normalizedDocType) {
             return NextResponse.json({ success: false, error: "workerId and docType are required" }, { status: 400 });
         }
 
@@ -48,25 +50,39 @@ export async function POST(request: Request) {
         const normalizedUserType = normalizeUserType(profile?.user_type || user.user_metadata?.user_type);
         const isAdmin = normalizedUserType === "admin" || isGodModeUser(user.email);
         let isAgencyOwnedVerification = false;
-        let targetWorkerProfileId = user.id;
+        let targetWorkerProfileId: string | null = user.id;
+        let targetWorkerRecordId: string | null = null;
+        let documentOwnerId = user.id;
 
         if (isAdmin) {
-            targetWorkerProfileId = requestedWorkerProfileId;
+            targetWorkerProfileId = requestedWorkerId;
+            documentOwnerId = requestedWorkerId;
         } else if (normalizedUserType === "agency") {
-            if (requestedWorkerProfileId === user.id) {
+            if (requestedWorkerId === user.id) {
                 return NextResponse.json({ success: false, error: "Use a claimed worker profile for agency verification" }, { status: 400 });
             }
 
-            const { worker } = await getAgencyOwnedClaimedWorkerByProfileId(adminClient, user.id, requestedWorkerProfileId);
-            if (!worker) {
-                return NextResponse.json({ success: false, error: "Worker access denied" }, { status: 403 });
-            }
+            const { worker: claimedWorker } = await getAgencyOwnedClaimedWorkerByProfileId(adminClient, user.id, requestedWorkerId);
+            if (claimedWorker) {
+                targetWorkerProfileId = requestedWorkerId;
+                targetWorkerRecordId = claimedWorker.id;
+                documentOwnerId = requestedWorkerId;
+                isAgencyOwnedVerification = true;
+            } else {
+                const { worker: draftWorker } = await getAgencyOwnedWorker(adminClient, user.id, requestedWorkerId);
+                if (!draftWorker) {
+                    return NextResponse.json({ success: false, error: "Worker access denied" }, { status: 403 });
+                }
 
-            targetWorkerProfileId = requestedWorkerProfileId;
-            isAgencyOwnedVerification = true;
-        } else if (requestedWorkerProfileId !== user.id) {
+                targetWorkerProfileId = draftWorker.profile_id || null;
+                targetWorkerRecordId = draftWorker.id;
+                documentOwnerId = draftWorker.profile_id || draftWorker.id;
+                isAgencyOwnedVerification = true;
+            }
+        } else if (requestedWorkerId !== user.id) {
             return NextResponse.json({ success: false, error: "Worker access denied" }, { status: 403 });
         }
+        const activityTargetId = targetWorkerProfileId || targetWorkerRecordId || documentOwnerId;
 
         // Use admin client for storage/DB ops when admin is acting on another user's docs
         // This bypasses RLS which would block cross-user storage operations
@@ -77,13 +93,13 @@ export async function POST(request: Request) {
         const { data: document, error: fetchError } = await readClient
             .from("worker_documents")
             .select("*")
-            .eq("user_id", targetWorkerProfileId)
+            .eq("user_id", documentOwnerId)
             .eq("document_type", normalizedDocType)
             .single();
 
         if (fetchError || !document) {
             console.error("[Verify] Document not found:", fetchError);
-            await logServerActivity(targetWorkerProfileId, "verify_document_not_found", "documents", { doc_type: normalizedDocType, error: fetchError?.message }, "error");
+            await logServerActivity(activityTargetId, "verify_document_not_found", "documents", { doc_type: normalizedDocType, error: fetchError?.message }, "error");
             return NextResponse.json({ success: false, error: "Document not found" }, { status: 404 });
         }
 
@@ -125,7 +141,7 @@ export async function POST(request: Request) {
                 // Update DB with new path
                 await storageClient.from("worker_documents")
                     .update({ storage_path: jpegPath, updated_at: new Date().toISOString() })
-                    .eq("user_id", targetWorkerProfileId)
+                    .eq("user_id", documentOwnerId)
                     .eq("document_type", normalizedDocType);
 
                 // Refresh URL
@@ -184,7 +200,7 @@ export async function POST(request: Request) {
                 const { data: currentDoc } = await readClient
                     .from("worker_documents")
                     .select("storage_path")
-                    .eq("user_id", targetWorkerProfileId)
+                    .eq("user_id", documentOwnerId)
                     .eq("document_type", normalizedDocType)
                     .single();
 
@@ -260,11 +276,20 @@ export async function POST(request: Request) {
 
                         // Cross-check passport number: OCR vs manually entered
                         if (status !== 'rejected') {
-                            const { data: workerRecord } = await loadCanonicalWorkerRecord(
-                                readClient,
-                                targetWorkerProfileId,
-                                "id, passport_number, updated_at"
-                            );
+                            const workerRecord = targetWorkerRecordId
+                                ? await adminClient
+                                    .from("worker_onboarding")
+                                    .select("id, passport_number, updated_at")
+                                    .eq("id", targetWorkerRecordId)
+                                    .maybeSingle()
+                                    .then((result) => result.data)
+                                : targetWorkerProfileId
+                                    ? await loadCanonicalWorkerRecord(
+                                        readClient,
+                                        targetWorkerProfileId,
+                                        "id, passport_number, updated_at"
+                                    ).then((result) => result.data)
+                                    : null;
 
                             if (workerRecord?.passport_number && result.data.passport_number) {
                                 const ocrNum = result.data.passport_number.replace(/\s/g, '').toUpperCase();
@@ -353,7 +378,7 @@ export async function POST(request: Request) {
 
         } catch (aiError) {
             console.error("[Verify] AI processing error:", aiError);
-            await logServerActivity(targetWorkerProfileId, "verify_ai_error", "documents", { doc_type: normalizedDocType, error: aiError instanceof Error ? aiError.message : "Unknown" }, "error");
+            await logServerActivity(activityTargetId, "verify_ai_error", "documents", { doc_type: normalizedDocType, error: aiError instanceof Error ? aiError.message : "Unknown" }, "error");
             // If AI fails, mark for manual review rather than outright rejection
             status = 'manual_review';
             rejectReason = "AI verification temporarily unavailable";
@@ -372,10 +397,10 @@ export async function POST(request: Request) {
                     ocr_json: ocrJson,
                     updated_at: new Date().toISOString()
                 })
-                .eq("user_id", targetWorkerProfileId)
+                .eq("user_id", documentOwnerId)
                 .eq("document_type", normalizedDocType);
 
-            await logServerActivity(targetWorkerProfileId, "document_rejected_server", "documents", { doc_type: normalizedDocType, reason: rejectReason, quality_issues: qualityIssues }, "warning");
+            await logServerActivity(activityTargetId, "document_rejected_server", "documents", { doc_type: normalizedDocType, reason: rejectReason, quality_issues: qualityIssues }, "warning");
 
             return NextResponse.json({
                 success: false,
@@ -414,7 +439,7 @@ export async function POST(request: Request) {
         const { error: updateError } = await storageClient
             .from("worker_documents")
             .update(updateData)
-            .eq("user_id", targetWorkerProfileId)
+            .eq("user_id", documentOwnerId)
             .eq("document_type", normalizedDocType);
 
         if (updateError) {
@@ -422,47 +447,76 @@ export async function POST(request: Request) {
             throw updateError;
         }
 
-        await logServerActivity(targetWorkerProfileId, "document_verified_server", "documents", { doc_type: normalizedDocType, status, has_quality_issues: qualityIssues.length > 0 });
+        await logServerActivity(activityTargetId, "document_verified_server", "documents", { doc_type: normalizedDocType, status, has_quality_issues: qualityIssues.length > 0 });
 
         // Auto-check: if all 3 docs are verified, update worker status to VERIFIED
+        let reviewQueued = false;
         if (status === 'verified') {
             try {
                 const { data: allDocs } = await readClient
                     .from("worker_documents")
                     .select("document_type, status")
-                    .eq("user_id", targetWorkerProfileId);
+                    .eq("user_id", documentOwnerId);
 
                 const verifiedTypes = new Set((allDocs || []).filter(d => d.status === 'verified').map(d => d.document_type));
                 const allThreeVerified = verifiedTypes.has('passport') && verifiedTypes.has('biometric_photo') && verifiedTypes.has('diploma');
 
                 if (allThreeVerified) {
-                    // Update worker status
-                    await storageClient.from("worker_onboarding").update({
-                        status: 'VERIFIED',
-                    }).eq('profile_id', targetWorkerProfileId);
+                    const workerRecord = targetWorkerRecordId
+                        ? await adminClient
+                            .from("worker_onboarding")
+                            .select("id, profile_id, submitted_full_name, status, admin_approved, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data")
+                            .eq("id", targetWorkerRecordId)
+                            .maybeSingle()
+                            .then((result) => result.data)
+                        : targetWorkerProfileId
+                            ? await loadCanonicalWorkerRecord(
+                                adminClient,
+                                targetWorkerProfileId,
+                                "id, profile_id, submitted_full_name, status, admin_approved, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data"
+                            ).then((result) => result.data)
+                            : null;
 
-                    await logServerActivity(targetWorkerProfileId, "all_documents_verified", "documents", { message: "All 3 documents verified — worker status updated to VERIFIED" });
+                    const profileLike = targetWorkerProfileId
+                        ? await readClient
+                            .from("profiles")
+                            .select("full_name, email")
+                            .eq("id", targetWorkerProfileId)
+                            .maybeSingle()
+                            .then((result) => result.data)
+                        : { full_name: workerRecord?.submitted_full_name || "Worker", email: null };
 
-                    // Notify admin via email
-                    try {
-                        const { data: userProfile } = await readClient.from("profiles").select("full_name, email").eq("id", targetWorkerProfileId).single();
-                        const { queueEmail } = await import("@/lib/email-templates");
-                        await queueEmail(
-                            storageClient,
-                            targetWorkerProfileId,
-                            "admin_update",
-                            process.env.ADMIN_EMAIL || "contact@workersunited.eu",
-                            "Workers United Admin",
-                            {
-                                subject: `New worker ready: ${userProfile?.full_name || userProfile?.email || "Unknown"}`,
-                                message: `${userProfile?.full_name || "A worker"} (${userProfile?.email}) has completed all 3 document verifications and is ready for admin approval.`,
-                                actionLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://workersunited.eu'}/admin/workers`,
-                                actionText: "Review in Admin Panel"
-                            }
-                        );
-                    } catch (emailErr) {
-                        console.warn("[Verify] Could not notify admin:", emailErr);
+                    const completion = getWorkerCompletion({
+                        profile: profileLike,
+                        worker: workerRecord,
+                        documents: allDocs || [],
+                    }, { phoneOptional: isAgencyOwnedVerification && !targetWorkerProfileId }).completion;
+                    const targetStatus = getPendingApprovalTargetStatus({
+                        completion,
+                        entryFeePaid: workerRecord?.entry_fee_paid,
+                        adminApproved: !!workerRecord?.admin_approved,
+                        currentStatus: workerRecord?.status,
+                    });
+                    const nextStatus = targetStatus || "VERIFIED";
+                    reviewQueued = nextStatus === "PENDING_APPROVAL";
+
+                    if (targetWorkerRecordId) {
+                        await storageClient
+                            .from("worker_onboarding")
+                            .update({ status: nextStatus, updated_at: new Date().toISOString() })
+                            .eq("id", targetWorkerRecordId);
+                    } else if (targetWorkerProfileId) {
+                        await storageClient
+                            .from("worker_onboarding")
+                            .update({ status: nextStatus, updated_at: new Date().toISOString() })
+                            .eq("profile_id", targetWorkerProfileId);
                     }
+
+                    await logServerActivity(activityTargetId, "all_documents_verified", "documents", {
+                        message: nextStatus === "PENDING_APPROVAL"
+                            ? "All 3 documents verified and profile is ready for admin review."
+                            : "All 3 documents verified — worker status updated to VERIFIED",
+                    });
                 }
             } catch (checkErr) {
                 console.warn("[Verify] All-docs check failed:", checkErr);
@@ -476,7 +530,8 @@ export async function POST(request: Request) {
                 ? 'Document verified successfully! ✓'
                 : 'Document needs manual review',
             qualityIssues,
-            extractedData: ocrJson
+            extractedData: ocrJson,
+            reviewQueued,
         });
 
     } catch (err) {

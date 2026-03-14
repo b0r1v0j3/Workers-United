@@ -102,18 +102,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Worker not found" }, { status: 404 });
         }
 
-        if (!worker.profile_id) {
-            return NextResponse.json({ error: "Worker must claim the profile before documents can be uploaded." }, { status: 400 });
-        }
-
         const nowIso = new Date().toISOString();
+        const documentOwnerId = worker.profile_id || worker.id;
         const sanitizedFileName = sanitizeStorageFileName(fileEntry.name || `${docType}.bin`, docType);
-        const storagePath = `${worker.profile_id}/${docType}/${Date.now()}_${sanitizedFileName}`;
+        const storagePath = `${documentOwnerId}/${docType}/${Date.now()}_${sanitizedFileName}`;
 
         const { data: existingDocument, error: existingDocumentError } = await admin
             .from("worker_documents")
             .select("storage_path")
-            .eq("user_id", worker.profile_id)
+            .eq("user_id", documentOwnerId)
             .eq("document_type", docType)
             .maybeSingle();
 
@@ -137,7 +134,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const { error: upsertError } = await admin
             .from("worker_documents")
             .upsert({
-                user_id: worker.profile_id,
+                user_id: documentOwnerId,
                 document_type: docType,
                 storage_path: storagePath,
                 status: "uploaded",
@@ -164,17 +161,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
             }
         }
 
-        await logServerActivity(worker.profile_id, "document_uploaded_server", "documents", {
+        await logServerActivity(worker.profile_id || worker.id, "document_uploaded_server", "documents", {
             doc_type: docType,
             uploaded_by_agency: true,
             agency_profile_id: user.id,
             worker_id: worker.id,
+            draft_worker: !worker.profile_id,
         });
 
         return NextResponse.json({
             success: true,
             docType,
             profileId: worker.profile_id,
+            documentOwnerId,
             storagePath,
         });
     } catch (error) {

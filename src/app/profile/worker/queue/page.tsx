@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminTestSession, getAdminTestWorkspaceHref } from "@/lib/admin-test-mode";
 import { getAdminTestWorkerWorkspace } from "@/lib/admin-test-data";
+import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
@@ -45,7 +46,12 @@ export default async function QueuePage({
             worker: workerRecord,
             documents: workspace.documents,
         });
-        const sandboxPaymentUnlocked = sandboxProfileCompletion === 100;
+        const sandboxUnlockState = getEntryFeeUnlockState({
+            entry_fee_paid: !!workerRecord.entry_fee_paid || !!workerRecord.job_search_active || isPostEntryFeeWorkerStatus(workerRecord.status),
+            profile_completion: sandboxProfileCompletion,
+            admin_approved: typeof workerRecord?.admin_approved === "boolean" ? !!workerRecord.admin_approved : undefined,
+        });
+        const sandboxPaymentUnlocked = sandboxUnlockState.allowed;
         const sandboxDisplayName = sandboxProfile.full_name || session.activePersona.label;
 
         const hasPaidEntryFee =
@@ -96,13 +102,14 @@ export default async function QueuePage({
                                     </div>
                                 </div>
                             ) : (
-                                <LockedEntryFeeState
-                                    displayName={sandboxDisplayName}
-                                    profileCompletion={sandboxProfileCompletion}
-                                    missingCount={sandboxMissingFields.length}
-                                    helperText="Sandbox worker now follows the same locked-until-100% rule as a real worker account."
-                                />
-                            )
+                            <LockedEntryFeeState
+                                displayName={sandboxDisplayName}
+                                profileCompletion={sandboxProfileCompletion}
+                                missingCount={sandboxMissingFields.length}
+                                pendingAdminReview={sandboxUnlockState.reason === "pending_admin_review"}
+                                helperText="Sandbox worker now follows the same locked-until-100% rule as a real worker account."
+                            />
+                        )
                         ) : paymentAcceptedNoOffer ? (
                             <div className="py-2">
                                 <div className="text-center">
@@ -262,7 +269,12 @@ export default async function QueuePage({
         worker: workerRecord,
         documents: documents || [],
     });
-    const entryFeeUnlocked = profileCompletion === 100;
+    const entryFeeUnlockState = getEntryFeeUnlockState({
+        entry_fee_paid: workerRecord?.entry_fee_paid,
+        profile_completion: profileCompletion,
+        admin_approved: !!workerRecord?.admin_approved,
+    });
+    const entryFeeUnlocked = entryFeeUnlockState.allowed;
     const displayName = profile?.full_name || user.user_metadata?.full_name || "Worker";
 
     return (
@@ -315,6 +327,7 @@ export default async function QueuePage({
                                 displayName={displayName}
                                 profileCompletion={profileCompletion}
                                 missingCount={missingFields.length}
+                                pendingAdminReview={entryFeeUnlockState.reason === "pending_admin_review"}
                                 readOnlyPreview={isAdminPreview}
                             />
                         )
@@ -412,12 +425,14 @@ function LockedEntryFeeState({
     displayName,
     profileCompletion,
     missingCount,
+    pendingAdminReview = false,
     readOnlyPreview = false,
     helperText,
 }: {
     displayName: string;
     profileCompletion: number;
     missingCount: number;
+    pendingAdminReview?: boolean;
     readOnlyPreview?: boolean;
     helperText?: string;
 }) {
@@ -428,10 +443,12 @@ function LockedEntryFeeState({
         <div className="relative z-10 flex flex-col items-center justify-center gap-5 py-8 text-center">
             <div className="flex flex-col items-center">
                 <h3 className="text-xl font-semibold tracking-tight text-gray-900">
-                    Complete your profile first
+                    {pendingAdminReview ? "Waiting for admin review" : "Complete your profile first"}
                 </h3>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
-                    The Job Finder payment card stays locked until your worker profile reaches 100% completion.
+                    {pendingAdminReview
+                        ? "Your profile is complete. An admin still needs to approve it before Job Finder payment unlocks."
+                        : "The Job Finder payment card stays locked until your worker profile reaches 100% completion."}
                 </p>
             </div>
 
@@ -442,20 +459,28 @@ function LockedEntryFeeState({
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-white/80 px-4 text-center backdrop-blur-sm">
                     <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800">
                         <Lock size={12} />
-                        {profileCompletion}% complete
+                        {pendingAdminReview ? "Pending review" : `${profileCompletion}% complete`}
                     </div>
                     <p className="text-lg font-semibold tracking-tight text-gray-900">
-                        Complete profile to unlock
+                        {pendingAdminReview ? "Admin review required" : "Complete profile to unlock"}
                     </p>
                     <p className="max-w-[220px] text-xs leading-relaxed text-gray-600">
-                        Finish your required worker details and uploaded documents to unlock Job Finder.
+                        {pendingAdminReview
+                            ? "Job Finder unlocks automatically after an admin approves this complete worker profile."
+                            : "Finish your required worker details and uploaded documents to unlock Job Finder."}
                     </p>
                 </div>
             </div>
 
             {readOnlyPreview ? (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
-                    Preview only. The card unlocks automatically once this worker reaches 100%.
+                    {pendingAdminReview
+                        ? "Preview only. This worker is complete and still waiting for admin approval."
+                        : "Preview only. The card unlocks automatically once this worker reaches 100%."}
+                </div>
+            ) : pendingAdminReview ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                    Profile complete. We will unlock Job Finder after the admin approval step.
                 </div>
             ) : (
                 <Link
@@ -469,7 +494,7 @@ function LockedEntryFeeState({
 
             <div className="mx-auto flex max-w-sm items-start justify-center gap-1.5 px-1 text-center text-[11px] font-medium leading-relaxed text-gray-500 sm:items-center sm:text-xs">
                 <Shield size={14} className="mt-0.5 shrink-0 text-gray-400 sm:mt-0" />
-                <span className="min-w-0">{helperText || `${missingCopy}. The payment card unlocks as soon as the profile hits 100%.`}</span>
+                <span className="min-w-0">{helperText || (pendingAdminReview ? "The profile is already complete and waiting for admin approval." : `${missingCopy}. The payment card unlocks as soon as the profile hits 100%.`)}</span>
             </div>
         </div>
     );

@@ -11,6 +11,8 @@ import { getAgencyOwnedWorker, getAgencySchemaState } from "@/lib/agencies";
 import { normalizeAgencyWorkerPayload } from "@/lib/agency-worker-payload";
 import { normalizeUserType } from "@/lib/domain";
 import { deleteUserData } from "@/lib/user-management";
+import { getWorkerCompletion } from "@/lib/profile-completion";
+import { getPendingApprovalTargetStatus } from "@/lib/worker-review";
 
 interface RouteContext {
     params: Promise<{ workerId: string }>;
@@ -271,7 +273,79 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             }
         }
 
-        return NextResponse.json({ success: true });
+        const { data: refreshedWorker, error: refreshedWorkerError } = await admin
+            .from("worker_onboarding")
+            .select(`
+                id,
+                profile_id,
+                status,
+                admin_approved,
+                entry_fee_paid,
+                phone,
+                nationality,
+                current_country,
+                preferred_job,
+                gender,
+                marital_status,
+                date_of_birth,
+                birth_country,
+                birth_city,
+                citizenship,
+                family_data,
+                passport_number,
+                passport_issued_by,
+                passport_issue_date,
+                passport_expiry_date,
+                lives_abroad,
+                previous_visas
+            `)
+            .eq("id", workerId)
+            .eq("agency_id", worker.agency_id)
+            .single();
+
+        if (refreshedWorkerError || !refreshedWorker) {
+            console.error("[AgencyWorker PATCH] Refresh failed:", refreshedWorkerError);
+            return NextResponse.json({ error: "Worker updated but completion refresh failed" }, { status: 500 });
+        }
+
+        const documentOwnerId = refreshedWorker.profile_id || refreshedWorker.id;
+        const { data: documents } = await admin
+            .from("worker_documents")
+            .select("document_type, status")
+            .eq("user_id", documentOwnerId);
+
+        const completion = getWorkerCompletion({
+            profile: { full_name: normalized.fullName },
+            worker: refreshedWorker,
+            documents: documents || [],
+        }, { phoneOptional: true }).completion;
+        const targetStatus = getPendingApprovalTargetStatus({
+            completion,
+            entryFeePaid: refreshedWorker.entry_fee_paid,
+            adminApproved: !!refreshedWorker.admin_approved,
+            currentStatus: refreshedWorker.status,
+        });
+
+        if (targetStatus && targetStatus !== refreshedWorker.status) {
+            const { error: statusError } = await admin
+                .from("worker_onboarding")
+                .update({
+                    status: targetStatus,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", refreshedWorker.id);
+
+            if (statusError) {
+                console.error("[AgencyWorker PATCH] Status update failed:", statusError);
+                return NextResponse.json({ error: "Worker updated but review status failed" }, { status: 500 });
+            }
+        }
+
+        return NextResponse.json({
+            success: true,
+            completion,
+            reviewQueued: targetStatus === "PENDING_APPROVAL" || refreshedWorker.status === "PENDING_APPROVAL",
+        });
     } catch (error) {
         console.error("[AgencyWorker PATCH] Error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

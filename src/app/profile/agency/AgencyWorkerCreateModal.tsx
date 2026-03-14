@@ -522,6 +522,9 @@ export default function AgencyWorkerCreateModal({
                 return false;
             }
             toast.success(workerId ? "Worker updated." : "Worker created.");
+            if (data.reviewQueued) {
+                toast.info("This worker is now waiting for admin review.");
+            }
             onLiveSave(workerId || data.workerId);
 
             setShowClosePrompt(false);

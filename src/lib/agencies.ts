@@ -462,6 +462,15 @@ export async function claimAgencyWorkerDraft(
         return { ok: false, reason: "not_found", workerId: null };
     }
 
+    const { error: documentsRelinkError } = await supabase
+        .from("worker_documents")
+        .update({ user_id: input.profileId })
+        .eq("user_id", input.workerId);
+
+    if (documentsRelinkError) {
+        throw documentsRelinkError;
+    }
+
     const resolvedName = input.fullName?.trim() || worker.submitted_full_name || null;
     if (resolvedName) {
         const { data: existingProfile, error: profileLookupError } = await supabase

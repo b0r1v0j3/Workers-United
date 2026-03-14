@@ -181,6 +181,7 @@ export async function POST(request: NextRequest) {
         let agencyWorkerRecordForCheckout: {
             id: string;
             entry_fee_paid: boolean | null;
+            admin_approved: boolean | null;
             status: string | null;
             job_search_active: boolean | null;
             queue_joined_at: string | null;
@@ -265,7 +266,7 @@ export async function POST(request: NextRequest) {
 
                 const { data: agencyWorkerRecord, error: agencyWorkerRecordError } = await admin
                     .from("worker_onboarding")
-                    .select("id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, submitted_full_name, submitted_email")
+                    .select("id, entry_fee_paid, admin_approved, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, submitted_full_name, submitted_email")
                     .eq("id", worker.id)
                     .maybeSingle();
 
@@ -351,7 +352,7 @@ export async function POST(request: NextRequest) {
                 ? await loadCanonicalWorkerRecord(
                     admin,
                     paymentOwnerProfileId,
-                    "id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, address"
+                    "id, entry_fee_paid, admin_approved, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, address"
                 )
                 : { data: null, error: null };
             workerRecord = paymentOwnerProfileId ? initialWorkerRecord : agencyWorkerRecordForCheckout;
@@ -386,7 +387,7 @@ export async function POST(request: NextRequest) {
                 } = await loadCanonicalWorkerRecord(
                     admin,
                     paymentOwnerProfileId,
-                    "id, entry_fee_paid, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, address"
+                    "id, entry_fee_paid, admin_approved, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, address"
                 );
 
                 if (repairedWorkerRecordError) {
@@ -413,11 +414,14 @@ export async function POST(request: NextRequest) {
             }
 
             let workerProfileCompletion: number | null = null;
-            if (!isAgencyPayingForWorker && paymentOwnerProfileId) {
-                const { data: paymentDocuments, error: paymentDocumentsError } = await supabase
+            const paymentDocumentOwnerId = isAgencyPayingForWorker
+                ? paymentOwnerProfileId || agencyTargetWorkerId
+                : paymentOwnerProfileId;
+            if (paymentDocumentOwnerId) {
+                const { data: paymentDocuments, error: paymentDocumentsError } = await admin
                     .from("worker_documents")
-                    .select("document_type")
-                    .eq("user_id", paymentOwnerProfileId);
+                    .select("document_type, status")
+                    .eq("user_id", paymentDocumentOwnerId);
 
                 if (paymentDocumentsError) {
                     console.error("Worker payment documents fetch error:", paymentDocumentsError);
@@ -425,15 +429,20 @@ export async function POST(request: NextRequest) {
                 }
 
                 workerProfileCompletion = getWorkerCompletion({
-                    profile,
+                    profile: isAgencyPayingForWorker
+                        ? { full_name: paymentOwnerName }
+                        : profile,
                     worker: workerRecord,
                     documents: paymentDocuments || [],
-                }).completion;
+                }, { phoneOptional: isAgencyPayingForWorker }).completion;
             }
 
             const eligibility = getEntryFeeEligibility({
                 entry_fee_paid: workerRecord?.entry_fee_paid,
                 profile_completion: workerProfileCompletion,
+                admin_approved: isAgencyPayingForWorker || paymentOwnerProfileId
+                    ? !!workerRecord?.admin_approved
+                    : undefined,
             });
             if (!eligibility.allowed) {
                 return NextResponse.json(

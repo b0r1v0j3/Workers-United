@@ -18,6 +18,7 @@ import {
     User,
     Users,
 } from "lucide-react";
+import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import { PayToJoinButton } from "./queue/QueueClientEffects";
 
 interface WorkerProfile {
@@ -44,6 +45,7 @@ interface WorkerRecord {
     passport_expiry_date?: string | null;
     queue_joined_at?: string | null;
     entry_fee_paid?: boolean | null;
+    admin_approved?: boolean | null;
 }
 
 interface WorkerDocument {
@@ -90,8 +92,14 @@ export default function DashboardClient({
     const displayName = profile?.full_name || worker?.profiles?.full_name || user.user_metadata?.full_name || "Worker";
     const activeOfferCount = pendingOffers.length;
     const verifiedDocuments = documents.filter((document) => document.status === "verified").length;
-    const canStartPayment = !readOnlyPreview && !hasPaidEntryFee && !inQueue && profileCompletion === 100;
+    const entryFeeUnlockState = getEntryFeeUnlockState({
+        entry_fee_paid: worker?.entry_fee_paid,
+        profile_completion: profileCompletion,
+        admin_approved: !!worker?.admin_approved,
+    });
+    const canStartPayment = !readOnlyPreview && !hasPaidEntryFee && !inQueue && entryFeeUnlockState.allowed;
     const profileIncomplete = !readOnlyPreview && !hasPaidEntryFee && !inQueue && profileCompletion < 100;
+    const approvalPending = !readOnlyPreview && !hasPaidEntryFee && !inQueue && entryFeeUnlockState.reason === "pending_admin_review";
     const paymentPendingActivation = hasPaidEntryFee && !inQueue;
     const workspaceStatus = readOnlyPreview
         ? "Preview"
@@ -101,8 +109,10 @@ export default function DashboardClient({
                 ? "In Queue"
                 : hasPaidEntryFee
                     ? "Paid"
-                    : profileCompletion === 100
-                        ? "Ready"
+                    : approvalPending
+                        ? "Pending review"
+                        : profileCompletion === 100
+                            ? "Ready"
                         : "Incomplete";
     const workspaceSummary = readOnlyPreview
         ? "Review the worker workspace structure without changing your admin role."
@@ -374,6 +384,25 @@ export default function DashboardClient({
                                     title="Queue"
                                     copy="Track payment, queue status, and any active offer."
                                 />
+                            </div>
+                        )}
+
+                        {approvalPending && (
+                            <div className="flex flex-col items-center justify-center gap-5 text-center py-4">
+                                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
+                                    <Shield size={30} className="text-amber-700" />
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <h3 className="text-xl font-semibold tracking-tight text-[#18181b]">
+                                        Waiting for admin review
+                                    </h3>
+                                    <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
+                                        Your profile is 100% complete. We&apos;ll unlock Job Finder as soon as an admin approves your case.
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                                    No payment is needed yet. The next step is the approval decision.
+                                </div>
                             </div>
                         )}
                     </div>

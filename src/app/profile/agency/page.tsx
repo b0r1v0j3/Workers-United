@@ -23,6 +23,7 @@ export const dynamic = "force-dynamic";
 interface AgencyWorkerQueryRow {
     id: string;
     profile_id: string | null;
+    admin_approved: boolean | null;
     phone: string | null;
     nationality: string | null;
     current_country: string | null;
@@ -143,6 +144,7 @@ export default async function AgencyProfilePage({
                 preferredJob: worker.preferred_job || null,
                 status: worker.status || "NEW",
                 completion,
+                adminApproved: completion === 100,
                 claimed: false,
                 accessLabel: "Sandbox agency worker",
                 verifiedDocuments,
@@ -250,6 +252,7 @@ export default async function AgencyProfilePage({
             .select(`
                 id,
                 profile_id,
+                admin_approved,
                 phone,
                 nationality,
                 current_country,
@@ -276,6 +279,9 @@ export default async function AgencyProfilePage({
     const claimedProfileIds = workers
         .map((worker) => worker.profile_id)
         .filter((profileId): profileId is string => Boolean(profileId));
+    const documentOwnerIds = workers
+        .map((worker) => worker.profile_id || worker.id)
+        .filter((ownerId): ownerId is string => Boolean(ownerId));
 
     const { data: linkedProfiles } = claimedProfileIds.length > 0
         ? await admin
@@ -284,11 +290,11 @@ export default async function AgencyProfilePage({
             .in("id", claimedProfileIds)
         : { data: [] as Array<{ id: string; full_name: string | null; email: string | null }> };
 
-    const { data: documents } = claimedProfileIds.length > 0
+    const { data: documents } = documentOwnerIds.length > 0
         ? await admin
             .from("worker_documents")
             .select("user_id, document_type, status")
-            .in("user_id", claimedProfileIds)
+            .in("user_id", documentOwnerIds)
         : { data: [] as Array<{ user_id: string; document_type: string; status: string | null }> };
 
     const { data: profilePayments } = claimedProfileIds.length > 0
@@ -339,8 +345,10 @@ export default async function AgencyProfilePage({
         const claimed = isAgencyWorkerClaimed(worker);
         const profileId = worker.profile_id || null;
         const linkedProfile = profileId ? profilesById.get(profileId) || null : null;
-        const workerDocuments = claimed && profileId ? docsByUser.get(profileId) || [] : [];
+        const documentOwnerId = profileId || worker.id;
+        const workerDocuments = docsByUser.get(documentOwnerId) || [];
         const verifiedDocuments = workerDocuments.filter((doc) => doc.status === "verified").length;
+        const uploadedDocuments = workerDocuments.length;
         const workerIdentity = {
             submitted_full_name: worker.submitted_full_name,
             submitted_email: worker.submitted_email,
@@ -400,10 +408,15 @@ export default async function AgencyProfilePage({
             preferredJob: worker.preferred_job || null,
             status: worker.status || "NEW",
             completion,
+            adminApproved: !!worker.admin_approved,
             claimed,
             accessLabel: claimed ? "Worker account ready" : "Managed by agency",
             verifiedDocuments,
-            documentsLabel: claimed ? `${verifiedDocuments}/3 verified` : "Not uploaded",
+            documentsLabel: uploadedDocuments === 0
+                ? "Not uploaded"
+                : verifiedDocuments > 0
+                    ? `${verifiedDocuments}/3 verified`
+                    : "Pending review",
             paymentLabel: paymentState === "paid" ? "Paid" : "Pay $9",
             paymentState,
             paymentPendingUntil: latestActivePendingEntryFee?.deadline_at || null,
@@ -417,7 +430,7 @@ export default async function AgencyProfilePage({
 
     const stats: AgencyDashboardProps["stats"] = {
         totalWorkers: workerRows.length,
-        readyWorkers: workerRows.filter((worker) => worker.completion === 100 && worker.verifiedDocuments >= 3).length,
+        readyWorkers: workerRows.filter((worker) => worker.completion === 100 && worker.adminApproved && worker.paymentState === "not_paid").length,
         paidWorkers: workerRows.filter((worker) => worker.paymentState === "paid").length,
         draftWorkers: workerRows.filter((worker) => !worker.claimed).length,
     };

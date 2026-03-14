@@ -23,7 +23,7 @@ export default function InternationalPhoneField({
     disabled = false,
     inputClassName,
     buttonClassName,
-    containerClassName = "!w-full !max-w-full",
+    containerClassName = "!w-full !max-w-full phone-field",
     defaultCountry = "rs",
 }: InternationalPhoneFieldProps) {
     return (
@@ -39,8 +39,8 @@ export default function InternationalPhoneField({
                 onChange(`+${phone}`);
             }}
             containerClass={containerClassName}
-            inputClass={`${inputClassName} !pl-12 !w-full`}
-            buttonClass={buttonClassName}
+            inputClass={`${inputClassName} phone-field__input !w-full !pl-[4.25rem]`}
+            buttonClass={`${buttonClassName} phone-field__button`}
             disabled={disabled}
             enableSearch
             searchPlaceholder="Search country..."

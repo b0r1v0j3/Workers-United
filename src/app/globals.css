@@ -113,21 +113,68 @@ body {
   max-width: 100%;
 }
 
+.phone-field.react-tel-input {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
 .react-tel-input .form-control {
   width: 100% !important;
   max-width: 100%;
   min-width: 0;
-  padding-right: 12px;
+  min-inline-size: 0;
+  padding-right: 16px;
 }
 
-.react-tel-input .selected-flag {
-  width: 44px;
-  padding-left: 12px;
+.phone-field.react-tel-input .form-control {
+  height: auto !important;
+  padding-left: 68px !important;
+}
+
+.phone-field.react-tel-input .flag-dropdown {
+  inset: 0 auto 0 0 !important;
+  width: 56px !important;
+  border: 1px solid #e5e7eb !important;
+  border-right: 0 !important;
+  border-radius: 16px 0 0 16px !important;
+  background: #fafafa !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.phone-field.react-tel-input .selected-flag {
+  width: 100% !important;
+  padding: 0 0 0 16px !important;
+  border-radius: 16px 0 0 16px !important;
+  background: transparent !important;
+}
+
+.phone-field.react-tel-input .selected-flag:hover,
+.phone-field.react-tel-input .selected-flag:focus {
+  background: transparent !important;
+}
+
+.phone-field.react-tel-input .selected-flag .flag {
+  margin-top: 0;
+}
+
+.phone-field.react-tel-input .selected-flag .arrow {
+  left: 36px;
+  right: auto;
+}
+
+.phone-field.react-tel-input:focus-within .form-control,
+.phone-field.react-tel-input:focus-within .flag-dropdown {
+  border-color: #111111 !important;
 }
 
 .react-tel-input .country-list {
   width: min(320px, calc(100vw - 24px)) !important;
   max-width: calc(100vw - 24px);
+  border: 1px solid #e5e7eb !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 45px -30px rgba(15, 23, 42, 0.32) !important;
+  margin-top: 8px !important;
 }
 
 .react-tel-input .country-list .search {

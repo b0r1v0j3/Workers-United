@@ -224,7 +224,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "profile_complete":
             return {
-                subject: "Profile 100% Complete — Activate Job Finder!",
+                subject: "Profile 100% Complete — Admin Review Started",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/ios/100/000000/verified-account.png" width="80" height="80" alt="Verified" style="margin-bottom: 20px;">
@@ -233,42 +233,44 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
-                        You are officially ready to activate our Job Finder service. We will match your profile with employers across Europe and find you the best opportunity.
+                        Your profile and required documents are now ready for admin review. We will check everything and unlock Job Finder as soon as your case is approved.
                     </p>
                     
                     <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
-                        <h3 style="margin:0 0 10px; font-size:22px; color: white;">Activate Job Finder</h3>
-                        <p style="margin:0 0 25px; opacity:0.9; font-size: 16px; color: #E5E5EA;">One-time service fee</p>
-                        <div style="font-size:56px; font-weight:800; margin-bottom: 15px; letter-spacing: -2px; color: white;">$9</div>
-                        <div style="background: #333333; display: inline-block; padding: 6px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; color: white;">
-                            90-day money-back guarantee
-                        </div>
+                        <h3 style="margin:0 0 10px; font-size:22px; color: white;">What Happens Next</h3>
+                        <p style="margin:0; opacity:0.9; font-size: 16px; color: #E5E5EA;">
+                            1. Admin reviews your profile
+                            <br>
+                            2. Job Finder unlocks after approval
+                            <br>
+                            3. You can then activate the $9 service
+                        </p>
                     </div>
 
                     <div style="background:#F5F5F7; border-radius:12px; padding:20px; margin:20px 0; border: 1px solid #E5E5EA;">
-                        <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">What You Get</h3>
+                        <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">While You Wait</h3>
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                                 <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
-                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">Personalized employer matching</td>
+                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">Your profile is now in the admin review queue</td>
                             </tr>
                             <tr>
                                 <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
-                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">Visa guidance and interview prep</td>
+                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">We will notify you as soon as approval is complete</td>
                             </tr>
                             <tr>
                                 <td width="30" style="vertical-align: top;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
-                                <td style="color: #1D1D1F; font-size: 14px;">Full refund if no offer in 90 days</td>
+                                <td style="color: #1D1D1F; font-size: 14px;">No payment is needed until Job Finder is officially unlocked</td>
                             </tr>
                         </table>
                     </div>
                     
                     <div style="text-align:center; margin-top:30px;">
                         <a href="https://workersunited.eu/profile/worker" style="${buttonStyle}">
-                            Activate Job Finder
+                            Open My Profile
                         </a>
                     </div>
-                `, "Profile Complete!", "You're ready to activate Job Finder.")
+                `, "Profile Complete!", "Your profile is now waiting for admin review.")
             };
 
         case "payment_success":
@@ -800,7 +802,12 @@ export async function queueEmail(
                     await wa.sendWelcome(recipientPhone, firstName, userId);
                     break;
                 case "profile_complete":
-                    await wa.sendProfileVerified(recipientPhone, firstName, userId);
+                    await wa.sendStatusUpdate(
+                        recipientPhone,
+                        firstName,
+                        "Your profile is 100% complete and is now waiting for admin review. We will unlock Job Finder as soon as it is approved.",
+                        userId
+                    );
                     break;
                 case "payment_success":
                     await wa.sendPaymentConfirmed(recipientPhone, firstName, templateData.amount || "$9", userId);

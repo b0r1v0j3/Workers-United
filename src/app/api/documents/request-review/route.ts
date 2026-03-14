@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAgencyOwnedClaimedWorkerByProfileId } from "@/lib/agencies";
+import { getAgencyOwnedClaimedWorkerByProfileId, getAgencyOwnedWorker } from "@/lib/agencies";
 import { normalizeUserType } from "@/lib/domain";
 import { isGodModeUser } from "@/lib/godmode";
 import { logServerActivity } from "@/lib/activityLoggerServer";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
             workerId?: string;
         };
         const normalizedDocType = typeof docType === "string" ? docType.trim() : "";
-        const requestedWorkerProfileId =
+        const requestedWorkerId =
             typeof workerId === "string" && workerId.trim()
                 ? workerId.trim()
                 : user.id;
@@ -48,32 +48,45 @@ export async function POST(request: Request) {
         const normalizedUserType = normalizeUserType(profile?.user_type || user.user_metadata?.user_type);
         const isAdmin = normalizedUserType === "admin" || isGodModeUser(user.email);
         let targetProfileId = user.id;
+        let documentOwnerId = user.id;
         let requestedByAgency = false;
         let agencyName: string | null = null;
+        let workerLabelOverride: string | null = null;
 
         if (isAdmin) {
-            targetProfileId = requestedWorkerProfileId;
+            targetProfileId = requestedWorkerId;
+            documentOwnerId = requestedWorkerId;
         } else if (normalizedUserType === "agency") {
             if (!workerId) {
                 return NextResponse.json({ error: "workerId required for agency review requests" }, { status: 400 });
             }
 
-            const { agency, worker } = await getAgencyOwnedClaimedWorkerByProfileId(admin, user.id, requestedWorkerProfileId);
-            if (!worker) {
-                return NextResponse.json({ error: "Worker access denied" }, { status: 403 });
-            }
+            const { agency, worker } = await getAgencyOwnedClaimedWorkerByProfileId(admin, user.id, requestedWorkerId);
+            if (worker) {
+                targetProfileId = requestedWorkerId;
+                documentOwnerId = requestedWorkerId;
+                requestedByAgency = true;
+                agencyName = agency?.display_name || agency?.legal_name || null;
+            } else {
+                const draftContext = await getAgencyOwnedWorker(admin, user.id, requestedWorkerId);
+                if (!draftContext.worker) {
+                    return NextResponse.json({ error: "Worker access denied" }, { status: 403 });
+                }
 
-            targetProfileId = requestedWorkerProfileId;
-            requestedByAgency = true;
-            agencyName = agency?.display_name || agency?.legal_name || null;
-        } else if (requestedWorkerProfileId !== user.id) {
+                targetProfileId = draftContext.worker.profile_id || requestedWorkerId;
+                documentOwnerId = draftContext.worker.profile_id || draftContext.worker.id;
+                requestedByAgency = true;
+                agencyName = draftContext.agency?.display_name || draftContext.agency?.legal_name || null;
+                workerLabelOverride = draftContext.worker.submitted_full_name || "Agency worker";
+            }
+        } else if (requestedWorkerId !== user.id) {
             return NextResponse.json({ error: "Worker access denied" }, { status: 403 });
         }
 
         const { data: document, error: documentError } = await admin
             .from("worker_documents")
             .select("status")
-            .eq("user_id", targetProfileId)
+            .eq("user_id", documentOwnerId)
             .eq("document_type", normalizedDocType)
             .maybeSingle();
 
@@ -101,7 +114,7 @@ export async function POST(request: Request) {
                 status: "manual_review",
                 updated_at: new Date().toISOString(),
             })
-            .eq("user_id", targetProfileId)
+            .eq("user_id", documentOwnerId)
             .eq("document_type", normalizedDocType);
 
         if (error) {
@@ -124,7 +137,7 @@ export async function POST(request: Request) {
                 .eq("id", targetProfileId)
                 .maybeSingle();
             const { queueEmail } = await import("@/lib/email-templates");
-            const workerLabel = targetProfile?.full_name || targetProfile?.email || user.email || "Worker";
+            const workerLabel = workerLabelOverride || targetProfile?.full_name || targetProfile?.email || user.email || "Worker";
             const requesterLabel = profile?.full_name || user.email || "User";
             const docLabel = normalizedDocType.replace("_", " ");
             const requestContext = requestedByAgency
