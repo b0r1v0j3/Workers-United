@@ -762,7 +762,6 @@ export default function ProfilePage({
                                         value={formData.phone}
                                         onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
                                         inputClassName={inputClass}
-                                        buttonClassName="!border-[#e5e7eb] !bg-[#fafafa] !rounded-l-2xl"
                                         disabled={readOnlyPreview || saving}
                                     />
                                 </Field>

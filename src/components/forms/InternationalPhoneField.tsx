@@ -12,7 +12,7 @@ interface InternationalPhoneFieldProps {
     onChange: (value: string) => void;
     disabled?: boolean;
     inputClassName: string;
-    buttonClassName: string;
+    buttonClassName?: string;
     containerClassName?: string;
     defaultCountry?: string;
 }
@@ -22,7 +22,7 @@ export default function InternationalPhoneField({
     onChange,
     disabled = false,
     inputClassName,
-    buttonClassName,
+    buttonClassName = "",
     containerClassName = "!w-full !max-w-full phone-field",
     defaultCountry = "rs",
 }: InternationalPhoneFieldProps) {
@@ -38,12 +38,23 @@ export default function InternationalPhoneField({
 
                 onChange(`+${phone}`);
             }}
-            containerClass={containerClassName}
-            inputClass={`${inputClassName} phone-field__input !w-full !pl-[4.25rem]`}
+            containerClass={`${containerClassName} ${disabled ? "phone-field--disabled" : ""}`}
+            inputClass={`${inputClassName} phone-field__input !w-full`}
             buttonClass={`${buttonClassName} phone-field__button`}
+            dropdownClass="phone-field__dropdown"
+            searchClass="phone-field__search"
             disabled={disabled}
             enableSearch
+            disableSearchIcon
+            autocompleteSearch
             searchPlaceholder="Search country..."
+            searchNotFound="No country found"
+            specialLabel=""
+            inputProps={{
+                autoComplete: "tel",
+                inputMode: "tel",
+                "aria-label": "Phone number",
+            }}
         />
     );
 }
