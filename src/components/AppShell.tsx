@@ -130,6 +130,7 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
         ? "Profile edits, document uploads, job requests, and test payments stay outside live worker, employer, and agency records."
         : null;
     const desktopSidebarWidthClass = sidebarExpanded ? "lg:w-[264px]" : "lg:w-[68px]";
+    const mobileNavbarOffsetClass = variant === "admin" ? "top-[60px]" : "top-[56px]";
     const mobileDrawerClass = !isDesktop && !sidebarExpanded ? "pointer-events-none" : "";
     const mobileDrawerStyle = !isDesktop
         ? {
@@ -162,7 +163,7 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
                 {/* Mobile Backdrop */}
                 {!isDesktop && sidebarExpanded && (
                     <div
-                        className="fixed inset-x-0 bottom-0 top-[56px] bg-black/35 z-[54] backdrop-blur-sm transition-opacity"
+                        className={`fixed inset-x-0 bottom-0 ${mobileNavbarOffsetClass} bg-black/35 z-[54] backdrop-blur-sm transition-opacity`}
                         onClick={() => setIsOpen(false)}
                     />
                 )}
@@ -170,7 +171,7 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
                 {/* SIDEBAR (Desktop + Mobile Drawer/Thin Sidebar) */}
                 <aside className={`
                     fixed left-0 z-[55] w-[272px] max-w-[calc(100vw-0.75rem)] transition-all duration-300 ease-in-out px-0 lg:max-w-none lg:px-0
-                    top-[56px] bottom-0 pt-0 pb-0
+                    ${mobileNavbarOffsetClass} bottom-0 pt-0 pb-0
                     lg:left-4 lg:top-[70px] lg:bottom-4 lg:pt-0 lg:pb-0 lg:z-0
                     ${desktopSidebarWidthClass}
                     ${mobileDrawerClass}
