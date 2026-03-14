@@ -11,7 +11,6 @@ import {
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
-import DateSelectField from "@/components/forms/DateSelectField";
 
 type AgencyDocType = "passport" | "biometric_photo" | "diploma";
 
@@ -114,6 +113,12 @@ function splitFullName(fullName: string) {
 
 function normalizeDateInput(value: string | null | undefined) {
     return value ? value.split("T")[0] || "" : "";
+}
+
+function formatDateInputValue(date: Date) {
+    const localDate = new Date(date);
+    localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+    return localDate.toISOString().slice(0, 10);
 }
 
 function normalizeFamilyData(value: unknown): AgencyFamilyData {
@@ -235,6 +240,10 @@ export default function AgencyWorkerClient({
     const hasWorkerAccount = adminTestMode || (initialWorker.claimed && Boolean(initialWorker.profileId));
     const canStartEntryPayment = initialWorker.paymentLabel !== "Paid";
     const currentYear = useMemo(() => new Date().getFullYear(), []);
+    const todayIso = useMemo(() => formatDateInputValue(new Date()), []);
+    const birthDateMinIso = useMemo(() => `${currentYear - 120}-01-01`, [currentYear]);
+    const passportIssueMinIso = useMemo(() => `${currentYear - 20}-01-01`, [currentYear]);
+    const passportExpiryMaxIso = useMemo(() => `${currentYear + 20}-12-31`, [currentYear]);
 
     useEffect(() => {
         const paymentState = searchParams.get("payment");
@@ -543,12 +552,13 @@ export default function AgencyWorkerClient({
                                 </select>
                             </Field>
                             <Field label="Date of Birth">
-                                <DateSelectField
-                                    minYear={currentYear - 120}
-                                    maxYear={currentYear}
-                                    selectClassName={inputClass}
+                                <input
+                                    type="date"
+                                    className={inputClass}
+                                    min={birthDateMinIso}
+                                    max={todayIso}
                                     value={form.dateOfBirth}
-                                    onChange={(value) => updateField("dateOfBirth", value)}
+                                    onChange={(event) => updateField("dateOfBirth", event.target.value)}
                                 />
                             </Field>
                             <Field label="Gender">
@@ -683,12 +693,13 @@ export default function AgencyWorkerClient({
                                         <Field label="Spouse First Name"><input className={inputClass} value={spouseData.first_name} onChange={(event) => setSpouseData((current) => ({ ...current, first_name: event.target.value }))} /></Field>
                                         <Field label="Spouse Last Name"><input className={inputClass} value={spouseData.last_name} onChange={(event) => setSpouseData((current) => ({ ...current, last_name: event.target.value }))} /></Field>
                                         <Field label="Spouse Date of Birth">
-                                            <DateSelectField
-                                                minYear={currentYear - 120}
-                                                maxYear={currentYear}
-                                                selectClassName={inputClass}
+                                            <input
+                                                type="date"
+                                                className={inputClass}
+                                                min={birthDateMinIso}
+                                                max={todayIso}
                                                 value={spouseData.dob}
-                                                onChange={(value) => setSpouseData((current) => ({ ...current, dob: value }))}
+                                                onChange={(event) => setSpouseData((current) => ({ ...current, dob: event.target.value }))}
                                             />
                                         </Field>
                                         <Field label="Spouse Birth Country">
@@ -723,12 +734,13 @@ export default function AgencyWorkerClient({
                                                     <Field label={`Child ${index + 1} First Name`}><input className={inputClass} value={child.first_name} onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, first_name: event.target.value } : item))} /></Field>
                                                     <Field label="Last Name"><input className={inputClass} value={child.last_name} onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, last_name: event.target.value } : item))} /></Field>
                                                     <Field label="Date of Birth">
-                                                        <DateSelectField
-                                                            minYear={currentYear - 120}
-                                                            maxYear={currentYear}
-                                                            selectClassName={inputClass}
+                                                        <input
+                                                            type="date"
+                                                            className={inputClass}
+                                                            min={birthDateMinIso}
+                                                            max={todayIso}
                                                             value={child.dob}
-                                                            onChange={(value) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, dob: value } : item))}
+                                                            onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, dob: event.target.value } : item))}
                                                         />
                                                     </Field>
                                                 </div>
@@ -750,22 +762,23 @@ export default function AgencyWorkerClient({
                             <Field label="Passport Number"><input className={inputClass} value={form.passportNumber} onChange={(event) => updateField("passportNumber", event.target.value)} /></Field>
                             <Field label="Passport Issued By"><input className={inputClass} value={form.passportIssuedBy} onChange={(event) => updateField("passportIssuedBy", event.target.value)} /></Field>
                             <Field label="Passport Issue Date">
-                                <DateSelectField
-                                    minYear={currentYear - 20}
-                                    maxYear={currentYear}
-                                    selectClassName={inputClass}
+                                <input
+                                    type="date"
+                                    className={inputClass}
+                                    min={passportIssueMinIso}
+                                    max={todayIso}
                                     value={form.passportIssueDate}
-                                    onChange={(value) => updateField("passportIssueDate", value)}
+                                    onChange={(event) => updateField("passportIssueDate", event.target.value)}
                                 />
                             </Field>
                             <Field label="Passport Expiry Date">
-                                <DateSelectField
-                                    minYear={currentYear}
-                                    maxYear={currentYear + 20}
-                                    yearDirection="asc"
-                                    selectClassName={inputClass}
+                                <input
+                                    type="date"
+                                    className={inputClass}
+                                    min={todayIso}
+                                    max={passportExpiryMaxIso}
                                     value={form.passportExpiryDate}
-                                    onChange={(value) => updateField("passportExpiryDate", value)}
+                                    onChange={(event) => updateField("passportExpiryDate", event.target.value)}
                                 />
                             </Field>
                             <Field label="Lives Abroad">
