@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export const ALL_OPTION_VALUE = "Any";
 
@@ -95,8 +95,25 @@ export function NativeDestinationSelectField({
     const normalizedValues = normalizeDesiredCountryValues(values);
     const [pickerValue, setPickerValue] = useState("");
     const hasAllSelected = normalizedValues.includes(ALL_OPTION_VALUE);
+    const optionLabels = useMemo(
+        () => new Map(options.map((option) => [option.value, option.label])),
+        [options]
+    );
+
+    function getDisplayLabel(value: string) {
+        if (value === ALL_OPTION_VALUE) {
+            return allLabel;
+        }
+
+        return optionLabels.get(value) || value;
+    }
+
     const selectLabel = normalizedValues.length > 0
-        ? getDesiredCountriesLabel(normalizedValues)
+        ? hasAllSelected
+            ? allLabel
+            : normalizedValues.length <= 2
+                ? normalizedValues.map((value) => getDisplayLabel(value)).join(", ")
+                : `${normalizedValues.length} destinations selected`
         : optionLabel;
 
     function handleSelect(value: string) {
@@ -153,7 +170,7 @@ export function NativeDestinationSelectField({
                             onClick={() => removeValue(ALL_OPTION_VALUE)}
                             className={`${chipClassName} ${removeButtonClassName}`}
                         >
-                            {allLabel}
+                            {getDisplayLabel(ALL_OPTION_VALUE)}
                             <span aria-hidden="true">x</span>
                         </button>
                     ) : (
@@ -164,7 +181,7 @@ export function NativeDestinationSelectField({
                                 onClick={() => removeValue(value)}
                                 className={`${chipClassName} ${removeButtonClassName}`}
                             >
-                                {value}
+                                {getDisplayLabel(value)}
                                 <span aria-hidden="true">x</span>
                             </button>
                         ))
