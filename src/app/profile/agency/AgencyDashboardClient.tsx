@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 
-const surfaceClass = "rounded-[14px] border border-[#e7e7e5] bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)]";
+const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] sm:before:hidden";
 
 type PaymentState = "not_paid" | "pending" | "paid";
 

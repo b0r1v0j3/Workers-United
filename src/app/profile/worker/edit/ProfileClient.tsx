@@ -624,6 +624,7 @@ export default function ProfilePage({
 
     const inputClass = "min-w-0 w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
     const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
+    const sectionCardClass = "relative overflow-hidden rounded-none border-0 bg-transparent shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-lg sm:border sm:border-gray-200 sm:bg-white sm:shadow-sm sm:before:hidden";
 
     return (
         <div className="w-full">
@@ -631,7 +632,7 @@ export default function ProfilePage({
                 <form onSubmit={handleSubmit}>
                     <fieldset disabled={saving || readOnlyPreview} className="space-y-4">
                         {/* • • • • • • • • • • • • • • •  Account Information Card • • • • • • • • • • • • • • •  */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className={sectionCardClass}>
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Account Information</h2>
                             </div>
@@ -670,7 +671,7 @@ export default function ProfilePage({
                         </div>
 
                         {/* • • • • • • • • • • • • • • •  Personal Information Card • • • • • • • • • • • • • • •  */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className={sectionCardClass}>
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Personal Information</h2>
                             </div>
@@ -919,7 +920,7 @@ export default function ProfilePage({
                         </div>
 
                         {/* • • • • • • • • • • • • • • •  Family Information Card • • • • • • • • • • • • • • •  */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className={sectionCardClass}>
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Family Information</h2>
                             </div>
@@ -1102,7 +1103,7 @@ export default function ProfilePage({
                         </div>
 
                         {/* • • • • • • • • • • • • • • •  Passport & Travel Card • • • • • • • • • • • • • • •  */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className={sectionCardClass}>
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Passport & Travel</h2>
                             </div>
@@ -1208,7 +1209,7 @@ export default function ProfilePage({
                         </div>
 
                         {/* • • • • • • • • • • • • • • •  Job Preferences Card • • • • • • • • • • • • • • •  */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className={sectionCardClass}>
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <h2 className="font-semibold text-gray-900 text-[15px]">Job Preferences</h2>
                             </div>

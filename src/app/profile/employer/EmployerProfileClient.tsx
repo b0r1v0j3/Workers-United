@@ -103,7 +103,9 @@ function createCompanyFormFromEmployer(employer: EmployerProfile | null): Compan
 // ─── Shared styles ──────────────────────────────────────────────
 const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] text-[#18181b] outline-none transition hover:bg-[#fafafa] focus:border-[#111111] focus:bg-white focus:ring-0";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]";
-const surfaceClass = "rounded-[26px] border border-[#e5e7eb] bg-white p-6 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.18)]";
+const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[26px] sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_20px_50px_-40px_rgba(15,23,42,0.18)] sm:before:hidden";
+const heroSurfaceClass = "relative overflow-hidden rounded-none border-0 bg-transparent px-1 py-0 shadow-none sm:rounded-[28px] sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_30px_70px_-52px_rgba(15,23,42,0.22)]";
+const noticeSurfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[26px] sm:border sm:bg-[#f8fafc] sm:p-6 sm:shadow-[0_18px_45px_-40px_rgba(15,23,42,0.18)] sm:before:hidden";
 
 // ─── Helper: Calculate Completion ───────────────────────────────
 function calculateCompletion(form: CompanyForm) {
@@ -568,7 +570,7 @@ export default function EmployerProfilePage({
 
     return (
         <div className="space-y-6">
-            <section className="relative overflow-hidden rounded-[28px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_70px_-52px_rgba(15,23,42,0.22)]">
+            <section className={heroSurfaceClass}>
                 <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-2xl">
                         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
@@ -603,7 +605,7 @@ export default function EmployerProfilePage({
             <section className="space-y-6">
                         {/* Coming soon banner for markets not enabled yet */}
                         {employer && hasCountry && !isPrimaryMarket && !editing && (
-                            <div className="rounded-[26px] border border-[#dbe4f0] bg-[#f8fafc] p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.18)]">
+                            <div className={`${noticeSurfaceClass} sm:border-[#dbe4f0]`}>
                                 <div className="flex items-start gap-4">
                                     <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[#eef2f7]">
                                         <Globe className="text-[#475569]" size={24} />
@@ -913,7 +915,7 @@ export default function EmployerProfilePage({
                         {activeTab === 'jobs' && (employer || readOnlyPreview) && (
                             <div className="space-y-6">
                                 {jobs.length === 0 ? (
-                                    <div className={`${surfaceClass} p-12 text-center`}>
+                                    <div className={`${surfaceClass} px-4 py-10 text-center sm:p-12`}>
                                         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#fafafa]">
                                             <Briefcase size={32} className="text-[#6b7280]" />
                                         </div>
