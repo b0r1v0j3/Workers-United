@@ -82,6 +82,15 @@ function normalizeSelect(value: unknown): string | null {
     return normalizeText(value);
 }
 
+function normalizePreferredJob(value: unknown): string | null {
+    const normalized = normalizeText(value);
+    if (!normalized) {
+        return null;
+    }
+
+    return normalized === "All" ? "Any" : normalized;
+}
+
 function normalizeEmail(value: unknown): string | null {
     if (typeof value !== "string") {
         return null;
@@ -99,9 +108,14 @@ function normalizeCountries(value: unknown): string[] | null {
     const normalized = value
         .filter((country): country is string => typeof country === "string")
         .map((country) => country.trim())
+        .map((country) => country === "All" ? "Any" : country)
         .filter(Boolean);
 
-    return normalized.length > 0 ? normalized : null;
+    if (normalized.includes("Any")) {
+        return ["Any"];
+    }
+
+    return normalized.length > 0 ? Array.from(new Set(normalized)) : null;
 }
 
 function normalizeFamilyPerson(value: AgencyFamilyPersonInput | null | undefined) {
@@ -177,7 +191,7 @@ export function normalizeAgencyWorkerPayload(body: Record<string, unknown>): Age
             phone,
             nationality: normalizeText(body.nationality),
             current_country: normalizeText(body.currentCountry),
-            preferred_job: normalizeText(body.preferredJob),
+            preferred_job: normalizePreferredJob(body.preferredJob),
             desired_countries: normalizeCountries(body.desiredCountries),
             gender: normalizeSelect(body.gender),
             marital_status: normalizeSelect(body.maritalStatus),

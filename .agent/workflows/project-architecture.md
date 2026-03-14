@@ -100,6 +100,7 @@ Workers-United/
 │   ├── components/
 │   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), agency `Support` nav linked to `/profile/agency/inbox`, inspect-query preservation across admin previews, safe routing back to /admin, direct `Exceptions` + `Email Health` admin navigation, a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
+│   │   ├── forms/PreferenceSheetField.tsx # Shared portal-based picker sheet for worker/agency preference fields; keeps legacy `Any` storage compatibility while surfacing `All industries` / `All destinations` in the UI
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
