@@ -17,6 +17,7 @@ import {
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
+import NativeDateField from "@/components/forms/NativeDateField";
 
 const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
@@ -640,13 +641,13 @@ export default function AgencyWorkerCreateModal({
                                     </select>
                                 </Field>
                                 <Field label="Date of birth">
-                                    <input
-                                        type="date"
-                                        className={inputClass}
+                                    <NativeDateField
                                         min={birthDateMinIso}
                                         max={todayIso}
+                                        inputClassName={inputClass}
                                         value={form.dateOfBirth}
-                                        onChange={(event) => updateField("dateOfBirth", event.target.value)}
+                                        onChange={(value) => updateField("dateOfBirth", value)}
+                                        disabled={saving || loadingWorker}
                                     />
                                 </Field>
                                 <Field label="Address">
@@ -714,23 +715,23 @@ export default function AgencyWorkerCreateModal({
                                     <input className={inputClass} value={form.passportIssuedBy} onChange={(event) => updateField("passportIssuedBy", event.target.value)} />
                                 </Field>
                                 <Field label="Passport issue date">
-                                    <input
-                                        type="date"
-                                        className={inputClass}
+                                    <NativeDateField
                                         min={passportIssueMinIso}
                                         max={todayIso}
+                                        inputClassName={inputClass}
                                         value={form.passportIssueDate}
-                                        onChange={(event) => updateField("passportIssueDate", event.target.value)}
+                                        onChange={(value) => updateField("passportIssueDate", value)}
+                                        disabled={saving || loadingWorker}
                                     />
                                 </Field>
                                 <Field label="Passport expiry date">
-                                    <input
-                                        type="date"
-                                        className={inputClass}
+                                    <NativeDateField
                                         min={todayIso}
                                         max={passportExpiryMaxIso}
+                                        inputClassName={inputClass}
                                         value={form.passportExpiryDate}
-                                        onChange={(event) => updateField("passportExpiryDate", event.target.value)}
+                                        onChange={(value) => updateField("passportExpiryDate", value)}
+                                        disabled={saving || loadingWorker}
                                     />
                                 </Field>
                                 <Field label="Do you live outside your home country?">
@@ -810,13 +811,13 @@ export default function AgencyWorkerCreateModal({
                                                 <input className={inputClass} value={spouse.last_name} onChange={(event) => setSpouse((current) => ({ ...current, last_name: event.target.value }))} />
                                             </Field>
                                             <Field label="Spouse date of birth">
-                                                <input
-                                                    type="date"
-                                                    className={inputClass}
+                                                <NativeDateField
                                                     min={birthDateMinIso}
                                                     max={todayIso}
+                                                    inputClassName={inputClass}
                                                     value={spouse.dob}
-                                                    onChange={(event) => setSpouse((current) => ({ ...current, dob: event.target.value }))}
+                                                    onChange={(value) => setSpouse((current) => ({ ...current, dob: value }))}
+                                                    disabled={saving || loadingWorker}
                                                 />
                                             </Field>
                                             <Field label="Spouse birth country">
@@ -876,17 +877,17 @@ export default function AgencyWorkerCreateModal({
                                                             />
                                                         </Field>
                                                         <Field label="Date of birth">
-                                                            <input
-                                                                type="date"
-                                                                className={inputClass}
+                                                            <NativeDateField
                                                                 min={birthDateMinIso}
                                                                 max={todayIso}
+                                                                inputClassName={inputClass}
                                                                 value={child.dob}
-                                                                onChange={(event) => setChildren((current) =>
+                                                                onChange={(value) => setChildren((current) =>
                                                                     current.map((item, currentIndex) =>
-                                                                        currentIndex === index ? { ...item, dob: event.target.value } : item
+                                                                        currentIndex === index ? { ...item, dob: value } : item
                                                                     )
                                                                 )}
+                                                                disabled={saving || loadingWorker}
                                                             />
                                                         </Field>
                                                     </div>
