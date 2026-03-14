@@ -13,6 +13,7 @@ import {
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
+import { getCountryDisplayLabel } from "@/lib/country-display";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import { logActivity, logError } from "@/lib/activityLogger";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
@@ -100,7 +101,7 @@ const workerIndustryOptions = [
 ];
 const destinationPreferenceOptions = EUROPEAN_COUNTRIES.map((country) => ({
     value: country,
-    label: country === "Bosnia and Herzegovina" ? "Bosnia & Herzegovina" : country,
+    label: getCountryDisplayLabel(country),
 }));
 
 function parseDateParts(dateStr: string | null | undefined) {
@@ -795,7 +796,7 @@ export default function ProfilePage({
                                         </label>
                                         <select name="birth_country" value={formData.birth_country} onChange={handleChange} className={inputClass}>
                                             <option value="">Select country...</option>
-                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
                                         </select>
                                     </div>
                                     <div>
@@ -821,7 +822,7 @@ export default function ProfilePage({
                                         </label>
                                         <select name="citizenship" value={formData.citizenship} onChange={handleChange} className={inputClass}>
                                             <option value="">Select country...</option>
-                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
                                         </select>
                                     </div>
                                     <div>
@@ -850,7 +851,7 @@ export default function ProfilePage({
                                                 className={inputClass}
                                             >
                                                 <option value="">Select country...</option>
-                                                {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                                {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
                                             </select>
                                         )}
                                     </div>
@@ -1002,7 +1003,7 @@ export default function ProfilePage({
                                                     className={inputClass}
                                                 >
                                                     <option value="">Select...</option>
-                                                    {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                                    {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
                                                 </select>
                                             </div>
                                             <div>

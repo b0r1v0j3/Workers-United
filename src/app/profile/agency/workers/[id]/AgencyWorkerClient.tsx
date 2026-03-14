@@ -13,6 +13,7 @@ import {
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import NativeDateField from "@/components/forms/NativeDateField";
+import { getCountryDisplayLabel } from "@/lib/country-display";
 
 type AgencyDocType = "passport" | "biometric_photo" | "diploma";
 
@@ -105,7 +106,7 @@ const industryOptions = [
 ];
 const destinationOptions = EUROPEAN_COUNTRIES.map((country) => ({
     value: country,
-    label: country === "Bosnia and Herzegovina" ? "Bosnia & Herzegovina" : country,
+    label: getCountryDisplayLabel(country),
 }));
 
 function splitFullName(fullName: string) {
@@ -558,7 +559,7 @@ export default function AgencyWorkerClient({
                             <Field label="Nationality">
                                 <select className={inputClass} value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)}>
                                     <option value="">Select nationality</option>
-                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                 </select>
                             </Field>
                             <Field label="Date of Birth">
@@ -614,7 +615,7 @@ export default function AgencyWorkerClient({
                             <Field label="Current Country">
                                 <select className={inputClass} value={form.currentCountry} onChange={(event) => updateField("currentCountry", event.target.value)}>
                                     <option value="">Select current country</option>
-                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                 </select>
                             </Field>
                             <Field label="Address"><input className={inputClass} value={form.address} onChange={(event) => updateField("address", event.target.value)} /></Field>
@@ -626,14 +627,14 @@ export default function AgencyWorkerClient({
                             <Field label="Birth Country">
                                 <select className={inputClass} value={form.birthCountry} onChange={(event) => updateField("birthCountry", event.target.value)}>
                                     <option value="">Select birth country</option>
-                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                 </select>
                             </Field>
                             <Field label="Birth City"><input className={inputClass} value={form.birthCity} onChange={(event) => updateField("birthCity", event.target.value)} /></Field>
                             <Field label="Citizenship">
                                 <select className={inputClass} value={form.citizenship} onChange={(event) => updateField("citizenship", event.target.value)}>
                                     <option value="">Select citizenship</option>
-                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                 </select>
                             </Field>
                             <Field label="Original Citizenship" helper="Leave the checkbox on if it is the same as current citizenship.">
@@ -645,7 +646,7 @@ export default function AgencyWorkerClient({
                                     {!form.originalCitizenshipSame && (
                                         <select className={inputClass} value={form.originalCitizenship} onChange={(event) => updateField("originalCitizenship", event.target.value)}>
                                             <option value="">Select original citizenship</option>
-                                            {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                            {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                         </select>
                                     )}
                                 </div>
@@ -721,7 +722,7 @@ export default function AgencyWorkerClient({
                                         <Field label="Spouse Birth Country">
                                             <select className={inputClass} value={spouseData.birth_country} onChange={(event) => setSpouseData((current) => ({ ...current, birth_country: event.target.value }))}>
                                                 <option value="">Select birth country</option>
-                                                {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                                {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                             </select>
                                         </Field>
                                         <Field label="Spouse Birth City"><input className={inputClass} value={spouseData.birth_city} onChange={(event) => setSpouseData((current) => ({ ...current, birth_city: event.target.value }))} /></Field>
