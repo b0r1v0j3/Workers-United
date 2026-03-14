@@ -142,7 +142,7 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
         ? sidebarExpanded
             ? "lg:ml-[280px]"
             : "lg:ml-[84px]"
-        : "pl-0";
+        : "";
     const handleMenuToggle = () => {
         if ((isAdminPreview || isAdminTestMode) && isDesktop) return;
         setIsOpen((current) => !current);
