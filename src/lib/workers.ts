@@ -17,12 +17,14 @@ export interface WorkerRecordSnapshot {
     updated_at?: string | null;
     entry_fee_paid?: boolean | null;
     job_search_active?: boolean | null;
+    admin_approved?: boolean | null;
     queue_joined_at?: string | null;
     phone?: string | null;
     nationality?: string | null;
     current_country?: string | null;
     preferred_job?: string | null;
     status?: string | null;
+    submitted_full_name?: string | null;
     passport_number?: string | null;
 }
 

@@ -13,6 +13,7 @@ import {
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
+import NativeDateField from "@/components/forms/NativeDateField";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import { logActivity, logError } from "@/lib/activityLogger";
@@ -66,30 +67,7 @@ interface WorkerRecordLookupRow {
     status?: string | null;
 }
 
-// Generate days, months, years for DOB
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
-const MONTHS = [
-    { value: 1, label: "January" },
-    { value: 2, label: "February" },
-    { value: 3, label: "March" },
-    { value: 4, label: "April" },
-    { value: 5, label: "May" },
-    { value: 6, label: "June" },
-    { value: 7, label: "July" },
-    { value: 8, label: "August" },
-    { value: 9, label: "September" },
-    { value: 10, label: "October" },
-    { value: 11, label: "November" },
-    { value: 12, label: "December" },
-];
 const currentYear = new Date().getFullYear();
-const YEARS = Array.from({ length: 80 }, (_, i) => currentYear - 18 - i);
-// Family DOB years (0–100 years ago)
-const ALL_YEARS = Array.from({ length: 100 }, (_, i) => currentYear - i);
-// Passport issue date: last 10 years
-const PASSPORT_ISSUE_YEARS = Array.from({ length: 10 }, (_, i) => currentYear - i);
-// Passport expiry date: current year + 10 years ahead
-const PASSPORT_EXPIRY_YEARS = Array.from({ length: 11 }, (_, i) => currentYear + i);
 
 // Empty child template
 const EMPTY_CHILD = { last_name: "", first_name: "", dobDay: "", dobMonth: "", dobYear: "" };
@@ -136,6 +114,29 @@ function parseDateToComponents(dateStr: string | null | undefined, prefix: strin
         [`${prefix}Month`]: parsed.month,
         [`${prefix}Year`]: parsed.year,
     };
+}
+
+function buildDateValue(day: string, month: string, year: string) {
+    if (!day || !month || !year) {
+        return "";
+    }
+
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function extractDateParts(dateStr: string) {
+    const parsed = parseDateParts(dateStr);
+    return {
+        day: parsed?.day || "",
+        month: parsed?.month || "",
+        year: parsed?.year || "",
+    };
+}
+
+function formatDateInputValue(date: Date) {
+    const localDate = new Date(date);
+    localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+    return localDate.toISOString().slice(0, 10);
 }
 
 export default function ProfilePage({
@@ -207,6 +208,14 @@ export default function ProfilePage({
     });
     const [hasChildren, setHasChildren] = useState(false);
     const [children, setChildren] = useState<Array<{ last_name: string; first_name: string; dobDay: string; dobMonth: string; dobYear: string }>>([]);
+    const todayIso = useMemo(() => formatDateInputValue(new Date()), []);
+    const birthDateMinIso = useMemo(() => `${currentYear - 120}-01-01`, []);
+    const passportIssueMinIso = useMemo(() => `${currentYear - 20}-01-01`, []);
+    const passportExpiryMaxIso = useMemo(() => `${currentYear + 20}-12-31`, []);
+    const dateOfBirthValue = buildDateValue(formData.dobDay, formData.dobMonth, formData.dobYear);
+    const passportIssueDateValue = buildDateValue(formData.passport_issue_day, formData.passport_issue_month, formData.passport_issue_year);
+    const passportExpiryDateValue = buildDateValue(formData.passport_expiry_day, formData.passport_expiry_month, formData.passport_expiry_year);
+    const spouseDateOfBirthValue = buildDateValue(spouseData.dobDay, spouseData.dobMonth, spouseData.dobYear);
 
     const overviewHref = useMemo(() => {
         const inspect = searchParams.get("inspect");
@@ -566,6 +575,36 @@ export default function ProfilePage({
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const updateDobParts = (value: string) => {
+        const parts = extractDateParts(value);
+        setFormData(prev => ({ ...prev, dobDay: parts.day, dobMonth: parts.month, dobYear: parts.year }));
+    };
+
+    const updatePassportIssueParts = (value: string) => {
+        const parts = extractDateParts(value);
+        setFormData(prev => ({
+            ...prev,
+            passport_issue_day: parts.day,
+            passport_issue_month: parts.month,
+            passport_issue_year: parts.year,
+        }));
+    };
+
+    const updatePassportExpiryParts = (value: string) => {
+        const parts = extractDateParts(value);
+        setFormData(prev => ({
+            ...prev,
+            passport_expiry_day: parts.day,
+            passport_expiry_month: parts.month,
+            passport_expiry_year: parts.year,
+        }));
+    };
+
+    const updateSpouseDobParts = (value: string) => {
+        const parts = extractDateParts(value);
+        setSpouseData(prev => ({ ...prev, dobDay: parts.day, dobMonth: parts.month, dobYear: parts.year }));
+    };
+
     // Helper: add a child
     const addChild = () => {
         if (children.length < 5) {
@@ -583,6 +622,15 @@ export default function ProfilePage({
         setChildren(prev => prev.map((child, i) =>
             i === index ? { ...child, [field]: value } : child
         ));
+    };
+
+    const updateChildDobParts = (index: number, value: string) => {
+        const parts = extractDateParts(value);
+        setChildren(prev => prev.map((child, i) => (
+            i === index
+                ? { ...child, dobDay: parts.day, dobMonth: parts.month, dobYear: parts.year }
+                : child
+        )));
     };
 
     if (loading) {
@@ -638,9 +686,9 @@ export default function ProfilePage({
         );
     }
 
-    const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
-    const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
-    const sectionCardClass = "relative overflow-hidden rounded-none border-0 bg-transparent shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-lg sm:border sm:border-gray-200 sm:bg-white sm:shadow-sm sm:before:hidden";
+    const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
+    const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
+    const sectionCardClass = "relative overflow-hidden rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[28px] sm:border sm:border-[#ececec] sm:bg-white sm:p-6 sm:shadow-[0_20px_60px_-52px_rgba(15,23,42,0.22)] sm:before:hidden";
 
     return (
         <div className="w-full">
@@ -649,10 +697,10 @@ export default function ProfilePage({
                     <fieldset disabled={saving || readOnlyPreview} className="space-y-4">
                         {/* • • • • • • • • • • • • • • •  Account Information Card • • • • • • • • • • • • • • •  */}
                         <div className={sectionCardClass}>
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Account Information</h2>
+                            <div className="px-1">
+                                <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Identity & Contact</h2>
                             </div>
-                            <div className="p-4 space-y-4">
+                            <div className="mt-5 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className={labelClass}>Email</label>
@@ -660,7 +708,7 @@ export default function ProfilePage({
                                             type="email"
                                             value={profile?.email || ""}
                                             disabled
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] bg-gray-100 cursor-not-allowed text-gray-500"
+                                            className="min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-[#f3f4f6] px-4 py-3 text-sm text-[#9ca3af] outline-none"
                                         />
                                     </div>
                                     <div>
@@ -671,7 +719,7 @@ export default function ProfilePage({
                                             value={formData.phone}
                                             onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
                                             inputClassName={inputClass}
-                                            buttonClassName="!border-gray-300 !bg-gray-50 !rounded-l-md"
+                                            buttonClassName="!border-[#e5e7eb] !bg-[#fafafa] !rounded-l-2xl"
                                             disabled={readOnlyPreview || saving}
                                         />
                                         <p className="text-[11px] text-gray-500 mt-1">
@@ -684,10 +732,10 @@ export default function ProfilePage({
 
                         {/* • • • • • • • • • • • • • • •  Personal Information Card • • • • • • • • • • • • • • •  */}
                         <div className={sectionCardClass}>
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Personal Information</h2>
+                            <div className="px-1">
+                                <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Birth & Citizenship</h2>
                             </div>
-                            <div className="p-4 space-y-4">
+                            <div className="mt-5 space-y-4">
                                 {/* Row: First and Last Name */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -746,45 +794,28 @@ export default function ProfilePage({
                                         <label className={labelClass}>
                                             Nationality <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="text"
+                                        <select
                                             name="nationality"
                                             value={formData.nationality}
                                             onChange={handleChange}
                                             className={inputClass}
-                                            placeholder="e.g., Indian"
-                                        />
+                                        >
+                                            <option value="">Select nationality...</option>
+                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className={labelClass}>
                                             Date of Birth <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                            <select
-                                                value={formData.dobDay}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, dobDay: e.target.value }))}
-                                                className={inputClass}
-                                            >
-                                                <option value="">Day</option>
-                                                {DAYS.map(day => (<option key={day} value={day}>{day}</option>))}
-                                            </select>
-                                            <select
-                                                value={formData.dobMonth}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, dobMonth: e.target.value }))}
-                                                className={inputClass}
-                                            >
-                                                <option value="">Month</option>
-                                                {MONTHS.map(month => (<option key={month.value} value={month.value}>{month.label}</option>))}
-                                            </select>
-                                            <select
-                                                value={formData.dobYear}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, dobYear: e.target.value }))}
-                                                className={inputClass}
-                                            >
-                                                <option value="">Year</option>
-                                                {YEARS.map(year => (<option key={year} value={year}>{year}</option>))}
-                                            </select>
-                                        </div>
+                                        <NativeDateField
+                                            min={birthDateMinIso}
+                                            max={todayIso}
+                                            inputClassName={inputClass}
+                                            value={dateOfBirthValue}
+                                            onChange={updateDobParts}
+                                            disabled={readOnlyPreview || saving}
+                                        />
                                     </div>
                                 </div>
 
@@ -837,7 +868,7 @@ export default function ProfilePage({
                                                     original_citizenship_same: e.target.checked,
                                                     original_citizenship: e.target.checked ? "" : prev.original_citizenship
                                                 }))}
-                                                className="w-4 h-4 text-[#1877f2] rounded focus:ring-[#1877f2]"
+                                                className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
                                             />
                                             <label htmlFor="origCitizenshipSame" className="text-[13px] text-gray-600">
                                                 Same as current citizenship
@@ -907,14 +938,15 @@ export default function ProfilePage({
                                         <label className={labelClass}>
                                             Current Country <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="text"
+                                        <select
                                             name="current_country"
                                             value={formData.current_country}
                                             onChange={handleChange}
                                             className={inputClass}
-                                            placeholder="Where you live now"
-                                        />
+                                        >
+                                            <option value="">Select current country...</option>
+                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className={labelClass}>Address</label>
@@ -933,10 +965,10 @@ export default function ProfilePage({
 
                         {/* • • • • • • • • • • • • • • •  Family Information Card • • • • • • • • • • • • • • •  */}
                         <div className={sectionCardClass}>
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Family Information</h2>
+                            <div className="px-1">
+                                <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Family</h2>
                             </div>
-                            <div className="p-4 space-y-4">
+                            <div className="mt-5 space-y-4">
                                 {/* Spouse Toggle */}
                                 <div className="flex items-center gap-3">
                                     <input
@@ -944,7 +976,7 @@ export default function ProfilePage({
                                         id="hasSpouse"
                                         checked={hasSpouse}
                                         onChange={(e) => setHasSpouse(e.target.checked)}
-                                        className="w-4 h-4 text-[#1877f2] rounded focus:ring-[#1877f2]"
+                                        className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
                                     />
                                     <label htmlFor="hasSpouse" className="text-[14px] font-medium text-gray-700">
                                         I have a spouse / partner
@@ -953,8 +985,8 @@ export default function ProfilePage({
 
                                 {/* Spouse Fields */}
                                 {hasSpouse && (
-                                    <div className="border border-gray-200 rounded-md p-4 bg-gray-50 space-y-4">
-                                        <h3 className="text-[13px] font-semibold text-gray-600 uppercase tracking-wide">Spouse Details</h3>
+                                    <div className="rounded-[24px] border border-[#e5e7eb] bg-[#fafafa] p-4 space-y-4">
+                                        <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">Spouse details</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <label className={labelClass}>First Name <span className="text-red-500">*</span></label>
@@ -980,20 +1012,14 @@ export default function ProfilePage({
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <label className={labelClass}>Date of Birth <span className="text-red-500">*</span></label>
-                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                                    <select value={spouseData.dobDay} onChange={(e) => setSpouseData(prev => ({ ...prev, dobDay: e.target.value }))} className={inputClass}>
-                                                        <option value="">Day</option>
-                                                        {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
-                                                    </select>
-                                                    <select value={spouseData.dobMonth} onChange={(e) => setSpouseData(prev => ({ ...prev, dobMonth: e.target.value }))} className={inputClass}>
-                                                        <option value="">Month</option>
-                                                        {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
-                                                    </select>
-                                                    <select value={spouseData.dobYear} onChange={(e) => setSpouseData(prev => ({ ...prev, dobYear: e.target.value }))} className={inputClass}>
-                                                        <option value="">Year</option>
-                                                        {ALL_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
-                                                    </select>
-                                                </div>
+                                                <NativeDateField
+                                                    min={birthDateMinIso}
+                                                    max={todayIso}
+                                                    inputClassName={inputClass}
+                                                    value={spouseDateOfBirthValue}
+                                                    onChange={updateSpouseDobParts}
+                                                    disabled={readOnlyPreview || saving}
+                                                />
                                             </div>
                                             <div>
                                                 <label className={labelClass}>Country of Birth</label>
@@ -1032,7 +1058,7 @@ export default function ProfilePage({
                                                 setChildren([{ ...EMPTY_CHILD }]);
                                             }
                                         }}
-                                        className="w-4 h-4 text-[#1877f2] rounded focus:ring-[#1877f2]"
+                                        className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
                                     />
                                     <label htmlFor="hasChildren" className="text-[14px] font-medium text-gray-700">
                                         I have children
@@ -1043,15 +1069,15 @@ export default function ProfilePage({
                                 {hasChildren && (
                                     <div className="space-y-3">
                                         {children.map((child, index) => (
-                                            <div key={index} className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                                            <div key={index} className="rounded-2xl border border-[#e5e7eb] bg-[#fafafa] p-4">
                                                 <div className="flex items-center justify-between mb-3">
-                                                    <h3 className="text-[13px] font-semibold text-gray-600 uppercase tracking-wide">
+                                                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">
                                                         Child {index + 1}
                                                     </h3>
                                                     <button
                                                         type="button"
                                                         onClick={() => removeChild(index)}
-                                                        className="text-red-500 text-[13px] hover:text-red-700 font-medium"
+                                                        className="rounded-full border border-[#f3d7d7] bg-white px-3 py-1 text-xs font-semibold text-[#9f1239] transition hover:bg-[#fff1f2]"
                                                     >
                                                         Remove
                                                     </button>
@@ -1079,20 +1105,14 @@ export default function ProfilePage({
                                                     </div>
                                                     <div>
                                                         <label className={labelClass}>Date of Birth</label>
-                                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                                            <select value={child.dobDay} onChange={(e) => updateChild(index, "dobDay", e.target.value)} className={inputClass}>
-                                                                <option value="">Day</option>
-                                                                {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
-                                                            </select>
-                                                            <select value={child.dobMonth} onChange={(e) => updateChild(index, "dobMonth", e.target.value)} className={inputClass}>
-                                                                <option value="">Month</option>
-                                                                {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
-                                                            </select>
-                                                            <select value={child.dobYear} onChange={(e) => updateChild(index, "dobYear", e.target.value)} className={inputClass}>
-                                                                <option value="">Year</option>
-                                                                {ALL_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
-                                                            </select>
-                                                        </div>
+                                                        <NativeDateField
+                                                            min={birthDateMinIso}
+                                                            max={todayIso}
+                                                            inputClassName={inputClass}
+                                                            value={buildDateValue(child.dobDay, child.dobMonth, child.dobYear)}
+                                                            onChange={(value) => updateChildDobParts(index, value)}
+                                                            disabled={readOnlyPreview || saving}
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
@@ -1101,9 +1121,9 @@ export default function ProfilePage({
                                             <button
                                                 type="button"
                                                 onClick={addChild}
-                                                className="text-[#1877f2] text-[14px] font-semibold hover:underline"
+                                                className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
                                             >
-                                                + Add another child
+                                                Add child
                                             </button>
                                         )}
                                         {children.length >= 5 && (
@@ -1116,10 +1136,10 @@ export default function ProfilePage({
 
                         {/* • • • • • • • • • • • • • • •  Passport & Travel Card • • • • • • • • • • • • • • •  */}
                         <div className={sectionCardClass}>
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Passport & Travel</h2>
+                            <div className="px-1">
+                                <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Passport & Travel</h2>
                             </div>
-                            <div className="p-4 space-y-4">
+                            <div className="mt-5 space-y-4">
                                 {/* Row: Passport Number + Issued By */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -1156,40 +1176,28 @@ export default function ProfilePage({
                                         <label className={labelClass}>
                                             Issue Date <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                            <select name="passport_issue_day" value={formData.passport_issue_day} onChange={handleChange} className={inputClass}>
-                                                <option value="">Day</option>
-                                                {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
-                                            </select>
-                                            <select name="passport_issue_month" value={formData.passport_issue_month} onChange={handleChange} className={inputClass}>
-                                                <option value="">Month</option>
-                                                {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
-                                            </select>
-                                            <select name="passport_issue_year" value={formData.passport_issue_year} onChange={handleChange} className={inputClass}>
-                                                <option value="">Year</option>
-                                                {PASSPORT_ISSUE_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
-                                            </select>
-                                        </div>
+                                        <NativeDateField
+                                            min={passportIssueMinIso}
+                                            max={todayIso}
+                                            inputClassName={inputClass}
+                                            value={passportIssueDateValue}
+                                            onChange={updatePassportIssueParts}
+                                            disabled={readOnlyPreview || saving}
+                                        />
                                         <p className="text-[11px] text-gray-500 mt-1">Must be within the last 10 years</p>
                                     </div>
                                     <div>
                                         <label className={labelClass}>
                                             Expiry Date <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                            <select name="passport_expiry_day" value={formData.passport_expiry_day} onChange={handleChange} className={inputClass}>
-                                                <option value="">Day</option>
-                                                {DAYS.map(d => (<option key={d} value={d.toString()}>{d}</option>))}
-                                            </select>
-                                            <select name="passport_expiry_month" value={formData.passport_expiry_month} onChange={handleChange} className={inputClass}>
-                                                <option value="">Month</option>
-                                                {MONTHS.map(m => (<option key={m.value} value={m.value.toString()}>{m.label}</option>))}
-                                            </select>
-                                            <select name="passport_expiry_year" value={formData.passport_expiry_year} onChange={handleChange} className={inputClass}>
-                                                <option value="">Year</option>
-                                                {PASSPORT_EXPIRY_YEARS.map(y => (<option key={y} value={y.toString()}>{y}</option>))}
-                                            </select>
-                                        </div>
+                                        <NativeDateField
+                                            min={todayIso}
+                                            max={passportExpiryMaxIso}
+                                            inputClassName={inputClass}
+                                            value={passportExpiryDateValue}
+                                            onChange={updatePassportExpiryParts}
+                                            disabled={readOnlyPreview || saving}
+                                        />
                                         <p className="text-[11px] text-gray-500 mt-1">Must be valid for at least 3 months after departure</p>
                                     </div>
                                 </div>
@@ -1222,10 +1230,10 @@ export default function ProfilePage({
 
                         {/* • • • • • • • • • • • • • • •  Job Preferences Card • • • • • • • • • • • • • • •  */}
                         <div className={sectionCardClass}>
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="font-semibold text-gray-900 text-[15px]">Job Preferences</h2>
+                            <div className="px-1">
+                                <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Job Preferences</h2>
                             </div>
-                            <div className="p-4 space-y-4">
+                            <div className="mt-5 space-y-4">
                                 <div>
                                     <label className={labelClass}>
                                         Preferred Job / Industry <span className="text-red-500">*</span>
@@ -1272,13 +1280,13 @@ export default function ProfilePage({
                         {/* Save / Cancel Buttons */}
                         <div className="flex flex-col gap-3 pt-2 pb-24 md:flex-row md:items-center md:justify-end md:pb-8">
                             {readOnlyPreview && (
-                                <div className="text-sm text-gray-500 md:mr-auto">
+                                <div className="text-sm text-[#6b7280] md:mr-auto">
                                     Preview is read-only. Review the full form structure here, then return to the worker overview.
                                 </div>
                             )}
                             <Link
                                 href={overviewHref}
-                                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium text-[15px]"
+                                className="w-full rounded-2xl border border-[#e5e7eb] bg-white px-5 py-3 text-center text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] md:w-auto"
                             >
                                 {readOnlyPreview ? "Back to Overview" : "Cancel"}
                             </Link>
@@ -1286,14 +1294,10 @@ export default function ProfilePage({
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="px-5 py-2.5 bg-[#1877f2] text-white rounded-md hover:bg-[#166fe5] font-medium text-[15px] disabled:opacity-50 flex items-center gap-2"
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111111] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:opacity-70 md:w-auto"
                                 >
                                     {saving ? (
                                         <>
-                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                            </svg>
                                             Saving...
                                         </>
                                     ) : (

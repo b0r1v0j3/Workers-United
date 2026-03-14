@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { queueEmail } from "@/lib/email-templates";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { getPendingApprovalTargetStatus } from "@/lib/worker-review";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ export const dynamic = "force-dynamic";
 export async function POST() {
     try {
         const supabase = await createClient();
+        const admin = createAdminClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
@@ -49,6 +52,21 @@ export async function POST() {
             worker: workerRecord,
             documents: documents || [],
         });
+        const targetStatus = getPendingApprovalTargetStatus({
+            completion,
+            entryFeePaid: workerRecord?.entry_fee_paid,
+            adminApproved: !!workerRecord?.admin_approved,
+            currentStatus: workerRecord?.status,
+        });
+        if (targetStatus && workerRecord?.id) {
+            await admin
+                .from("worker_onboarding")
+                .update({
+                    status: targetStatus,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", workerRecord.id);
+        }
 
         // If not 100%, just return the current status
         if (completion < 100) {
@@ -56,6 +74,7 @@ export async function POST() {
                 completion,
                 missingFields,
                 notificationSent: false,
+                reviewQueued: false,
             });
         }
 
@@ -66,6 +85,7 @@ export async function POST() {
                 missingFields: [],
                 notificationSent: false,
                 reason: "already_paid",
+                reviewQueued: false,
             });
         }
 
@@ -84,6 +104,7 @@ export async function POST() {
                 missingFields: [],
                 notificationSent: false,
                 reason: "already_notified",
+                reviewQueued: targetStatus === "PENDING_APPROVAL" || workerRecord?.status === "PENDING_APPROVAL",
             });
         }
 
@@ -107,6 +128,7 @@ export async function POST() {
             completion,
             missingFields: [],
             notificationSent: true,
+            reviewQueued: targetStatus === "PENDING_APPROVAL" || workerRecord?.status === "PENDING_APPROVAL",
         });
 
     } catch (error) {

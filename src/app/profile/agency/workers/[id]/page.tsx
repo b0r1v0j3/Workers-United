@@ -110,6 +110,10 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                         documents,
                         accessLabel: "Sandbox agency worker",
                         paymentLabel: hasPaidEntryFee ? "Paid" : "Not paid",
+                        paymentState: hasPaidEntryFee ? "paid" : "not_paid",
+                        paymentPendingUntil: null,
+                        entryFeePaidAt: worker.queue_joined_at || null,
+                        adminApproved: completionResult.completion === 100,
                     }}
                     readOnlyPreview={false}
                     adminTestMode
@@ -159,6 +163,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
             submitted_full_name,
             submitted_email,
             entry_fee_paid,
+            admin_approved,
             gender,
             marital_status,
             date_of_birth,
@@ -196,19 +201,26 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
 
     const claimed = isAgencyWorkerClaimed(workerRecord);
     const profileId = workerRecord.profile_id || null;
-    const { data: documents } = claimed && profileId
+    const documentOwnerId = profileId || workerRecord.id;
+    const { data: documents } = documentOwnerId
         ? await admin
             .from("worker_documents")
             .select("document_type, status, reject_reason")
-            .eq("user_id", profileId)
+            .eq("user_id", documentOwnerId)
         : { data: [] as Array<{ document_type: string; status: string | null; reject_reason: string | null }> };
 
     const { data: payments } = claimed && profileId
         ? await admin
             .from("payments")
-            .select("payment_type, status")
+            .select("payment_type, status, paid_at, deadline_at")
             .eq("profile_id", profileId)
-        : { data: [] as Array<{ payment_type: string | null; status: string | null }> };
+        : { data: [] as Array<{ payment_type: string | null; status: string | null; paid_at: string | null; deadline_at: string | null }> };
+
+    const { data: agencyTargetPayments } = await admin
+        .from("payments")
+        .select("payment_type, status, paid_at, deadline_at")
+        .eq("payment_type", "entry_fee")
+        .contains("metadata", { target_worker_id: workerRecord.id, paid_by_profile_id: targetAgencyProfileId });
 
     const completionResult = getWorkerCompletion({
         profile: { full_name: getAgencyWorkerName(workerRecord) },
@@ -217,10 +229,14 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
     }, { phoneOptional: true });
 
     const verifiedDocuments = (documents || []).filter((doc) => doc.status === "verified").length;
+    const workerPayments = [...(payments || []), ...(agencyTargetPayments || [])];
     const hasPaidEntryFee =
         !!workerRecord.entry_fee_paid ||
         isPostEntryFeeWorkerStatus(workerRecord.status) ||
-        (payments || []).some((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
+        workerPayments.some((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
+    const latestPendingPayment = workerPayments.find((payment) => payment.payment_type === "entry_fee" && payment.status === "pending");
+    const latestCompletedPayment = workerPayments.find((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
+    const paymentState = hasPaidEntryFee ? "paid" : latestPendingPayment ? "pending" : "not_paid";
 
     return (
         <AppShell user={user} variant="dashboard">
@@ -276,9 +292,14 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                         ? "Worker account ready"
                         : "Managed by agency",
                     paymentLabel: hasPaidEntryFee ? "Paid" : "Not paid",
+                    paymentState,
+                    paymentPendingUntil: latestPendingPayment?.deadline_at || null,
+                    entryFeePaidAt: latestCompletedPayment?.paid_at || null,
+                    adminApproved: !!workerRecord.admin_approved,
                 }}
                 readOnlyPreview={userType === "admin"}
                 adminTestMode={false}
+                adminApprovalAccess={userType === "admin"}
             />
         </AppShell>
     );

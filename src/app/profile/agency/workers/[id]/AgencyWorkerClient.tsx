@@ -14,6 +14,7 @@ import {
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import NativeDateField from "@/components/forms/NativeDateField";
 import { getCountryDisplayLabel } from "@/lib/country-display";
+import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 
 type AgencyDocType = "passport" | "biometric_photo" | "diploma";
 
@@ -86,9 +87,14 @@ interface AgencyWorkerClientProps {
         documents: WorkerDocumentState[];
         accessLabel: string;
         paymentLabel: string;
+        paymentState: "not_paid" | "pending" | "paid";
+        paymentPendingUntil: string | null;
+        entryFeePaidAt: string | null;
+        adminApproved: boolean;
     };
     readOnlyPreview?: boolean;
     adminTestMode?: boolean;
+    adminApprovalAccess?: boolean;
 }
 
 const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e4e4df] bg-white px-4 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#111111]";
@@ -188,6 +194,7 @@ export default function AgencyWorkerClient({
     initialWorker,
     readOnlyPreview = false,
     adminTestMode = false,
+    adminApprovalAccess = false,
 }: AgencyWorkerClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -243,13 +250,20 @@ export default function AgencyWorkerClient({
     const [paying, setPaying] = useState(false);
     const [uploadingDocType, setUploadingDocType] = useState<AgencyDocType | null>(null);
     const [reviewingDocType, setReviewingDocType] = useState<AgencyDocType | null>(null);
+    const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
     const handledPaymentSessionsRef = useRef<Set<string>>(new Set());
     const handledPaymentCancellationRef = useRef(false);
     const passportInputRef = useRef<HTMLInputElement | null>(null);
     const biometricInputRef = useRef<HTMLInputElement | null>(null);
     const diplomaInputRef = useRef<HTMLInputElement | null>(null);
-    const hasWorkerAccount = adminTestMode || (initialWorker.claimed && Boolean(initialWorker.profileId));
-    const canStartEntryPayment = initialWorker.paymentLabel !== "Paid";
+    const entryFeeUnlockState = useMemo(() => getEntryFeeUnlockState({
+        entry_fee_paid: initialWorker.paymentState === "paid",
+        profile_completion: initialWorker.completion,
+        admin_approved: initialWorker.adminApproved,
+    }), [initialWorker.adminApproved, initialWorker.completion, initialWorker.paymentState]);
+    const canStartEntryPayment = !readOnlyPreview && initialWorker.paymentState === "not_paid" && entryFeeUnlockState.allowed;
+    const pendingAdminReview = entryFeeUnlockState.reason === "pending_admin_review";
+    const needsCompletion = entryFeeUnlockState.reason === "needs_completion";
     const currentYear = useMemo(() => new Date().getFullYear(), []);
     const todayIso = useMemo(() => formatDateInputValue(new Date()), []);
     const birthDateMinIso = useMemo(() => `${currentYear - 120}-01-01`, [currentYear]);
@@ -395,6 +409,9 @@ export default function AgencyWorkerClient({
                 return;
             }
             toast.success("Worker profile updated.");
+            if (data.reviewQueued) {
+                toast.info("This worker is now waiting for admin review.");
+            }
             router.refresh();
         } catch {
             toast.error("Failed to save worker profile.");
@@ -408,7 +425,12 @@ export default function AgencyWorkerClient({
             toast.info("Admin preview is read-only.");
             return;
         }
-        if (!canStartEntryPayment) return;
+        if (!canStartEntryPayment) {
+            toast.info(pendingAdminReview
+                ? "This worker is waiting for admin approval before payment unlocks."
+                : "Complete the worker profile and documents first.");
+            return;
+        }
         setPaying(true);
         try {
             const response = await fetch("/api/stripe/create-checkout", {
@@ -434,7 +456,6 @@ export default function AgencyWorkerClient({
         const inputRef = getInputRef(docType);
         if (inputRef.current) inputRef.current.value = "";
         if (!file) return;
-        if (!adminTestMode && !initialWorker.profileId) return;
         if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
             toast.error(`File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
             return;
@@ -455,12 +476,15 @@ export default function AgencyWorkerClient({
                 const verifyResponse = await fetch("/api/verify-document", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ workerId: initialWorker.profileId, docType }),
+                    body: JSON.stringify({ workerId: initialWorker.profileId || initialWorker.id, docType }),
                 });
                 const verifyData = await verifyResponse.json();
                 if (!verifyResponse.ok) throw new Error(verifyData.error || "Failed to verify document.");
                 if (verifyData.success) toast.success(verifyData.message || `${getDocumentLabel(docType)} verified successfully.`);
                 else toast.error(verifyData.message || verifyData.error || `${getDocumentLabel(docType)} needs attention.`);
+                if (verifyData.reviewQueued) {
+                    toast.info("All required documents are in. This profile is now waiting for admin review.");
+                }
             }
             router.refresh();
         } catch (error) {
@@ -479,13 +503,12 @@ export default function AgencyWorkerClient({
             toast.info("Sandbox uploads are auto-verified, so manual review is not needed here.");
             return;
         }
-        if (!initialWorker.profileId) return;
         setReviewingDocType(docType);
         try {
             const response = await fetch("/api/documents/request-review", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ workerId: initialWorker.profileId, docType }),
+                body: JSON.stringify({ workerId: initialWorker.profileId || initialWorker.id, docType }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || "Could not request manual review.");
@@ -496,6 +519,36 @@ export default function AgencyWorkerClient({
             toast.error(error instanceof Error ? error.message : "Could not request manual review.");
         } finally {
             setReviewingDocType(null);
+        }
+    }
+
+    async function handleAdminApproval(action: "approve" | "revoke") {
+        if (!adminApprovalAccess) {
+            return;
+        }
+
+        if (action === "approve" && initialWorker.completion < 100) {
+            toast.info("This profile must be 100% complete before approval.");
+            return;
+        }
+
+        setApprovalAction(action);
+        try {
+            const response = await fetch(`/api/admin/agency-workers/${initialWorker.id}/approval`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to update approval.");
+            }
+            toast.success(action === "approve" ? "Worker approved for payment." : "Worker approval revoked.");
+            router.refresh();
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to update approval.");
+        } finally {
+            setApprovalAction(null);
         }
     }
 
@@ -533,7 +586,7 @@ export default function AgencyWorkerClient({
 
             {readOnlyPreview && (
                 <div className="rounded-3xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-950">
-                    This is a read-only admin preview. Use a real agency account to edit worker data, upload documents, and start payment.
+                    This is an admin preview. Worker fields stay read-only here, but approval controls remain available below.
                 </div>
             )}
 
@@ -608,7 +661,7 @@ export default function AgencyWorkerClient({
                                     value={form.phone}
                                     onChange={(phone) => updateField("phone", phone)}
                                     inputClassName={inputClass}
-                                    buttonClassName="!border-[#e4e4df] !bg-[#faf8f3] !rounded-l-2xl"
+                                    buttonClassName="!border-[#e5e7eb] !bg-[#fafafa] !rounded-l-2xl"
                                     disabled={readOnlyPreview || saving}
                                 />
                             </Field>
@@ -835,7 +888,13 @@ export default function AgencyWorkerClient({
                         <div className="mt-4 rounded-2xl border border-[#f1ede5] bg-[#faf8f3] px-4 py-3">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a8a29e]">Entry fee</div>
                             <div className="mt-1 text-sm font-semibold text-[#18181b]">{initialWorker.paymentLabel}</div>
-                            <p className="mt-2 text-sm text-[#57534e]">Use this to activate Job Finder access for this worker.</p>
+                            <p className="mt-2 text-sm text-[#57534e]">
+                                {pendingAdminReview
+                                    ? "The profile is complete and waiting for admin approval before Job Finder payment unlocks."
+                                    : needsCompletion
+                                        ? "Complete all required worker fields and documents to send this profile for admin review."
+                                        : "Use this to activate Job Finder access for this worker."}
+                            </p>
                         </div>
                         {!readOnlyPreview && canStartEntryPayment && (
                             <button type="button" onClick={handleEntryFeePayment} disabled={paying} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111111] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2b2b] disabled:cursor-not-allowed disabled:opacity-70">
@@ -843,11 +902,60 @@ export default function AgencyWorkerClient({
                                 Pay $9 Job Finder
                             </button>
                         )}
+                        {!readOnlyPreview && initialWorker.paymentState === "pending" && (
+                            <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                                Checkout is already open{initialWorker.paymentPendingUntil ? ` until ${new Date(initialWorker.paymentPendingUntil).toLocaleDateString("en-GB")}` : ""}.
+                            </p>
+                        )}
+                        {!readOnlyPreview && pendingAdminReview && (
+                            <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                                This worker is complete and is now waiting for admin approval.
+                            </p>
+                        )}
+                        {!readOnlyPreview && needsCompletion && (
+                            <p className="mt-4 rounded-2xl border border-[#e7e5e4] bg-[#fafaf9] px-4 py-3 text-sm text-[#57534e]">
+                                Payment stays locked until the profile reaches 100% and all 3 documents are uploaded.
+                            </p>
+                        )}
                         {readOnlyPreview && <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">Payments are disabled in admin preview.</p>}
-                        {initialWorker.paymentLabel === "Paid" && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 size={16} />Job Finder access is active for this worker.</p>}
+                        {initialWorker.paymentState === "paid" && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 size={16} />Job Finder access is active for this worker.</p>}
                     </aside>
 
-                    <aside className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                    {adminApprovalAccess ? (
+                        <aside className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                            <h2 className="text-lg font-semibold text-[#18181b]">Admin Approval</h2>
+                            <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+                                initialWorker.adminApproved
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                    : initialWorker.completion === 100
+                                        ? "border-blue-200 bg-blue-50 text-blue-800"
+                                        : "border-amber-200 bg-amber-50 text-amber-900"
+                            }`}>
+                                {initialWorker.adminApproved
+                                    ? "This worker is already approved for payment."
+                                    : initialWorker.completion === 100
+                                        ? "This profile is ready for your approval."
+                                        : "Approval stays locked until the worker reaches 100% completion."}
+                            </div>
+                            <div className="mt-4 flex flex-col gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => void handleAdminApproval(initialWorker.adminApproved ? "revoke" : "approve")}
+                                    disabled={approvalAction !== null || (!initialWorker.adminApproved && initialWorker.completion < 100)}
+                                    className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                                        initialWorker.adminApproved
+                                            ? "bg-[#b91c1c] hover:bg-[#991b1b]"
+                                            : "bg-[#111111] hover:bg-[#2b2b2b]"
+                                    }`}
+                                >
+                                    {approvalAction ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                                    {initialWorker.adminApproved ? "Revoke approval" : "Approve for payment"}
+                                </button>
+                            </div>
+                        </aside>
+                    ) : null}
+
+                    <aside id="documents" className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
                         <h2 className="text-lg font-semibold text-[#18181b]">Missing Fields</h2>
                         {initialWorker.missingFields.length === 0 ? <p className="mt-3 text-sm text-emerald-700">This worker profile is currently complete.</p> : (
                             <ul className="mt-4 space-y-2 text-sm text-[#57534e]">
@@ -881,7 +989,7 @@ export default function AgencyWorkerClient({
                                             <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${documentState.badgeClass}`}>{documentState.icon}{documentState.label}</div>
                                         </div>
                                         {document?.reject_reason && <p className="mt-3 rounded-2xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-rose-800">{document.reject_reason}</p>}
-                                        {!hasWorkerAccount ? <p className="mt-3 text-sm text-[#7c6f5d]">Document upload and verification become available once this worker has their own platform account.</p> : readOnlyPreview ? <p className="mt-3 text-sm text-blue-800">Document actions are disabled in admin preview.</p> : (
+                                        {readOnlyPreview ? <p className="mt-3 text-sm text-blue-800">Document actions are disabled in admin preview.</p> : (
                                             <div className="mt-4 flex flex-col gap-2">
                                                 {adminTestMode ? <p className="text-sm text-[#7c6f5d]">Sandbox uploads go into isolated admin test storage and auto-verify immediately for mobile flow testing.</p> : null}
                                                 <button type="button" onClick={() => getInputRef(documentDefinition.key).current?.click()} disabled={isUploading || isReviewing} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#ddd6c8] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3] disabled:cursor-not-allowed disabled:opacity-60">

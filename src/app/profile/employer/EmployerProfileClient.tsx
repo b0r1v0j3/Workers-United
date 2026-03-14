@@ -712,7 +712,7 @@ export default function EmployerProfilePage({
                                                         value={companyForm.contact_phone}
                                                         onChange={(phone) => setCompanyForm(prev => ({ ...prev, contact_phone: phone }))}
                                                         inputClassName={inputClass}
-                                                        buttonClassName="!border-gray-200 !bg-gray-50 !rounded-l-xl"
+                                                        buttonClassName="!border-[#e5e7eb] !bg-[#fafafa] !rounded-l-2xl"
                                                     />
                                                     <p className="text-[11px] text-gray-500 mt-1">
                                                         Do not type &apos;0&apos; before your number. If your number is 0601234567, just type 601234567.

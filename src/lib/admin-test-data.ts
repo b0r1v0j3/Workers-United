@@ -16,6 +16,7 @@ export interface AdminTestWorkerProfileRow {
     full_name: string | null;
     email: string | null;
     phone: string | null;
+    admin_approved?: boolean | null;
     nationality: string | null;
     current_country: string | null;
     preferred_job: string | null;

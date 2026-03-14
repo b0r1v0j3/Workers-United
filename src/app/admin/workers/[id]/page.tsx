@@ -17,9 +17,40 @@ import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2, X } from "lucide-react";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { getWorkerDocumentPublicUrl, WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 
 interface PageProps {
     params: Promise<{ id: string }>;
+}
+
+async function getWorkerAdminGuardState(adminClient: ReturnType<typeof createAdminClient>, profileId: string) {
+    const { data: workerProfile } = await adminClient
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", profileId)
+        .maybeSingle();
+
+    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(adminClient, profileId, "*, phone, entry_fee_paid, queue_joined_at, status");
+    const { data: documents } = await adminClient
+        .from("worker_documents")
+        .select("document_type, status")
+        .eq("user_id", profileId);
+    const { data: payments } = await adminClient
+        .from("payments")
+        .select("payment_type, status")
+        .eq("user_id", profileId);
+
+    const completion = getWorkerCompletion({
+        profile: workerProfile,
+        worker: workerRecord,
+        documents: documents || [],
+    }).completion;
+    const hasPaidEntryFee =
+        !!workerRecord?.entry_fee_paid ||
+        isPostEntryFeeWorkerStatus(workerRecord?.status) ||
+        (payments || []).some((payment: any) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
+
+    return { completion, hasPaidEntryFee };
 }
 
 export default async function WorkerDetailPage({ params }: PageProps) {
@@ -292,6 +323,11 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         const adminClient = createAdminClient();
+        const { completion } = await getWorkerAdminGuardState(adminClient, id);
+
+        if (action === "approve" && completion < 100) {
+            throw new Error("Worker profile must be 100% complete before approval.");
+        }
 
         if (action === "approve") {
             await adminClient
@@ -312,7 +348,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                     admin_approved: false,
                     admin_approved_at: null,
                     admin_approved_by: null,
-                    status: 'PENDING_APPROVAL',
+                    status: completion >= 100 ? 'PENDING_APPROVAL' : 'NEW',
                     updated_at: new Date().toISOString()
                 })
                 .eq("profile_id", id);
@@ -341,6 +377,15 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         const adminClient = createAdminClient();
+        const { completion, hasPaidEntryFee } = await getWorkerAdminGuardState(adminClient, id);
+
+        if ((newStatus === "PENDING_APPROVAL" || newStatus === "APPROVED") && completion < 100) {
+            throw new Error("Worker profile must be 100% complete before entering admin review or approval.");
+        }
+
+        if (newStatus === "IN_QUEUE" && !hasPaidEntryFee) {
+            throw new Error("Worker cannot enter queue before the $9 Job Finder fee is paid.");
+        }
 
         await adminClient
             .from("worker_onboarding")
@@ -454,7 +499,9 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                         title="Current case signal"
                         copy={workerRecord?.admin_approved
                             ? "This worker is already admin-approved. Keep focus on queue, offers, payments, and document validity."
-                            : "This worker still needs admin approval before the downstream flow becomes fully operational."}
+                            : profileCompletion === 100
+                                ? "This worker is complete and is now waiting for your approval before payment unlocks."
+                                : "This worker still needs profile completion before approval can happen."}
                         tone="amber"
                     />
                 </div>
@@ -590,7 +637,9 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                 <div className="mt-1 text-sm text-[#57534e]">
                                                     {workerRecord.admin_approved
                                                         ? "Worker is unlocked for payment and downstream queue operations."
-                                                        : "Worker still needs an explicit admin approval decision before payment readiness is fully clear."}
+                                                        : profileCompletion === 100
+                                                            ? "This worker is complete and ready for your approval."
+                                                            : "Approval stays locked until the profile reaches 100% completion."}
                                                 </div>
                                             </div>
                                             <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${workerRecord.admin_approved
@@ -610,14 +659,20 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                             <input type="hidden" name="action" value={workerRecord.admin_approved ? "revoke" : "approve"} />
                                             <button
                                                 type="submit"
+                                                disabled={!workerRecord.admin_approved && profileCompletion < 100}
                                                 className={`w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${workerRecord.admin_approved
                                                     ? "bg-red-500 hover:bg-red-600"
-                                                    : "bg-emerald-600 hover:bg-emerald-700"
+                                                    : "bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
                                                     }`}
                                             >
                                                 {workerRecord.admin_approved ? "Revoke approval" : "Approve for payment"}
                                             </button>
                                         </form>
+                                        {!workerRecord.admin_approved && profileCompletion < 100 ? (
+                                            <p className="mt-3 text-xs font-medium text-amber-800">
+                                                This button unlocks after the worker reaches 100% completion.
+                                            </p>
+                                        ) : null}
                                     </div>
 
                                     <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5">
