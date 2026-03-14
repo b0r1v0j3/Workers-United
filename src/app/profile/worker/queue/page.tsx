@@ -448,7 +448,7 @@ function LockedEntryFeeState({
                         Complete profile to unlock
                     </p>
                     <p className="max-w-[220px] text-xs leading-relaxed text-gray-600">
-                        Finish your required worker details and uploaded documents before paying the $9 Job Finder fee.
+                        Finish your required worker details and uploaded documents to unlock Job Finder.
                     </p>
                 </div>
             </div>
