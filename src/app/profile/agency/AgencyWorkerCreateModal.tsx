@@ -10,6 +10,15 @@ import {
     WORKER_INDUSTRIES,
     WORLD_COUNTRIES,
 } from "@/lib/constants";
+import {
+    ALL_OPTION_VALUE,
+    getDesiredCountriesLabel,
+    getPreferredJobLabel,
+    MultiChoiceSheetField,
+    normalizeDesiredCountryValues,
+    normalizePreferredJobValue,
+    SingleChoiceSheetField,
+} from "@/components/forms/PreferenceSheetField";
 
 const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
@@ -126,7 +135,7 @@ function emptyForm(): FormState {
         phone: "",
         nationality: "",
         currentCountry: "",
-        preferredJob: "",
+        preferredJob: ALL_OPTION_VALUE,
         desiredCountries: [],
         gender: "",
         maritalStatus: "",
@@ -198,8 +207,8 @@ function hydrateWorkerDetail(worker: AgencyWorkerDetail) {
         phone: worker.phone || "",
         nationality: worker.nationality || "",
         currentCountry: worker.current_country || "",
-        preferredJob: worker.preferred_job || "",
-        desiredCountries: worker.desired_countries || [],
+        preferredJob: normalizePreferredJobValue(worker.preferred_job, true),
+        desiredCountries: normalizeDesiredCountryValues(worker.desired_countries),
         gender: worker.gender || "",
         maritalStatus: worker.marital_status || "",
         dateOfBirth: normalizeDateInput(worker.date_of_birth),
@@ -350,6 +359,7 @@ export default function AgencyWorkerCreateModal({
     );
     const [initialPayload, setInitialPayload] = useState<AgencyWorkerModalPayload>(pristinePayload);
     const isDirty = JSON.stringify(payload) !== JSON.stringify(initialPayload);
+    const pickerTriggerClass = `${inputClass} flex min-h-[52px] items-center justify-between gap-3 text-left`;
     const modeLabel = readOnlyPreview ? "Admin preview" : workerId ? "Edit worker" : "Add worker";
     const footerCopy = standalone
         ? readOnlyPreview
@@ -379,6 +389,23 @@ export default function AgencyWorkerCreateModal({
     const closePromptOverlayClass = standalone
         ? "fixed inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6"
         : "absolute inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6";
+    const industryOptions = useMemo(
+        () => [
+            { value: ALL_OPTION_VALUE, label: "All industries", description: "Let the worker stay open to any job industry." },
+            ...WORKER_INDUSTRIES.filter((industry) => industry !== ALL_OPTION_VALUE).map((industry) => ({
+                value: industry,
+                label: industry,
+            })),
+        ],
+        []
+    );
+    const destinationOptions = useMemo(
+        () => EUROPEAN_COUNTRIES.map((country) => ({
+            value: country,
+            label: country,
+        })),
+        []
+    );
 
     useEffect(() => {
         if (!open) return;
@@ -655,42 +682,35 @@ export default function AgencyWorkerCreateModal({
 
                         <Section title="Job Preferences">
                             <Field label="Preferred job">
-                                <select className={inputClass} value={form.preferredJob} onChange={(event) => updateField("preferredJob", event.target.value)}>
-                                    <option value="">Select industry</option>
-                                    {WORKER_INDUSTRIES.map((industry) => <option key={industry} value={industry}>{industry}</option>)}
-                                </select>
+                                <SingleChoiceSheetField
+                                    buttonClassName={pickerTriggerClass}
+                                    panelTone="neutral"
+                                    sheetTitle="Preferred job"
+                                    sheetDescription="Choose the worker's target industry. You can also keep them open to every industry."
+                                    triggerLabel={getPreferredJobLabel(form.preferredJob)}
+                                    value={normalizePreferredJobValue(form.preferredJob, true)}
+                                    options={industryOptions}
+                                    onChange={(value) => updateField("preferredJob", value)}
+                                />
                             </Field>
 
-                            <div className="mt-5 rounded-[24px] border border-[#e5e7eb] bg-[#fafafa] p-4">
-                                <div className={labelClass}>Preferred destinations</div>
-                                <label className="mb-4 flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-medium text-[#111827]">
-                                    <input
-                                        type="checkbox"
-                                        checked={form.desiredCountries.includes("Any")}
-                                        onChange={(event) => updateField("desiredCountries", event.target.checked ? ["Any"] : [])}
-                                        className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
+                            <div className="mt-5">
+                                <Field
+                                    label="Preferred destinations"
+                                    helper="Pick one or more destinations, or keep this worker open to all destinations in Europe."
+                                >
+                                    <MultiChoiceSheetField
+                                        allLabel="All destinations"
+                                        buttonClassName={pickerTriggerClass}
+                                        panelTone="neutral"
+                                        sheetTitle="Preferred destinations"
+                                        sheetDescription="Choose the European destinations this worker is open to."
+                                        triggerLabel={getDesiredCountriesLabel(form.desiredCountries)}
+                                        values={normalizeDesiredCountryValues(form.desiredCountries)}
+                                        options={destinationOptions}
+                                        onChange={(values) => updateField("desiredCountries", values)}
                                     />
-                                    Open to any country in Europe
-                                </label>
-
-                                <div className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-3 ${form.desiredCountries.includes("Any") ? "pointer-events-none opacity-45" : ""}`}>
-                                    {EUROPEAN_COUNTRIES.map((country) => (
-                                        <label key={country} className="flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827]">
-                                            <input
-                                                type="checkbox"
-                                                checked={form.desiredCountries.includes(country)}
-                                                onChange={(event) => updateField(
-                                                    "desiredCountries",
-                                                    event.target.checked
-                                                        ? [...form.desiredCountries.filter((value) => value !== "Any"), country]
-                                                        : form.desiredCountries.filter((value) => value !== country)
-                                                )}
-                                                className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
-                                            />
-                                            {country}
-                                        </label>
-                                    ))}
-                                </div>
+                                </Field>
                             </div>
                         </Section>
 

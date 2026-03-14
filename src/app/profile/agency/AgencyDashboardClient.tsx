@@ -17,6 +17,7 @@ import {
     Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getPreferredJobLabel } from "@/components/forms/PreferenceSheetField";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 
 const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] sm:before:hidden";
@@ -235,7 +236,7 @@ export default function AgencyDashboardClient({
                 worker.name,
                 worker.nationality || "",
                 worker.currentCountry || "",
-                worker.preferredJob || "",
+                worker.preferredJob ? getPreferredJobLabel(worker.preferredJob) : "",
                 worker.status,
                 phase.label,
                 phase.detail,
@@ -632,7 +633,7 @@ export default function AgencyDashboardClient({
                                                         {workerName.secondary ? <div className="break-words">{workerName.secondary}</div> : null}
                                                     </div>
                                                     {worker.preferredJob ? (
-                                                        <div className="mt-2 text-sm text-[#6b7280]">{worker.preferredJob}</div>
+                                                        <div className="mt-2 text-sm text-[#6b7280]">{getPreferredJobLabel(worker.preferredJob)}</div>
                                                     ) : null}
                                                 </td>
 

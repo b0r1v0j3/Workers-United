@@ -6,6 +6,15 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    ALL_OPTION_VALUE,
+    getDesiredCountriesLabel,
+    getPreferredJobLabel,
+    MultiChoiceSheetField,
+    normalizeDesiredCountryValues,
+    normalizePreferredJobValue,
+    SingleChoiceSheetField,
+} from "@/components/forms/PreferenceSheetField";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
@@ -87,6 +96,17 @@ const PASSPORT_EXPIRY_YEARS = Array.from({ length: 11 }, (_, i) => currentYear +
 
 // Empty child template
 const EMPTY_CHILD = { last_name: "", first_name: "", dobDay: "", dobMonth: "", dobYear: "" };
+const workerIndustryOptions = [
+    { value: ALL_OPTION_VALUE, label: "All industries", description: "Stay open to any industry while the team searches for a match." },
+    ...WORKER_INDUSTRIES.filter((industry) => industry !== ALL_OPTION_VALUE).map((industry) => ({
+        value: industry,
+        label: industry,
+    })),
+];
+const destinationPreferenceOptions = EUROPEAN_COUNTRIES.map((country) => ({
+    value: country,
+    label: country,
+}));
 
 function parseDateParts(dateStr: string | null | undefined) {
     if (!dateStr) return null;
@@ -152,7 +172,7 @@ export default function ProfilePage({
         phone: "",
         address: "",
         current_country: "",
-        preferred_job: "",
+        preferred_job: ALL_OPTION_VALUE,
         desired_countries: [] as string[],
         // New visa fields
         birth_country: "",
@@ -241,8 +261,8 @@ export default function ProfilePage({
             phone: workerRecordData.phone || "",
             address: workerRecordData.address || "",
             current_country: workerRecordData.current_country || "",
-            preferred_job: workerRecordData.preferred_job || "",
-            desired_countries: workerRecordData.desired_countries || [],
+            preferred_job: normalizePreferredJobValue(workerRecordData.preferred_job, true),
+            desired_countries: normalizeDesiredCountryValues(workerRecordData.desired_countries || []),
             birth_country: workerRecordData.birth_country || "",
             birth_city: workerRecordData.birth_city || "",
             citizenship: workerRecordData.citizenship || "",
@@ -624,6 +644,7 @@ export default function ProfilePage({
 
     const inputClass = "min-w-0 w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
     const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
+    const pickerTriggerClass = `${inputClass} flex min-h-[46px] items-center justify-between gap-3 text-left`;
     const sectionCardClass = "relative overflow-hidden rounded-none border-0 bg-transparent shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-lg sm:border sm:border-gray-200 sm:bg-white sm:shadow-sm sm:before:hidden";
 
     return (
@@ -1218,15 +1239,16 @@ export default function ProfilePage({
                                     <label className={labelClass}>
                                         Preferred Job / Industry <span className="text-red-500">*</span>
                                     </label>
-                                    <select
-                                        name="preferred_job"
-                                        value={formData.preferred_job}
-                                        onChange={handleChange}
-                                        className={inputClass}
-                                    >
-                                        <option value="">Select industry...</option>
-                                        {WORKER_INDUSTRIES.map(ind => (<option key={ind} value={ind}>{ind}</option>))}
-                                    </select>
+                                    <SingleChoiceSheetField
+                                        buttonClassName={pickerTriggerClass}
+                                        panelTone="neutral"
+                                        sheetTitle="Preferred job"
+                                        sheetDescription="Choose your target industry or stay open to all industries."
+                                        triggerLabel={getPreferredJobLabel(formData.preferred_job)}
+                                        value={normalizePreferredJobValue(formData.preferred_job, true)}
+                                        options={workerIndustryOptions}
+                                        onChange={(value) => setFormData(prev => ({ ...prev, preferred_job: value }))}
+                                    />
                                 </div>
 
                                 <div>
@@ -1234,47 +1256,17 @@ export default function ProfilePage({
                                         Preferred Destinations (Europe)
                                     </label>
 
-                                    <div className="bg-gray-50 border border-gray-200 rounded-md p-3 max-h-60 overflow-y-auto">
-                                        <label className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-200">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.desired_countries.includes("Any")}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setFormData(prev => ({ ...prev, desired_countries: ["Any"] }));
-                                                    } else {
-                                                        setFormData(prev => ({ ...prev, desired_countries: [] }));
-                                                    }
-                                                }}
-                                                className="rounded text-[#1877f2] focus:ring-[#1877f2]"
-                                            />
-                                            <span className="text-sm font-medium text-gray-900">Any (Open to anywhere in Europe)</span>
-                                        </label>
-
-                                        <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 ${formData.desired_countries.includes("Any") ? "opacity-50 pointer-events-none" : ""}`}>
-                                            {EUROPEAN_COUNTRIES.map(country => (
-                                                <label key={country} className="flex items-center space-x-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.desired_countries.includes(country)}
-                                                        onChange={(e) => {
-                                                            const checked = e.target.checked;
-                                                            setFormData(prev => {
-                                                                const current = prev.desired_countries.filter(c => c !== "Any");
-                                                                if (checked) {
-                                                                    return { ...prev, desired_countries: [...current, country] };
-                                                                } else {
-                                                                    return { ...prev, desired_countries: current.filter(c => c !== country) };
-                                                                }
-                                                            });
-                                                        }}
-                                                        className="rounded text-[#1877f2] focus:ring-[#1877f2]"
-                                                    />
-                                                    <span className="text-sm text-gray-700">{country}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    <MultiChoiceSheetField
+                                        allLabel="All destinations"
+                                        buttonClassName={pickerTriggerClass}
+                                        panelTone="neutral"
+                                        sheetTitle="Preferred destinations"
+                                        sheetDescription="Choose one or more European destinations, or stay open to all destinations."
+                                        triggerLabel={getDesiredCountriesLabel(formData.desired_countries)}
+                                        values={normalizeDesiredCountryValues(formData.desired_countries)}
+                                        options={destinationPreferenceOptions}
+                                        onChange={(values) => setFormData(prev => ({ ...prev, desired_countries: values }))}
+                                    />
                                     <p className="text-[12px] text-gray-500 mt-2">
                                         ⓘ Selecting a specific country doesn&apos;t guarantee a job there. You might receive offers from other EU countries.
                                     </p>
