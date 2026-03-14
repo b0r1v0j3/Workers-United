@@ -141,6 +141,8 @@ function splitWorkerName(name: string) {
     };
 }
 
+const BOARD_ACTION_BUTTON_CLASS = "inline-flex h-[52px] w-[124px] items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition";
+
 function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     const normalizedStatus = (worker.status || "").toUpperCase();
     const normalizedRefundStatus = (worker.refundStatus || "").toLowerCase();
@@ -223,7 +225,7 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     if (unlockState.reason === "needs_completion") {
         return {
             label: "Needs profile",
-            detail: "Complete all required worker details and documents before this profile can go to admin review.",
+            detail: "Complete required profile fields and documents before admin review.",
             tone: "slate",
         };
     }
@@ -676,14 +678,15 @@ export default function AgencyDashboardClient({
                                             profile_completion: worker.completion,
                                             admin_approved: worker.adminApproved,
                                         });
+                                        const showPhaseBadge = phase.label !== "Needs profile";
                                         const showPayButton = !readOnlyPreview && worker.paymentState === "not_paid" && paymentUnlockState.allowed;
                                         const workerName = splitWorkerName(worker.name);
 
                                         return (
                                             <tr key={worker.id} className="border-b border-[#ececec] last:border-b-0">
                                                 {!readOnlyPreview ? (
-                                                    <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
-                                                        <div className="flex justify-center pt-1">
+                                                    <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
+                                                        <div className="flex justify-center pt-0.5">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={selectedWorkerIds.includes(worker.id)}
@@ -695,11 +698,11 @@ export default function AgencyDashboardClient({
                                                     </td>
                                                 ) : null}
 
-                                                <td className="border-r border-[#f7f7f6] px-3 py-5 align-top">
-                                                    <div className="pt-1 text-sm font-semibold text-[#111827]">{index + 1}</div>
+                                                <td className="border-r border-[#f7f7f6] px-3 py-4 align-top">
+                                                    <div className="pt-0.5 text-sm font-semibold text-[#111827]">{index + 1}</div>
                                                 </td>
 
-                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
                                                     <div className="text-[1.02rem] font-semibold leading-tight text-[#111827]">
                                                         <div className="break-words">{workerName.primary}</div>
                                                         {workerName.secondary ? <div className="break-words">{workerName.secondary}</div> : null}
@@ -709,32 +712,26 @@ export default function AgencyDashboardClient({
                                                     ) : null}
                                                 </td>
 
-                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
-                                                    <div className="pt-1 text-sm font-semibold text-[#111827]">{formatDate(worker.createdAt)}</div>
+                                                <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
+                                                    <div className="pt-0.5 text-sm font-semibold text-[#111827]">{formatDate(worker.createdAt)}</div>
                                                 </td>
 
-                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
                                                     <CompletionMeter value={worker.completion} compact />
                                                 </td>
 
-                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
                                                     <button
                                                         type="button"
                                                         onClick={() => openWorkerDocuments(worker)}
-                                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-xs font-semibold text-[#111827] transition hover:bg-white"
+                                                        className={`${BOARD_ACTION_BUTTON_CLASS} border border-[#e5e7eb] bg-[#fafafa] text-[#111827] hover:bg-white`}
                                                     >
-                                                        <Upload size={13} />
+                                                        <Upload size={14} />
                                                         {readOnlyPreview ? "Review docs" : "Upload docs"}
                                                     </button>
-                                                    <div className="mt-3 text-sm font-semibold text-[#111827]">{worker.documentsLabel}</div>
-                                                    <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
-                                                        {worker.verifiedDocuments > 0
-                                                            ? `${worker.verifiedDocuments} verified`
-                                                            : "No verified documents yet"}
-                                                    </div>
                                                 </td>
 
-                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
                                                     {showPayButton ? (
                                                         <AgencyPaymentCard
                                                             state="not_paid"
@@ -759,19 +756,23 @@ export default function AgencyDashboardClient({
                                                     )}
                                                 </td>
 
-                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
-                                                    <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
-                                                        {phase.label}
+                                                <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
+                                                    {showPhaseBadge ? (
+                                                        <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
+                                                            {phase.label}
+                                                        </div>
+                                                    ) : null}
+                                                    <div className={`${showPhaseBadge ? "mt-2" : "pt-0.5"} text-xs leading-relaxed text-[#6b7280]`}>
+                                                        {phase.detail}
                                                     </div>
-                                                    <div className="mt-3 text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
                                                 </td>
 
-                                                <td className="px-4 py-5 align-top">
-                                                    <div className="flex flex-col gap-2">
+                                                <td className="px-4 py-4 align-top">
+                                                    <div className="flex flex-col gap-1.5">
                                                         <button
                                                             type="button"
                                                             onClick={() => openEditWorkerModal(worker)}
-                                                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
+                                                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa]"
                                                         >
                                                             <Pencil size={14} />
                                                             Edit
@@ -782,7 +783,7 @@ export default function AgencyDashboardClient({
                                                                 type="button"
                                                                 onClick={() => openDeleteDialog([worker])}
                                                                 disabled={isDeleting}
-                                                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f3d7d7] bg-white px-3 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
+                                                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#f3d7d7] bg-white px-3 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] disabled:cursor-not-allowed disabled:opacity-45"
                                                             >
                                                                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#fff1f2] text-[#be123c]">
                                                                     <Trash2 size={13} strokeWidth={2.3} />
@@ -932,12 +933,12 @@ function AgencyPaymentCard({
 }) {
     if (state === "paid") {
         return (
-            <div className="inline-flex min-w-[112px] flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-emerald-800 shadow-[0_12px_30px_-24px_rgba(16,185,129,0.4)]">
+            <div className={`${BOARD_ACTION_BUTTON_CLASS} flex-col border border-emerald-200 bg-emerald-50 text-center text-emerald-800 shadow-[0_12px_30px_-24px_rgba(16,185,129,0.4)]`}>
                 <div className="inline-flex items-center gap-2 text-sm font-semibold">
                     <CreditCard size={14} />
                     Paid
                 </div>
-                <div className="mt-1 text-[11px] font-medium text-emerald-700">
+                <div className="mt-0.5 text-[11px] font-medium text-emerald-700">
                     {paidAt ? formatDate(paidAt) : "Confirmed"}
                 </div>
             </div>
@@ -946,12 +947,12 @@ function AgencyPaymentCard({
 
     if (state === "pending") {
         return (
-            <div className="inline-flex min-w-[112px] flex-col items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center text-blue-800 shadow-[0_12px_30px_-24px_rgba(59,130,246,0.35)]">
+            <div className={`${BOARD_ACTION_BUTTON_CLASS} flex-col border border-blue-200 bg-blue-50 text-center text-blue-800 shadow-[0_12px_30px_-24px_rgba(59,130,246,0.35)]`}>
                 <div className="inline-flex items-center gap-2 text-sm font-semibold">
                     <Loader2 size={14} className="animate-spin" />
                     Pending
                 </div>
-                <div className="mt-1 text-[11px] font-medium text-blue-700">
+                <div className="mt-0.5 text-[11px] font-medium text-blue-700">
                     {paidAt ? `Until ${formatDate(paidAt)}` : "Checkout open"}
                 </div>
             </div>
@@ -965,12 +966,12 @@ function AgencyPaymentCard({
                 : "Complete first";
 
         return (
-            <div className="inline-flex min-w-[112px] flex-col items-center justify-center rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-center text-[#57534e] shadow-[0_10px_24px_-26px_rgba(15,23,42,0.32)]">
+            <div className={`${BOARD_ACTION_BUTTON_CLASS} flex-col border border-[#e5e7eb] bg-[#fafafa] text-center text-[#57534e] shadow-[0_10px_24px_-26px_rgba(15,23,42,0.32)]`}>
                 <div className="inline-flex items-center gap-2 text-sm font-semibold text-[#18181b]">
                     <Lock size={14} />
                     Locked
                 </div>
-                <div className="mt-1 text-[11px] font-medium text-[#6b7280]">{detail}</div>
+                <div className="mt-0.5 text-[11px] font-medium text-[#6b7280]">{detail}</div>
             </div>
         );
     }
@@ -980,7 +981,7 @@ function AgencyPaymentCard({
             type="button"
             onClick={onClick}
             disabled={loading}
-            className="inline-flex min-w-[112px] items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_-26px_rgba(15,23,42,0.48)] transition hover:bg-[#232323] disabled:cursor-not-allowed disabled:opacity-70"
+            className={`${BOARD_ACTION_BUTTON_CLASS} bg-[#111111] text-white shadow-[0_16px_32px_-26px_rgba(15,23,42,0.48)] hover:bg-[#232323] disabled:cursor-not-allowed disabled:opacity-70`}
         >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
             {loading ? "Opening..." : "Pay $9"}
