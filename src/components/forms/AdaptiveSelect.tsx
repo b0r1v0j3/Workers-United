@@ -268,14 +268,14 @@ export default function AdaptiveSelect({
                         setSearch("");
                     }
                 }}
-                className={`${className} flex items-center justify-between gap-3 pr-11 text-left disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#9ca3af]`}
+                className={`${className} relative w-full min-w-0 flex items-center justify-between gap-3 pr-10 text-left disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#9ca3af]`}
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
             >
                 <span className={resolvedValue ? "truncate text-[#111827]" : "truncate text-[#9ca3af]"}>
                     {displayLabel}
                 </span>
-                <ChevronDown size={16} className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#9ca3af] transition ${isOpen ? "rotate-180" : ""}`} />
+                <ChevronDown size={16} className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af] transition ${isOpen ? "rotate-180" : ""}`} />
             </button>
 
             {!useNativeSelect && isOpen && popoverStyle && typeof document !== "undefined"
