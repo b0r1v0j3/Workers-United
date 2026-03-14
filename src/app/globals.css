@@ -151,7 +151,7 @@ body {
 
 .phone-field.react-tel-input .flag-dropdown {
   inset: 4px auto 4px 4px !important;
-  width: 64px !important;
+  width: 72px !important;
   border: 0 !important;
   border-right: 1px solid #e5e7eb !important;
   border-radius: 12px !important;
@@ -161,7 +161,7 @@ body {
 
 .phone-field.react-tel-input .selected-flag {
   width: 100% !important;
-  padding: 0 0 0 16px !important;
+  padding: 0 0 0 18px !important;
   border-radius: 12px !important;
   background: transparent !important;
 }
@@ -173,11 +173,39 @@ body {
 
 .phone-field.react-tel-input .selected-flag .flag {
   margin-top: 0;
+  transform-origin: left center;
+  transform: scale(1.22) !important;
 }
 
 .phone-field.react-tel-input .selected-flag .arrow {
-  left: 40px;
+  left: 46px;
   right: auto;
+}
+
+.phone-field.react-tel-input .form-control {
+  padding: 0 16px 0 84px !important;
+}
+
+@media (max-width: 767px) {
+  .phone-field.react-tel-input .flag-dropdown {
+    width: 64px !important;
+  }
+
+  .phone-field.react-tel-input .form-control {
+    padding: 0 16px 0 76px !important;
+  }
+
+  .phone-field.react-tel-input .selected-flag {
+    padding: 0 0 0 16px !important;
+  }
+
+  .phone-field.react-tel-input .selected-flag .flag {
+    transform: scale(1.08) !important;
+  }
+
+  .phone-field.react-tel-input .selected-flag .arrow {
+    left: 40px;
+  }
 }
 
 .phone-field.react-tel-input:focus-within .form-control {
