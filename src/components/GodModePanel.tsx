@@ -70,9 +70,9 @@ export function GodModePanel({ currentRole, userName, activeLabel = null, person
     if (!mounted || !showPanel) return null;
 
     return (
-        <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end gap-3 pointer-events-none font-sans sm:bottom-6 sm:right-6 sm:gap-4">
+        <div className="fixed bottom-3 left-3 z-50 flex flex-col items-start gap-3 pointer-events-none font-sans sm:bottom-6 sm:left-6 sm:gap-4">
             {isOpen && (
-                <div className="w-[280px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 ring-1 ring-slate-900/5 pointer-events-auto animate-in slide-in-from-bottom-5 fade-in duration-200 origin-bottom-right sm:w-[320px]">
+                <div className="w-[280px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 ring-1 ring-slate-900/5 pointer-events-auto animate-in slide-in-from-bottom-5 fade-in duration-200 origin-bottom-left sm:w-[320px]">
                     <div className="border-b border-slate-100 bg-slate-50/80 p-3 backdrop-blur-sm sm:p-4">
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-2">

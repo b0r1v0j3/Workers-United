@@ -101,7 +101,7 @@ const workerIndustryOptions = [
 ];
 const destinationPreferenceOptions = EUROPEAN_COUNTRIES.map((country) => ({
     value: country,
-    label: country,
+    label: country === "Bosnia and Herzegovina" ? "Bosnia & Herzegovina" : country,
 }));
 
 function parseDateParts(dateStr: string | null | undefined) {

@@ -16,6 +16,7 @@ import {
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
+import DateSelectField from "@/components/forms/DateSelectField";
 
 const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
@@ -169,13 +170,6 @@ function splitFullName(fullName: string | null | undefined) {
 
 function normalizeDateInput(value: string | null | undefined) {
     return value ? value.split("T")[0] || "" : "";
-}
-
-function getLocalDateInputValue(date: Date) {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, "0");
-    const day = `${date.getDate()}`.padStart(2, "0");
-    return `${year}-${month}-${day}`;
 }
 
 function normalizeFamilyData(value: AgencyWorkerModalPayload["familyData"] | null | undefined) {
@@ -339,9 +333,7 @@ export default function AgencyWorkerCreateModal({
     const [saving, setSaving] = useState(false);
     const [loadingWorker, setLoadingWorker] = useState(false);
     const [showClosePrompt, setShowClosePrompt] = useState(false);
-    const today = useMemo(() => new Date(), []);
-    const maxPastDate = useMemo(() => getLocalDateInputValue(today), [today]);
-    const maxPassportExpiryDate = useMemo(() => `${today.getFullYear() + 20}-12-31`, [today]);
+    const currentYear = useMemo(() => new Date().getFullYear(), []);
 
     useEffect(() => {
         if (!open || standalone || typeof document === "undefined") return;
@@ -402,7 +394,7 @@ export default function AgencyWorkerCreateModal({
     const destinationOptions = useMemo(
         () => EUROPEAN_COUNTRIES.map((country) => ({
             value: country,
-            label: country,
+            label: country === "Bosnia and Herzegovina" ? "Bosnia & Herzegovina" : country,
         })),
         []
     );
@@ -624,7 +616,13 @@ export default function AgencyWorkerCreateModal({
                                     </select>
                                 </Field>
                                 <Field label="Date of birth">
-                                    <input className={inputClass} type="date" max={maxPastDate} value={form.dateOfBirth} onChange={(event) => updateField("dateOfBirth", event.target.value)} />
+                                    <DateSelectField
+                                        minYear={currentYear - 120}
+                                        maxYear={currentYear}
+                                        selectClassName={inputClass}
+                                        value={form.dateOfBirth}
+                                        onChange={(value) => updateField("dateOfBirth", value)}
+                                    />
                                 </Field>
                                 <Field label="Address">
                                     <input className={inputClass} value={form.address} onChange={(event) => updateField("address", event.target.value)} />
@@ -691,10 +689,23 @@ export default function AgencyWorkerCreateModal({
                                     <input className={inputClass} value={form.passportIssuedBy} onChange={(event) => updateField("passportIssuedBy", event.target.value)} />
                                 </Field>
                                 <Field label="Passport issue date">
-                                    <input className={inputClass} type="date" max={maxPastDate} value={form.passportIssueDate} onChange={(event) => updateField("passportIssueDate", event.target.value)} />
+                                    <DateSelectField
+                                        minYear={currentYear - 20}
+                                        maxYear={currentYear}
+                                        selectClassName={inputClass}
+                                        value={form.passportIssueDate}
+                                        onChange={(value) => updateField("passportIssueDate", value)}
+                                    />
                                 </Field>
                                 <Field label="Passport expiry date">
-                                    <input className={inputClass} type="date" min={maxPastDate} max={maxPassportExpiryDate} value={form.passportExpiryDate} onChange={(event) => updateField("passportExpiryDate", event.target.value)} />
+                                    <DateSelectField
+                                        minYear={currentYear}
+                                        maxYear={currentYear + 20}
+                                        yearDirection="asc"
+                                        selectClassName={inputClass}
+                                        value={form.passportExpiryDate}
+                                        onChange={(value) => updateField("passportExpiryDate", value)}
+                                    />
                                 </Field>
                                 <Field label="Lives abroad">
                                     <select className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)}>
@@ -773,7 +784,13 @@ export default function AgencyWorkerCreateModal({
                                                 <input className={inputClass} value={spouse.last_name} onChange={(event) => setSpouse((current) => ({ ...current, last_name: event.target.value }))} />
                                             </Field>
                                             <Field label="Spouse date of birth">
-                                                <input className={inputClass} type="date" max={maxPastDate} value={spouse.dob} onChange={(event) => setSpouse((current) => ({ ...current, dob: event.target.value }))} />
+                                                <DateSelectField
+                                                    minYear={currentYear - 120}
+                                                    maxYear={currentYear}
+                                                    selectClassName={inputClass}
+                                                    value={spouse.dob}
+                                                    onChange={(value) => setSpouse((current) => ({ ...current, dob: value }))}
+                                                />
                                             </Field>
                                             <Field label="Spouse birth country">
                                                 <select className={inputClass} value={spouse.birth_country} onChange={(event) => setSpouse((current) => ({ ...current, birth_country: event.target.value }))}>
@@ -832,14 +849,14 @@ export default function AgencyWorkerCreateModal({
                                                             />
                                                         </Field>
                                                         <Field label="Date of birth">
-                                                            <input
-                                                                className={inputClass}
-                                                                type="date"
-                                                                max={maxPastDate}
+                                                            <DateSelectField
+                                                                minYear={currentYear - 120}
+                                                                maxYear={currentYear}
+                                                                selectClassName={inputClass}
                                                                 value={child.dob}
-                                                                onChange={(event) => setChildren((current) =>
+                                                                onChange={(value) => setChildren((current) =>
                                                                     current.map((item, currentIndex) =>
-                                                                        currentIndex === index ? { ...item, dob: event.target.value } : item
+                                                                        currentIndex === index ? { ...item, dob: value } : item
                                                                     )
                                                                 )}
                                                             />
