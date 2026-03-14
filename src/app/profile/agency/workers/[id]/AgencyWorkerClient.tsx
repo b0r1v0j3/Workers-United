@@ -88,7 +88,7 @@ interface AgencyWorkerClientProps {
     adminTestMode?: boolean;
 }
 
-const inputClass = "w-full rounded-2xl border border-[#e4e4df] bg-white px-4 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#111111]";
+const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e4e4df] bg-white px-4 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8479]";
 const documentDefinitions: Array<{ key: AgencyDocType; label: string; helper: string }> = [
     { key: "passport", label: "Passport", helper: "Upload the main passport photo page." },

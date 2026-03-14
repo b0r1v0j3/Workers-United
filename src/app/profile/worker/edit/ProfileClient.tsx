@@ -638,7 +638,7 @@ export default function ProfilePage({
         );
     }
 
-    const inputClass = "min-w-0 w-full border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
+    const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] border border-gray-300 rounded-md px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#1877f2] focus:border-transparent bg-gray-50 hover:bg-white focus:bg-white transition-colors";
     const labelClass = "block text-[13px] font-medium text-gray-700 mb-1.5";
     const sectionCardClass = "relative overflow-hidden rounded-none border-0 bg-transparent shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-lg sm:border sm:border-gray-200 sm:bg-white sm:shadow-sm sm:before:hidden";
 
