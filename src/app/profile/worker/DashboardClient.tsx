@@ -71,7 +71,7 @@ interface DashboardClientProps {
     readOnlyPreview?: boolean;
 }
 
-const surfaceClass = "rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_20px_45px_-36px_rgba(15,23,42,0.18)]";
+const surfaceClass = "relative rounded-none border-0 bg-transparent px-0 pt-5 shadow-none before:absolute before:left-2 before:right-2 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_20px_45px_-36px_rgba(15,23,42,0.18)] sm:before:hidden";
 
 export default function DashboardClient({
     user,
