@@ -616,7 +616,6 @@ export default function AgencyWorkerCreateModal({
                                         value={form.phone}
                                         onChange={(phone) => updateField("phone", phone)}
                                         inputClassName={inputClass}
-                                        buttonClassName="!border-[#e5e7eb] !bg-[#fafafa] !rounded-l-2xl"
                                         disabled={saving || loadingWorker}
                                     />
                                 </Field>
