@@ -12,7 +12,6 @@ import {
     FileText,
     Globe,
     MapPin,
-    MessageSquareMore,
     Pencil,
     Phone,
     Shield,
@@ -94,7 +93,6 @@ export default function DashboardClient({
     const canStartPayment = !readOnlyPreview && !hasPaidEntryFee && !inQueue && profileCompletion === 100;
     const profileIncomplete = !readOnlyPreview && !hasPaidEntryFee && !inQueue && profileCompletion < 100;
     const paymentPendingActivation = hasPaidEntryFee && !inQueue;
-    const supportUnlocked = hasPaidEntryFee || inQueue;
     const workspaceStatus = readOnlyPreview
         ? "Preview"
         : activeOfferCount > 0
@@ -376,45 +374,6 @@ export default function DashboardClient({
                                     title="Queue"
                                     copy="Track payment, queue status, and any active offer."
                                 />
-                            </div>
-                        )}
-                    </div>
-
-                    <div className={`${surfaceClass} flex flex-col gap-4 md:flex-row md:items-start md:justify-between`}>
-                        <div className="max-w-2xl">
-                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
-                                <MessageSquareMore size={14} />
-                                Support Inbox
-                            </div>
-                            <h3 className="text-lg font-semibold text-[#18181b]">
-                                {readOnlyPreview
-                                    ? "Support inbox is hidden in admin preview"
-                                    : supportUnlocked
-                                        ? "Support is unlocked"
-                                        : "Support unlocks after Job Finder payment"}
-                            </h3>
-                            <p className="mt-2 text-sm leading-relaxed text-[#52525b]">
-                                {readOnlyPreview
-                                    ? "Support stays disabled in admin preview so the admin account never behaves like a real worker account."
-                                    : supportUnlocked
-                                        ? "Message Workers United directly inside the platform for support, case updates, and document questions."
-                                        : "After the $9 Job Finder payment is confirmed, workers can message Workers United support from inside the platform."}
-                            </p>
-                        </div>
-                        {readOnlyPreview ? (
-                            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
-                                Preview only
-                            </div>
-                        ) : supportUnlocked ? (
-                            <Link
-                                href="/profile/worker/inbox"
-                                className="inline-flex items-center justify-center rounded-xl bg-[#111111] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#27272a]"
-                            >
-                                Open Support Inbox
-                            </Link>
-                        ) : (
-                            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                                Unlocks after $9 payment
                             </div>
                         )}
                     </div>
