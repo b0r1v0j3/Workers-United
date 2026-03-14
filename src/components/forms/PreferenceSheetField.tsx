@@ -95,6 +95,9 @@ export function NativeDestinationSelectField({
     const normalizedValues = normalizeDesiredCountryValues(values);
     const [pickerValue, setPickerValue] = useState("");
     const hasAllSelected = normalizedValues.includes(ALL_OPTION_VALUE);
+    const selectLabel = normalizedValues.length > 0
+        ? getDesiredCountriesLabel(normalizedValues)
+        : optionLabel;
 
     function handleSelect(value: string) {
         if (!value) {
@@ -133,7 +136,7 @@ export function NativeDestinationSelectField({
                     setPickerValue("");
                 }}
             >
-                <option value="">{optionLabel}</option>
+                <option value="">{selectLabel}</option>
                 <option value={ALL_OPTION_VALUE}>{allLabel}</option>
                 {options.map((option) => (
                     <option key={option.value} value={option.value}>
