@@ -29,14 +29,25 @@ export default function NotificationBell({
     const [isDrawerVisible, setIsDrawerVisible] = useState(false);
     const [loading, setLoading] = useState(false);
     const closeTimerRef = useRef<number | null>(null);
+    const openFrameRef = useRef<number | null>(null);
     const mobileOffsetClass = variant === "admin" ? "top-[60px]" : "top-[56px]";
     const desktopOffsetClass = variant === "admin" ? "lg:top-[80px]" : "lg:top-[74px]";
     const isOpen = isDrawerMounted && isDrawerVisible;
+    const drawerStyle = {
+        transform: isDrawerVisible ? "translateX(0)" : "translateX(120%)",
+        opacity: isDrawerVisible ? 1 : 0,
+    };
 
     const clearCloseTimer = () => {
         if (typeof window === "undefined" || closeTimerRef.current === null) return;
         window.clearTimeout(closeTimerRef.current);
         closeTimerRef.current = null;
+    };
+
+    const clearOpenFrame = () => {
+        if (typeof window === "undefined" || openFrameRef.current === null) return;
+        window.cancelAnimationFrame(openFrameRef.current);
+        openFrameRef.current = null;
     };
 
     const closeDrawer = useEffectEvent(() => {
@@ -47,6 +58,7 @@ export default function NotificationBell({
         }
 
         clearCloseTimer();
+        clearOpenFrame();
         setIsDrawerVisible(false);
         closeTimerRef.current = window.setTimeout(() => {
             setIsDrawerMounted(false);
@@ -56,17 +68,31 @@ export default function NotificationBell({
 
     const openDrawer = () => {
         clearCloseTimer();
+        clearOpenFrame();
         setIsDrawerMounted(true);
+    };
 
+    useEffect(() => {
+        if (!isDrawerMounted) return;
         if (typeof window === "undefined") {
             setIsDrawerVisible(true);
             return;
         }
 
-        window.requestAnimationFrame(() => {
-            setIsDrawerVisible(true);
+        const firstFrame = window.requestAnimationFrame(() => {
+            const secondFrame = window.requestAnimationFrame(() => {
+                setIsDrawerVisible(true);
+                openFrameRef.current = null;
+            });
+
+            openFrameRef.current = secondFrame;
         });
-    };
+
+        return () => {
+            window.cancelAnimationFrame(firstFrame);
+            clearOpenFrame();
+        };
+    }, [isDrawerMounted]);
 
     useEffect(() => {
         if (!isDrawerMounted) return;
@@ -101,6 +127,7 @@ export default function NotificationBell({
     useEffect(() => {
         return () => {
             clearCloseTimer();
+            clearOpenFrame();
         };
     }, []);
 
@@ -213,11 +240,14 @@ export default function NotificationBell({
                     <>
                         <button
                             type="button"
-                            className={`fixed inset-x-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[54] bg-black/30 backdrop-blur-[1px] transition-opacity duration-300 ease-out ${isDrawerVisible ? "opacity-100" : "opacity-0"}`}
+                            className={`fixed inset-x-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[54] bg-black/30 backdrop-blur-[1px] transition-opacity duration-300 ease-in-out ${isDrawerVisible ? "opacity-100" : "opacity-0"}`}
                             onClick={() => closeDrawer()}
                             aria-label="Close notifications panel"
                         />
-                        <aside className={`fixed right-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[55] w-[calc(100vw-0.75rem)] max-w-[390px] transform transition-[transform,opacity] duration-300 ease-out ${isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-[112%] opacity-0"}`}>
+                        <aside
+                            className={`fixed right-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[55] w-[calc(100vw-0.75rem)] max-w-[390px] transition-all duration-300 ease-in-out`}
+                            style={drawerStyle}
+                        >
                             <div className="flex h-full max-h-full flex-col overflow-hidden border-l border-gray-200 bg-white shadow-[-24px_0_70px_-42px_rgba(15,23,42,0.35)] lg:rounded-[14px] lg:border lg:border-white/60 lg:bg-white/95 lg:shadow-sm lg:backdrop-blur-sm">
                                 <div className="border-b border-[#dddfe2] px-4 py-4">
                                     <div className="flex items-center justify-between gap-3">
