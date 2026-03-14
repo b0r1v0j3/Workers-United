@@ -11,6 +11,9 @@ interface DocumentsClientProps {
     adminTestMode?: boolean;
 }
 
+const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-xl sm:border sm:border-gray-200 sm:bg-white sm:p-8 sm:shadow-sm sm:before:hidden";
+const previewSurfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 text-sm text-blue-900 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#dbeafe] sm:rounded-xl sm:border sm:border-blue-200 sm:bg-blue-50 sm:p-6 sm:before:hidden";
+
 export default function DocumentsClient({ workerProfileId, email, documents, readOnlyPreview = false, adminTestMode = false }: DocumentsClientProps) {
 
     const getDocStatus = (type: string) => {
@@ -27,11 +30,11 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
     return (
         <div className="w-full space-y-6">
             {readOnlyPreview ? (
-                <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 text-sm text-blue-900">
+                <div className={previewSurfaceClass}>
                     Admin preview is read-only. Document upload is disabled here.
                 </div>
             ) : !hasAllDocs && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                <div className={surfaceClass}>
                     <div className="mb-6">
                         <h3 className="font-semibold text-gray-900 text-xl">Upload Documents</h3>
                         <p className="text-gray-500 mt-1">
@@ -44,7 +47,7 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
                 </div>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div className={surfaceClass}>
                 <h3 className="font-semibold text-gray-900 text-xl mb-6">Document Status</h3>
                 <div className="space-y-4">
                     <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
@@ -67,17 +70,17 @@ function DocumentRow({ label, type, status }: { label: string, type: string, sta
     };
 
     return (
-        <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${colorMap[status.color] || colorMap.gray}`}>
-            <div className="flex items-center gap-4">
+        <div className={`flex flex-col gap-3 rounded-xl border p-4 transition-all sm:flex-row sm:items-center sm:justify-between ${colorMap[status.color] || colorMap.gray}`}>
+            <div className="flex min-w-0 items-center gap-4">
                 <div className="w-10 h-10 rounded-lg bg-white/60 flex items-center justify-center border border-current/10">
                     <FileText size={18} className="opacity-80" />
                 </div>
-                <div>
+                <div className="min-w-0">
                     <h4 className="font-semibold text-sm">{label}</h4>
                     <p className="text-xs opacity-70 font-medium mt-0.5">{type.replace(/_/g, ' ')}</p>
                 </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
                 <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-white/60 border border-current/10`}>
                     {status.label}
                 </span>

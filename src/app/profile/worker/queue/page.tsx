@@ -11,6 +11,7 @@ import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
 
 export const dynamic = "force-dynamic";
+const queueSurfaceClass = "relative mb-6 rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-xl sm:border sm:border-[#dddfe2] sm:bg-white sm:p-6 sm:shadow-sm sm:before:hidden";
 
 export default async function QueuePage({
     searchParams,
@@ -59,7 +60,7 @@ export default async function QueuePage({
             <div className="w-full">
                 <QueueClientEffects />
                 <main className="w-full">
-                    <div className="mb-6 rounded-xl border border-[#dddfe2] bg-white p-6 shadow-sm">
+                    <div className={queueSurfaceClass}>
                         {!hasPaidEntryFee ? (
                             <div className="relative z-10 flex flex-col items-center justify-center gap-6 py-8 text-center">
                                 <div className="flex flex-col items-center">
@@ -230,7 +231,7 @@ export default async function QueuePage({
             {!isAdminPreview && <QueueClientEffects />}
             <main className="w-full">
                 {/* Queue Status Card */}
-                <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] p-6 mb-6">
+                <div className={queueSurfaceClass}>
                     {hasPendingOffer ? (
                         // Has pending offer
                         <div className="text-center py-4">

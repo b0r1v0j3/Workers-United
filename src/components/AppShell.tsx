@@ -143,6 +143,7 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
             ? "lg:ml-[280px]"
             : "lg:ml-[84px]"
         : "";
+    const contentInsetClass = "mx-auto flex w-full max-w-[1220px] flex-col gap-4 px-2 sm:gap-5 sm:px-0";
     const handleMenuToggle = () => {
         if ((isAdminPreview || isAdminTestMode) && isDesktop) return;
         setIsOpen((current) => !current);
@@ -192,40 +193,40 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
 
                 {/* MAIN CONTENT */}
                 <main className={`flex-1 min-w-0 w-full animate-fade-in-up px-5 pb-10 pt-2 transition-all duration-300 sm:px-6 sm:pt-4 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
-                    {(isAdminPreview || isAdminTestMode) && (
-                        <div className={`mb-4 flex flex-col gap-3 rounded-2xl px-3.5 py-3.5 text-sm md:flex-row md:items-center md:justify-between md:px-4 md:py-4 ${
-                            isAdminTestMode
-                                ? "border border-amber-200 bg-amber-50 text-amber-950"
-                                : "border border-blue-100 bg-blue-50 text-blue-900"
-                        }`}>
-                            <div>
-                                <div className={`text-[11px] font-bold uppercase tracking-[0.18em] ${
-                                    isAdminTestMode ? "text-amber-700" : "text-blue-600"
-                                }`}>
-                                    {isAdminTestMode ? "Admin Sandbox Mode" : "Admin Preview Mode"}
+                    <div className={contentInsetClass}>
+                        {(isAdminPreview || isAdminTestMode) && (
+                            <div className={`flex flex-col gap-3 rounded-2xl px-3.5 py-3.5 text-sm md:flex-row md:items-center md:justify-between md:px-4 md:py-4 ${
+                                isAdminTestMode
+                                    ? "border border-amber-200 bg-amber-50 text-amber-950"
+                                    : "border border-blue-100 bg-blue-50 text-blue-900"
+                            }`}>
+                                <div>
+                                    <div className={`text-[11px] font-bold uppercase tracking-[0.18em] ${
+                                        isAdminTestMode ? "text-amber-700" : "text-blue-600"
+                                    }`}>
+                                        {isAdminTestMode ? "Admin Sandbox Mode" : "Admin Preview Mode"}
+                                    </div>
+                                    <div className="mt-1 font-semibold">{previewLabel}</div>
+                                    <p className={`mt-1 ${
+                                        isAdminTestMode ? "text-amber-900/80" : "text-blue-800/80"
+                                    }`}>
+                                        {previewMessage}
+                                        {previewMessageDetail ? <span className="hidden sm:inline"> {previewMessageDetail}</span> : null}
+                                    </p>
                                 </div>
-                                <div className="mt-1 font-semibold">{previewLabel}</div>
-                                <p className={`mt-1 ${
-                                    isAdminTestMode ? "text-amber-900/80" : "text-blue-800/80"
-                                }`}>
-                                    {previewMessage}
-                                    {previewMessageDetail ? <span className="hidden sm:inline"> {previewMessageDetail}</span> : null}
-                                </p>
+                                <Link
+                                    href="/admin"
+                                    className={`inline-flex items-center justify-center rounded-[12px] px-4 py-2 text-sm font-semibold text-white transition md:py-2.5 ${
+                                        isAdminTestMode
+                                            ? "bg-amber-700 hover:bg-amber-800"
+                                            : "bg-blue-600 hover:bg-blue-700"
+                                    }`}
+                                >
+                                    Back to Admin
+                                </Link>
                             </div>
-                            <Link
-                                href="/admin"
-                                className={`inline-flex items-center justify-center rounded-[12px] px-4 py-2 text-sm font-semibold text-white transition md:py-2.5 ${
-                                    isAdminTestMode
-                                        ? "bg-amber-700 hover:bg-amber-800"
-                                        : "bg-blue-600 hover:bg-blue-700"
-                                }`}
-                            >
-                                Back to Admin
-                            </Link>
-                        </div>
-                    )}
-                    {variant === 'admin' && <AdminBreadcrumbs />}
-                    <div className="mx-auto w-full max-w-[1220px] px-1 sm:px-0">
+                        )}
+                        {variant === 'admin' && <AdminBreadcrumbs />}
                         {children}
                     </div>
                 </main>
