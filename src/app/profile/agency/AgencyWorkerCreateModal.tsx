@@ -351,29 +351,6 @@ export default function AgencyWorkerCreateModal({
     const [initialPayload, setInitialPayload] = useState<AgencyWorkerModalPayload>(pristinePayload);
     const isDirty = JSON.stringify(payload) !== JSON.stringify(initialPayload);
     const modeLabel = readOnlyPreview ? "Admin preview" : workerId ? "Edit worker" : "Add worker";
-    const title = workerId ? `Edit ${workerLabel || "worker"}` : "Add worker";
-    const description = standalone
-        ? readOnlyPreview
-            ? "Inspect the full worker form on its own page so every field stays visible on smaller screens. Changes are discarded when you go back."
-            : workerId
-                ? "Update this worker draft on its own page so every field stays visible on smaller screens. Email and phone stay optional unless the worker should receive notifications."
-                : "Fill the full worker form on its own page so every field stays visible on smaller screens. Email and phone stay optional unless the worker should receive notifications."
-        : readOnlyPreview
-            ? "Inspect the full worker form here without leaving the workspace. Changes are discarded when you close this preview."
-            : workerId
-                ? "Update this worker draft here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications."
-                : "Fill the full worker form here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications.";
-    const helperCopy = standalone
-        ? readOnlyPreview
-            ? "Email and phone are optional. This preview opens as a full page so every field stays visible on smaller screens."
-            : workerId
-                ? "Email and phone are optional. This full-page form keeps every field visible on smaller screens while you update the worker draft."
-                : "Email and phone are optional. This full-page form keeps every field visible on smaller screens while you create the worker draft."
-        : readOnlyPreview
-            ? "Email and phone are optional. This preview shows the real worker intake structure without creating preview rows or drafts."
-            : workerId
-                ? "Email and phone are optional. Edit them only if this worker should receive notifications."
-                : "Email and phone are optional. Add them only if the worker should receive notifications.";
     const footerCopy = standalone
         ? readOnlyPreview
             ? "This preview does not save draft workers."
@@ -533,20 +510,7 @@ export default function AgencyWorkerCreateModal({
                 onClick={standalone ? undefined : (event) => event.stopPropagation()}
             >
                 <div className="border-b border-[#ececec] bg-white px-4 py-4 sm:px-6 sm:py-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0 max-w-3xl">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
-                                {workerId ? <Pencil size={14} /> : <UserPlus size={14} />}
-                                {modeLabel}
-                            </div>
-                            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
-                                {title}
-                            </h2>
-                            <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                {description}
-                            </p>
-                        </div>
-
+                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
                             <button
                                 type="button"
@@ -588,12 +552,12 @@ export default function AgencyWorkerCreateModal({
                         </div>
                     ) : (
                         <div className="mx-auto max-w-[920px] space-y-6">
-                        <div className="rounded-[24px] border border-[#e5e7eb] bg-white px-5 py-4 text-sm leading-relaxed text-[#4b5563]">
-                            {helperCopy}
-                        </div>
-
-                        <Section title="Identity">
-                            <div className="grid gap-4 md:grid-cols-2">
+                        <section className={sectionClass}>
+                            <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
+                                {workerId ? <Pencil size={14} /> : <UserPlus size={14} />}
+                                {modeLabel}
+                            </div>
+                            <div className="mt-5 grid gap-4 md:grid-cols-2">
                                 <Field label="First name">
                                     <input className={inputClass} value={form.firstName} onChange={(event) => updateField("firstName", event.target.value)} />
                                 </Field>
@@ -637,7 +601,7 @@ export default function AgencyWorkerCreateModal({
                                     <input className={inputClass} value={form.address} onChange={(event) => updateField("address", event.target.value)} />
                                 </Field>
                             </div>
-                        </Section>
+                        </section>
 
                         <Section title="Birth & Citizenship">
                             <div className="grid gap-4 md:grid-cols-2">
