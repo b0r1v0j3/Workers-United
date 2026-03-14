@@ -56,7 +56,7 @@ Workers-United/
 │   │   │   ├── page.tsx       # Auto-redirect (/profile → worker, employer, or agency)
 │   │   │   ├── worker/        # Worker workspace in shared AppShell with simplified `Overview / Documents / Queue / Support` language; overview no longer duplicates Documents/Queue/Support cards in the main canvas, main content is a single primary column, worker overview/queue now use `worker`/`workerRecord` as canonical local naming, and admin can inspect real worker data via `?inspect=<profile_id>` in read-only preview
 │   │   │   ├── employer/      # Canonical employer workspace in shared AppShell; `jobs*` routes redirect back into employer tabs, company/job content now lives in a single primary column without duplicate helper panels, and admin can inspect real employer workspaces via `?inspect=<profile_id>`
-│   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action, desktop modal intake, direct `Upload docs` entry from the Documents column, and a dedicated mobile full-page create route at `/profile/agency/workers/new`, plus always-unlocked agency support at `/profile/agency/inbox`. Agency draft workers now store docs under `profile_id || worker.id`, can be verified before claim, and share the same `100% + admin approval -> payment unlock` rule as self-managed workers. Generic admin preview uses the same real layout in inspect-only mode, but agency worker detail now exposes an admin-only approval card backed by `/api/admin/agency-workers/[workerId]/approval`
+│   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action, desktop modal intake, direct `Upload docs` entry from the Documents column, a dedicated desktop documents-only modal, and dedicated mobile full-page routes at `/profile/agency/workers/new` and `/profile/agency/workers/[id]/documents`, plus always-unlocked agency support at `/profile/agency/inbox`. Agency draft workers now store docs under `profile_id || worker.id`, can be verified before claim, and share the same `100% + admin approval -> payment unlock` rule as self-managed workers. Generic admin preview uses the same real layout in inspect-only mode, but agency worker detail now exposes an admin-only approval card backed by `/api/admin/agency-workers/[workerId]/approval`
 │   │   │   └── settings/      # GDPR: delete account, export data
 │   │   ├── admin/
 │   │   │   ├── page.tsx       # Admin operations dashboard (stats, action cards, pipeline, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
@@ -76,7 +76,7 @@ Workers-United/
 │   │   │   ├── account/       # delete, export (GDPR)
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics, admin inbox support list, and agency-worker approval API; manual-match/re-verify are now fully workerId-first
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
-│   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail patch + document upload)
+│   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
 │   │   │   ├── cron/          # 9 cron jobs (see below)
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
@@ -102,7 +102,7 @@ Workers-United/
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
 │   │   ├── forms/PreferenceSheetField.tsx # Shared native-select preference helpers for worker/agency preference fields; keeps legacy `Any` storage compatibility while surfacing `All industries` / `All destinations` in the UI and allows shorter display labels (e.g. `Bosnia & Herzegovina`) without changing stored values
 │   │   ├── forms/InternationalPhoneField.tsx # Shared modern phone input shell (flag + calling code + searchable picker) used across worker/employer/agency forms
-│   │   ├── forms/DateSelectField.tsx # Shared compact day/month/year select field used by agency add/edit worker forms so mobile date inputs stay within viewport width and year ranges stay bounded
+│   │   ├── forms/NativeDateField.tsx # Shared compact native-date trigger field used by agency add/edit worker forms so mobile date inputs stay within viewport width while still opening the iPhone picker
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
@@ -204,7 +204,7 @@ User (Browser)
 4. Email confirmation, password recovery, and Supabase magic-link flows can land on `/login` with `#access_token=...`; `src/app/login/LoginClient.tsx` now restores that session client-side, and `POST /api/auth/finalize` reuses the shared post-auth resolver to return the correct workspace URL
 5. `/auth/callback` remains the code-exchange path for OAuth, but when there is no `code` it now forwards the browser back to `/login?mode=confirm|recovery` so the hash-session flow can finish instead of dumping users onto a dead auth error state
 6. Agency-submitted worker drafts can be claimed via `/signup?type=worker&claim=<worker-record-id>`; callback/API links the draft to the real worker auth/profile only when the worker signs up with the same invited email, and the claim token resolves against the canonical worker record id
-7. Claimed or draft agency workers can be managed from `/profile/agency/workers/[id]`, where the agency can fill almost the full worker profile (`identity/contact/citizenship/family/preferences/passport`), while keeping `email` and `phone` optional contact channels; the same page also handles document upload/replacement, manual review requests, admin approval preview controls, and the `$9` Job Finder payment for agency-managed workers
+7. Claimed or draft agency workers can be managed from `/profile/agency/workers/[id]`, where the agency can fill almost the full worker profile (`identity/contact/citizenship/family/preferences/passport`), while keeping `email` and `phone` optional contact channels; document upload/replacement/manual review now also has its own shared surface, opened as a desktop-only documents modal from `/profile/agency` or as the dedicated mobile route `/profile/agency/workers/[id]/documents`, while the full editor still embeds the same shared panel plus admin approval controls and the `$9` Job Finder payment for agency-managed workers
 8. Generic admin access to `/profile/agency` is now a true structure preview: it never provisions an agency row or downgrades the admin role, and it opens the same add-worker surfaces (desktop modal, mobile full-page create route) plus table layout without persisting fake preview drafts between refreshes
 9. Admin access to `/profile/worker` and `/profile/employer` remains read-only preview only, while `/profile/agency?inspect=<profile_id>` opens the real target agency workspace with admin authority attached to that agency instead of overloading the admin's own role records
 10. Employer workspace is now canonical at `/profile/employer`; legacy `/profile/employer/jobs` and `/profile/employer/jobs/new` immediately redirect into `?tab=jobs` and `?tab=post-job`
@@ -296,6 +296,8 @@ User (Browser)
 | `src/app/api/account/export/route.ts` | Self-service data export; returns canonical `worker` data from `worker_onboarding`, and includes agency-owned worker lists when the account has an agency profile |
 | `src/app/profile/agency/AgencyWorkerCreateModal.tsx` | Shared agency worker intake surface; supports desktop modal mode plus standalone full-page mode, save-draft, close-confirm, inspect-only admin preview, and real agency creation through `/api/agency/workers` |
 | `src/app/profile/agency/workers/[id]/AgencyWorkerClient.tsx` | Full worker editor for agency-owned workers, including documents, review requests, and Job Finder payment for claimed workers |
+| `src/app/profile/agency/AgencyWorkerDocumentsPanel.tsx` | Shared documents-only surface for agency upload/replace/manual-review flow; reused by dashboard modal, dedicated mobile documents page, and embedded worker detail |
+| `src/app/profile/agency/AgencyWorkerDocumentsModal.tsx` | Desktop-only documents popup opened from the agency dashboard `Upload docs` action |
 
 ### Admin
 | File | Role |

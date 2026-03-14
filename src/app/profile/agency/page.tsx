@@ -189,6 +189,7 @@ export default async function AgencyProfilePage({
                     stats={stats}
                     workers={workerRows}
                     readOnlyPreview={false}
+                    adminTestMode
                     inspectProfileId={null}
                 />
             </AppShell>
@@ -445,6 +446,7 @@ export default async function AgencyProfilePage({
                 stats={stats}
                 workers={workerRows}
                 readOnlyPreview={isAdminPreview}
+                adminTestMode={false}
                 inspectProfileId={inspectProfileId}
             />
         </AppShell>
