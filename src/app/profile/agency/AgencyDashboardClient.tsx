@@ -216,6 +216,7 @@ export default function AgencyDashboardClient({
     const searchParams = useSearchParams();
     const [search, setSearch] = useState("");
     const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
+    const [useFullPageWorkerFlow, setUseFullPageWorkerFlow] = useState(false);
     const [selectedWorker, setSelectedWorker] = useState<{ id: string; name: string } | null>(null);
     const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
     const [payingWorkerId, setPayingWorkerId] = useState<string | null>(null);
@@ -268,12 +269,52 @@ export default function AgencyDashboardClient({
         router.refresh();
     }, [router, searchParams]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        const mediaQuery = window.matchMedia("(max-width: 767px)");
+        const syncViewportMode = () => setUseFullPageWorkerFlow(mediaQuery.matches);
+
+        syncViewportMode();
+
+        if (typeof mediaQuery.addEventListener === "function") {
+            mediaQuery.addEventListener("change", syncViewportMode);
+            return () => mediaQuery.removeEventListener("change", syncViewportMode);
+        }
+
+        mediaQuery.addListener(syncViewportMode);
+
+        return () => mediaQuery.removeListener(syncViewportMode);
+    }, []);
+
+    function buildAgencyWorkerHref(path: string) {
+        const params = new URLSearchParams();
+        if (inspectProfileId) {
+            params.set("inspect", inspectProfileId);
+        }
+
+        const query = params.toString();
+        return query ? `${path}?${query}` : path;
+    }
+
     function openNewWorkerModal() {
+        if (useFullPageWorkerFlow) {
+            router.push(buildAgencyWorkerHref("/profile/agency/workers/new"));
+            return;
+        }
+
         setSelectedWorker(null);
         setIsWorkerModalOpen(true);
     }
 
     function openEditWorkerModal(worker: DashboardWorker) {
+        if (useFullPageWorkerFlow) {
+            router.push(buildAgencyWorkerHref(`/profile/agency/workers/${worker.id}`));
+            return;
+        }
+
         setSelectedWorker({ id: worker.id, name: worker.name });
         setIsWorkerModalOpen(true);
     }
@@ -529,7 +570,7 @@ export default function AgencyDashboardClient({
                                     </div>
                                     <h3 className="mt-4 text-lg font-semibold text-[#111827]">No workers yet</h3>
                                     <p className="mt-2 max-w-md text-sm leading-relaxed text-[#6b7280]">
-                                        Use the Add worker button above to open the full worker form without leaving this workspace.
+                                        Use the Add worker button above to open the full worker form.
                                     </p>
                                 </div>
                             </div>
@@ -670,15 +711,17 @@ export default function AgencyDashboardClient({
                 </section>
             </div>
 
-            <AgencyWorkerCreateModal
-                open={isWorkerModalOpen}
-                workerId={selectedWorker?.id || null}
-                workerLabel={selectedWorker?.name || null}
-                readOnlyPreview={readOnlyPreview}
-                inspectProfileId={inspectProfileId}
-                onClose={closeWorkerModal}
-                onLiveSave={handleLiveSave}
-            />
+            {!useFullPageWorkerFlow ? (
+                <AgencyWorkerCreateModal
+                    open={isWorkerModalOpen}
+                    workerId={selectedWorker?.id || null}
+                    workerLabel={selectedWorker?.name || null}
+                    readOnlyPreview={readOnlyPreview}
+                    inspectProfileId={inspectProfileId}
+                    onClose={closeWorkerModal}
+                    onLiveSave={handleLiveSave}
+                />
+            ) : null}
 
             {deleteDialog && typeof document !== "undefined"
                 ? createPortal(
