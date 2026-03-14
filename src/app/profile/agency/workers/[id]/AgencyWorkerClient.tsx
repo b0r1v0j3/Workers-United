@@ -12,6 +12,7 @@ import {
     normalizePreferredJobValue,
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
+import NativeDateField from "@/components/forms/NativeDateField";
 
 type AgencyDocType = "passport" | "biometric_photo" | "diploma";
 
@@ -561,13 +562,13 @@ export default function AgencyWorkerClient({
                                 </select>
                             </Field>
                             <Field label="Date of Birth">
-                                <input
-                                    type="date"
-                                    className={inputClass}
+                                <NativeDateField
                                     min={birthDateMinIso}
                                     max={todayIso}
+                                    inputClassName={inputClass}
                                     value={form.dateOfBirth}
-                                    onChange={(event) => updateField("dateOfBirth", event.target.value)}
+                                    onChange={(value) => updateField("dateOfBirth", value)}
+                                    disabled={readOnlyPreview || saving}
                                 />
                             </Field>
                             <Field label="Gender">
@@ -708,13 +709,13 @@ export default function AgencyWorkerClient({
                                         <Field label="Spouse First Name"><input className={inputClass} value={spouseData.first_name} onChange={(event) => setSpouseData((current) => ({ ...current, first_name: event.target.value }))} /></Field>
                                         <Field label="Spouse Last Name"><input className={inputClass} value={spouseData.last_name} onChange={(event) => setSpouseData((current) => ({ ...current, last_name: event.target.value }))} /></Field>
                                         <Field label="Spouse Date of Birth">
-                                            <input
-                                                type="date"
-                                                className={inputClass}
+                                            <NativeDateField
                                                 min={birthDateMinIso}
                                                 max={todayIso}
+                                                inputClassName={inputClass}
                                                 value={spouseData.dob}
-                                                onChange={(event) => setSpouseData((current) => ({ ...current, dob: event.target.value }))}
+                                                onChange={(value) => setSpouseData((current) => ({ ...current, dob: value }))}
+                                                disabled={readOnlyPreview || saving}
                                             />
                                         </Field>
                                         <Field label="Spouse Birth Country">
@@ -749,13 +750,13 @@ export default function AgencyWorkerClient({
                                                     <Field label={`Child ${index + 1} First Name`}><input className={inputClass} value={child.first_name} onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, first_name: event.target.value } : item))} /></Field>
                                                     <Field label="Last Name"><input className={inputClass} value={child.last_name} onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, last_name: event.target.value } : item))} /></Field>
                                                     <Field label="Date of Birth">
-                                                        <input
-                                                            type="date"
-                                                            className={inputClass}
+                                                        <NativeDateField
                                                             min={birthDateMinIso}
                                                             max={todayIso}
+                                                            inputClassName={inputClass}
                                                             value={child.dob}
-                                                            onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, dob: event.target.value } : item))}
+                                                            onChange={(value) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, dob: value } : item))}
+                                                            disabled={readOnlyPreview || saving}
                                                         />
                                                     </Field>
                                                 </div>
@@ -777,23 +778,23 @@ export default function AgencyWorkerClient({
                             <Field label="Passport Number"><input className={inputClass} value={form.passportNumber} onChange={(event) => updateField("passportNumber", event.target.value)} /></Field>
                             <Field label="Passport Issued By"><input className={inputClass} value={form.passportIssuedBy} onChange={(event) => updateField("passportIssuedBy", event.target.value)} /></Field>
                             <Field label="Passport Issue Date">
-                                <input
-                                    type="date"
-                                    className={inputClass}
+                                <NativeDateField
                                     min={passportIssueMinIso}
                                     max={todayIso}
+                                    inputClassName={inputClass}
                                     value={form.passportIssueDate}
-                                    onChange={(event) => updateField("passportIssueDate", event.target.value)}
+                                    onChange={(value) => updateField("passportIssueDate", value)}
+                                    disabled={readOnlyPreview || saving}
                                 />
                             </Field>
                             <Field label="Passport Expiry Date">
-                                <input
-                                    type="date"
-                                    className={inputClass}
+                                <NativeDateField
                                     min={todayIso}
                                     max={passportExpiryMaxIso}
+                                    inputClassName={inputClass}
                                     value={form.passportExpiryDate}
-                                    onChange={(event) => updateField("passportExpiryDate", event.target.value)}
+                                    onChange={(value) => updateField("passportExpiryDate", value)}
+                                    disabled={readOnlyPreview || saving}
                                 />
                             </Field>
                             <Field label="Do you live outside your home country?">
