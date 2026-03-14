@@ -171,6 +171,13 @@ function normalizeDateInput(value: string | null | undefined) {
     return value ? value.split("T")[0] || "" : "";
 }
 
+function getLocalDateInputValue(date: Date) {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, "0");
+    const day = `${date.getDate()}`.padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
 function normalizeFamilyData(value: AgencyWorkerModalPayload["familyData"] | null | undefined) {
     return {
         spouse: value?.spouse
@@ -332,6 +339,9 @@ export default function AgencyWorkerCreateModal({
     const [saving, setSaving] = useState(false);
     const [loadingWorker, setLoadingWorker] = useState(false);
     const [showClosePrompt, setShowClosePrompt] = useState(false);
+    const today = useMemo(() => new Date(), []);
+    const maxPastDate = useMemo(() => getLocalDateInputValue(today), [today]);
+    const maxPassportExpiryDate = useMemo(() => `${today.getFullYear() + 20}-12-31`, [today]);
 
     useEffect(() => {
         if (!open || standalone || typeof document === "undefined") return;
@@ -614,7 +624,7 @@ export default function AgencyWorkerCreateModal({
                                     </select>
                                 </Field>
                                 <Field label="Date of birth">
-                                    <input className={inputClass} type="date" value={form.dateOfBirth} onChange={(event) => updateField("dateOfBirth", event.target.value)} />
+                                    <input className={inputClass} type="date" max={maxPastDate} value={form.dateOfBirth} onChange={(event) => updateField("dateOfBirth", event.target.value)} />
                                 </Field>
                                 <Field label="Address">
                                     <input className={inputClass} value={form.address} onChange={(event) => updateField("address", event.target.value)} />
@@ -681,10 +691,10 @@ export default function AgencyWorkerCreateModal({
                                     <input className={inputClass} value={form.passportIssuedBy} onChange={(event) => updateField("passportIssuedBy", event.target.value)} />
                                 </Field>
                                 <Field label="Passport issue date">
-                                    <input className={inputClass} type="date" value={form.passportIssueDate} onChange={(event) => updateField("passportIssueDate", event.target.value)} />
+                                    <input className={inputClass} type="date" max={maxPastDate} value={form.passportIssueDate} onChange={(event) => updateField("passportIssueDate", event.target.value)} />
                                 </Field>
                                 <Field label="Passport expiry date">
-                                    <input className={inputClass} type="date" value={form.passportExpiryDate} onChange={(event) => updateField("passportExpiryDate", event.target.value)} />
+                                    <input className={inputClass} type="date" min={maxPastDate} max={maxPassportExpiryDate} value={form.passportExpiryDate} onChange={(event) => updateField("passportExpiryDate", event.target.value)} />
                                 </Field>
                                 <Field label="Lives abroad">
                                     <select className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)}>
@@ -763,7 +773,7 @@ export default function AgencyWorkerCreateModal({
                                                 <input className={inputClass} value={spouse.last_name} onChange={(event) => setSpouse((current) => ({ ...current, last_name: event.target.value }))} />
                                             </Field>
                                             <Field label="Spouse date of birth">
-                                                <input className={inputClass} type="date" value={spouse.dob} onChange={(event) => setSpouse((current) => ({ ...current, dob: event.target.value }))} />
+                                                <input className={inputClass} type="date" max={maxPastDate} value={spouse.dob} onChange={(event) => setSpouse((current) => ({ ...current, dob: event.target.value }))} />
                                             </Field>
                                             <Field label="Spouse birth country">
                                                 <select className={inputClass} value={spouse.birth_country} onChange={(event) => setSpouse((current) => ({ ...current, birth_country: event.target.value }))}>
@@ -825,6 +835,7 @@ export default function AgencyWorkerCreateModal({
                                                             <input
                                                                 className={inputClass}
                                                                 type="date"
+                                                                max={maxPastDate}
                                                                 value={child.dob}
                                                                 onChange={(event) => setChildren((current) =>
                                                                     current.map((item, currentIndex) =>
