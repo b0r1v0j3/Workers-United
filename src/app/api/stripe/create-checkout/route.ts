@@ -3,10 +3,11 @@ import { stripe, PRICES, getCheckoutSuccessUrl, getCheckoutCancelUrl, PaymentTyp
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAgencyOwnedWorker, getAgencyWorkerName } from "@/lib/agencies";
+import { getWorkerCompletion } from "@/lib/profile-completion";
 import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { getAdminTestSession } from "@/lib/admin-test-mode";
-import { markAdminTestAgencyWorkerEntryFeePaid, markAdminTestWorkerEntryFeePaid } from "@/lib/admin-test-data";
+import { getAdminTestWorkerWorkspace, markAdminTestAgencyWorkerEntryFeePaid, markAdminTestWorkerEntryFeePaid } from "@/lib/admin-test-data";
 import { normalizeUserType } from "@/lib/domain";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
@@ -84,6 +85,32 @@ export async function POST(request: NextRequest) {
             }
 
             if (adminTestSession.activePersona.role === "worker") {
+                const workspace = await getAdminTestWorkerWorkspace(admin, adminTestSession.activePersona.id);
+                const sandboxWorker = workspace.worker;
+                const sandboxProfile = {
+                    full_name: sandboxWorker?.full_name || adminTestSession.activePersona.label,
+                    email: sandboxWorker?.email || user.email || "",
+                };
+                const { completion: sandboxProfileCompletion } = getWorkerCompletion({
+                    profile: sandboxProfile,
+                    worker: sandboxWorker,
+                    documents: workspace.documents,
+                });
+                const sandboxEligibility = getEntryFeeEligibility({
+                    entry_fee_paid:
+                        !!sandboxWorker?.entry_fee_paid ||
+                        !!sandboxWorker?.job_search_active ||
+                        isPostEntryFeeWorkerStatus(sandboxWorker?.status),
+                    profile_completion: sandboxProfileCompletion,
+                });
+
+                if (!sandboxEligibility.allowed) {
+                    return NextResponse.json(
+                        { error: sandboxEligibility.error || "Entry fee is not available" },
+                        { status: sandboxEligibility.status || 400 }
+                    );
+                }
+
                 await markAdminTestWorkerEntryFeePaid(admin, adminTestSession.activePersona.id);
                 const targetPath = normalizedSuccessPath || "/profile/worker/queue";
                 return NextResponse.json({
@@ -385,7 +412,29 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
             }
 
-            const eligibility = getEntryFeeEligibility(workerRecord);
+            let workerProfileCompletion: number | null = null;
+            if (!isAgencyPayingForWorker && paymentOwnerProfileId) {
+                const { data: paymentDocuments, error: paymentDocumentsError } = await supabase
+                    .from("worker_documents")
+                    .select("document_type")
+                    .eq("user_id", paymentOwnerProfileId);
+
+                if (paymentDocumentsError) {
+                    console.error("Worker payment documents fetch error:", paymentDocumentsError);
+                    return NextResponse.json({ error: "Failed to check worker payment readiness" }, { status: 500 });
+                }
+
+                workerProfileCompletion = getWorkerCompletion({
+                    profile,
+                    worker: workerRecord,
+                    documents: paymentDocuments || [],
+                }).completion;
+            }
+
+            const eligibility = getEntryFeeEligibility({
+                entry_fee_paid: workerRecord?.entry_fee_paid,
+                profile_completion: workerProfileCompletion,
+            });
             if (!eligibility.allowed) {
                 return NextResponse.json(
                     { error: eligibility.error || "Entry fee is not available" },
