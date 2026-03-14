@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+
+interface NotificationBellProps {
+    variant?: "dashboard" | "admin";
+    onOpen?: () => void;
+}
 
 interface Notification {
     id: string;
@@ -11,22 +17,45 @@ interface Notification {
     read: boolean;
 }
 
-export default function NotificationBell() {
+export default function NotificationBell({
+    variant = "dashboard",
+    onOpen,
+}: NotificationBellProps) {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const mobileOffsetClass = variant === "admin" ? "top-[60px]" : "top-[56px]";
+    const desktopOffsetClass = variant === "admin" ? "lg:top-[80px]" : "lg:top-[74px]";
 
-    // Close on outside click
     useEffect(() => {
-        const handleClick = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        if (!isOpen) return;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
                 setIsOpen(false);
             }
         };
-        document.addEventListener("mousedown", handleClick);
-        return () => document.removeEventListener("mousedown", handleClick);
+
+        document.addEventListener("keydown", handleEscape);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const handleCloseNotifications = () => {
+            setIsOpen(false);
+        };
+
+        window.addEventListener("workersunited:close-notifications", handleCloseNotifications);
+        return () => window.removeEventListener("workersunited:close-notifications", handleCloseNotifications);
     }, []);
 
     // Load unread count on mount
@@ -57,8 +86,14 @@ export default function NotificationBell() {
     };
 
     const handleToggle = () => {
-        if (!isOpen) loadNotifications();
-        setIsOpen(!isOpen);
+        if (!isOpen) {
+            onOpen?.();
+            loadNotifications();
+            setIsOpen(true);
+            return;
+        }
+
+        setIsOpen(false);
     };
 
     const markAsRead = async (id: string) => {
@@ -107,12 +142,15 @@ export default function NotificationBell() {
     };
 
     return (
-        <div ref={dropdownRef} className="relative">
+        <>
             {/* Bell Button */}
             <button
+                type="button"
                 onClick={handleToggle}
-                className="w-9 h-9 bg-[#f0f2f5] rounded-full flex items-center justify-center text-[#050505] hover:bg-[#e4e6eb] transition-colors relative"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#f0f2f5] text-[#050505] transition-colors hover:bg-[#e4e6eb]"
                 title="Notifications"
+                aria-label={isOpen ? "Close notifications" : "Open notifications"}
+                aria-expanded={isOpen}
             >
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                     <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
@@ -124,70 +162,87 @@ export default function NotificationBell() {
                 )}
             </button>
 
-            {/* Dropdown */}
-            {isOpen && (
-                <div className="absolute right-0 top-12 w-[360px] bg-white rounded-xl shadow-xl border border-[#dddfe2] z-50 overflow-hidden">
-                    {/* Header */}
-                    <div className="px-4 py-3 border-b border-[#dddfe2] flex items-center justify-between">
-                        <h3 className="font-bold text-[#050505] text-lg">Notifications</h3>
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs text-[#65676b]">
-                                {unreadCount > 0 ? `${unreadCount} unread` : "All read"}
-                            </span>
-                            {unreadCount > 0 && (
-                                <button
-                                    onClick={markAllAsRead}
-                                    className="text-xs text-[#1877f2] hover:underline font-medium"
-                                >
-                                    Mark all read
-                                </button>
-                            )}
-                        </div>
-                    </div>
+            {isOpen && typeof document !== "undefined"
+                ? createPortal(
+                    <>
+                        <button
+                            type="button"
+                            className={`fixed inset-x-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[54] bg-black/30 backdrop-blur-[1px]`}
+                            onClick={() => setIsOpen(false)}
+                            aria-label="Close notifications panel"
+                        />
+                        <aside className={`fixed right-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[55] w-[calc(100vw-0.75rem)] max-w-[390px]`}>
+                            <div className="flex h-full max-h-full flex-col overflow-hidden border-l border-gray-200 bg-white shadow-[-24px_0_70px_-42px_rgba(15,23,42,0.35)] lg:rounded-[14px] lg:border lg:border-white/60 lg:bg-white/95 lg:shadow-sm lg:backdrop-blur-sm">
+                                <div className="border-b border-[#dddfe2] px-4 py-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">
+                                                Notifications
+                                            </div>
+                                            <h3 className="mt-2 text-xl font-bold text-[#050505]">Updates</h3>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs text-[#65676b]">
+                                                {unreadCount > 0 ? `${unreadCount} unread` : "All read"}
+                                            </span>
+                                            {unreadCount > 0 && (
+                                                <button
+                                                    onClick={markAllAsRead}
+                                                    className="text-xs font-medium text-[#1877f2] hover:underline"
+                                                >
+                                                    Mark all read
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
 
-                    {/* List */}
-                    <div className="max-h-[400px] overflow-y-auto">
-                        {loading ? (
-                            <div className="p-8 text-center text-[#65676b] text-sm">Loading...</div>
-                        ) : notifications.length === 0 ? (
-                            <div className="p-8 text-center">
-                                <span className="text-3xl">🔔</span>
-                                <p className="text-[#65676b] text-sm mt-2">No notifications yet</p>
-                            </div>
-                        ) : (
-                            notifications.map((n) => (
-                                <div
-                                    key={n.id}
-                                    onClick={() => !n.read && markAsRead(n.id)}
-                                    className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer border-b border-[#f0f2f5] last:border-0 ${n.read
-                                            ? "bg-white hover:bg-[#f7f8fa]"
-                                            : "bg-[#e7f3ff] hover:bg-[#dbeafe]"
-                                        }`}
-                                >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${n.read ? "bg-[#f0f2f5]" : "bg-[#1877f2]/10"
-                                        }`}>
-                                        {n.icon}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className={`text-sm leading-snug ${n.read
-                                                ? "text-[#65676b] font-normal"
-                                                : "text-[#050505] font-medium"
-                                            }`}>
-                                            {n.title}
-                                        </p>
-                                        <p className="text-xs text-[#65676b] mt-0.5">
-                                            {formatTime(n.time)}
-                                        </p>
-                                    </div>
-                                    {!n.read && (
-                                        <div className="w-2.5 h-2.5 rounded-full bg-[#1877f2] flex-shrink-0 mt-1.5" />
+                                <div className="flex-1 overflow-y-auto bg-[#fafafa]">
+                                    {loading ? (
+                                        <div className="p-8 text-center text-sm text-[#65676b]">Loading...</div>
+                                    ) : notifications.length === 0 ? (
+                                        <div className="p-8 text-center">
+                                            <span className="text-3xl">🔔</span>
+                                            <p className="mt-2 text-sm text-[#65676b]">No notifications yet</p>
+                                        </div>
+                                    ) : (
+                                        notifications.map((n) => (
+                                            <div
+                                                key={n.id}
+                                                onClick={() => !n.read && markAsRead(n.id)}
+                                                className={`flex cursor-pointer items-start gap-3 border-b border-[#f0f2f5] px-4 py-3 transition-colors last:border-0 ${n.read
+                                                        ? "bg-white hover:bg-[#f7f8fa]"
+                                                        : "bg-[#e7f3ff] hover:bg-[#dbeafe]"
+                                                    }`}
+                                            >
+                                                <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-lg ${n.read ? "bg-[#f0f2f5]" : "bg-[#1877f2]/10"
+                                                    }`}>
+                                                    {n.icon}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className={`text-sm leading-snug ${n.read
+                                                            ? "font-normal text-[#65676b]"
+                                                            : "font-medium text-[#050505]"
+                                                        }`}>
+                                                        {n.title}
+                                                    </p>
+                                                    <p className="mt-0.5 text-xs text-[#65676b]">
+                                                        {formatTime(n.time)}
+                                                    </p>
+                                                </div>
+                                                {!n.read && (
+                                                    <div className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#1877f2]" />
+                                                )}
+                                            </div>
+                                        ))
                                     )}
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
+                            </div>
+                        </aside>
+                    </>,
+                    document.body
+                )
+                : null}
+        </>
     );
 }

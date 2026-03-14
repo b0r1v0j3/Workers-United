@@ -70,6 +70,18 @@ export default function UnifiedNavbar({
             : normalizedUserType === "agency"
                 ? "/profile/agency"
                 : "/profile/worker";
+    const handleMobileMenuToggle = () => {
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("workersunited:close-notifications"));
+        }
+
+        onMenuToggle?.();
+    };
+    const handleNotificationsOpen = () => {
+        if (showMobileMenuButton && mobileMenuOpen && typeof onMenuToggle === "function") {
+            onMenuToggle();
+        }
+    };
 
     useEffect(() => {
         if (!isPublic) return;
@@ -87,17 +99,19 @@ export default function UnifiedNavbar({
                 {/* Left: Logo */}
                 <div className="z-10 flex items-center gap-2 md:gap-3">
                     {showMobileMenuButton && (
-                        <button
-                            type="button"
-                            onClick={onMenuToggle}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-gray-200 bg-white text-slate-600 shadow-sm transition hover:border-gray-300 hover:text-slate-900 md:hidden"
-                            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-                            aria-expanded={mobileMenuOpen}
-                        >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
+                        <div className="border-r border-gray-200 pr-3 md:hidden">
+                            <button
+                                type="button"
+                                onClick={handleMobileMenuToggle}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#f0f2f5] text-[#050505] transition-colors hover:bg-[#e4e6eb]"
+                                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                                aria-expanded={mobileMenuOpen}
+                            >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </button>
+                        </div>
                     )}
 
                     <Link
@@ -206,7 +220,10 @@ export default function UnifiedNavbar({
                     ) : (
                         user && (
                             <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-                                <NotificationBell />
+                                <NotificationBell
+                                    variant={variant === "admin" ? "admin" : "dashboard"}
+                                    onOpen={handleNotificationsOpen}
+                                />
                                 <span className="text-sm font-semibold text-[#050505] hidden sm:block">
                                     {profileName || user.user_metadata?.full_name || user.user_metadata?.first_name || user.email?.split('@')[0]}
                                 </span>
