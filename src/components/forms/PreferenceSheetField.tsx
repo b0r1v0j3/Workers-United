@@ -71,8 +71,15 @@ export function normalizeDesiredCountryValues(values: string[] | null | undefine
 }
 
 export function getPreferredJobLabel(value: string | null | undefined) {
-    const normalized = normalizePreferredJobValue(value, true);
+    const normalized = normalizePreferredJobValue(value, false);
+    if (!normalized) {
+        return "";
+    }
     return normalized === ALL_OPTION_VALUE ? "All industries" : normalized;
+}
+
+export function getPreferredJobTriggerLabel(value: string | null | undefined, placeholder = "Select industries") {
+    return getPreferredJobLabel(value) || placeholder;
 }
 
 export function getDesiredCountriesLabel(values: string[] | null | undefined) {

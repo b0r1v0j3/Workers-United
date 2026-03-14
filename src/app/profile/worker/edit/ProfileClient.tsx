@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
     ALL_OPTION_VALUE,
     getDesiredCountriesLabel,
-    getPreferredJobLabel,
+    getPreferredJobTriggerLabel,
     MultiChoiceSheetField,
     normalizeDesiredCountryValues,
     normalizePreferredJobValue,
@@ -172,7 +172,7 @@ export default function ProfilePage({
         phone: "",
         address: "",
         current_country: "",
-        preferred_job: ALL_OPTION_VALUE,
+        preferred_job: "",
         desired_countries: [] as string[],
         // New visa fields
         birth_country: "",
@@ -261,7 +261,7 @@ export default function ProfilePage({
             phone: workerRecordData.phone || "",
             address: workerRecordData.address || "",
             current_country: workerRecordData.current_country || "",
-            preferred_job: normalizePreferredJobValue(workerRecordData.preferred_job, true),
+            preferred_job: normalizePreferredJobValue(workerRecordData.preferred_job, false),
             desired_countries: normalizeDesiredCountryValues(workerRecordData.desired_countries || []),
             birth_country: workerRecordData.birth_country || "",
             birth_city: workerRecordData.birth_city || "",
@@ -1244,8 +1244,8 @@ export default function ProfilePage({
                                         panelTone="neutral"
                                         sheetTitle="Preferred job"
                                         sheetDescription="Choose your target industry or stay open to all industries."
-                                        triggerLabel={getPreferredJobLabel(formData.preferred_job)}
-                                        value={normalizePreferredJobValue(formData.preferred_job, true)}
+                                        triggerLabel={getPreferredJobTriggerLabel(formData.preferred_job)}
+                                        value={normalizePreferredJobValue(formData.preferred_job, false)}
                                         options={workerIndustryOptions}
                                         onChange={(value) => setFormData(prev => ({ ...prev, preferred_job: value }))}
                                     />
