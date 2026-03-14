@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { getPreferredJobLabel } from "@/components/forms/PreferenceSheetField";
 import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
+import AgencyWorkerDocumentsModal from "./AgencyWorkerDocumentsModal";
 
 const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] sm:before:hidden";
 
@@ -63,6 +64,7 @@ export interface AgencyDashboardProps {
         updatedAt: string | null;
     }>;
     readOnlyPreview?: boolean;
+    adminTestMode?: boolean;
     inspectProfileId?: string | null;
 }
 
@@ -246,14 +248,17 @@ export default function AgencyDashboardClient({
     stats,
     workers,
     readOnlyPreview = false,
+    adminTestMode = false,
     inspectProfileId = null,
 }: AgencyDashboardProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [search, setSearch] = useState("");
     const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
+    const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
     const [useFullPageWorkerFlow, setUseFullPageWorkerFlow] = useState(false);
     const [selectedWorker, setSelectedWorker] = useState<{ id: string; name: string } | null>(null);
+    const [selectedDocumentsWorker, setSelectedDocumentsWorker] = useState<{ id: string; name: string } | null>(null);
     const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
     const [payingWorkerId, setPayingWorkerId] = useState<string | null>(null);
     const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
@@ -357,12 +362,23 @@ export default function AgencyDashboardClient({
     }
 
     function openWorkerDocuments(worker: DashboardWorker) {
-        router.push(buildAgencyWorkerHref(`/profile/agency/workers/${worker.id}`, "documents"));
+        if (useFullPageWorkerFlow) {
+            router.push(buildAgencyWorkerHref(`/profile/agency/workers/${worker.id}/documents`));
+            return;
+        }
+
+        setSelectedDocumentsWorker({ id: worker.id, name: worker.name });
+        setIsDocumentsModalOpen(true);
     }
 
     function closeWorkerModal() {
         setSelectedWorker(null);
         setIsWorkerModalOpen(false);
+    }
+
+    function closeDocumentsModal() {
+        setSelectedDocumentsWorker(null);
+        setIsDocumentsModalOpen(false);
     }
 
     function handleLiveSave() {
@@ -795,6 +811,19 @@ export default function AgencyDashboardClient({
                     inspectProfileId={inspectProfileId}
                     onClose={closeWorkerModal}
                     onLiveSave={handleLiveSave}
+                />
+            ) : null}
+
+            {!useFullPageWorkerFlow ? (
+                <AgencyWorkerDocumentsModal
+                    open={isDocumentsModalOpen}
+                    workerId={selectedDocumentsWorker?.id || null}
+                    workerLabel={selectedDocumentsWorker?.name || null}
+                    readOnlyPreview={readOnlyPreview}
+                    adminTestMode={adminTestMode}
+                    inspectProfileId={inspectProfileId}
+                    onClose={closeDocumentsModal}
+                    onUpdated={() => router.refresh()}
                 />
             ) : null}
 

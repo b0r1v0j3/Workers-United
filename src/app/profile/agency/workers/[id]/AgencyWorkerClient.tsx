@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { BadgeCheck, CheckCircle2, CircleAlert, Clock3, CreditCard, FileCheck2, Loader2, Save, ShieldAlert, Upload } from "lucide-react";
-import { EUROPEAN_COUNTRIES, GENDER_OPTIONS, MARITAL_STATUSES, MAX_FILE_SIZE_MB, WORKER_INDUSTRIES, WORLD_COUNTRIES } from "@/lib/constants";
+import { BadgeCheck, CheckCircle2, CircleAlert, CreditCard, FileCheck2, Loader2, Save, ShieldAlert } from "lucide-react";
+import { EUROPEAN_COUNTRIES, GENDER_OPTIONS, MARITAL_STATUSES, WORKER_INDUSTRIES, WORLD_COUNTRIES } from "@/lib/constants";
 import {
     ALL_OPTION_VALUE,
     NativeDestinationSelectField,
@@ -15,14 +15,7 @@ import InternationalPhoneField from "@/components/forms/InternationalPhoneField"
 import NativeDateField from "@/components/forms/NativeDateField";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
-
-type AgencyDocType = "passport" | "biometric_photo" | "diploma";
-
-interface WorkerDocumentState {
-    document_type: string;
-    status: string | null;
-    reject_reason: string | null;
-}
+import AgencyWorkerDocumentsPanel, { type AgencyWorkerDocumentsData, type WorkerDocumentState } from "@/app/profile/agency/AgencyWorkerDocumentsPanel";
 
 interface AgencyFamilySpouse {
     first_name?: string | null;
@@ -99,11 +92,6 @@ interface AgencyWorkerClientProps {
 
 const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e4e4df] bg-white px-4 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a8479]";
-const documentDefinitions: Array<{ key: AgencyDocType; label: string; helper: string }> = [
-    { key: "passport", label: "Passport", helper: "Upload the main passport photo page." },
-    { key: "biometric_photo", label: "Biometric photo", helper: "Clear front-facing photo with a neutral background." },
-    { key: "diploma", label: "Diploma", helper: "School or university diploma for visa processing." },
-];
 const industryOptions = [
     ...WORKER_INDUSTRIES.filter((industry) => industry !== ALL_OPTION_VALUE).map((industry) => ({
         value: industry,
@@ -168,28 +156,6 @@ function hasText(value: string) {
     return value.trim().length > 0;
 }
 
-function getDocumentLabel(docType: AgencyDocType) {
-    if (docType === "biometric_photo") return "Biometric photo";
-    if (docType === "diploma") return "Diploma";
-    return "Passport";
-}
-
-function getDocumentState(status: string | null | undefined) {
-    switch (status) {
-        case "verified":
-            return { label: "Verified", icon: <CheckCircle2 size={14} />, containerClass: "border-emerald-200 bg-emerald-50/70", badgeClass: "border-emerald-200 bg-white text-emerald-700" };
-        case "manual_review":
-            return { label: "Manual review", icon: <Clock3 size={14} />, containerClass: "border-amber-200 bg-amber-50/80", badgeClass: "border-amber-200 bg-white text-amber-700" };
-        case "rejected":
-            return { label: "Rejected", icon: <ShieldAlert size={14} />, containerClass: "border-rose-200 bg-rose-50/70", badgeClass: "border-rose-200 bg-white text-rose-700" };
-        case "uploaded":
-        case "verifying":
-            return { label: status === "verifying" ? "Verifying" : "Uploaded", icon: <Loader2 size={14} className={status === "verifying" ? "animate-spin" : ""} />, containerClass: "border-sky-200 bg-sky-50/80", badgeClass: "border-sky-200 bg-white text-sky-700" };
-        default:
-            return { label: "Not uploaded", icon: <CircleAlert size={14} />, containerClass: "border-[#e8e3d7] bg-[#faf8f3]", badgeClass: "border-[#e8e3d7] bg-white text-[#6b675d]" };
-    }
-}
-
 export default function AgencyWorkerClient({
     initialWorker,
     readOnlyPreview = false,
@@ -248,14 +214,9 @@ export default function AgencyWorkerClient({
     );
     const [saving, setSaving] = useState(false);
     const [paying, setPaying] = useState(false);
-    const [uploadingDocType, setUploadingDocType] = useState<AgencyDocType | null>(null);
-    const [reviewingDocType, setReviewingDocType] = useState<AgencyDocType | null>(null);
     const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
     const handledPaymentSessionsRef = useRef<Set<string>>(new Set());
     const handledPaymentCancellationRef = useRef(false);
-    const passportInputRef = useRef<HTMLInputElement | null>(null);
-    const biometricInputRef = useRef<HTMLInputElement | null>(null);
-    const diplomaInputRef = useRef<HTMLInputElement | null>(null);
     const entryFeeUnlockState = useMemo(() => getEntryFeeUnlockState({
         entry_fee_paid: initialWorker.paymentState === "paid",
         profile_completion: initialWorker.completion,
@@ -269,6 +230,12 @@ export default function AgencyWorkerClient({
     const birthDateMinIso = useMemo(() => `${currentYear - 120}-01-01`, [currentYear]);
     const passportIssueMinIso = useMemo(() => `${currentYear - 20}-01-01`, [currentYear]);
     const passportExpiryMaxIso = useMemo(() => `${currentYear + 20}-12-31`, [currentYear]);
+    const documentsInitialData = useMemo<AgencyWorkerDocumentsData>(() => ({
+        workerId: initialWorker.id,
+        profileId: initialWorker.profileId,
+        verifiedDocuments: initialWorker.verifiedDocuments,
+        documents: initialWorker.documents,
+    }), [initialWorker.documents, initialWorker.id, initialWorker.profileId, initialWorker.verifiedDocuments]);
 
     useEffect(() => {
         const paymentState = searchParams.get("payment");
@@ -324,16 +291,6 @@ export default function AgencyWorkerClient({
 
     function updateField<Key extends keyof typeof form>(key: Key, value: (typeof form)[Key]) {
         setForm((current) => ({ ...current, [key]: value }));
-    }
-
-    function getDocument(docType: AgencyDocType) {
-        return initialWorker.documents.find((document) => document.document_type === docType);
-    }
-
-    function getInputRef(docType: AgencyDocType) {
-        if (docType === "passport") return passportInputRef;
-        if (docType === "biometric_photo") return biometricInputRef;
-        return diplomaInputRef;
     }
 
     async function handleSave() {
@@ -444,81 +401,6 @@ export default function AgencyWorkerClient({
         } catch (error) {
             setPaying(false);
             toast.error(error instanceof Error ? error.message : "Failed to start payment.");
-        }
-    }
-
-    async function handleDocumentSelected(docType: AgencyDocType, fileList: FileList | null) {
-        if (readOnlyPreview) {
-            toast.info("Admin preview is read-only.");
-            return;
-        }
-        const file = fileList?.[0] || null;
-        const inputRef = getInputRef(docType);
-        if (inputRef.current) inputRef.current.value = "";
-        if (!file) return;
-        if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-            toast.error(`File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
-            return;
-        }
-
-        setUploadingDocType(docType);
-        try {
-            const uploadFormData = new FormData();
-            uploadFormData.set("docType", docType);
-            uploadFormData.set("file", file);
-            const uploadResponse = await fetch(`/api/agency/workers/${initialWorker.id}/documents`, { method: "POST", body: uploadFormData });
-            const uploadData = await uploadResponse.json();
-            if (!uploadResponse.ok) throw new Error(uploadData.error || "Failed to upload document.");
-
-            if (adminTestMode) {
-                toast.success(uploadData.message || `${getDocumentLabel(docType)} uploaded in sandbox.`);
-            } else {
-                const verifyResponse = await fetch("/api/verify-document", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ workerId: initialWorker.profileId || initialWorker.id, docType }),
-                });
-                const verifyData = await verifyResponse.json();
-                if (!verifyResponse.ok) throw new Error(verifyData.error || "Failed to verify document.");
-                if (verifyData.success) toast.success(verifyData.message || `${getDocumentLabel(docType)} verified successfully.`);
-                else toast.error(verifyData.message || verifyData.error || `${getDocumentLabel(docType)} needs attention.`);
-                if (verifyData.reviewQueued) {
-                    toast.info("All required documents are in. This profile is now waiting for admin review.");
-                }
-            }
-            router.refresh();
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Failed to upload document.");
-        } finally {
-            setUploadingDocType(null);
-        }
-    }
-
-    async function handleManualReview(docType: AgencyDocType) {
-        if (readOnlyPreview) {
-            toast.info("Admin preview is read-only.");
-            return;
-        }
-        if (adminTestMode) {
-            toast.info("Sandbox uploads are auto-verified, so manual review is not needed here.");
-            return;
-        }
-        setReviewingDocType(docType);
-        try {
-            const response = await fetch("/api/documents/request-review", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ workerId: initialWorker.profileId || initialWorker.id, docType }),
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Could not request manual review.");
-            if (data.state === "already_pending") toast.info("Manual review was already requested for this document.");
-            else toast.success("Sent for admin review.");
-            router.refresh();
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Could not request manual review.");
-        } finally {
-            setReviewingDocType(null);
         }
     }
 
@@ -964,51 +846,14 @@ export default function AgencyWorkerClient({
                         )}
                     </aside>
 
-                    <aside className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h2 className="text-lg font-semibold text-[#18181b]">Document Actions</h2>
-                                <p className="mt-1 text-sm text-[#57534e]">Upload, replace, and escalate worker documents from the agency workspace.</p>
-                            </div>
-                            <div className="rounded-full border border-[#ece7da] bg-[#faf8f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b675d]">{initialWorker.verifiedDocuments}/3 verified</div>
-                        </div>
-                        <div className="mt-4 space-y-3">
-                            {documentDefinitions.map((documentDefinition) => {
-                                const document = getDocument(documentDefinition.key);
-                                const documentState = getDocumentState(document?.status);
-                                const isUploading = uploadingDocType === documentDefinition.key;
-                                const isReviewing = reviewingDocType === documentDefinition.key;
-                                return (
-                                    <div key={documentDefinition.key} className={`rounded-2xl border px-4 py-4 ${documentState.containerClass}`}>
-                                        <input ref={getInputRef(documentDefinition.key)} type="file" accept="image/*,.pdf" className="hidden" onChange={(event) => void handleDocumentSelected(documentDefinition.key, event.target.files)} />
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <div className="text-sm font-semibold text-[#18181b]">{documentDefinition.label}</div>
-                                                <div className="mt-1 text-sm text-[#57534e]">{documentDefinition.helper}</div>
-                                            </div>
-                                            <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${documentState.badgeClass}`}>{documentState.icon}{documentState.label}</div>
-                                        </div>
-                                        {document?.reject_reason && <p className="mt-3 rounded-2xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-rose-800">{document.reject_reason}</p>}
-                                        {readOnlyPreview ? <p className="mt-3 text-sm text-blue-800">Document actions are disabled in admin preview.</p> : (
-                                            <div className="mt-4 flex flex-col gap-2">
-                                                {adminTestMode ? <p className="text-sm text-[#7c6f5d]">Sandbox uploads go into isolated admin test storage and auto-verify immediately for mobile flow testing.</p> : null}
-                                                <button type="button" onClick={() => getInputRef(documentDefinition.key).current?.click()} disabled={isUploading || isReviewing} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#ddd6c8] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3] disabled:cursor-not-allowed disabled:opacity-60">
-                                                    {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                                                    {isUploading ? "Uploading..." : document ? "Replace document" : "Upload document"}
-                                                </button>
-                                                {!adminTestMode && document?.status === "rejected" && (
-                                                    <button type="button" onClick={() => void handleManualReview(documentDefinition.key)} disabled={isUploading || isReviewing} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#f0d9a8] bg-[#fff8df] px-4 py-3 text-sm font-semibold text-[#7a5b00] transition hover:bg-[#fff3c1] disabled:cursor-not-allowed disabled:opacity-60">
-                                                        {isReviewing ? <Loader2 size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
-                                                        {isReviewing ? "Sending..." : "Request manual review"}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </aside>
+                    <div id="documents">
+                        <AgencyWorkerDocumentsPanel
+                            workerId={initialWorker.id}
+                            initialData={documentsInitialData}
+                            readOnlyPreview={readOnlyPreview}
+                            adminTestMode={adminTestMode}
+                        />
+                    </div>
                 </div>
             </section>
         </div>

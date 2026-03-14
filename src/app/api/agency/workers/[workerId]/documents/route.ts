@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminTestSession } from "@/lib/admin-test-mode";
 import {
     getAdminTestAgencyWorker,
+    getAdminTestAgencyWorkerDocuments,
     uploadAdminTestAgencyWorkerDocument,
 } from "@/lib/admin-test-data";
 import { getAgencyOwnedWorker, getAgencySchemaState } from "@/lib/agencies";
@@ -18,6 +19,92 @@ const ALLOWED_DOC_TYPES = new Set(["passport", "biometric_photo", "diploma"]);
 
 interface RouteContext {
     params: Promise<{ workerId: string }>;
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+    try {
+        const { workerId } = await context.params;
+        const supabase = await createClient();
+        const admin = createAdminClient();
+        const adminTestSession = await getAdminTestSession({ supabase, admin, ensurePersonas: true });
+
+        if (!adminTestSession.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        if (adminTestSession.activePersona?.role === "agency") {
+            const sandboxWorker = await getAdminTestAgencyWorker(admin, adminTestSession.activePersona.id, workerId);
+            if (!sandboxWorker) {
+                return NextResponse.json({ error: "Worker not found" }, { status: 404 });
+            }
+
+            const documents = await getAdminTestAgencyWorkerDocuments(admin, adminTestSession.activePersona.id, workerId);
+
+            return NextResponse.json({
+                worker: {
+                    workerId,
+                    profileId: null,
+                    verifiedDocuments: (documents || []).filter((document) => document.status === "verified").length,
+                    documents: documents || [],
+                },
+                sandbox: true,
+            });
+        }
+
+        const schemaState = await getAgencySchemaState(admin);
+        if (!schemaState.ready) {
+            return NextResponse.json({ error: "Agency workspace setup is not active yet." }, { status: 503 });
+        }
+
+        const user = adminTestSession.user;
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { data: profile } = await admin
+            .from("profiles")
+            .select("user_type")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        const userType = normalizeUserType(profile?.user_type || user.user_metadata?.user_type);
+        const inspectProfileId = userType === "admin"
+            ? request.nextUrl.searchParams.get("inspect")?.trim() || null
+            : null;
+
+        if (userType !== "agency" && !(userType === "admin" && inspectProfileId)) {
+            return NextResponse.json({ error: "Agency access required" }, { status: 403 });
+        }
+
+        const targetAgencyProfileId = userType === "agency" ? user.id : inspectProfileId;
+        const { worker } = await getAgencyOwnedWorker(admin, targetAgencyProfileId || user.id, workerId);
+        if (!worker) {
+            return NextResponse.json({ error: "Worker not found" }, { status: 404 });
+        }
+
+        const documentOwnerId = worker.profile_id || worker.id;
+        const { data: documents, error: documentsError } = await admin
+            .from("worker_documents")
+            .select("document_type, status, reject_reason")
+            .eq("user_id", documentOwnerId);
+
+        if (documentsError) {
+            console.error("[AgencyWorkerDocuments GET] Document fetch failed:", documentsError);
+            return NextResponse.json({ error: "Failed to load worker documents" }, { status: 500 });
+        }
+
+        return NextResponse.json({
+            worker: {
+                workerId: worker.id,
+                profileId: worker.profile_id || null,
+                verifiedDocuments: (documents || []).filter((document) => document.status === "verified").length,
+                documents: documents || [],
+            },
+        });
+    } catch (error) {
+        console.error("[AgencyWorkerDocuments GET] Error:", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
