@@ -191,7 +191,7 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className={`flex-1 min-w-0 w-full animate-fade-in-up px-4 pb-10 pt-2 transition-all duration-300 sm:px-6 sm:pt-4 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
+                <main className={`flex-1 min-w-0 w-full animate-fade-in-up px-5 pb-10 pt-2 transition-all duration-300 sm:px-6 sm:pt-4 lg:pl-6 lg:pr-8 ${mainOffsetClass}`}>
                     {(isAdminPreview || isAdminTestMode) && (
                         <div className={`mb-4 flex flex-col gap-3 rounded-2xl px-3.5 py-3.5 text-sm md:flex-row md:items-center md:justify-between md:px-4 md:py-4 ${
                             isAdminTestMode
@@ -225,7 +225,7 @@ export default function AppShell({ children, user, variant = "dashboard", adminT
                         </div>
                     )}
                     {variant === 'admin' && <AdminBreadcrumbs />}
-                    <div className="mx-auto w-full max-w-[1220px]">
+                    <div className="mx-auto w-full max-w-[1220px] px-1 sm:px-0">
                         {children}
                     </div>
                 </main>

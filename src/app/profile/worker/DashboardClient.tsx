@@ -71,7 +71,7 @@ interface DashboardClientProps {
     readOnlyPreview?: boolean;
 }
 
-const surfaceClass = "relative rounded-none border-0 bg-transparent px-0 pt-5 shadow-none before:absolute before:left-2 before:right-2 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_20px_45px_-36px_rgba(15,23,42,0.18)] sm:before:hidden";
+const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_20px_45px_-36px_rgba(15,23,42,0.18)] sm:before:hidden";
 
 export default function DashboardClient({
     user,
@@ -160,7 +160,7 @@ export default function DashboardClient({
 
     return (
         <div className="space-y-6">
-            <section className="relative overflow-visible rounded-none border-0 bg-transparent p-0 shadow-none sm:overflow-hidden sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_30px_70px_-52px_rgba(15,23,42,0.18)]">
+            <section className="relative overflow-visible rounded-none border-0 bg-transparent px-1 py-0 shadow-none sm:overflow-hidden sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_30px_70px_-52px_rgba(15,23,42,0.18)]">
                 <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-2xl">
                         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
