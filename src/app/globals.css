@@ -156,6 +156,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   margin-left: auto;
 }
 
+select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+}
+
 a {
   color: inherit;
   text-decoration: none;
