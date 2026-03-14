@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, Loader2, Pencil, Save, UserPlus, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2, Pencil, Save, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
     EUROPEAN_COUNTRIES,
@@ -113,6 +113,7 @@ interface Props {
     workerLabel?: string | null;
     readOnlyPreview: boolean;
     inspectProfileId?: string | null;
+    standalone?: boolean;
     onClose: () => void;
     onLiveSave: (workerId: string) => void;
 }
@@ -314,6 +315,7 @@ export default function AgencyWorkerCreateModal({
     workerLabel = null,
     readOnlyPreview,
     inspectProfileId = null,
+    standalone = false,
     onClose,
     onLiveSave,
 }: Props) {
@@ -327,13 +329,13 @@ export default function AgencyWorkerCreateModal({
     const [showClosePrompt, setShowClosePrompt] = useState(false);
 
     useEffect(() => {
-        if (!open || typeof document === "undefined") return;
+        if (!open || standalone || typeof document === "undefined") return;
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
         return () => {
             document.body.style.overflow = previousOverflow;
         };
-    }, [open]);
+    }, [open, standalone]);
 
     const payload = useMemo(() => buildPayload(form, hasSpouse, spouse, hasChildren, children), [children, form, hasChildren, hasSpouse, spouse]);
     const pristinePayload = useMemo(
@@ -348,6 +350,58 @@ export default function AgencyWorkerCreateModal({
     );
     const [initialPayload, setInitialPayload] = useState<AgencyWorkerModalPayload>(pristinePayload);
     const isDirty = JSON.stringify(payload) !== JSON.stringify(initialPayload);
+    const modeLabel = readOnlyPreview ? "Admin preview" : workerId ? "Edit worker" : "Add worker";
+    const title = workerId ? `Edit ${workerLabel || "worker"}` : "Add worker";
+    const description = standalone
+        ? readOnlyPreview
+            ? "Inspect the full worker form on its own page so every field stays visible on smaller screens. Changes are discarded when you go back."
+            : workerId
+                ? "Update this worker draft on its own page so every field stays visible on smaller screens. Email and phone stay optional unless the worker should receive notifications."
+                : "Fill the full worker form on its own page so every field stays visible on smaller screens. Email and phone stay optional unless the worker should receive notifications."
+        : readOnlyPreview
+            ? "Inspect the full worker form here without leaving the workspace. Changes are discarded when you close this preview."
+            : workerId
+                ? "Update this worker draft here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications."
+                : "Fill the full worker form here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications.";
+    const helperCopy = standalone
+        ? readOnlyPreview
+            ? "Email and phone are optional. This preview opens as a full page so every field stays visible on smaller screens."
+            : workerId
+                ? "Email and phone are optional. This full-page form keeps every field visible on smaller screens while you update the worker draft."
+                : "Email and phone are optional. This full-page form keeps every field visible on smaller screens while you create the worker draft."
+        : readOnlyPreview
+            ? "Email and phone are optional. This preview shows the real worker intake structure without creating preview rows or drafts."
+            : workerId
+                ? "Email and phone are optional. Edit them only if this worker should receive notifications."
+                : "Email and phone are optional. Add them only if the worker should receive notifications.";
+    const footerCopy = standalone
+        ? readOnlyPreview
+            ? "This preview does not save draft workers."
+            : workerId
+                ? "Saving updates this worker draft and returns you to the agency dashboard."
+                : "Saving creates the worker draft and returns you to the agency dashboard."
+        : readOnlyPreview
+            ? "This preview does not save draft workers."
+            : workerId
+                ? "Saving updates this worker draft and keeps you on the dashboard."
+                : "Saving creates the worker draft and keeps you on the dashboard.";
+    const secondarySaveLabel = standalone
+        ? workerId ? "Save draft" : "Create worker"
+        : workerId ? "Save changes" : "Save worker";
+    const primarySaveLabel = standalone
+        ? workerId ? "Save and return" : "Create and return"
+        : workerId ? "Save changes and close" : "Save and close";
+    const closeButtonLabel = standalone ? "Back" : "Close";
+    const closeAriaLabel = standalone ? "Back to agency dashboard" : "Close worker modal";
+    const overlayClass = standalone
+        ? "relative"
+        : "fixed inset-0 z-[120] flex items-stretch justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 backdrop-blur-[2px] sm:items-center sm:px-4 sm:py-5";
+    const panelClass = standalone
+        ? "relative flex min-h-[calc(100dvh-132px)] w-full flex-col overflow-hidden bg-white sm:rounded-[34px] sm:border sm:border-[#e5e7eb] sm:shadow-[0_44px_140px_-64px_rgba(15,23,42,0.18)]"
+        : "relative flex h-[100dvh] max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-none border border-[#e5e7eb] bg-white shadow-[0_44px_140px_-64px_rgba(15,23,42,0.35)] sm:h-[90vh] sm:max-h-[90vh] sm:rounded-[34px]";
+    const closePromptOverlayClass = standalone
+        ? "fixed inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6"
+        : "absolute inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6";
 
     useEffect(() => {
         if (!open) return;
@@ -471,33 +525,40 @@ export default function AgencyWorkerCreateModal({
 
     return (
         <div
-            className="fixed inset-0 z-[120] flex items-stretch justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 backdrop-blur-[2px] sm:items-center sm:px-4 sm:py-5"
-            onClick={requestClose}
+            className={overlayClass}
+            onClick={standalone ? undefined : requestClose}
         >
             <div
-                className="relative flex h-[100dvh] max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-none border border-[#e5e7eb] bg-white shadow-[0_44px_140px_-64px_rgba(15,23,42,0.35)] sm:h-[90vh] sm:max-h-[90vh] sm:rounded-[34px]"
-                onClick={(event) => event.stopPropagation()}
+                className={panelClass}
+                onClick={standalone ? undefined : (event) => event.stopPropagation()}
             >
                 <div className="border-b border-[#ececec] bg-white px-4 py-4 sm:px-6 sm:py-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 max-w-3xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
                                 {workerId ? <Pencil size={14} /> : <UserPlus size={14} />}
-                                {readOnlyPreview ? "Admin preview" : workerId ? "Edit worker" : "Add worker"}
+                                {modeLabel}
                             </div>
                             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
-                                {workerId ? `Edit ${workerLabel || "worker"}` : "Add worker"}
+                                {title}
                             </h2>
                             <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                {readOnlyPreview
-                                    ? "Inspect the full worker form here without leaving the workspace. Changes are discarded when you close this preview."
-                                    : workerId
-                                        ? "Update this worker draft here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications."
-                                        : "Fill the full worker form here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications."}
+                                {description}
                             </p>
                         </div>
 
                         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+                            <button
+                                type="button"
+                                onClick={requestClose}
+                                className={standalone
+                                    ? "inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] sm:w-auto"
+                                    : "inline-flex h-12 w-12 self-end items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-[#111827] transition hover:bg-[#fafafa] sm:self-auto"}
+                                aria-label={closeAriaLabel}
+                            >
+                                {standalone ? <ArrowLeft size={16} /> : <X size={18} />}
+                                {standalone ? closeButtonLabel : null}
+                            </button>
                             {readOnlyPreview ? (
                                 <div className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-sm font-semibold text-[#6b7280] sm:w-auto">
                                     Preview only
@@ -510,17 +571,9 @@ export default function AgencyWorkerCreateModal({
                                     className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    {workerId ? "Save changes" : "Save worker"}
+                                    {secondarySaveLabel}
                                 </button>
                             )}
-                            <button
-                                type="button"
-                                onClick={requestClose}
-                                className="inline-flex h-12 w-12 self-end items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-[#111827] transition hover:bg-[#fafafa] sm:self-auto"
-                                aria-label="Close worker modal"
-                            >
-                                <X size={18} />
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -536,11 +589,7 @@ export default function AgencyWorkerCreateModal({
                     ) : (
                         <div className="mx-auto max-w-[920px] space-y-6">
                         <div className="rounded-[24px] border border-[#e5e7eb] bg-white px-5 py-4 text-sm leading-relaxed text-[#4b5563]">
-                            {readOnlyPreview
-                                ? "Email and phone are optional. This preview shows the real worker intake structure without creating preview rows or drafts."
-                                : workerId
-                                    ? "Email and phone are optional. Edit them only if this worker should receive notifications."
-                                    : "Email and phone are optional. Add them only if the worker should receive notifications."}
+                            {helperCopy}
                         </div>
 
                         <Section title="Identity">
@@ -838,11 +887,7 @@ export default function AgencyWorkerCreateModal({
                 <div className="border-t border-[#ececec] bg-white px-4 py-4 sm:px-6">
                     <div className="mx-auto flex max-w-[920px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="max-w-2xl text-sm text-[#6b7280]">
-                            {readOnlyPreview
-                                ? "This preview does not save draft workers."
-                                : workerId
-                                    ? "Saving updates this worker draft and keeps you on the dashboard."
-                                    : "Saving creates the worker draft and keeps you on the dashboard."}
+                            {footerCopy}
                         </div>
                         <div className="flex flex-col-reverse gap-3 sm:flex-row">
                             <button
@@ -850,7 +895,7 @@ export default function AgencyWorkerCreateModal({
                                 onClick={requestClose}
                                 className="w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-center text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] sm:w-auto"
                             >
-                                Close
+                                {standalone ? "Back to dashboard" : "Close"}
                             </button>
                             {!readOnlyPreview && (
                                 <button
@@ -860,7 +905,7 @@ export default function AgencyWorkerCreateModal({
                                     className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#111111] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    {workerId ? "Save changes and close" : "Save and close"}
+                                    {primarySaveLabel}
                                 </button>
                             )}
                         </div>
@@ -870,7 +915,7 @@ export default function AgencyWorkerCreateModal({
 
             {showClosePrompt && (
                 <div
-                    className="absolute inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6"
+                    className={closePromptOverlayClass}
                     onClick={() => setShowClosePrompt(false)}
                 >
                     <div
@@ -902,7 +947,7 @@ export default function AgencyWorkerCreateModal({
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#111111] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    {workerId ? "Save changes and close" : "Save and close"}
+                                    {primarySaveLabel}
                                 </button>
                             )}
                             <button
