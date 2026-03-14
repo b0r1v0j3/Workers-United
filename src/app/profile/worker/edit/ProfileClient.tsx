@@ -723,7 +723,7 @@ export default function ProfilePage({
         <div className="w-full">
             <div className="w-full">
                 <form onSubmit={handleSubmit}>
-                    <fieldset disabled={saving || readOnlyPreview} className="space-y-4">
+                    <fieldset disabled={saving || readOnlyPreview} className="flex flex-col gap-4">
                         <Section title="Identity">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <Field label={<>First Name <span className="text-red-500">*</span></>}>
@@ -915,7 +915,7 @@ export default function ProfilePage({
                         </Section>
 
                         {/* • • • • • • • • • • • • • • •  Family Information Card • • • • • • • • • • • • • • •  */}
-                        <div className={sectionCardClass}>
+                        <div className={`${sectionCardClass} order-5`}>
                             <div className="px-1">
                                 <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Family</h2>
                             </div>
@@ -1086,7 +1086,7 @@ export default function ProfilePage({
                         </div>
 
                         {/* • • • • • • • • • • • • • • •  Passport & Travel Card • • • • • • • • • • • • • • •  */}
-                        <div className={sectionCardClass}>
+                        <div className={`${sectionCardClass} order-3`}>
                             <div className="px-1">
                                 <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Passport & Travel</h2>
                             </div>
@@ -1180,7 +1180,7 @@ export default function ProfilePage({
                         </div>
 
                         {/* • • • • • • • • • • • • • • •  Job Preferences Card • • • • • • • • • • • • • • •  */}
-                        <div className={sectionCardClass}>
+                        <div className={`${sectionCardClass} order-4`}>
                             <div className="px-1">
                                 <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Job Preferences</h2>
                             </div>
