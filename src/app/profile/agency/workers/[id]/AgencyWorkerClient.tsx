@@ -115,6 +115,13 @@ function normalizeDateInput(value: string | null | undefined) {
     return value ? value.split("T")[0] || "" : "";
 }
 
+function getLocalDateInputValue(date: Date) {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, "0");
+    const day = `${date.getDate()}`.padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
 function normalizeFamilyData(value: unknown): AgencyFamilyData {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
         return {};
@@ -233,6 +240,9 @@ export default function AgencyWorkerClient({
     const diplomaInputRef = useRef<HTMLInputElement | null>(null);
     const hasWorkerAccount = adminTestMode || (initialWorker.claimed && Boolean(initialWorker.profileId));
     const canStartEntryPayment = initialWorker.paymentLabel !== "Paid";
+    const today = useMemo(() => new Date(), []);
+    const maxPastDate = useMemo(() => getLocalDateInputValue(today), [today]);
+    const maxPassportExpiryDate = useMemo(() => `${today.getFullYear() + 20}-12-31`, [today]);
 
     useEffect(() => {
         const paymentState = searchParams.get("payment");
@@ -540,7 +550,7 @@ export default function AgencyWorkerClient({
                                     {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
                                 </select>
                             </Field>
-                            <Field label="Date of Birth"><input className={inputClass} type="date" value={form.dateOfBirth} onChange={(event) => updateField("dateOfBirth", event.target.value)} /></Field>
+                            <Field label="Date of Birth"><input className={inputClass} type="date" max={maxPastDate} value={form.dateOfBirth} onChange={(event) => updateField("dateOfBirth", event.target.value)} /></Field>
                             <Field label="Gender">
                                 <select className={inputClass} value={form.gender} onChange={(event) => updateField("gender", event.target.value)}>
                                     <option value="">Select gender</option>
@@ -672,7 +682,7 @@ export default function AgencyWorkerClient({
                                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                                         <Field label="Spouse First Name"><input className={inputClass} value={spouseData.first_name} onChange={(event) => setSpouseData((current) => ({ ...current, first_name: event.target.value }))} /></Field>
                                         <Field label="Spouse Last Name"><input className={inputClass} value={spouseData.last_name} onChange={(event) => setSpouseData((current) => ({ ...current, last_name: event.target.value }))} /></Field>
-                                        <Field label="Spouse Date of Birth"><input className={inputClass} type="date" value={spouseData.dob} onChange={(event) => setSpouseData((current) => ({ ...current, dob: event.target.value }))} /></Field>
+                                        <Field label="Spouse Date of Birth"><input className={inputClass} type="date" max={maxPastDate} value={spouseData.dob} onChange={(event) => setSpouseData((current) => ({ ...current, dob: event.target.value }))} /></Field>
                                         <Field label="Spouse Birth Country">
                                             <select className={inputClass} value={spouseData.birth_country} onChange={(event) => setSpouseData((current) => ({ ...current, birth_country: event.target.value }))}>
                                                 <option value="">Select birth country</option>
@@ -704,7 +714,7 @@ export default function AgencyWorkerClient({
                                                 <div className="grid gap-4 md:grid-cols-3">
                                                     <Field label={`Child ${index + 1} First Name`}><input className={inputClass} value={child.first_name} onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, first_name: event.target.value } : item))} /></Field>
                                                     <Field label="Last Name"><input className={inputClass} value={child.last_name} onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, last_name: event.target.value } : item))} /></Field>
-                                                    <Field label="Date of Birth"><input className={inputClass} type="date" value={child.dob} onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, dob: event.target.value } : item))} /></Field>
+                                                    <Field label="Date of Birth"><input className={inputClass} type="date" max={maxPastDate} value={child.dob} onChange={(event) => setChildren((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, dob: event.target.value } : item))} /></Field>
                                                 </div>
                                             </div>
                                         ))}
@@ -723,8 +733,8 @@ export default function AgencyWorkerClient({
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label="Passport Number"><input className={inputClass} value={form.passportNumber} onChange={(event) => updateField("passportNumber", event.target.value)} /></Field>
                             <Field label="Passport Issued By"><input className={inputClass} value={form.passportIssuedBy} onChange={(event) => updateField("passportIssuedBy", event.target.value)} /></Field>
-                            <Field label="Passport Issue Date"><input className={inputClass} type="date" value={form.passportIssueDate} onChange={(event) => updateField("passportIssueDate", event.target.value)} /></Field>
-                            <Field label="Passport Expiry Date"><input className={inputClass} type="date" value={form.passportExpiryDate} onChange={(event) => updateField("passportExpiryDate", event.target.value)} /></Field>
+                            <Field label="Passport Issue Date"><input className={inputClass} type="date" max={maxPastDate} value={form.passportIssueDate} onChange={(event) => updateField("passportIssueDate", event.target.value)} /></Field>
+                            <Field label="Passport Expiry Date"><input className={inputClass} type="date" min={maxPastDate} max={maxPassportExpiryDate} value={form.passportExpiryDate} onChange={(event) => updateField("passportExpiryDate", event.target.value)} /></Field>
                             <Field label="Lives Abroad">
                                 <select className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)}>
                                     <option value="">Select answer</option>
