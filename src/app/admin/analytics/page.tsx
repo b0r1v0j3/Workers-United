@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, Users, FileCheck, Briefcase, Shield, Calendar } from "lucide-react";
+import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { RegistrationsChart, RevenueChart } from "@/components/admin/AnalyticsCharts";
 
 interface FunnelData {
@@ -139,15 +140,16 @@ export default function AnalyticsPage() {
                 {/* Period Filter */}
                 <div className="flex items-center gap-2 bg-white border border-[#dddfe2] rounded-lg px-3 py-2">
                     <Calendar size={16} className="text-[#65676b]" />
-                    <select
+                    <AdaptiveSelect
                         value={period}
                         onChange={(e) => setPeriod(e.target.value as Period)}
                         className="text-sm font-medium text-[#050505] bg-transparent border-none outline-none cursor-pointer"
+                        desktopSearchThreshold={999}
                     >
                         {Object.entries(PERIOD_LABELS).map(([key, label]) => (
                             <option key={key} value={key}>{label}</option>
                         ))}
-                    </select>
+                    </AdaptiveSelect>
                 </div>
             </div>
 

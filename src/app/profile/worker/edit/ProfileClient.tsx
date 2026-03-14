@@ -14,6 +14,7 @@ import {
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import NativeDateField from "@/components/forms/NativeDateField";
+import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { WORLD_COUNTRIES, WORKER_INDUSTRIES, MARITAL_STATUSES, GENDER_OPTIONS, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import { logActivity, logError } from "@/lib/activityLogger";
@@ -766,38 +767,40 @@ export default function ProfilePage({
                                     />
                                 </Field>
                                 <Field label={<>Nationality <span className="text-red-500">*</span></>}>
-                                    <select
+                                    <AdaptiveSelect
                                         name="nationality"
                                         value={formData.nationality}
                                         onChange={handleChange}
                                         className={inputClass}
+                                        desktopSearchPlaceholder="Search nationality"
                                     >
                                         <option value="">Select nationality</option>
                                         {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label={<>Current Country <span className="text-red-500">*</span></>}>
-                                    <select
+                                    <AdaptiveSelect
                                         name="current_country"
                                         value={formData.current_country}
                                         onChange={handleChange}
                                         className={inputClass}
+                                        desktopSearchPlaceholder="Search country"
                                     >
                                         <option value="">Select current country</option>
                                         {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label={<>Gender <span className="text-red-500">*</span></>}>
-                                    <select name="gender" value={formData.gender} onChange={handleChange} className={inputClass}>
+                                    <AdaptiveSelect name="gender" value={formData.gender} onChange={handleChange} className={inputClass} desktopSearchThreshold={999}>
                                         <option value="">Select gender</option>
                                         {GENDER_OPTIONS.map(g => (<option key={g} value={g}>{g}</option>))}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label={<>Marital Status <span className="text-red-500">*</span></>}>
-                                    <select name="marital_status" value={formData.marital_status} onChange={handleChange} className={inputClass}>
+                                    <AdaptiveSelect name="marital_status" value={formData.marital_status} onChange={handleChange} className={inputClass} desktopSearchThreshold={999}>
                                         <option value="">Select status</option>
                                         {MARITAL_STATUSES.map(s => (<option key={s} value={s}>{s}</option>))}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label={<>Date of Birth <span className="text-red-500">*</span></>}>
                                     <NativeDateField
@@ -825,10 +828,10 @@ export default function ProfilePage({
                         <Section title="Birth & Citizenship">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <Field label={<>Country of Birth <span className="text-red-500">*</span></>}>
-                                    <select name="birth_country" value={formData.birth_country} onChange={handleChange} className={inputClass}>
+                                    <AdaptiveSelect name="birth_country" value={formData.birth_country} onChange={handleChange} className={inputClass} desktopSearchPlaceholder="Search birth country">
                                         <option value="">Select birth country</option>
                                         {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label={<>City of Birth <span className="text-red-500">*</span></>}>
                                     <input
@@ -841,10 +844,10 @@ export default function ProfilePage({
                                     />
                                 </Field>
                                 <Field label={<>Current Citizenship <span className="text-red-500">*</span></>}>
-                                    <select name="citizenship" value={formData.citizenship} onChange={handleChange} className={inputClass}>
+                                    <AdaptiveSelect name="citizenship" value={formData.citizenship} onChange={handleChange} className={inputClass} desktopSearchPlaceholder="Search citizenship">
                                         <option value="">Select citizenship</option>
                                         {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field
                                     label="Maiden Name"
@@ -899,15 +902,16 @@ export default function ProfilePage({
                             {!formData.original_citizenship_same && (
                                 <div className="mt-4">
                                     <Field label="Original Citizenship">
-                                        <select
+                                        <AdaptiveSelect
                                             name="original_citizenship"
                                             value={formData.original_citizenship}
                                             onChange={handleChange}
                                             className={inputClass}
+                                            desktopSearchPlaceholder="Search original citizenship"
                                         >
                                             <option value="">Select original citizenship</option>
                                             {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                        </select>
+                                        </AdaptiveSelect>
                                     </Field>
                                 </div>
                             )}
@@ -973,14 +977,15 @@ export default function ProfilePage({
                                             </div>
                                             <div>
                                                 <label className={labelClass}>Country of Birth</label>
-                                                <select
+                                                <AdaptiveSelect
                                                     value={spouseData.birth_country}
                                                     onChange={(e) => setSpouseData(prev => ({ ...prev, birth_country: e.target.value }))}
                                                     className={inputClass}
+                                                    desktopSearchPlaceholder="Search birth country"
                                                 >
                                                     <option value="">Select...</option>
                                                     {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                                </select>
+                                                </AdaptiveSelect>
                                             </div>
                                             <div>
                                                 <label className={labelClass}>City of Birth</label>
@@ -1158,21 +1163,21 @@ export default function ProfilePage({
                                         <label className={labelClass}>
                                             Do you live outside your home country? <span className="text-red-500">*</span>
                                         </label>
-                                        <select name="lives_abroad" value={formData.lives_abroad} onChange={handleChange} className={inputClass}>
+                                        <AdaptiveSelect name="lives_abroad" value={formData.lives_abroad} onChange={handleChange} className={inputClass} desktopSearchThreshold={999}>
                                             <option value="">Select...</option>
                                             <option value="No">No</option>
                                             <option value="Yes">Yes</option>
-                                        </select>
+                                        </AdaptiveSelect>
                                     </div>
                                     <div>
                                         <label className={labelClass}>
                                             Have you had any visas in the last 3 years? <span className="text-red-500">*</span>
                                         </label>
-                                        <select name="previous_visas" value={formData.previous_visas} onChange={handleChange} className={inputClass}>
+                                        <AdaptiveSelect name="previous_visas" value={formData.previous_visas} onChange={handleChange} className={inputClass} desktopSearchThreshold={999}>
                                             <option value="">Select...</option>
                                             <option value="No">No</option>
                                             <option value="Yes">Yes</option>
-                                        </select>
+                                        </AdaptiveSelect>
                                     </div>
                                 </div>
                             </div>
@@ -1188,18 +1193,19 @@ export default function ProfilePage({
                                     <label className={labelClass}>
                                         Preferred Job / Industry <span className="text-red-500">*</span>
                                     </label>
-                                    <select
+                                    <AdaptiveSelect
                                         name="preferred_job"
                                         value={normalizePreferredJobValue(formData.preferred_job, false)}
                                         onChange={handleChange}
                                         className={inputClass}
+                                        desktopSearchPlaceholder="Search industries"
                                     >
                                         <option value="">Select industries</option>
                                         <option value={ALL_OPTION_VALUE}>All industries</option>
                                         {workerIndustryOptions.map((option) => (
                                             <option key={option.value} value={option.value}>{option.label}</option>
                                         ))}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </div>
 
                                 <div>

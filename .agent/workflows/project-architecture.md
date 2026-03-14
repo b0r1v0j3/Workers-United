@@ -100,9 +100,10 @@ Workers-United/
 │   ├── components/
 │   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), agency `Support` nav linked to `/profile/agency/inbox`, inspect-query preservation across admin previews, safe routing back to /admin, direct `Exceptions` + `Email Health` admin navigation, a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
+│   │   ├── forms/AdaptiveSelect.tsx # Shared adaptive select: native `<select>` on mobile, modern custom popover/listbox on desktop, used across worker/employer/agency/admin forms and desktop calendar month/year controls
 │   │   ├── forms/PreferenceSheetField.tsx # Shared native-select preference helpers for worker/agency preference fields; keeps legacy `Any` storage compatibility while surfacing `All industries` / `All destinations` in the UI and allows shorter display labels (e.g. `Bosnia & Herzegovina`) without changing stored values
 │   │   ├── forms/InternationalPhoneField.tsx # Shared modern phone input shell (flag + calling code + searchable picker) used across worker/employer/agency forms
-│   │   ├── forms/NativeDateField.tsx # Shared compact native-date trigger field used by agency add/edit worker forms so mobile date inputs stay within viewport width while still opening the iPhone picker
+│   │   ├── forms/NativeDateField.tsx # Shared compact date field: mobile keeps the native iPhone/Android picker, desktop opens a custom calendar popover and now delegates month/year dropdown styling to `AdaptiveSelect`
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply

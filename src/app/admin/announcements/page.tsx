@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
+import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { queueEmail } from "@/lib/email-templates";
 import { revalidatePath } from "next/cache";
 
@@ -106,11 +107,16 @@ export default async function AnnouncementsPage() {
 
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Target Audience</label>
-                            <select name="target" className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <AdaptiveSelect
+                                name="target"
+                                defaultValue="workers"
+                                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                desktopSearchThreshold={999}
+                            >
                                 <option value="workers">All Workers</option>
                                 <option value="employers">All Employers</option>
                                 <option value="all">Everyone (Workers + Employers)</option>
-                            </select>
+                            </AdaptiveSelect>
                         </div>
 
                         <div>

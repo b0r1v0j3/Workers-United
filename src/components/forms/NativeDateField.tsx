@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import AdaptiveSelect from "./AdaptiveSelect";
 
 interface NativeDateFieldProps {
     value: string;
@@ -362,29 +363,31 @@ export default function NativeDateField({
                                     </button>
 
                                     <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_110px] gap-2">
-                                        <select
+                                        <AdaptiveSelect
                                             value={displayMonth.getMonth()}
                                             onChange={(event) => updateMonth(Number(event.target.value))}
                                             className="h-10 min-w-0 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111111]"
+                                            desktopSearchThreshold={999}
                                         >
                                             {MONTH_LABELS.map((label, index) => (
                                                 <option key={label} value={index}>
                                                     {label}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </AdaptiveSelect>
 
-                                        <select
+                                        <AdaptiveSelect
                                             value={displayMonth.getFullYear()}
                                             onChange={(event) => updateYear(Number(event.target.value))}
                                             className="h-10 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111111]"
+                                            desktopSearchThreshold={999}
                                         >
                                             {yearOptions.map((year) => (
                                                 <option key={year} value={year}>
                                                     {year}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </AdaptiveSelect>
                                     </div>
 
                                     <button
