@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -688,280 +688,231 @@ export default function ProfilePage({
 
     const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
     const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
-    const sectionCardClass = "relative overflow-hidden rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[28px] sm:border sm:border-[#ececec] sm:bg-white sm:p-6 sm:shadow-[0_20px_60px_-52px_rgba(15,23,42,0.22)] sm:before:hidden";
+    const sectionCardClass = "relative min-w-0 overflow-x-hidden rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[28px] sm:border sm:border-[#ececec] sm:bg-white sm:p-6 sm:shadow-[0_20px_60px_-52px_rgba(15,23,42,0.22)] sm:before:hidden";
+
+    function Section({ title, children }: { title: string; children: ReactNode }) {
+        return (
+            <section className={sectionCardClass}>
+                <div className="px-1">
+                    <h2 className="text-xl font-semibold tracking-tight text-[#111827]">{title}</h2>
+                </div>
+                <div className="mt-5">{children}</div>
+            </section>
+        );
+    }
+
+    function Field({
+        label,
+        helper,
+        children,
+    }: {
+        label: ReactNode;
+        helper?: ReactNode;
+        children: ReactNode;
+    }) {
+        return (
+            <label className="block">
+                <span className={labelClass}>{label}</span>
+                {children}
+                {helper ? <p className="mt-2 text-xs leading-relaxed text-[#6b7280]">{helper}</p> : null}
+            </label>
+        );
+    }
 
     return (
         <div className="w-full">
             <div className="w-full">
                 <form onSubmit={handleSubmit}>
                     <fieldset disabled={saving || readOnlyPreview} className="space-y-4">
-                        {/* • • • • • • • • • • • • • • •  Account Information Card • • • • • • • • • • • • • • •  */}
-                        <div className={sectionCardClass}>
-                            <div className="px-1">
-                                <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Identity & Contact</h2>
+                        <Section title="Identity">
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label={<>First Name <span className="text-red-500">*</span></>}>
+                                    <input
+                                        type="text"
+                                        name="first_name"
+                                        value={formData.first_name}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="First name"
+                                    />
+                                </Field>
+                                <Field label={<>Last Name <span className="text-red-500">*</span></>}>
+                                    <input
+                                        type="text"
+                                        name="last_name"
+                                        value={formData.last_name}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="Last name"
+                                    />
+                                </Field>
+                                <Field label="Email" helper="This email is used for sign-in and account notices.">
+                                    <input
+                                        type="email"
+                                        value={profile?.email || ""}
+                                        disabled
+                                        className="min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-[#f3f4f6] px-4 py-3 text-sm text-[#9ca3af] outline-none"
+                                    />
+                                </Field>
+                                <Field
+                                    label={<>Phone Number (WhatsApp) <span className="text-red-500">*</span></>}
+                                    helper="Used for WhatsApp updates. Do not type '0' before the number."
+                                >
+                                    <InternationalPhoneField
+                                        value={formData.phone}
+                                        onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
+                                        inputClassName={inputClass}
+                                        buttonClassName="!border-[#e5e7eb] !bg-[#fafafa] !rounded-l-2xl"
+                                        disabled={readOnlyPreview || saving}
+                                    />
+                                </Field>
+                                <Field label={<>Nationality <span className="text-red-500">*</span></>}>
+                                    <select
+                                        name="nationality"
+                                        value={formData.nationality}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                    >
+                                        <option value="">Select nationality</option>
+                                        {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
+                                    </select>
+                                </Field>
+                                <Field label={<>Current Country <span className="text-red-500">*</span></>}>
+                                    <select
+                                        name="current_country"
+                                        value={formData.current_country}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                    >
+                                        <option value="">Select current country</option>
+                                        {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
+                                    </select>
+                                </Field>
+                                <Field label={<>Gender <span className="text-red-500">*</span></>}>
+                                    <select name="gender" value={formData.gender} onChange={handleChange} className={inputClass}>
+                                        <option value="">Select gender</option>
+                                        {GENDER_OPTIONS.map(g => (<option key={g} value={g}>{g}</option>))}
+                                    </select>
+                                </Field>
+                                <Field label={<>Marital Status <span className="text-red-500">*</span></>}>
+                                    <select name="marital_status" value={formData.marital_status} onChange={handleChange} className={inputClass}>
+                                        <option value="">Select status</option>
+                                        {MARITAL_STATUSES.map(s => (<option key={s} value={s}>{s}</option>))}
+                                    </select>
+                                </Field>
+                                <Field label={<>Date of Birth <span className="text-red-500">*</span></>}>
+                                    <NativeDateField
+                                        min={birthDateMinIso}
+                                        max={todayIso}
+                                        inputClassName={inputClass}
+                                        value={dateOfBirthValue}
+                                        onChange={updateDobParts}
+                                        disabled={readOnlyPreview || saving}
+                                    />
+                                </Field>
+                                <Field label="Address">
+                                    <input
+                                        type="text"
+                                        name="address"
+                                        value={formData.address}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="Your full address"
+                                    />
+                                </Field>
                             </div>
-                            <div className="mt-5 space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>Email</label>
-                                        <input
-                                            type="email"
-                                            value={profile?.email || ""}
-                                            disabled
-                                            className="min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-[#f3f4f6] px-4 py-3 text-sm text-[#9ca3af] outline-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>
-                                            Phone Number (WhatsApp) <span className="text-red-500">*</span>
-                                        </label>
-                                        <InternationalPhoneField
-                                            value={formData.phone}
-                                            onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
-                                            inputClassName={inputClass}
-                                            buttonClassName="!border-[#e5e7eb] !bg-[#fafafa] !rounded-l-2xl"
-                                            disabled={readOnlyPreview || saving}
-                                        />
-                                        <p className="text-[11px] text-gray-500 mt-1">
-                                            Do not type &apos;0&apos; before your number. If your number is 0601234567, just type 601234567.
-                                        </p>
-                                    </div>
-                                </div>
+                        </Section>
+
+                        <Section title="Birth & Citizenship">
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label={<>Country of Birth <span className="text-red-500">*</span></>}>
+                                    <select name="birth_country" value={formData.birth_country} onChange={handleChange} className={inputClass}>
+                                        <option value="">Select birth country</option>
+                                        {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
+                                    </select>
+                                </Field>
+                                <Field label={<>City of Birth <span className="text-red-500">*</span></>}>
+                                    <input
+                                        type="text"
+                                        name="birth_city"
+                                        value={formData.birth_city}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="Birth city"
+                                    />
+                                </Field>
+                                <Field label={<>Current Citizenship <span className="text-red-500">*</span></>}>
+                                    <select name="citizenship" value={formData.citizenship} onChange={handleChange} className={inputClass}>
+                                        <option value="">Select citizenship</option>
+                                        {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
+                                    </select>
+                                </Field>
+                                <Field
+                                    label="Maiden Name"
+                                    helper="Optional. Use it only if your surname changed after marriage."
+                                >
+                                    <input
+                                        type="text"
+                                        name="maiden_name"
+                                        value={formData.maiden_name}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="Birth surname"
+                                    />
+                                </Field>
+                                <Field label="Father&apos;s First Name" helper="Optional">
+                                    <input
+                                        type="text"
+                                        name="father_name"
+                                        value={formData.father_name}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="Father's first name"
+                                    />
+                                </Field>
+                                <Field label="Mother&apos;s First Name" helper="Optional">
+                                    <input
+                                        type="text"
+                                        name="mother_name"
+                                        value={formData.mother_name}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="Mother's first name"
+                                    />
+                                </Field>
                             </div>
-                        </div>
 
-                        {/* • • • • • • • • • • • • • • •  Personal Information Card • • • • • • • • • • • • • • •  */}
-                        <div className={sectionCardClass}>
-                            <div className="px-1">
-                                <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Birth & Citizenship</h2>
-                            </div>
-                            <div className="mt-5 space-y-4">
-                                {/* Row: First and Last Name */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>
-                                            First Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="first_name"
-                                            value={formData.first_name}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                            placeholder="Your first name"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>
-                                            Last Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="last_name"
-                                            value={formData.last_name}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                            placeholder="Your last name"
-                                        />
-                                    </div>
-                                </div>
+                            <label className="mt-5 flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-sm font-medium text-[#111827]">
+                                <input
+                                    type="checkbox"
+                                    id="origCitizenshipSame"
+                                    checked={formData.original_citizenship_same}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        original_citizenship_same: e.target.checked,
+                                        original_citizenship: e.target.checked ? "" : prev.original_citizenship
+                                    }))}
+                                    className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
+                                />
+                                Original citizenship is the same as current citizenship
+                            </label>
 
-                                {/* Row: Gender + Marital Status */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>
-                                            Gender <span className="text-red-500">*</span>
-                                        </label>
-                                        <select name="gender" value={formData.gender} onChange={handleChange} className={inputClass}>
-                                            <option value="">Select gender...</option>
-                                            {GENDER_OPTIONS.map(g => (<option key={g} value={g}>{g}</option>))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>
-                                            Marital Status <span className="text-red-500">*</span>
-                                        </label>
-                                        <select name="marital_status" value={formData.marital_status} onChange={handleChange} className={inputClass}>
-                                            <option value="">Select status...</option>
-                                            {MARITAL_STATUSES.map(s => (<option key={s} value={s}>{s}</option>))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Row: Nationality + DOB */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>
-                                            Nationality <span className="text-red-500">*</span>
-                                        </label>
+                            {!formData.original_citizenship_same && (
+                                <div className="mt-4">
+                                    <Field label="Original Citizenship">
                                         <select
-                                            name="nationality"
-                                            value={formData.nationality}
+                                            name="original_citizenship"
+                                            value={formData.original_citizenship}
                                             onChange={handleChange}
                                             className={inputClass}
                                         >
-                                            <option value="">Select nationality...</option>
+                                            <option value="">Select original citizenship</option>
                                             {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
                                         </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>
-                                            Date of Birth <span className="text-red-500">*</span>
-                                        </label>
-                                        <NativeDateField
-                                            min={birthDateMinIso}
-                                            max={todayIso}
-                                            inputClassName={inputClass}
-                                            value={dateOfBirthValue}
-                                            onChange={updateDobParts}
-                                            disabled={readOnlyPreview || saving}
-                                        />
-                                    </div>
+                                    </Field>
                                 </div>
-
-                                {/* Row: Birth Country + Birth City */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>
-                                            Country of Birth <span className="text-red-500">*</span>
-                                        </label>
-                                        <select name="birth_country" value={formData.birth_country} onChange={handleChange} className={inputClass}>
-                                            <option value="">Select country...</option>
-                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>
-                                            City of Birth <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="birth_city"
-                                            value={formData.birth_city}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                            placeholder="e.g., Mumbai"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Row: Citizenship + Original Citizenship */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>
-                                            Citizenship <span className="text-red-500">*</span>
-                                        </label>
-                                        <select name="citizenship" value={formData.citizenship} onChange={handleChange} className={inputClass}>
-                                            <option value="">Select country...</option>
-                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Original Citizenship</label>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <input
-                                                type="checkbox"
-                                                id="origCitizenshipSame"
-                                                checked={formData.original_citizenship_same}
-                                                onChange={(e) => setFormData(prev => ({
-                                                    ...prev,
-                                                    original_citizenship_same: e.target.checked,
-                                                    original_citizenship: e.target.checked ? "" : prev.original_citizenship
-                                                }))}
-                                                className="h-4 w-4 rounded border-[#d1d5db] text-[#111111] focus:ring-0"
-                                            />
-                                            <label htmlFor="origCitizenshipSame" className="text-[13px] text-gray-600">
-                                                Same as current citizenship
-                                            </label>
-                                        </div>
-                                        {!formData.original_citizenship_same && (
-                                            <select
-                                                name="original_citizenship"
-                                                value={formData.original_citizenship}
-                                                onChange={handleChange}
-                                                className={inputClass}
-                                            >
-                                                <option value="">Select country...</option>
-                                                {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                            </select>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Row: Maiden Name */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>Maiden Name (Birth Surname)</label>
-                                        <input
-                                            type="text"
-                                            name="maiden_name"
-                                            value={formData.maiden_name}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                            placeholder="Only if different from current surname"
-                                        />
-                                        <p className="text-[11px] text-gray-500 mt-1">Optional — if your surname changed after marriage</p>
-                                    </div>
-                                </div>
-
-                                {/* Row: Father + Mother name */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>Father&apos;s First Name</label>
-                                        <input
-                                            type="text"
-                                            name="father_name"
-                                            value={formData.father_name}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                            placeholder="Father's first name"
-                                        />
-                                        <p className="text-[11px] text-gray-500 mt-1">Optional</p>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Mother&apos;s First Name</label>
-                                        <input
-                                            type="text"
-                                            name="mother_name"
-                                            value={formData.mother_name}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                            placeholder="Mother's first name"
-                                        />
-                                        <p className="text-[11px] text-gray-500 mt-1">Optional</p>
-                                    </div>
-                                </div>
-
-                                {/* Row: Current Country + Address */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>
-                                            Current Country <span className="text-red-500">*</span>
-                                        </label>
-                                        <select
-                                            name="current_country"
-                                            value={formData.current_country}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                        >
-                                            <option value="">Select current country...</option>
-                                            {WORLD_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Address</label>
-                                        <input
-                                            type="text"
-                                            name="address"
-                                            value={formData.address}
-                                            onChange={handleChange}
-                                            className={inputClass}
-                                            placeholder="Your full address"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            )}
+                        </Section>
 
                         {/* • • • • • • • • • • • • • • •  Family Information Card • • • • • • • • • • • • • • •  */}
                         <div className={sectionCardClass}>
