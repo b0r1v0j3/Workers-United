@@ -662,8 +662,8 @@ export default function AgencyDashboardClient({
                                         <th className="min-w-[96px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[10%] lg:min-w-0">Added</th>
                                         <th className="min-w-[150px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[14%] lg:min-w-0">Completion</th>
                                         <th className="min-w-[128px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[13%] lg:min-w-0">Documents</th>
-                                        <th className="min-w-[180px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[19%] lg:min-w-0">Status</th>
                                         <th className="min-w-[132px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[13%] lg:min-w-0">Payment</th>
+                                        <th className="min-w-[180px] border-r border-[#f1f1ef] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[19%] lg:min-w-0">Status</th>
                                         <th className="min-w-[132px] px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af] lg:w-[11%] lg:min-w-0">Action</th>
                                     </tr>
                                 </thead>
@@ -718,27 +718,20 @@ export default function AgencyDashboardClient({
                                                 </td>
 
                                                 <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
-                                                    <div className="pt-1 text-sm font-semibold text-[#111827]">{worker.documentsLabel}</div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openWorkerDocuments(worker)}
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-xs font-semibold text-[#111827] transition hover:bg-white"
+                                                    >
+                                                        <Upload size={13} />
+                                                        {readOnlyPreview ? "Review docs" : "Upload docs"}
+                                                    </button>
+                                                    <div className="mt-3 text-sm font-semibold text-[#111827]">{worker.documentsLabel}</div>
                                                     <div className="mt-2 text-xs leading-relaxed text-[#6b7280]">
                                                         {worker.verifiedDocuments > 0
                                                             ? `${worker.verifiedDocuments} verified`
                                                             : "No verified documents yet"}
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openWorkerDocuments(worker)}
-                                                        className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-xs font-semibold text-[#111827] transition hover:bg-white"
-                                                    >
-                                                        <Upload size={13} />
-                                                        {readOnlyPreview ? "Review docs" : "Upload docs"}
-                                                    </button>
-                                                </td>
-
-                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
-                                                    <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
-                                                        {phase.label}
-                                                    </div>
-                                                    <div className="mt-3 text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
                                                 </td>
 
                                                 <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
@@ -764,6 +757,13 @@ export default function AgencyDashboardClient({
                                                             lockedReason={paymentUnlockState.reason}
                                                         />
                                                     )}
+                                                </td>
+
+                                                <td className="border-r border-[#f7f7f6] px-4 py-5 align-top">
+                                                    <div className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${WORKER_PHASE_TONE_STYLES[phase.tone]}`}>
+                                                        {phase.label}
+                                                    </div>
+                                                    <div className="mt-3 text-xs leading-relaxed text-[#6b7280]">{phase.detail}</div>
                                                 </td>
 
                                                 <td className="px-4 py-5 align-top">
