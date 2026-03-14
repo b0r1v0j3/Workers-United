@@ -18,6 +18,7 @@ import {
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import NativeDateField from "@/components/forms/NativeDateField";
+import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 
 const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
@@ -620,28 +621,28 @@ export default function AgencyWorkerCreateModal({
                                     />
                                 </Field>
                                 <Field label="Nationality">
-                                    <select className={inputClass} value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)}>
+                                    <AdaptiveSelect className={inputClass} value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)} desktopSearchPlaceholder="Search nationality">
                                         <option value="">Select nationality</option>
                                         {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label="Current country">
-                                    <select className={inputClass} value={form.currentCountry} onChange={(event) => updateField("currentCountry", event.target.value)}>
+                                    <AdaptiveSelect className={inputClass} value={form.currentCountry} onChange={(event) => updateField("currentCountry", event.target.value)} desktopSearchPlaceholder="Search country">
                                         <option value="">Select current country</option>
                                         {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label="Gender">
-                                    <select className={inputClass} value={form.gender} onChange={(event) => updateField("gender", event.target.value)}>
+                                    <AdaptiveSelect className={inputClass} value={form.gender} onChange={(event) => updateField("gender", event.target.value)} desktopSearchThreshold={999}>
                                         <option value="">Select gender</option>
                                         {GENDER_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label="Marital status">
-                                    <select className={inputClass} value={form.maritalStatus} onChange={(event) => updateField("maritalStatus", event.target.value)}>
+                                    <AdaptiveSelect className={inputClass} value={form.maritalStatus} onChange={(event) => updateField("maritalStatus", event.target.value)} desktopSearchThreshold={999}>
                                         <option value="">Select status</option>
                                         {MARITAL_STATUSES.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label="Date of birth">
                                     <NativeDateField
@@ -662,19 +663,19 @@ export default function AgencyWorkerCreateModal({
                         <Section title="Birth & Citizenship">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <Field label="Birth country">
-                                    <select className={inputClass} value={form.birthCountry} onChange={(event) => updateField("birthCountry", event.target.value)}>
+                                    <AdaptiveSelect className={inputClass} value={form.birthCountry} onChange={(event) => updateField("birthCountry", event.target.value)} desktopSearchPlaceholder="Search birth country">
                                         <option value="">Select birth country</option>
                                         {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label="Birth city">
                                     <input className={inputClass} value={form.birthCity} onChange={(event) => updateField("birthCity", event.target.value)} />
                                 </Field>
                                 <Field label="Current citizenship">
-                                    <select className={inputClass} value={form.citizenship} onChange={(event) => updateField("citizenship", event.target.value)}>
+                                    <AdaptiveSelect className={inputClass} value={form.citizenship} onChange={(event) => updateField("citizenship", event.target.value)} desktopSearchPlaceholder="Search citizenship">
                                         <option value="">Select citizenship</option>
                                         {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label="Maiden name">
                                     <input className={inputClass} value={form.maidenName} onChange={(event) => updateField("maidenName", event.target.value)} />
@@ -700,10 +701,10 @@ export default function AgencyWorkerCreateModal({
                             {!form.originalCitizenshipSame && (
                                 <div className="mt-4">
                                     <Field label="Original citizenship">
-                                        <select className={inputClass} value={form.originalCitizenship} onChange={(event) => updateField("originalCitizenship", event.target.value)}>
+                                        <AdaptiveSelect className={inputClass} value={form.originalCitizenship} onChange={(event) => updateField("originalCitizenship", event.target.value)} desktopSearchPlaceholder="Search original citizenship">
                                             <option value="">Select original citizenship</option>
                                             {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                        </select>
+                                        </AdaptiveSelect>
                                     </Field>
                                 </div>
                             )}
@@ -738,28 +739,29 @@ export default function AgencyWorkerCreateModal({
                                     />
                                 </Field>
                                 <Field label="Do you live outside your home country?">
-                                    <select className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)}>
+                                    <AdaptiveSelect className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)} desktopSearchThreshold={999}>
                                         <option value="">Select answer</option>
                                         <option value="No">No</option>
                                         <option value="Yes">Yes</option>
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                                 <Field label="Have you had any visas in the last 3 years?">
-                                    <select className={inputClass} value={form.previousVisas} onChange={(event) => updateField("previousVisas", event.target.value)}>
+                                    <AdaptiveSelect className={inputClass} value={form.previousVisas} onChange={(event) => updateField("previousVisas", event.target.value)} desktopSearchThreshold={999}>
                                         <option value="">Select answer</option>
                                         <option value="No">No</option>
                                         <option value="Yes">Yes</option>
-                                    </select>
+                                    </AdaptiveSelect>
                                 </Field>
                             </div>
                         </Section>
 
                         <Section title="Job Preferences">
                             <Field label="Preferred job">
-                                <select
+                                <AdaptiveSelect
                                     className={inputClass}
                                     value={normalizePreferredJobValue(form.preferredJob, false)}
                                     onChange={(event) => updateField("preferredJob", event.target.value)}
+                                    desktopSearchPlaceholder="Search industries"
                                 >
                                     <option value="">Select industries</option>
                                     <option value={ALL_OPTION_VALUE}>All industries</option>
@@ -768,7 +770,7 @@ export default function AgencyWorkerCreateModal({
                                             {option.label}
                                         </option>
                                     ))}
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
 
                             <div className="mt-5">
@@ -824,10 +826,10 @@ export default function AgencyWorkerCreateModal({
                                                 />
                                             </Field>
                                             <Field label="Spouse birth country">
-                                                <select className={inputClass} value={spouse.birth_country} onChange={(event) => setSpouse((current) => ({ ...current, birth_country: event.target.value }))}>
+                                                <AdaptiveSelect className={inputClass} value={spouse.birth_country} onChange={(event) => setSpouse((current) => ({ ...current, birth_country: event.target.value }))} desktopSearchPlaceholder="Search birth country">
                                                     <option value="">Select birth country</option>
                                                     {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                                </select>
+                                                </AdaptiveSelect>
                                             </Field>
                                             <Field label="Spouse birth city">
                                                 <input className={inputClass} value={spouse.birth_city} onChange={(event) => setSpouse((current) => ({ ...current, birth_city: event.target.value }))} />

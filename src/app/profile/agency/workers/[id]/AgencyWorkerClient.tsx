@@ -13,6 +13,7 @@ import {
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import NativeDateField from "@/components/forms/NativeDateField";
+import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import AgencyWorkerDocumentsPanel, { type AgencyWorkerDocumentsData, type WorkerDocumentState } from "@/app/profile/agency/AgencyWorkerDocumentsPanel";
@@ -492,10 +493,10 @@ export default function AgencyWorkerClient({
                             <Field label="First Name"><input className={inputClass} value={form.firstName} onChange={(event) => updateField("firstName", event.target.value)} /></Field>
                             <Field label="Last Name"><input className={inputClass} value={form.lastName} onChange={(event) => updateField("lastName", event.target.value)} /></Field>
                             <Field label="Nationality">
-                                <select className={inputClass} value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)}>
+                                <AdaptiveSelect className={inputClass} value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)} desktopSearchPlaceholder="Search nationality">
                                     <option value="">Select nationality</option>
                                     {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                             <Field label="Date of Birth">
                                 <NativeDateField
@@ -508,16 +509,16 @@ export default function AgencyWorkerClient({
                                 />
                             </Field>
                             <Field label="Gender">
-                                <select className={inputClass} value={form.gender} onChange={(event) => updateField("gender", event.target.value)}>
+                                <AdaptiveSelect className={inputClass} value={form.gender} onChange={(event) => updateField("gender", event.target.value)} desktopSearchThreshold={999}>
                                     <option value="">Select gender</option>
                                     {GENDER_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                             <Field label="Marital Status">
-                                <select className={inputClass} value={form.maritalStatus} onChange={(event) => updateField("maritalStatus", event.target.value)}>
+                                <AdaptiveSelect className={inputClass} value={form.maritalStatus} onChange={(event) => updateField("maritalStatus", event.target.value)} desktopSearchThreshold={999}>
                                     <option value="">Select marital status</option>
                                     {MARITAL_STATUSES.map((option) => <option key={option} value={option}>{option}</option>)}
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                         </div>
                     </FormCard>
@@ -547,10 +548,10 @@ export default function AgencyWorkerClient({
                                 />
                             </Field>
                             <Field label="Current Country">
-                                <select className={inputClass} value={form.currentCountry} onChange={(event) => updateField("currentCountry", event.target.value)}>
+                                <AdaptiveSelect className={inputClass} value={form.currentCountry} onChange={(event) => updateField("currentCountry", event.target.value)} desktopSearchPlaceholder="Search country">
                                     <option value="">Select current country</option>
                                     {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                             <Field label="Address"><input className={inputClass} value={form.address} onChange={(event) => updateField("address", event.target.value)} /></Field>
                         </div>
@@ -559,17 +560,17 @@ export default function AgencyWorkerClient({
                     <FormCard title="Citizenship & Civil Data" description="Fields used for matching and visa paperwork.">
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label="Birth Country">
-                                <select className={inputClass} value={form.birthCountry} onChange={(event) => updateField("birthCountry", event.target.value)}>
+                                <AdaptiveSelect className={inputClass} value={form.birthCountry} onChange={(event) => updateField("birthCountry", event.target.value)} desktopSearchPlaceholder="Search birth country">
                                     <option value="">Select birth country</option>
                                     {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                             <Field label="Birth City"><input className={inputClass} value={form.birthCity} onChange={(event) => updateField("birthCity", event.target.value)} /></Field>
                             <Field label="Citizenship">
-                                <select className={inputClass} value={form.citizenship} onChange={(event) => updateField("citizenship", event.target.value)}>
+                                <AdaptiveSelect className={inputClass} value={form.citizenship} onChange={(event) => updateField("citizenship", event.target.value)} desktopSearchPlaceholder="Search citizenship">
                                     <option value="">Select citizenship</option>
                                     {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                             <Field label="Original Citizenship" helper="Leave the checkbox on if it is the same as current citizenship.">
                                 <div className="space-y-3">
@@ -578,10 +579,10 @@ export default function AgencyWorkerClient({
                                         Same as current citizenship
                                     </label>
                                     {!form.originalCitizenshipSame && (
-                                        <select className={inputClass} value={form.originalCitizenship} onChange={(event) => updateField("originalCitizenship", event.target.value)}>
+                                        <AdaptiveSelect className={inputClass} value={form.originalCitizenship} onChange={(event) => updateField("originalCitizenship", event.target.value)} desktopSearchPlaceholder="Search original citizenship">
                                             <option value="">Select original citizenship</option>
                                             {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                        </select>
+                                        </AdaptiveSelect>
                                     )}
                                 </div>
                             </Field>
@@ -600,10 +601,11 @@ export default function AgencyWorkerClient({
                     <FormCard title="Job Preferences" description="Worker job target and country preferences.">
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label="Preferred Job">
-                                <select
+                                <AdaptiveSelect
                                     className={inputClass}
                                     value={normalizePreferredJobValue(form.preferredJob, false)}
                                     onChange={(event) => updateField("preferredJob", event.target.value)}
+                                    desktopSearchPlaceholder="Search industries"
                                 >
                                     <option value="">Select industries</option>
                                     <option value={ALL_OPTION_VALUE}>All industries</option>
@@ -612,7 +614,7 @@ export default function AgencyWorkerClient({
                                             {option.label}
                                         </option>
                                     ))}
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                         </div>
                         <div className="mt-5">
@@ -654,10 +656,10 @@ export default function AgencyWorkerClient({
                                             />
                                         </Field>
                                         <Field label="Spouse Birth Country">
-                                            <select className={inputClass} value={spouseData.birth_country} onChange={(event) => setSpouseData((current) => ({ ...current, birth_country: event.target.value }))}>
+                                            <AdaptiveSelect className={inputClass} value={spouseData.birth_country} onChange={(event) => setSpouseData((current) => ({ ...current, birth_country: event.target.value }))} desktopSearchPlaceholder="Search birth country">
                                                 <option value="">Select birth country</option>
                                                 {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
-                                            </select>
+                                            </AdaptiveSelect>
                                         </Field>
                                         <Field label="Spouse Birth City"><input className={inputClass} value={spouseData.birth_city} onChange={(event) => setSpouseData((current) => ({ ...current, birth_city: event.target.value }))} /></Field>
                                     </div>
@@ -733,18 +735,18 @@ export default function AgencyWorkerClient({
                                 />
                             </Field>
                             <Field label="Do you live outside your home country?">
-                                <select className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)}>
+                                <AdaptiveSelect className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)} desktopSearchThreshold={999}>
                                     <option value="">Select answer</option>
                                     <option value="No">No</option>
                                     <option value="Yes">Yes</option>
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                             <Field label="Have you had any visas in the last 3 years?">
-                                <select className={inputClass} value={form.previousVisas} onChange={(event) => updateField("previousVisas", event.target.value)}>
+                                <AdaptiveSelect className={inputClass} value={form.previousVisas} onChange={(event) => updateField("previousVisas", event.target.value)} desktopSearchThreshold={999}>
                                     <option value="">Select answer</option>
                                     <option value="No">No</option>
                                     <option value="Yes">Yes</option>
-                                </select>
+                                </AdaptiveSelect>
                             </Field>
                         </div>
                     </FormCard>

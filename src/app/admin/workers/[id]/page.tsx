@@ -12,6 +12,7 @@ import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
 import ReVerifyButton from "@/components/admin/ReVerifyButton";
 import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
+import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import DocumentPreview from "@/components/admin/DocumentPreview";
 import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2, X } from "lucide-react";
@@ -694,10 +695,11 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                 <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                     Update status
                                                 </label>
-                                                <select
+                                                <AdaptiveSelect
                                                     name="status"
                                                     defaultValue={workerRecord.status || "NEW"}
                                                     className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
+                                                    desktopSearchThreshold={999}
                                                 >
                                                     <option value="NEW">New</option>
                                                     <option value="PROFILE_COMPLETE">Profile Complete</option>
@@ -712,7 +714,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                     <option value="PLACED">Placed</option>
                                                     <option value="REJECTED">Rejected</option>
                                                     <option value="REFUND_FLAGGED">Refund Flagged</option>
-                                                </select>
+                                                </AdaptiveSelect>
                                             </div>
                                             <button
                                                 type="submit"
@@ -913,16 +915,17 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                                 Set status
                                                             </label>
-                                                            <select
+                                                            <AdaptiveSelect
                                                                 name="status"
                                                                 defaultValue={doc.status}
                                                                 className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
+                                                                desktopSearchThreshold={999}
                                                             >
                                                                 <option value="pending">Pending</option>
                                                                 <option value="verifying">Verifying</option>
                                                                 <option value="verified">Verified</option>
                                                                 <option value="rejected">Rejected</option>
-                                                            </select>
+                                                            </AdaptiveSelect>
                                                         </div>
                                                         <div className="mb-4">
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">

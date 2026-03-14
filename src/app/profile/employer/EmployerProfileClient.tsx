@@ -5,6 +5,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
+import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import {
@@ -653,10 +654,10 @@ export default function EmployerProfilePage({
 
                                             <div>
                                                 <label className={labelClass}>Industry <span className="text-red-500">*</span></label>
-                                                <select name="industry" value={companyForm.industry} onChange={handleCompanyChange} className={inputClass}>
+                                                <AdaptiveSelect name="industry" value={companyForm.industry} onChange={handleCompanyChange} className={inputClass} desktopSearchPlaceholder="Search industry">
                                                     <option value="">Select industry...</option>
                                                     {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
-                                                </select>
+                                                </AdaptiveSelect>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -677,10 +678,10 @@ export default function EmployerProfilePage({
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                 <div>
                                                     <label className={labelClass}>Country <span className="text-red-500">*</span></label>
-                                                    <select name="country" value={companyForm.country} onChange={handleCompanyChange} className={inputClass}>
+                                                    <AdaptiveSelect name="country" value={companyForm.country} onChange={handleCompanyChange} className={inputClass} desktopSearchPlaceholder="Search country">
                                                         <option value="">Select country...</option>
                                                         {EUROPEAN_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
-                                                    </select>
+                                                    </AdaptiveSelect>
                                                 </div>
                                                 {isPrimaryMarket && (
                                                     <div>
@@ -697,10 +698,10 @@ export default function EmployerProfilePage({
                                                 {isPrimaryMarket && (
                                                     <div>
                                                         <label className={labelClass}>Company Size</label>
-                                                        <select name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass}>
+                                                        <AdaptiveSelect name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass} desktopSearchThreshold={999}>
                                                             <option value="">Select size...</option>
                                                             {COMPANY_SIZES.map(s => (<option key={s} value={s}>{s}</option>))}
-                                                        </select>
+                                                        </AdaptiveSelect>
                                                     </div>
                                                 )}
                                             </div>
@@ -838,10 +839,10 @@ export default function EmployerProfilePage({
                                         </div>
                                         <div>
                                             <label className={labelClass}>Industry <span className="text-red-500">*</span></label>
-                                            <select value={jobForm.industry} onChange={(e) => setJobForm(prev => ({ ...prev, industry: e.target.value }))} className={inputClass}>
+                                            <AdaptiveSelect value={jobForm.industry} onChange={(e) => setJobForm(prev => ({ ...prev, industry: e.target.value }))} className={inputClass} desktopSearchPlaceholder="Search industry">
                                                 <option value="">Select Industry</option>
                                                 {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
-                                            </select>
+                                            </AdaptiveSelect>
                                         </div>
                                     </div>
 
@@ -861,19 +862,19 @@ export default function EmployerProfilePage({
                                         </div>
                                         <div>
                                             <label className={labelClass}>Schedule</label>
-                                            <select name="work_schedule" value={jobForm.work_schedule} onChange={handleJobChange} className={inputClass}>
+                                            <AdaptiveSelect name="work_schedule" value={jobForm.work_schedule} onChange={handleJobChange} className={inputClass} desktopSearchThreshold={999}>
                                                 <option value="Full-time (40 hours/week)">Full-time (40h)</option>
                                                 <option value="Shift work">Shift work</option>
-                                            </select>
+                                            </AdaptiveSelect>
                                         </div>
                                         <div>
                                             <label className={labelClass}>Contract</label>
-                                            <select name="contract_duration_months" value={jobForm.contract_duration_months} onChange={handleJobChange} className={inputClass}>
+                                            <AdaptiveSelect name="contract_duration_months" value={jobForm.contract_duration_months} onChange={handleJobChange} className={inputClass} desktopSearchThreshold={999}>
                                                 <option value="6">6 months</option>
                                                 <option value="12">12 months</option>
                                                 <option value="24">24 months</option>
                                                 <option value="36">36+ months</option>
-                                            </select>
+                                            </AdaptiveSelect>
                                         </div>
                                     </div>
 
@@ -975,9 +976,9 @@ export default function EmployerProfilePage({
                                                             </div>
                                                             <div>
                                                                 <label className={labelClass}>Industry</label>
-                                                                <select value={editJobForm.industry} onChange={(e) => setEditJobForm(p => ({ ...p, industry: e.target.value }))} className={inputClass}>
+                                                                <AdaptiveSelect value={editJobForm.industry} onChange={(e) => setEditJobForm(p => ({ ...p, industry: e.target.value }))} className={inputClass} desktopSearchPlaceholder="Search industry">
                                                                     {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
-                                                                </select>
+                                                                </AdaptiveSelect>
                                                             </div>
                                                         </div>
                                                         {/* More edit fields can go here similar to post job form */}
@@ -1034,8 +1035,8 @@ function JobStatusBadge({ status }: { status: string }) {
 }
 
 const IndustrySelect = ({ value, onChange }: { value: string, onChange: (v: string) => void }) => (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+    <AdaptiveSelect value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} desktopSearchPlaceholder="Search industry">
         <option value="">Select Industry</option>
         {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
-    </select>
+    </AdaptiveSelect>
 );

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Search, ChevronRight, Globe, Phone, FileText, CheckCircle2, Clock, Hourglass, Trash2 } from "lucide-react";
+import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 
@@ -118,23 +119,25 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                 </div>
 
                 <div className="flex w-full gap-2 md:w-auto">
-                    <select
+                    <AdaptiveSelect
                         value={countryFilter}
                         onChange={e => setCountryFilter(e.target.value)}
                         className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm w-full md:w-auto"
+                        desktopSearchPlaceholder="Search country"
                     >
                         <option value="all">All Countries</option>
                         {uniqueCountries.map(c => <option key={c} value={c}>{getCountryDisplayLabel(c)}</option>)}
-                    </select>
+                    </AdaptiveSelect>
 
-                    <select
+                    <AdaptiveSelect
                         value={jobFilter}
                         onChange={e => setJobFilter(e.target.value)}
                         className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm w-full md:w-auto"
+                        desktopSearchPlaceholder="Search job"
                     >
                         <option value="all">All Jobs</option>
                         {uniqueJobs.map(j => <option key={j} value={j}>{j}</option>)}
-                    </select>
+                    </AdaptiveSelect>
                 </div>
                 </div>
             </div>

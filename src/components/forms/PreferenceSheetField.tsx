@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getCountryDisplayLabel } from "@/lib/country-display";
+import AdaptiveSelect from "./AdaptiveSelect";
 
 export const ALL_OPTION_VALUE = "Any";
 
@@ -146,13 +147,14 @@ export function NativeDestinationSelectField({
 
     return (
         <div className="space-y-3">
-            <select
+            <AdaptiveSelect
                 className={selectClassName}
                 value={pickerValue}
                 onChange={(event) => {
                     handleSelect(event.target.value);
                     setPickerValue("");
                 }}
+                desktopSearchPlaceholder="Search destinations"
             >
                 <option value="">{selectLabel}</option>
                 <option value={ALL_OPTION_VALUE}>{allLabel}</option>
@@ -161,7 +163,7 @@ export function NativeDestinationSelectField({
                         {option.label}
                     </option>
                 ))}
-            </select>
+            </AdaptiveSelect>
 
             {normalizedValues.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
