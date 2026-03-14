@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowLeft, Loader2, Pencil, Save, UserPlus, X } from "lucide-react";
+import { AlertTriangle, Loader2, Pencil, Save, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
     EUROPEAN_COUNTRIES,
@@ -22,7 +22,7 @@ import {
 
 const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
-const sectionClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[28px] sm:border sm:border-[#ececec] sm:bg-white sm:p-6 sm:shadow-[0_20px_60px_-52px_rgba(15,23,42,0.22)] sm:before:hidden";
+const sectionClass = "relative min-w-0 overflow-x-hidden rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[28px] sm:border sm:border-[#ececec] sm:bg-white sm:p-6 sm:shadow-[0_20px_60px_-52px_rgba(15,23,42,0.22)] sm:before:hidden";
 
 type Child = { first_name: string; last_name: string; dob: string };
 type Spouse = { first_name: string; last_name: string; dob: string; birth_country: string; birth_city: string };
@@ -321,7 +321,6 @@ function Field({ label, helper, children }: { label: string; helper?: string; ch
 export default function AgencyWorkerCreateModal({
     open,
     workerId = null,
-    workerLabel = null,
     readOnlyPreview,
     inspectProfileId = null,
     standalone = false,
@@ -378,14 +377,12 @@ export default function AgencyWorkerCreateModal({
     const primarySaveLabel = standalone
         ? workerId ? "Save and return" : "Create and return"
         : workerId ? "Save changes and close" : "Save and close";
-    const closeButtonLabel = standalone ? "Back" : "Close";
-    const closeAriaLabel = standalone ? "Back to agency dashboard" : "Close worker modal";
     const overlayClass = standalone
-        ? "relative"
-        : "fixed inset-0 z-[120] flex items-stretch justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 backdrop-blur-[2px] sm:items-center sm:px-4 sm:py-5";
+        ? "relative overflow-x-hidden"
+        : "fixed inset-0 z-[120] flex items-stretch justify-center overflow-x-hidden bg-[rgba(15,23,42,0.12)] px-0 py-0 backdrop-blur-[2px] sm:items-center sm:px-4 sm:py-5";
     const panelClass = standalone
-        ? "relative flex min-h-[calc(100dvh-132px)] w-full flex-col overflow-hidden bg-white sm:rounded-[34px] sm:border sm:border-[#e5e7eb] sm:shadow-[0_44px_140px_-64px_rgba(15,23,42,0.18)]"
-        : "relative flex h-[100dvh] max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-none border border-[#e5e7eb] bg-white shadow-[0_44px_140px_-64px_rgba(15,23,42,0.35)] sm:h-[90vh] sm:max-h-[90vh] sm:rounded-[34px]";
+        ? "relative flex min-h-[calc(100dvh-132px)] w-full max-w-full min-w-0 flex-col overflow-x-hidden overflow-y-hidden bg-white sm:rounded-[34px] sm:border sm:border-[#e5e7eb] sm:shadow-[0_44px_140px_-64px_rgba(15,23,42,0.18)]"
+        : "relative flex h-[100dvh] max-h-[100dvh] w-full max-w-5xl min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-none border border-[#e5e7eb] bg-white shadow-[0_44px_140px_-64px_rgba(15,23,42,0.35)] sm:h-[90vh] sm:max-h-[90vh] sm:rounded-[34px]";
     const closePromptOverlayClass = standalone
         ? "fixed inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6"
         : "absolute inset-0 z-[130] flex items-end justify-center bg-[rgba(15,23,42,0.12)] px-0 py-0 sm:items-center sm:px-4 sm:py-6";
@@ -536,40 +533,39 @@ export default function AgencyWorkerCreateModal({
                 className={panelClass}
                 onClick={standalone ? undefined : (event) => event.stopPropagation()}
             >
-                <div className="border-b border-[#ececec] bg-white px-4 py-4 sm:px-6 sm:py-5">
-                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
-                            <button
-                                type="button"
-                                onClick={requestClose}
-                                className={standalone
-                                    ? "inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] sm:w-auto"
-                                    : "inline-flex h-12 w-12 self-end items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-[#111827] transition hover:bg-[#fafafa] sm:self-auto"}
-                                aria-label={closeAriaLabel}
-                            >
-                                {standalone ? <ArrowLeft size={16} /> : <X size={18} />}
-                                {standalone ? closeButtonLabel : null}
-                            </button>
-                            {readOnlyPreview ? (
-                                <div className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-sm font-semibold text-[#6b7280] sm:w-auto">
-                                    Preview only
-                                </div>
-                            ) : (
+                {!standalone && (
+                    <div className="border-b border-[#ececec] bg-white px-4 py-4 sm:px-6 sm:py-5">
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
                                 <button
                                     type="button"
-                                    onClick={() => void handleSave(false)}
-                                    disabled={saving || loadingWorker}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                    onClick={requestClose}
+                                    className="inline-flex h-12 w-12 self-end items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-[#111827] transition hover:bg-[#fafafa] sm:self-auto"
+                                    aria-label="Close worker modal"
                                 >
-                                    {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    {secondarySaveLabel}
+                                    <X size={18} />
                                 </button>
-                            )}
+                                {readOnlyPreview ? (
+                                    <div className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-sm font-semibold text-[#6b7280] sm:w-auto">
+                                        Preview only
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleSave(false)}
+                                        disabled={saving || loadingWorker}
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                    >
+                                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                        {secondarySaveLabel}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
-                <div className="flex-1 overflow-y-auto bg-[#f7f7f6] px-4 py-4 sm:px-6 sm:py-6">
+                <div className="flex-1 overflow-x-hidden overflow-y-auto bg-[#f7f7f6] px-4 py-4 sm:px-6 sm:py-6">
                     {loadingWorker ? (
                         <div className="flex h-full min-h-[420px] items-center justify-center">
                             <div className="inline-flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-5 py-4 text-sm font-semibold text-[#111827] shadow-sm">
@@ -578,13 +574,16 @@ export default function AgencyWorkerCreateModal({
                             </div>
                         </div>
                     ) : (
-                        <div className="mx-auto max-w-[920px] space-y-6">
-                        <section className={sectionClass}>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
+                        <div className="mx-auto max-w-[920px] min-w-0 overflow-x-hidden space-y-6">
+                        <div className="px-1">
+                            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
                                 {workerId ? <Pencil size={14} /> : <UserPlus size={14} />}
                                 {modeLabel}
                             </div>
-                            <div className="mt-5 grid gap-4 md:grid-cols-2">
+                        </div>
+
+                        <Section title="Identity">
+                            <div className="grid gap-4 md:grid-cols-2">
                                 <Field label="First name">
                                     <input className={inputClass} value={form.firstName} onChange={(event) => updateField("firstName", event.target.value)} />
                                 </Field>
@@ -628,7 +627,7 @@ export default function AgencyWorkerCreateModal({
                                     <input className={inputClass} value={form.address} onChange={(event) => updateField("address", event.target.value)} />
                                 </Field>
                             </div>
-                        </section>
+                        </Section>
 
                         <Section title="Birth & Citizenship">
                             <div className="grid gap-4 md:grid-cols-2">
@@ -680,6 +679,37 @@ export default function AgencyWorkerCreateModal({
                             )}
                         </Section>
 
+                        <Section title="Passport & Travel">
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label="Passport number">
+                                    <input className={inputClass} value={form.passportNumber} onChange={(event) => updateField("passportNumber", event.target.value)} />
+                                </Field>
+                                <Field label="Passport issued by">
+                                    <input className={inputClass} value={form.passportIssuedBy} onChange={(event) => updateField("passportIssuedBy", event.target.value)} />
+                                </Field>
+                                <Field label="Passport issue date">
+                                    <input className={inputClass} type="date" value={form.passportIssueDate} onChange={(event) => updateField("passportIssueDate", event.target.value)} />
+                                </Field>
+                                <Field label="Passport expiry date">
+                                    <input className={inputClass} type="date" value={form.passportExpiryDate} onChange={(event) => updateField("passportExpiryDate", event.target.value)} />
+                                </Field>
+                                <Field label="Lives abroad">
+                                    <select className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)}>
+                                        <option value="">Select answer</option>
+                                        <option value="yes">Yes</option>
+                                        <option value="no">No</option>
+                                    </select>
+                                </Field>
+                                <Field label="Previous visas in last 3 years">
+                                    <select className={inputClass} value={form.previousVisas} onChange={(event) => updateField("previousVisas", event.target.value)}>
+                                        <option value="">Select answer</option>
+                                        <option value="yes">Yes</option>
+                                        <option value="no">No</option>
+                                    </select>
+                                </Field>
+                            </div>
+                        </Section>
+
                         <Section title="Job Preferences">
                             <Field label="Preferred job">
                                 <SingleChoiceSheetField
@@ -714,7 +744,7 @@ export default function AgencyWorkerCreateModal({
                             </div>
                         </Section>
 
-                        <Section title="Family & Passport">
+                        <Section title="Family">
                             <div className="space-y-5">
                                 <div className="rounded-[24px] border border-[#e5e7eb] bg-[#fafafa] p-4">
                                     <label className="flex items-center gap-3 text-sm font-medium text-[#111827]">
@@ -832,35 +862,6 @@ export default function AgencyWorkerCreateModal({
                                             </div>
                                         </div>
                                     )}
-                                </div>
-
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <Field label="Passport number">
-                                        <input className={inputClass} value={form.passportNumber} onChange={(event) => updateField("passportNumber", event.target.value)} />
-                                    </Field>
-                                    <Field label="Passport issued by">
-                                        <input className={inputClass} value={form.passportIssuedBy} onChange={(event) => updateField("passportIssuedBy", event.target.value)} />
-                                    </Field>
-                                    <Field label="Passport issue date">
-                                        <input className={inputClass} type="date" value={form.passportIssueDate} onChange={(event) => updateField("passportIssueDate", event.target.value)} />
-                                    </Field>
-                                    <Field label="Passport expiry date">
-                                        <input className={inputClass} type="date" value={form.passportExpiryDate} onChange={(event) => updateField("passportExpiryDate", event.target.value)} />
-                                    </Field>
-                                    <Field label="Lives abroad">
-                                        <select className={inputClass} value={form.livesAbroad} onChange={(event) => updateField("livesAbroad", event.target.value)}>
-                                            <option value="">Select answer</option>
-                                            <option value="yes">Yes</option>
-                                            <option value="no">No</option>
-                                        </select>
-                                    </Field>
-                                    <Field label="Previous visas in last 3 years">
-                                        <select className={inputClass} value={form.previousVisas} onChange={(event) => updateField("previousVisas", event.target.value)}>
-                                            <option value="">Select answer</option>
-                                            <option value="yes">Yes</option>
-                                            <option value="no">No</option>
-                                        </select>
-                                    </Field>
                                 </div>
                             </div>
                         </Section>
