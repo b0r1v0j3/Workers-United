@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Search, ChevronRight, Globe, Phone, FileText, CheckCircle2, Clock, Hourglass, Trash2 } from "lucide-react";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
+import { getCountryDisplayLabel } from "@/lib/country-display";
 
 export type WorkerTableRow = {
     id: string;
@@ -123,7 +124,7 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                         className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm w-full md:w-auto"
                     >
                         <option value="all">All Countries</option>
-                        {uniqueCountries.map(c => <option key={c} value={c}>{c}</option>)}
+                        {uniqueCountries.map(c => <option key={c} value={c}>{getCountryDisplayLabel(c)}</option>)}
                     </select>
 
                     <select

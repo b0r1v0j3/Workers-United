@@ -18,6 +18,7 @@ import {
 } from "@/components/forms/PreferenceSheetField";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import NativeDateField from "@/components/forms/NativeDateField";
+import { getCountryDisplayLabel } from "@/lib/country-display";
 
 const inputClass = "min-w-0 w-full max-w-full [min-inline-size:0] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#111111]";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]";
@@ -413,7 +414,7 @@ export default function AgencyWorkerCreateModal({
     const destinationOptions = useMemo(
         () => EUROPEAN_COUNTRIES.map((country) => ({
             value: country,
-            label: country === "Bosnia and Herzegovina" ? "Bosnia & Herzegovina" : country,
+            label: getCountryDisplayLabel(country),
         })),
         []
     );
@@ -619,13 +620,13 @@ export default function AgencyWorkerCreateModal({
                                 <Field label="Nationality">
                                     <select className={inputClass} value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)}>
                                         <option value="">Select nationality</option>
-                                        {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                        {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                     </select>
                                 </Field>
                                 <Field label="Current country">
                                     <select className={inputClass} value={form.currentCountry} onChange={(event) => updateField("currentCountry", event.target.value)}>
                                         <option value="">Select current country</option>
-                                        {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                        {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                     </select>
                                 </Field>
                                 <Field label="Gender">
@@ -661,7 +662,7 @@ export default function AgencyWorkerCreateModal({
                                 <Field label="Birth country">
                                     <select className={inputClass} value={form.birthCountry} onChange={(event) => updateField("birthCountry", event.target.value)}>
                                         <option value="">Select birth country</option>
-                                        {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                        {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                     </select>
                                 </Field>
                                 <Field label="Birth city">
@@ -670,7 +671,7 @@ export default function AgencyWorkerCreateModal({
                                 <Field label="Current citizenship">
                                     <select className={inputClass} value={form.citizenship} onChange={(event) => updateField("citizenship", event.target.value)}>
                                         <option value="">Select citizenship</option>
-                                        {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                        {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                     </select>
                                 </Field>
                                 <Field label="Maiden name">
@@ -699,7 +700,7 @@ export default function AgencyWorkerCreateModal({
                                     <Field label="Original citizenship">
                                         <select className={inputClass} value={form.originalCitizenship} onChange={(event) => updateField("originalCitizenship", event.target.value)}>
                                             <option value="">Select original citizenship</option>
-                                            {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                            {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                         </select>
                                     </Field>
                                 </div>
@@ -823,7 +824,7 @@ export default function AgencyWorkerCreateModal({
                                             <Field label="Spouse birth country">
                                                 <select className={inputClass} value={spouse.birth_country} onChange={(event) => setSpouse((current) => ({ ...current, birth_country: event.target.value }))}>
                                                     <option value="">Select birth country</option>
-                                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}
+                                                    {WORLD_COUNTRIES.map((country) => <option key={country} value={country}>{getCountryDisplayLabel(country)}</option>)}
                                                 </select>
                                             </Field>
                                             <Field label="Spouse birth city">

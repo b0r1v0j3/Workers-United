@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { getCountryDisplayLabel } from "@/lib/country-display";
 
 export const ALL_OPTION_VALUE = "Any";
 
@@ -74,7 +75,7 @@ export function getDesiredCountriesLabel(values: string[] | null | undefined) {
         return "Select destinations";
     }
     if (normalized.length <= 2) {
-        return normalized.join(", ");
+        return normalized.map((value) => getCountryDisplayLabel(value)).join(", ");
     }
 
     return `${normalized.length} destinations selected`;
@@ -105,7 +106,7 @@ export function NativeDestinationSelectField({
             return allLabel;
         }
 
-        return optionLabels.get(value) || value;
+        return optionLabels.get(value) || getCountryDisplayLabel(value);
     }
 
     const selectLabel = normalizedValues.length > 0

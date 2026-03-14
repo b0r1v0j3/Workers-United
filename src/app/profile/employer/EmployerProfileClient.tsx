@@ -5,6 +5,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
+import { getCountryDisplayLabel } from "@/lib/country-display";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import {
     Building2, MapPin, Globe, Phone, Calendar, FileText, Hash, Users,
@@ -678,7 +679,7 @@ export default function EmployerProfilePage({
                                                     <label className={labelClass}>Country <span className="text-red-500">*</span></label>
                                                     <select name="country" value={companyForm.country} onChange={handleCompanyChange} className={inputClass}>
                                                         <option value="">Select country...</option>
-                                                        {EUROPEAN_COUNTRIES.map(c => (<option key={c} value={c}>{c}</option>))}
+                                                        {EUROPEAN_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
                                                     </select>
                                                 </div>
                                                 {isPrimaryMarket && (
