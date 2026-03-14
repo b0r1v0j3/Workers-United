@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface NotificationBellProps {
@@ -17,26 +17,66 @@ interface Notification {
     read: boolean;
 }
 
+const DRAWER_ANIMATION_MS = 260;
+
 export default function NotificationBell({
     variant = "dashboard",
     onOpen,
 }: NotificationBellProps) {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [isOpen, setIsOpen] = useState(false);
+    const [isDrawerMounted, setIsDrawerMounted] = useState(false);
+    const [isDrawerVisible, setIsDrawerVisible] = useState(false);
     const [loading, setLoading] = useState(false);
+    const closeTimerRef = useRef<number | null>(null);
     const mobileOffsetClass = variant === "admin" ? "top-[60px]" : "top-[56px]";
     const desktopOffsetClass = variant === "admin" ? "lg:top-[80px]" : "lg:top-[74px]";
+    const isOpen = isDrawerMounted && isDrawerVisible;
+
+    const clearCloseTimer = () => {
+        if (typeof window === "undefined" || closeTimerRef.current === null) return;
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+    };
+
+    const closeDrawer = useEffectEvent(() => {
+        if (typeof window === "undefined") {
+            setIsDrawerVisible(false);
+            setIsDrawerMounted(false);
+            return;
+        }
+
+        clearCloseTimer();
+        setIsDrawerVisible(false);
+        closeTimerRef.current = window.setTimeout(() => {
+            setIsDrawerMounted(false);
+            closeTimerRef.current = null;
+        }, DRAWER_ANIMATION_MS);
+    });
+
+    const openDrawer = () => {
+        clearCloseTimer();
+        setIsDrawerMounted(true);
+
+        if (typeof window === "undefined") {
+            setIsDrawerVisible(true);
+            return;
+        }
+
+        window.requestAnimationFrame(() => {
+            setIsDrawerVisible(true);
+        });
+    };
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isDrawerMounted) return;
 
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
 
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
-                setIsOpen(false);
+                closeDrawer();
             }
         };
 
@@ -45,17 +85,23 @@ export default function NotificationBell({
             document.body.style.overflow = previousOverflow;
             document.removeEventListener("keydown", handleEscape);
         };
-    }, [isOpen]);
+    }, [isDrawerMounted]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
 
         const handleCloseNotifications = () => {
-            setIsOpen(false);
+            closeDrawer();
         };
 
         window.addEventListener("workersunited:close-notifications", handleCloseNotifications);
         return () => window.removeEventListener("workersunited:close-notifications", handleCloseNotifications);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            clearCloseTimer();
+        };
     }, []);
 
     // Load unread count on mount
@@ -89,11 +135,11 @@ export default function NotificationBell({
         if (!isOpen) {
             onOpen?.();
             loadNotifications();
-            setIsOpen(true);
+            openDrawer();
             return;
         }
 
-        setIsOpen(false);
+        closeDrawer();
     };
 
     const markAsRead = async (id: string) => {
@@ -162,16 +208,16 @@ export default function NotificationBell({
                 )}
             </button>
 
-            {isOpen && typeof document !== "undefined"
+            {isDrawerMounted && typeof document !== "undefined"
                 ? createPortal(
                     <>
                         <button
                             type="button"
-                            className={`fixed inset-x-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[54] bg-black/30 backdrop-blur-[1px]`}
-                            onClick={() => setIsOpen(false)}
+                            className={`fixed inset-x-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[54] bg-black/30 backdrop-blur-[1px] transition-opacity duration-300 ease-out ${isDrawerVisible ? "opacity-100" : "opacity-0"}`}
+                            onClick={() => closeDrawer()}
                             aria-label="Close notifications panel"
                         />
-                        <aside className={`fixed right-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[55] w-[calc(100vw-0.75rem)] max-w-[390px]`}>
+                        <aside className={`fixed right-0 bottom-0 ${mobileOffsetClass} ${desktopOffsetClass} z-[55] w-[calc(100vw-0.75rem)] max-w-[390px] transform transition-[transform,opacity] duration-300 ease-out ${isDrawerVisible ? "translate-x-0 opacity-100" : "translate-x-[112%] opacity-0"}`}>
                             <div className="flex h-full max-h-full flex-col overflow-hidden border-l border-gray-200 bg-white shadow-[-24px_0_70px_-42px_rgba(15,23,42,0.35)] lg:rounded-[14px] lg:border lg:border-white/60 lg:bg-white/95 lg:shadow-sm lg:backdrop-blur-sm">
                                 <div className="border-b border-[#dddfe2] px-4 py-4">
                                     <div className="flex items-center justify-between gap-3">
