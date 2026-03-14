@@ -79,7 +79,16 @@ function normalizeText(value: unknown): string | null {
 }
 
 function normalizeSelect(value: unknown): string | null {
-    return normalizeText(value);
+    const normalized = normalizeText(value);
+    if (!normalized) {
+        return null;
+    }
+
+    const lowered = normalized.toLowerCase();
+    if (lowered === "yes") return "Yes";
+    if (lowered === "no") return "No";
+
+    return normalized;
 }
 
 function normalizePreferredJob(value: unknown): string | null {
