@@ -299,6 +299,12 @@ export default function Home() {
                   >
                     Join as Employer
                   </Link>
+                  <Link
+                    href="/signup?type=agency"
+                    className="inline-flex items-center justify-center rounded-2xl border border-[#d1d5db] bg-white px-7 py-4 text-base font-semibold !text-[#1c1c1c] transition hover:bg-[#f4f4f5]"
+                  >
+                    Join as Agency
+                  </Link>
               </div>
             </div>
           </section>
