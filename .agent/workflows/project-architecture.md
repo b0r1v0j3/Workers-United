@@ -21,8 +21,8 @@ description: Full project architecture reference — tech stack, folder structur
 | Storage | **Supabase Storage** | Canonical and only active worker document bucket is `worker-docs`; runtime helpers resolve only `worker-docs`, while legacy `candidate-docs` and empty `documents` buckets are retired |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
-| AI (Chatbot) | **GPT-5 mini** | WhatsApp AI now uses a small intent router + response model flow with shorter context windows, enriched worker facts, canonical `workerRecord` runtime naming, and admin-only `[LEARN]` writes |
-| AI (Brain) | **GPT-5 mini** | Daily Brain Monitor snapshots + exception reports default to `BRAIN_DAILY_MODEL`; every run is stored, email only sends on exception |
+| AI (Chatbot) | **GPT-5 mini** | WhatsApp AI now uses a small intent router + response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, canonical `workerRecord` runtime naming, and simpler role-safe worker/employer behavior |
+| AI (Brain) | **GPT-5 mini** | Daily Brain Monitor snapshots + exception reports default to `BRAIN_DAILY_MODEL`; every run is stored, email only sends on exception, and `/api/brain/improve` now writes only low-risk conversation learnings instead of new business facts |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
@@ -140,6 +140,7 @@ Workers-United/
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
 │   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging, failed-send error capture)
+│   │   ├── whatsapp-brain.ts  # Canonical WhatsApp facts/rules, safe-learning filter, explicit onboarding trigger
 │   │   ├── whatsapp-health.ts # WhatsApp ops-health classification helpers (platform-side vs recipient-side failures)
 │   │   ├── sanitize.ts        # Input sanitization
 │   │   ├── user-management.ts # Shared user deletion logic; cascade cleanup deletes worker-domain rows (`worker_documents`, `workers`, matches/offers/contracts) and keeps canonical app-layer naming as `workerRecord`
@@ -168,7 +169,7 @@ Configured in `vercel.json`:
 | `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months |
 | `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
 | `/api/cron/brain-monitor` | Daily 8 AM UTC | Daily Brain snapshot + exception report email when critical or meaningfully changed |
-| `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, generates new brain_memory facts |
+| `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, but now stores only low-risk WhatsApp learnings (`common_question`, `error_fix`, `copy_rule`) after shared safety filtering |
 | `/api/cron/whatsapp-nudge` | Daily 11 AM UTC | WhatsApp nudges for users who need a profile/doc action |
 | `/api/cron/checkout-recovery` | Every hour at :15 | Recover opened but unpaid `$9` Job Finder checkouts with `1h / 24h / 72h` follow-up and mark stale pending rows as `abandoned` |
 | `/api/cron/system-smoke` | Every hour at :30 | Route + service smoke monitor (`/`, auth pages, `/api/health`) with critical alert cooldown; optional degraded services now surface as warnings instead of silent healthy |
@@ -323,6 +324,7 @@ User (Browser)
 | `src/lib/mailer.ts` | `sendEmail()` — Nodemailer wrapper |
 | `src/lib/email-templates.ts` | All HTML email templates; includes `checkout_recovery` and reuses the existing WhatsApp `status_update` template when a valid worker phone exists |
 | `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
+| `src/lib/whatsapp-brain.ts` | Shared canonical WhatsApp facts/rules, safer worker/employer prompting, onboarding trigger detection, and low-risk learning filter used by `/api/whatsapp/webhook` + `/api/brain/improve` |
 | `src/lib/smoke-evaluator.ts` | Shared health evaluator (`healthy/degraded/critical`) for smoke checks |
 | `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback) |
 | `src/lib/stripe.ts` | Stripe client init |
@@ -335,7 +337,8 @@ User (Browser)
 | `src/lib/domain.ts` | Canonical role/domain helper; normalizes legacy `candidate` metadata into the `worker` domain and exposes worker storage constants |
 | `src/lib/workers.ts` | Canonical worker helper layer; use `loadCanonicalWorkerRecord()` / `pickCanonicalWorkerRecord()` instead of raw `.single()` / `.maybeSingle()` on `worker_onboarding`/`workers`, plus shared phone normalization and storage filename sanitization |
 | `src/lib/agencies.ts` | Agency provisioning + ownership helper; schema guard, claim-link context, claim linking, and agency-owned worker resolution over `worker_onboarding` / physical `workers` |
-| `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: GPT-5 mini intent router + response generator, shorter history windows, canonical `workerRecord` snapshot context, and admin-only learning writes |
+| `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: GPT-5 mini intent router + response generator, shorter history windows, canonical `workerRecord` snapshot context, shared facts/rules from `src/lib/whatsapp-brain.ts`, and explicit WhatsApp onboarding only when the user actually asks for profile completion over WhatsApp |
+| `src/app/api/brain/improve/route.ts` | Daily low-risk conversation improver; analyzes DB/conversation/error summaries but may only persist safe `common_question / error_fix / copy_rule` learnings after `filterSafeBrainLearnings()` rejects numbers, pricing, country claims, document/legal facts, and URLs |
 | `src/app/api/brain/act/route.ts` | Brain action executor; now accepts canonical `update_worker_status` while still honoring legacy `update_candidate_status` during the transition |
 | `src/app/api/cron/brain-monitor/route.ts` | Daily Brain v2: GPT-5 mini daily analysis, snapshot persistence to `brain_reports`, exception-only email delivery, retry-email as the only auto-executed action |
 | `src/app/api/brain/report/route.ts` | Brain report storage/read API; default model now follows `BRAIN_DAILY_MODEL` |
@@ -495,6 +498,7 @@ When adding a new feature, follow this order:
 - **Pre-fetch dedup data in bulk, not per-record.** Use the same pattern as `profile-reminders` and `match-jobs`: fetch all relevant emails into a Set, then do O(1) lookups in the loop. Never query inside a nested loop.
 - **Critical alert cooldown matters.** `system-smoke` sends critical emails with a 6-hour cooldown to avoid alert spam loops. Keep the cooldown check when editing alerting logic.
 - **Do not write to `brain_memory` with raw inserts in automations.** Use `saveBrainFactsDedup()` from `src/lib/brain-memory.ts` so repeated learnings do not bloat prompts.
+- **Do not let `/api/brain/improve` or WhatsApp prompt code invent new business facts from patterns.** Canonical product truths live in `src/lib/whatsapp-brain.ts`; Brain improvement may only add low-risk conversational learnings and must pass `filterSafeBrainLearnings()` before writing to `brain_memory`.
 
 ---
 

@@ -3,6 +3,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { saveBrainFactsDedup } from "@/lib/brain-memory";
+import {
+    buildCanonicalWhatsAppFacts,
+    buildEmployerWhatsAppRules,
+    buildWorkerWhatsAppRules,
+    shouldStartWhatsAppOnboarding,
+} from "@/lib/whatsapp-brain";
 import { loadCanonicalWorkerRecord, pickCanonicalWorkerRecord } from "@/lib/workers";
 import crypto from "crypto";
 
@@ -845,65 +851,39 @@ async function generateWhatsAppReply({
     const memoryText = brainMemory.length > 0
         ? brainMemory.map((entry) => `- [${entry.category}] ${entry.content}`).join("\n")
         : "(No stored facts)";
+    const canonicalFacts = buildCanonicalWhatsAppFacts();
+    const instructions = `You are the official WhatsApp assistant for Workers United.
 
-    const instructions = `You are the official WhatsApp assistant for Workers United, a legal hiring and visa support company operating across Europe.
+Personality:
+- Friendly, warm, practical, and calm.
+- Treat the person with respect and keep things easy to understand.
+- If something is not available, say it simply and move them to the next safe step.
 
-IMPORTANT: You MUST reply in ${routerDecision.language}. Always match the language of the user's message. If they write in Serbian, reply in Serbian. If they write in English, reply in English. Never switch to a different language.
+Canonical facts (never contradict these):
+${canonicalFacts}
 
-Current routed intent: ${routerDecision.intent}
-Router confidence: ${routerDecision.confidence}
-Router reason: ${routerDecision.reason}
-
-YOUR PERSONALITY:
-- You are friendly, warm, and encouraging. Treat every person like a valued partner.
-- You are an AI assistant and you are proud of it. You are getting smarter every day because the team is constantly improving you.
-- If someone asks something you cannot do yet, say something like: "I can't do that just yet, but my team is upgrading me every day — try again tomorrow and I might surprise you!"
-- Be conversational and human-like, not robotic. Use the person's name when you know it.
-- Show empathy — these are real people looking for real jobs to support their families.
-
-Business facts:
-${businessFacts || "No business facts available"}
-- We operate across entire Europe, connecting verified workers with verified employers.
-- We handle the complete process: documentation verification, contract creation, visa support, embassy communication, airport pickup, and ongoing support (residence extensions, etc).
-- Job Finder is a service that costs $9 USD. It includes a 90-day job match guarantee — if no job is found within 90 days, the full amount is refunded. NEVER call it a fee or tax — it is a service. CRITICAL LANGUAGE RULE: In Serbian, ALWAYS say 'naknada za uslugu' or 'servisna naknada'. NEVER EVER say 'ulazna taksa', 'taksa', 'ulazna naknada', or any variation with 'taksa'.
-- Required worker documents: passport, diploma or work certificate, and a biometric photo.
-- Support email: contact@workersunited.eu.
-- Do NOT suggest emailing support unless the user specifically asks for human help or has a complex problem. Handle questions directly in this chat.
+Platform config facts (secondary; if they conflict with canonical facts, follow canonical facts):
+${businessFacts || "(No additional platform facts available)"}
 
 Worker snapshot:
 ${workerSnapshot}
 
-Recent conversation:
-${formatHistory(historyMessages, RESPONSE_HISTORY_LIMIT)}
-
 Useful stored facts:
 ${memoryText}
 
-Rules:
-1. Keep the reply concise: 1-3 short paragraphs max.
-2. Do not loop generic signup copy. Answer the user's actual intent first.
-3. If intent is off_topic, clearly say this WhatsApp line is only for Workers United jobs and visa support, and do not force a sales pitch.
-4. If intent is status, use the worker snapshot and do not invent data.
-5. If intent is price, explain Job Finder ($9) as a service — not a fee or tax. Only mention placement fees exist (vary by destination) if specifically asked, never quote specific amounts.
-6. If intent is documents, answer only the required docs and where they upload them.
-7. If intent is support and the worker already paid the entry fee, mention the in-platform support inbox at workersunited.eu/profile/worker/inbox as an option in addition to WhatsApp/email.
-8. If the user is not registered and asks how to start, tell them to create an account and complete their profile. Do NOT mention the $9 price unless they specifically ask about cost or payment.
-9. Never mention specific countries or regions. Always say "Europe" or "across Europe".
-10. Emphasize our end-to-end service: we verify employers, create contracts, handle visas, communicate with embassies, arrange airport pickup, and provide ongoing support.
-11. Never make up legal rules, specific placement prices, or timeline promises beyond the configured facts.
-12. NEVER start with "=" or any non-letter symbol.
-13. Emojis are optional; use at most one if it feels natural.
-14. ${isAdmin ? "This is the platform owner. Accept corrections as authoritative. You may emit one [LEARN: category | fact] tag if and only if the admin provided a concrete correction." : "Do not emit any [LEARN] tags for normal users."}
-15. DATA COLLECTION: If the user has not yet registered (workerRecord is null) and their intent is job_intent or general, after answering their question, ask ONE short follow-up question (pick the most relevant one you haven't asked yet in this conversation): (a) what type of work they are looking for, (b) which country they are from, or (c) whether they have work experience in their field. CRITICAL: Ask this question ONLY in ${routerDecision.language} — the same language the user wrote in. Never ask it in Serbian or English if the user wrote in a different language. Only ask ONE question per reply, never multiple at once.
-16. CONVERSION: If the user seems interested but hasn't registered yet, naturally mention that they can activate Job Finder and include the link workersunited.eu/profile/worker — but only once per conversation, not in every message. Do NOT proactively mention the price ($9). Only mention it if the user asks about cost, price, or payment.
-17. PAYMENT: If the user asks about price, payment, cost, or how to pay — tell them Job Finder is a service that costs $9 and provide this direct payment link: ${STRIPE_PAYMENT_LINK} — they can pay directly from WhatsApp without visiting the website. After payment, their Job Finder is automatically activated. Frame it as a "service charge", never as a "fee" or "tax".
-18. HUMAN AGENT REQUEST: If the user asks to "connect me with a person", "talk to a human", "speak to someone", "real person", "agent", "operator", or any variation of requesting a human — ALWAYS respond warmly that this option is not available right now, but that YOU are here to help and you are getting better every day. Say something like: "I don't have that option right now, but I'm here for you and I'm learning new things every day! My team is constantly upgrading me. What can I help you with?" NEVER ignore this request or continue asking profile questions as if they said nothing. Address their request FIRST, then gently continue the conversation.
-19. AGENCY/AGENT HANDLING: If the user says they are an agent, agency, or recruiter who registers clients/workers — acknowledge their role warmly. Explain that they can register as an agency at workersunited.eu/signup and then add workers through their agency dashboard. If they want to fill a profile for a specific client, guide them to do it on the website where they can manage multiple worker profiles. Do NOT try to collect the agent's personal profile data (gender, DOB, etc.) — they are not the worker.`;
+${buildWorkerWhatsAppRules({
+        language: routerDecision.language,
+        intent: routerDecision.intent,
+        confidence: routerDecision.confidence,
+        reason: routerDecision.reason,
+        isAdmin,
+        paymentLink: STRIPE_PAYMENT_LINK,
+    })}`;
 
     return callOpenAIResponseText(apiKey, {
         model: WHATSAPP_RESPONSE_MODEL,
         instructions,
-        input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}`,
+        input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}\n\nRecent conversation:\n${formatHistory(historyMessages, RESPONSE_HISTORY_LIMIT)}`,
         maxOutputTokens: 4096,
     });
 }
@@ -934,56 +914,32 @@ async function generateEmployerWhatsAppReply({
     const memoryText = brainMemory.length > 0
         ? brainMemory.map(e => `- [${e.category}] ${e.content}`).join("\n")
         : "(No stored facts)";
+    const canonicalFacts = buildCanonicalWhatsAppFacts();
+    const instructions = `You are the official WhatsApp assistant for Workers United.
 
-    const langName = language === "sr" ? "Serbian" : "English";
+Personality:
+- Warm, professional, direct, and operational.
+- Answer first, then move the employer to one concrete next step.
+- Do not oversell or invent inventory.
 
-    const instructions = `You are the official WhatsApp assistant for Workers United, a legal worker placement company operating across Europe.
+Canonical facts (never contradict these):
+${canonicalFacts}
 
-You are speaking with a POTENTIAL EMPLOYER or REGISTERED EMPLOYER — someone who wants to HIRE workers, not find a job.
-
-IMPORTANT: Reply in ${langName}. Always match the language of the employer's message. If they write in Serbian, reply in Serbian. If English, reply in English.
-
-Employer context:
-- Phone: ${normalizedPhone}
-- Registered employer: ${isRegistered ? "YES" : "NO (new contact)"}
-${isRegistered ? `- Company: ${companyName}\n- Contact: ${contactName}\n- Status: ${employerRecord?.status || "unknown"}` : ""}
-
-About Workers United (for employers):
-- We connect verified employers with pre-screened foreign workers ready to work in Europe
-- Workers come from Serbia, Bosnia, Nepal, India, Bangladesh, Morocco, Philippines and other countries
-- We handle EVERYTHING: worker selection, contracts, work permits, visa applications, embassy communication, airport pickup, and ongoing support during employment
-- The service is COMPLETELY FREE for employers — workers pay a placement fee, not the companies
-- Employers register at workersunited.eu/signup, post a job request, and we match them with suitable candidates
-- Typical worker profiles: construction workers, factory workers, drivers, hospitality staff, cleaners, warehouse workers, agricultural workers, welders, electricians
-- We guarantee fully legal contracts and compliance with local labor law
-- Typical placement time: 2-6 weeks after employer approval
-- We currently have 194+ verified workers available
-
-Recent conversation:
-${formatHistory(historyMessages, 10)}
-
-Stored facts:
+Useful stored facts:
 ${memoryText}
 
-Rules:
-1. Keep replies concise and professional — 2-3 short paragraphs max.
-2. If the employer asks about workers or hiring, explain the process clearly and warmly.
-3. If they ask about cost/price: the service is COMPLETELY FREE for employers. Workers pay a placement fee.
-4. If they ask about available workers: mention 194+ verified workers across various sectors.
-5. If they ask about specific worker types (e.g. "do you have welders?"), confirm availability and invite them to register to see profiles.
-6. If they ask how to start: register at workersunited.eu/signup and post a job request — takes 5 minutes.
-7. If they ask about timeline: typically 2-6 weeks from job posting to worker arrival.
-8. If they ask about legal compliance: we handle all permits, visas, and contracts — fully legal and compliant.
-9. If they seem interested, naturally invite them to register: workersunited.eu/signup
-10. NEVER mention the worker placement fee ($9) — that is irrelevant for employers.
-11. Be warm, professional, and treat them as a valued business partner.
-12. Do NOT ask them if they are looking for a job — they are employers.
-13. If they ask about a specific number of workers (e.g. "I need 10 workers"), acknowledge the request and ask what type of work and when they need them.`;
+${buildEmployerWhatsAppRules({
+        language,
+        isRegistered,
+        companyName,
+        contactName,
+        employerStatus: employerRecord?.status || null,
+    })}`;
 
     return callOpenAIResponseText(apiKey, {
         model: WHATSAPP_RESPONSE_MODEL,
         instructions,
-        input: `Phone: ${normalizedPhone}\nLatest message:\n${message}`,
+        input: `Phone: ${normalizedPhone}\nLatest message:\n${message}\n\nRecent conversation:\n${formatHistory(historyMessages, 10)}`,
         maxOutputTokens: 2048,
     });
 }
@@ -1001,8 +957,8 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
 
     const ENTRY_FEE = config.entry_fee || "$9";
     const WEBSITE = config.website_url || "workersunited.eu";
-    const GREETING_EN = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers find jobs in Europe and handle all visa paperwork.";
-    const GREETING_SR = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima da nađu posao u Evropi.";
+    const GREETING_EN = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers through the full job-search and visa process in Europe.";
+    const GREETING_SR = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima kroz ceo proces traženja posla i vize u Evropi.";
     // Language detection for fallback
     const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|pomoc|posao|rad|plata|cena|cijena|koliko|dokumenti|pasos|pasoš|profil|status|registr/i.test(msg);
     const isNepali = /[\u0900-\u097F]/.test(message);
@@ -1023,12 +979,12 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
         en: GREETING_EN,
     };
     const startMessages: Record<string, string> = {
-        sr: `Registrujte se na ${WEBSITE}/signup, popunite profil i pokrenite Job Finder. Kada to završite, mi vam tražimo odgovarajući posao širom Evrope.`,
-        ne: `${WEBSITE}/signup मा खाता बनाउनुहोस्, प्रोफाइल पूरा गर्नुहोस् र Job Finder सक्रिय गर्नुहोस्। त्यसपछि हामी तपाईंको लागि युरोपमा काम खोज्छौं।`,
-        ar: `أنشئ حسابك على ${WEBSITE}/signup، أكمل ملفك الشخصي وفعّل Job Finder. بعد ذلك نبحث لك عن وظيفة في أوروبا.`,
-        fr: `Créez votre compte sur ${WEBSITE}/signup, complétez votre profil et activez Job Finder. Ensuite, nous cherchons un emploi pour vous en Europe.`,
-        pt: `Crie sua conta em ${WEBSITE}/signup, complete seu perfil e ative o Job Finder. Depois disso, buscamos um emprego para você na Europa.`,
-        en: `Create your account at ${WEBSITE}/signup, complete your profile, and activate Job Finder. Once that is done, we match you with the best available job across Europe.`,
+        sr: `Registrujte se na ${WEBSITE}/signup i popunite profil. Posle registracije možete nastaviti i na dashboard-u i ovde na WhatsApp-u — oba ažuriraju isti profil. Job Finder tada pokreće traženje odgovarajućeg posla tokom perioda usluge.`,
+        ne: `${WEBSITE}/signup मा खाता बनाउनुहोस् र प्रोफाइल पूरा गर्नुहोस्। दर्ता भएपछि तपाईं ड्यासबोर्ड वा यही WhatsApp मा अगाडि बढ्न सक्नुहुन्छ — दुवैले एउटै प्रोफाइल अपडेट गर्छन्। त्यसपछि Job Finder ले मिल्दो काम खोज्न सुरु गर्छ।`,
+        ar: `أنشئ حسابك على ${WEBSITE}/signup وأكمل ملفك الشخصي. بعد التسجيل يمكنك المتابعة من لوحة التحكم أو من هنا على WhatsApp — كلاهما يحدّث نفس الملف. بعد ذلك يبدأ Job Finder بالبحث عن الفرصة المناسبة.`,
+        fr: `Créez votre compte sur ${WEBSITE}/signup et complétez votre profil. Après inscription, vous pouvez continuer dans le tableau de bord ou ici sur WhatsApp — les deux mettent à jour le même profil. Ensuite Job Finder commence la recherche d'une opportunité adaptée.`,
+        pt: `Crie sua conta em ${WEBSITE}/signup e complete seu perfil. Depois do registro, você pode continuar no painel ou aqui no WhatsApp — os dois atualizam o mesmo perfil. Em seguida o Job Finder começa a procurar a oportunidade certa.`,
+        en: `Create your account at ${WEBSITE}/signup and complete your profile. After signup, you can continue either in your dashboard or here on WhatsApp — both update the same profile. Job Finder then starts searching for the right match during the service period.`,
     };
     const greeting = greetings[fallbackLang] || greetings.en;
     const startMessage = startMessages[fallbackLang] || startMessages.en;
@@ -1047,10 +1003,16 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
     }
 
     if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر")) {
-        if (fallbackLang === 'sr') return `Zdravo ${name}! Servisna naknada za Job Finder je ${ENTRY_FEE}. Ako ne pronađemo posao u roku od 90 dana, naknada se vraća u potpunosti. Plati ovde: ${STRIPE_PAYMENT_LINK}`;
-        if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder को शुल्क ${ENTRY_FEE} हो। ९० दिनभित्र काम नपाए पूरा फिर्ता। यहाँ भुक्तानी गर्नुहोस्: ${STRIPE_PAYMENT_LINK}`;
-        if (fallbackLang === 'ar') return `مرحباً ${name}! رسوم خدمة Job Finder هي ${ENTRY_FEE}. إذا لم نجد لك وظيفة خلال 90 يومًا، ستحصل على استرداد كامل. ادفع هنا: ${STRIPE_PAYMENT_LINK}`;
-        return `Hi ${name}! Job Finder is a service that costs ${ENTRY_FEE}. If we don't find you a job within 90 days, you get a full refund.`;
+        if (!workerRecord) {
+            if (fallbackLang === 'sr') return `Zdravo ${name}! Job Finder je servisna naknada od ${ENTRY_FEE}, ali prvo napravite profil na ${WEBSITE}/signup. Posle registracije možete nastaviti ovde ili na dashboard-u, a ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
+            if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder को सेवा शुल्क ${ENTRY_FEE} हो, तर पहिले ${WEBSITE}/signup मा प्रोफाइल बनाउनुहोस्। दर्ता भएपछि तपाईं यहाँ वा ड्यासबोर्डमा अगाडि बढ्न सक्नुहुन्छ, र ९० दिनभित्र काम नपाए पूरा फिर्ता हुन्छ।`;
+            if (fallbackLang === 'ar') return `مرحباً ${name}! تكلفة خدمة Job Finder هي ${ENTRY_FEE}، لكن أنشئ ملفك أولاً على ${WEBSITE}/signup. بعد التسجيل يمكنك المتابعة هنا أو من لوحة التحكم، وإذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
+            return `Hi ${name}! Job Finder is a service that costs ${ENTRY_FEE}, but first create your profile at ${WEBSITE}/signup. After registration you can continue here or in the dashboard, and if no job is found within 90 days the full amount is refunded.`;
+        }
+        if (fallbackLang === 'sr') return `Zdravo ${name}! Servisna naknada za Job Finder je ${ENTRY_FEE}. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti. Nastavite ovde: ${STRIPE_PAYMENT_LINK}`;
+        if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder को सेवा शुल्क ${ENTRY_FEE} हो। ९० दिनभित्र काम नपाए पूरा फिर्ता हुन्छ। यहाँ अगाडि बढ्नुहोस्: ${STRIPE_PAYMENT_LINK}`;
+        if (fallbackLang === 'ar') return `مرحباً ${name}! رسوم خدمة Job Finder هي ${ENTRY_FEE}. إذا لم نجد لك وظيفة خلال 90 يومًا ستحصل على استرداد كامل. تابع من هنا: ${STRIPE_PAYMENT_LINK}`;
+        return `Hi ${name}! Job Finder is a service that costs ${ENTRY_FEE}. If we do not find you a job within 90 days, the full amount is refunded. Continue here: ${STRIPE_PAYMENT_LINK}`;
     }
 
     if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز")) {
@@ -1061,10 +1023,10 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
     }
 
     // Catch-all
-    if (fallbackLang === 'sr') return `Zdravo ${name}! 👋 ${startMessage} Ako želite dodatne informacije, pišite nam ovde ili na ${config.contact_email || "contact@workersunited.eu"}.`;
-    if (fallbackLang === 'ne') return `नमस्ते ${name}! 👋 ${startMessage} थप जानकारीको लागि यहाँ सम्पर्क गर्नुहोस्।`;
-    if (fallbackLang === 'ar') return `مرحباً ${name}! 👋 ${startMessage} للمزيد من المعلومات، راسلنا هنا.`;
-    return `Hi ${name}! 👋 ${startMessage} If you want more details, message us here or contact ${config.contact_email || "contact@workersunited.eu"}.`;
+    if (fallbackLang === 'sr') return `Zdravo ${name}! 👋 ${startMessage}`;
+    if (fallbackLang === 'ne') return `नमस्ते ${name}! 👋 ${startMessage}`;
+    if (fallbackLang === 'ar') return `مرحباً ${name}! 👋 ${startMessage}`;
+    return `Hi ${name}! 👋 ${startMessage}`;
 }
 
 
@@ -1557,9 +1519,7 @@ export async function handleWhatsAppOnboarding(
 
     // ── No state yet: only offer onboarding when the user explicitly asks to fill it on WhatsApp ──
     if (!state) {
-        const lower = message.toLowerCase().trim();
-        const wantsWhatsAppOnboarding = /fill.*profile.*whatsapp|complete.*profile.*whatsapp|register.*whatsapp|whatsapp.*profile|whatsapp.*register|profile.*on whatsapp|popuni.*profil.*whatsapp|profil.*na whatsapp|registr.*preko whatsapp|registro.*whatsapp|perfil.*whatsapp/i.test(lower);
-        if (wantsWhatsAppOnboarding) {
+        if (shouldStartWhatsAppOnboarding(message)) {
             await saveOnboardingState(supabase, phone, "ask_start", {}, detectedLanguage);
             return getQ("ask_start", detectedLanguage || "en");
         }

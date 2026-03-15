@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { saveBrainFactsDedup } from "@/lib/brain-memory";
+import {
+    SAFE_BRAIN_IMPROVEMENT_PROMPT,
+    buildCanonicalWhatsAppFacts,
+    filterSafeBrainLearnings,
+} from "@/lib/whatsapp-brain";
 import type { Json } from "@/lib/database.types";
 
 function assertNoError(error: { message: string } | null, context: string): void {
@@ -199,10 +204,15 @@ Open positions remaining: ${openPositions}`;
             .map((entry) => `[${entry.category}] ${entry.content}`)
             .join("\n") || "(Empty brain)";
 
-        const analysisPrompt = `You are the Brain Improvement Engine for Workers United, a legal international hiring platform.
+        const analysisPrompt = `You are the Brain Improvement Engine for Workers United.
 Terminology rule: In generated facts, use only the canonical platform terms "worker" and "employer".
 
-Your job is to analyze the FULL SYSTEM DATA and recent conversations, then generate NEW facts to remember. The system data contains the TRUTH — use it to generate accurate facts.
+Your job is to analyze recent conversations and error patterns, then propose only LOW-RISK WhatsApp improvements. You are NOT allowed to create new business facts.
+
+Canonical WhatsApp facts (never override these):
+${buildCanonicalWhatsAppFacts()}
+
+${SAFE_BRAIN_IMPROVEMENT_PROMPT}
 
 EXISTING KNOWLEDGE (what you already know — do NOT repeat these):
 ${existingFacts}
@@ -217,25 +227,23 @@ RECENT ERRORS (last 24 hours):
 ${errorSummary}
 
 TASKS:
-1. Analyze the SYSTEM DATA — extract key business facts (prices, statuses, processes, document types, available jobs)
-2. Analyze conversations — what questions did users ask? What did you answer wrong?
-3. What common questions keep coming up?
-4. What errors occurred and how could they be prevented?
-5. Are any existing memories OUTDATED based on current system data? If so, generate a corrected version.
+1. Analyze conversations — what questions keep repeating?
+2. Analyze errors — what routing, copy, or delivery mistakes keep repeating?
+3. Generate only small behavior improvements that make WhatsApp simpler and safer.
+4. Do not generate new product rules, pricing facts, country claims, worker counts, or timelines.
 
 OUTPUT FORMAT:
 For each new learning, output one line in this EXACT format:
 LEARN|category|fact
 
-Categories: pricing, process, documents, eligibility, faq, company_info, legal, error_fix, common_question, system_stats
+Categories: common_question, error_fix, copy_rule
 
 RULES:
-- PRIORITIZE facts from system data — these are verified and accurate
-- Only output GENUINELY NEW facts not already in your existing knowledge
-- Generate facts that would help answer user questions correctly
-- If system data contradicts existing knowledge, output the corrected fact
-- If users frequently ask the same question, summarize it as a common_question
-- For errors, suggest preventions as error_fix
+- Only output GENUINELY NEW low-risk learnings not already in existing knowledge
+- Prefer learnings backed by repeated evidence, not one-off anecdotes
+- If users frequently ask the same question, summarize it as common_question
+- If you see a repeated routing/delivery/copy problem, describe the safest fix as error_fix or copy_rule
+- Never output anything with money, numbers, URLs, country lists, legal claims, document policies, or vacancy inventory
 - Output NO_NEW_LEARNINGS if nothing is new
 - Maximum 15 learnings per analysis`;
 
@@ -264,7 +272,7 @@ RULES:
 
         console.log("[Brain] 🧠 Codex self-improvement analysis:", response);
 
-        const newLearnings: { category: string; content: string }[] = [];
+        let newLearnings: { category: string; content: string }[] = [];
         let saveStats = { inserted: 0, updated: 0, skipped: 0 };
 
         if (!response.includes("NO_NEW_LEARNINGS")) {
@@ -278,6 +286,8 @@ RULES:
                     });
                 }
             }
+
+            newLearnings = filterSafeBrainLearnings(newLearnings);
 
             if (newLearnings.length > 0) {
                 saveStats = await saveBrainFactsDedup(

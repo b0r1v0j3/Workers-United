@@ -18,11 +18,25 @@ describe("getEntryFeeEligibility", () => {
         expect(result.error).toContain("Entry fee already paid");
     });
 
-    it("allows payment for unpaid profiles regardless of admin approval or status fields", () => {
+    it("blocks payment until the profile is complete and admin approved", () => {
         const candidate = {
             entry_fee_paid: false,
+            profile_completion: 100,
             admin_approved: false,
-            status: "PENDING_APPROVAL",
+        };
+
+        const result = getEntryFeeEligibility(candidate);
+
+        expect(result.allowed).toBe(false);
+        expect(result.status).toBe(400);
+        expect(result.error).toContain("admin review");
+    });
+
+    it("allows payment only when the profile is complete and approved", () => {
+        const candidate = {
+            entry_fee_paid: false,
+            profile_completion: 100,
+            admin_approved: true,
         };
 
         const result = getEntryFeeEligibility(candidate);
