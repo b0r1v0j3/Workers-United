@@ -277,6 +277,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Homepage pricing sentence cleanup: `src/app/page.tsx` refund rečenica više ne koristi nespretan copy `If we do not find a worker a job within 90 days`, nego sada prirodno kaže `If we do not find a job within 90 days`, dok ostatak pricing logike ostaje isti — 15.03.2026
 - [x] Homepage pricing copy agency parity: `src/app/page.tsx` pricing intro više ne tvrdi da samo workers mogu da aktiviraju Job Finder, nego sada jasno kaže da to mogu i workers i agencies kada je profil kompletan i odobren, dok employers ostaju `free of charge` — 15.03.2026
 - [x] Homepage bottom-rhythm color fix: završni signup CTA u `src/app/page.tsx` vraćen je na svetlosivu pozadinu kako bi pratio ritam sekcija posle pricing panela, dok je `src/components/Footer.tsx` prebačen na belu pozadinu da dno stranice više ne ostavlja dve bele sekcije zaredom i da footer dobije čist odvojen završetak — 15.03.2026
 - [x] Homepage CTA parity fix: `src/app/page.tsx` završni CTA blok više nema samo `Join as Worker` i `Join as Employer`, nego sada dodaje i `Join as Agency`, tako da agency više nije prisutan samo u flow sekciji nego i u glavnom signup pozivu na akciju; desktop prikazuje sva tri CTA-a u istom redu, telefon ih i dalje slaže vertikalno — 15.03.2026
