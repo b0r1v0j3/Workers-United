@@ -15,12 +15,11 @@ import {
 
 export default function Home() {
   const processSteps = [
-    "Create your account.",
-    "Complete profile and required documents.",
-    "We review, verify, and approve the case.",
-    "Activate Job Finder and enter queue.",
-    "We match based on real role needs.",
-    "Worker confirms and enters visa process.",
+    "Create your account and tell us what kind of work you want.",
+    "Complete your profile and documents so your case is ready when the right opening appears.",
+    "Once approved, Job Finder starts searching and watching for the right employer fit.",
+    "When we secure the match, we handle contracts, documents, and visa coordination.",
+    "We guide your arrival and handover all the way to the employer.",
   ];
 
   return (
