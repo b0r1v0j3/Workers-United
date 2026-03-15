@@ -14,13 +14,21 @@ import {
 } from "lucide-react";
 
 export default function Home() {
-  const processSteps = [
+  const workerProcessSteps = [
     "Create your account and complete the essentials so we can open your case properly.",
     "We search for the right employer match and stay ready for the next real opening.",
     "When we secure the job, we handle contracts, documents, and the full visa submission process.",
     "After visa approval, we coordinate your travel and prepare the final handover.",
     "We welcome you on arrival and take you directly to the employer.",
     "We stay with you through onboarding, legal stay, and residence extensions.",
+  ];
+  const employerProcessSteps = [
+    "Create your company account and tell us exactly what kind of workers you need.",
+    "We review the role, salary, location, and conditions before moving forward.",
+    "We match your request with workers who are genuinely ready for the process.",
+    "Once you confirm the fit, we handle contracts, visa paperwork, and legal coordination.",
+    "We organize arrival and handover so the worker reaches your business ready to start.",
+    "We stay involved for onboarding, legal stay, and follow-up support after arrival.",
   ];
 
   return (
@@ -161,24 +169,46 @@ export default function Home() {
 
           {/* How it works */}
           <section id="how-it-works" className="border-b border-[#e5e7eb] bg-[#f8fafc] py-16 md:py-20">
-            <div className="mx-auto max-w-[1020px] px-5">
-              <div className="rounded-[30px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_60px_-55px_rgba(15,23,42,0.18)] md:p-8">
-                <div className="mb-6">
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
-                    <Files className="h-3.5 w-3.5" />
-                    Worker flow
-                  </div>
-                  <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From signup to arrival and beyond</h2>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {processSteps.map((step, idx) => (
-                    <div key={step} className="flex items-start gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3">
-                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f4f4f5] text-xs font-semibold text-[#52525b]">
-                        {idx + 1}
-                      </span>
-                      <p className="text-sm text-[#4b5563]">{step}</p>
+            <div className="mx-auto max-w-[1180px] px-5">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="rounded-[30px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_60px_-55px_rgba(15,23,42,0.18)] md:p-8">
+                  <div className="mb-6">
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
+                      <UserRound className="h-3.5 w-3.5" />
+                      Worker flow
                     </div>
-                  ))}
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From signup to arrival and beyond</h2>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {workerProcessSteps.map((step, idx) => (
+                      <div key={step} className="flex items-start gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3">
+                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f4f4f5] text-xs font-semibold text-[#52525b]">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm text-[#4b5563]">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[30px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_60px_-55px_rgba(15,23,42,0.18)] md:p-8">
+                  <div className="mb-6">
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
+                      <BriefcaseBusiness className="h-3.5 w-3.5" />
+                      Employer flow
+                    </div>
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From hiring request to worker arrival</h2>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {employerProcessSteps.map((step, idx) => (
+                      <div key={step} className="flex items-start gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3">
+                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f4f4f5] text-xs font-semibold text-[#52525b]">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm text-[#4b5563]">{step}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

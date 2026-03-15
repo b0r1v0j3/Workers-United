@@ -277,6 +277,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Homepage dual-flow expansion: `src/app/page.tsx` `How it works` sekcija više nije samo worker card, nego sada na desktopu renderuje paralelne `Worker flow` i `Employer flow` blokove istog vizuelnog jezika, dok se na telefonu slažu jedan ispod drugog; dodat je i novi employer service tok od company signup-a i hiring request-a, preko match + legal coordination, do arrival/handover i post-arrival podrške — 15.03.2026
 - [x] Homepage flow badge parity fix: `src/app/page.tsx` worker service-path header više nema odvojeni levi icon-square + file-label stack, nego sada koristi isti rounded badge obrazac kao donje kartice (`icon + text` u jednoj kapsuli) sa labelom `Worker flow`, pa blok konačno deli isti UI jezik sa ostatkom homepage sekcija — 15.03.2026
 - [x] Homepage flow badge style fix: `src/app/page.tsx` worker service-path blok više ne koristi marketinški badge `From signup onward`, nego sada prati isti “file name” jezik kao hero kartice kroz `Case_Flow.md`, dok naslov ostaje `From signup to arrival and beyond` — 15.03.2026
 - [x] Homepage service-path title correction: `src/app/page.tsx` public worker flow više ne koristi netačan naslov `What happens after you join`, nego sada jasno pokriva registraciju kao prvi korak kroz badge `From signup onward` i naslov `From signup to arrival and beyond` — 15.03.2026
