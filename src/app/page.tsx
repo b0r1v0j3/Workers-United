@@ -18,7 +18,8 @@ export default function Home() {
     "Create your account and complete the essentials so we can open your case properly.",
     "We search for the right employer match and stay ready for the next real opening.",
     "When we secure the job, we handle contracts, documents, and the full visa submission process.",
-    "After visa approval, we coordinate your arrival, welcome you, and take you to the employer.",
+    "After visa approval, we coordinate your travel and prepare the final handover.",
+    "We welcome you on arrival and take you directly to the employer.",
     "We stay with you through onboarding, legal stay, and residence extensions.",
   ];
 
