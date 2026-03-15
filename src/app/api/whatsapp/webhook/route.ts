@@ -438,15 +438,6 @@ export async function POST(request: NextRequest) {
                                 ? "Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike — besplatno za poslodavce. Kako mogu da Vam pomognem?"
                                 : "Hi! I'm the Workers United WhatsApp assistant. We help companies hire foreign workers — completely free for employers. How can I help you?");
                             await sendWhatsAppText(normalizedPhone, finalEmployerReply, undefined);
-                            await supabase.from("whatsapp_messages").insert({
-                                user_id: employerRecord?.id || null,
-                                phone_number: normalizedPhone,
-                                direction: "outbound",
-                                message_type: "text",
-                                content: finalEmployerReply,
-                                status: "sent",
-                                template_name: "employer_flow",
-                            });
                             return NextResponse.json({ status: "ok" }); // Always return — never fall through to worker flow
                         } catch (empErr) {
                             console.error("[WhatsApp] Employer AI error:", empErr);
@@ -476,15 +467,6 @@ export async function POST(request: NextRequest) {
 
                 if (onboardingReply !== null) {
                     await sendWhatsAppText(normalizedPhone, onboardingReply, workerRecord?.profile_id || undefined);
-                    await supabase.from("whatsapp_messages").insert({
-                        user_id: null,
-                        phone_number: normalizedPhone,
-                        direction: "outbound",
-                        message_type: "text",
-                        content: onboardingReply,
-                        status: "sent",
-                        template_name: "onboarding_flow",
-                    });
                     return NextResponse.json({ status: "ok" });
                 }
 
@@ -1573,18 +1555,15 @@ export async function handleWhatsAppOnboarding(
     const state = await getOnboardingState(supabase, phone);
     const lang = state?.language || detectedLanguage || "en";
 
-    // ── No state yet: offer onboarding on greeting/job-related messages ──
+    // ── No state yet: only offer onboarding when the user explicitly asks to fill it on WhatsApp ──
     if (!state) {
         const lower = message.toLowerCase().trim();
-        const isGreeting = lower.length < 120 && (
-            /^(hi|hello|hey|good|salam|zdravo|merhaba|bonjour|hola|ciao|namaste|ola|salut|hej|merhaba|selam)/i.test(lower) ||
-            /\?$/.test(lower) ||
-            /(job|work|posao|rad|emploi|trabaj|lavoro|visa|europe|evropa)/i.test(lower)
-        );
-        if (isGreeting) {
+        const wantsWhatsAppOnboarding = /fill.*profile.*whatsapp|complete.*profile.*whatsapp|register.*whatsapp|whatsapp.*profile|whatsapp.*register|profile.*on whatsapp|popuni.*profil.*whatsapp|profil.*na whatsapp|registr.*preko whatsapp|registro.*whatsapp|perfil.*whatsapp/i.test(lower);
+        if (wantsWhatsAppOnboarding) {
             await saveOnboardingState(supabase, phone, "ask_start", {}, detectedLanguage);
+            return getQ("ask_start", detectedLanguage || "en");
         }
-        return null; // Let GPT handle the actual reply
+        return null; // Let GPT handle normal questions
     }
 
     const collected = { ...state.collected_data };
@@ -1663,7 +1642,8 @@ export async function handleWhatsAppOnboarding(
             };
             return msgs[lk];
         }
-        return null; // Let GPT handle unexpected replies
+        await clearOnboardingState(supabase, phone);
+        return null; // Let GPT handle anything except explicit yes/no
     }
 
     // ── full_name ──
