@@ -42,7 +42,7 @@ export default function Footer() {
     ];
 
     return (
-        <footer className="bg-[#fafafa] border-t border-gray-200 relative z-10 w-full py-12">
+        <footer className="bg-white border-t border-gray-200 relative z-10 w-full py-12">
             <div className="max-w-[1120px] mx-auto px-5 lg:px-8 flex flex-col items-center gap-10">
 
                 {/* Centered Large Social Icons */}
