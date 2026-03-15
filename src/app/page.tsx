@@ -242,53 +242,27 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Workers / Employers */}
-          <section className="border-b border-[#e5e7eb] bg-white py-16 md:py-20">
-            <div className="mx-auto grid max-w-[1180px] gap-6 px-5 md:grid-cols-2">
-              <article id="workers" className="rounded-3xl border border-[#e5e7eb] bg-white p-6 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.12)]">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
-                  <UserRound className="h-3.5 w-3.5" />
-                  For workers
-                </div>
-                <h3 className="text-2xl font-semibold text-[#191919]">Transparent path to legal work</h3>
-                <ul className="mt-4 space-y-3 text-sm text-[#4b5563]">
-                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" /> Clear checklist of what is required.</li>
-                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" /> Verified employers only inside the flow.</li>
-                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" /> Visa process starts after confirmation.</li>
-                </ul>
-              </article>
-              <article id="employers" className="rounded-3xl border border-[#e5e7eb] bg-white p-6 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.12)]">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
-                  <BriefcaseBusiness className="h-3.5 w-3.5" />
-                  For employers
-                </div>
-                <h3 className="text-2xl font-semibold text-[#191919]">Structured hiring with fewer surprises</h3>
-                <ul className="mt-4 space-y-3 text-sm text-[#4b5563]">
-                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" /> Role requirements captured upfront.</li>
-                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" /> Matching against verified worker readiness.</li>
-                  <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" /> Ongoing support through onboarding.</li>
-                </ul>
-              </article>
-            </div>
-          </section>
-
           {/* Pricing note */}
-          <section className="border-b border-[#e5e7eb] bg-[#f8fafc] py-16 md:py-20">
-            <div className="mx-auto max-w-[980px] px-5">
-              <article className="rounded-[30px] border border-[#e5e7eb] bg-white p-6 shadow-[0_24px_55px_-42px_rgba(15,23,42,0.14)] md:p-8">
+          <section className="border-b border-[#e5e7eb] bg-white py-16 md:py-20">
+            <div className="mx-auto max-w-[1120px] px-5">
+              <article className="rounded-[30px] border border-[#e5e7eb] bg-[#f8fafc] p-6 shadow-[0_24px_55px_-42px_rgba(15,23,42,0.14)] md:p-8">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   <CircleDollarSign className="h-3.5 w-3.5" />
                   Pricing note
                 </div>
                 <h2 className="text-2xl font-semibold text-[#171717] md:text-3xl">Simple pricing with a clear refund promise</h2>
                 <p className="mt-3 text-sm leading-relaxed text-[#52525b] md:text-base">
-                  Once your profile is complete and approved, you can activate Job Finder with a one-time <strong>$9 fee</strong>.
-                  If we do not find you a job within <strong> 90 days</strong>, you receive a <strong>full refund</strong>.
+                  Workers can activate Job Finder with a one-time <strong>$9 fee</strong> once the profile is complete and approved.
+                  Employers use Workers United <strong>free of charge</strong>. If we do not find a worker a job within <strong>90 days</strong>, the <strong>$9 is fully refunded</strong>.
                 </p>
-                <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
+                <div className="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4">
                     <p className="text-[#6b7280]">Job Finder</p>
                     <p className="mt-1 text-2xl font-semibold text-[#161616]">$9 one-time</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4">
+                    <p className="text-[#6b7280]">For employers</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#161616]">$0 forever</p>
                   </div>
                   <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4">
                     <p className="text-[#6b7280]">Refund promise</p>
