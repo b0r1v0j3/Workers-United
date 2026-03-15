@@ -15,11 +15,11 @@ import {
 
 export default function Home() {
   const processSteps = [
-    "Create your account and tell us what kind of work you want.",
-    "Complete your profile and documents so your case is ready when the right opening appears.",
-    "Once approved, Job Finder starts searching and watching for the right employer fit.",
-    "When we secure the match, we handle contracts, documents, and visa coordination.",
-    "We guide your arrival and handover all the way to the employer.",
+    "Create your account and complete the essentials so we can open your case properly.",
+    "We search for the right employer match and stay ready for the next real opening.",
+    "When we secure the job, we handle contracts, documents, and the full visa submission process.",
+    "After visa approval, we coordinate your arrival, welcome you, and take you to the employer.",
+    "We stay with you through onboarding, legal stay, and residence extensions.",
   ];
 
   return (
@@ -167,8 +167,8 @@ export default function Home() {
                     <Files className="h-4 w-4" />
                   </span>
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">Process_Document</p>
-                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">How the flow works</h2>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">Full-service path</p>
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">What happens after you join</h2>
                   </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
