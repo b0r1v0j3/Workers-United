@@ -277,6 +277,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Homepage flow badge style fix: `src/app/page.tsx` worker service-path blok više ne koristi marketinški badge `From signup onward`, nego sada prati isti “file name” jezik kao hero kartice kroz `Case_Flow.md`, dok naslov ostaje `From signup to arrival and beyond` — 15.03.2026
 - [x] Homepage service-path title correction: `src/app/page.tsx` public worker flow više ne koristi netačan naslov `What happens after you join`, nego sada jasno pokriva registraciju kao prvi korak kroz badge `From signup onward` i naslov `From signup to arrival and beyond` — 15.03.2026
 - [x] Homepage service-path step expansion: `src/app/page.tsx` public worker flow sada ima 6 koraka umesto 5, tako da su `travel prep / final handover`, `arrival + escort to employer` i `ongoing support after arrival` jasno razdvojeni, umesto da se dolazak i dalji boravak stapaju u jednu stavku — 15.03.2026
 - [x] Homepage service-path rewrite: `src/app/page.tsx` public worker flow sada konačno priča stvarnu suštinu Workers United usluge umesto formalne procedure — nalog + essentials za otvaranje case-a, mi tražimo pravi match, kada ga obezbedimo vodimo ugovore/dokumenta/vizu, zatim koordiniramo dolazak/doček i ostajemo prisutni za onboarding, legal stay i produženja boravka; isti blok je dobio topliji naslov `What happens after you join` i badge `Full-service path` — 15.03.2026
