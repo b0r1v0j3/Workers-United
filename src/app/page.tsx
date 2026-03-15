@@ -168,8 +168,8 @@ export default function Home() {
                     <Files className="h-4 w-4" />
                   </span>
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">Full-service path</p>
-                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">What happens after you join</h2>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">From signup onward</p>
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From signup to arrival and beyond</h2>
                   </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
