@@ -30,6 +30,14 @@ export default function Home() {
     "We organize arrival and handover so the worker reaches your business ready to start.",
     "We stay involved for onboarding, legal stay, and follow-up support after arrival.",
   ];
+  const agencyProcessSteps = [
+    "Create your agency account and open one workspace for all of your workers.",
+    "Add each worker, complete profiles, and upload documents in one place.",
+    "We review every case and show what is still missing before it can move forward.",
+    "Once a worker is approved, Job Finder can be activated for that specific case.",
+    "When we secure the match, we handle contracts, visa paperwork, and legal coordination.",
+    "We support arrival, handover, and the follow-up process after the worker starts.",
+  ];
 
   return (
     <>
@@ -169,8 +177,8 @@ export default function Home() {
 
           {/* How it works */}
           <section id="how-it-works" className="border-b border-[#e5e7eb] bg-[#f8fafc] py-16 md:py-20">
-            <div className="mx-auto max-w-[1180px] px-5">
-              <div className="grid gap-6 lg:grid-cols-2">
+            <div className="mx-auto max-w-[1320px] px-5">
+              <div className="grid gap-6 xl:grid-cols-3">
                 <div className="rounded-[30px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_60px_-55px_rgba(15,23,42,0.18)] md:p-8">
                   <div className="mb-6">
                     <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
@@ -179,7 +187,7 @@ export default function Home() {
                     </div>
                     <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From signup to arrival and beyond</h2>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-3">
                     {workerProcessSteps.map((step, idx) => (
                       <div key={step} className="flex items-start gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3">
                         <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f4f4f5] text-xs font-semibold text-[#52525b]">
@@ -199,8 +207,28 @@ export default function Home() {
                     </div>
                     <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From hiring request to worker arrival</h2>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-3">
                     {employerProcessSteps.map((step, idx) => (
+                      <div key={step} className="flex items-start gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3">
+                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f4f4f5] text-xs font-semibold text-[#52525b]">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm text-[#4b5563]">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[30px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_60px_-55px_rgba(15,23,42,0.18)] md:p-8">
+                  <div className="mb-6">
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
+                      <Files className="h-3.5 w-3.5" />
+                      Agency flow
+                    </div>
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From agency workspace to worker handover</h2>
+                  </div>
+                  <div className="grid gap-3">
+                    {agencyProcessSteps.map((step, idx) => (
                       <div key={step} className="flex items-start gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3">
                         <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f4f4f5] text-xs font-semibold text-[#52525b]">
                           {idx + 1}
