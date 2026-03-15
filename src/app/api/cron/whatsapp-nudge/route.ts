@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendProfileIncomplete } from "@/lib/whatsapp";
+import { isRecipientSideWhatsAppFailure } from "@/lib/whatsapp-health";
 import { isInternalOrTestEmail } from "@/lib/reporting";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 
@@ -30,6 +31,7 @@ export async function GET(request: Request) {
     const supabase = createAdminClient();
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const results = { found: 0, nudged: 0, skipped: 0, errors: 0 };
 
@@ -74,6 +76,23 @@ export async function GET(request: Request) {
                 .filter((phone): phone is string => !!phone)
         );
 
+        const { data: recentFailedNudges } = await supabase
+            .from("whatsapp_messages")
+            .select("phone_number, error_message")
+            .eq("template_name", "profile_incomplete")
+            .eq("direction", "outbound")
+            .eq("status", "failed")
+            .gte("created_at", monthAgo.toISOString());
+
+        const blockedRecipientPhones = new Set(
+            (recentFailedNudges || [])
+                .filter((message: { error_message?: string | null }) =>
+                    isRecipientSideWhatsAppFailure(message.error_message)
+                )
+                .map((message: { phone_number: string }) => normalizeWorkerPhone(message.phone_number))
+                .filter((phone): phone is string => !!phone)
+        );
+
         // Get profile names
         const profileIds = canonicalWorkerRows.map(workerRecord => workerRecord.profile_id).filter((value): value is string => !!value);
         const { data: profiles } = await supabase
@@ -94,6 +113,11 @@ export async function GET(request: Request) {
             }
 
             if (alreadyNudgedPhones.has(phone)) {
+                results.skipped++;
+                continue;
+            }
+
+            if (blockedRecipientPhones.has(phone)) {
                 results.skipped++;
                 continue;
             }
