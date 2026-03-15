@@ -252,12 +252,12 @@ export default function Home() {
                 </div>
                 <h2 className="text-2xl font-semibold text-[#171717] md:text-3xl">Simple pricing with a clear refund promise</h2>
                 <p className="mt-3 text-sm leading-relaxed text-[#52525b] md:text-base">
-                  Workers and agencies can activate Job Finder with a one-time <strong>$9 fee</strong> once the profile is complete and approved.
+                  Job Finder can be activated for an approved worker case with a one-time <strong>$9 fee</strong>.
                   Employers use Workers United <strong>free of charge</strong>. If we do not find a job within <strong>90 days</strong>, the <strong>$9 is fully refunded</strong>.
                 </p>
                 <div className="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4">
-                    <p className="text-[#6b7280]">Job Finder</p>
+                    <p className="text-[#6b7280]">Per worker case</p>
                     <p className="mt-1 text-2xl font-semibold text-[#161616]">$9 one-time</p>
                   </div>
                   <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4">
