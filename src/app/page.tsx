@@ -15,12 +15,12 @@ import {
 
 export default function Home() {
   const processSteps = [
-    "Create your account and activate Job Finder.",
+    "Create your account.",
     "Complete profile and required documents.",
-    "We verify details and documents.",
+    "We review, verify, and approve the case.",
+    "Activate Job Finder and enter queue.",
     "We match based on real role needs.",
     "Worker confirms and enters visa process.",
-    "Arrival support and onboarding continuity.",
   ];
 
   return (
@@ -226,8 +226,8 @@ export default function Home() {
                 </div>
                 <h2 className="text-2xl font-semibold text-[#171717] md:text-3xl">Simple pricing with a clear refund promise</h2>
                 <p className="mt-3 text-sm leading-relaxed text-[#52525b] md:text-base">
-                  Start with a one-time <strong>$9 Job Finder fee</strong>. If we do not find you a job within
-                  <strong> 90 days</strong>, you receive a <strong>full refund</strong>.
+                  Once your profile is complete and approved, you can activate Job Finder with a one-time <strong>$9 fee</strong>.
+                  If we do not find you a job within <strong> 90 days</strong>, you receive a <strong>full refund</strong>.
                 </p>
                 <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
                   <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4">
