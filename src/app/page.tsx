@@ -163,14 +163,12 @@ export default function Home() {
           <section id="how-it-works" className="border-b border-[#e5e7eb] bg-[#f8fafc] py-16 md:py-20">
             <div className="mx-auto max-w-[1020px] px-5">
               <div className="rounded-[30px] border border-[#e5e7eb] bg-white p-6 shadow-[0_30px_60px_-55px_rgba(15,23,42,0.18)] md:p-8">
-                <div className="mb-6 flex items-center gap-3">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#f4f4f5] text-[#52525b]">
-                    <Files className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">Case_Flow.md</p>
-                    <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From signup to arrival and beyond</h2>
+                <div className="mb-6">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
+                    <Files className="h-3.5 w-3.5" />
+                    Worker flow
                   </div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-[#191919] md:text-3xl">From signup to arrival and beyond</h2>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   {processSteps.map((step, idx) => (
