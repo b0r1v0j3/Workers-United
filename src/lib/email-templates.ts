@@ -1,4 +1,5 @@
 // Email templates for Workers United
+import { normalizeUserType, type CanonicalUserType } from "@/lib/domain";
 import { escapeHtml } from "@/lib/sanitize";
 
 export type EmailType =
@@ -29,6 +30,7 @@ interface EmailTemplate {
 export interface TemplateData {
     name?: string;
     email?: string;
+    recipientRole?: Exclude<CanonicalUserType, "admin"> | null;
     // Job & payment
     jobTitle?: string;
     companyName?: string;
@@ -85,6 +87,133 @@ const buttonStyle = `
 `;
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
+
+type RecipientRole = Exclude<CanonicalUserType, "admin">;
+
+function getRecipientRole(data: TemplateData): RecipientRole {
+    const normalized = normalizeUserType(data.recipientRole);
+    if (normalized === "employer" || normalized === "agency") {
+        return normalized;
+    }
+    if (normalized === "worker") {
+        return "worker";
+    }
+    if (data.isEmployer) {
+        return "employer";
+    }
+    return "worker";
+}
+
+function getRecipientWorkspaceUrl(role: RecipientRole, purpose: "setup" | "dashboard" | "documents" | "queue" = "dashboard") {
+    switch (role) {
+        case "employer":
+            return `${BASE_URL}/profile/employer`;
+        case "agency":
+            return `${BASE_URL}/profile/agency`;
+        case "worker":
+        default:
+            switch (purpose) {
+                case "setup":
+                    return `${BASE_URL}/profile/worker/edit`;
+                case "documents":
+                    return `${BASE_URL}/profile/worker/documents`;
+                case "queue":
+                    return `${BASE_URL}/profile/worker/queue`;
+                case "dashboard":
+                default:
+                    return `${BASE_URL}/profile/worker`;
+            }
+    }
+}
+
+function renderJourneyRows(rows: Array<{ icon: string; title: string; description: string }>) {
+    return rows.map((row, index) => `
+        <tr>
+            <td width="50" style="vertical-align: top; padding-bottom: ${index === rows.length - 1 ? "0" : "15px"};">
+                <img src="${row.icon}" width="32" alt="">
+            </td>
+            <td style="padding-bottom: ${index === rows.length - 1 ? "0" : "15px"};">
+                <strong style="color: #1D1D1F;">${row.title}</strong>
+                <div style="color: #515154; font-size: 14px;">${row.description}</div>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function getRoleReminderCopy(role: RecipientRole) {
+    switch (role) {
+        case "employer":
+            return {
+                subject: "Don't forget your company profile!",
+                title: "Finish your company profile",
+                text: "Complete your company details so your hiring request can move forward.",
+                buttonText: "Open Employer Workspace",
+                buttonUrl: getRecipientWorkspaceUrl("employer", "dashboard"),
+            };
+        case "agency":
+            return {
+                subject: "Don't forget your agency workspace!",
+                title: "Finish your agency workspace",
+                text: "Complete your agency details so you can manage worker cases from one place.",
+                buttonText: "Open Agency Workspace",
+                buttonUrl: getRecipientWorkspaceUrl("agency", "dashboard"),
+            };
+        case "worker":
+        default:
+            return {
+                subject: "Don't forget your profile!",
+                title: "Finish your worker profile",
+                text: "Complete your profile and required documents so we can move your case to review.",
+                buttonText: "Complete Profile",
+                buttonUrl: getRecipientWorkspaceUrl("worker", "setup"),
+            };
+    }
+}
+
+function getRoleWarningCopy(role: RecipientRole) {
+    switch (role) {
+        case "employer":
+            return {
+                warningText: "Your company profile is incomplete and scheduled for cleanup.",
+                buttonText: "Save Company Profile",
+                buttonUrl: getRecipientWorkspaceUrl("employer", "dashboard"),
+            };
+        case "agency":
+            return {
+                warningText: "Your agency workspace is incomplete and scheduled for cleanup.",
+                buttonText: "Save Agency Workspace",
+                buttonUrl: getRecipientWorkspaceUrl("agency", "dashboard"),
+            };
+        case "worker":
+        default:
+            return {
+                warningText: "Your worker profile is incomplete and scheduled for cleanup.",
+                buttonText: "Save My Profile",
+                buttonUrl: getRecipientWorkspaceUrl("worker", "setup"),
+            };
+    }
+}
+
+function getRoleDeletionCopy(role: RecipientRole) {
+    switch (role) {
+        case "employer":
+            return {
+                body: "Your employer account has been removed due to inactivity. You are always welcome to sign up again when you are ready to hire.",
+                buttonText: "Create New Employer Account",
+            };
+        case "agency":
+            return {
+                body: "Your agency workspace has been removed due to inactivity. You are always welcome to sign up again when you are ready to manage worker cases.",
+                buttonText: "Create New Agency Account",
+            };
+        case "worker":
+        default:
+            return {
+                body: "Your worker account has been removed due to inactivity. You are always welcome to sign up again when you are ready.",
+                buttonText: "Create New Account",
+            };
+    }
+}
 
 // Helper to wrap content in the Monochrome Apple Header design
 const wrapModernTemplate = (content: string, title: string = "Workers United", subtitle: string = ""): string => `
@@ -163,64 +292,132 @@ function getCheckoutRecoveryStatusMessage(step: number | undefined, amount: stri
 export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemplate {
     const name = escapeHtml(data.name || "friend");
     const firstName = escapeHtml((data.name || "friend").split(" ")[0]);
+    const recipientRole = getRecipientRole(data);
 
     switch (type) {
-        case "welcome":
+        case "welcome": {
+            const welcomeCopy = {
+                worker: {
+                    subject: "Welcome to Workers United",
+                    title: `Welcome, ${firstName}!`,
+                    subtitle: "We're thrilled to have you onboard.",
+                    intro: "Workers United is your bridge to legal work in Europe. Complete your worker case first, and we will handle the rest when the right opportunity appears.",
+                    buttonText: "Start Your Profile",
+                    buttonUrl: getRecipientWorkspaceUrl("worker", "setup"),
+                    rows: [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/edit-user-male.png",
+                            title: "1. Complete Profile",
+                            description: "Review your worker details",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
+                            title: "2. Upload Docs",
+                            description: "Passport, photo, diploma",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/approval.png",
+                            title: "3. Wait for Approval",
+                            description: "We review the completed case",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/rocket.png",
+                            title: "4. Activate Job Finder",
+                            description: "Unlock the $9 search after approval",
+                        },
+                    ],
+                },
+                employer: {
+                    subject: "Welcome to Workers United",
+                    title: `Welcome, ${firstName}!`,
+                    subtitle: "Your hiring workspace is ready.",
+                    intro: "Workers United helps you request international workers without platform fees. Complete your employer profile so we can start matching real hiring needs.",
+                    buttonText: "Open Employer Workspace",
+                    buttonUrl: getRecipientWorkspaceUrl("employer", "dashboard"),
+                    rows: [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/company.png",
+                            title: "1. Finish Company Profile",
+                            description: "Add the essentials about your business",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/document.png",
+                            title: "2. Submit Hiring Needs",
+                            description: "Tell us role, salary, and headcount",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
+                            title: "3. We Match Workers",
+                            description: "We search verified worker cases for you",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/passport-control.png",
+                            title: "4. We Handle Legal Steps",
+                            description: "Contracts, visa workflow, and arrival coordination",
+                        },
+                    ],
+                },
+                agency: {
+                    subject: "Welcome to Workers United",
+                    title: `Welcome, ${firstName}!`,
+                    subtitle: "Your agency workspace is ready.",
+                    intro: "Workers United gives your agency one place to add workers, upload documents, and track each approved worker case through Job Finder and the visa process.",
+                    buttonText: "Open Agency Workspace",
+                    buttonUrl: getRecipientWorkspaceUrl("agency", "dashboard"),
+                    rows: [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/briefcase.png",
+                            title: "1. Open Your Workspace",
+                            description: "Use one dashboard for all worker cases",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/add-user-group-man-man.png",
+                            title: "2. Add Workers",
+                            description: "Create and manage worker profiles",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
+                            title: "3. Upload Documents",
+                            description: "Prepare each worker case for review",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked-user-male.png",
+                            title: "4. Unlock Job Finder Per Case",
+                            description: "Activate approved worker cases one by one",
+                        },
+                    ],
+                },
+            }[recipientRole];
+
             return {
-                subject: "Welcome to the team!",
+                subject: welcomeCopy.subject,
                 html: wrapModernTemplate(`
                     <div style="text-align: center; margin-bottom: 30px;">
                          <img src="https://img.icons8.com/ios/100/000000/conference-call.png" width="80" height="80" alt="Welcome" style="margin-bottom: 20px;">
-                        <h1 style="margin:0; color:#1D1D1F; font-size: 26px; font-weight: 700;">Welcome, ${firstName}!</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 10px;">We're thrilled to have you onboard.</p>
+                        <h1 style="margin:0; color:#1D1D1F; font-size: 26px; font-weight: 700;">${welcomeCopy.title}</h1>
+                        <p style="font-size: 16px; color: #515154; margin-top: 10px;">${welcomeCopy.subtitle}</p>
                     </div>
 
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 25px; text-align: center;">
-                        Workers United is your bridge to great job opportunities in Europe. We handle the paperwork, so you can focus on building your future.
+                        ${welcomeCopy.intro}
                     </p>
                     
                     <div style="background:#F5F5F7; border-radius:12px; padding:25px; margin:30px 0; border: 1px solid #E5E5EA;">
                         <h3 style="margin:0 0 20px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">Your Journey</h3>
                         
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/ios/50/000000/edit-user-male.png" width="32"></td>
-                                <td style="padding-bottom: 15px;">
-                                    <strong style="color: #1D1D1F;">1. Complete Profile</strong>
-                                    <div style="color: #515154; font-size: 14px;">Review all fields</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/ios/50/000000/upload-to-cloud.png" width="32"></td>
-                                <td style="padding-bottom: 15px;">
-                                    <strong style="color: #1D1D1F;">2. Upload Docs</strong>
-                                    <div style="color: #515154; font-size: 14px;">Passport, Photo, Diploma</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td width="50" style="vertical-align: top; padding-bottom: 15px;"><img src="https://img.icons8.com/ios/50/000000/brain.png" width="32"></td>
-                                <td style="padding-bottom: 15px;">
-                                    <strong style="color: #1D1D1F;">3. AI Verification</strong>
-                                    <div style="color: #515154; font-size: 14px;">Instant checks</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td width="50" style="vertical-align: top;"><img src="https://img.icons8.com/ios/50/000000/rocket.png" width="32"></td>
-                                <td>
-                                    <strong style="color: #1D1D1F;">4. Get Hired</strong>
-                                    <div style="color: #515154; font-size: 14px;">Matched with employers</div>
-                                </td>
-                            </tr>
+                            ${renderJourneyRows(welcomeCopy.rows)}
                         </table>
                     </div>
                     
                     <div style="text-align:center; margin-top:40px;">
-                        <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle}">
-                            Start Your Profile
+                        <a href="${welcomeCopy.buttonUrl}" style="${buttonStyle}">
+                            ${welcomeCopy.buttonText}
                         </a>
                     </div>
-                `, "Welcome to Workers United", "Let's get you hired!")
+                `, "Welcome to Workers United", "Let's get you moving.")
             };
+        }
 
         case "profile_complete":
             return {
@@ -624,21 +821,15 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             };
 
         case "profile_reminder": {
-            const isEmp = data.isEmployer || false;
-            const title = isEmp ? "Start Hiring!" : "Start working!";
-            const text = isEmp
-                ? "Complete your company profile to find great workers."
-                : "Complete your profile to get matched with jobs.";
-            const btnLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
-            const subject = isEmp ? "Don't forget your company profile!" : "Don't forget your profile!";
+            const reminderCopy = getRoleReminderCopy(recipientRole);
 
             return {
-                subject,
+                subject: reminderCopy.subject,
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/ios/100/000000/todo-list.png" width="80" height="80" alt="Todo" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${title}</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">${text}</p>
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${reminderCopy.title}</h1>
+                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">${reminderCopy.text}</p>
                     </div>
 
                    <div style="background:#F5F5F7; border-radius:12px; padding:25px; margin:30px 0; border: 1px solid #E5E5EA;">
@@ -649,8 +840,8 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
 
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="${btnLink}" style="${buttonStyle}">
-                            Complete Now
+                        <a href="${reminderCopy.buttonUrl}" style="${buttonStyle}">
+                            ${reminderCopy.buttonText}
                         </a>
                     </div>
                 `, "Profile Reminder", "Don't wait")
@@ -659,11 +850,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "profile_warning": {
             const daysLeft = data.daysLeft || 0;
-            const isEmp = data.isEmployer || false;
-            const saveLink = isEmp ? "https://workersunited.eu/profile/employer" : "https://workersunited.eu/profile/worker/edit";
-            const warningText = isEmp
-                ? "Your company profile is incomplete and scheduled for cleanup."
-                : "Your profile is incomplete and scheduled for cleanup.";
+            const warningCopy = getRoleWarningCopy(recipientRole);
 
             return {
                 subject: `Last chance: ${daysLeft} days left`,
@@ -677,19 +864,20 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
-                        ${warningText} Please finish your signup to stay with us.
+                        ${warningCopy.warningText} Please finish your signup to stay with us.
                     </p>
 
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="${saveLink}" style="${buttonStyle}">
-                            Save My Account
+                        <a href="${warningCopy.buttonUrl}" style="${buttonStyle}">
+                            ${warningCopy.buttonText}
                         </a>
                     </div>
                 `, "Final Warning", "Please act now")
             };
         }
 
-        case "profile_deletion":
+        case "profile_deletion": {
+            const deletionCopy = getRoleDeletionCopy(recipientRole);
             return {
                 subject: "Account Removed",
                 html: wrapModernTemplate(`
@@ -699,16 +887,17 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
-                         Your account has been removed due to inactivity. You are always welcome to sign up again when you are ready!
+                         ${deletionCopy.body}
                     </p>
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="https://workersunited.eu/signup" style="${buttonStyle}">
-                            Create New Account
+                            ${deletionCopy.buttonText}
                         </a>
                     </div>
                 `, "Account Deleted", "See you later")
             };
+        }
 
         case "announcement_document_fix":
             return {
@@ -761,7 +950,9 @@ export async function queueEmail(
     scheduledFor?: Date,
     recipientPhone?: string
 ): Promise<void> {
-    const template = getEmailTemplate(emailType, { name: recipientName, ...templateData });
+    const recipientRole = getRecipientRole(templateData);
+    const enrichedTemplateData = { ...templateData, recipientRole };
+    const template = getEmailTemplate(emailType, { name: recipientName, ...enrichedTemplateData });
 
     const { data } = await supabase.from("email_queue").insert({
         user_id: userId,
@@ -769,7 +960,7 @@ export async function queueEmail(
         recipient_email: recipientEmail,
         recipient_name: recipientName,
         subject: template.subject,
-        template_data: { ...templateData, html: template.html },
+        template_data: { ...enrichedTemplateData, html: template.html },
         scheduled_for: scheduledFor?.toISOString() || new Date().toISOString()
     }).select().single();
 
@@ -799,24 +990,28 @@ export async function queueEmail(
             // Map EmailType → WhatsApp template
             switch (emailType) {
                 case "welcome":
-                    await wa.sendWelcome(recipientPhone, firstName, userId);
+                    await wa.sendRoleWelcome(recipientPhone, firstName, recipientRole, userId);
                     break;
                 case "profile_complete":
-                    await wa.sendStatusUpdate(
-                        recipientPhone,
-                        firstName,
-                        "Your profile is 100% complete and is now waiting for admin review. We will unlock Job Finder as soon as it is approved.",
-                        userId
-                    );
+                    if (recipientRole === "worker") {
+                        await wa.sendRoleStatusUpdate(
+                            recipientPhone,
+                            firstName,
+                            "Your profile is 100% complete and is now waiting for admin review. We will unlock Job Finder as soon as it is approved.",
+                            "worker",
+                            userId
+                        );
+                    }
                     break;
                 case "payment_success":
                     await wa.sendPaymentConfirmed(recipientPhone, firstName, templateData.amount || "$9", userId);
                     break;
                 case "checkout_recovery":
-                    await wa.sendStatusUpdate(
+                    await wa.sendRoleStatusUpdate(
                         recipientPhone,
                         firstName,
                         getCheckoutRecoveryStatusMessage(templateData.recoveryStep, templateData.amount || "$9"),
+                        recipientRole,
                         userId
                     );
                     break;
@@ -830,10 +1025,10 @@ export async function queueEmail(
                     await wa.sendRefundProcessed(recipientPhone, firstName, templateData.amount || "$9", userId);
                     break;
                 case "admin_update":
-                    await wa.sendStatusUpdate(recipientPhone, firstName, templateData.message || "Profile updated", userId);
+                    await wa.sendRoleStatusUpdate(recipientPhone, firstName, templateData.message || "Profile updated", recipientRole, userId);
                     break;
                 case "announcement":
-                    await wa.sendAnnouncement(recipientPhone, templateData.title || "Announcement", templateData.message || "", templateData.actionLink, userId);
+                    await wa.sendRoleAnnouncement(recipientPhone, templateData.title || "Announcement", templateData.message || "", recipientRole, templateData.actionLink, userId);
                     break;
                 // job_offer and offer_reminder are handled separately in notifications.ts
                 default:

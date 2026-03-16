@@ -41,6 +41,12 @@ const EMPLOYER_FIELD_LABELS: Record<string, string> = {
     founding_date: "Company Founding Date",
 };
 
+const AGENCY_FIELD_LABELS: Record<string, string> = {
+    display_name: "Agency Name",
+    legal_name: "Legal Name",
+    contact_email: "Contact Email",
+};
+
 // ─── Types ───────────────────────────────────────────────────────
 
 export interface ProfileCompletionResult {
@@ -107,6 +113,14 @@ interface EmployerData {
         description?: string | null;
         business_registry_number?: string | null;
         founding_date?: string | null;
+    } | null;
+}
+
+interface AgencyData {
+    agency: {
+        display_name?: string | null;
+        legal_name?: string | null;
+        contact_email?: string | null;
     } | null;
 }
 
@@ -220,6 +234,26 @@ export function getEmployerCompletion(data: EmployerData): ProfileCompletionResu
     const missingFields = Object.entries(fields)
         .filter(([_, v]) => v === null || v === undefined || v === '')
         .map(([k]) => EMPLOYER_FIELD_LABELS[k] || k);
+
+    return { completion, missingFields, totalFields, completedFields };
+}
+
+export function getAgencyCompletion(data: AgencyData): ProfileCompletionResult {
+    const { agency } = data;
+
+    const fields: Record<string, string | null | undefined> = {
+        display_name: agency?.display_name,
+        legal_name: agency?.legal_name,
+        contact_email: agency?.contact_email,
+    };
+
+    const totalFields = Object.keys(fields).length;
+    const completedFields = Object.values(fields).filter(v => v !== null && v !== undefined && v !== '').length;
+    const completion = Math.round((completedFields / totalFields) * 100);
+
+    const missingFields = Object.entries(fields)
+        .filter(([_, v]) => v === null || v === undefined || v === '')
+        .map(([k]) => AGENCY_FIELD_LABELS[k] || k);
 
     return { completion, missingFields, totalFields, completedFields };
 }
