@@ -94,11 +94,31 @@ describe('getEmailTemplate', () => {
     it('employer profile_reminder uses employer-specific text', () => {
         const { html, subject } = getEmailTemplate('profile_reminder', {
             name: 'Corp',
-            isEmployer: true,
+            recipientRole: 'employer',
             todoList: '<li>Company Name</li>',
         });
         expect(subject).toContain('company profile');
         expect(html).toContain('company profile');
+    });
+
+    it('agency welcome email opens the agency workspace', () => {
+        const { html } = getEmailTemplate('welcome', {
+            name: 'Agency Owner',
+            recipientRole: 'agency',
+        });
+        expect(html).toContain('agency workspace');
+        expect(html).toContain('Open Agency Workspace');
+        expect(html).toContain('/profile/agency');
+    });
+
+    it('agency profile_reminder uses agency-specific text', () => {
+        const { html, subject } = getEmailTemplate('profile_reminder', {
+            name: 'Agency Owner',
+            recipientRole: 'agency',
+            todoList: '<li>Agency Name</li>',
+        });
+        expect(subject).toContain('agency workspace');
+        expect(html).toContain('agency workspace');
     });
 
     it('all emails contain unsubscribe link', () => {

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
+import { normalizeUserType } from "@/lib/domain";
 import { queueEmail } from "@/lib/email-templates";
 import { revalidatePath } from "next/cache";
 
@@ -49,6 +50,8 @@ export default async function AnnouncementsPage() {
 
         const { createAdminClient: createAdmin, getAllAuthUsers: fetchAllUsers } = await import("@/lib/supabase/admin");
         const adminClient = createAdmin();
+        const normalizedActionText = actionText?.trim() || undefined;
+        const normalizedActionLink = actionLink?.trim() || undefined;
 
         // 1. Fetch ALL Users (paginated)
         const allUsers = await fetchAllUsers(adminClient);
@@ -56,11 +59,16 @@ export default async function AnnouncementsPage() {
         let recipients = [];
 
         if (targetAudience === 'workers') {
-            recipients = allUsers.filter((u: any) => u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin');
+            recipients = allUsers.filter((u: any) => {
+                const role = normalizeUserType(u.user_metadata?.user_type);
+                return role === "worker" || role === null;
+            });
         } else if (targetAudience === 'employers') {
-            recipients = allUsers.filter((u: any) => u.user_metadata?.user_type === 'employer');
+            recipients = allUsers.filter((u: any) => normalizeUserType(u.user_metadata?.user_type) === "employer");
+        } else if (targetAudience === 'agencies') {
+            recipients = allUsers.filter((u: any) => normalizeUserType(u.user_metadata?.user_type) === "agency");
         } else {
-            recipients = allUsers;
+            recipients = allUsers.filter((u: any) => normalizeUserType(u.user_metadata?.user_type) !== "admin");
         }
 
         // 2. Queue Emails with throttling to avoid Gmail SMTP rate limits
@@ -68,6 +76,10 @@ export default async function AnnouncementsPage() {
         let count = 0;
         for (const recipient of recipients) {
             if (recipient.email) {
+                const normalizedRecipientRole = normalizeUserType(recipient.user_metadata?.user_type);
+                const recipientRole = normalizedRecipientRole === "worker" || normalizedRecipientRole === "employer" || normalizedRecipientRole === "agency"
+                    ? normalizedRecipientRole
+                    : "worker";
                 await queueEmail(
                     adminClient,
                     recipient.id,
@@ -78,8 +90,9 @@ export default async function AnnouncementsPage() {
                         title: subject,
                         message: message,
                         subject: subject,
-                        actionText: actionText || "View Details",
-                        actionLink: actionLink || "https://workersunited.eu/login"
+                        actionText: normalizedActionLink ? (normalizedActionText || "View Details") : undefined,
+                        actionLink: normalizedActionLink,
+                        recipientRole,
                     }
                 );
                 count++;
@@ -115,7 +128,8 @@ export default async function AnnouncementsPage() {
                             >
                                 <option value="workers">All Workers</option>
                                 <option value="employers">All Employers</option>
-                                <option value="all">Everyone (Workers + Employers)</option>
+                                <option value="agencies">All Agencies</option>
+                                <option value="all">Everyone (Workers + Employers + Agencies)</option>
                             </AdaptiveSelect>
                         </div>
 

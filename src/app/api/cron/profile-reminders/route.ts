@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/mailer";
-import { getWorkerCompletion, getEmployerCompletion } from "@/lib/profile-completion";
+import { normalizeUserType } from "@/lib/domain";
+import { getWorkerCompletion, getEmployerCompletion, getAgencyCompletion } from "@/lib/profile-completion";
 import { getEmailTemplate } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 
 // ─── Main cron handler ──────────────────────────────────────────
 // Runs daily via Vercel cron — sends profile completion reminders + auto-deletes after 30 days
-// Applies to BOTH workers and employers
+// Applies to worker, employer, and agency accounts
 // Performance: uses batch queries (~6 total) instead of per-user queries
 
 export async function GET(request: Request) {
@@ -41,12 +42,14 @@ export async function GET(request: Request) {
             { data: allProfiles },
             { data: allWorkerRecords },
             { data: allEmployers },
+            { data: allAgencies },
             { data: allDocs },
             { data: allEmails },
         ] = await Promise.all([
             supabase.from("profiles").select("id, full_name"),
             supabase.from("worker_onboarding").select("*"),
             supabase.from("employers").select("*"),
+            supabase.from("agencies").select("profile_id, display_name, legal_name, contact_email"),
             supabase.from("worker_documents").select("user_id, document_type, status"),
             supabase.from("email_queue").select("id, recipient_email, email_type, subject, created_at")
                 .in("email_type", ["profile_reminder", "profile_warning"]),
@@ -56,6 +59,7 @@ export async function GET(request: Request) {
         const profileMap = new Map((allProfiles || []).map(p => [p.id, p]));
         const workerRecordMap = new Map((allWorkerRecords || []).map(workerRow => [workerRow.profile_id, workerRow]));
         const employerMap = new Map((allEmployers || []).map(e => [e.profile_id, e]));
+        const agencyMap = new Map((allAgencies || []).map(a => [a.profile_id, a]));
         const docsByUser = new Map<string, typeof allDocs>();
         for (const d of allDocs || []) {
             if (!docsByUser.has(d.user_id)) docsByUser.set(d.user_id, []);
@@ -87,8 +91,8 @@ export async function GET(request: Request) {
             const userId = user.id;
             const email = user.email;
             const fullName = user.user_metadata?.full_name || "";
-            const userType = user.user_metadata?.user_type;
-            const isEmployer = userType === "employer";
+            const userType = normalizeUserType(user.user_metadata?.user_type);
+            const recipientRole = userType === "employer" || userType === "agency" ? userType : "worker";
 
             if (!email || isInternalOrTestEmail(email) || hasKnownTypoEmailDomain(email)) {
                 skipped++;
@@ -103,9 +107,13 @@ export async function GET(request: Request) {
 
             let missingItems: string[];
 
-            if (isEmployer) {
+            if (recipientRole === "employer") {
                 const employer = employerMap.get(userId) || null;
                 const result = getEmployerCompletion({ employer });
+                missingItems = result.missingFields;
+            } else if (recipientRole === "agency") {
+                const agency = agencyMap.get(userId) || null;
+                const result = getAgencyCompletion({ agency });
                 missingItems = result.missingFields;
             } else {
                 const workerRecord = workerRecordMap.get(userId) || null;
@@ -141,7 +149,7 @@ export async function GET(request: Request) {
 
                 const { subject, html } = getEmailTemplate("profile_deletion", {
                     name: firstName,
-                    isEmployer,
+                    recipientRole,
                 });
                 await sendEmail(email, subject, html);
 
@@ -182,7 +190,7 @@ export async function GET(request: Request) {
             if (isWarningDay) {
                 const { subject: warningSubject, html } = getEmailTemplate("profile_warning", {
                     name: firstName,
-                    isEmployer,
+                    recipientRole,
                     daysLeft,
                     todoList,
                 });
@@ -200,9 +208,9 @@ export async function GET(request: Request) {
                         user_id: userId,
                         email_type: "profile_warning",
                         recipient_email: email,
-                        recipient_name: fullName || (isEmployer ? "Employer" : "Worker"),
+                        recipient_name: fullName || (recipientRole === "employer" ? "Employer" : recipientRole === "agency" ? "Agency" : "Worker"),
                         subject: warningSubject,
-                        template_data: { todoList, daysLeft, isEmployer },
+                        template_data: { todoList, daysLeft, recipientRole },
                         status: "sent",
                         sent_at: new Date().toISOString(),
                         scheduled_for: new Date().toISOString(),
@@ -221,7 +229,7 @@ export async function GET(request: Request) {
 
             const { subject, html } = getEmailTemplate("profile_reminder", {
                 name: firstName,
-                isEmployer,
+                recipientRole,
                 todoList,
             });
             const result = await sendEmail(email, subject, html);
@@ -231,9 +239,9 @@ export async function GET(request: Request) {
                     user_id: userId,
                     email_type: "profile_reminder",
                     recipient_email: email,
-                    recipient_name: fullName || (isEmployer ? "Employer" : "Worker"),
+                    recipient_name: fullName || (recipientRole === "employer" ? "Employer" : recipientRole === "agency" ? "Agency" : "Worker"),
                     subject,
-                    template_data: { todoList, isEmployer },
+                    template_data: { todoList, recipientRole },
                     status: "sent",
                     sent_at: new Date().toISOString(),
                     scheduled_for: new Date().toISOString(),

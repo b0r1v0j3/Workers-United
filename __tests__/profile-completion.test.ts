@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getWorkerCompletion, getEmployerCompletion } from '@/lib/profile-completion';
+import { getWorkerCompletion, getEmployerCompletion, getAgencyCompletion } from '@/lib/profile-completion';
 
 describe('getWorkerCompletion', () => {
     it('returns 0% for completely empty profile', () => {
@@ -104,5 +104,26 @@ describe('getEmployerCompletion', () => {
         expect(result.missingFields).toContain('Company Name');
         expect(result.missingFields).toContain('Country');
         expect(result.missingFields).toContain('Contact Phone');
+    });
+});
+
+describe('getAgencyCompletion', () => {
+    it('returns 0% for empty agency record', () => {
+        const result = getAgencyCompletion({ agency: null });
+        expect(result.completion).toBe(0);
+        expect(result.missingFields).toContain('Agency Name');
+        expect(result.missingFields).toContain('Contact Email');
+    });
+
+    it('returns 100% for a filled agency record', () => {
+        const result = getAgencyCompletion({
+            agency: {
+                display_name: 'Global Recruiters',
+                legal_name: 'Global Recruiters LLC',
+                contact_email: 'agency@example.com',
+            },
+        });
+        expect(result.completion).toBe(100);
+        expect(result.missingFields).toHaveLength(0);
     });
 });

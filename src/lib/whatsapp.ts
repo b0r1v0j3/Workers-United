@@ -3,6 +3,7 @@
 // Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { CanonicalUserType } from "@/lib/domain";
 
 const GRAPH_API_VERSION = "v21.0";
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
@@ -448,14 +449,53 @@ async function logMessage(params: LogMessageParams): Promise<void> {
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
 
-export async function sendWelcome(phone: string, firstName: string, userId?: string) {
+type WhatsAppRecipientRole = Exclude<CanonicalUserType, "admin">;
+
+function getRoleWorkspacePath(role: WhatsAppRecipientRole, purpose: "welcome" | "dashboard" | "documents" | "queue" = "dashboard") {
+    switch (role) {
+        case "employer":
+            return "/profile/employer";
+        case "agency":
+            return "/profile/agency";
+        case "worker":
+        default:
+            switch (purpose) {
+                case "welcome":
+                    return "/profile/worker/edit";
+                case "documents":
+                    return "/profile/worker/documents";
+                case "queue":
+                    return "/profile/worker/queue";
+                case "dashboard":
+                default:
+                    return "/profile/worker";
+            }
+    }
+}
+
+function toTemplateUrlSuffix(url: string) {
+    return url.startsWith("http://") || url.startsWith("https://")
+        ? url.replace(BASE_URL, "")
+        : url;
+}
+
+export async function sendRoleWelcome(
+    phone: string,
+    firstName: string,
+    role: WhatsAppRecipientRole,
+    userId?: string
+) {
     return sendWhatsAppTemplate({
         to: phone,
         templateName: "welcome_registration",
         bodyParams: [firstName],
-        buttonParams: [{ type: "url", url: "/profile/worker/edit" }],
+        buttonParams: [{ type: "url", url: getRoleWorkspacePath(role, "welcome") }],
         userId,
     });
+}
+
+export async function sendWelcome(phone: string, firstName: string, userId?: string) {
+    return sendRoleWelcome(phone, firstName, "worker", userId);
 }
 
 export async function sendProfileVerified(phone: string, firstName: string, userId?: string) {
@@ -463,7 +503,7 @@ export async function sendProfileVerified(phone: string, firstName: string, user
         to: phone,
         templateName: "profile_verified",
         bodyParams: [firstName],
-        buttonParams: [{ type: "url", url: "/profile/worker" }],
+        buttonParams: [{ type: "url", url: getRoleWorkspacePath("worker", "dashboard") }],
         userId,
     });
 }
@@ -473,7 +513,7 @@ export async function sendPaymentConfirmed(phone: string, firstName: string, amo
         to: phone,
         templateName: "payment_confirmed",
         bodyParams: [amount, firstName],
-        buttonParams: [{ type: "url", url: "/profile/worker/queue" }],
+        buttonParams: [{ type: "url", url: getRoleWorkspacePath("worker", "queue") }],
         userId,
     });
 }
@@ -511,7 +551,7 @@ export async function sendDocumentReminder(phone: string, name: string, docType:
         to: phone,
         templateName: "document_reminder",
         bodyParams: [name, docType, expiryDate],
-        buttonParams: [{ type: "url", url: "/profile/worker/documents" }],
+        buttonParams: [{ type: "url", url: getRoleWorkspacePath("worker", "documents") }],
         userId,
     });
 }
@@ -534,22 +574,44 @@ export async function sendRefundProcessed(phone: string, name: string, amount: s
     });
 }
 
-export async function sendStatusUpdate(phone: string, name: string, message: string, userId?: string) {
+export async function sendRoleStatusUpdate(
+    phone: string,
+    name: string,
+    message: string,
+    role: WhatsAppRecipientRole,
+    userId?: string
+) {
     return sendWhatsAppTemplate({
         to: phone,
         templateName: "status_update",
         bodyParams: [name, message],
-        buttonParams: [{ type: "url", url: "/profile/worker" }],
+        buttonParams: [{ type: "url", url: getRoleWorkspacePath(role, "dashboard") }],
+        userId,
+    });
+}
+
+export async function sendStatusUpdate(phone: string, name: string, message: string, userId?: string) {
+    return sendRoleStatusUpdate(phone, name, message, "worker", userId);
+}
+
+export async function sendRoleAnnouncement(
+    phone: string,
+    title: string,
+    message: string,
+    _role: WhatsAppRecipientRole,
+    actionUrl?: string,
+    userId?: string
+) {
+    const resolvedActionUrl = actionUrl ? toTemplateUrlSuffix(actionUrl) : undefined;
+    return sendWhatsAppTemplate({
+        to: phone,
+        templateName: "announcement",
+        bodyParams: [title, message],
+        ...(resolvedActionUrl ? { buttonParams: [{ type: "url" as const, url: resolvedActionUrl }] } : {}),
         userId,
     });
 }
 
 export async function sendAnnouncement(phone: string, title: string, message: string, actionUrl?: string, userId?: string) {
-    return sendWhatsAppTemplate({
-        to: phone,
-        templateName: "announcement",
-        bodyParams: [title, message],
-        ...(actionUrl ? { buttonParams: [{ type: "url" as const, url: actionUrl }] } : {}),
-        userId,
-    });
+    return sendRoleAnnouncement(phone, title, message, "worker", actionUrl, userId);
 }

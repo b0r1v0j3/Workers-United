@@ -69,7 +69,10 @@ export async function resolvePostAuthRedirect({
             user.id,
             "welcome",
             user.email || "",
-            user.user_metadata?.full_name || user.email?.split("@")[0] || "there"
+            user.user_metadata?.full_name || user.email?.split("@")[0] || "there",
+            normalizedUserType === "worker" || normalizedUserType === "employer" || normalizedUserType === "agency"
+                ? { recipientRole: normalizedUserType }
+                : {}
         ).catch(() => {
             /* welcome email is best-effort */
         });
