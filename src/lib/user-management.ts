@@ -6,7 +6,35 @@ import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 // Deletes ALL user data: storage, documents, signatures, matches, payments, etc.
 
 export async function deleteUserData(adminClient: SupabaseClient, userId: string) {
-    // 1. Delete from storage (documents bucket) — supports nested folders
+    const { data: workerDocuments, error: workerDocumentsError } = await adminClient
+        .from("worker_documents")
+        .select("storage_path")
+        .eq("user_id", userId);
+
+    if (workerDocumentsError) {
+        throw workerDocumentsError;
+    }
+
+    // 1. Delete document files referenced by DB first, so path mismatches do not leave orphans behind.
+    const referencedStoragePaths = Array.from(
+        new Set(
+            (workerDocuments || [])
+                .map((document) => document.storage_path?.trim())
+                .filter((storagePath): storagePath is string => Boolean(storagePath))
+        )
+    );
+
+    if (referencedStoragePaths.length > 0) {
+        const { error: referencedRemoveError } = await adminClient.storage
+            .from(WORKER_DOCUMENTS_BUCKET)
+            .remove(referencedStoragePaths);
+
+        if (referencedRemoveError) {
+            console.warn("[deleteUserData] Referenced document cleanup failed:", referencedRemoveError);
+        }
+    }
+
+    // 1b. Delete any legacy files that still live under the user folder.
     const docTypes = ['passport', 'biometric_photo', 'diploma'];
     for (const docType of docTypes) {
         const { data: files } = await adminClient.storage
@@ -15,7 +43,13 @@ export async function deleteUserData(adminClient: SupabaseClient, userId: string
 
         if (files && files.length > 0) {
             const filePaths = files.map(f => `${userId}/${docType}/${f.name}`);
-            await adminClient.storage.from(WORKER_DOCUMENTS_BUCKET).remove(filePaths);
+            const { error: legacyRemoveError } = await adminClient.storage
+                .from(WORKER_DOCUMENTS_BUCKET)
+                .remove(filePaths);
+
+            if (legacyRemoveError) {
+                console.warn("[deleteUserData] Legacy folder cleanup failed:", legacyRemoveError);
+            }
         }
     }
 

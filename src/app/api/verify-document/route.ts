@@ -12,6 +12,10 @@ import { getWorkerCompletion } from "@/lib/profile-completion";
 import { getPendingApprovalTargetStatus } from "@/lib/worker-review";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import {
+    AGENCY_DRAFT_DOCUMENT_OWNER_KEY,
+    resolveAgencyWorkerDocumentOwnerId,
+} from "@/lib/agency-draft-documents";
 
 export async function POST(request: Request) {
     // Rate limit: 10 requests per minute per IP (AI verification is expensive)
@@ -55,8 +59,34 @@ export async function POST(request: Request) {
         let documentOwnerId = user.id;
 
         if (isAdmin) {
-            targetWorkerProfileId = requestedWorkerId;
-            documentOwnerId = requestedWorkerId;
+            const { data: adminTargetWorker } = await adminClient
+                .from("worker_onboarding")
+                .select("id, profile_id, application_data")
+                .eq("id", requestedWorkerId)
+                .maybeSingle();
+
+            if (adminTargetWorker) {
+                targetWorkerRecordId = adminTargetWorker.id;
+                targetWorkerProfileId = adminTargetWorker.profile_id || null;
+                documentOwnerId = resolveAgencyWorkerDocumentOwnerId(adminTargetWorker)
+                    || adminTargetWorker.profile_id
+                    || requestedWorkerId;
+            } else {
+                const { data: draftOwnerWorker } = await adminClient
+                    .from("worker_onboarding")
+                    .select("id, profile_id")
+                    .contains("application_data", { [AGENCY_DRAFT_DOCUMENT_OWNER_KEY]: requestedWorkerId })
+                    .maybeSingle();
+
+                if (draftOwnerWorker) {
+                    targetWorkerRecordId = draftOwnerWorker.id;
+                    targetWorkerProfileId = draftOwnerWorker.profile_id || null;
+                    documentOwnerId = requestedWorkerId;
+                } else {
+                    targetWorkerProfileId = requestedWorkerId;
+                    documentOwnerId = requestedWorkerId;
+                }
+            }
         } else if (normalizedUserType === "agency") {
             if (requestedWorkerId === user.id) {
                 return NextResponse.json({ success: false, error: "Use a claimed worker profile for agency verification" }, { status: 400 });
@@ -76,18 +106,22 @@ export async function POST(request: Request) {
 
                 targetWorkerProfileId = draftWorker.profile_id || null;
                 targetWorkerRecordId = draftWorker.id;
-                documentOwnerId = draftWorker.profile_id || draftWorker.id;
+                documentOwnerId = resolveAgencyWorkerDocumentOwnerId(draftWorker) || "";
                 isAgencyOwnedVerification = true;
             }
         } else if (requestedWorkerId !== user.id) {
             return NextResponse.json({ success: false, error: "Worker access denied" }, { status: 403 });
         }
-        const activityTargetId = targetWorkerProfileId || targetWorkerRecordId || documentOwnerId;
+        const activityTargetId = targetWorkerProfileId || targetWorkerRecordId || requestedWorkerId;
 
         // Use admin client for storage/DB ops when admin is acting on another user's docs
         // This bypasses RLS which would block cross-user storage operations
         const storageClient = isAdmin || isAgencyOwnedVerification ? adminClient : supabase;
         const readClient = isAdmin || isAgencyOwnedVerification ? adminClient : supabase;
+
+        if (!documentOwnerId) {
+            return NextResponse.json({ success: false, error: "Document owner not found" }, { status: 404 });
+        }
 
         // 1. Fetch document data
         const { data: document, error: fetchError } = await readClient
@@ -141,8 +175,7 @@ export async function POST(request: Request) {
                 // Update DB with new path
                 await storageClient.from("worker_documents")
                     .update({ storage_path: jpegPath, updated_at: new Date().toISOString() })
-                    .eq("user_id", documentOwnerId)
-                    .eq("document_type", normalizedDocType);
+                    .eq("id", document.id);
 
                 // Refresh URL
                 const { data: jpegUrlData } = await storageClient.storage
@@ -200,8 +233,7 @@ export async function POST(request: Request) {
                 const { data: currentDoc } = await readClient
                     .from("worker_documents")
                     .select("storage_path")
-                    .eq("user_id", documentOwnerId)
-                    .eq("document_type", normalizedDocType)
+                    .eq("id", document.id)
                     .single();
 
                 const storagePath = currentDoc?.storage_path || document.storage_path;
@@ -397,8 +429,7 @@ export async function POST(request: Request) {
                     ocr_json: ocrJson,
                     updated_at: new Date().toISOString()
                 })
-                .eq("user_id", documentOwnerId)
-                .eq("document_type", normalizedDocType);
+                .eq("id", document.id);
 
             await logServerActivity(activityTargetId, "document_rejected_server", "documents", { doc_type: normalizedDocType, reason: rejectReason, quality_issues: qualityIssues }, "warning");
 
@@ -439,8 +470,7 @@ export async function POST(request: Request) {
         const { error: updateError } = await storageClient
             .from("worker_documents")
             .update(updateData)
-            .eq("user_id", documentOwnerId)
-            .eq("document_type", normalizedDocType);
+            .eq("id", document.id);
 
         if (updateError) {
             console.error("[Verify] Database update error:", updateError);
@@ -453,10 +483,11 @@ export async function POST(request: Request) {
         let reviewQueued = false;
         if (status === 'verified') {
             try {
-                const { data: allDocs } = await readClient
+                const { data: allDocs, error: allDocsError } = await readClient
                     .from("worker_documents")
                     .select("document_type, status")
                     .eq("user_id", documentOwnerId);
+                if (allDocsError) throw allDocsError;
 
                 const verifiedTypes = new Set((allDocs || []).filter(d => d.status === 'verified').map(d => d.document_type));
                 const allThreeVerified = verifiedTypes.has('passport') && verifiedTypes.has('biometric_photo') && verifiedTypes.has('diploma');

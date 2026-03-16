@@ -1,4 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+    getAgencyDraftDocumentOwnerId,
+    relinkAgencyDraftDocumentsToClaimedProfile,
+} from "@/lib/agency-draft-documents";
+import type { Json } from "@/lib/database.types";
 
 interface EnsureAgencyRecordInput {
     userId: string;
@@ -34,6 +39,7 @@ interface AgencyWorkerRecord {
     id: string;
     profile_id: string | null;
     agency_id: string | null;
+    application_data?: Json | null;
     submitted_full_name?: string | null;
     submitted_email?: string | null;
     phone?: string | null;
@@ -274,7 +280,7 @@ export async function getAgencyOwnedWorker(
 
     const { data: worker, error: workerError } = await supabase
         .from("worker_onboarding")
-        .select("id, profile_id, agency_id, submitted_full_name, submitted_email, phone, status")
+        .select("id, profile_id, agency_id, application_data, submitted_full_name, submitted_email, phone, status")
         .eq("id", workerId)
         .eq("agency_id", agency.id)
         .maybeSingle();
@@ -394,7 +400,7 @@ export async function claimAgencyWorkerDraft(
 
     const { data: worker, error: workerError } = await supabase
         .from("worker_onboarding")
-        .select("id, profile_id, submitted_full_name, submitted_email")
+        .select("id, profile_id, submitted_full_name, submitted_email, application_data")
         .eq("id", input.workerId)
         .maybeSingle();
 
@@ -406,8 +412,51 @@ export async function claimAgencyWorkerDraft(
         return { ok: false, reason: "not_found", workerId: null };
     }
 
+    const finalizeLinkedWorker = async (
+        resultReason: "linked" | "already_linked",
+        applicationData: Json | null | undefined
+    ): Promise<AgencyWorkerClaimResult> => {
+        if (getAgencyDraftDocumentOwnerId(applicationData)) {
+            const { error: documentsRelinkError } = await relinkAgencyDraftDocumentsToClaimedProfile(supabase, {
+                workerId: input.workerId,
+                profileId: input.profileId,
+                applicationData,
+            });
+
+            if (documentsRelinkError) {
+                throw documentsRelinkError;
+            }
+        }
+
+        const resolvedName = input.fullName?.trim() || worker.submitted_full_name || null;
+        if (resolvedName) {
+            const { data: existingProfile, error: profileLookupError } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", input.profileId)
+                .maybeSingle();
+
+            if (profileLookupError) {
+                throw profileLookupError;
+            }
+
+            if (!existingProfile?.full_name?.trim()) {
+                const { error: profileUpdateError } = await supabase
+                    .from("profiles")
+                    .update({ full_name: resolvedName })
+                    .eq("id", input.profileId);
+
+                if (profileUpdateError) {
+                    throw profileUpdateError;
+                }
+            }
+        }
+
+        return { ok: true, reason: resultReason, workerId: worker.id };
+    };
+
     if (worker.profile_id === input.profileId) {
-        return { ok: true, reason: "already_linked", workerId: worker.id };
+        return finalizeLinkedWorker("already_linked", worker.application_data);
     }
 
     if (worker.profile_id) {
@@ -443,7 +492,7 @@ export async function claimAgencyWorkerDraft(
     if (!linkedWorker) {
         const { data: freshWorker, error: freshWorkerError } = await supabase
             .from("worker_onboarding")
-            .select("id, profile_id")
+            .select("id, profile_id, application_data")
             .eq("id", input.workerId)
             .maybeSingle();
 
@@ -452,7 +501,7 @@ export async function claimAgencyWorkerDraft(
         }
 
         if (freshWorker?.profile_id === input.profileId) {
-            return { ok: true, reason: "already_linked", workerId: input.workerId };
+            return finalizeLinkedWorker("already_linked", freshWorker.application_data);
         }
 
         if (freshWorker?.profile_id) {
@@ -462,38 +511,5 @@ export async function claimAgencyWorkerDraft(
         return { ok: false, reason: "not_found", workerId: null };
     }
 
-    const { error: documentsRelinkError } = await supabase
-        .from("worker_documents")
-        .update({ user_id: input.profileId })
-        .eq("user_id", input.workerId);
-
-    if (documentsRelinkError) {
-        throw documentsRelinkError;
-    }
-
-    const resolvedName = input.fullName?.trim() || worker.submitted_full_name || null;
-    if (resolvedName) {
-        const { data: existingProfile, error: profileLookupError } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", input.profileId)
-            .maybeSingle();
-
-        if (profileLookupError) {
-            throw profileLookupError;
-        }
-
-        if (!existingProfile?.full_name?.trim()) {
-            const { error: profileUpdateError } = await supabase
-                .from("profiles")
-                .update({ full_name: resolvedName })
-                .eq("id", input.profileId);
-
-            if (profileUpdateError) {
-                throw profileUpdateError;
-            }
-        }
-    }
-
-    return { ok: true, reason: "linked", workerId: worker.id };
+    return finalizeLinkedWorker("linked", worker.application_data);
 }

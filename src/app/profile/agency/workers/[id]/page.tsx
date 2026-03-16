@@ -10,6 +10,7 @@ import { getAgencyOwnedWorker, getAgencySchemaState, getAgencyWorkerEmail, getAg
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import AgencyWorkerClient from "./AgencyWorkerClient";
 
 export const dynamic = "force-dynamic";
@@ -152,6 +153,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
         .select(`
             id,
             profile_id,
+            application_data,
             phone,
             nationality,
             current_country,
@@ -201,13 +203,16 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
 
     const claimed = isAgencyWorkerClaimed(workerRecord);
     const profileId = workerRecord.profile_id || null;
-    const documentOwnerId = profileId || workerRecord.id;
-    const { data: documents } = documentOwnerId
+    const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(workerRecord);
+    const { data: documents, error: documentsError } = documentOwnerId
         ? await admin
             .from("worker_documents")
             .select("document_type, status, reject_reason")
             .eq("user_id", documentOwnerId)
-        : { data: [] as Array<{ document_type: string; status: string | null; reject_reason: string | null }> };
+        : { data: [] as Array<{ document_type: string; status: string | null; reject_reason: string | null }>, error: null };
+    if (documentsError) {
+        console.error("[AgencyWorkerPage] Document fetch failed:", documentsError);
+    }
 
     const { data: payments } = claimed && profileId
         ? await admin

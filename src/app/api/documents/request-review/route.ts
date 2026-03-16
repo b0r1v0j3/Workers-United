@@ -6,6 +6,7 @@ import { normalizeUserType } from "@/lib/domain";
 import { isGodModeUser } from "@/lib/godmode";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { checkRateLimit, standardLimiter } from "@/lib/rate-limit";
+import { AGENCY_DRAFT_DOCUMENT_OWNER_KEY, resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 
 // ─── Request Manual Review ──────────────────────────────────────────────────
 // When AI rejects a document but user believes it's correct,
@@ -54,8 +55,32 @@ export async function POST(request: Request) {
         let workerLabelOverride: string | null = null;
 
         if (isAdmin) {
-            targetProfileId = requestedWorkerId;
-            documentOwnerId = requestedWorkerId;
+            const { data: adminTargetWorker } = await admin
+                .from("worker_onboarding")
+                .select("id, profile_id, application_data, submitted_full_name")
+                .eq("id", requestedWorkerId)
+                .maybeSingle();
+
+            if (adminTargetWorker) {
+                targetProfileId = adminTargetWorker.profile_id || requestedWorkerId;
+                documentOwnerId = resolveAgencyWorkerDocumentOwnerId(adminTargetWorker) || requestedWorkerId;
+                workerLabelOverride = adminTargetWorker.submitted_full_name || null;
+            } else {
+                const { data: draftOwnerWorker } = await admin
+                    .from("worker_onboarding")
+                    .select("id, profile_id, submitted_full_name")
+                    .contains("application_data", { [AGENCY_DRAFT_DOCUMENT_OWNER_KEY]: requestedWorkerId })
+                    .maybeSingle();
+
+                if (draftOwnerWorker) {
+                    targetProfileId = draftOwnerWorker.profile_id || requestedWorkerId;
+                    documentOwnerId = requestedWorkerId;
+                    workerLabelOverride = draftOwnerWorker.submitted_full_name || null;
+                } else {
+                    targetProfileId = requestedWorkerId;
+                    documentOwnerId = requestedWorkerId;
+                }
+            }
         } else if (normalizedUserType === "agency") {
             if (!workerId) {
                 return NextResponse.json({ error: "workerId required for agency review requests" }, { status: 400 });
@@ -74,7 +99,7 @@ export async function POST(request: Request) {
                 }
 
                 targetProfileId = draftContext.worker.profile_id || requestedWorkerId;
-                documentOwnerId = draftContext.worker.profile_id || draftContext.worker.id;
+                documentOwnerId = resolveAgencyWorkerDocumentOwnerId(draftContext.worker) || "";
                 requestedByAgency = true;
                 agencyName = draftContext.agency?.display_name || draftContext.agency?.legal_name || null;
                 workerLabelOverride = draftContext.worker.submitted_full_name || "Agency worker";
@@ -83,9 +108,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Worker access denied" }, { status: 403 });
         }
 
+        if (!documentOwnerId) {
+            return NextResponse.json({ error: "Document owner not found" }, { status: 404 });
+        }
+
         const { data: document, error: documentError } = await admin
             .from("worker_documents")
-            .select("status")
+            .select("id, status")
             .eq("user_id", documentOwnerId)
             .eq("document_type", normalizedDocType)
             .maybeSingle();
@@ -114,8 +143,7 @@ export async function POST(request: Request) {
                 status: "manual_review",
                 updated_at: new Date().toISOString(),
             })
-            .eq("user_id", documentOwnerId)
-            .eq("document_type", normalizedDocType);
+            .eq("id", document.id);
 
         if (error) {
             console.error("[RequestReview] DB error:", error);
