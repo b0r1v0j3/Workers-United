@@ -5,7 +5,7 @@ import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion, getEmployerCompletion, getAgencyCompletion } from "@/lib/profile-completion";
 import { getEmailTemplate } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
-import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import { deleteUserData } from "@/lib/user-management";
 
 // ─── Main cron handler ──────────────────────────────────────────
 // Runs daily via Vercel cron — sends profile completion reminders + auto-deletes after 30 days
@@ -153,32 +153,11 @@ export async function GET(request: Request) {
                 });
                 await sendEmail(email, subject, html);
 
-                // Clean up all related data before deleting auth user
-                // (mirrors account/delete and admin/delete-user patterns)
-                await supabase.from("worker_documents").delete().eq("user_id", userId);
-                await supabase.from("signatures").delete().eq("user_id", userId);
-                await supabase.from("payments").delete().eq("user_id", userId);
-                await supabase.from("email_queue").delete().eq("user_id", userId);
-                await supabase.from("worker_onboarding").delete().eq("profile_id", userId);
-                await supabase.from("employers").delete().eq("profile_id", userId);
-                await supabase.from("profiles").delete().eq("id", userId);
-
-                // Delete storage files
-                for (const docType of ['passport', 'biometric_photo', 'diploma']) {
-                    const { data: files } = await supabase.storage
-                        .from(WORKER_DOCUMENTS_BUCKET)
-                        .list(`${userId}/${docType}`);
-                    if (files && files.length > 0) {
-                        const filePaths = files.map((f: { name: string }) => `${userId}/${docType}/${f.name}`);
-                        await supabase.storage.from(WORKER_DOCUMENTS_BUCKET).remove(filePaths);
-                    }
-                }
-
-                const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
-                if (deleteError) {
-                    console.error(`[Reminders] Failed to delete user ${email}:`, deleteError);
-                } else {
+                try {
+                    await deleteUserData(supabase, userId);
                     deleted++;
+                } catch (deleteError) {
+                    console.error(`[Reminders] Failed to delete user ${email}:`, deleteError);
                 }
                 continue;
             }

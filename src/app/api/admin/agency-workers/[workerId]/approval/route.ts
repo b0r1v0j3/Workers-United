@@ -6,6 +6,7 @@ import { isGodModeUser } from "@/lib/godmode";
 import { getAgencyWorkerName } from "@/lib/agencies";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 
 interface RouteContext {
     params: Promise<{ workerId: string }>;
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                 id,
                 agency_id,
                 profile_id,
+                application_data,
                 submitted_full_name,
                 status,
                 admin_approved,
@@ -79,11 +81,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
                 .maybeSingle()
             : { data: null as { full_name: string | null; email: string | null } | null };
 
-        const documentOwnerId = worker.profile_id || worker.id;
-        const { data: documents } = await admin
-            .from("worker_documents")
-            .select("document_type, status")
-            .eq("user_id", documentOwnerId);
+        const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(worker);
+        const { data: documents, error: documentsError } = documentOwnerId
+            ? await admin
+                .from("worker_documents")
+                .select("document_type, status")
+                .eq("user_id", documentOwnerId)
+            : { data: [], error: null };
+        if (documentsError) {
+            console.error("[AdminAgencyWorkerApproval] Document lookup failed:", documentsError);
+            return NextResponse.json({ error: "Failed to load worker documents" }, { status: 500 });
+        }
 
         const completion = getWorkerCompletion({
             profile: { full_name: getAgencyWorkerName({ submitted_full_name: worker.submitted_full_name, profiles: linkedProfile }) },

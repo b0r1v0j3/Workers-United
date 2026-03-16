@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
+import { AGENCY_DRAFT_DOCUMENT_OWNER_KEY } from "@/lib/agency-draft-documents";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,21 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Document has no storage path" }, { status: 400 });
         }
 
+        let verificationTargetId = doc.user_id;
+        if (!verificationTargetId) {
+            return NextResponse.json({ error: "Document has no worker target" }, { status: 400 });
+        }
+
+        const { data: draftWorker } = await admin
+            .from("worker_onboarding")
+            .select("id")
+            .contains("application_data", { [AGENCY_DRAFT_DOCUMENT_OWNER_KEY]: doc.user_id })
+            .maybeSingle();
+
+        if (draftWorker?.id) {
+            verificationTargetId = draftWorker.id;
+        }
+
         // Call the existing verify-document endpoint internally
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
             || process.env.NEXT_PUBLIC_APP_URL
@@ -73,7 +89,7 @@ export async function POST(request: NextRequest) {
                 Cookie: request.headers.get("cookie") || "",
             },
             body: JSON.stringify({
-                workerId: doc.user_id,
+                workerId: verificationTargetId,
                 docType: doc.document_type,
             }),
         });

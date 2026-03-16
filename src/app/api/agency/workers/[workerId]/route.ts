@@ -13,6 +13,7 @@ import { normalizeUserType } from "@/lib/domain";
 import { deleteUserData } from "@/lib/user-management";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { getPendingApprovalTargetStatus } from "@/lib/worker-review";
+import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 
 interface RouteContext {
     params: Promise<{ workerId: string }>;
@@ -278,6 +279,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             .select(`
                 id,
                 profile_id,
+                application_data,
                 status,
                 admin_approved,
                 entry_fee_paid,
@@ -308,11 +310,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Worker updated but completion refresh failed" }, { status: 500 });
         }
 
-        const documentOwnerId = refreshedWorker.profile_id || refreshedWorker.id;
-        const { data: documents } = await admin
-            .from("worker_documents")
-            .select("document_type, status")
-            .eq("user_id", documentOwnerId);
+        const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(refreshedWorker);
+        const { data: documents, error: documentsError } = documentOwnerId
+            ? await admin
+                .from("worker_documents")
+                .select("document_type, status")
+                .eq("user_id", documentOwnerId)
+            : { data: [], error: null };
+        if (documentsError) {
+            console.error("[AgencyWorker PATCH] Document refresh failed:", documentsError);
+            return NextResponse.json({ error: "Worker updated but document refresh failed" }, { status: 500 });
+        }
 
         const completion = getWorkerCompletion({
             profile: { full_name: normalized.fullName },

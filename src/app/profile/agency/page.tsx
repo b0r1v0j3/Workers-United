@@ -13,6 +13,8 @@ import {
     getAgencyWorkerName,
     isAgencyWorkerClaimed,
 } from "@/lib/agencies";
+import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
+import type { Json } from "@/lib/database.types";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
@@ -23,6 +25,7 @@ export const dynamic = "force-dynamic";
 interface AgencyWorkerQueryRow {
     id: string;
     profile_id: string | null;
+    application_data: Json | null;
     admin_approved: boolean | null;
     phone: string | null;
     nationality: string | null;
@@ -253,6 +256,7 @@ export default async function AgencyProfilePage({
             .select(`
                 id,
                 profile_id,
+                application_data,
                 admin_approved,
                 phone,
                 nationality,
@@ -281,9 +285,8 @@ export default async function AgencyProfilePage({
         .map((worker) => worker.profile_id)
         .filter((profileId): profileId is string => Boolean(profileId));
     const documentOwnerIds = workers
-        .map((worker) => worker.profile_id || worker.id)
+        .map((worker) => resolveAgencyWorkerDocumentOwnerId(worker))
         .filter((ownerId): ownerId is string => Boolean(ownerId));
-
     const { data: linkedProfiles } = claimedProfileIds.length > 0
         ? await admin
             .from("profiles")
@@ -314,11 +317,11 @@ export default async function AgencyProfilePage({
             .contains("metadata", { paid_by_profile_id: targetAgencyProfileId })
         : { data: [] as PaymentQueryRow[] };
 
-    const docsByUser = new Map<string, Array<{ user_id: string; document_type: string; status: string | null }>>();
+    const docsByOwnerId = new Map<string, Array<{ user_id: string; document_type: string; status: string | null }>>();
     for (const doc of documents || []) {
-        const current = docsByUser.get(doc.user_id) || [];
+        const current = docsByOwnerId.get(doc.user_id) || [];
         current.push(doc);
-        docsByUser.set(doc.user_id, current);
+        docsByOwnerId.set(doc.user_id, current);
     }
 
     const paymentsByProfile = new Map<string, PaymentQueryRow[]>();
@@ -346,8 +349,8 @@ export default async function AgencyProfilePage({
         const claimed = isAgencyWorkerClaimed(worker);
         const profileId = worker.profile_id || null;
         const linkedProfile = profileId ? profilesById.get(profileId) || null : null;
-        const documentOwnerId = profileId || worker.id;
-        const workerDocuments = docsByUser.get(documentOwnerId) || [];
+        const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(worker);
+        const workerDocuments = documentOwnerId ? docsByOwnerId.get(documentOwnerId) || [] : [];
         const verifiedDocuments = workerDocuments.filter((doc) => doc.status === "verified").length;
         const uploadedDocuments = workerDocuments.length;
         const workerIdentity = {

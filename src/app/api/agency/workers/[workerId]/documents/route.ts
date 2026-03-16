@@ -14,6 +14,10 @@ import { logServerActivity } from "@/lib/activityLoggerServer";
 import { checkRateLimit, standardLimiter } from "@/lib/rate-limit";
 import { sanitizeStorageFileName } from "@/lib/workers";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import {
+    ensureAgencyDraftDocumentOwner,
+    resolveAgencyWorkerDocumentOwnerId,
+} from "@/lib/agency-draft-documents";
 
 const ALLOWED_DOC_TYPES = new Set(["passport", "biometric_photo", "diploma"]);
 
@@ -82,11 +86,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Worker not found" }, { status: 404 });
         }
 
-        const documentOwnerId = worker.profile_id || worker.id;
-        const { data: documents, error: documentsError } = await admin
-            .from("worker_documents")
-            .select("document_type, status, reject_reason")
-            .eq("user_id", documentOwnerId);
+        const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(worker);
+        const { data: documents, error: documentsError } = documentOwnerId
+            ? await admin
+                .from("worker_documents")
+                .select("id, user_id, document_type, status, reject_reason, storage_path, updated_at, created_at, verified_at, extracted_data, ocr_json")
+                .eq("user_id", documentOwnerId)
+                .order("updated_at", { ascending: false })
+            : { data: [], error: null };
 
         if (documentsError) {
             console.error("[AgencyWorkerDocuments GET] Document fetch failed:", documentsError);
@@ -190,13 +197,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
         }
 
         const nowIso = new Date().toISOString();
-        const documentOwnerId = worker.profile_id || worker.id;
+        const documentOwnerId = worker.profile_id
+            ? worker.profile_id
+            : (await ensureAgencyDraftDocumentOwner(admin, worker)).documentOwnerId;
         const sanitizedFileName = sanitizeStorageFileName(fileEntry.name || `${docType}.bin`, docType);
         const storagePath = `${documentOwnerId}/${docType}/${Date.now()}_${sanitizedFileName}`;
 
         const { data: existingDocument, error: existingDocumentError } = await admin
             .from("worker_documents")
-            .select("storage_path")
+            .select("id, storage_path")
             .eq("user_id", documentOwnerId)
             .eq("document_type", docType)
             .maybeSingle();
@@ -218,23 +227,39 @@ export async function POST(request: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });
         }
 
-        const { error: upsertError } = await admin
-            .from("worker_documents")
-            .upsert({
-                user_id: documentOwnerId,
-                document_type: docType,
-                storage_path: storagePath,
-                status: "uploaded",
-                reject_reason: null,
-                verified_at: null,
-                extracted_data: null,
-                ocr_json: null,
-                updated_at: nowIso,
-            }, { onConflict: "user_id,document_type" });
+        const documentMutation = existingDocument
+            ? admin
+                .from("worker_documents")
+                .update({
+                    user_id: documentOwnerId,
+                    storage_path: storagePath,
+                    status: "uploaded",
+                    reject_reason: null,
+                    verified_at: null,
+                    extracted_data: null,
+                    ocr_json: null,
+                    updated_at: nowIso,
+                })
+                .eq("id", existingDocument.id)
+            : admin
+                .from("worker_documents")
+                .insert({
+                    user_id: documentOwnerId,
+                    document_type: docType,
+                    storage_path: storagePath,
+                    status: "uploaded",
+                    reject_reason: null,
+                    verified_at: null,
+                    extracted_data: null,
+                    ocr_json: null,
+                    updated_at: nowIso,
+                });
 
-        if (upsertError) {
+        const { error: persistError } = await documentMutation;
+
+        if (persistError) {
             await admin.storage.from(WORKER_DOCUMENTS_BUCKET).remove([storagePath]);
-            console.error("[AgencyWorkerDocuments] Document record upsert failed:", upsertError);
+            console.error("[AgencyWorkerDocuments] Document record upsert failed:", persistError);
             return NextResponse.json({ error: "Failed to save document metadata" }, { status: 500 });
         }
 
