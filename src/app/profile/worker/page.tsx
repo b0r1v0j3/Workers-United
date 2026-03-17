@@ -145,8 +145,11 @@ export default async function WorkerProfilePage({
     const inQueue = workerRecord?.status === "IN_QUEUE";
 
     // Calculate profile completion using shared function
+    const fullNameFallback = profile?.full_name || user.user_metadata?.full_name || null;
     const { completion: profileCompletion, missingFields } = getWorkerCompletion({
         profile, worker: workerRecord, documents: documents || []
+    }, {
+        fullNameFallback,
     });
     const isReady = profileCompletion === 100 && verifiedCount >= 3;
     const previewUser = inspectProfileId

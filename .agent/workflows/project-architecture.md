@@ -74,7 +74,7 @@ Workers-United/
 │   │   │   └── settings/      # Platform settings
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
-│   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics, admin inbox support list, and agency-worker approval API; manual-match/re-verify are now fully workerId-first
+│   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics, admin inbox support list, agency-worker approval API, and same-origin document preview streaming; manual-match/re-verify are now fully workerId-first
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
@@ -106,6 +106,7 @@ Workers-United/
 │   │   ├── forms/NativeDateField.tsx # Shared compact date field: mobile keeps the native iPhone/Android picker, desktop opens a custom calendar popover and now delegates month/year dropdown styling to `AdaptiveSelect`
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
+│   │   ├── admin/ActionSubmitButton.tsx # Shared pending-aware submit button for slower admin document actions
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
 │   │   ├── CookieConsent.tsx   # GDPR cookie banner
 │   │   ├── AgencySetupRequired.tsx # Graceful setup-required card when agency migration is missing
@@ -125,7 +126,8 @@ Workers-United/
 │   │   │   └── middleware.ts  # Auth middleware / proxy
 │   │   ├── mailer.ts          # sendEmail() via Nodemailer
 │   │   ├── email-templates.ts # HTML email templates + checkout recovery notification mapping
-│   │   ├── document-ai.ts     # GPT-primary document AI helpers with Gemini fallback
+│   │   ├── document-ai.ts     # GPT-primary document AI helpers with Gemini fallback; passport verification is now strict about requiring the actual biodata page instead of accepting closed passport covers
+│   │   ├── document-review.ts # Shared admin/worker document-review copy helpers derived from canonical `ocr_json` + `reject_reason`
 │   │   ├── stripe.ts          # Stripe client initialization
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
@@ -298,7 +300,8 @@ User (Browser)
 | `src/app/admin/email-health/EmailHealthClient.tsx` | Client-side email-health UI with safe-delete actions via the existing admin delete-user API |
 | `src/app/api/admin/search/route.ts` | Global admin search; returns `worker` as the canonical app-layer result, dedupes duplicate worker rows per `profile_id`, and keeps employer hits separate from worker hits |
 | `src/app/admin/workers/page.tsx` | Worker registry for admin ops; dedupes duplicate worker rows per `profile_id` via the canonical worker helper before computing stats or rendering the table |
-| `src/app/admin/workers/[id]/page.tsx` | Admin worker case view; now loads the canonical worker record instead of assuming `.single()` over one worker row |
+| `src/app/admin/workers/[id]/page.tsx` | Admin worker case view; now loads the canonical worker record, renders same-origin document preview URLs, and reads canonical document review fields (`ocr_json`, `reject_reason`, `verified_at`) instead of removed legacy columns |
+| `src/app/api/admin/documents/[documentId]/preview/route.ts` | Same-origin admin document preview stream; downloads from `worker-docs` with service-role access and returns inline PDF/image responses so browser PDF viewers work inside the admin modal |
 | `src/app/api/account/export/route.ts` | Self-service data export; returns canonical `worker` data from `worker_onboarding`, and includes agency-owned worker lists when the account has an agency profile |
 | `src/app/profile/agency/AgencyWorkerCreateModal.tsx` | Shared agency worker intake surface; supports desktop modal mode plus standalone full-page mode, save-draft, close-confirm, inspect-only admin preview, and real agency creation through `/api/agency/workers` |
 | `src/app/profile/agency/workers/[id]/AgencyWorkerClient.tsx` | Full worker editor for agency-owned workers, including documents, review requests, and Job Finder payment for claimed workers |
@@ -330,7 +333,8 @@ User (Browser)
 | `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
 | `src/lib/whatsapp-brain.ts` | Shared canonical WhatsApp facts/rules, safer worker/employer prompting, explicit `profile complete + admin approval -> payment unlock` guard language, no-fake-escalation rule set, onboarding trigger detection, and low-risk learning filter used by `/api/whatsapp/webhook` + `/api/brain/improve` |
 | `src/lib/smoke-evaluator.ts` | Shared health evaluator (`healthy/degraded/critical`) for smoke checks |
-| `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback) |
+| `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback); passport verifier now rejects closed covers / wrong pages and emits structured worker guidance |
+| `src/lib/document-review.ts` | Shared review helper that turns canonical `ocr_json` / `reject_reason` into admin-facing summaries and worker-facing re-upload guidance |
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals |
@@ -439,6 +443,8 @@ When adding a new feature, follow this order:
 - **Do not use raw `.single()` / `.maybeSingle()` on `worker_onboarding` / `workers` when the lookup key is `profile_id` or phone.** Use `src/lib/workers.ts` (`loadCanonicalWorkerRecord()`, `pickCanonicalWorkerRecord()`) so duplicate worker rows cannot break worker pages, Stripe flow, support gating, or WhatsApp identity resolution.
 - **Supabase Storage keys must be sanitized before upload.** Camera/device filenames can contain characters like `~` that break uploads with `Invalid key`; route all worker/agency document filenames through `sanitizeStorageFileName()` from `src/lib/workers.ts`.
 - **`worker_documents.user_id` must always be a real auth/profile id.** Never point it at `worker_onboarding.id`. Agency draft workers must go through `src/lib/agency-draft-documents.ts`, which stores a hidden auth-backed owner id in `worker_onboarding.application_data.draft_document_owner_profile_id` until claim relinks the documents to the real worker profile.
+- **Admin document review must use the live schema.** The canonical fields are `status`, `ocr_json`, `reject_reason`, and `verified_at`. Legacy `verification_result` / `admin_notes` references will break on production because those columns do not exist anymore.
+- **Inline admin previews should stay same-origin.** Use `/api/admin/documents/[documentId]/preview` for iframe/PDF rendering instead of direct public storage URLs, otherwise browsers can block the embedded document and force operators into `Open in New Tab`.
 
 ### Profile Field Consistency
 - When adding/changing a dropdown field (e.g., `preferred_job`), ensure the **same options** are used everywhere: onboarding form, edit form, employer form, admin display.

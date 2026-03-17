@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -11,40 +12,54 @@ import { buildContractDataForMatch } from "@/lib/contract-data";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
 import ReVerifyButton from "@/components/admin/ReVerifyButton";
+import ActionSubmitButton from "@/components/admin/ActionSubmitButton";
 import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import DocumentPreview from "@/components/admin/DocumentPreview";
 import DocumentViewerModal from "./DocumentViewerModal";
-import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2 } from "lucide-react";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
-import { getWorkerDocumentPublicUrl, WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
 
 interface PageProps {
     params: Promise<{ id: string }>;
 }
 
 async function getWorkerAdminGuardState(adminClient: ReturnType<typeof createAdminClient>, profileId: string) {
-    const { data: workerProfile } = await adminClient
-        .from("profiles")
-        .select("full_name, email")
-        .eq("id", profileId)
-        .maybeSingle();
+    const [
+        { data: workerProfile },
+        workerRecordResult,
+        { data: documents },
+        { data: payments },
+        { data: authUserPayload },
+    ] = await Promise.all([
+        adminClient
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", profileId)
+            .maybeSingle(),
+        loadCanonicalWorkerRecord<any>(adminClient, profileId, "*, phone, entry_fee_paid, queue_joined_at, status"),
+        adminClient
+            .from("worker_documents")
+            .select("document_type, status")
+            .eq("user_id", profileId),
+        adminClient
+            .from("payments")
+            .select("payment_type, status")
+            .eq("user_id", profileId),
+        adminClient.auth.admin.getUserById(profileId),
+    ]);
 
-    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(adminClient, profileId, "*, phone, entry_fee_paid, queue_joined_at, status");
-    const { data: documents } = await adminClient
-        .from("worker_documents")
-        .select("document_type, status")
-        .eq("user_id", profileId);
-    const { data: payments } = await adminClient
-        .from("payments")
-        .select("payment_type, status")
-        .eq("user_id", profileId);
+    const workerRecord = workerRecordResult.data;
 
     const completion = getWorkerCompletion({
         profile: workerProfile,
         worker: workerRecord,
         documents: documents || [],
+    }, {
+        fullNameFallback: authUserPayload?.user?.user_metadata?.full_name,
     }).completion;
     const hasPaidEntryFee =
         !!workerRecord?.entry_fee_paid ||
@@ -140,6 +155,8 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         profile: workerProfile,
         worker: workerRecord,
         documents: (documents || []).map((d: any) => ({ document_type: d.document_type })),
+    }, {
+        fullNameFallback: authUser.user_metadata?.full_name,
     });
     const verifiedDocumentsCount = (documents || []).filter((doc: any) => doc.status === "verified").length;
     const pendingDocumentsCount = (documents || []).filter((doc: any) => ["pending", "uploaded", "verifying", "manual_review"].includes(doc.status || "")).length;
@@ -158,7 +175,10 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         "use server";
         const docId = formData.get("doc_id") as string;
         const newStatus = formData.get("status") as string;
-        const adminNotes = formData.get("admin_notes") as string;
+        const feedback = formData.get("feedback") as string;
+        const userEmail = formData.get("user_email") as string;
+        const userName = formData.get("user_name") as string;
+        const docType = formData.get("doc_type") as string;
 
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -176,35 +196,39 @@ export default async function WorkerDetailPage({ params }: PageProps) {
 
         const adminClient = createAdminClient();
 
-        await adminClient
+        const rejectReason = newStatus === "rejected"
+            ? (feedback?.trim() || buildDocumentRequestReason(docType, null, null))
+            : null;
+
+        const { error: updateError } = await adminClient
             .from("worker_documents")
             .update({
                 status: newStatus,
-                admin_notes: adminNotes,
-                updated_at: new Date().toISOString()
+                reject_reason: rejectReason,
+                verified_at: newStatus === "verified" ? new Date().toISOString() : null,
+                updated_at: new Date().toISOString(),
             })
             .eq("id", docId);
+        if (updateError) {
+            throw new Error(updateError.message);
+        }
 
-        // Send email notification
-        if (newStatus !== "pending" && newStatus !== "verifying") {
-            const userEmail = formData.get("user_email") as string;
-            const docType = formData.get("doc_type") as string;
-
-            if (userEmail) {
-                const title = newStatus === 'verified' ? 'Document Verified' : 'Document Rejected';
-                const message = newStatus === 'verified'
-                    ? `Your ${docType} has been successfully verified.`
-                    : `Your ${docType} has been rejected. ${adminNotes ? `Reason: ${adminNotes}` : 'Please upload a valid document.'}`;
-
+        if (newStatus !== "pending" && newStatus !== "verifying" && userEmail) {
+            const approved = newStatus === "verified";
+            after(async () => {
                 await queueEmail(
                     adminClient,
                     id,
-                    "admin_update",
+                    "document_review_result",
                     userEmail,
-                    "User", // We could fetch name, but generic "User" or just "Hello" works with the template logic
-                    { title, message, subject: `Document Update: ${docType} ${newStatus}` }
+                    userName || "there",
+                    {
+                        approved,
+                        docType: humanizeDocumentType(docType),
+                        feedback: approved ? null : rejectReason,
+                    }
                 );
-            }
+            });
         }
 
         revalidatePath(`/admin/workers/${id}`);
@@ -239,10 +263,13 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         // Delete from database
-        await adminClient
+        const { error: deleteError } = await adminClient
             .from("worker_documents")
             .delete()
             .eq("id", docId);
+        if (deleteError) {
+            throw new Error(deleteError.message);
+        }
 
         revalidatePath(`/admin/workers/${id}`);
     }
@@ -254,6 +281,8 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         const docType = formData.get("doc_type") as string;
         const reason = formData.get("reason") as string;
         const userEmail = formData.get("user_email") as string;
+        const userName = formData.get("user_name") as string;
+        const requestedReason = reason?.trim() || buildDocumentRequestReason(docType, null, null);
 
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -279,28 +308,30 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         // Delete from database  
-        await adminClient
+        const { error: deleteError } = await adminClient
             .from("worker_documents")
             .delete()
             .eq("id", docId);
-
-        // Send email notification to user
-        if (userEmail) {
-            await queueEmail(
-                adminClient,
-                id,
-                "admin_update",
-                userEmail,
-                "User",
-                {
-                    title: "Action Required: New Document Needed",
-                    message: `We need you to upload a new ${docType}. Reason: ${reason}`,
-                    subject: "Action Required: New Document Needed"
-                }
-            );
+        if (deleteError) {
+            throw new Error(deleteError.message);
         }
 
-        // Admin requested new document
+        if (userEmail) {
+            after(async () => {
+                await queueEmail(
+                    adminClient,
+                    id,
+                    "document_review_result",
+                    userEmail,
+                    userName || "there",
+                    {
+                        approved: false,
+                        docType: humanizeDocumentType(docType),
+                        feedback: requestedReason,
+                    }
+                );
+            });
+        }
 
         revalidatePath(`/admin/workers/${id}`);
     }
@@ -860,6 +891,13 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                             {documents && documents.length > 0 ? (
                                 <div className="mt-5 space-y-4">
                                     {documents.map((doc: any) => (
+                                        (() => {
+                                            const previewUrl = `/api/admin/documents/${doc.id}/preview`;
+                                            const aiSummary = buildDocumentAiSummary(doc.document_type, doc.ocr_json, doc.reject_reason);
+                                            const requestReason = buildDocumentRequestReason(doc.document_type, doc.ocr_json, doc.reject_reason);
+                                            const isPdf = typeof doc.storage_path === "string" && doc.storage_path.toLowerCase().endsWith(".pdf");
+
+                                            return (
                                         <article
                                             key={doc.id}
                                             className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5"
@@ -881,29 +919,36 @@ export default async function WorkerDetailPage({ params }: PageProps) {
 
                                             <div className="mt-4 grid gap-3 sm:grid-cols-3">
                                                 <InlineFact label="Storage" value={doc.storage_path ? "File attached" : "No file"} />
-                                                <InlineFact label="Admin Notes" value={doc.admin_notes ? "Present" : "None"} />
-                                                <InlineFact label="AI Result" value={doc.verification_result ? "Available" : "None"} />
+                                                <InlineFact label="Worker Guidance" value={doc.reject_reason ? "Present" : "None"} />
+                                                <InlineFact label="AI Result" value={aiSummary || "None"} />
                                             </div>
 
                                             {doc.storage_path ? (
                                                 <DocumentViewerModal
-                                                    url={getWorkerDocumentPublicUrl(doc.storage_path) || ""}
+                                                    url={previewUrl}
                                                     documentType={doc.document_type}
                                                     status={doc.status}
+                                                    isPdf={isPdf}
                                                 >
-                                                    {doc.verification_result ? (
-                                                        <ModalDetailCard title="AI verification result" icon={<Brain size={14} />} tone="blue">
+                                                    {aiSummary ? (
+                                                        <ModalDetailCard title="AI review summary" icon={<Brain size={14} />} tone="blue">
+                                                            <p className="text-sm leading-relaxed text-blue-900">{aiSummary}</p>
+                                                        </ModalDetailCard>
+                                                    ) : null}
+
+                                                    {doc.ocr_json ? (
+                                                        <ModalDetailCard title="AI payload" icon={<Brain size={14} />} tone="blue">
                                                             <pre className="whitespace-pre-wrap text-[12px] leading-relaxed text-[#0f172a]">
-                                                                {typeof doc.verification_result === "object"
-                                                                    ? JSON.stringify(doc.verification_result, null, 2)
-                                                                    : doc.verification_result}
+                                                                {typeof doc.ocr_json === "object"
+                                                                    ? JSON.stringify(doc.ocr_json, null, 2)
+                                                                    : String(doc.ocr_json)}
                                                             </pre>
                                                         </ModalDetailCard>
                                                     ) : null}
 
-                                                    {doc.admin_notes ? (
-                                                        <ModalDetailCard title="Admin notes" icon={<StickyNote size={14} />} tone="amber">
-                                                            <p className="text-sm text-[#78350f]">{doc.admin_notes}</p>
+                                                    {doc.reject_reason ? (
+                                                        <ModalDetailCard title="Current worker guidance" icon={<StickyNote size={14} />} tone="amber">
+                                                            <p className="text-sm text-[#78350f]">{doc.reject_reason}</p>
                                                         </ModalDetailCard>
                                                     ) : null}
 
@@ -911,6 +956,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                         <input type="hidden" name="doc_id" value={doc.id} />
                                                         <input type="hidden" name="doc_type" value={doc.document_type} />
                                                         <input type="hidden" name="user_email" value={workerProfile?.email || authUser.email || ""} />
+                                                        <input type="hidden" name="user_name" value={displayName} />
                                                         <div className="mb-4">
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                                 Set status
@@ -929,22 +975,21 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                         </div>
                                                         <div className="mb-4">
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
-                                                                Admin notes
+                                                                Feedback for worker
                                                             </label>
                                                             <input
                                                                 type="text"
-                                                                name="admin_notes"
-                                                                defaultValue={doc.admin_notes || ""}
-                                                                placeholder="Add internal notes..."
+                                                                name="feedback"
+                                                                defaultValue={doc.reject_reason || ""}
+                                                                placeholder="Optional guidance if you are rejecting this file..."
                                                                 className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
                                                             />
                                                         </div>
-                                                        <button
-                                                            type="submit"
+                                                        <ActionSubmitButton
+                                                            idleLabel="Save status changes"
+                                                            pendingLabel="Saving..."
                                                             className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
-                                                        >
-                                                            Save status changes
-                                                        </button>
+                                                        />
                                                     </form>
 
                                                     <div className="space-y-3">
@@ -964,21 +1009,28 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                                 <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
                                                                 <input type="hidden" name="doc_type" value={doc.document_type} />
                                                                 <input type="hidden" name="user_email" value={workerProfile?.email || authUser.email || ""} />
+                                                                <input type="hidden" name="user_name" value={displayName} />
                                                                 <p className="text-xs leading-relaxed text-orange-900">
                                                                     This deletes the current file and emails the worker with a request to upload a new version.
                                                                 </p>
+                                                                {aiSummary ? (
+                                                                    <div className="rounded-xl border border-orange-200 bg-white px-3 py-3 text-xs leading-relaxed text-orange-900">
+                                                                        <strong className="block text-[11px] uppercase tracking-[0.16em] text-orange-700">AI saw</strong>
+                                                                        <span className="mt-1 block">{aiSummary}</span>
+                                                                    </div>
+                                                                ) : null}
                                                                 <textarea
                                                                     name="reason"
                                                                     required
                                                                     placeholder="Explain what needs to change in the re-upload."
+                                                                    defaultValue={requestReason}
                                                                     className="min-h-[110px] w-full rounded-xl border border-orange-300 bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
                                                                 />
-                                                                <button
-                                                                    type="submit"
+                                                                <ActionSubmitButton
+                                                                    idleLabel="Delete current file and notify worker"
+                                                                    pendingLabel="Deleting and notifying..."
                                                                     className="w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-700"
-                                                                >
-                                                                    Delete current file and notify worker
-                                                                </button>
+                                                                />
                                                             </form>
                                                         </details>
 
@@ -993,12 +1045,11 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                                 <p className="text-xs leading-relaxed text-red-900">
                                                                     This removes the document without notifying the worker.
                                                                 </p>
-                                                                <button
-                                                                    type="submit"
+                                                                <ActionSubmitButton
+                                                                    idleLabel="Confirm silent delete"
+                                                                    pendingLabel="Deleting..."
                                                                     className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
-                                                                >
-                                                                    Confirm silent delete
-                                                                </button>
+                                                                />
                                                             </form>
                                                         </details>
                                                     </div>
@@ -1009,6 +1060,8 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                 </div>
                                             )}
                                         </article>
+                                            );
+                                        })()
                                     ))}
                                 </div>
                             ) : (

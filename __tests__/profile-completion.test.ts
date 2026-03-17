@@ -77,6 +77,72 @@ describe('getWorkerCompletion', () => {
         expect(result.missingFields).toContain('Passport Document');
         expect(result.missingFields).toContain('Biometric Photo');
     });
+
+    it('uses a fallback full name when the profile row is temporarily out of sync', () => {
+        const result = getWorkerCompletion({
+            profile: { full_name: null },
+            worker: {
+                phone: '+381601234567',
+                nationality: 'Serbian',
+                current_country: 'Serbia',
+                preferred_job: 'Construction',
+                gender: 'Male',
+                date_of_birth: '1990-01-15',
+                birth_country: 'Serbia',
+                birth_city: 'Belgrade',
+                citizenship: 'Serbian',
+                marital_status: 'Single',
+                passport_number: 'P12345678',
+                passport_issued_by: 'Authority',
+                passport_issue_date: '2019-01-01',
+                passport_expiry_date: '2029-01-01',
+                lives_abroad: false,
+                previous_visas: false,
+            },
+            documents: [
+                { document_type: 'passport' },
+                { document_type: 'biometric_photo' },
+                { document_type: 'diploma' },
+            ],
+        }, {
+            fullNameFallback: 'Marko Petrovic',
+        });
+
+        expect(result.completion).toBe(100);
+        expect(result.missingFields).not.toContain('Full Name');
+    });
+
+    it('treats whitespace-only strings as missing values', () => {
+        const result = getWorkerCompletion({
+            profile: { full_name: '   ' },
+            worker: {
+                phone: '   ',
+                nationality: 'Serbian',
+                current_country: 'Serbia',
+                preferred_job: 'Construction',
+                gender: 'Male',
+                date_of_birth: '1990-01-15',
+                birth_country: 'Serbia',
+                birth_city: 'Belgrade',
+                citizenship: 'Serbian',
+                marital_status: 'Single',
+                passport_number: 'P12345678',
+                passport_issued_by: 'Authority',
+                passport_issue_date: '2019-01-01',
+                passport_expiry_date: '2029-01-01',
+                lives_abroad: false,
+                previous_visas: false,
+            },
+            documents: [
+                { document_type: 'passport' },
+                { document_type: 'biometric_photo' },
+                { document_type: 'diploma' },
+            ],
+        });
+
+        expect(result.missingFields).toContain('Full Name');
+        expect(result.missingFields).toContain('Phone Number');
+    });
 });
 
 describe('getEmployerCompletion', () => {

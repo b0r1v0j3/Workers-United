@@ -90,7 +90,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         .forEach((u: any) => employerProfileIds.add(u.id));
 
     // Calculate user progress — uses shared getWorkerCompletion() as single source of truth
-    const getUserStats = (userId: string) => {
+    const getUserStats = (userId: string, authUser?: any) => {
         const workerRecord = workerMap.get(userId);
         const p = profileMap.get(userId);
         const userDocs = (allDocs?.filter(d => d.user_id === userId) || []) as { document_type: string }[];
@@ -100,6 +100,8 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
             profile: p || null,
             worker: workerRecord || null,
             documents: userDocs,
+        }, {
+            fullNameFallback: authUser?.user_metadata?.full_name || null,
         });
 
         return { workerRecord, userDocs, verifiedDocs, profileCompletion: result.completion };
@@ -126,7 +128,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
     } else if (filter === 'needs_approval') {
         filteredUsers = activeAuthUsers.filter((u: any) => {
             const workerRecord = workerMap.get(u.id);
-            const { profileCompletion } = getUserStats(u.id);
+            const { profileCompletion } = getUserStats(u.id, u);
             return workerRecord && profileCompletion === 100 && !workerRecord.admin_approved;
         });
     } else if (statusFilters.includes(filter)) {
@@ -147,12 +149,12 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
     const filterLabel = filterLabels[filter] || 'All';
     const nowMs = new Date().getTime();
     const readyWorkersCount = activeAuthUsers.filter((authUser: any) => {
-        const { verifiedDocs, profileCompletion } = getUserStats(authUser.id);
+        const { verifiedDocs, profileCompletion } = getUserStats(authUser.id, authUser);
         return profileCompletion === 100 && verifiedDocs >= 3;
     }).length;
     const needsApprovalCount = activeAuthUsers.filter((authUser: any) => {
         const workerRecord = workerMap.get(authUser.id);
-        const { profileCompletion } = getUserStats(authUser.id);
+        const { profileCompletion } = getUserStats(authUser.id, authUser);
         return !!workerRecord && profileCompletion === 100 && !workerRecord.admin_approved;
     }).length;
     const queueCount = activeAuthUsers.filter((authUser: any) => workerMap.get(authUser.id)?.status === "IN_QUEUE").length;
@@ -252,7 +254,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                 <WorkersTableClient
                     data={filteredUsers.map((authUser: any) => {
                         const profile = profileMap.get(authUser.id);
-                        const { workerRecord, userDocs, verifiedDocs, profileCompletion } = getUserStats(authUser.id);
+                        const { workerRecord, userDocs, verifiedDocs, profileCompletion } = getUserStats(authUser.id, authUser);
 
                         return {
                             id: authUser.id,
