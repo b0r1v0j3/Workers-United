@@ -17,6 +17,7 @@ import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents
 import type { Json } from "@/lib/database.types";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import AgencyDashboardClient, { type AgencyDashboardProps } from "./AgencyDashboardClient";
 
@@ -39,6 +40,19 @@ interface AgencyWorkerQueryRow {
     job_search_active: boolean | null;
     submitted_full_name: string | null;
     submitted_email: string | null;
+    gender?: string | null;
+    date_of_birth?: string | null;
+    birth_country?: string | null;
+    birth_city?: string | null;
+    citizenship?: string | null;
+    marital_status?: string | null;
+    passport_number?: string | null;
+    passport_issued_by?: string | null;
+    passport_issue_date?: string | null;
+    passport_expiry_date?: string | null;
+    lives_abroad?: string | boolean | null;
+    previous_visas?: string | boolean | null;
+    family_data?: Json | null;
 }
 
 type PaymentQueryRow = {
@@ -126,7 +140,7 @@ export default async function AgencyProfilePage({
         const sandboxWorkspace = await getAdminTestAgencyWorkspace(admin, session.activePersona.id);
         const workerRows: AgencyDashboardProps["workers"] = sandboxWorkspace.workers.map((worker) => {
             const workerDocuments = sandboxWorkspace.documents.filter((document) => document.agency_worker_id === worker.id);
-            const verifiedDocuments = workerDocuments.filter((document) => document.status === "verified").length;
+            const documentProgress = getWorkerDocumentProgress(workerDocuments);
             const completion = getWorkerCompletion({
                 profile: { full_name: worker.full_name || "Sandbox worker" },
                 worker,
@@ -150,8 +164,12 @@ export default async function AgencyProfilePage({
                 adminApproved: completion === 100,
                 claimed: false,
                 accessLabel: "Sandbox agency worker",
-                verifiedDocuments,
-                documentsLabel: verifiedDocuments > 0 ? `${verifiedDocuments}/3 verified` : "Not uploaded",
+                verifiedDocuments: documentProgress.verifiedCount,
+                documentsLabel: documentProgress.uploadedCount === 0
+                    ? "Not uploaded"
+                    : documentProgress.verifiedCount >= documentProgress.requiredCount
+                        ? `${documentProgress.verifiedCount}/${documentProgress.requiredCount} verified`
+                        : `${documentProgress.uploadedCount}/${documentProgress.requiredCount} uploaded`,
                 paymentLabel: hasPaidEntryFee ? "Paid" : "Pay $9",
                 paymentState: hasPaidEntryFee ? "paid" : "not_paid",
                 paymentPendingUntil: null,
@@ -253,24 +271,7 @@ export default async function AgencyProfilePage({
     const { data: workersRaw, error: workersError } = agencyId
         ? await admin
             .from("worker_onboarding")
-            .select(`
-                id,
-                profile_id,
-                application_data,
-                admin_approved,
-                phone,
-                nationality,
-                current_country,
-                preferred_job,
-                status,
-                created_at,
-                updated_at,
-                queue_joined_at,
-                entry_fee_paid,
-                job_search_active,
-                submitted_full_name,
-                submitted_email
-            `)
+            .select("*")
             .eq("agency_id", agencyId)
             .order("created_at", { ascending: false })
         : { data: [] as AgencyWorkerQueryRow[], error: null };
@@ -351,8 +352,7 @@ export default async function AgencyProfilePage({
         const linkedProfile = profileId ? profilesById.get(profileId) || null : null;
         const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(worker);
         const workerDocuments = documentOwnerId ? docsByOwnerId.get(documentOwnerId) || [] : [];
-        const verifiedDocuments = workerDocuments.filter((doc) => doc.status === "verified").length;
-        const uploadedDocuments = workerDocuments.length;
+        const documentProgress = getWorkerDocumentProgress(workerDocuments);
         const workerIdentity = {
             submitted_full_name: worker.submitted_full_name,
             submitted_email: worker.submitted_email,
@@ -415,12 +415,12 @@ export default async function AgencyProfilePage({
             adminApproved: !!worker.admin_approved,
             claimed,
             accessLabel: claimed ? "Worker account ready" : "Managed by agency",
-            verifiedDocuments,
-            documentsLabel: uploadedDocuments === 0
+            verifiedDocuments: documentProgress.verifiedCount,
+            documentsLabel: documentProgress.uploadedCount === 0
                 ? "Not uploaded"
-                : verifiedDocuments > 0
-                    ? `${verifiedDocuments}/3 verified`
-                    : "Pending review",
+                : documentProgress.verifiedCount >= documentProgress.requiredCount
+                    ? `${documentProgress.verifiedCount}/${documentProgress.requiredCount} verified`
+                    : `${documentProgress.uploadedCount}/${documentProgress.requiredCount} uploaded`,
             paymentLabel: paymentState === "paid" ? "Paid" : "Pay $9",
             paymentState,
             paymentPendingUntil: latestActivePendingEntryFee?.deadline_at || null,
