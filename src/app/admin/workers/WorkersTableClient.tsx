@@ -2,14 +2,14 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Search, ChevronRight, Globe, Phone, FileText, CheckCircle2, Clock, Hourglass, Trash2 } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp, Search, Globe, Phone, FileText, CheckCircle2, Clock, Hourglass, Trash2 } from "lucide-react";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 
 export type WorkerTableRow = {
     id: string;
-    profile_id: string;
+    profile_id: string | null;
     name: string;
     email: string;
     avatar_url: string;
@@ -27,6 +27,13 @@ export type WorkerTableRow = {
     entryFeePaid: boolean;
     authProvider: string;
     paymentState: string;
+    hasVerifyingDocs?: boolean;
+    sourceLabel?: string | null;
+    workspaceHref: string;
+    workspaceLabel?: string;
+    caseHref: string;
+    caseLabel?: string;
+    deleteUserId?: string | null;
 };
 
 export default function WorkersTableClient({ data, currentFilter }: { data: WorkerTableRow[], currentFilter: string }) {
@@ -59,7 +66,8 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
             const lowerSearch = search.toLowerCase();
             result = result.filter(w =>
                 w.name.toLowerCase().includes(lowerSearch) ||
-                w.email.toLowerCase().includes(lowerSearch)
+                w.email.toLowerCase().includes(lowerSearch) ||
+                (w.sourceLabel || "").toLowerCase().includes(lowerSearch)
             );
         }
 
@@ -221,6 +229,12 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                                 {worker.isCurrentUser && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">You</span>}
                                             </p>
                                             <p className="text-xs text-slate-500">{worker.email}</p>
+                                            {worker.sourceLabel ? (
+                                                <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-blue-700">
+                                                    <Building2 size={11} />
+                                                    {worker.sourceLabel}
+                                                </p>
+                                            ) : null}
                                         </div>
                                     </div>
                                 </td>
@@ -286,19 +300,19 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <Link
-                                            href={`/profile/worker?inspect=${worker.profile_id}`}
+                                            href={worker.workspaceHref}
                                             className="rounded-md border border-transparent px-2 py-1 text-xs font-bold text-emerald-700 transition-colors hover:border-emerald-100 hover:bg-emerald-50"
                                         >
-                                            Inspect workspace
+                                            {worker.workspaceLabel || "Inspect workspace"}
                                         </Link>
                                         <Link
-                                            href={`/admin/workers/${worker.id}`}
+                                            href={worker.caseHref}
                                             className="rounded-md border border-transparent px-2 py-1 text-xs font-bold text-blue-600 transition-colors hover:border-blue-100 hover:bg-blue-50"
                                         >
-                                            Open case
+                                            {worker.caseLabel || "Open case"}
                                         </Link>
-                                        {!worker.isCurrentUser && (
-                                            <DeleteUserButton userId={worker.id} userName={worker.name} />
+                                        {!worker.isCurrentUser && worker.deleteUserId && (
+                                            <DeleteUserButton userId={worker.deleteUserId} userName={worker.name} />
                                         )}
                                     </div>
                                 </td>
