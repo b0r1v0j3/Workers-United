@@ -29,6 +29,8 @@ export default function ReVerifyButton({ documentId }: { documentId: string }) {
                     ? data.status === "manual_review"
                         ? "warning"
                         : "error"
+                    : data.status === "manual_review"
+                        ? "warning"
                     : "success";
                 setResult({
                     type: resultType,

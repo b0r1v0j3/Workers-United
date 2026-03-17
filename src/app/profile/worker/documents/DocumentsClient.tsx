@@ -20,6 +20,7 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
         const doc = documents.find(d => d.document_type === type);
         if (!doc) return { status: "missing", label: "Not uploaded", color: "gray", icon: Upload };
         if (doc.status === "verified") return { status: "verified", label: "Verified", color: "emerald", icon: CheckCircle2 };
+        if (doc.status === "manual_review") return { status: "manual_review", label: "Awaiting review", color: "amber", icon: Clock };
         if (doc.status === "rejected") return { status: "rejected", label: "Rejected", color: "red", icon: AlertCircle };
         if (doc.status === "verifying") return { status: "verifying", label: "Verifying...", color: "amber", icon: Loader2 };
         return { status: "uploaded", label: "Uploaded", color: "blue", icon: Clock };

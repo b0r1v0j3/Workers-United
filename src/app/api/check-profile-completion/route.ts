@@ -46,11 +46,13 @@ export async function POST() {
             .select("document_type, status")
             .eq("user_id", user.id);
 
+        const verifiedDocuments = (documents || []).filter((document) => document.status === "verified");
+
         // Calculate completion
         const { completion, missingFields } = getWorkerCompletion({
             profile,
             worker: workerRecord,
-            documents: documents || [],
+            documents: verifiedDocuments,
         }, {
             fullNameFallback: user.user_metadata?.full_name,
         });

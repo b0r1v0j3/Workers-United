@@ -8,11 +8,10 @@ import { extractPassportData, verifyBiometricPhoto, verifyDiploma, detectDocumen
 import sharp from "sharp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { checkRateLimit, strictLimiter } from "@/lib/rate-limit";
-import { getWorkerCompletion } from "@/lib/profile-completion";
-import { getPendingApprovalTargetStatus } from "@/lib/worker-review";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import { buildDocumentRequestReason } from "@/lib/document-review";
+import { syncWorkerReviewStatus } from "@/lib/worker-review";
 import {
     AGENCY_DRAFT_DOCUMENT_OWNER_KEY,
     resolveAgencyWorkerDocumentOwnerId,
@@ -258,7 +257,7 @@ export async function POST(request: Request) {
         }
 
         // 3. Perform AI verification based on document type
-        let status: 'verified' | 'rejected' | 'manual_review' = 'verified';
+        let status: 'verified' | 'rejected' | 'manual_review' = 'manual_review';
         let rejectReason: string | null = null;
         let ocrJson: Record<string, unknown> = {};
         let qualityIssues: string[] = [];
@@ -269,11 +268,13 @@ export async function POST(request: Request) {
                     const result = await extractPassportData(imageUrl);
 
                     if (result.success && result.data) {
-                        status = 'verified';
+                        status = 'manual_review';
                         ocrJson = {
                             ...result.data,
                             confidence: result.confidence,
                             extracted_at: new Date().toISOString(),
+                            ai_recommendation: "approve",
+                            review_state: "awaiting_admin_approval",
                             ...(result.documentKind ? { document_kind: result.documentKind } : {}),
                             ...(result.summary ? { summary: result.summary } : {}),
                             ...(result.workerGuidance ? { worker_guidance: result.workerGuidance } : {}),
@@ -326,7 +327,7 @@ export async function POST(request: Request) {
                                         readClient,
                                         targetWorkerProfileId,
                                         "id, passport_number, updated_at"
-                                    ).then((result) => result.data)
+                                    ).then((queryResult) => queryResult.data as { id?: string | null; passport_number?: string | null; updated_at?: string | null } | null)
                                     : null;
 
                             if (workerRecord?.passport_number && result.data.passport_number) {
@@ -360,11 +361,13 @@ export async function POST(request: Request) {
                     const result = await verifyBiometricPhoto(imageUrl);
 
                     if (result.success) {
-                        status = 'verified';
+                        status = 'manual_review';
                         ocrJson = {
                             is_valid: true,
                             confidence: result.confidence,
-                            analyzed_at: new Date().toISOString()
+                            analyzed_at: new Date().toISOString(),
+                            ai_recommendation: "approve",
+                            review_state: "awaiting_admin_approval",
                         };
                     } else {
                         status = 'rejected';
@@ -393,11 +396,13 @@ export async function POST(request: Request) {
                     const result = await verifyDiploma(imageUrl);
 
                     if (result.success) {
-                        status = 'verified';
+                        status = 'manual_review';
                         ocrJson = {
                             ...result.extractedData,
                             confidence: result.confidence,
-                            analyzed_at: new Date().toISOString()
+                            analyzed_at: new Date().toISOString(),
+                            ai_recommendation: "approve",
+                            review_state: "awaiting_admin_approval",
                         };
                     } else {
                         // Reject wrong document types — worker must upload a real school diploma
@@ -417,9 +422,12 @@ export async function POST(request: Request) {
                 }
 
                 default:
-                    // Unknown document types - accept by default
-                    status = 'verified';
-                    ocrJson = { note: "No specific verification for this document type" };
+                    status = 'manual_review';
+                    ocrJson = {
+                        note: "No specific verification for this document type",
+                        ai_recommendation: "review",
+                        review_state: "awaiting_admin_approval",
+                    };
             }
 
         } catch (aiError) {
@@ -445,6 +453,15 @@ export async function POST(request: Request) {
                 })
                 .eq("id", document.id);
 
+            await syncWorkerReviewStatus({
+                adminClient,
+                profileId: targetWorkerProfileId,
+                workerId: targetWorkerRecordId,
+                documentOwnerId,
+                phoneOptional: isAgencyOwnedVerification && !targetWorkerProfileId,
+                notifyOnPendingApproval: true,
+            });
+
             await logServerActivity(activityTargetId, "document_rejected_server", "documents", { doc_type: normalizedDocType, reason: rejectReason, quality_issues: qualityIssues }, "warning");
 
             return NextResponse.json({
@@ -456,17 +473,17 @@ export async function POST(request: Request) {
             });
         }
 
-        // 5. Update database with results (only for verified/manual_review)
+        // 5. Update database with results (AI only ever returns manual_review here; admin approval sets verified later)
         const updateData: Record<string, unknown> = {
             status: status,
             ocr_json: ocrJson,
             reject_reason: rejectReason,
-            verified_at: status === 'verified' ? new Date().toISOString() : null,
+            verified_at: null,
             updated_at: new Date().toISOString()
         };
 
         // Save structured extracted data for passport
-        if (normalizedDocType === 'passport' && ocrJson && status === 'verified') {
+        if (normalizedDocType === 'passport' && ocrJson) {
             updateData.extracted_data = {
                 full_name: ocrJson.full_name || '',
                 surname: ocrJson.surname || '',
@@ -491,89 +508,34 @@ export async function POST(request: Request) {
             throw updateError;
         }
 
-        await logServerActivity(activityTargetId, "document_verified_server", "documents", { doc_type: normalizedDocType, status, has_quality_issues: qualityIssues.length > 0 });
+        await logServerActivity(
+            activityTargetId,
+            status === "manual_review" ? "document_review_queued_server" : "document_verified_server",
+            "documents",
+            { doc_type: normalizedDocType, status, has_quality_issues: qualityIssues.length > 0 }
+        );
 
-        // Auto-check: if all 3 docs are verified, update worker status to VERIFIED
         let reviewQueued = false;
-        if (status === 'verified') {
-            try {
-                const { data: allDocs, error: allDocsError } = await readClient
-                    .from("worker_documents")
-                    .select("document_type, status")
-                    .eq("user_id", documentOwnerId);
-                if (allDocsError) throw allDocsError;
-
-                const verifiedTypes = new Set((allDocs || []).filter(d => d.status === 'verified').map(d => d.document_type));
-                const allThreeVerified = verifiedTypes.has('passport') && verifiedTypes.has('biometric_photo') && verifiedTypes.has('diploma');
-
-                if (allThreeVerified) {
-                    const workerRecord = targetWorkerRecordId
-                        ? await adminClient
-                            .from("worker_onboarding")
-                            .select("id, profile_id, submitted_full_name, status, admin_approved, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data")
-                            .eq("id", targetWorkerRecordId)
-                            .maybeSingle()
-                            .then((result) => result.data)
-                        : targetWorkerProfileId
-                            ? await loadCanonicalWorkerRecord(
-                                adminClient,
-                                targetWorkerProfileId,
-                                "id, profile_id, submitted_full_name, status, admin_approved, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data"
-                            ).then((result) => result.data)
-                            : null;
-
-                    const profileLike = targetWorkerProfileId
-                        ? await readClient
-                            .from("profiles")
-                            .select("full_name, email")
-                            .eq("id", targetWorkerProfileId)
-                            .maybeSingle()
-                            .then((result) => result.data)
-                        : { full_name: workerRecord?.submitted_full_name || "Worker", email: null };
-
-                    const completion = getWorkerCompletion({
-                        profile: profileLike,
-                        worker: workerRecord,
-                        documents: allDocs || [],
-                    }, { phoneOptional: isAgencyOwnedVerification && !targetWorkerProfileId }).completion;
-                    const targetStatus = getPendingApprovalTargetStatus({
-                        completion,
-                        entryFeePaid: workerRecord?.entry_fee_paid,
-                        adminApproved: !!workerRecord?.admin_approved,
-                        currentStatus: workerRecord?.status,
-                    });
-                    const nextStatus = targetStatus || "VERIFIED";
-                    reviewQueued = nextStatus === "PENDING_APPROVAL";
-
-                    if (targetWorkerRecordId) {
-                        await storageClient
-                            .from("worker_onboarding")
-                            .update({ status: nextStatus, updated_at: new Date().toISOString() })
-                            .eq("id", targetWorkerRecordId);
-                    } else if (targetWorkerProfileId) {
-                        await storageClient
-                            .from("worker_onboarding")
-                            .update({ status: nextStatus, updated_at: new Date().toISOString() })
-                            .eq("profile_id", targetWorkerProfileId);
-                    }
-
-                    await logServerActivity(activityTargetId, "all_documents_verified", "documents", {
-                        message: nextStatus === "PENDING_APPROVAL"
-                            ? "All 3 documents verified and profile is ready for admin review."
-                            : "All 3 documents verified — worker status updated to VERIFIED",
-                    });
-                }
-            } catch (checkErr) {
-                console.warn("[Verify] All-docs check failed:", checkErr);
-            }
+        try {
+            const syncResult = await syncWorkerReviewStatus({
+                adminClient,
+                profileId: targetWorkerProfileId,
+                workerId: targetWorkerRecordId,
+                documentOwnerId,
+                phoneOptional: isAgencyOwnedVerification && !targetWorkerProfileId,
+                notifyOnPendingApproval: true,
+            });
+            reviewQueued = syncResult.reviewQueued;
+        } catch (syncError) {
+            console.warn("[Verify] Review status sync failed:", syncError);
         }
 
         return NextResponse.json({
             success: true,
             status,
-            message: status === 'verified'
-                ? 'Document verified successfully! ✓'
-                : 'Document needs manual review',
+            message: status === 'manual_review'
+                ? 'AI review complete. Your document is now waiting for admin approval.'
+                : 'Document verified successfully! ✓',
             qualityIssues,
             extractedData: ocrJson,
             reviewQueued,
