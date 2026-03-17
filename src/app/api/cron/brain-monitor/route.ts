@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/mailer";
 import {
+    type BrainAnalysis,
+    type BrainIssue,
+    getDailyExceptionReasons,
+    getRetryEmailIds,
+    parseBrainAnalysis,
+} from "@/lib/brain-monitor";
+import {
     prepareBrainFactsForStorage,
     pruneInvalidBrainFacts,
     saveBrainFactsDedup,
@@ -25,71 +32,6 @@ const GITHUB_REPO = "b0r1v0j3/Workers-United";
 const ADMIN_EMAIL = "cvetkovicborivoje@gmail.com";
 const BRAIN_DAILY_MODEL = process.env.BRAIN_DAILY_MODEL || "gpt-5-mini";
 const DAILY_EXCEPTION_HEALTH_THRESHOLD = 85;
-
-function unwrapResponseJsonText(text: string): string {
-    const trimmed = text.trim();
-    const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-    return fencedMatch ? fencedMatch[1].trim() : trimmed;
-}
-
-function extractResponsesJsonText(aiData: any): string | null {
-    if (typeof aiData?.output_text === "string" && aiData.output_text.trim()) {
-        return unwrapResponseJsonText(aiData.output_text);
-    }
-
-    if (!Array.isArray(aiData?.output)) {
-        return null;
-    }
-
-    const contentTexts = aiData.output
-        .flatMap((item: any) => Array.isArray(item?.content) ? item.content : [])
-        .map((part: any) => typeof part?.text === "string" ? unwrapResponseJsonText(part.text) : null)
-        .filter((text: string | null): text is string => !!text && text.trim().length > 0);
-
-    const jsonText = contentTexts.find((text: string) => text.startsWith("{") && text.endsWith("}"));
-    return jsonText || contentTexts[0] || null;
-}
-
-function parseBrainAnalysis(aiData: any): BrainAnalysis {
-    const aiContent = extractResponsesJsonText(aiData);
-
-    if (!aiContent) {
-        throw new Error("Empty AI response");
-    }
-
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(aiContent);
-    } catch {
-        throw new Error(`Failed to parse AI response: ${aiContent.substring(0, 300)}`);
-    }
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new Error("AI response did not contain the expected JSON object");
-    }
-
-    return parsed as BrainAnalysis;
-}
-
-function getRetryEmailIds(params: Record<string, unknown> | undefined): string[] {
-    if (!params) return [];
-
-    const ids = new Set<string>();
-
-    if (typeof params.email_id === "string" && params.email_id.trim()) {
-        ids.add(params.email_id);
-    }
-
-    if (Array.isArray(params.email_ids)) {
-        for (const rawId of params.email_ids) {
-            if (typeof rawId === "string" && rawId.trim()) {
-                ids.add(rawId);
-            }
-        }
-    }
-
-    return Array.from(ids);
-}
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
@@ -212,7 +154,7 @@ export async function GET(request: Request) {
         }
 
         // ─── Step 4: Send Email Report (exception-only) ─────────────────
-        const emailReasons = getDailyExceptionReasons(analysis);
+        const emailReasons = getDailyExceptionReasons(analysis, DAILY_EXCEPTION_HEALTH_THRESHOLD);
         if (emailReasons.length > 0) {
             const emailHtml = buildEmailReport(
                 analysis,
@@ -315,51 +257,37 @@ export async function GET(request: Request) {
         console.error("[Brain Monitor] Error:", message);
         results.error = message;
 
-        // Try to send error email
         try {
-            await sendEmail(
-                ADMIN_EMAIL,
-                "🧠❌ Brain Monitor Failed",
-                `<p>Brain Monitor failed at ${new Date().toISOString()}</p><p><strong>Error:</strong> ${message}</p><pre>${JSON.stringify(results, null, 2)}</pre>`
-            );
-        } catch { /* ignore email errors */ }
+            const { error: saveFailureError } = await supabase.from("brain_reports").insert({
+                report: {
+                    report_type: "automated_daily_failure",
+                    delivery_mode: "db_only",
+                    email_delivery: "suppressed",
+                    email_error: null,
+                    failure_message: message,
+                    failure_context: results,
+                    failed_at: new Date().toISOString(),
+                },
+                model: BRAIN_DAILY_MODEL,
+                findings_count: 0,
+            });
+
+            if (!saveFailureError) {
+                results.reportSaved = true;
+                results.emailSkipped = true;
+                results.emailReason = "Failure snapshot saved to brain_reports; failure email suppressed";
+            } else {
+                console.error("[Brain Monitor] Failed to save failure snapshot:", saveFailureError.message);
+            }
+        } catch (saveFailure) {
+            console.error("[Brain Monitor] Unexpected failure while saving crash snapshot:", saveFailure);
+        }
 
         return NextResponse.json({ errorMessage: message, ...results }, { status: 500 });
     }
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-interface BrainIssue {
-    title: string;
-    body: string;
-    priority: "P0" | "P1" | "P2";
-    labels: string[];
-}
-
-interface BrainAction {
-    type: string;
-    description: string;
-    params?: Record<string, unknown>;
-}
-
-interface BrainAnalysis {
-    summary: string;
-    healthScore: number;
-    operations: { name: string; emoji: string; status: string; findings: string[]; score: number }[];
-    issues: BrainIssue[];
-    improvements: { title: string; description: string; impact: string; effort: string }[];
-    actions: BrainAction[];
-    brainFacts: { category: string; content: string }[];
-    selfImprovements: string[];
-    metrics: {
-        totalWorkers: number;
-        totalEmployers: number;
-        documentsVerified: number;
-        emailDeliveryRate: string;
-        funnelProgression: string;
-    };
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -394,6 +322,8 @@ You run 7 OPERATIONS. Analyze each separately:
 - Email delivery rate (sent vs failed)
 - ⚠️ CHECK bouncePatterns data: domains with high bounce rates may indicate typos that should be added to the signup email validation
 - If you find repeated bounce domains, use brainFacts to record them and create an issue to add them to email typo detection
+- ⚠️ CHECK health.whatsappTemplateHealth and health.recentFailedWhatsApp: platform-side template failures are real ops issues, while recipient-side delivery blocks are informational only
+- ⚠️ CHECK whatsappConversations for repeated user confusion, weak bot guidance, or real attachment/document misunderstandings
 - WhatsApp response quality
 - Status: OK / WARNING / CRITICAL
 
@@ -471,28 +401,6 @@ Respond in JSON:
   "selfImprovements": ["Capability I wish I had", "Data I need access to"],
   "metrics": { "totalWorkers": N, "totalEmployers": N, "documentsVerified": N, "emailDeliveryRate": "X%", "funnelProgression": "description" }
 }`;
-}
-
-function getDailyExceptionReasons(analysis: BrainAnalysis): string[] {
-    const reasons: string[] = [];
-
-    if ((analysis.issues?.length || 0) > 0) {
-        reasons.push(`${analysis.issues.length} issue(s) detected`);
-    }
-
-    if ((analysis.actions || []).some((action) => action.type === "retry_email")) {
-        reasons.push("auto-retry email action suggested");
-    }
-
-    if ((analysis.operations || []).some((operation) => operation.status === "CRITICAL")) {
-        reasons.push("at least one operation is CRITICAL");
-    }
-
-    if (analysis.healthScore < DAILY_EXCEPTION_HEALTH_THRESHOLD) {
-        reasons.push(`health score below ${DAILY_EXCEPTION_HEALTH_THRESHOLD}`);
-    }
-
-    return reasons;
 }
 
 function getAiInputData(data: Record<string, unknown>): Record<string, unknown> {
@@ -681,7 +589,7 @@ function buildEmailReport(
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                         <td valign="top" width="48" style="padding-right:10px;">
-                            <span style="display:inline-block;font-size:12px;font-weight:700;line-height:1;color:${issue.priority.includes("0") ? colors.error.text : colors.warning.text};background:${issue.priority.includes("0") ? colors.error.bg : colors.warning.bg};padding:4px 6px;border-radius:4px;">
+                            <span style="display:inline-block;font-size:12px;font-weight:700;line-height:1;color:${issue.priority === "P0" ? colors.error.text : colors.warning.text};background:${issue.priority === "P0" ? colors.error.bg : colors.warning.bg};padding:4px 6px;border-radius:4px;">
                                 ${escapeHtml(issue.priority)}
                             </span>
                         </td>

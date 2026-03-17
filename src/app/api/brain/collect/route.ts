@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
+import { summarizeWhatsAppTemplateHealth } from "@/lib/whatsapp-health";
 
 // ─── Brain Data Collector ───────────────────────────────────────────────────
 // Collects ALL system data for AI brain analysis (o1-pro / Claude / Gemini)
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
         supabase.from("worker_documents").select("user_id, document_type, status, created_at, verified_at"),
         supabase.from("payments").select("user_id, payment_type, status, amount, amount_cents, paid_at"),
         supabase.from("email_queue").select("id, email_type, status, error_message, recipient_email, created_at").gte("created_at", monthAgo.toISOString()),
-        supabase.from("whatsapp_messages").select("direction, status, content, created_at, phone_number").gte("created_at", monthAgo.toISOString()).order("created_at", { ascending: false }),
+        supabase.from("whatsapp_messages").select("direction, status, content, created_at, phone_number, message_type, template_name, error_message").gte("created_at", monthAgo.toISOString()).order("created_at", { ascending: false }),
         supabase.from("employers").select("id, status, country, industry, created_at"),
         supabase.from("job_requests").select("id, status, industry, destination_country, positions_count, created_at"),
         supabase.from("matches").select("id, status, worker_id, employer_id"),
@@ -239,6 +241,7 @@ export async function GET(request: NextRequest) {
         failed: whatsappMsgs.filter(m => m.status === "failed").length,
         uniqueUsers: new Set(whatsappMsgs.map(m => m.phone_number)).size,
         thisWeek: whatsappMsgs.filter(m => toTimestamp(m.created_at) >= weekAgo.getTime()).length,
+        totalOutboundTemplates: whatsappMsgs.filter(m => m.direction === "outbound" && m.message_type === "template").length,
         recentConversations: whatsappMsgs.slice(0, 50).map(m => ({
             direction: m.direction,
             content: m.content?.substring(0, 500),
@@ -375,6 +378,15 @@ export async function GET(request: NextRequest) {
 
     // ─── 10. System Health Indicators ───────────────────────────────────
     const failedWhatsApp = whatsappMsgs.filter(m => m.status === "failed");
+    const whatsappTemplateHealth = summarizeWhatsAppTemplateHealth({
+        totalOutboundTemplates: chatbotStats.totalOutboundTemplates,
+        failedMessages: failedWhatsApp
+            .filter((message) => message.direction === "outbound" && message.message_type === "template")
+            .map((message) => ({
+                templateName: message.template_name,
+                errorMessage: message.error_message,
+            })),
+    });
 
     const health = {
         emailDeliveryRate: emailStats.totalThisMonth > 0
@@ -385,10 +397,17 @@ export async function GET(request: NextRequest) {
             : "N/A",
         failedEmailCount: failedEmails.length,
         failedWhatsAppCount: failedWhatsApp.length,
+        whatsappTemplateHealth,
         recentFailedEmails: failedEmails.slice(0, 5).map(e => ({
             type: e.email_type,
             error: e.error_message,
             date: e.created_at,
+        })),
+        recentFailedWhatsApp: failedWhatsApp.slice(0, 5).map(message => ({
+            template_name: message.template_name,
+            error_message: message.error_message,
+            status: message.status,
+            date: message.created_at,
         })),
     };
 
@@ -558,17 +577,17 @@ export async function GET(request: NextRequest) {
                 const allAuthUsers = await getAllAuthUsers(supabase);
                 const profileIds = new Set(allProfiles.map(p => p.id));
 
-                const unconfirmedUsers = allAuthUsers.filter((u: any) => !u.email_confirmed_at);
-                const noUserType = allAuthUsers.filter((u: any) => !u.user_metadata?.user_type);
-                const workersWithoutProfile = allAuthUsers.filter((u: any) =>
+                const unconfirmedUsers = allAuthUsers.filter((u: SupabaseAuthUser) => !u.email_confirmed_at);
+                const noUserType = allAuthUsers.filter((u: SupabaseAuthUser) => !u.user_metadata?.user_type);
+                const workersWithoutProfile = allAuthUsers.filter((u: SupabaseAuthUser) =>
                     u.user_metadata?.user_type === "worker" && !profileIds.has(u.id)
                 );
-                const workersWithoutWorkerOnboarding = allAuthUsers.filter((u: any) =>
+                const workersWithoutWorkerOnboarding = allAuthUsers.filter((u: SupabaseAuthUser) =>
                     u.user_metadata?.user_type === "worker" && !workerRecordProfileIds.has(u.id)
                 );
 
                 // Users registered in last 7 days who never completed profile
-                const recentStuckUsers = allAuthUsers.filter((u: any) => {
+                const recentStuckUsers = allAuthUsers.filter((u: SupabaseAuthUser) => {
                     const createdAt = new Date(u.created_at);
                     const isRecent = createdAt >= weekAgo;
                     const isWorker = u.user_metadata?.user_type === "worker";
@@ -580,7 +599,7 @@ export async function GET(request: NextRequest) {
                     totalAuthUsers: allAuthUsers.length,
                     unconfirmedEmails: {
                         count: unconfirmedUsers.length,
-                        users: unconfirmedUsers.slice(0, 20).map((u: any) => ({
+                        users: unconfirmedUsers.slice(0, 20).map((u: SupabaseAuthUser) => ({
                             id: u.id,
                             email: u.email,
                             created_at: u.created_at,
@@ -589,19 +608,19 @@ export async function GET(request: NextRequest) {
                     },
                     missingUserType: {
                         count: noUserType.length,
-                        users: noUserType.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
+                        users: noUserType.slice(0, 10).map((u: SupabaseAuthUser) => ({ id: u.id, email: u.email })),
                     },
                     workersWithoutProfile: {
                         count: workersWithoutProfile.length,
-                        users: workersWithoutProfile.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
+                        users: workersWithoutProfile.slice(0, 10).map((u: SupabaseAuthUser) => ({ id: u.id, email: u.email })),
                     },
                     workersWithoutWorkerOnboarding: {
                         count: workersWithoutWorkerOnboarding.length,
-                        users: workersWithoutWorkerOnboarding.slice(0, 10).map((u: any) => ({ id: u.id, email: u.email })),
+                        users: workersWithoutWorkerOnboarding.slice(0, 10).map((u: SupabaseAuthUser) => ({ id: u.id, email: u.email })),
                     },
                     recentStuckSignups: {
                         count: recentStuckUsers.length,
-                        users: recentStuckUsers.slice(0, 10).map((u: any) => ({
+                        users: recentStuckUsers.slice(0, 10).map((u: SupabaseAuthUser) => ({
                             id: u.id,
                             email: u.email,
                             created_at: u.created_at,
