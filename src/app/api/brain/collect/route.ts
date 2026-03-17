@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
+import { getAdminExceptionSnapshot } from "@/lib/admin-exceptions";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { summarizeWhatsAppTemplateHealth } from "@/lib/whatsapp-health";
 
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
         jobRequestsResult,
         matchesResult,
         offersResult,
+        opsSnapshot,
     ] = await Promise.all([
         supabase.from("profiles").select("id, user_type, full_name, created_at"),
         supabase.from("worker_onboarding").select("id, profile_id, status, entry_fee_paid, queue_joined_at, phone"),
@@ -72,6 +74,7 @@ export async function GET(request: NextRequest) {
         supabase.from("job_requests").select("id, status, industry, destination_country, positions_count, created_at"),
         supabase.from("matches").select("id, status, worker_id, employer_id"),
         supabase.from("offers").select("id, status, worker_id, job_request_id"),
+        getAdminExceptionSnapshot(),
     ]);
 
     const queryErrors = [
@@ -448,6 +451,7 @@ export async function GET(request: NextRequest) {
         stalls,
         bouncePatterns,
         health,
+        opsSnapshot,
         // ─── User Activity (last 24h) ───────────────────────────────
         userActivity: await (async () => {
             try {

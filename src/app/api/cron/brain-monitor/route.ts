@@ -1,37 +1,117 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { AdminExceptionSnapshot } from "@/lib/admin-exceptions";
+import {
+    buildOpsMonitorEmailReport,
+    buildOpsMonitorReport,
+    getOpsMonitorEmailReasons,
+} from "@/lib/ops-monitor";
 import { sendEmail } from "@/lib/mailer";
-import {
-    type BrainAnalysis,
-    type BrainIssue,
-    getDailyExceptionReasons,
-    getRetryEmailIds,
-    parseBrainAnalysis,
-} from "@/lib/brain-monitor";
-import {
-    prepareBrainFactsForStorage,
-    pruneInvalidBrainFacts,
-    saveBrainFactsDedup,
-} from "@/lib/brain-memory";
-
-// ─── Brain Monitor ──────────────────────────────────────────────────────────
-// Autonomous AI that monitors platform health, creates GitHub Issues for bugs,
-// and sends email reports. Runs daily via Vercel Cron.
-//
-// Brain Monitor — runs via Vercel Cron (configured in vercel.json).
-// Uses: OpenAI Responses API, GitHub API, Supabase, SMTP
-//
-// Auth: CRON_SECRET bearer token
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 minutes max (Vercel Pro)
+export const maxDuration = 300;
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_REPO = "b0r1v0j3/Workers-United";
 const ADMIN_EMAIL = "cvetkovicborivoje@gmail.com";
-const BRAIN_DAILY_MODEL = process.env.BRAIN_DAILY_MODEL || "gpt-5-mini";
-const DAILY_EXCEPTION_HEALTH_THRESHOLD = 85;
+const OPS_MONITOR_MODEL = "ops-first-monitor";
+const CRITICAL_ROUTES = ["/login", "/signup", "/auth/callback", "/api/health"];
+
+interface RouteHealthEntry {
+    status: number | string;
+    ok: boolean;
+    latencyMs: number;
+}
+
+interface BrainCollectResponse {
+    generatedAt?: string;
+    documents?: {
+        rejected?: number;
+        pending?: number;
+    };
+    emails?: {
+        recentFailedEmails?: Array<{
+            email_type?: string | null;
+            error_message?: string | null;
+            created_at?: string | null;
+        }>;
+    };
+    health?: {
+        whatsappTemplateHealth?: {
+            state?: string | null;
+            details?: string | null;
+            totalOutboundTemplates?: number | null;
+            failedTemplates?: number | null;
+            platformFailures?: number | null;
+            recipientFailures?: number | null;
+        } | null;
+        recentFailedWhatsApp?: Array<{
+            template_name?: string | null;
+            error_message?: string | null;
+            status?: string | null;
+            date?: string | null;
+        }>;
+    };
+    paymentTelemetry?: {
+        failed?: number | null;
+        abandoned?: number | null;
+        pending?: number | null;
+        successful?: number | null;
+        totalAttempts?: number | null;
+        recentAttempts?: Array<{
+            action?: string | null;
+            status?: string | null;
+            created_at?: string | null;
+            user_id?: string | null;
+        }>;
+    } | null;
+    authHealth?: {
+        status?: string | null;
+        unconfirmedEmails?: { count?: number | null };
+        workersWithoutWorkerOnboarding?: { count?: number | null };
+        recentStuckSignups?: { count?: number | null };
+    } | null;
+    whatsappConversations?: {
+        conversations?: Array<{
+            phone?: string;
+            messageCount?: number;
+            messages?: Array<{
+                role?: string;
+                content?: string | null;
+                time?: string | null;
+            }>;
+        }>;
+    } | null;
+    opsSnapshot?: AdminExceptionSnapshot;
+}
+
+async function getRouteHealth(baseUrl: string) {
+    const routeHealth: Record<string, RouteHealthEntry> = {};
+
+    for (const route of CRITICAL_ROUTES) {
+        const startedAt = Date.now();
+
+        try {
+            const response = await fetch(`${baseUrl}${route}`, {
+                method: "GET",
+                redirect: "manual",
+                signal: AbortSignal.timeout(10000),
+            });
+
+            routeHealth[route] = {
+                status: response.status,
+                ok: response.status < 500,
+                latencyMs: Date.now() - startedAt,
+            };
+        } catch (error) {
+            routeHealth[route] = {
+                status: error instanceof Error ? error.message : "timeout",
+                ok: false,
+                latencyMs: Date.now() - startedAt,
+            };
+        }
+    }
+
+    return routeHealth;
+}
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
@@ -39,148 +119,82 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const startTime = Date.now();
+    const startedAt = Date.now();
     const supabase = createAdminClient();
     const results = {
         dataCollected: false,
-        aiAnalyzed: false,
-        issuesCreated: 0,
+        opsReportBuilt: false,
         emailSent: false,
         emailSkipped: false,
         emailReason: null as string | null,
         emailError: null as string | null,
         reportSaved: false,
+        signalCount: 0,
+        criticalSignals: 0,
+        highSignals: 0,
         error: null as string | null,
     };
 
     try {
-        // ─── Step 1: Collect Platform Data ───────────────────────────────
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
-        const collectRes = await fetch(`${baseUrl}/api/brain/collect`, {
+        const collectResponse = await fetch(`${baseUrl}/api/brain/collect`, {
             headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
         });
 
-        if (!collectRes.ok) {
-            throw new Error(`Data collection failed: ${collectRes.status}`);
+        if (!collectResponse.ok) {
+            throw new Error(`Data collection failed: ${collectResponse.status}`);
         }
 
-        const platformData = await collectRes.json();
+        const platformData = await collectResponse.json() as BrainCollectResponse;
         results.dataCollected = true;
 
-        // ─── Step 1b: Self-Test Critical Routes ──────────────────────────
-        const criticalRoutes = ["/login", "/signup", "/auth/callback", "/api/health"];
-        const routeHealth: Record<string, { status: number | string; ok: boolean; latencyMs: number }> = {};
-        for (const route of criticalRoutes) {
-            const start = Date.now();
-            try {
-                const res = await fetch(`${baseUrl}${route}`, {
-                    method: "GET",
-                    redirect: "manual", // don't follow redirects — just check if route exists
-                    signal: AbortSignal.timeout(10000),
-                });
-                routeHealth[route] = {
-                    status: res.status,
-                    ok: res.status < 500, // 200, 302 (redirects) are fine, 5xx is bad
-                    latencyMs: Date.now() - start,
-                };
-            } catch (err) {
-                routeHealth[route] = {
-                    status: err instanceof Error ? err.message : "timeout",
-                    ok: false,
-                    latencyMs: Date.now() - start,
-                };
-            }
-        }
-        platformData.routeHealth = routeHealth;
-
-        // Pre-fetch existing issues for dedup (both open and closed)
-        const existingIssues = await getExistingIssueTitles();
-        const allResolvedTitles = existingIssues.closed;
-
-        // ─── Step 2: AI Analysis (OpenAI Responses API) ──────────────────
-        if (!OPENAI_API_KEY) {
-            throw new Error("OPENAI_API_KEY not set");
+        const routeHealth = await getRouteHealth(baseUrl);
+        const opsSnapshot = platformData.opsSnapshot;
+        if (!opsSnapshot) {
+            throw new Error("Brain collect did not return opsSnapshot");
         }
 
-        // Load business facts from centralized config
-        const { getBusinessFactsForAI } = await import("@/lib/platform-config");
-        const businessFacts = await getBusinessFactsForAI();
-
-        const today = new Date().toISOString().split("T")[0];
-        const prompt = buildAnalysisPrompt(platformData, today, allResolvedTitles);
-
-        // GPT-5 models use /v1/responses (not /v1/chat/completions)
-        const aiRes = await fetch("https://api.openai.com/v1/responses", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: BRAIN_DAILY_MODEL,
-                instructions: getSystemPrompt(businessFacts),
-                input: prompt,
-                text: {
-                    format: { type: "json_object" },
-                },
-            }),
+        const opsReport = buildOpsMonitorReport({
+            generatedAt: platformData.generatedAt || new Date().toISOString(),
+            opsSnapshot,
+            routeHealth,
+            whatsappTemplateHealth: platformData.health?.whatsappTemplateHealth || null,
+            recentFailedWhatsApp: platformData.health?.recentFailedWhatsApp || [],
+            recentFailedEmails: (platformData.emails?.recentFailedEmails || []).map((entry) => ({
+                type: entry.email_type || null,
+                error: entry.error_message || null,
+                date: entry.created_at || null,
+            })),
+            whatsappConversations: platformData.whatsappConversations || null,
+            paymentTelemetry: platformData.paymentTelemetry || null,
+            authHealth: platformData.authHealth || null,
+            documents: platformData.documents || null,
         });
+        results.opsReportBuilt = true;
+        results.signalCount = opsReport.metrics.totalSignals;
+        results.criticalSignals = opsReport.metrics.criticalSignals;
+        results.highSignals = opsReport.metrics.highSignals;
 
-        if (!aiRes.ok) {
-            const errText = await aiRes.text();
-            throw new Error(`OpenAI API failed: ${aiRes.status} - ${errText.substring(0, 300)}`);
-        }
-
-        const aiData = await aiRes.json();
-        const analysis = parseBrainAnalysis(aiData);
-        analysis.brainFacts = prepareBrainFactsForStorage(analysis.brainFacts || []);
-        results.aiAnalyzed = true;
-
-        // ─── Step 3: Create GitHub Issues ────────────────────────────────
-        if (GITHUB_TOKEN && analysis.issues && analysis.issues.length > 0) {
-            // Combine open + closed titles for dedup check
-            const allExistingTitles = [...existingIssues.open, ...existingIssues.closed];
-
-            for (const issue of analysis.issues.slice(0, 5)) { // Max 5 issues per run
-                // Skip if similar issue already exists (open OR closed)
-                const isDuplicate = allExistingTitles.some((t: string) =>
-                    t.toLowerCase().includes(issue.title.toLowerCase().split(" ").slice(0, 3).join(" "))
-                );
-                if (isDuplicate) continue;
-
-                const created = await createGitHubIssue(issue);
-                if (created) results.issuesCreated++;
-            }
-        }
-
-        // ─── Step 4: Send Email Report (exception-only) ─────────────────
-        const emailReasons = getDailyExceptionReasons(analysis, DAILY_EXCEPTION_HEALTH_THRESHOLD);
+        const emailReasons = getOpsMonitorEmailReasons(opsReport);
         if (emailReasons.length > 0) {
-            const emailHtml = buildEmailReport(
-                analysis,
-                platformData,
-                results.issuesCreated,
-                startTime,
-                BRAIN_DAILY_MODEL,
-                emailReasons
-            );
+            const reportDate = new Date(opsReport.generatedAt).toLocaleDateString("en-GB");
             const emailResult = await sendEmail(
                 ADMIN_EMAIL,
-                `🧠 Brain Alert — ${today} — ${analysis.healthScore}/100`,
-                emailHtml
+                `Ops Monitor Alert — ${reportDate} — ${opsReport.healthScore}/100`,
+                buildOpsMonitorEmailReport(opsReport, baseUrl)
             );
             results.emailSent = emailResult.success;
             results.emailReason = emailReasons.join("; ");
             results.emailError = emailResult.success ? null : (emailResult.error || "Unknown email error");
         } else {
             results.emailSkipped = true;
-            results.emailReason = "No material change — saved to brain_reports only";
+            results.emailReason = "No critical or high-priority ops signals — saved to brain_reports only";
         }
 
-        // ─── Step 5: Save Report to Database ─────────────────────────────
-        const brainReportPayload = {
-            report_type: emailReasons.length > 0 ? "automated_daily_exception" : "automated_daily_snapshot",
-            email_summary: analysis.summary,
+        const reportPayload = {
+            report_type: emailReasons.length > 0 ? "ops_daily_exception" : "ops_daily_snapshot",
+            monitor_mode: "ops_first",
+            email_summary: opsReport.summary,
             email_reasons: emailReasons,
             delivery_mode: emailReasons.length === 0
                 ? "db_only"
@@ -189,78 +203,41 @@ export async function GET(request: Request) {
                     : "db_and_email_failed",
             email_delivery: results.emailSkipped ? "skipped" : (results.emailSent ? "sent" : "failed"),
             email_error: results.emailError,
-            structured_report: analysis,
+            structured_report: {
+                ...opsReport,
+                routeHealth,
+                whatsappTemplateHealth: platformData.health?.whatsappTemplateHealth || null,
+            },
         };
+
         const { error: saveReportError } = await supabase.from("brain_reports").insert({
-            report: brainReportPayload,
-            model: BRAIN_DAILY_MODEL,
-            findings_count: analysis.issues?.length || 0,
+            report: reportPayload,
+            model: OPS_MONITOR_MODEL,
+            findings_count: opsReport.signals.length,
         });
+
         if (saveReportError) {
-            console.error("[Brain Monitor] Failed to save report:", saveReportError.message);
-            results.reportSaved = false;
+            console.error("[Ops Monitor] Failed to save report:", saveReportError.message);
         } else {
             results.reportSaved = true;
         }
 
-        // ─── Step 6: Execute Brain Actions (auto-healing + auto-remediation) ───
-        if (analysis.actions && analysis.actions.length > 0) {
-            for (const action of analysis.actions) {
-                let actionStatus = "logged";
-
-                // Exception-report mode: only safe deterministic actions auto-execute.
-                const retryEmailIds = getRetryEmailIds(action.params);
-                if (action.type === "retry_email" && retryEmailIds.length > 0) {
-                    try {
-                        const { error: retryError } = await supabase.from("email_queue")
-                            .update({ status: "pending", error_message: null })
-                            .in("id", retryEmailIds);
-                        actionStatus = retryError ? "failed" : "executed";
-                    } catch { actionStatus = "failed"; }
-                }
-
-                if (action.type !== "retry_email") {
-                    actionStatus = "logged";
-                }
-
-                await supabase.from("brain_actions").insert({
-                    action_type: action.type,
-                    description: action.description,
-                    params: action.params || {},
-                    status: actionStatus,
-                    source: "vercel-cron",
-                });
-            }
-        }
-
-        // ─── Step 7: Write learned facts to brain_memory ─────────────────
-        // IMPORTANT: system_stats are NEVER stored — they go stale and mislead the bot.
-        // Live stats are served fresh via /api/brain/collect in the system prompt.
-        const removedUnsafeFacts = await pruneInvalidBrainFacts(supabase);
-        if (removedUnsafeFacts > 0) {
-            console.log(`[Brain] 🧹 Removed ${removedUnsafeFacts} invalid pricing facts from memory`);
-        }
-
-        if (analysis.brainFacts && analysis.brainFacts.length > 0) {
-            const stats = await saveBrainFactsDedup(supabase, analysis.brainFacts);
-            console.log(`[Brain] 🧠 Codex learned ${stats.inserted} new facts (${stats.updated} upgraded, ${stats.skipped} skipped)`);
-        }
-
-        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        const duration = ((Date.now() - startedAt) / 1000).toFixed(1);
         return NextResponse.json({
             success: true,
             duration: `${duration}s`,
             ...results,
         });
-    } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        console.error("[Brain Monitor] Error:", message);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error("[Ops Monitor] Error:", message);
         results.error = message;
 
         try {
             const { error: saveFailureError } = await supabase.from("brain_reports").insert({
                 report: {
-                    report_type: "automated_daily_failure",
+                    report_type: "ops_daily_failure",
+                    monitor_mode: "ops_first",
                     delivery_mode: "db_only",
                     email_delivery: "suppressed",
                     email_error: null,
@@ -268,7 +245,7 @@ export async function GET(request: Request) {
                     failure_context: results,
                     failed_at: new Date().toISOString(),
                 },
-                model: BRAIN_DAILY_MODEL,
+                model: OPS_MONITOR_MODEL,
                 findings_count: 0,
             });
 
@@ -277,477 +254,12 @@ export async function GET(request: Request) {
                 results.emailSkipped = true;
                 results.emailReason = "Failure snapshot saved to brain_reports; failure email suppressed";
             } else {
-                console.error("[Brain Monitor] Failed to save failure snapshot:", saveFailureError.message);
+                console.error("[Ops Monitor] Failed to save failure snapshot:", saveFailureError.message);
             }
         } catch (saveFailure) {
-            console.error("[Brain Monitor] Unexpected failure while saving crash snapshot:", saveFailure);
+            console.error("[Ops Monitor] Unexpected failure while saving crash snapshot:", saveFailure);
         }
 
         return NextResponse.json({ errorMessage: message, ...results }, { status: 500 });
     }
-}
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getSystemPrompt(businessFacts: string): string {
-    return `You are the Workers United Platform Brain — an autonomous AI system that runs 7 organized operations every morning.
-
-Platform context (from live database — ALWAYS use these exact values):
-${businessFacts}
-- Flow: Signup → Profile → Documents (passport, diploma, photo) → AI Verification → Admin Approval → Payment → Queue → Job Match
-- AI: OpenAI GPT-4o-mini for document verification, with Gemini fallback if OpenAI vision is unavailable
-- WhatsApp: GPT-5 mini intent router + response flow, with business facts and stored brain_memory context
-- Email: Nodemailer + Google Workspace SMTP
-- Terminology rule: In all findings/issues/improvements, use only the canonical platform terms "worker" and "employer".
-
-You run 7 OPERATIONS. Analyze each separately:
-
-## Operation 1: 🔧 SYSTEM HEALTH
-- API errors, 5xx rates, failed endpoints
-- ⚠️ CHECK routeHealth data: critical routes (/login, /signup, /auth/callback) are self-tested. If ANY route has ok:false, this is P0 CRITICAL
-- Document verification success rate (Gemini)
-- Database connection issues, cron job failures
-- Status: OK / WARNING / CRITICAL
-
-## Operation 2: 📊 FUNNEL ANALYSIS
-- Where are users dropping off? (signup → profile → docs → verification → payment → queue)
-- ⚠️ CHECK stalls data: shows exact bottleneck counts (no_worker_record, no_docs_uploaded, docs_pending_verification, approved_not_paid)
-- ⚠️ CHECK signup_page_view events in userActivity: compare page views vs actual signups to measure ad conversion
-- Conversion rates between stages
-- Status: OK / WARNING / CRITICAL
-
-## Operation 3: 📨 EMAIL & WHATSAPP
-- Email delivery rate (sent vs failed)
-- ⚠️ CHECK bouncePatterns data: domains with high bounce rates may indicate typos that should be added to the signup email validation
-- If you find repeated bounce domains, use brainFacts to record them and create an issue to add them to email typo detection
-- ⚠️ CHECK health.whatsappTemplateHealth and health.recentFailedWhatsApp: platform-side template failures are real ops issues, while recipient-side delivery blocks are informational only
-- ⚠️ CHECK whatsappConversations for repeated user confusion, weak bot guidance, or real attachment/document misunderstandings
-- WhatsApp response quality
-- Status: OK / WARNING / CRITICAL
-
-## Operation 4: 🛡️ CODE QUALITY
-- Deprecated APIs still in use
-- Security concerns in the data
-- Missing or broken features visible from data
-- Status: OK / WARNING / CRITICAL
-
-## Operation 5: 💡 GROWTH & REVENUE
-- What features/improvements would increase signups?
-- What's causing users to NOT pay $9?
-- Competitive advantages to build
-- Revenue optimization ideas
-- Status: SUGGESTIONS
-
-Rules:
-1. Only report REAL issues backed by data evidence
-2. Don't report "no users yet" as a bug — it's just early stage
-3. Each operation MUST have a status and findings
-4. Issues: specific, actionable, with fix suggestions
-5. De-duplicate across operations
-6. healthScore 0-100 weighted: System Health 30%, Funnel 25%, Email/WA 20%, Code 15%, Growth 10%
-7. Do NOT create issues for problems listed in RECENTLY_RESOLVED — those are already fixed
-8. 0 admin approvals / 0 payments / 0 queued is EXPECTED for an early-stage platform — it is NOT a bug
-9. You now have funnelTimestamps data showing per-user stage timing — use it to find WHERE users stall
-10. You now have paymentTelemetry showing failed/abandoned checkout attempts — analyze drop-off
-11. Pricing is strict: workers pay the $9 entry fee and the placement fee after a job is found. Employers never pay platform fees.
-12. NEVER say or imply that the employer pays the placement fee. If you mention the placement fee, state that it is worker-paid.
-
-## Auto-Remediation powers:
-- retry_email is the ONLY action that auto-executes without human review
-- update_config, send_employer_nudge, update_memory, delete_memory, confirm_stuck_users, and create_missing_records are recommendation-only actions that will be logged for admin review
-- log_observation is recommendation-only
-
-## Operation 6: 🧠 SELF-IMPROVEMENT
-- What capabilities are you MISSING that would make you more effective?
-- What data do you WISH you had access to?
-- What actions should you be able to EXECUTE (not just report)?
-- What facts should the WhatsApp bot know? Generate them as brainFacts.
-- Status: SUGGESTIONS
-
-## Operation 7: 🔐 AUTH HEALTH
-- You MUST check authHealth data EVERY run. It contains unconfirmed emails, missing records, and stuck signups.
-- CRITICAL: If unconfirmed users exist, your #1 priority is finding the ROOT CAUSE:
-  - Is the signup emailRedirectTo URL correct? Check if callback route exists.
-  - Is the Supabase Site URL misconfigured?
-  - Are users entering invalid emails (typos like gmai.com, yahoo.coms)?
-  - Are confirmation links expiring before users click?
-  - Is there a code bug preventing session exchange?
-- CREATE A P0 ISSUE explaining the root cause and fix, with label "auth-health"
-- Auto-confirm (confirm_stuck_users) is a TEMPORARY band-aid — NEVER use it without ALSO creating an issue for the root cause
-- If workers have no onboarding record, use create_missing_records to fix silently
-- Check for users with missing user_type metadata (they fall through the cracks)
-- Flag invalid email patterns (typos, disposable domains) — these users can never confirm
-- Status: OK / WARNING / CRITICAL
-
-Respond in JSON:
-{
-  "summary": "2-3 sentence executive summary",
-  "healthScore": 0-100,
-  "operations": [
-    {
-      "name": "System Health",
-      "emoji": "🔧",
-      "status": "OK|WARNING|CRITICAL",
-      "findings": ["finding 1", "finding 2"],
-      "score": 0-100
-    }
-  ],
-  "issues": [{ "title": "...", "body": "...", "priority": "P0|P1|P2", "labels": ["bug"|"enhancement"|"critical"], "operation": "System Health|Funnel|Email|Code|Growth|Auth Health" }],
-  "improvements": [{ "title": "...", "description": "...", "impact": "high|medium|low", "effort": "easy|medium|hard" }],
-   "actions": [{ "type": "retry_email|send_alert|clean_stale_data|update_config|send_employer_nudge|update_memory|delete_memory|confirm_stuck_users|create_missing_records|log_observation", "description": "...", "params": {} }],
-  "brainFacts": [{ "category": "pricing|process|documents|eligibility|faq", "content": "Verified fact for WhatsApp bot to use (NEVER use system_stats — live stats come from /api/brain/collect)" }],
-  "selfImprovements": ["Capability I wish I had", "Data I need access to"],
-  "metrics": { "totalWorkers": N, "totalEmployers": N, "documentsVerified": N, "emailDeliveryRate": "X%", "funnelProgression": "description" }
-}`;
-}
-
-function getAiInputData(data: Record<string, unknown>): Record<string, unknown> {
-    const aiData = structuredClone(data) as Record<string, unknown>;
-    return aiData;
-}
-
-function buildAnalysisPrompt(data: Record<string, unknown>, date: string, resolvedTitles: string[]): string {
-    const resolvedSection = resolvedTitles.length > 0
-        ? `\n\nRECENTLY_RESOLVED (do NOT re-report these):\n${resolvedTitles.map(t => `- ${t}`).join("\n")}`
-        : "";
-    const aiInputData = getAiInputData(data);
-    return `Morning Brain Report — ${date}
-
-Run your operations on this platform data:
-
-${JSON.stringify(aiInputData, null, 2)}${resolvedSection}
-
-Execute each operation (System Health, Funnel, Email/WhatsApp, Code Quality, Growth, Self-Improvement, Auth Health) and report findings.`;
-}
-
-async function getExistingIssueTitles(): Promise<{ open: string[]; closed: string[] }> {
-    if (!GITHUB_TOKEN) return { open: [], closed: [] };
-    const headers = { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github.v3+json" };
-    try {
-        // Fetch both open AND recently closed issues to prevent duplicates
-        const [openRes, closedRes] = await Promise.all([
-            fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues?state=open&per_page=50&labels=brain-auto`, { headers }),
-            fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues?state=closed&per_page=50&labels=brain-auto&sort=updated&direction=desc`, { headers }),
-        ]);
-        const openIssues = openRes.ok ? await openRes.json() : [];
-        const closedIssues = closedRes.ok ? await closedRes.json() : [];
-        return {
-            open: openIssues.map((i: { title: string }) => i.title),
-            closed: closedIssues.map((i: { title: string }) => i.title),
-        };
-    } catch {
-        return { open: [], closed: [] };
-    }
-}
-
-async function createGitHubIssue(issue: BrainIssue): Promise<boolean> {
-    if (!GITHUB_TOKEN) return false;
-    try {
-        const labels = [
-            ...issue.labels,
-            `priority:${issue.priority}`,
-            "brain-auto",
-        ];
-
-        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues`, {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${GITHUB_TOKEN}`,
-                Accept: "application/vnd.github.v3+json",
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                title: issue.title,
-                body: `${issue.body}\n\n---\n*🧠 Auto-generated by Brain Monitor (Vercel Cron)*`,
-                labels,
-            }),
-        });
-
-        if (!res.ok) {
-            console.warn(`[Brain] GitHub Issue creation failed: ${res.status}`);
-            return false;
-        }
-        return true;
-    } catch (err) {
-        console.error("[Brain] GitHub Issue error:", err);
-        return false;
-    }
-}
-
-function escapeHtml(value: string | number | null | undefined): string {
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-}
-
-function buildEmailReport(
-    analysis: BrainAnalysis,
-    _platformData: Record<string, unknown>,
-    issuesCreated: number,
-    startTime: number,
-    modelName: string,
-    exceptionReasons: string[]
-): string {
-    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-    const reportDate = new Date().toLocaleDateString("en-GB", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-    });
-
-    const colors = {
-        bg: "#FAFAFA",
-        surface: "#FFFFFF",
-        text: "#111827",
-        textMuted: "#6B7280",
-        border: "#E5E7EB",
-        success: { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
-        warning: { bg: "#FFFBEB", text: "#D97706", border: "#FDE68A" },
-        error: { bg: "#FEF2F2", text: "#DC2626", border: "#FECACA" },
-        brand: { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE" }
-    };
-
-    const getStatusTheme = (s: string | number) => {
-        if (s === "OK" || (typeof s === "number" && s >= 80)) return colors.success;
-        if (s === "WARNING" || (typeof s === "number" && s >= 50)) return colors.warning;
-        if (s === "CRITICAL" || (typeof s === "number" && s < 50)) return colors.error;
-        return colors.brand;
-    };
-
-    const scoreTheme = getStatusTheme(analysis.healthScore);
-
-    const statusBadge = (s: string) => {
-        const t = getStatusTheme(s);
-        return `<span style="display:inline-block;background:${t.bg};color:${t.text};border:1px solid ${t.border};padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;">${escapeHtml(s)}</span>`;
-    };
-
-    const metricCard = (label: string, value: string | number) => `
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;">
-            <tr>
-                <td style="padding:18px 16px;">
-                    <div style="font-size:12px;font-weight:600;color:${colors.textMuted};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">${escapeHtml(label)}</div>
-                    <div style="font-size:28px;font-weight:700;line-height:1.2;color:${colors.text};letter-spacing:-0.02em;">${escapeHtml(value)}</div>
-                </td>
-            </tr>
-        </table>
-    `;
-
-    const renderFindings = (findings: string[]) => {
-        if (!findings || findings.length === 0) {
-            return `
-                <tr>
-                    <td style="font-size:14px;color:${colors.textMuted};line-height:1.6;">No notable findings.</td>
-                </tr>
-            `;
-        }
-        return findings.map(finding => `
-            <tr>
-                <td style="padding:0 0 8px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                            <td valign="top" width="14" style="font-size:14px;line-height:1.6;color:${colors.textMuted};">•</td>
-                            <td style="font-size:14px;line-height:1.6;color:${colors.textMuted};">${escapeHtml(finding)}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        `).join("");
-    };
-
-    const operationsHtml = (analysis.operations || []).map(op => `
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;margin-bottom:16px;">
-            <tr>
-                <td style="padding:20px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
-                        <tr>
-                            <td valign="middle" style="font-size:22px;line-height:1.2;color:${colors.text};font-weight:700;">
-                                <span style="font-size:20px;vertical-align:middle;">${escapeHtml(op.emoji)}</span>
-                                <span style="font-size:22px;vertical-align:middle;"> ${escapeHtml(op.name)}</span>
-                            </td>
-                            <td valign="middle" align="right">
-                                ${statusBadge(op.status)}
-                            </td>
-                        </tr>
-                    </table>
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                        ${renderFindings(op.findings)}
-                    </table>
-                </td>
-            </tr>
-        </table>
-    `).join("");
-
-    const issuesHtml = (analysis.issues || []).map((issue, index) => `
-        <tr>
-            <td style="padding:${index === 0 ? "0" : "12px 0 0"};${index === 0 ? "" : `border-top:1px solid ${colors.border};`}">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                        <td valign="top" width="48" style="padding-right:10px;">
-                            <span style="display:inline-block;font-size:12px;font-weight:700;line-height:1;color:${issue.priority === "P0" ? colors.error.text : colors.warning.text};background:${issue.priority === "P0" ? colors.error.bg : colors.warning.bg};padding:4px 6px;border-radius:4px;">
-                                ${escapeHtml(issue.priority)}
-                            </span>
-                        </td>
-                        <td style="font-size:14px;line-height:1.5;color:${colors.text};">${escapeHtml(issue.title)}</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    `).join("");
-
-    const improvementsHtml = (analysis.improvements || []).map((improvement, index) => `
-        <tr>
-            <td style="padding:${index === 0 ? "0" : "12px 0 0"};${index === 0 ? "" : `border-top:1px solid ${colors.border};`}">
-                <div style="font-size:15px;line-height:1.4;color:${colors.text};font-weight:600;margin-bottom:6px;">
-                    ${escapeHtml(improvement.title)}
-                    <span style="display:inline-block;margin-left:6px;font-size:11px;font-weight:700;line-height:1;color:${colors.brand.text};background:${colors.brand.bg};padding:4px 6px;border-radius:4px;text-transform:uppercase;">
-                        ${escapeHtml(improvement.impact)} impact
-                    </span>
-                </div>
-                <div style="font-size:13px;line-height:1.6;color:${colors.textMuted};">${escapeHtml(improvement.description)}</div>
-            </td>
-        </tr>
-    `).join("");
-
-    return `
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.bg};margin:0;padding:0;border-collapse:collapse;">
-    <tr>
-        <td align="center" style="padding:28px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${colors.text};">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;border-collapse:separate;">
-                <tr>
-                    <td align="center" style="padding:0 0 24px;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 12px;">
-                            <tr>
-                                <td align="center" style="width:48px;height:48px;font-size:24px;line-height:48px;background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;">🧠</td>
-                            </tr>
-                        </table>
-                        <div style="font-size:26px;line-height:1.2;font-weight:700;letter-spacing:-0.02em;color:${colors.text};margin-bottom:6px;">Daily Brain Report</div>
-                        <div style="font-size:14px;line-height:1.4;color:${colors.textMuted};">${escapeHtml(reportDate)}</div>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding:0 0 20px;">
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.surface};border:1px solid ${colors.border};border-radius:16px;">
-                            <tr>
-                                <td align="center" style="padding:24px 22px;">
-                                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 14px;">
-                                        <tr>
-                                            <td align="center" style="width:112px;height:112px;font-size:52px;line-height:112px;font-weight:700;letter-spacing:-0.04em;color:${scoreTheme.text};background:${scoreTheme.bg};border:4px solid ${scoreTheme.border};border-radius:9999px;">
-                                                ${escapeHtml(analysis.healthScore)}
-                                            </td>
-                                        </tr>
-                                    </table>
-                                    <div style="font-size:16px;line-height:1.3;font-weight:700;color:${colors.text};margin-bottom:8px;">System Health Score</div>
-                                    <div style="font-size:14px;line-height:1.6;color:${colors.textMuted};text-align:left;max-width:480px;margin:0 auto;">
-                                        ${escapeHtml(analysis.summary)}
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-                ${exceptionReasons.length ? `
-                    <tr>
-                        <td style="padding:0 0 20px;">
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;">
-                                <tr>
-                                    <td style="padding:18px 20px;">
-                                        <div style="font-size:13px;line-height:1.4;font-weight:700;color:${colors.text};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Why you got this email</div>
-                                        <div style="font-size:14px;line-height:1.7;color:${colors.textMuted};">${escapeHtml(exceptionReasons.join(" • "))}</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                ` : ""}
-                <tr>
-                    <td style="padding:0 0 24px;">
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td width="50%" valign="top" style="padding:0 8px 12px 0;">
-                                    ${metricCard("Total Workers", analysis.metrics?.totalWorkers ?? "N/A")}
-                                </td>
-                                <td width="50%" valign="top" style="padding:0 0 12px 8px;">
-                                    ${metricCard("Employers", analysis.metrics?.totalEmployers ?? "N/A")}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td width="50%" valign="top" style="padding:0 8px 0 0;">
-                                    ${metricCard("Email Delivery", analysis.metrics?.emailDeliveryRate ?? "N/A")}
-                                </td>
-                                <td width="50%" valign="top" style="padding:0 0 0 8px;">
-                                    ${metricCard("Analysis Time", `${duration}s`)}
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="font-size:18px;line-height:1.3;font-weight:700;color:${colors.text};letter-spacing:-0.01em;padding:0 0 12px;">
-                        Operations Analysis
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding:0;">${operationsHtml}</td>
-                </tr>
-                <tr>
-                    <td style="padding:6px 0 0;">
-                        ${analysis.issues?.length ? `
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;">
-                                <tr>
-                                    <td style="padding:20px;">
-                                        <div style="font-size:20px;line-height:1.25;font-weight:700;color:${colors.text};margin-bottom:14px;">
-                                            🚨 Identified Issues
-                                            <span style="display:inline-block;font-size:12px;line-height:1;color:${colors.textMuted};background:${colors.bg};padding:4px 8px;border-radius:99px;vertical-align:middle;margin-left:6px;">${issuesCreated} auto-logged</span>
-                                        </div>
-                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                                            ${issuesHtml}
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        ` : `
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;">
-                                <tr>
-                                    <td align="center" style="padding:24px 20px;">
-                                        <div style="font-size:26px;line-height:1;margin-bottom:8px;">✨</div>
-                                        <div style="font-size:16px;line-height:1.3;font-weight:700;color:${colors.text};margin-bottom:4px;">All Systems Normal</div>
-                                        <div style="font-size:14px;line-height:1.6;color:${colors.textMuted};">No critical issues detected during analysis.</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        `}
-                    </td>
-                </tr>
-                ${analysis.improvements?.length ? `
-                    <tr>
-                        <td style="padding:16px 0 0;">
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${colors.surface};border:1px solid ${colors.border};border-radius:12px;">
-                                <tr>
-                                    <td style="padding:20px;">
-                                        <div style="font-size:20px;line-height:1.25;font-weight:700;color:${colors.text};margin-bottom:14px;">💡 Strategic Suggestions</div>
-                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                                            ${improvementsHtml}
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                ` : ""}
-                <tr>
-                    <td align="center" style="padding:26px 0 0;border-top:1px solid ${colors.border};">
-                        <div style="font-size:12px;line-height:1.6;color:${colors.textMuted};">Generated autonomously by Brain Monitor (${escapeHtml(modelName)})</div>
-                        <div style="font-size:12px;line-height:1.6;color:${colors.border};">Workers United Platform</div>
-                    </td>
-                </tr>
-            </table>
-        </td>
-    </tr>
-</table>`;
 }

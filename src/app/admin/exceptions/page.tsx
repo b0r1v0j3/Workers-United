@@ -6,6 +6,7 @@ import {
     Clock3,
     ExternalLink,
     FileSearch,
+    Hourglass,
     ListOrdered,
     MailX,
     ShieldCheck,
@@ -53,11 +54,12 @@ export default async function AdminExceptionsPage() {
                 <AdminSectionHero
                     eyebrow="Admin exceptions"
                     title="Operational Exceptions"
-                    description="One screen for email hygiene, checkout drift, document review, queue/payment mismatches, and open job requests with no worker pipeline yet."
+                    description="One screen for email hygiene, checkout drift, document review, approval backlog, queue/payment mismatches, and open job requests with no worker pipeline yet."
                     metrics={[
                         { label: "Signals", value: snapshot.totalSignals, meta: "Open issues that need action" },
                         { label: "Checkout", value: snapshot.openedCheckoutButUnpaid.length, meta: "Opened, not paid" },
                         { label: "Docs", value: snapshot.manualReviewProfiles.length, meta: "Manual review workers" },
+                        { label: "Approval", value: snapshot.pendingAdminApproval.length, meta: "Ready, waiting on admin" },
                         { label: "Email", value: snapshot.invalidEmailProfiles.length, meta: "Invalid or bounced" },
                         { label: "Queue Drift", value: snapshot.paidButNotInQueue.length, meta: "Paid but not advanced" },
                     ]}
@@ -87,6 +89,14 @@ export default async function AdminExceptionsPage() {
                         meta="Workers blocked on manual document review"
                         tone={snapshot.manualReviewProfiles.length > 0 ? "warning" : "neutral"}
                         icon={<FileSearch size={18} />}
+                    />
+                    <ActionCard
+                        href="/admin/workers?filter=needs_approval"
+                        title="Needs Approval"
+                        value={snapshot.pendingAdminApproval.length}
+                        meta="Fully ready worker cases still blocked on admin approval"
+                        tone={snapshot.pendingAdminApproval.length > 0 ? "warning" : "neutral"}
+                        icon={<Hourglass size={18} />}
                     />
                     <ActionCard
                         href="/admin/workers?filter=VERIFIED"
@@ -166,7 +176,7 @@ export default async function AdminExceptionsPage() {
                     <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
                         <SectionHeader
                             title="Worker Readiness"
-                            description="Workers blocked on documents, workers ready but unpaid, and workers who paid without moving into queue."
+                            description="Workers blocked on documents, workers waiting for admin approval, workers ready but unpaid, and workers who paid without moving into queue."
                             href="/admin/workers"
                             label="Open workers"
                         />
@@ -190,9 +200,28 @@ export default async function AdminExceptionsPage() {
                                 ))
                             )}
 
+                            <SubSectionLabel label="Ready, waiting on approval" />
+                            {snapshot.pendingAdminApproval.length === 0 ? (
+                                <EmptyState copy="No fully ready workers are waiting on admin approval." />
+                            ) : (
+                                snapshot.pendingAdminApproval.slice(0, 5).map((entry) => (
+                                    <WorkerIssueRow
+                                        key={`approval-${entry.profileId}`}
+                                        title={entry.fullName}
+                                        subtitle={`${entry.email} • ${entry.completion}% complete • ${entry.verifiedDocs}/3 verified docs`}
+                                        chips={[entry.workerStatus.replace(/_/g, " "), `Waiting ${entry.waitingHours}h`]}
+                                        details={`Latest ready activity: ${formatDate(entry.latestReadyAt)}`}
+                                        primaryHref={entry.caseHref}
+                                        primaryLabel="Open case"
+                                        secondaryHref={entry.workspaceHref}
+                                        secondaryLabel="Inspect worker"
+                                    />
+                                ))
+                            )}
+
                             <SubSectionLabel label="Verified but unpaid" />
                             {snapshot.verifiedButUnpaid.length === 0 ? (
-                                <EmptyState copy="No fully ready workers are waiting only on payment." />
+                                <EmptyState copy="No admin-approved workers are waiting only on payment." />
                             ) : (
                                 snapshot.verifiedButUnpaid.slice(0, 5).map((entry) => (
                                     <WorkerIssueRow
@@ -200,7 +229,7 @@ export default async function AdminExceptionsPage() {
                                         title={entry.fullName}
                                         subtitle={`${entry.email} • ${entry.completion}% complete • ${entry.verifiedDocs}/3 verified docs`}
                                         chips={[entry.workerStatus.replace(/_/g, " "), "Ready to convert"]}
-                                        details="Profile is ready for Job Finder activation."
+                                        details="Admin approval is done. Case is now waiting only on Job Finder activation."
                                         primaryHref={entry.workspaceHref}
                                         primaryLabel="Inspect worker"
                                         secondaryHref={entry.caseHref}
