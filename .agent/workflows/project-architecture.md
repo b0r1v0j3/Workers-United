@@ -22,7 +22,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
 | AI (Chatbot) | **GPT-5 mini** | WhatsApp AI now uses a small intent router + response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, canonical `workerRecord` runtime naming, and simpler role-safe worker/employer behavior |
-| AI (Brain) | **GPT-5 mini** | Daily Brain Monitor snapshots + exception reports default to `BRAIN_DAILY_MODEL`; every run is stored, AI output is normalized through `src/lib/brain-monitor.ts`, failure runs are saved to `brain_reports` instead of blasting raw failure emails, and `/api/brain/improve` writes only low-risk conversation learnings instead of new business facts |
+| AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, and failure runs are saved instead of blasting raw crash mail |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
@@ -62,7 +62,7 @@ Workers-United/
 │   │   │   ├── page.tsx       # Admin operations dashboard (stats, action cards, pipeline, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
 │   │   │   ├── layout.tsx     # Admin layout (AppShell)
 │   │   │   ├── agencies/      # Agency registry with shared admin hero/metrics layout + direct agency workspace inspect links
-│   │   │   ├── exceptions/    # Unified admin exception cockpit (payments, docs, email hygiene, employer demand drift)
+│   │   │   ├── exceptions/    # Unified admin exception cockpit (payments, docs, approval backlog, email hygiene, employer demand drift)
 │   │   │   ├── email-health/  # Invalid / bounced email center with safe-delete guard and workspace inspect links
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
 │   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, filters out hidden agency draft document-owner auth profiles, renders real agency draft worker rows with agency source labels, and worker case detail now resolves by canonical `worker_onboarding.id` as well as legacy profile/auth ids so agency drafts use the right document-owner id plus agency workspace inspect links instead of leaking through fake `/profile/worker` previews
@@ -78,7 +78,7 @@ Workers-United/
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
-│   │   │   ├── cron/          # 9 cron jobs (see below)
+│   │   │   ├── cron/          # 9 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
 │   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback
@@ -132,7 +132,8 @@ Workers-United/
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
 │   │   ├── brain-memory.ts    # Brain memory dedup + normalization helpers
-│   │   ├── admin-exceptions.ts # Shared admin exception snapshot helper (checkout drift, email hygiene, docs, queue/payment mismatch, employer demand)
+│   │   ├── admin-exceptions.ts # Shared admin exception snapshot helper (checkout drift, email hygiene, manual review, pending admin approval, queue/payment mismatch, employer demand)
+│   │   ├── ops-monitor.ts     # Deterministic ops-first daily monitor builder + compact alert email renderer (route health, WhatsApp, docs, email, payments, auth)
 │   │   ├── reporting.ts       # Reporting filters + email hygiene helpers (exclude Codex/test/internal-orphan payments, `.dev`/`.internal`/draft-worker contacts, typo correction suggestions, undeliverable error detection)
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
@@ -171,7 +172,7 @@ Configured in `vercel.json`:
 | `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles; worker sends skip hidden/internal/test contacts and agency draft workers without real direct contact data |
 | `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months |
 | `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
-| `/api/cron/brain-monitor` | Daily 8 AM UTC | Daily Brain snapshot + exception report email when critical or meaningfully changed |
+| `/api/cron/brain-monitor` | Daily 8 AM UTC | Deterministic ops-first daily sweep; stores a compact `brain_reports` snapshot every run and emails only when critical/high operational signals are present |
 | `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, but now stores only low-risk WhatsApp learnings (`common_question`, `error_fix`, `copy_rule`) after shared safety filtering |
 | `/api/cron/whatsapp-nudge` | Daily 11 AM UTC | WhatsApp nudges for users who need a profile/doc action |
 | `/api/cron/checkout-recovery` | Every hour at :15 | Recover opened but unpaid `$9` Job Finder checkouts with `1h / 24h / 72h` follow-up and mark stale pending rows as `abandoned` |
@@ -342,7 +343,8 @@ User (Browser)
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals |
-| `src/lib/admin-exceptions.ts` | Shared admin exception snapshot helper used by `/admin` and `/admin/exceptions`; centralizes invalid-email, checkout drift, manual review, worker readiness, queue/payment mismatch, and open-demand-without-offers signals |
+| `src/lib/admin-exceptions.ts` | Shared admin exception snapshot helper used by `/admin`, `/admin/exceptions`, and the ops-first daily monitor; centralizes invalid-email, checkout drift, manual review, pending admin approval, worker readiness, queue/payment mismatch, and open-demand-without-offers signals |
+| `src/lib/ops-monitor.ts` | Deterministic ops monitor builder + email renderer; turns route health, `opsSnapshot`, WhatsApp confusion/platform failures, document backlog/rejections, email hygiene, payment drift, and auth drift into a compact scored report |
 | `src/lib/reporting.ts` | Shared reporting + email-hygiene helpers; keeps admin dashboard and analytics revenue clean by excluding Codex/test/internal-orphan payment rows and flags `.dev` / `.internal` / draft-worker contacts as non-deliverable internal traffic |
 | `src/lib/worker-notification-eligibility.ts` | Shared guard for worker direct notifications; hidden draft-owner auth users never receive welcome/reminder/profile-complete sends, and agency draft workers only become directly contactable after the agency provides the real worker email plus phone |
 | `src/lib/contract-data.ts` | Shared contract-doc payload builder; derives full PDF data from live `matches/worker_onboarding/profiles/employers/job_requests/worker_documents`, exposes `worker` / `workerProfile` as the canonical build result, and persists only supported `contract_data` override/meta fields (`worker_*`, job description, signing/meta data) |
@@ -351,10 +353,10 @@ User (Browser)
 | `src/lib/workers.ts` | Canonical worker helper layer; use `loadCanonicalWorkerRecord()` / `pickCanonicalWorkerRecord()` instead of raw `.single()` / `.maybeSingle()` on `worker_onboarding`/`workers`, plus shared phone normalization and storage filename sanitization |
 | `src/lib/agencies.ts` | Agency provisioning + ownership helper; schema guard, claim-link context, claim linking, and agency-owned worker resolution over `worker_onboarding` / physical `workers` |
 | `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: GPT-5 mini intent router + response generator, shorter history windows, canonical `workerRecord` snapshot context, shared facts/rules from `src/lib/whatsapp-brain.ts`, explicit WhatsApp onboarding only when the user actually asks for profile completion over WhatsApp, and single-response media fallback that avoids pretending WhatsApp attachments already update worker profiles |
-| `src/app/api/brain/collect/route.ts` | Brain data collector; aggregates funnel, payment telemetry, auth drift, recent user activity, recent WhatsApp conversations, and canonical `whatsappTemplateHealth` + failed-template samples so the daily Brain sees real ops signals instead of only top-level counts |
+| `src/app/api/brain/collect/route.ts` | Brain/ops data collector; aggregates funnel, payment telemetry, auth drift, recent user activity, recent WhatsApp conversations, canonical `whatsappTemplateHealth` + failed-template samples, and a shared `opsSnapshot` so the daily monitor sees real operational signals instead of only top-level counts |
 | `src/app/api/brain/improve/route.ts` | Daily low-risk conversation improver; analyzes DB/conversation/error summaries but may only persist safe `common_question / error_fix / copy_rule` learnings after `filterSafeBrainLearnings()` rejects numbers, pricing, country claims, document/legal facts, and URLs |
 | `src/app/api/brain/act/route.ts` | Brain action executor; now accepts canonical `update_worker_status` while still honoring legacy `update_candidate_status` during the transition |
-| `src/app/api/cron/brain-monitor/route.ts` | Daily Brain v2: GPT-5 mini daily analysis, shared AI-output normalization via `src/lib/brain-monitor.ts`, snapshot persistence to `brain_reports`, exception-only email delivery, failure snapshot save on crash, and retry-email as the only auto-executed action |
+| `src/app/api/cron/brain-monitor/route.ts` | Daily ops-first monitor: fetches `/api/brain/collect`, self-tests critical routes, builds a deterministic report via `src/lib/ops-monitor.ts`, stores `ops_daily_snapshot/exception` rows in `brain_reports`, and sends only compact critical/high alert mail with clickable admin links |
 | `src/app/api/brain/report/route.ts` | Brain report storage/read API; default model now follows `BRAIN_DAILY_MODEL` |
 | `src/lib/brain-monitor.ts` | Shared Brain parsing/normalization helpers; unwraps Responses API JSON, applies safe defaults for partial issue/action/operation payloads, and keeps exception reasoning stable even when the AI omits fields |
 | `src/lib/notifications.ts` | Email notification dispatch helpers |

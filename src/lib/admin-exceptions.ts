@@ -8,32 +8,11 @@ import {
     isLikelyUndeliverableEmailError,
     isReportablePaymentProfile,
 } from "@/lib/reporting";
+import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { pickCanonicalWorkerRecord } from "@/lib/workers";
 
 type ProfileRow = Pick<Tables<"profiles">, "id" | "email" | "full_name" | "user_type" | "created_at">;
-type WorkerRow = Pick<
-    Tables<"worker_onboarding">,
-    | "id"
-    | "profile_id"
-    | "status"
-    | "updated_at"
-    | "entry_fee_paid"
-    | "job_search_active"
-    | "queue_joined_at"
-    | "phone"
-    | "nationality"
-    | "current_country"
-    | "preferred_job"
-    | "gender"
-    | "date_of_birth"
-    | "birth_country"
-    | "birth_city"
-    | "citizenship"
-    | "marital_status"
-    | "passport_number"
-    | "lives_abroad"
-    | "previous_visas"
->;
+type WorkerRow = Tables<"worker_onboarding">;
 type DocumentRow = Pick<Tables<"worker_documents">, "user_id" | "document_type" | "status" | "updated_at" | "created_at">;
 type PaymentRow = Pick<
     Tables<"payments">,
@@ -113,6 +92,14 @@ export interface WorkerReadinessException extends ExceptionWorkerBase {
     queueHref: string;
 }
 
+export interface PendingApprovalException extends ExceptionWorkerBase {
+    completion: number;
+    verifiedDocs: number;
+    waitingHours: number;
+    latestReadyAt: string | null;
+    reviewHref: string;
+}
+
 export interface QueueDriftException extends ExceptionWorkerBase {
     paidAt: string | null;
     queueHref: string;
@@ -138,6 +125,7 @@ export interface AdminExceptionSnapshot {
     openedCheckoutButUnpaid: CheckoutException[];
     stalePendingPayments: CheckoutException[];
     manualReviewProfiles: ManualReviewException[];
+    pendingAdminApproval: PendingApprovalException[];
     verifiedButUnpaid: WorkerReadinessException[];
     paidButNotInQueue: QueueDriftException[];
     openJobRequestsWithoutOffers: JobRequestException[];
@@ -168,11 +156,6 @@ function parseIsoDate(value: string | null | undefined) {
 
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function formatDate(value: string | null | undefined) {
-    const parsed = parseIsoDate(value);
-    return parsed ? parsed.toLocaleString("en-GB") : null;
 }
 
 function resolveWorkerStatus(worker: WorkerRow | null) {
@@ -280,7 +263,7 @@ export async function getAdminExceptionSnapshot() {
         admin.from("profiles").select("id, email, full_name, user_type, created_at"),
         admin
             .from("worker_onboarding")
-            .select("id, profile_id, status, updated_at, entry_fee_paid, job_search_active, queue_joined_at, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas")
+            .select("*")
             .not("profile_id", "is", null)
             .order("updated_at", { ascending: false }),
         admin.from("worker_documents").select("user_id, document_type, status, updated_at, created_at"),
@@ -498,6 +481,7 @@ export async function getAdminExceptionSnapshot() {
         .filter(Boolean)
         .sort((left, right) => right!.manualReviewCount - left!.manualReviewCount) as ManualReviewException[];
 
+    const pendingAdminApproval: PendingApprovalException[] = [];
     const verifiedButUnpaid: WorkerReadinessException[] = [];
     const paidButNotInQueue: QueueDriftException[] = [];
 
@@ -512,7 +496,7 @@ export async function getAdminExceptionSnapshot() {
         }
 
         const workerDocuments = docsByUser.get(profile.id) || [];
-        const verifiedDocs = workerDocuments.filter((document) => document.status === "verified").length;
+        const documentProgress = getWorkerDocumentProgress(workerDocuments);
         const completionResult = getWorkerCompletion({
             profile,
             worker,
@@ -528,11 +512,33 @@ export async function getAdminExceptionSnapshot() {
             || !!worker.job_search_active
             || !!worker.queue_joined_at;
 
-        if (completionResult.completion === 100 && verifiedDocs >= 3 && !hasCompletedEntryFee) {
+        if (completionResult.completion === 100 && documentProgress.verifiedCount >= documentProgress.requiredCount && !worker.admin_approved) {
+            const latestReadyAt = [
+                worker.updated_at,
+                ...workerDocuments.map((document) => document.updated_at || document.created_at).filter(Boolean),
+            ]
+                .filter(Boolean)
+                .sort()
+                .at(-1) || null;
+            const waitingHours = latestReadyAt
+                ? Math.max(1, Math.floor((Date.now() - new Date(latestReadyAt).getTime()) / (1000 * 60 * 60)))
+                : 0;
+
+            pendingAdminApproval.push({
+                ...buildWorkerBase(profile, worker),
+                completion: completionResult.completion,
+                verifiedDocs: documentProgress.verifiedCount,
+                waitingHours,
+                latestReadyAt,
+                reviewHref: getWorkerCaseHref(profile.id),
+            });
+        }
+
+        if (completionResult.completion === 100 && documentProgress.verifiedCount >= documentProgress.requiredCount && !!worker.admin_approved && !hasCompletedEntryFee) {
             verifiedButUnpaid.push({
                 ...buildWorkerBase(profile, worker),
                 completion: completionResult.completion,
-                verifiedDocs,
+                verifiedDocs: documentProgress.verifiedCount,
                 queueHref: `/profile/worker/queue?inspect=${profile.id}`,
             });
         }
@@ -596,6 +602,7 @@ export async function getAdminExceptionSnapshot() {
         + openedCheckoutButUnpaid.length
         + stalePendingPayments.length
         + manualReviewProfiles.length
+        + pendingAdminApproval.length
         + verifiedButUnpaid.length
         + paidButNotInQueue.length
         + openJobRequestsWithoutOffers.length;
@@ -607,6 +614,7 @@ export async function getAdminExceptionSnapshot() {
         openedCheckoutButUnpaid,
         stalePendingPayments,
         manualReviewProfiles,
+        pendingAdminApproval,
         verifiedButUnpaid,
         paidButNotInQueue,
         openJobRequestsWithoutOffers,
