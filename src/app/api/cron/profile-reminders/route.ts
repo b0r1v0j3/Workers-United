@@ -5,6 +5,7 @@ import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion, getEmployerCompletion, getAgencyCompletion } from "@/lib/profile-completion";
 import { getEmailTemplate } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
+import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { deleteUserData } from "@/lib/user-management";
 
 // ─── Main cron handler ──────────────────────────────────────────
@@ -93,8 +94,9 @@ export async function GET(request: Request) {
             const fullName = user.user_metadata?.full_name || "";
             const userType = normalizeUserType(user.user_metadata?.user_type);
             const recipientRole = userType === "employer" || userType === "agency" ? userType : "worker";
+            const isHiddenDraftOwner = Boolean(user.user_metadata?.hidden_draft_owner);
 
-            if (!email || isInternalOrTestEmail(email) || hasKnownTypoEmailDomain(email)) {
+            if (!email || isHiddenDraftOwner || isInternalOrTestEmail(email) || hasKnownTypoEmailDomain(email)) {
                 skipped++;
                 continue;
             }
@@ -118,6 +120,16 @@ export async function GET(request: Request) {
             } else {
                 const workerRecord = workerRecordMap.get(userId) || null;
                 const docs = docsByUser.get(userId) || [];
+
+                if (!canSendWorkerDirectNotifications({
+                    email,
+                    phone: workerRecord?.phone,
+                    worker: workerRecord,
+                    isHiddenDraftOwner,
+                })) {
+                    skipped++;
+                    continue;
+                }
 
                 // NEVER delete paid workers or workers with accepted offers
                 if (workerRecord?.status === "IN_QUEUE" || workerRecord?.status === "OFFER_PENDING") {

@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { queueEmail } from "@/lib/email-templates";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { claimAgencyWorkerDraft, ensureAgencyRecord, getAgencySchemaState } from "@/lib/agencies";
+import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
+import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { ensureWorkerProfileRecord, ensureWorkerRecord, loadCanonicalWorkerRecord } from "@/lib/workers";
 
 const SUPPORTED_SIGNUP_TYPES = new Set(["worker", "employer", "agency"]);
@@ -56,19 +58,26 @@ export async function resolvePostAuthRedirect({
         return `${origin}/auth/select-role`;
     }
 
-    const { data: existingWelcomeEmail } = await adminClient
-        .from("email_queue")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("email_type", "welcome")
-        .limit(1);
+    const normalizedUserEmail = user.email?.trim().toLowerCase() || "";
+    const canSendAutomatedWelcome = Boolean(normalizedUserEmail)
+        && !isInternalOrTestEmail(normalizedUserEmail)
+        && !hasKnownTypoEmailDomain(normalizedUserEmail);
 
-    if (!existingWelcomeEmail || existingWelcomeEmail.length === 0) {
+    const { data: existingWelcomeEmail } = canSendAutomatedWelcome
+        ? await adminClient
+            .from("email_queue")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("email_type", "welcome")
+            .limit(1)
+        : { data: [] };
+
+    if (canSendAutomatedWelcome && (!existingWelcomeEmail || existingWelcomeEmail.length === 0)) {
         queueEmail(
             adminClient,
             user.id,
             "welcome",
-            user.email || "",
+            normalizedUserEmail,
             user.user_metadata?.full_name || user.email?.split("@")[0] || "there",
             normalizedUserType === "worker" || normalizedUserType === "employer" || normalizedUserType === "agency"
                 ? { recipientRole: normalizedUserType }
@@ -171,11 +180,18 @@ export async function resolvePostAuthRedirect({
     const { data: workerRecordCheck } = await loadCanonicalWorkerRecord(
         adminClient,
         user.id,
-        "id, phone, nationality, updated_at, entry_fee_paid, queue_joined_at, job_search_active, current_country, preferred_job, status"
+        "id, profile_id, agency_id, submitted_email, phone, nationality, updated_at, entry_fee_paid, queue_joined_at, job_search_active, current_country, preferred_job, status"
     );
 
     if (!workerRecordCheck || !workerRecordCheck.phone || !workerRecordCheck.nationality) {
-        if (workerRecordCheck?.phone) {
+        const canSendWorkerNotifications = canSendWorkerDirectNotifications({
+            email: normalizedUserEmail,
+            phone: workerRecordCheck?.phone || undefined,
+            worker: workerRecordCheck,
+            isHiddenDraftOwner: Boolean(user.user_metadata?.hidden_draft_owner),
+        });
+
+        if (workerRecordCheck?.phone && canSendWorkerNotifications) {
             try {
                 const { sendWelcome } = await import("@/lib/whatsapp");
                 const firstName = user.user_metadata?.full_name?.split(" ")[0] || "there";

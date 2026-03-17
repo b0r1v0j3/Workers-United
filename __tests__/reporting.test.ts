@@ -3,6 +3,7 @@ import {
     getSuggestedEmailCorrection,
     hasKnownInvalidOnlyEmailDomain,
     hasKnownTypoEmailDomain,
+    isInternalOrTestEmail,
     isLikelyUndeliverableEmailError,
     isReportablePaymentProfile,
 } from "@/lib/reporting";
@@ -16,6 +17,13 @@ describe("reporting email hygiene helpers", () => {
     it("treats workersunited.org as invalid-only for reporting", () => {
         expect(hasKnownInvalidOnlyEmailDomain("borivoje@workersunited.org")).toBe(true);
         expect(isReportablePaymentProfile({ email: "borivoje@workersunited.org" })).toBe(false);
+    });
+
+    it("treats internal draft and debug domains as non-reportable contacts", () => {
+        expect(isInternalOrTestEmail("draft-worker-123@workersunited.internal")).toBe(true);
+        expect(isInternalOrTestEmail("codex-worker-storage-123@workersunited.dev")).toBe(true);
+        expect(hasKnownInvalidOnlyEmailDomain("codex-worker-storage-123@workersunited.dev")).toBe(true);
+        expect(isReportablePaymentProfile({ email: "codex-worker-storage-123@workersunited.dev" })).toBe(false);
     });
 
     it("detects common undeliverable email failures", () => {
