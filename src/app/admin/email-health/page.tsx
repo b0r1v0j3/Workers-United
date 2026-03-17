@@ -288,9 +288,9 @@ export default async function EmailHealthPage() {
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
                 <AdminSectionHero
-                    eyebrow="Admin email health"
+                    eyebrow="Internal email health"
                     title="Invalid & Bounced Emails"
-                    description="See typo domains, known invalid addresses, and recent undeliverable deliveries in one place. Delete obvious garbage safely, and inspect real accounts before touching anything with business activity."
+                    description="Internal hygiene screen for typo domains, known invalid addresses, and recent undeliverable deliveries. Delete obvious garbage safely, and inspect real accounts before touching anything with business activity."
                     metrics={[
                         { label: "Flagged", value: flaggedProfiles.length, meta: "Profiles with obvious email risk" },
                         { label: "Safe Delete", value: safeDeletes, meta: "No real activity detected" },

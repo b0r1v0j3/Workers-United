@@ -397,7 +397,7 @@ export async function getAdminExceptionSnapshot() {
                 reason: reasons.join(" • "),
                 bounceCount: undeliverableFailures.length,
                 lastBounceAt: latestBounce?.created_at || null,
-                emailHealthHref: "/admin/email-health",
+                emailHealthHref: "/internal/email-health",
             } satisfies InvalidEmailException;
         })
         .filter(Boolean)

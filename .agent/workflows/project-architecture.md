@@ -22,7 +22,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
 | AI (Chatbot) | **GPT-5 mini** | WhatsApp AI now uses a small intent router + response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, canonical `workerRecord` runtime naming, and simpler role-safe worker/employer behavior |
-| AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, and failure runs are saved instead of blasting raw crash mail |
+| AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, failure runs are saved instead of blasting raw crash mail, and technical monitoring surfaces now live behind the owner-only `/internal` hub instead of the business admin shell |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
@@ -59,11 +59,11 @@ Workers-United/
 │   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action, desktop modal intake, direct `Upload docs` entry from the Documents column, a dedicated desktop documents-only modal, and dedicated mobile full-page routes at `/profile/agency/workers/new` and `/profile/agency/workers/[id]/documents`, plus always-unlocked agency support at `/profile/agency/inbox`. Agency draft workers can upload/verify docs before claim through a hidden auth-backed document owner id stored in `worker_onboarding.application_data`, and still share the same `100% + admin approval -> payment unlock` rule as self-managed workers. Generic admin preview uses the same real layout in inspect-only mode, but agency worker detail now exposes an admin-only approval card backed by `/api/admin/agency-workers/[workerId]/approval`
 │   │   │   └── settings/      # GDPR: delete account, export data
 │   │   ├── admin/
-│   │   │   ├── page.tsx       # Admin operations dashboard (stats, action cards, pipeline, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
+│   │   │   ├── page.tsx       # Business admin dashboard (stats, action cards, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
 │   │   │   ├── layout.tsx     # Admin layout (AppShell)
 │   │   │   ├── agencies/      # Agency registry with shared admin hero/metrics layout + direct agency workspace inspect links
-│   │   │   ├── exceptions/    # Unified admin exception cockpit (payments, docs, approval backlog, email hygiene, employer demand drift)
-│   │   │   ├── email-health/  # Invalid / bounced email center with safe-delete guard and workspace inspect links
+│   │   │   ├── exceptions/    # Legacy route that now renders the internal ops cockpit copy; business admin no longer links here directly
+│   │   │   ├── email-health/  # Legacy route that now renders the internal email-hygiene copy; business admin no longer links here directly
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
 │   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, filters out hidden agency draft document-owner auth profiles, renders real agency draft worker rows with agency source labels, and worker case detail now resolves by canonical `worker_onboarding.id` as well as legacy profile/auth ids so agency drafts use the right document-owner id plus agency workspace inspect links instead of leaking through fake `/profile/worker` previews
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout
@@ -72,6 +72,12 @@ Workers-United/
 │   │   │   ├── announcements/ # Bulk email sender
 │   │   │   ├── refunds/       # Refund management
 │   │   │   └── settings/      # Platform settings
+│   │   ├── internal/          # Owner-only technical hub kept outside the business admin flow
+│   │   │   ├── layout.tsx     # Owner-only gate (GodMode email only; non-owner redirects back to /admin)
+│   │   │   ├── page.tsx       # Internal tools landing page
+│   │   │   ├── ops/           # Internal ops monitor entry (wraps the shared exception cockpit)
+│   │   │   ├── email-health/  # Internal bounced/invalid email hygiene screen
+│   │   │   └── email-preview/ # Internal email template sandbox
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics, admin inbox support list, agency-worker approval API, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
@@ -98,7 +104,7 @@ Workers-United/
 │   │   └── terms/             # Terms & conditions page
 │   ├── proxy.ts                # ← CSRF + auth guard (profile, admin, API routes)
 │   ├── components/
-│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), agency `Support` nav linked to `/profile/agency/inbox`, inspect-query preservation across admin previews, safe routing back to /admin, direct `Exceptions` + `Email Health` admin navigation, a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
+│   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), agency `Support` nav linked to `/profile/agency/inbox`, inspect-query preservation across admin previews, safe routing back to /admin, business-only admin navigation (no debug/incident links in the sidebar), a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
 │   │   ├── forms/AdaptiveSelect.tsx # Shared adaptive select: native `<select>` on mobile, modern custom popover/listbox on desktop, used across worker/employer/agency/admin forms and desktop calendar month/year controls
 │   │   ├── forms/PreferenceSheetField.tsx # Shared native-select preference helpers for worker/agency preference fields; keeps legacy `Any` storage compatibility while surfacing `All industries` / `All destinations` in the UI and allows shorter display labels (e.g. `Bosnia & Herzegovina`) without changing stored values
@@ -116,7 +122,7 @@ Workers-United/
 │   │   ├── SignaturePad.tsx    # Digital signature component
 │   │   ├── DeleteUserButton.tsx # Admin: delete user completely
 │   │   ├── EmployerStatusButton.tsx # Admin: change employer status
-│   │   ├── GodModePanel.tsx    # Dev testing panel
+│   │   ├── GodModePanel.tsx    # Dev testing panel + owner shortcut into `/internal`
 │   │   └── GodModeWrapper.tsx  # GodMode conditional loader
 │   ├── lib/
 │   │   ├── supabase/
@@ -132,7 +138,7 @@ Workers-United/
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
 │   │   ├── brain-memory.ts    # Brain memory dedup + normalization helpers
-│   │   ├── admin-exceptions.ts # Shared admin exception snapshot helper (checkout drift, email hygiene, manual review, pending admin approval, queue/payment mismatch, employer demand)
+│   │   ├── admin-exceptions.ts # Shared technical exception snapshot helper (checkout drift, email hygiene, manual review, pending admin approval, queue/payment mismatch, employer demand)
 │   │   ├── ops-monitor.ts     # Deterministic ops-first daily monitor builder + compact alert email renderer (route health, WhatsApp, docs, email, payments, auth)
 │   │   ├── reporting.ts       # Reporting filters + email hygiene helpers (exclude Codex/test/internal-orphan payments, `.dev`/`.internal`/draft-worker contacts, typo correction suggestions, undeliverable error detection)
 │   │   ├── notifications.ts   # Email notification helpers
@@ -254,7 +260,7 @@ User (Browser)
 |---|---|
 | `src/app/layout.tsx` | Root layout — loads Montserrat font, GodModeWrapper, CookieConsent |
 | `src/app/login/LoginClient.tsx` | Login/auth recovery screen — handles classic login, request-reset, password update, and Supabase hash-session finalize for confirm/magic-link/recovery links |
-| `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, exposes agency `Support` directly in the shared shell, keeps only `Back to Admin` plus the current role navigation inside preview workspaces, and uses a wider neutral dashboard canvas |
+| `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, exposes agency `Support` directly in the shared shell, keeps only `Back to Admin` plus the current role navigation inside preview workspaces, keeps business admin navigation free of debug/incident entries, and uses a wider neutral dashboard canvas |
 | `src/components/DocumentWizard.tsx` | Worker document upload flow; upload keys now pass through `sanitizeStorageFileName()` so camera-style filenames like `IMG_...~2.jpg` cannot break Supabase Storage with `Invalid key`, and the UI resolves the canonical `worker-docs` bucket through a shared worker-first helper |
 | `src/lib/worker-documents.ts` | Shared worker-first wrapper for the canonical `worker-docs` bucket, public URL builder, and canonical required-doc progress helper (`uploaded / verified / pending / rejected`) used to keep agency/admin counters aligned |
 | `src/lib/agency-draft-documents.ts` | Shared draft-document owner helper for agency-managed workers; ensures every draft document points to a real auth/profile id, stores that owner id in `worker_onboarding.application_data`, and relinks/cleans it up during claim |
@@ -298,8 +304,8 @@ User (Browser)
 ### Admin / Data Surfaces
 | File | Role |
 |---|---|
-| `src/app/admin/exceptions/page.tsx` | Unified admin exception cockpit; aggregates checkout recovery drift, invalid/bounced emails, manual-review documents, `verified but unpaid`, `paid but not in queue`, and open employer job requests without offers into one operations screen |
-| `src/app/admin/email-health/page.tsx` | Admin invalid / bounced email registry; aggregates typo domains, known invalid suffixes, and recent undeliverable sends, then links directly into real workspaces |
+| `src/app/admin/exceptions/page.tsx` | Legacy internal-ops route; still renders the shared technical exception cockpit, but the business admin shell no longer links to it and owners should enter through `/internal/ops` |
+| `src/app/admin/email-health/page.tsx` | Legacy internal email-hygiene route; still renders the shared bounced/invalid email screen, but owners should enter through `/internal/email-health` |
 | `src/app/admin/email-health/EmailHealthClient.tsx` | Client-side email-health UI with safe-delete actions via the existing admin delete-user API |
 | `src/app/api/admin/search/route.ts` | Global admin search; returns `worker` as the canonical app-layer result, dedupes duplicate worker rows per `profile_id`, and keeps employer hits separate from worker hits |
 | `src/app/admin/workers/page.tsx` | Worker registry for admin ops; dedupes duplicate worker rows per `profile_id` via the canonical worker helper before computing stats or rendering the table, and now derives required-doc uploaded/verified counts from the shared worker-doc progress helper so draft/claimed rows use the same semantics |
@@ -312,10 +318,19 @@ User (Browser)
 | `src/app/profile/agency/AgencyWorkerDocumentsPanel.tsx` | Shared documents-only surface for agency upload/replace/manual-review flow; reused by dashboard modal, dedicated mobile documents page, and embedded worker detail |
 | `src/app/profile/agency/AgencyWorkerDocumentsModal.tsx` | Desktop-only documents popup opened from the agency dashboard `Upload docs` action |
 
+### Internal / Technical Tools
+| File | Role |
+|---|---|
+| `src/app/internal/layout.tsx` | Owner-only gate for internal tools; requires auth and `isGodModeUser(email)`, otherwise redirects to `/admin` |
+| `src/app/internal/page.tsx` | Hidden internal tools landing page; clearly separates technical monitors/template sandbox from firm-facing admin operations |
+| `src/app/internal/ops/page.tsx` | Canonical entry point for the ops monitor / exception cockpit |
+| `src/app/internal/email-health/page.tsx` | Canonical entry point for bounced/invalid email hygiene |
+| `src/app/internal/email-preview/page.tsx` | Canonical entry point for email template preview/sandbox |
+
 ### Admin
 | File | Role |
 |---|---|
-| `src/app/admin/page.tsx` | Admin operations dashboard with actionable stats, queue watch, recent lists, preview shortcuts, direct inspect links into real worker/employer/agency workspaces, and a top-level `Exceptions` signal sourced from the shared exception snapshot |
+| `src/app/admin/page.tsx` | Business admin dashboard with actionable stats, queue watch, recent lists, preview shortcuts, and direct inspect links into real worker/employer/agency workspaces; technical incident/email-health tooling is intentionally kept out of this shell |
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
@@ -343,7 +358,7 @@ User (Browser)
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals |
-| `src/lib/admin-exceptions.ts` | Shared admin exception snapshot helper used by `/admin`, `/admin/exceptions`, and the ops-first daily monitor; centralizes invalid-email, checkout drift, manual review, pending admin approval, worker readiness, queue/payment mismatch, and open-demand-without-offers signals |
+| `src/lib/admin-exceptions.ts` | Shared technical exception snapshot helper used by the internal ops screens and the ops-first daily monitor; centralizes invalid-email, checkout drift, manual review, pending admin approval, worker readiness, queue/payment mismatch, and open-demand-without-offers signals |
 | `src/lib/ops-monitor.ts` | Deterministic ops monitor builder + email renderer; turns route health, `opsSnapshot`, WhatsApp confusion/platform failures, document backlog/rejections, email hygiene, payment drift, and auth drift into a compact scored report |
 | `src/lib/reporting.ts` | Shared reporting + email-hygiene helpers; keeps admin dashboard and analytics revenue clean by excluding Codex/test/internal-orphan payment rows and flags `.dev` / `.internal` / draft-worker contacts as non-deliverable internal traffic |
 | `src/lib/worker-notification-eligibility.ts` | Shared guard for worker direct notifications; hidden draft-owner auth users never receive welcome/reminder/profile-complete sends, and agency draft workers only become directly contactable after the agency provides the real worker email plus phone |
