@@ -277,6 +277,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] AI document auto-rotation pass: `src/lib/document-ai.ts` sada ima shared quarter-turn orientation helper + canonical `ocr_json` patch builder, `/api/verify-document` koristi poseban AI orientation pass pre verifikacije da nove slike auto-rotira/normalizuje i upiše rotation metadata, a `/api/admin/documents/[documentId]/preview/route.ts` sada ume da one-shot ispravi i legacy upside-down image dokumente pri prvom admin preview-u pa sledeća otvaranja više ne zavise od ručnog `Open in New Tab` workaround-a — 17.03.2026
 - [x] Manual admin document-approval pass: `/api/verify-document` više ne sme da auto-zaključa dobar upload kao `verified`, nego uspešan AI rezultat spušta u `manual_review` sa `awaiting admin approval` porukom, worker documents UI i admin decision select sada otvoreno komuniciraju da admin mora ručno da potvrdi dokument, a novi shared helper u `src/lib/worker-review.ts` pomera worker case u `PENDING_APPROVAL` tek kada admin stvarno odobri sva 3 obavezna dokumenta; `src/app/api/check-profile-completion/route.ts` pritom računa readiness samo iz admin-verifikovanih dokumenata da se review/payment signal više ne aktivira prerano — 17.03.2026
 - [x] Admin document review recovery pass: `src/app/api/admin/documents/[documentId]/preview/route.ts` sada strimuje worker dokumente kroz isti origin da inline PDF/image preview više ne zavisi od blokiranog cross-origin iframe-a, `src/app/admin/workers/[id]/page.tsx` i `src/app/api/admin/re-verify/route.ts` su usklađeni sa stvarnim `worker_documents` kolonama (`ocr_json`, `reject_reason`, `verified_at`) umesto mrtvih `verification_result/admin_notes`, novi `src/lib/document-review.ts` gradi admin summary + worker guidance, passport AI u `src/lib/document-ai.ts` više ne prihvata zatvoren pasoš cover kao validan upload, a admin `Delete current file and notify worker` sada vraća UI odmah dok email ide u background preko `after(...)` — 17.03.2026
 - [x] WhatsApp live-conversation safety hardening: pregled live `whatsapp_messages` od 15.03. pokazao je da bot i dalje prerano gura `$9` checkout, obećava lažni “tech-team/ticket” handoff i šalje više odgovora na batch screenshot-ova; `src/lib/whatsapp-brain.ts` i `src/app/api/whatsapp/webhook/route.ts` sada eksplicitno blokiraju direktne payment linkove pre dashboard unlock-a, zabranjuju izmišljene eskalacije i na media poruke šalju najviše jedan iskren fallback da attachment-i još ne ažuriraju profil automatski nego idu kroz dashboard/email — 17.03.2026
@@ -562,7 +563,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | Admin Analytics | `src/app/admin/analytics/` | Conversion funnel dashboard |
 | Admin Workers | `src/app/admin/workers/` | Lista radnika |
 | Admin Worker Detail | `src/app/admin/workers/[id]/` | Detalji radnika |
-| Admin Document Preview API | `src/app/api/admin/documents/[documentId]/preview/route.ts` | Same-origin stream za admin inline preview PDF/image dokumenata iz `worker-docs`, tako da browser više ne zavisi od spoljnog storage origin PDF viewer ograničenja |
+| Admin Document Preview API | `src/app/api/admin/documents/[documentId]/preview/route.ts` | Same-origin stream za admin inline preview PDF/image dokumenata iz `worker-docs`; za image dokumente bez orientation metadata radi one-shot AI auto-rotation + storage self-heal tako da legacy upside-down upload-i postanu čitljivi već u modalu |
 | GodModePanel | `src/components/GodModePanel.tsx` | Dev testiranje |
 | DocumentGenerator | `src/components/DocumentGenerator.tsx` | Admin: generiše 4 DOCX za radne vize |
 | ManualMatchButton | `src/components/admin/ManualMatchButton.tsx` | Admin: ručno matchovanje radnika → job |
@@ -592,6 +593,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | Fajl | Namena |
 |---|---|
 | `src/lib/profile-completion.ts` | Shared profile completion — **single source of truth** za worker i employer, uz auth `full_name` fallback kada `profiles.full_name` kasni ili ostane prazan |
+| `src/lib/document-ai.ts` | Shared document AI helper — OpenAI primary / Gemini fallback, strict passport page detection, AI quarter-turn orientation detection i kanonski `ocr_json` patch za auto-rotation metadata |
 | `src/lib/document-review.ts` | Shared admin doc-review helper — gradi sažetak AI nalaza i worker-facing razlog za re-upload iz `ocr_json` + `reject_reason` |
 | `src/lib/worker-review.ts` | Shared worker review/readiness helper — kanonski `PENDING_APPROVAL` gate, all-3-docs verified check i status sync posle admin document odluka |
 | `src/lib/smoke-evaluator.ts` | Shared evaluator za system smoke (healthy/degraded/critical) |
