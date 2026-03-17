@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     buildCanonicalWhatsAppFacts,
+    buildWorkerWhatsAppRules,
     filterSafeBrainLearnings,
     shouldStartWhatsAppOnboarding,
 } from "@/lib/whatsapp-brain";
@@ -22,7 +23,22 @@ describe("whatsapp-brain guards", () => {
 
         expect(facts).toContain("not a public job board");
         expect(facts).toContain("There is no standing inventory of jobs");
-        expect(facts).toContain("After signup, the user can continue in the dashboard or here on WhatsApp");
+        expect(facts).toContain("payment unlocks only after the worker profile is fully complete and approved by admin");
+        expect(facts).toContain("Document uploads and screenshots are not processed as WhatsApp attachments yet");
+    });
+
+    it("forbids premature payment links and fake escalation promises", () => {
+        const rules = buildWorkerWhatsAppRules({
+            language: "English",
+            intent: "support",
+            confidence: "high",
+            reason: "User reported a website problem",
+            isAdmin: false,
+        });
+
+        expect(rules).toContain("Do NOT share direct payment links from WhatsApp");
+        expect(rules).toContain("Never claim you escalated, forwarded screenshots, opened a ticket");
+        expect(rules).toContain("uploads happen in the dashboard");
     });
 
     it("keeps only low-risk self-improvement learnings", () => {

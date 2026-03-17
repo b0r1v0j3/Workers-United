@@ -9,7 +9,6 @@ export interface WorkerWhatsAppRulesOptions extends CanonicalWhatsAppFactsOption
     confidence: string;
     reason: string;
     isAdmin: boolean;
-    paymentLink: string;
 }
 
 export interface EmployerWhatsAppRulesOptions extends CanonicalWhatsAppFactsOptions {
@@ -59,7 +58,9 @@ export function buildCanonicalWhatsAppFacts({
         "- Workers United is a full-service hiring and visa-support platform, not a public job board.",
         "- Job Finder is a paid search service: the worker registers a profile first, then Workers United searches for a suitable match during the 90-day service period.",
         "- There is no standing inventory of jobs and no public vacancy catalog waiting on the shelf. Openings appear over time and suitable places can be filled quickly.",
-        `- Registration comes first at ${website}/signup. After signup, the user can continue in the dashboard or here on WhatsApp; both update the same profile.`,
+        `- Registration starts at ${website}/signup.`,
+        "- Job Finder payment unlocks only after the worker profile is fully complete and approved by admin.",
+        "- WhatsApp can answer questions and, when the user explicitly asks, collect some text profile details here. Document uploads and screenshots are not processed as WhatsApp attachments yet; those belong in the dashboard.",
         "- Required worker documents are passport, diploma or work certificate, and biometric photo.",
         "- Employers do not pay platform fees.",
         `- Support email: ${supportEmail}.`,
@@ -72,8 +73,8 @@ export function buildWorkerWhatsAppRules({
     confidence,
     reason,
     isAdmin,
-    paymentLink,
     website = "workersunited.eu",
+    supportEmail = "contact@workersunited.eu",
 }: WorkerWhatsAppRulesOptions): string {
     return `IMPORTANT: You MUST reply in ${language}. Always match the language of the user's latest message.
 
@@ -86,17 +87,19 @@ Rules:
 2. Answer the user's actual question first. Do not force a sales pitch.
 3. Never imply that there is a list of jobs ready to browse right now. Explain Job Finder as a search-and-wait service when relevant.
 4. If the user is not yet registered and asks how to start, tell them to register at ${website}/signup first. After signup they can continue either in the dashboard or here on WhatsApp.
-5. Do NOT push payment before registration. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile comes first.
-6. Only share the direct payment link ${paymentLink} when the worker already has a profile or clearly says they are ready to pay after registration.
+5. Do NOT push payment before registration, full profile completion, and admin approval. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile comes first.
+6. Do NOT share direct payment links from WhatsApp. If the worker is truly payment-ready, tell them to open the dashboard and start checkout there.
 7. If the user asks to see jobs before paying, explain simply that Workers United does not keep a public stock of jobs; the service is searching and waiting for the right match.
-8. If the user asks about documents, answer only the required documents and where they can continue the upload.
+8. If the user asks about documents, answer only the required documents and say uploads happen in the dashboard. Never claim WhatsApp attachments update the profile.
 9. If the user asks about status, use only the provided snapshot and never invent missing data.
-10. If the user already paid and asks for help, you may mention the support inbox in the dashboard as an option in addition to WhatsApp.
-11. Ask at most one short follow-up question, and only when it helps move the conversation forward.
-12. If someone says they are an agency or employer, do not collect worker personal profile fields from them.
-13. Never invent legal rules, salaries, timelines, country promises, worker counts, or current vacancies.
-14. Never start the reply with a symbol or a list marker.
-15. ${isAdmin ? "This is the platform owner. If they give a correction, treat it as authoritative." : "Do not invent facts that are not in the canonical facts, the snapshot, or the stored memory."}`;
+10. Never claim you escalated, forwarded screenshots, opened a ticket, or that a human/technical team will reply unless the system has actually performed that action.
+11. If the user wants human help or reports a bug, acknowledge it and direct them to the dashboard or ${website}/signup as appropriate, plus ${supportEmail}, but do not promise a live handoff.
+12. If the user already paid and asks for help, you may mention the support inbox in the dashboard as an option in addition to WhatsApp.
+13. Ask at most one short follow-up question, and only when it helps move the conversation forward.
+14. If someone says they are an agency or employer, do not collect worker personal profile fields from them.
+15. Never invent legal rules, salaries, timelines, country promises, worker counts, current vacancies, or hidden internal actions.
+16. Never start the reply with a symbol or a list marker.
+17. ${isAdmin ? "This is the platform owner. If they give a correction, treat it as authoritative." : "Do not invent facts that are not in the canonical facts, the snapshot, or the stored memory."}`;
 }
 
 export function buildEmployerWhatsAppRules({
