@@ -25,8 +25,9 @@ export async function DELETE() {
 
         return NextResponse.json({ success: true, message: "Account deleted successfully" });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Delete account error:", error);
-        return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+        const message = error instanceof Error ? error.message : "Internal server error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

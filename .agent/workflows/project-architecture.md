@@ -145,7 +145,7 @@ Workers-United/
 │   │   ├── whatsapp-brain.ts  # Canonical WhatsApp facts/rules, safe-learning filter, explicit onboarding trigger
 │   │   ├── whatsapp-health.ts # WhatsApp ops-health classification helpers (platform-side vs recipient-side failures)
 │   │   ├── sanitize.ts        # Input sanitization
-│   │   ├── user-management.ts # Shared user deletion logic; cascade cleanup deletes worker-domain rows (`worker_documents`, `workers`, matches/offers/contracts), removes document files by real `worker_documents.storage_path` before falling back to legacy user folders, and keeps canonical app-layer naming as `workerRecord`
+│   │   ├── user-management.ts # Shared user deletion logic; cascade cleanup deletes worker-domain rows (`worker_documents`, `workers`, matches/offers/contracts), employer-domain rows (`job_requests`, employer-owned `offers`/`matches`, related support conversations), removes document files by real `worker_documents.storage_path` before falling back to legacy user folders, also clears `payments.profile_id` + `user_activity`, and keeps canonical app-layer naming as `workerRecord`
 │   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types)
 │   │   └── imageUtils.ts      # Image processing helpers
 │   └── types/                 # TypeScript types (currently empty)
