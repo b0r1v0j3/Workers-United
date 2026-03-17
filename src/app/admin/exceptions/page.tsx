@@ -52,9 +52,9 @@ export default async function AdminExceptionsPage() {
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
                 <AdminSectionHero
-                    eyebrow="Admin exceptions"
+                    eyebrow="Internal ops"
                     title="Operational Exceptions"
-                    description="One screen for email hygiene, checkout drift, document review, approval backlog, queue/payment mismatches, and open job requests with no worker pipeline yet."
+                    description="Internal incident screen for email hygiene, checkout drift, document review, approval backlog, queue/payment mismatches, and open job requests with no worker pipeline yet."
                     metrics={[
                         { label: "Signals", value: snapshot.totalSignals, meta: "Open issues that need action" },
                         { label: "Checkout", value: snapshot.openedCheckoutButUnpaid.length, meta: "Opened, not paid" },
@@ -67,7 +67,7 @@ export default async function AdminExceptionsPage() {
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <ActionCard
-                        href="/admin/email-health"
+                        href="/internal/email-health"
                         title="Invalid Emails"
                         value={snapshot.invalidEmailProfiles.length}
                         meta="Typo domains and recent undeliverable sends"
@@ -265,7 +265,7 @@ export default async function AdminExceptionsPage() {
                         <SectionHeader
                             title="Email Hygiene"
                             description="Profiles with obvious email risk, so reminders and follow-up do not silently fail."
-                            href="/admin/email-health"
+                            href="/internal/email-health"
                             label="Open email health"
                         />
                         {snapshot.invalidEmailProfiles.length === 0 ? (

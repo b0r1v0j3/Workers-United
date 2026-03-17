@@ -398,7 +398,7 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
         evidence: input.opsSnapshot.invalidEmailProfiles.slice(0, 3).map((entry) =>
             `${entry.fullName} • ${entry.email} • ${entry.reason}`
         ),
-        links: [{ label: "Open email health", href: "/admin/email-health" }],
+        links: [{ label: "Open email health", href: "/internal/email-health" }],
     } : null);
 
     pushSignal(signals, paymentFailures > 0 ? {

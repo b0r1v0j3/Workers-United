@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-    AlertTriangle, Building2, CheckCircle2, Clock, FileSearch,
-    MessageSquareMore, ShieldCheck, TrendingUp, Users, Wallet, MailX
+    AlertTriangle, Building2, CheckCircle2, Clock,
+    ShieldCheck, TrendingUp, Users, Wallet
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
-import { getAdminExceptionSnapshot } from "@/lib/admin-exceptions";
 import { normalizeUserType } from "@/lib/domain";
-import { getWorkerCompletion } from "@/lib/profile-completion";
-import { hasKnownInvalidOnlyEmailDomain, hasKnownTypoEmailDomain, isLikelyUndeliverableEmailError, isReportablePaymentProfile } from "@/lib/reporting";
+import { isReportablePaymentProfile } from "@/lib/reporting";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { pickCanonicalWorkerRecord } from "@/lib/workers";
@@ -36,7 +34,6 @@ export default async function AdminDashboard() {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
     const [
         { data: workersRaw },
@@ -47,8 +44,6 @@ export default async function AdminDashboard() {
         { data: documents },
         { data: payments },
         { data: supportConversations },
-        { data: failedEmails },
-        exceptionSnapshot,
     ] = await Promise.all([
         admin.from("worker_onboarding").select("id, profile_id, status, queue_joined_at, admin_approved, created_at, entry_fee_paid, agency_id"),
         getAllAuthUsers(admin),
@@ -58,8 +53,6 @@ export default async function AdminDashboard() {
         admin.from("worker_documents").select("user_id, document_type, status"),
         admin.from("payments").select("id, amount, amount_cents, status, payment_type, paid_at, profile_id, created_at"),
         admin.from("conversations").select("id, status, type, last_message_at, created_at").eq("type", "support"),
-        admin.from("email_queue").select("user_id, recipient_email, error_message, created_at, status").gte("created_at", ninetyDaysAgo.toISOString()).range(0, 1999),
-        getAdminExceptionSnapshot(),
     ]);
 
     // Worker grouping
@@ -94,7 +87,6 @@ export default async function AdminDashboard() {
     const newAgenciesThisWeek = (agencies || []).filter((entry: any) => new Date(entry.created_at) >= weekAgo).length;
 
     // Payments
-    const profileIdByEmail = new Map((profiles || []).map((entry: any) => [entry.email?.trim().toLowerCase(), entry.id]));
     const reportablePayments = (payments || []).filter((payment: any) =>
         isReportablePaymentProfile(payment.profile_id ? profileMap.get(payment.profile_id) || null : null)
     );
@@ -109,9 +101,6 @@ export default async function AdminDashboard() {
             const amount = payment.amount != null ? Number(payment.amount) : Number(payment.amount_cents || 0) / 100;
             return sum + (Number.isFinite(amount) ? amount : 0);
         }, 0);
-    const paymentsToday = successfulPayments.filter((payment: any) =>
-        payment.paid_at && new Date(payment.paid_at) >= todayStart
-    ).length;
     const revenueToday = successfulPayments
         .filter((payment: any) => payment.paid_at && new Date(payment.paid_at) >= todayStart)
         .reduce((sum: number, payment: any) => {
@@ -141,23 +130,6 @@ export default async function AdminDashboard() {
         })
         .filter((w) => w.daysRemaining <= 30)
         .sort((a, b) => a.daysRemaining - b.daysRemaining);
-
-    // Invalid emails
-    const invalidEmailProfileIds = new Set<string>();
-    for (const profileEntry of profiles || []) {
-        if (normalizeUserType((profileEntry as any).user_type) === "admin") continue;
-        if (hasKnownTypoEmailDomain((profileEntry as any).email) || hasKnownInvalidOnlyEmailDomain((profileEntry as any).email)) {
-            invalidEmailProfileIds.add((profileEntry as any).id);
-        }
-    }
-    for (const failedEmail of failedEmails || []) {
-        const recipientEmail = (failedEmail as any).recipient_email?.trim().toLowerCase();
-        const linkedProfileId = (failedEmail as any).user_id || (recipientEmail ? profileIdByEmail.get(recipientEmail) : null);
-        if (!linkedProfileId) continue;
-        if (isLikelyUndeliverableEmailError((failedEmail as any).error_message)) {
-            invalidEmailProfileIds.add(linkedProfileId);
-        }
-    }
 
     // Recent payments (last 5)
     const recentPayments = successfulPayments
@@ -260,12 +232,6 @@ export default async function AdminDashboard() {
                             )}
                             {urgentQueueWorkers.length > 0 && (
                                 <ActionItem href="/admin/queue" label={`Queue workers inside 30-day window`} count={urgentQueueWorkers.length} tone="red" />
-                            )}
-                            {exceptionSnapshot.totalSignals > 0 && (
-                                <ActionItem href="/admin/exceptions" label="System exceptions" count={exceptionSnapshot.totalSignals} tone="amber" />
-                            )}
-                            {invalidEmailProfileIds.size > 0 && (
-                                <ActionItem href="/admin/email-health" label="Invalid or undeliverable emails" count={invalidEmailProfileIds.size} tone="amber" />
                             )}
                         </div>
                     </div>
@@ -379,8 +345,6 @@ export default async function AdminDashboard() {
                             { href: "/admin/jobs", label: "Jobs" },
                             { href: "/admin/inbox", label: "Inbox" },
                             { href: "/admin/analytics", label: "Analytics" },
-                            { href: "/admin/exceptions", label: "Exceptions" },
-                            { href: "/admin/email-health", label: "Email Health" },
                             { href: "/admin/settings", label: "Settings" },
                         ].map((item) => (
                             <Link

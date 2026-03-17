@@ -4,9 +4,7 @@ import {
     LayoutDashboard,
     Users,
     Building2,
-    AlertTriangle,
     Settings,
-    MailX,
     MessageSquareMore,
     Briefcase,
     User,
@@ -394,10 +392,8 @@ function SidebarContent({
                     <SidebarLink href="/admin/queue" icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} tone="amber" />
                     <SidebarLink href="/admin/review" icon={<FileSearch size={20} />} label="Review" isCollapsed={isCollapsed} tone="rose" />
                     <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} tone="violet" />
-                    <div className={`px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${isCollapsed ? 'hidden' : 'block'}`}>System</div>
+                    <div className={`px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${isCollapsed ? 'hidden' : 'block'}`}>Insights</div>
                     <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} tone="blue" />
-                    <SidebarLink href="/admin/exceptions" icon={<AlertTriangle size={20} />} label="Exceptions" isCollapsed={isCollapsed} tone="red" />
-                    <SidebarLink href="/admin/email-health" icon={<MailX size={20} />} label="Email Health" isCollapsed={isCollapsed} tone="red" />
                     <SidebarLink href="/admin/whatsapp-blast" icon={<MessageSquareMore size={20} />} label="WA Blast" isCollapsed={isCollapsed} tone="emerald" />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} tone="slate" />
                 </>
