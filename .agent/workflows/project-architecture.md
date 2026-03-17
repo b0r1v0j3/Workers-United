@@ -133,12 +133,13 @@ Workers-United/
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
 │   │   ├── brain-memory.ts    # Brain memory dedup + normalization helpers
 │   │   ├── admin-exceptions.ts # Shared admin exception snapshot helper (checkout drift, email hygiene, docs, queue/payment mismatch, employer demand)
-│   │   ├── reporting.ts       # Reporting filters + email hygiene helpers (exclude Codex/test/internal-orphan payments, typo correction suggestions, undeliverable error detection)
+│   │   ├── reporting.ts       # Reporting filters + email hygiene helpers (exclude Codex/test/internal-orphan payments, `.dev`/`.internal`/draft-worker contacts, typo correction suggestions, undeliverable error detection)
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
-│   │   ├── auth-redirect.ts   # Shared post-auth provisioning + role-aware redirect resolver for callback/hash login finalize flows
+│   │   ├── auth-redirect.ts   # Shared post-auth provisioning + role-aware redirect resolver for callback/hash login finalize flows; queues automated welcome only for real deliverable contacts
 │   │   ├── constants.ts       # Shared constants
 │   │   ├── workers.ts         # Canonical worker lookup + normalization helpers (duplicate-safe worker record selection over legacy physical worker table via `worker_onboarding`, phone normalization, storage filename sanitization)
+│   │   ├── worker-notification-eligibility.ts # Shared guard for worker direct email/WhatsApp automations; blocks hidden draft owners, internal/test addresses, and agency drafts without real worker email+phone
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
 │   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging, failed-send error capture)
@@ -167,7 +168,7 @@ Configured in `vercel.json`:
 | Path | Schedule | Purpose |
 |---|---|---|
 | `/api/cron/check-expiry` | Every hour | Check for expired sessions/tokens |
-| `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles |
+| `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles; worker sends skip hidden/internal/test contacts and agency draft workers without real direct contact data |
 | `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months |
 | `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
 | `/api/cron/brain-monitor` | Daily 8 AM UTC | Daily Brain snapshot + exception report email when critical or meaningfully changed |
@@ -275,7 +276,7 @@ User (Browser)
 |---|---|
 | `src/app/auth/callback/route.ts` | Server callback for OAuth/code-exchange auth; now also rescues non-code auth links by forwarding them to `/login?mode=confirm|recovery` instead of failing cold |
 | `src/app/api/auth/finalize/route.ts` | Finalize endpoint used after `LoginClient` restores a hash session; validates the user and returns the final role-aware workspace href |
-| `src/lib/auth-redirect.ts` | Shared post-auth provisioning/redirect engine used by both `/auth/callback` and `/api/auth/finalize` so admin/employer/agency/worker routing stays consistent |
+| `src/lib/auth-redirect.ts` | Shared post-auth provisioning/redirect engine used by both `/auth/callback` and `/api/auth/finalize` so admin/employer/agency/worker routing stays consistent, while automated welcome sends are skipped for hidden/internal/test contacts |
 
 ### Employer Flow
 | File | Role |
@@ -341,7 +342,8 @@ User (Browser)
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals |
 | `src/lib/admin-exceptions.ts` | Shared admin exception snapshot helper used by `/admin` and `/admin/exceptions`; centralizes invalid-email, checkout drift, manual review, worker readiness, queue/payment mismatch, and open-demand-without-offers signals |
-| `src/lib/reporting.ts` | Shared reporting helpers; keeps admin dashboard and analytics revenue clean by excluding Codex/test/internal-orphan payment rows |
+| `src/lib/reporting.ts` | Shared reporting + email-hygiene helpers; keeps admin dashboard and analytics revenue clean by excluding Codex/test/internal-orphan payment rows and flags `.dev` / `.internal` / draft-worker contacts as non-deliverable internal traffic |
+| `src/lib/worker-notification-eligibility.ts` | Shared guard for worker direct notifications; hidden draft-owner auth users never receive welcome/reminder/profile-complete sends, and agency draft workers only become directly contactable after the agency provides the real worker email plus phone |
 | `src/lib/contract-data.ts` | Shared contract-doc payload builder; derives full PDF data from live `matches/worker_onboarding/profiles/employers/job_requests/worker_documents`, exposes `worker` / `workerProfile` as the canonical build result, and persists only supported `contract_data` override/meta fields (`worker_*`, job description, signing/meta data) |
 | `src/lib/offer-finalization.ts` | Shared confirmation-fee finalization helper; idempotently transitions `offers.pending -> offers.accepted` and increments job capacity once |
 | `src/lib/domain.ts` | Canonical role/domain helper; normalizes legacy `candidate` metadata into the `worker` domain and exposes worker storage constants |

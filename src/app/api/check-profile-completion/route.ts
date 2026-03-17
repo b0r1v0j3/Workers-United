@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { queueEmail } from "@/lib/email-templates";
+import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { getPendingApprovalTargetStatus } from "@/lib/worker-review";
 
@@ -34,7 +35,7 @@ export async function POST() {
             .maybeSingle();
 
         // Fetch canonical worker record
-        const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(
+        const { data: workerRecord } = await loadCanonicalWorkerRecord(
             supabase,
             user.id,
             "*, phone, entry_fee_paid, queue_joined_at, status"
@@ -116,6 +117,22 @@ export async function POST() {
         const userName = profile?.full_name || user.user_metadata?.full_name || "there";
         const userEmail = profile?.email || user.email || "";
         const phone = workerRecord?.phone || undefined;
+        const canNotifyWorkerDirectly = canSendWorkerDirectNotifications({
+            email: userEmail,
+            phone,
+            worker: workerRecord,
+            isHiddenDraftOwner: Boolean(user.user_metadata?.hidden_draft_owner),
+        });
+
+        if (!canNotifyWorkerDirectly) {
+            return NextResponse.json({
+                completion,
+                missingFields: [],
+                notificationSent: false,
+                reason: "worker_direct_notifications_disabled",
+                reviewQueued: targetStatus === "PENDING_APPROVAL" || workerRecord?.status === "PENDING_APPROVAL",
+            });
+        }
 
         await queueEmail(
             supabase,

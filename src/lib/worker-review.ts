@@ -2,7 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { queueEmail } from "@/lib/email-templates";
 import { getWorkerCompletion } from "@/lib/profile-completion";
-import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
+import { loadCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 
 interface WorkerReviewInput {
     completion: number;
@@ -15,6 +16,13 @@ interface ReviewDocumentRow {
     document_type: string | null;
     status?: string | null;
 }
+
+type ReviewWorkerRecord = WorkerRecordSnapshot & {
+    profile_id?: string | null;
+    agency_id?: string | null;
+    submitted_email?: string | null;
+    family_data?: unknown;
+};
 
 interface SyncWorkerReviewStatusOptions {
     adminClient: SupabaseClient<Database>;
@@ -92,7 +100,7 @@ export async function syncWorkerReviewStatus({
     notifyOnPendingApproval = false,
 }: SyncWorkerReviewStatusOptions) {
     const workerRecord = profileId
-        ? await loadCanonicalWorkerRecord<any>(adminClient, profileId, WORKER_REVIEW_SELECT).then((result) => result.data)
+        ? await loadCanonicalWorkerRecord<ReviewWorkerRecord>(adminClient, profileId, WORKER_REVIEW_SELECT).then((result) => result.data)
         : workerId
             ? await adminClient
                 .from("worker_onboarding")
@@ -200,6 +208,21 @@ export async function syncWorkerReviewStatus({
                 || fullNameFallback?.trim()
                 || workerRecord.submitted_full_name?.trim()
                 || "there";
+            const canNotifyWorkerDirectly = canSendWorkerDirectNotifications({
+                email: profile.email,
+                phone: workerRecord.phone || undefined,
+                worker: workerRecord,
+            });
+
+            if (!canNotifyWorkerDirectly) {
+                return {
+                    completion: completionResult.completion,
+                    missingFields: completionResult.missingFields,
+                    reviewQueued,
+                    targetStatus,
+                    allDocumentsVerified,
+                };
+            }
 
             await queueEmail(
                 adminClient,

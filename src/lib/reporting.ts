@@ -15,16 +15,22 @@ const COMMON_EMAIL_DOMAIN_TYPOS: Record<string, string> = {
 
 const TEST_EMAIL_MARKERS = [
     "+wu-codex-",
+    "codex-",
+    "draft-worker-",
     "@example.com",
 ];
 
 const INTERNAL_EMAIL_SUFFIXES = [
     "@workersunited.eu",
     "@workersunited.org",
+    "@workersunited.dev",
+    "@workersunited.internal",
 ];
 
 const KNOWN_INVALID_ONLY_SUFFIXES = [
     "@workersunited.org",
+    "@workersunited.dev",
+    "@workersunited.internal",
 ];
 
 const UNDELIVERABLE_EMAIL_PATTERNS = [
