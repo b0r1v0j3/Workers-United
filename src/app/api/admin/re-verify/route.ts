@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: verifyData.success !== false,
-            status: verifyData.status || (verifyData.success === false ? "rejected" : "verified"),
+            status: verifyData.status || (verifyData.success === false ? "rejected" : "manual_review"),
             message: verifyData.message || "Re-verification complete",
             result: verifyData,
         });

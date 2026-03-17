@@ -22,6 +22,7 @@ import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
+import { syncWorkerReviewStatus } from "@/lib/worker-review";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -165,6 +166,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
     const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
     const latestSignature = signatures?.[0] || null;
     const displayName = workerProfile?.full_name || authUser.user_metadata?.full_name || authUser.email || "Worker";
+    const workerNameFallback = workerProfile?.full_name || authUser.user_metadata?.full_name || null;
     const workerStatus = workerRecord?.status || "NEW";
     const approvalState = workerRecord?.admin_approved ? "Approved" : "Pending";
     const workspaceInspectHref = `/profile/worker?inspect=${id}`;
@@ -213,7 +215,15 @@ export default async function WorkerDetailPage({ params }: PageProps) {
             throw new Error(updateError.message);
         }
 
-        if (newStatus !== "pending" && newStatus !== "verifying" && userEmail) {
+        await syncWorkerReviewStatus({
+            adminClient,
+            profileId: id,
+            documentOwnerId: id,
+            fullNameFallback: workerNameFallback,
+            notifyOnPendingApproval: true,
+        });
+
+        if ((newStatus === "verified" || newStatus === "rejected") && userEmail) {
             const approved = newStatus === "verified";
             after(async () => {
                 await queueEmail(
@@ -271,6 +281,13 @@ export default async function WorkerDetailPage({ params }: PageProps) {
             throw new Error(deleteError.message);
         }
 
+        await syncWorkerReviewStatus({
+            adminClient,
+            profileId: id,
+            documentOwnerId: id,
+            fullNameFallback: workerNameFallback,
+        });
+
         revalidatePath(`/admin/workers/${id}`);
     }
 
@@ -315,6 +332,13 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         if (deleteError) {
             throw new Error(deleteError.message);
         }
+
+        await syncWorkerReviewStatus({
+            adminClient,
+            profileId: id,
+            documentOwnerId: id,
+            fullNameFallback: workerNameFallback,
+        });
 
         if (userEmail) {
             after(async () => {
@@ -959,7 +983,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                         <input type="hidden" name="user_name" value={displayName} />
                                                         <div className="mb-4">
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
-                                                                Set status
+                                                                Admin decision
                                                             </label>
                                                             <AdaptiveSelect
                                                                 name="status"
@@ -969,7 +993,8 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                             >
                                                                 <option value="pending">Pending</option>
                                                                 <option value="verifying">Verifying</option>
-                                                                <option value="verified">Verified</option>
+                                                                <option value="manual_review">Awaiting admin approval</option>
+                                                                <option value="verified">Approve / Verified</option>
                                                                 <option value="rejected">Rejected</option>
                                                             </AdaptiveSelect>
                                                         </div>
@@ -986,7 +1011,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                             />
                                                         </div>
                                                         <ActionSubmitButton
-                                                            idleLabel="Save status changes"
+                                                            idleLabel="Save admin decision"
                                                             pendingLabel="Saving..."
                                                             className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
                                                         />

@@ -335,6 +335,7 @@ User (Browser)
 | `src/lib/smoke-evaluator.ts` | Shared health evaluator (`healthy/degraded/critical`) for smoke checks |
 | `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback); passport verifier now rejects closed covers / wrong pages and emits structured worker guidance |
 | `src/lib/document-review.ts` | Shared review helper that turns canonical `ocr_json` / `reject_reason` into admin-facing summaries and worker-facing re-upload guidance |
+| `src/lib/worker-review.ts` | Shared worker review/readiness helpers; keeps `PENDING_APPROVAL` gated behind truly admin-verified required documents and syncs worker status after admin doc decisions |
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals |
@@ -445,6 +446,7 @@ When adding a new feature, follow this order:
 - **`worker_documents.user_id` must always be a real auth/profile id.** Never point it at `worker_onboarding.id`. Agency draft workers must go through `src/lib/agency-draft-documents.ts`, which stores a hidden auth-backed owner id in `worker_onboarding.application_data.draft_document_owner_profile_id` until claim relinks the documents to the real worker profile.
 - **Admin document review must use the live schema.** The canonical fields are `status`, `ocr_json`, `reject_reason`, and `verified_at`. Legacy `verification_result` / `admin_notes` references will break on production because those columns do not exist anymore.
 - **Inline admin previews should stay same-origin.** Use `/api/admin/documents/[documentId]/preview` for iframe/PDF rendering instead of direct public storage URLs, otherwise browsers can block the embedded document and force operators into `Open in New Tab`.
+- **Document AI is advisory, not final approval.** `POST /api/verify-document` may reject obviously bad uploads, but successful AI analysis must stop at `manual_review`. Only an explicit admin `verified` decision may count a document toward the all-3-required-docs readiness gate.
 
 ### Profile Field Consistency
 - When adding/changing a dropdown field (e.g., `preferred_job`), ensure the **same options** are used everywhere: onboarding form, edit form, employer form, admin display.

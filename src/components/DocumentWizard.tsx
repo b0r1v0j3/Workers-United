@@ -74,7 +74,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                         updates[doc.document_type] = {
                             file: null,
                             status: 'manual_review',
-                            message: 'Sent for admin review'
+                            message: 'Awaiting admin approval'
                         };
                         allVerified = false;
                     } else if (doc.status === 'uploaded' || doc.status === 'verifying') {
@@ -258,15 +258,26 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                 const result = await response.json();
 
                 if (result.success) {
-                    logActivity("document_verified", "documents", { doc_type: type, status: result.status });
-                    toast.success(`${type.replace('_', ' ')} verified successfully!`);
+                    logActivity(
+                        result.status === "manual_review" ? "document_review_queued" : "document_verified",
+                        "documents",
+                        { doc_type: type, status: result.status }
+                    );
+                    const successMessage = result.status === 'manual_review'
+                        ? `${type.replace('_', ' ')} uploaded successfully. Our team will review it before approval.`
+                        : `${type.replace('_', ' ')} verified successfully!`;
+                    toast.success(successMessage);
                     setUploads(prev => {
                         const newUploads = {
                             ...prev,
                             [type]: {
                                 file: uploadFile,
                                 status: result.status,
-                                message: result.status === 'verified' ? '✓ Verified' : 'Verification failed.'
+                                message: result.status === 'verified'
+                                    ? '✓ Verified'
+                                    : result.status === 'manual_review'
+                                        ? 'Awaiting admin approval'
+                                        : 'Uploaded'
                             }
                         };
 
@@ -350,7 +361,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
             });
             if (res.ok) {
                 toast.success('Sent for admin review! We\'ll notify you by email.');
-                updateStatus(type, 'manual_review' as FileUpload['status'], 'Sent for admin review');
+                updateStatus(type, 'manual_review' as FileUpload['status'], 'Awaiting admin approval');
             } else {
                 toast.error('Could not request review. Please try again.');
             }
@@ -407,7 +418,11 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                         </div>
                         <div className="flex items-center gap-2">
                             {uploads.passport.status !== 'missing' && uploads.passport.status !== 'verified' && (
-                                <span className={`text-sm font-medium ${uploads.passport.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
+                                <span className={`text-sm font-medium ${uploads.passport.status === 'error'
+                                    ? 'text-red-600'
+                                    : uploads.passport.status === 'manual_review'
+                                        ? 'text-amber-700'
+                                        : 'text-blue-600'}`}>
                                     {getStatusIcon(uploads.passport.status)} {uploads.passport.message}
                                 </span>
                             )}
@@ -434,7 +449,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                     <ProgressBar status={uploads.passport.status} />
                     {uploads.passport.status === 'manual_review' && (
                         <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p className="text-xs text-amber-700">👁 Sent for admin review — we&apos;ll email you when done</p>
+                            <p className="text-xs text-amber-700">👁 Under admin review — we&apos;ll email you once it is approved or needs changes</p>
                         </div>
                     )}
                     {(uploads.passport.status === 'rejected' || uploads.passport.status === 'error') && uploads.passport.message && (
@@ -477,7 +492,11 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                         </div>
                         <div className="flex items-center gap-2">
                             {uploads.biometric_photo.status !== 'missing' && uploads.biometric_photo.status !== 'verified' && (
-                                <span className={`text-sm font-medium ${uploads.biometric_photo.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
+                                <span className={`text-sm font-medium ${uploads.biometric_photo.status === 'error'
+                                    ? 'text-red-600'
+                                    : uploads.biometric_photo.status === 'manual_review'
+                                        ? 'text-amber-700'
+                                        : 'text-blue-600'}`}>
                                     {getStatusIcon(uploads.biometric_photo.status)} {uploads.biometric_photo.message}
                                 </span>
                             )}
@@ -504,7 +523,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                     <ProgressBar status={uploads.biometric_photo.status} />
                     {uploads.biometric_photo.status === 'manual_review' && (
                         <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p className="text-xs text-amber-700">👁 Sent for admin review — we&apos;ll email you when done</p>
+                            <p className="text-xs text-amber-700">👁 Under admin review — we&apos;ll email you once it is approved or needs changes</p>
                         </div>
                     )}
                     {(uploads.biometric_photo.status === 'rejected' || uploads.biometric_photo.status === 'error') && uploads.biometric_photo.message && (
@@ -548,7 +567,11 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                         </div>
                         <div className="flex items-center gap-2">
                             {uploads.diploma.status !== 'missing' && uploads.diploma.status !== 'verified' && (
-                                <span className={`text-sm font-medium ${uploads.diploma.status === 'error' ? 'text-red-600' : 'text-blue-600'}`}>
+                                <span className={`text-sm font-medium ${uploads.diploma.status === 'error'
+                                    ? 'text-red-600'
+                                    : uploads.diploma.status === 'manual_review'
+                                        ? 'text-amber-700'
+                                        : 'text-blue-600'}`}>
                                     {getStatusIcon(uploads.diploma.status)} {uploads.diploma.message}
                                 </span>
                             )}
@@ -575,7 +598,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                     <ProgressBar status={uploads.diploma.status} />
                     {uploads.diploma.status === 'manual_review' && (
                         <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p className="text-xs text-amber-700">👁 Sent for admin review — we&apos;ll email you when done</p>
+                            <p className="text-xs text-amber-700">👁 Under admin review — we&apos;ll email you once it is approved or needs changes</p>
                         </div>
                     )}
                     {(uploads.diploma.status === 'rejected' || uploads.diploma.status === 'error') && uploads.diploma.message && (
