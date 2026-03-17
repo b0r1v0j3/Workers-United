@@ -9,6 +9,9 @@ import { getWorkerCompletion } from "@/lib/profile-completion";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import WorkersTableClient, { WorkerTableRow } from "./WorkersTableClient";
 import { pickCanonicalWorkerRecord } from "@/lib/workers";
+import { getAgencyDraftDocumentOwnerId, resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
+import { getAgencyWorkerEmail, getAgencyWorkerName } from "@/lib/agencies";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 
 export default async function WorkersPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const params = await searchParams;
@@ -33,110 +36,198 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
     // Use admin client (service role) — same pattern as admin dashboard
     const adminClient = createAdminClient();
 
-    // Fetch ALL auth users (paginated — listUsers() defaults to 50 per page)
-    const allAuthUsers = await getAllAuthUsers(adminClient);
+    const [
+        allAuthUsers,
+        { data: workerRows },
+        { data: profiles },
+        { data: allDocs },
+        { data: employerRows },
+        { data: agencies },
+    ] = await Promise.all([
+        getAllAuthUsers(adminClient),
+        adminClient.from("worker_onboarding").select("*"),
+        adminClient.from("profiles").select("*"),
+        adminClient.from("worker_documents").select("*"),
+        adminClient.from("employers").select("profile_id"),
+        adminClient.from("agencies").select("id, profile_id, display_name, legal_name"),
+    ]);
 
-    // Fetch all worker rows from the legacy storage table
-    const { data: workerRows } = await adminClient
-        .from("worker_onboarding")
-        .select("*");
-
-    // Fetch all profiles
-    const { data: profiles } = await adminClient
-        .from("profiles")
-        .select("*");
-
-    // Fetch all documents
-    const { data: allDocs } = await adminClient
-        .from("worker_documents")
-        .select("*");
-
-    // Create lookup maps
+    const nowMs = new Date().getTime();
     const workerGroups = new Map<string, any[]>();
+    const hiddenDraftOwnerIds = new Set<string>();
     for (const workerRow of workerRows || []) {
+        const draftOwnerId = getAgencyDraftDocumentOwnerId(workerRow?.application_data);
+        if (draftOwnerId) {
+            hiddenDraftOwnerIds.add(draftOwnerId);
+        }
+
         if (!workerRow?.profile_id) continue;
         const current = workerGroups.get(workerRow.profile_id) || [];
         current.push(workerRow);
         workerGroups.set(workerRow.profile_id, current);
     }
+
     const workerMap = new Map(
         Array.from(workerGroups.entries())
             .map(([profileId, rows]) => [profileId, pickCanonicalWorkerRecord(rows)])
             .filter((entry): entry is [string, any] => !!entry[1])
     );
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+    const profileMap = new Map(profiles?.map((profileRow: any) => [profileRow.id, profileRow]) || []);
+    const agencyMap = new Map(agencies?.map((agency: any) => [agency.id, agency]) || []);
+    const documentsByOwnerId = new Map<string, any[]>();
+    for (const doc of allDocs || []) {
+        if (!doc?.user_id) continue;
+        const current = documentsByOwnerId.get(doc.user_id) || [];
+        current.push(doc);
+        documentsByOwnerId.set(doc.user_id, current);
+    }
 
-    // Also fetch employer profile IDs directly from employers table
-    const { data: employerRows } = await adminClient
-        .from("employers")
-        .select("profile_id");
-
-    // Build set of employer/admin profile IDs to exclude (use ALL sources)
-    const employerProfileIds = new Set<string>();
-
-    // From profiles.user_type
+    // Exclude non-worker auth users and hidden agency draft document-owner accounts.
+    const excludedProfileIds = new Set<string>();
     (profiles || [])
-        .filter(p => p.user_type === "employer" || p.user_type === "admin")
-        .forEach(p => employerProfileIds.add(p.id));
-
-    // From employers table
-    (employerRows || []).forEach((e: any) => {
-        if (e.profile_id) employerProfileIds.add(e.profile_id);
+        .filter((profileRow: any) => ["employer", "admin", "agency"].includes(profileRow.user_type))
+        .forEach((profileRow: any) => excludedProfileIds.add(profileRow.id));
+    (employerRows || []).forEach((employerRow: any) => {
+        if (employerRow.profile_id) {
+            excludedProfileIds.add(employerRow.profile_id);
+        }
     });
-
-    // From auth user_metadata
     allAuthUsers
-        .filter((u: any) => u.user_metadata?.user_type === 'employer' || u.user_metadata?.user_type === 'admin')
-        .forEach((u: any) => employerProfileIds.add(u.id));
+        .filter((authUser: any) => ["employer", "admin", "agency"].includes(authUser.user_metadata?.user_type))
+        .forEach((authUser: any) => excludedProfileIds.add(authUser.id));
+    allAuthUsers
+        .filter((authUser: any) => authUser.user_metadata?.hidden_draft_owner)
+        .forEach((authUser: any) => hiddenDraftOwnerIds.add(authUser.id));
 
-    // Calculate user progress — uses shared getWorkerCompletion() as single source of truth
-    const getUserStats = (userId: string, authUser?: any) => {
-        const workerRecord = workerMap.get(userId);
-        const p = profileMap.get(userId);
-        const userDocs = (allDocs?.filter(d => d.user_id === userId) || []) as { document_type: string }[];
-        const verifiedDocs = userDocs.filter((d: any) => d.status === 'verified').length;
+    const claimedRegistryRows: WorkerTableRow[] = allAuthUsers
+        .filter((authUser: any) => !excludedProfileIds.has(authUser.id) && !hiddenDraftOwnerIds.has(authUser.id))
+        .map((authUser: any) => {
+            const workerRecord = workerMap.get(authUser.id);
+            const profileRecord = profileMap.get(authUser.id);
+            const workerDocs = documentsByOwnerId.get(authUser.id) || [];
+            const verifiedDocs = workerDocs.filter((doc: any) => doc.status === "verified").length;
+            const agencyRecord = workerRecord?.agency_id ? agencyMap.get(workerRecord.agency_id) : null;
+            const completion = getWorkerCompletion({
+                profile: profileRecord || null,
+                worker: workerRecord || null,
+                documents: workerDocs,
+            }, {
+                phoneOptional: !!workerRecord?.agency_id,
+                fullNameFallback: authUser.user_metadata?.full_name || null,
+            }).completion;
+            const displayEmail = authUser.email || profileRecord?.email || "No email yet";
+            const displayName = profileRecord?.full_name || authUser.user_metadata?.full_name || displayEmail || "No Name";
+            const paymentState = workerRecord?.entry_fee_paid
+                ? "Paid"
+                : isPostEntryFeeWorkerStatus(workerRecord?.status)
+                    ? "In Queue"
+                    : "Unpaid";
 
-        const result = getWorkerCompletion({
-            profile: p || null,
-            worker: workerRecord || null,
-            documents: userDocs,
-        }, {
-            fullNameFallback: authUser?.user_metadata?.full_name || null,
+            return {
+                id: workerRecord?.id || authUser.id,
+                profile_id: authUser.id,
+                name: displayName,
+                email: displayEmail,
+                avatar_url: profileRecord?.avatar_url || authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${displayName.replace(/ /g, "+")}&background=random`,
+                created_at: workerRecord?.created_at || authUser.created_at,
+                status: workerRecord?.status || "NEW",
+                phone: workerRecord?.phone || "",
+                nationality: workerRecord?.nationality || "",
+                job: workerRecord?.preferred_job || "",
+                completion,
+                docsCount: workerDocs.length,
+                verifiedDocs,
+                adminApproved: !!workerRecord?.admin_approved,
+                isCurrentUser: authUser.id === user.id,
+                entryFeePaid: !!workerRecord?.entry_fee_paid,
+                daysUntilDeletion: !workerRecord?.agency_id && completion < 100 && !workerRecord?.entry_fee_paid
+                    ? Math.max(0, 30 - Math.floor((nowMs - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
+                    : null,
+                authProvider: authUser.app_metadata?.provider || "email",
+                paymentState,
+                hasVerifyingDocs: workerDocs.some((doc: any) => doc.status === "verifying"),
+                sourceLabel: agencyRecord
+                    ? `Agency worker · ${agencyRecord.display_name || agencyRecord.legal_name || "Unknown agency"}`
+                    : null,
+                workspaceHref: `/profile/worker?inspect=${authUser.id}`,
+                workspaceLabel: "Inspect workspace",
+                caseHref: `/admin/workers/${workerRecord?.id || authUser.id}`,
+                caseLabel: "Open case",
+                deleteUserId: authUser.id,
+            } satisfies WorkerTableRow;
         });
 
-        return { workerRecord, userDocs, verifiedDocs, profileCompletion: result.completion };
-    };
+    const draftRegistryRows: WorkerTableRow[] = (workerRows || [])
+        .filter((workerRow: any) => workerRow.agency_id && !workerRow.profile_id)
+        .map((workerRow: any) => {
+            const agencyRecord = agencyMap.get(workerRow.agency_id) || null;
+            const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(workerRow);
+            const workerDocs = documentOwnerId ? documentsByOwnerId.get(documentOwnerId) || [] : [];
+            const verifiedDocs = workerDocs.filter((doc: any) => doc.status === "verified").length;
+            const displayName = getAgencyWorkerName({ submitted_full_name: workerRow.submitted_full_name, profiles: null });
+            const displayEmail = getAgencyWorkerEmail({ submitted_email: workerRow.submitted_email, profiles: null }) || "No email yet";
+            const completion = getWorkerCompletion({
+                profile: { full_name: displayName },
+                worker: workerRow,
+                documents: workerDocs,
+            }, {
+                phoneOptional: true,
+                fullNameFallback: displayName,
+            }).completion;
+            const paymentState = workerRow.entry_fee_paid
+                ? "Paid"
+                : isPostEntryFeeWorkerStatus(workerRow.status)
+                    ? "In Queue"
+                    : "Unpaid";
 
-    // Filter: only show workers (exclude employers and admins)
-    const activeAuthUsers = allAuthUsers.filter((u: any) => !employerProfileIds.has(u.id));
+            return {
+                id: workerRow.id,
+                profile_id: null,
+                name: displayName,
+                email: displayEmail,
+                avatar_url: `https://ui-avatars.com/api/?name=${displayName.replace(/ /g, "+")}&background=random`,
+                created_at: workerRow.created_at || workerRow.updated_at || new Date().toISOString(),
+                status: workerRow.status || "NEW",
+                phone: workerRow.phone || "",
+                nationality: workerRow.nationality || "",
+                job: workerRow.preferred_job || "",
+                completion,
+                docsCount: workerDocs.length,
+                verifiedDocs,
+                adminApproved: !!workerRow.admin_approved,
+                isCurrentUser: false,
+                entryFeePaid: !!workerRow.entry_fee_paid,
+                daysUntilDeletion: null,
+                authProvider: "email",
+                paymentState,
+                hasVerifyingDocs: workerDocs.some((doc: any) => doc.status === "verifying"),
+                sourceLabel: `Agency draft · ${agencyRecord?.display_name || agencyRecord?.legal_name || "Unknown agency"}`,
+                workspaceHref: agencyRecord?.profile_id
+                    ? `/profile/agency/workers/${workerRow.id}?inspect=${agencyRecord.profile_id}`
+                    : `/admin/agencies`,
+                workspaceLabel: "Inspect draft",
+                caseHref: `/admin/workers/${workerRow.id}`,
+                caseLabel: "Open case",
+                deleteUserId: null,
+            } satisfies WorkerTableRow;
+        });
+
+    const activeWorkers = [...claimedRegistryRows, ...draftRegistryRows].sort((left, right) =>
+        new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    );
 
     // Apply filter
-    let filteredUsers = activeAuthUsers;
+    let filteredUsers = activeWorkers;
     const statusFilters = ['NEW', 'PROFILE_COMPLETE', 'PENDING_APPROVAL', 'VERIFIED', 'APPROVED', 'IN_QUEUE', 'OFFER_PENDING', 'OFFER_ACCEPTED', 'VISA_PROCESS_STARTED', 'VISA_APPROVED', 'PLACED', 'REJECTED', 'REFUND_FLAGGED'];
 
     if (filter === 'pending') {
-        filteredUsers = activeAuthUsers.filter((u: any) => {
-            const userDocs = allDocs?.filter(d => d.user_id === u.id) || [];
-            return userDocs.some(d => d.status === 'verifying');
-        });
+        filteredUsers = activeWorkers.filter((workerRow) => !!workerRow.hasVerifyingDocs);
     } else if (filter === 'verified') {
-        filteredUsers = activeAuthUsers.filter((u: any) => {
-            const userDocs = allDocs?.filter(d => d.user_id === u.id) || [];
-            const verifiedCount = userDocs.filter(d => d.status === 'verified').length;
-            return verifiedCount >= 3;
-        });
+        filteredUsers = activeWorkers.filter((workerRow) => workerRow.verifiedDocs >= 3);
     } else if (filter === 'needs_approval') {
-        filteredUsers = activeAuthUsers.filter((u: any) => {
-            const workerRecord = workerMap.get(u.id);
-            const { profileCompletion } = getUserStats(u.id, u);
-            return workerRecord && profileCompletion === 100 && !workerRecord.admin_approved;
-        });
+        filteredUsers = activeWorkers.filter((workerRow) => workerRow.completion === 100 && !workerRow.adminApproved);
     } else if (statusFilters.includes(filter)) {
-        // Status-based filter from pipeline badges
-        filteredUsers = activeAuthUsers.filter((u: any) => {
-            const workerRecord = workerMap.get(u.id);
-            return workerRecord?.status === filter;
-        });
+        filteredUsers = activeWorkers.filter((workerRow) => workerRow.status === filter);
     }
 
     const filterLabels: Record<string, string> = {
@@ -147,18 +238,10 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         VISA_APPROVED: 'Visa Approved', PLACED: 'Placed', REJECTED: 'Rejected', REFUND_FLAGGED: 'Refund',
     };
     const filterLabel = filterLabels[filter] || 'All';
-    const nowMs = new Date().getTime();
-    const readyWorkersCount = activeAuthUsers.filter((authUser: any) => {
-        const { verifiedDocs, profileCompletion } = getUserStats(authUser.id, authUser);
-        return profileCompletion === 100 && verifiedDocs >= 3;
-    }).length;
-    const needsApprovalCount = activeAuthUsers.filter((authUser: any) => {
-        const workerRecord = workerMap.get(authUser.id);
-        const { profileCompletion } = getUserStats(authUser.id, authUser);
-        return !!workerRecord && profileCompletion === 100 && !workerRecord.admin_approved;
-    }).length;
-    const queueCount = activeAuthUsers.filter((authUser: any) => workerMap.get(authUser.id)?.status === "IN_QUEUE").length;
-    const paidWorkersCount = activeAuthUsers.filter((authUser: any) => !!workerMap.get(authUser.id)?.entry_fee_paid).length;
+    const readyWorkersCount = activeWorkers.filter((workerRow) => workerRow.completion === 100 && workerRow.verifiedDocs >= 3).length;
+    const needsApprovalCount = activeWorkers.filter((workerRow) => workerRow.completion === 100 && !workerRow.adminApproved).length;
+    const queueCount = activeWorkers.filter((workerRow) => workerRow.status === "IN_QUEUE").length;
+    const paidWorkersCount = activeWorkers.filter((workerRow) => workerRow.entryFeePaid).length;
 
     return (
         <AppShell user={user} variant="admin">
@@ -168,7 +251,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                     title="Worker Operations"
                     description="Use this list for two different jobs: inspect the real worker workspace, or open the admin case view for approvals, payments, documents, and queue handling."
                     metrics={[
-                        { label: "Workers", value: activeAuthUsers.length, meta: `${filterLabel} view: ${filteredUsers.length}` },
+                        { label: "Workers", value: activeWorkers.length, meta: `${filterLabel} view: ${filteredUsers.length}` },
                         { label: "Ready", value: readyWorkersCount, meta: "100% profile + 3 docs" },
                         { label: "Approval", value: needsApprovalCount, meta: "Waiting for admin" },
                         { label: "In Queue", value: queueCount, meta: "Active Job Finder workers" },
@@ -228,7 +311,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                         <div>
                             <h2 className="text-lg font-semibold text-[#18181b]">Worker filters</h2>
                             <p className="text-sm text-[#71717a]">
-                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `${activeAuthUsers.length} registered workers`}
+                                {filter !== 'all' ? `${filterLabel} (${filteredUsers.length})` : `${activeWorkers.length} registered workers`}
                             </p>
                         </div>
                         <div className="rounded-full border border-[#ebe7df] bg-[#faf8f3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b675d]">
@@ -252,34 +335,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                 </div>
 
                 <WorkersTableClient
-                    data={filteredUsers.map((authUser: any) => {
-                        const profile = profileMap.get(authUser.id);
-                        const { workerRecord, userDocs, verifiedDocs, profileCompletion } = getUserStats(authUser.id, authUser);
-
-                        return {
-                            id: authUser.id,
-                            profile_id: authUser.id,
-                            name: profile?.full_name || authUser.user_metadata?.full_name || "No Name",
-                            email: authUser.email,
-                            avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${(profile?.full_name || "User").replace(' ', '+')}&background=random`,
-                            created_at: authUser.created_at,
-                            status: workerRecord?.status || "NEW",
-                            phone: workerRecord?.phone || "",
-                            nationality: workerRecord?.nationality || "",
-                            job: workerRecord?.preferred_job || "",
-                            completion: profileCompletion,
-                            docsCount: userDocs.length,
-                            verifiedDocs: verifiedDocs,
-                            adminApproved: !!workerRecord?.admin_approved,
-                            isCurrentUser: authUser.id === user.id,
-                            entryFeePaid: !!workerRecord?.entry_fee_paid,
-                            daysUntilDeletion: profileCompletion < 100
-                                ? Math.max(0, 30 - Math.floor((nowMs - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
-                                : null,
-                            authProvider: authUser.app_metadata?.provider || 'email',
-                            paymentState: workerRecord?.entry_fee_paid ? "Paid" : workerRecord?.status === "IN_QUEUE" ? "In Queue" : "Unpaid",
-                        } satisfies WorkerTableRow;
-                    })}
+                    data={filteredUsers}
                     currentFilter={filter}
                 />
             </div>

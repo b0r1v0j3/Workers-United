@@ -65,7 +65,7 @@ Workers-United/
 │   │   │   ├── exceptions/    # Unified admin exception cockpit (payments, docs, email hygiene, employer demand drift)
 │   │   │   ├── email-health/  # Invalid / bounced email center with safe-delete guard and workspace inspect links
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
-│   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, and worker case detail now uses the same admin ops-card system for profile, approvals, payments, signature, and document review, with inspect shortcuts into worker/documents/queue workspaces
+│   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, filters out hidden agency draft document-owner auth profiles, renders real agency draft worker rows with agency source labels, and worker case detail now resolves by canonical `worker_onboarding.id` as well as legacy profile/auth ids so agency drafts use the right document-owner id plus agency workspace inspect links instead of leaking through fake `/profile/worker` previews
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout
 │   │   │   ├── queue/         # Queue operations screen with shared admin hero, 90-day watch, and inspect-vs-case actions
 │   │   │   ├── jobs/          # Smart Match Hub with shared admin hero/guidance wrapper around matching client
@@ -212,12 +212,13 @@ User (Browser)
 8. Agency draft worker documents no longer use `worker_onboarding.id` as `worker_documents.user_id`. `src/lib/agency-draft-documents.ts` creates or reuses a hidden auth-backed profile id stored in `worker_onboarding.application_data.draft_document_owner_profile_id`, and all agency draft document reads/writes/verifications/manual-review requests go through that owner id until the draft is claimed
 9. During draft claim, `claimAgencyWorkerDraft()` relinks `worker_documents.user_id` from the hidden draft owner id to the real claimed `profile_id`, copies each storage object into the claimed worker folder, updates `storage_path`, removes the old hidden-owner object, clears the application-data pointer, and deletes the temporary hidden auth/profile owner
 10. Generic admin access to `/profile/agency` is now a true structure preview: it never provisions an agency row or downgrades the admin role, and it opens the same add-worker surfaces (desktop modal, mobile full-page create route) plus table layout without persisting fake preview drafts between refreshes
-11. Admin access to `/profile/worker` and `/profile/employer` remains read-only preview only, while `/profile/agency?inspect=<profile_id>` opens the real target agency workspace with admin authority attached to that agency instead of overloading the admin's own role records
-12. Employer workspace is now canonical at `/profile/employer`; legacy `/profile/employer/jobs` and `/profile/employer/jobs/new` immediately redirect into `?tab=jobs` and `?tab=post-job`
-13. On first login → user creates profile in the worker/employer domain; app-layer runtime talks to `worker_onboarding` / `worker_documents`, and the live public schema no longer exposes the removed `candidates` / `candidate_documents` aliases
-14. Document verification, manual review requests, and manual match admin flows now use canonical `workerId` only; the old legacy request shape is no longer active in app-layer runtime
-15. `profiles` table links auth user to their role
-16. Proxy (`src/proxy.ts`) checks auth state on protected routes
+11. `/admin/workers` must never list the hidden draft document-owner auth accounts created by `src/lib/agency-draft-documents.ts`; those internal profiles exist only so draft uploads have a valid `worker_documents.user_id`. The registry now filters them out and rebuilds agency draft rows from the real `worker_onboarding` data, while `/admin/workers/[id]` resolves those draft case ids back to the canonical draft worker row plus its hidden `documentOwnerId`
+12. Admin access to `/profile/worker` and `/profile/employer` remains read-only preview only, while `/profile/agency?inspect=<profile_id>` opens the real target agency workspace with admin authority attached to that agency instead of overloading the admin's own role records
+13. Employer workspace is now canonical at `/profile/employer`; legacy `/profile/employer/jobs` and `/profile/employer/jobs/new` immediately redirect into `?tab=jobs` and `?tab=post-job`
+14. On first login → user creates profile in the worker/employer domain; app-layer runtime talks to `worker_onboarding` / `worker_documents`, and the live public schema no longer exposes the removed `candidates` / `candidate_documents` aliases
+15. Document verification, manual review requests, and manual match admin flows now use canonical `workerId` only; the old legacy request shape is no longer active in app-layer runtime
+16. `profiles` table links auth user to their role
+17. Proxy (`src/proxy.ts`) checks auth state on protected routes
 17. Shared deletion now trusts `worker_documents.storage_path` as the primary cleanup source, so account deletion and `profile-reminders` auto-delete do not miss documents even if an older row was relinked before the storage-path migration fix
 
 ### Payment Flow

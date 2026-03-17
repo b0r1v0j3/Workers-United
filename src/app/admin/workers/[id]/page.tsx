@@ -23,49 +23,89 @@ import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
 import { syncWorkerReviewStatus } from "@/lib/worker-review";
+import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
+import { getAgencyWorkerEmail } from "@/lib/agencies";
 
 interface PageProps {
     params: Promise<{ id: string }>;
 }
 
-async function getWorkerAdminGuardState(adminClient: ReturnType<typeof createAdminClient>, profileId: string) {
+async function getWorkerAdminGuardState(
+    adminClient: ReturnType<typeof createAdminClient>,
+    input: {
+        workerId?: string | null;
+        profileId?: string | null;
+        documentOwnerId?: string | null;
+        phoneOptional?: boolean;
+        fullNameFallback?: string | null;
+    }
+) {
+    const workerRecord = input.workerId
+        ? await adminClient
+            .from("worker_onboarding")
+            .select("*, phone, entry_fee_paid, queue_joined_at, status")
+            .eq("id", input.workerId)
+            .maybeSingle()
+            .then((result) => result.data)
+        : input.profileId
+            ? await loadCanonicalWorkerRecord<any>(adminClient, input.profileId, "*, phone, entry_fee_paid, queue_joined_at, status").then((result) => result.data)
+            : null;
+
+    if (!workerRecord) {
+        return { completion: 0, hasPaidEntryFee: false };
+    }
+
+    const profileId = input.profileId || workerRecord.profile_id || null;
+    const documentOwnerId = input.documentOwnerId || resolveAgencyWorkerDocumentOwnerId(workerRecord) || profileId;
+
     const [
         { data: workerProfile },
-        workerRecordResult,
         { data: documents },
-        { data: payments },
-        { data: authUserPayload },
+        { data: directPayments },
+        { data: targetPayments },
+        authUserPayload,
     ] = await Promise.all([
-        adminClient
-            .from("profiles")
-            .select("full_name, email")
-            .eq("id", profileId)
-            .maybeSingle(),
-        loadCanonicalWorkerRecord<any>(adminClient, profileId, "*, phone, entry_fee_paid, queue_joined_at, status"),
-        adminClient
-            .from("worker_documents")
-            .select("document_type, status")
-            .eq("user_id", profileId),
-        adminClient
-            .from("payments")
-            .select("payment_type, status")
-            .eq("user_id", profileId),
-        adminClient.auth.admin.getUserById(profileId),
+        profileId
+            ? adminClient
+                .from("profiles")
+                .select("full_name, email")
+                .eq("id", profileId)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+        documentOwnerId
+            ? adminClient
+                .from("worker_documents")
+                .select("document_type, status")
+                .eq("user_id", documentOwnerId)
+            : Promise.resolve({ data: [] }),
+        profileId
+            ? adminClient
+                .from("payments")
+                .select("payment_type, status, metadata")
+                .or(`user_id.eq.${profileId},profile_id.eq.${profileId}`)
+            : Promise.resolve({ data: [] }),
+        workerRecord.id
+            ? adminClient
+                .from("payments")
+                .select("payment_type, status, metadata")
+                .contains("metadata", { target_worker_id: workerRecord.id })
+            : Promise.resolve({ data: [] }),
+        profileId ? adminClient.auth.admin.getUserById(profileId) : Promise.resolve({ data: { user: null } }),
     ]);
 
-    const workerRecord = workerRecordResult.data;
-
+    const payments = [...(directPayments || []), ...(targetPayments || [])];
     const completion = getWorkerCompletion({
         profile: workerProfile,
         worker: workerRecord,
         documents: documents || [],
     }, {
-        fullNameFallback: authUserPayload?.user?.user_metadata?.full_name,
+        phoneOptional: !!input.phoneOptional,
+        fullNameFallback: input.fullNameFallback || authUserPayload?.data?.user?.user_metadata?.full_name || workerRecord.submitted_full_name || null,
     }).completion;
     const hasPaidEntryFee =
         !!workerRecord?.entry_fee_paid ||
         isPostEntryFeeWorkerStatus(workerRecord?.status) ||
-        (payments || []).some((payment: any) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
+        payments.some((payment: any) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
 
     return { completion, hasPaidEntryFee };
 }
@@ -98,20 +138,98 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         adminClient = supabase;
     }
 
-    // Fetch auth user first (always exists if the user was created)
-    const { data: { user: authUser }, error: authUserError } = await adminClient.auth.admin.getUserById(id);
-    if (!authUser || authUserError) {
+    const { data: directWorkerRecord } = await adminClient
+        .from("worker_onboarding")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+    const resolvedWorkerRecord = directWorkerRecord
+        || (await loadCanonicalWorkerRecord<any>(adminClient, id, "*").then((result) => result.data));
+
+    const profileId = resolvedWorkerRecord?.profile_id || (!directWorkerRecord ? id : null);
+    const documentOwnerId = (resolvedWorkerRecord ? resolveAgencyWorkerDocumentOwnerId(resolvedWorkerRecord) : null) || profileId;
+    const notificationUserId = profileId || documentOwnerId || resolvedWorkerRecord?.id || id;
+    const isAgencyDraft = !!resolvedWorkerRecord?.agency_id && !resolvedWorkerRecord?.profile_id;
+    const isAgencyManagedCase = !!resolvedWorkerRecord?.agency_id;
+    const phoneOptional = isAgencyManagedCase;
+
+    const [
+        workerProfileResult,
+        authUserResult,
+        documentsResult,
+        directPaymentsResult,
+        targetPaymentsResult,
+        signaturesResult,
+        agencyResult,
+    ] = await Promise.all([
+        profileId
+            ? adminClient
+                .from("profiles")
+                .select("*")
+                .eq("id", profileId)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+        profileId
+            ? adminClient.auth.admin.getUserById(profileId)
+            : Promise.resolve({ data: { user: null }, error: null }),
+        documentOwnerId
+            ? adminClient
+                .from("worker_documents")
+                .select("*")
+                .eq("user_id", documentOwnerId)
+                .order("created_at", { ascending: false })
+            : Promise.resolve({ data: [] }),
+        profileId
+            ? adminClient
+                .from("payments")
+                .select("*")
+                .or(`user_id.eq.${profileId},profile_id.eq.${profileId}`)
+            : Promise.resolve({ data: [] }),
+        resolvedWorkerRecord?.id
+            ? adminClient
+                .from("payments")
+                .select("*")
+                .contains("metadata", { target_worker_id: resolvedWorkerRecord.id })
+            : Promise.resolve({ data: [] }),
+        profileId
+            ? adminClient
+                .from("signatures")
+                .select("*")
+                .eq("user_id", profileId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+            : Promise.resolve({ data: [] }),
+        resolvedWorkerRecord?.agency_id
+            ? adminClient
+                .from("agencies")
+                .select("id, profile_id, display_name, legal_name")
+                .eq("id", resolvedWorkerRecord.agency_id)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+    ]);
+
+    const workerRecord = resolvedWorkerRecord;
+    const workerProfile = workerProfileResult.data;
+    const authUser = authUserResult.data?.user || null;
+    if (!workerRecord && !authUser) {
         notFound();
     }
 
-    // Fetch worker profile (may not exist if user never completed signup)
-    const { data: workerProfile } = await adminClient
-        .from("profiles")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(adminClient, id, "*");
+    const documents = documentsResult.data || [];
+    const dedupedPayments = new Map<string, any>();
+    for (const payment of [...(directPaymentsResult.data || []), ...(targetPaymentsResult.data || [])]) {
+        if (payment?.id) {
+            dedupedPayments.set(payment.id, payment);
+        }
+    }
+    const payments = Array.from(dedupedPayments.values()).sort((a: any, b: any) => {
+        const aTime = a?.paid_at ? new Date(a.paid_at).getTime() : 0;
+        const bTime = b?.paid_at ? new Date(b.paid_at).getTime() : 0;
+        return bTime - aTime;
+    });
+    const signatures = signaturesResult.data || [];
+    const agencyRecord = agencyResult.data || null;
 
     // Fetch contract data to allow manual editing for PDF generation
     let contractData = null;
@@ -125,39 +243,14 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
     }
 
-    // Fetch documents
-    const { data: documents } = await adminClient
-        .from("worker_documents")
-        .select("*")
-        .eq("user_id", id)
-        .order("created_at", { ascending: false });
-
-    // Fetch payments
-    const { data: rawPayments } = await adminClient
-        .from("payments")
-        .select("*")
-        .eq("user_id", id);
-    const payments = [...(rawPayments || [])].sort((a: any, b: any) => {
-        const aTime = a?.paid_at ? new Date(a.paid_at).getTime() : 0;
-        const bTime = b?.paid_at ? new Date(b.paid_at).getTime() : 0;
-        return bTime - aTime;
-    });
-
-    // Fetch signatures
-    const { data: signatures } = await adminClient
-        .from("signatures")
-        .select("*")
-        .eq("user_id", id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
     // Profile completion
     const { completion: profileCompletion } = getWorkerCompletion({
         profile: workerProfile,
         worker: workerRecord,
         documents: (documents || []).map((d: any) => ({ document_type: d.document_type })),
     }, {
-        fullNameFallback: authUser.user_metadata?.full_name,
+        phoneOptional,
+        fullNameFallback: authUser?.user_metadata?.full_name || workerRecord?.submitted_full_name || null,
     });
     const verifiedDocumentsCount = (documents || []).filter((doc: any) => doc.status === "verified").length;
     const pendingDocumentsCount = (documents || []).filter((doc: any) => ["pending", "uploaded", "verifying", "manual_review"].includes(doc.status || "")).length;
@@ -165,13 +258,29 @@ export default async function WorkerDetailPage({ params }: PageProps) {
     const completedPaymentsCount = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || "")).length;
     const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
     const latestSignature = signatures?.[0] || null;
-    const displayName = workerProfile?.full_name || authUser.user_metadata?.full_name || authUser.email || "Worker";
-    const workerNameFallback = workerProfile?.full_name || authUser.user_metadata?.full_name || null;
+    const displayName = workerProfile?.full_name
+        || workerRecord?.submitted_full_name
+        || authUser?.user_metadata?.full_name
+        || authUser?.email
+        || "Worker";
+    const displayEmail = getAgencyWorkerEmail({
+        submitted_email: workerRecord?.submitted_email,
+        profiles: workerProfile ? [workerProfile] : null,
+    }) || authUser?.email || null;
+    const workerNameFallback = workerProfile?.full_name || authUser?.user_metadata?.full_name || workerRecord?.submitted_full_name || null;
     const workerStatus = workerRecord?.status || "NEW";
     const approvalState = workerRecord?.admin_approved ? "Approved" : "Pending";
-    const workspaceInspectHref = `/profile/worker?inspect=${id}`;
-    const documentsInspectHref = `/profile/worker/documents?inspect=${id}`;
-    const queueInspectHref = `/profile/worker/queue?inspect=${id}`;
+    const workspaceInspectHref = isAgencyDraft && agencyRecord?.profile_id
+        ? `/profile/agency/workers/${workerRecord?.id}?inspect=${agencyRecord.profile_id}`
+        : profileId
+            ? `/profile/worker?inspect=${profileId}`
+            : null;
+    const documentsInspectHref = isAgencyDraft && agencyRecord?.profile_id
+        ? `/profile/agency/workers/${workerRecord?.id}/documents?inspect=${agencyRecord.profile_id}`
+        : profileId
+            ? `/profile/worker/documents?inspect=${profileId}`
+            : null;
+    const queueInspectHref = profileId ? `/profile/worker/queue?inspect=${profileId}` : null;
 
     async function updateDocumentStatus(formData: FormData) {
         "use server";
@@ -197,6 +306,9 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         const adminClient = createAdminClient();
+        if (!workerRecord?.id) {
+            throw new Error("Worker record not found");
+        }
 
         const rejectReason = newStatus === "rejected"
             ? (feedback?.trim() || buildDocumentRequestReason(docType, null, null))
@@ -217,18 +329,20 @@ export default async function WorkerDetailPage({ params }: PageProps) {
 
         await syncWorkerReviewStatus({
             adminClient,
-            profileId: id,
-            documentOwnerId: id,
+            profileId,
+            workerId: workerRecord.id,
+            documentOwnerId,
+            phoneOptional,
             fullNameFallback: workerNameFallback,
             notifyOnPendingApproval: true,
         });
 
-        if ((newStatus === "verified" || newStatus === "rejected") && userEmail) {
+        if ((newStatus === "verified" || newStatus === "rejected") && userEmail && notificationUserId) {
             const approved = newStatus === "verified";
             after(async () => {
                 await queueEmail(
                     adminClient,
-                    id,
+                    notificationUserId,
                     "document_review_result",
                     userEmail,
                     userName || "there",
@@ -264,6 +378,9 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         const adminClient = createAdminClient();
+        if (!workerRecord?.id) {
+            throw new Error("Worker record not found");
+        }
 
         // Delete from storage
         if (storagePath) {
@@ -283,8 +400,10 @@ export default async function WorkerDetailPage({ params }: PageProps) {
 
         await syncWorkerReviewStatus({
             adminClient,
-            profileId: id,
-            documentOwnerId: id,
+            profileId,
+            workerId: workerRecord.id,
+            documentOwnerId,
+            phoneOptional,
             fullNameFallback: workerNameFallback,
         });
 
@@ -316,6 +435,9 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         const adminClient = createAdminClient();
+        if (!workerRecord?.id) {
+            throw new Error("Worker record not found");
+        }
 
         // Delete from storage
         if (storagePath) {
@@ -335,16 +457,18 @@ export default async function WorkerDetailPage({ params }: PageProps) {
 
         await syncWorkerReviewStatus({
             adminClient,
-            profileId: id,
-            documentOwnerId: id,
+            profileId,
+            workerId: workerRecord.id,
+            documentOwnerId,
+            phoneOptional,
             fullNameFallback: workerNameFallback,
         });
 
-        if (userEmail) {
+        if (userEmail && notificationUserId) {
             after(async () => {
                 await queueEmail(
                     adminClient,
-                    id,
+                    notificationUserId,
                     "document_review_result",
                     userEmail,
                     userName || "there",
@@ -379,7 +503,16 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         const adminClient = createAdminClient();
-        const { completion } = await getWorkerAdminGuardState(adminClient, id);
+        if (!workerRecord?.id) {
+            throw new Error("Worker record not found");
+        }
+        const { completion } = await getWorkerAdminGuardState(adminClient, {
+            workerId: workerRecord.id,
+            profileId,
+            documentOwnerId,
+            phoneOptional,
+            fullNameFallback: workerNameFallback,
+        });
 
         if (action === "approve" && completion < 100) {
             throw new Error("Worker profile must be 100% complete before approval.");
@@ -396,7 +529,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                     status: 'APPROVED',
                     updated_at: new Date().toISOString()
                 })
-                .eq("profile_id", id);
+                .eq("id", workerRecord.id);
         } else {
             await adminClient
                 .from("worker_onboarding")
@@ -407,7 +540,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                     status: completion >= 100 ? 'PENDING_APPROVAL' : 'NEW',
                     updated_at: new Date().toISOString()
                 })
-                .eq("profile_id", id);
+                .eq("id", workerRecord.id);
         }
 
         revalidatePath(`/admin/workers/${id}`);
@@ -433,7 +566,16 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         const adminClient = createAdminClient();
-        const { completion, hasPaidEntryFee } = await getWorkerAdminGuardState(adminClient, id);
+        if (!workerRecord?.id) {
+            throw new Error("Worker record not found");
+        }
+        const { completion, hasPaidEntryFee } = await getWorkerAdminGuardState(adminClient, {
+            workerId: workerRecord.id,
+            profileId,
+            documentOwnerId,
+            phoneOptional,
+            fullNameFallback: workerNameFallback,
+        });
 
         if ((newStatus === "PENDING_APPROVAL" || newStatus === "APPROVED") && completion < 100) {
             throw new Error("Worker profile must be 100% complete before entering admin review or approval.");
@@ -449,13 +591,13 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                 status: newStatus,
                 updated_at: new Date().toISOString()
             })
-            .eq("profile_id", id);
+            .eq("id", workerRecord.id);
 
         // Send email notification
-        if (userEmail) {
+        if (userEmail && notificationUserId) {
             await queueEmail(
                 adminClient,
-                id,
+                notificationUserId,
                 "admin_update",
                 userEmail,
                 "User",
@@ -505,27 +647,33 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                         <ArrowLeft size={16} />
                         Back to workers
                     </Link>
-                    <Link
-                        href={workspaceInspectHref}
-                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                    >
-                        <ExternalLink size={16} />
-                        Inspect workspace
-                    </Link>
-                    <Link
-                        href={documentsInspectHref}
-                        className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                    >
-                        <ExternalLink size={16} />
-                        Inspect documents
-                    </Link>
-                    <Link
-                        href={queueInspectHref}
-                        className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
-                    >
-                        <ListOrdered size={16} />
-                        Inspect queue
-                    </Link>
+                    {workspaceInspectHref ? (
+                        <Link
+                            href={workspaceInspectHref}
+                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                        >
+                            <ExternalLink size={16} />
+                            Inspect workspace
+                        </Link>
+                    ) : null}
+                    {documentsInspectHref ? (
+                        <Link
+                            href={documentsInspectHref}
+                            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                        >
+                            <ExternalLink size={16} />
+                            Inspect documents
+                        </Link>
+                    ) : null}
+                    {queueInspectHref ? (
+                        <Link
+                            href={queueInspectHref}
+                            className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
+                        >
+                            <ListOrdered size={16} />
+                            Inspect queue
+                        </Link>
+                    ) : null}
                 </div>
 
                 <AdminSectionHero
@@ -534,7 +682,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                     description="Admin case view for approvals, documents, payments, and matching. Use the inspect links above when you want the real worker workspace instead of the admin control surface."
                     metrics={[
                         { label: "Status", value: toDisplayLabel(workerStatus), meta: approvalState },
-                        { label: "Completion", value: `${profileCompletion}%`, meta: workerProfile?.email || authUser.email || "No email" },
+                        { label: "Completion", value: `${profileCompletion}%`, meta: displayEmail || "No email" },
                         { label: "Docs", value: `${verifiedDocumentsCount}/3`, meta: pendingDocumentsCount > 0 ? `${pendingDocumentsCount} pending` : "No pending review" },
                         { label: "Paid", value: completedPaymentsCount, meta: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} pending` : "No pending payments" },
                     ]}
@@ -565,7 +713,10 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                 <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.6fr)]">
                     <div className="space-y-6">
                         {!workerProfile ? (
-                            <OpsNotice copy="This user has not completed the worker profile yet. Only auth metadata and any existing document or payment records are available." />
+                            <OpsNotice copy={isAgencyDraft
+                                ? `This is an agency-managed draft worker from ${agencyRecord?.display_name || agencyRecord?.legal_name || "an agency"}. The real case data lives in the draft worker record, while document ownership stays on the hidden internal document-owner profile.`
+                                : "This user has not completed the worker profile yet. Only auth metadata and any existing document or payment records are available."}
+                            />
                         ) : null}
 
                         <OpsPanelCard
@@ -605,8 +756,14 @@ export default async function WorkerDetailPage({ params }: PageProps) {
 
                             <div className="mt-5 space-y-4">
                                 <FieldGroup title="Basic info" description="Identity and contact data used across notifications and case handling.">
-                                    <InfoRow label="Full Name" value={workerProfile?.full_name || authUser.user_metadata?.full_name} />
-                                    <InfoRow label="Email" value={workerProfile?.email || authUser.email} />
+                                    <InfoRow label="Full Name" value={displayName} />
+                                    <InfoRow label="Email" value={displayEmail} />
+                                    <InfoRow
+                                        label="Source"
+                                        value={isAgencyManagedCase
+                                            ? `${isAgencyDraft ? "Agency draft" : "Agency worker"} · ${agencyRecord?.display_name || agencyRecord?.legal_name || "Unknown agency"}`
+                                            : "Self signup"}
+                                    />
                                     <InfoRow label="Phone" value={workerRecord?.phone} />
                                     <InfoRow label="Gender" value={workerRecord?.gender} />
                                 </FieldGroup>
@@ -745,7 +902,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                         </div>
 
                                         <form action={updateWorkerStatus} className="mt-4 space-y-4">
-                                            <input type="hidden" name="user_email" value={workerProfile?.email || authUser.email || ""} />
+                                            <input type="hidden" name="user_email" value={displayEmail || ""} />
                                             <div>
                                                 <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                     Update status
@@ -864,7 +1021,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                             </div>
                         </OpsPanelCard>
 
-                        <DocumentPreview profileId={id} />
+                        {profileId ? <DocumentPreview profileId={profileId} /> : null}
 
                         <OpsPanelCard
                             eyebrow="Signature"
@@ -894,10 +1051,12 @@ export default async function WorkerDetailPage({ params }: PageProps) {
 
                         {workerRecord ? <ManualMatchButton workerRecordId={workerRecord.id} /> : null}
 
-                        <SingleWorkerDownload
-                            profileId={id}
-                            workerName={workerProfile?.full_name || authUser.user_metadata?.full_name || "Worker"}
-                        />
+                        {profileId ? (
+                            <SingleWorkerDownload
+                                profileId={profileId}
+                                workerName={displayName}
+                            />
+                        ) : null}
                     </div>
 
                     <div className="space-y-6">
@@ -979,7 +1138,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                     <form action={updateDocumentStatus} className="rounded-[22px] border border-[#e6e6e1] bg-[#faf8f3] p-4">
                                                         <input type="hidden" name="doc_id" value={doc.id} />
                                                         <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                        <input type="hidden" name="user_email" value={workerProfile?.email || authUser.email || ""} />
+                                                        <input type="hidden" name="user_email" value={displayEmail || ""} />
                                                         <input type="hidden" name="user_name" value={displayName} />
                                                         <div className="mb-4">
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
@@ -1033,7 +1192,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                                 <input type="hidden" name="doc_id" value={doc.id} />
                                                                 <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
                                                                 <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                                <input type="hidden" name="user_email" value={workerProfile?.email || authUser.email || ""} />
+                                                                <input type="hidden" name="user_email" value={displayEmail || ""} />
                                                                 <input type="hidden" name="user_name" value={displayName} />
                                                                 <p className="text-xs leading-relaxed text-orange-900">
                                                                     This deletes the current file and emails the worker with a request to upload a new version.
