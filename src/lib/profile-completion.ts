@@ -62,6 +62,7 @@ export interface ProfileCompletionResult {
 
 interface WorkerCompletionOptions {
     phoneOptional?: boolean;
+    fullNameFallback?: string | null;
 }
 
 interface WorkerSpouseData {
@@ -83,6 +84,7 @@ interface WorkerData {
         nationality?: string | null;
         current_country?: string | null;
         preferred_job?: string | null;
+        submitted_full_name?: string | null;
         gender?: string | null;
         date_of_birth?: string | null;
         birth_country?: string | null;
@@ -130,6 +132,10 @@ export function getWorkerCompletion(data: WorkerData, options: WorkerCompletionO
     const { profile, documents } = data;
     const worker = data.worker ?? null;
     const docTypes = (documents || []).map(d => d.document_type);
+    const resolvedFullName = profile?.full_name?.trim()
+        || options.fullNameFallback?.trim()
+        || worker?.submitted_full_name?.trim()
+        || null;
     const familyData = worker?.family_data && typeof worker.family_data === "object" && !Array.isArray(worker.family_data)
         ? worker.family_data as WorkerFamilyData
         : null;
@@ -138,7 +144,7 @@ export function getWorkerCompletion(data: WorkerData, options: WorkerCompletionO
     const BOOLEAN_ANSWER_FIELDS = new Set(['lives_abroad', 'previous_visas']);
 
     const fields: Record<string, unknown> = {
-        full_name: profile?.full_name,
+        full_name: resolvedFullName,
         nationality: worker?.nationality,
         current_country: worker?.current_country,
         preferred_job: worker?.preferred_job,
@@ -173,10 +179,10 @@ export function getWorkerCompletion(data: WorkerData, options: WorkerCompletionO
     // For boolean answer fields, `false` counts as filled (user answered "No")
     // For everything else, use truthiness (so passport_doc: false = not uploaded)
     const isFieldFilled = (key: string, value: unknown): boolean => {
+        if (typeof value === "string") {
+            return value.trim().length > 0;
+        }
         if (BOOLEAN_ANSWER_FIELDS.has(key)) {
-            if (typeof value === "string") {
-                return value.trim().length > 0;
-            }
             return value !== null && value !== undefined;
         }
         return !!value;
@@ -232,7 +238,7 @@ export function getEmployerCompletion(data: EmployerData): ProfileCompletionResu
     const completion = Math.round((completedFields / totalFields) * 100);
 
     const missingFields = Object.entries(fields)
-        .filter(([_, v]) => v === null || v === undefined || v === '')
+        .filter((entry) => entry[1] === null || entry[1] === undefined || entry[1] === '')
         .map(([k]) => EMPLOYER_FIELD_LABELS[k] || k);
 
     return { completion, missingFields, totalFields, completedFields };
@@ -252,7 +258,7 @@ export function getAgencyCompletion(data: AgencyData): ProfileCompletionResult {
     const completion = Math.round((completedFields / totalFields) * 100);
 
     const missingFields = Object.entries(fields)
-        .filter(([_, v]) => v === null || v === undefined || v === '')
+        .filter((entry) => entry[1] === null || entry[1] === undefined || entry[1] === '')
         .map(([k]) => AGENCY_FIELD_LABELS[k] || k);
 
     return { completion, missingFields, totalFields, completedFields };

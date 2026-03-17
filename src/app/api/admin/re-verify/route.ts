@@ -51,8 +51,9 @@ export async function POST(request: NextRequest) {
             .from("worker_documents")
             .update({
                 status: "verifying",
-                verification_result: null,
-                admin_notes: "Re-verification triggered by admin",
+                ocr_json: null,
+                reject_reason: null,
+                verified_at: null,
                 updated_at: new Date().toISOString(),
             })
             .eq("id", documentId);
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
                 .from("worker_documents")
                 .update({
                     status: "pending",
-                    admin_notes: `Re-verification failed: ${verifyData.error || "Unknown error"}`,
+                    reject_reason: `Re-verification failed: ${verifyData.error || "Unknown error"}`,
                     updated_at: new Date().toISOString(),
                 })
                 .eq("id", documentId);
@@ -114,8 +115,9 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({
-            success: true,
-            message: "Re-verification triggered successfully",
+            success: verifyData.success !== false,
+            status: verifyData.status || (verifyData.success === false ? "rejected" : "verified"),
+            message: verifyData.message || "Re-verification complete",
             result: verifyData,
         });
 

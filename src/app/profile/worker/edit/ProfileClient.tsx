@@ -538,13 +538,15 @@ export default function ProfilePage({
                     }
                 }
 
-                // Sync phone to Supabase Auth so it appears in Auth dashboard
+                // Keep Auth metadata aligned with the profile row so any metadata fallbacks
+                // never disagree with the canonical worker profile.
                 const cleanPhone = formData.phone ? formData.phone.replace(/[\s\-()]/g, '') : null;
-                if (cleanPhone) {
-                    await supabase.auth.updateUser({
-                        data: { phone: cleanPhone }
-                    });
-                }
+                await supabase.auth.updateUser({
+                    data: {
+                        full_name,
+                        ...(cleanPhone ? { phone: cleanPhone } : {}),
+                    }
+                });
             }
 
             logActivity("profile_saved", "profile", { is_new: !workerRecord, fields_filled: Object.keys(workerRecordUpdates).filter(k => (workerRecordUpdates as Record<string, unknown>)[k] != null).length });

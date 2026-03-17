@@ -51,6 +51,8 @@ export async function POST() {
             profile,
             worker: workerRecord,
             documents: documents || [],
+        }, {
+            fullNameFallback: user.user_metadata?.full_name,
         });
         const targetStatus = getPendingApprovalTargetStatus({
             completion,

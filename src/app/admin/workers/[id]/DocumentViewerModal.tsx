@@ -2,21 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { X, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
-import Image from "next/image";
 
 interface DocumentViewerModalProps {
     url: string;
     documentType: string;
     status: string;
+    isPdf: boolean;
     children: React.ReactNode;
 }
 
-export default function DocumentViewerModal({ url, documentType, status, children }: DocumentViewerModalProps) {
+export default function DocumentViewerModal({ url, documentType, status, isPdf, children }: DocumentViewerModalProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
-
-    const isPdf = url.toLowerCase().includes('.pdf');
 
     // Prevent scrolling on body when modal is open
     useEffect(() => {

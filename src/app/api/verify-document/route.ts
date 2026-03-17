@@ -12,6 +12,7 @@ import { getWorkerCompletion } from "@/lib/profile-completion";
 import { getPendingApprovalTargetStatus } from "@/lib/worker-review";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import { buildDocumentRequestReason } from "@/lib/document-review";
 import {
     AGENCY_DRAFT_DOCUMENT_OWNER_KEY,
     resolveAgencyWorkerDocumentOwnerId,
@@ -272,8 +273,13 @@ export async function POST(request: Request) {
                         ocrJson = {
                             ...result.data,
                             confidence: result.confidence,
-                            extracted_at: new Date().toISOString()
+                            extracted_at: new Date().toISOString(),
+                            ...(result.documentKind ? { document_kind: result.documentKind } : {}),
+                            ...(result.summary ? { summary: result.summary } : {}),
+                            ...(result.workerGuidance ? { worker_guidance: result.workerGuidance } : {}),
+                            ...(result.issues.length > 0 ? { issues: result.issues } : {}),
                         };
+                        qualityIssues = result.issues;
 
                         // Check passport expiry
                         if (result.data.expiry_date) {
@@ -337,16 +343,15 @@ export async function POST(request: Request) {
                         }
                     } else {
                         status = 'rejected';
-                        // Provide helpful guidance instead of raw error
-                        const issues = result.issues || [];
-                        if (issues.some((i: string) => i.toLowerCase().includes('not a passport'))) {
-                            rejectReason = "This doesn't appear to be a passport photo page. Please upload a clear photo of the page with your name, photo, and passport number.";
-                        } else if (issues.some((i: string) => i.toLowerCase().includes('blurry') || i.toLowerCase().includes('unclear'))) {
-                            rejectReason = "The image is too blurry. Please take a clear, well-lit photo of your passport flat on a surface.";
-                        } else {
-                            rejectReason = "We couldn't read your passport. Tips: place it flat on a surface, ensure good lighting, and capture the full page with your photo and details.";
-                        }
-                        ocrJson = { issues: result.issues, confidence: result.confidence };
+                        qualityIssues = result.issues || [];
+                        ocrJson = {
+                            issues: result.issues,
+                            confidence: result.confidence,
+                            ...(result.documentKind ? { document_kind: result.documentKind } : {}),
+                            ...(result.summary ? { summary: result.summary } : {}),
+                            ...(result.workerGuidance ? { worker_guidance: result.workerGuidance } : {}),
+                        };
+                        rejectReason = buildDocumentRequestReason("passport", ocrJson);
                     }
                     break;
                 }
@@ -375,7 +380,11 @@ export async function POST(request: Request) {
                             rejectReason = "Photo doesn't meet requirements. Please take a clear front-facing photo with good lighting and a plain background.";
                         }
                         qualityIssues = issues;
-                        ocrJson = { issues: result.qualityIssues, confidence: result.confidence };
+                        ocrJson = {
+                            issues: result.qualityIssues,
+                            confidence: result.confidence,
+                            worker_guidance: rejectReason,
+                        };
                     }
                     break;
                 }
@@ -397,7 +406,12 @@ export async function POST(request: Request) {
                             ? "This does not appear to be a school diploma. Please upload your high school or university diploma."
                             : result.qualityIssues?.join(", ") || "Could not verify diploma";
                         qualityIssues = result.qualityIssues || [];
-                        ocrJson = { issues: result.qualityIssues, confidence: result.confidence };
+                        ocrJson = {
+                            issues: result.qualityIssues,
+                            confidence: result.confidence,
+                            ...(result.extractedData ? result.extractedData : {}),
+                            worker_guidance: rejectReason,
+                        };
                     }
                     break;
                 }

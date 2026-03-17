@@ -30,6 +30,9 @@ export interface VerificationResult {
     confidence: number;
     issues: string[];
     rawResponse?: string;
+    documentKind?: string;
+    summary?: string;
+    workerGuidance?: string;
 }
 
 export interface DocumentQualityResult {
@@ -220,13 +223,21 @@ export async function callDocumentText(prompt: string): Promise<string> {
 
 export async function extractPassportData(imageUrl: string): Promise<VerificationResult> {
     try {
-        const prompt = `You are a passport document analyzer. Extract information from this passport image.
-Be VERY LENIENT — accept photos even if slightly blurry, dark, or taken at an angle.
-Only set readable to false if the image is clearly NOT a passport at all (e.g., a selfie, a random document, a blank page).
-If the image shows ANY passport-like document, set readable to true and try your best to extract data.
+        const prompt = `You are a passport identity-page analyzer.
+Your job is to decide whether this upload shows the INSIDE passport biodata / identity page.
 
-Return a JSON object with EXACTLY these fields (use null if not readable):
+Be tolerant about quality problems like blur, glare, shadows, or angle.
+But be STRICT about document type:
+- A closed passport cover is NOT valid
+- A random inside visa/stamp page is NOT valid
+- Another document type is NOT valid
+- The upload is only valid if the passport identity page is visible, with the holder photo and personal details area
+
+Return a JSON object with EXACTLY these fields:
 {
+  "document_kind": "passport_data_page | passport_cover | passport_other_page | non_passport | unclear",
+  "summary": "short admin-facing summary of what is visible",
+  "worker_guidance": "short direct instruction telling the worker what to upload next",
   "full_name": "SURNAME GIVEN_NAMES",
   "passport_number": "ABC123456",
   "nationality": "COUNTRY",
@@ -236,23 +247,41 @@ Return a JSON object with EXACTLY these fields (use null if not readable):
   "issuing_authority": "ISSUING AUTHORITY NAME",
   "gender": "M or F",
   "place_of_birth": "CITY",
-  "readable": true/false,
-  "confidence": 0.0-1.0,
-  "issues": ["list of problems if any"]
+  "readable": true,
+  "confidence": 0.0,
+  "issues": ["passport_cover_only | passport_other_page | non_passport | blurry | glare | cropped | unreadable_fields"]
 }
 
-IMPORTANT: Be generous. If it looks like a passport, accept it. We will manually verify later.
+Rules:
+- Set document_kind to "passport_cover" when the upload shows the front/back cover or a closed passport booklet
+- Set document_kind to "passport_other_page" when it is a passport page but NOT the biodata page
+- Set document_kind to "non_passport" when it is clearly some other document or photo
+- Set readable=true ONLY when the biodata page is visible and the main identity details can be read
+- If the biodata page is present but some fields are hard to read, keep document_kind="passport_data_page", set readable=true, and list the quality issues
+- If you cannot confidently tell what the upload is, set document_kind="unclear", readable=false
+
 Return ONLY the JSON object, no other text.`;
 
         const content = await callDocumentVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
+        const issues = Array.isArray(parsed.issues)
+            ? parsed.issues.filter((issue: unknown): issue is string => typeof issue === "string" && issue.trim().length > 0)
+            : [];
+        const documentKind = typeof parsed.document_kind === "string" ? parsed.document_kind.trim() : "";
+        const summary = typeof parsed.summary === "string" ? parsed.summary.trim() : "";
+        const workerGuidance = typeof parsed.worker_guidance === "string" ? parsed.worker_guidance.trim() : "";
+        const looksLikeDataPage = documentKind === "passport_data_page"
+            || (!!parsed.readable && typeof parsed.passport_number === "string" && typeof parsed.full_name === "string");
 
-        if (!parsed.readable) {
+        if (!parsed.readable || !looksLikeDataPage) {
             return {
                 success: false,
                 confidence: parsed.confidence || 0,
-                issues: parsed.issues || ["Document not readable"],
+                issues: issues.length > 0 ? issues : ["Document not readable"],
                 rawResponse: content,
+                documentKind,
+                summary,
+                workerGuidance,
             };
         }
 
@@ -270,8 +299,11 @@ Return ONLY the JSON object, no other text.`;
                 issuing_authority: parsed.issuing_authority,
             },
             confidence: parsed.confidence || 0.8,
-            issues: parsed.issues || [],
+            issues,
             rawResponse: content,
+            documentKind,
+            summary,
+            workerGuidance,
         };
     } catch (error) {
         console.error("Passport extraction error:", error);

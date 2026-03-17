@@ -268,6 +268,8 @@ export default async function QueuePage({
         profile,
         worker: workerRecord,
         documents: documents || [],
+    }, {
+        fullNameFallback: profile?.full_name || user.user_metadata?.full_name || null,
     });
     const entryFeeUnlockState = getEntryFeeUnlockState({
         entry_fee_paid: workerRecord?.entry_fee_paid,

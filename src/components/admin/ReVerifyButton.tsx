@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function ReVerifyButton({ documentId }: { documentId: string }) {
     const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+    const [result, setResult] = useState<{ type: "success" | "warning" | "error"; msg: string } | null>(null);
+    const router = useRouter();
 
     const handleReVerify = async () => {
         if (loading) return;
@@ -23,7 +25,16 @@ export default function ReVerifyButton({ documentId }: { documentId: string }) {
             if (!res.ok) {
                 setResult({ type: "error", msg: data.error || "Verification failed" });
             } else {
-                setResult({ type: "success", msg: "Re-verification complete! Refresh to see results." });
+                const resultType = data.success === false
+                    ? data.status === "manual_review"
+                        ? "warning"
+                        : "error"
+                    : "success";
+                setResult({
+                    type: resultType,
+                    msg: data.message || "Re-verification complete.",
+                });
+                router.refresh();
             }
         } catch {
             setResult({ type: "error", msg: "Network error" });
@@ -42,7 +53,11 @@ export default function ReVerifyButton({ documentId }: { documentId: string }) {
                 {loading ? "Re-verifying..." : "Run AI re-verification"}
             </button>
             {result && (
-                <span className={`text-[11px] font-medium ${result.type === "success" ? "text-emerald-600" : "text-red-600"
+                <span className={`text-[11px] font-medium ${result.type === "success"
+                    ? "text-emerald-600"
+                    : result.type === "warning"
+                        ? "text-amber-600"
+                        : "text-red-600"
                     }`}>
                     {result.msg}
                 </span>
