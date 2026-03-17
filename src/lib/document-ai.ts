@@ -43,6 +43,25 @@ export interface DocumentQualityResult {
     extractedData?: Record<string, string>;
 }
 
+export interface DocumentVisionImagePayload {
+    data: string;
+    mimeType: string;
+}
+
+export interface DocumentOrientationResult {
+    rotationDegrees: 0 | 90 | 180 | 270;
+    confidence: number;
+    summary?: string;
+}
+
+export interface DocumentOrientationOcrPatchOptions {
+    detectedRotationDegrees: 0 | 90 | 180 | 270;
+    appliedRotationDegrees: 0 | 90 | 180 | 270;
+    confidence?: number | null;
+    summary?: string | null;
+    cropApplied?: boolean;
+}
+
 // Helper: fetch image as base64 for document AI providers
 export async function fetchImageAsBase64(imageUrl: string): Promise<{ data: string; mimeType: string }> {
     const response = await fetch(imageUrl);
@@ -50,6 +69,14 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<{ data: stri
     const base64 = Buffer.from(buffer).toString("base64");
     const contentType = response.headers.get("content-type") || "image/jpeg";
     return { data: base64, mimeType: contentType };
+}
+
+async function resolveDocumentVisionInput(input: string | DocumentVisionImagePayload): Promise<DocumentVisionImagePayload> {
+    if (typeof input === "string") {
+        return fetchImageAsBase64(input);
+    }
+
+    return input;
 }
 
 type AIProviderModel = {
@@ -83,6 +110,27 @@ export class AIInfraError extends Error {
 
 function cleanModelJson(text: string): string {
     return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+}
+
+export function normalizeQuarterTurnRotation(value: unknown): 0 | 90 | 180 | 270 {
+    return value === 90 || value === 180 || value === 270 ? value : 0;
+}
+
+export function buildDocumentOrientationOcrPatch({
+    detectedRotationDegrees,
+    appliedRotationDegrees,
+    confidence,
+    summary,
+    cropApplied,
+}: DocumentOrientationOcrPatchOptions): Record<string, unknown> {
+    return {
+        orientation_processed_at: new Date().toISOString(),
+        detected_rotation_to_upright_degrees: detectedRotationDegrees,
+        auto_rotation_applied_degrees: appliedRotationDegrees,
+        orientation_detection_confidence: typeof confidence === "number" ? confidence : null,
+        ...(summary ? { orientation_summary: summary } : {}),
+        ...(cropApplied ? { auto_crop_applied: true } : {}),
+    };
 }
 
 async function callOpenAIVision(
@@ -171,8 +219,8 @@ async function callGeminiText(prompt: string, modelName: string): Promise<string
 }
 
 // Helper: call document vision model with provider fallback chain
-async function callDocumentVision(imageUrl: string, prompt: string): Promise<string> {
-    const image = await fetchImageAsBase64(imageUrl);
+async function callDocumentVision(input: string | DocumentVisionImagePayload, prompt: string): Promise<string> {
+    const image = await resolveDocumentVisionInput(input);
     const errors: string[] = [];
 
     for (const providerModel of VISION_CHAIN) {
@@ -181,8 +229,8 @@ async function callDocumentVision(imageUrl: string, prompt: string): Promise<str
                 return await callOpenAIVision(image, prompt, providerModel.model);
             }
             return await callGeminiVision(image, prompt, providerModel.model);
-        } catch (err: any) {
-            const msg = err?.message || String(err);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
             const label = `${providerModel.provider}:${providerModel.model}`;
             console.warn(`[Document AI] ${label} failed: ${msg.substring(0, 200)}`);
             errors.push(`${label}: ${msg.substring(0, 100)}`);
@@ -206,8 +254,8 @@ export async function callDocumentText(prompt: string): Promise<string> {
                 return await callOpenAIText(prompt, providerModel.model);
             }
             return await callGeminiText(prompt, providerModel.model);
-        } catch (err: any) {
-            const msg = err?.message || String(err);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
             const label = `${providerModel.provider}:${providerModel.model}`;
             console.warn(`[Document AI Text] ${label} failed: ${msg.substring(0, 200)}`);
             errors.push(`${label}: ${msg.substring(0, 100)}`);
@@ -462,7 +510,54 @@ Return ONLY the JSON object, no other text.`;
  * Returns crop coordinates as percentages (0-100) and rotation angle.
  * Used when a user photographs a document on a table — we crop and rotate to just the document.
  */
-export async function detectDocumentBounds(imageUrl: string, docType: string): Promise<{
+export async function detectDocumentOrientation(input: string | DocumentVisionImagePayload, docType: string): Promise<DocumentOrientationResult> {
+    try {
+        const docLabel = docType === 'passport'
+            ? 'passport identity page'
+            : docType === 'diploma'
+                ? 'diploma or certificate'
+                : docType === 'biometric_photo'
+                    ? 'portrait photo'
+                    : 'document';
+
+        const prompt = `You are an image orientation detector.
+Look at the main text and visual layout of this ${docLabel}.
+
+Return JSON:
+{
+  "rotation_degrees_to_upright": 0,
+  "confidence": 0.0,
+  "summary": "short note about current orientation"
+}
+
+Rules:
+- rotation_degrees_to_upright is the CLOCKWISE rotation that should be applied to the image so a human can read it upright
+- Allowed values: 0, 90, 180, 270
+- If the document is upside down, return 180
+- If the top of the text currently points to the left side of the screen, return 90
+- If the top of the text currently points to the right side of the screen, return 270
+- If it is already upright, return 0
+- If uncertain, pick the most likely value and lower confidence
+
+Return ONLY the JSON object.`;
+
+        const content = await callDocumentVision(input, prompt);
+        const parsed = JSON.parse(content);
+        return {
+            rotationDegrees: normalizeQuarterTurnRotation(parsed.rotation_degrees_to_upright ?? parsed.rotation_degrees),
+            confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
+            summary: typeof parsed.summary === "string" ? parsed.summary.trim() : undefined,
+        };
+    } catch (error) {
+        console.error("Document orientation detection error:", error);
+        return {
+            rotationDegrees: 0,
+            confidence: 0,
+        };
+    }
+}
+
+export async function detectDocumentBounds(input: string | DocumentVisionImagePayload, docType: string): Promise<{
     found: boolean;
     crop?: { x: number; y: number; width: number; height: number };
     rotationDegrees?: number;
@@ -480,7 +575,7 @@ The document may also be ROTATED — text might be sideways or upside down.
 Return JSON:
 {
   "document_found": true/false,
-  "rotation_degrees": 0,
+  "rotation_degrees_to_upright": 0,
   "crop_x_percent": 0-100,
   "crop_y_percent": 0-100,
   "crop_width_percent": 0-100,
@@ -488,12 +583,12 @@ Return JSON:
   "needs_cropping": true/false
 }
 
-Rules for rotation_degrees:
-- Look at the TEXT orientation in the document
-- 0 = text is upright (normal reading position)
-- 90 = text is rotated 90° clockwise (reader must tilt head left to read)
-- 180 = text is upside down
-- 270 = text is rotated 90° counter-clockwise (reader must tilt head right to read)
+Rules for rotation_degrees_to_upright:
+- Return the CLOCKWISE rotation that should be applied so the document becomes upright for reading
+- 0 = already upright
+- 90 = rotate the image 90° clockwise to make it upright
+- 180 = rotate the image 180° to make it upright
+- 270 = rotate the image 270° clockwise to make it upright
 - ONLY use values: 0, 90, 180, or 270
 
 Rules for cropping:
@@ -502,12 +597,11 @@ Rules for cropping:
 - Add 2% padding around the document edges for safety
 - Return ONLY the JSON object, no other text.`;
 
-        const content = await callDocumentVision(imageUrl, prompt);
+        const content = await callDocumentVision(input, prompt);
         const parsed = JSON.parse(content);
 
         // Normalize rotation to 0/90/180/270
-        const rawRotation = parsed.rotation_degrees || 0;
-        const rotationDegrees = [0, 90, 180, 270].includes(rawRotation) ? rawRotation : 0;
+        const rotationDegrees = normalizeQuarterTurnRotation(parsed.rotation_degrees_to_upright ?? parsed.rotation_degrees);
 
         if (!parsed.document_found) {
             return { found: false };
