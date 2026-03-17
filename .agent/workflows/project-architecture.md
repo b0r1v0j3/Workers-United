@@ -22,7 +22,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
 | AI (Chatbot) | **GPT-5 mini** | WhatsApp AI now uses a small intent router + response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, canonical `workerRecord` runtime naming, and simpler role-safe worker/employer behavior |
-| AI (Brain) | **GPT-5 mini** | Daily Brain Monitor snapshots + exception reports default to `BRAIN_DAILY_MODEL`; every run is stored, email only sends on exception, and `/api/brain/improve` now writes only low-risk conversation learnings instead of new business facts |
+| AI (Brain) | **GPT-5 mini** | Daily Brain Monitor snapshots + exception reports default to `BRAIN_DAILY_MODEL`; every run is stored, AI output is normalized through `src/lib/brain-monitor.ts`, failure runs are saved to `brain_reports` instead of blasting raw failure emails, and `/api/brain/improve` writes only low-risk conversation learnings instead of new business facts |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
@@ -350,10 +350,12 @@ User (Browser)
 | `src/lib/workers.ts` | Canonical worker helper layer; use `loadCanonicalWorkerRecord()` / `pickCanonicalWorkerRecord()` instead of raw `.single()` / `.maybeSingle()` on `worker_onboarding`/`workers`, plus shared phone normalization and storage filename sanitization |
 | `src/lib/agencies.ts` | Agency provisioning + ownership helper; schema guard, claim-link context, claim linking, and agency-owned worker resolution over `worker_onboarding` / physical `workers` |
 | `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: GPT-5 mini intent router + response generator, shorter history windows, canonical `workerRecord` snapshot context, shared facts/rules from `src/lib/whatsapp-brain.ts`, explicit WhatsApp onboarding only when the user actually asks for profile completion over WhatsApp, and single-response media fallback that avoids pretending WhatsApp attachments already update worker profiles |
+| `src/app/api/brain/collect/route.ts` | Brain data collector; aggregates funnel, payment telemetry, auth drift, recent user activity, recent WhatsApp conversations, and canonical `whatsappTemplateHealth` + failed-template samples so the daily Brain sees real ops signals instead of only top-level counts |
 | `src/app/api/brain/improve/route.ts` | Daily low-risk conversation improver; analyzes DB/conversation/error summaries but may only persist safe `common_question / error_fix / copy_rule` learnings after `filterSafeBrainLearnings()` rejects numbers, pricing, country claims, document/legal facts, and URLs |
 | `src/app/api/brain/act/route.ts` | Brain action executor; now accepts canonical `update_worker_status` while still honoring legacy `update_candidate_status` during the transition |
-| `src/app/api/cron/brain-monitor/route.ts` | Daily Brain v2: GPT-5 mini daily analysis, snapshot persistence to `brain_reports`, exception-only email delivery, retry-email as the only auto-executed action |
+| `src/app/api/cron/brain-monitor/route.ts` | Daily Brain v2: GPT-5 mini daily analysis, shared AI-output normalization via `src/lib/brain-monitor.ts`, snapshot persistence to `brain_reports`, exception-only email delivery, failure snapshot save on crash, and retry-email as the only auto-executed action |
 | `src/app/api/brain/report/route.ts` | Brain report storage/read API; default model now follows `BRAIN_DAILY_MODEL` |
+| `src/lib/brain-monitor.ts` | Shared Brain parsing/normalization helpers; unwraps Responses API JSON, applies safe defaults for partial issue/action/operation payloads, and keeps exception reasoning stable even when the AI omits fields |
 | `src/lib/notifications.ts` | Email notification dispatch helpers |
 | `src/lib/docx-generator.ts` | DOCX generation from templates (docxtemplater + pizzip) |
 | `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging; failed sends now persist `error_message` into `whatsapp_messages` so delivery issues are debuggable |
