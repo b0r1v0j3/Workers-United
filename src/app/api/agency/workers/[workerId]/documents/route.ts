@@ -13,7 +13,7 @@ import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from "@/lib/constants";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { checkRateLimit, standardLimiter } from "@/lib/rate-limit";
 import { sanitizeStorageFileName } from "@/lib/workers";
-import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import { getWorkerDocumentProgress, WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import {
     ensureAgencyDraftDocumentOwner,
     resolveAgencyWorkerDocumentOwnerId,
@@ -43,12 +43,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
             }
 
             const documents = await getAdminTestAgencyWorkerDocuments(admin, adminTestSession.activePersona.id, workerId);
+            const documentProgress = getWorkerDocumentProgress(documents || []);
 
             return NextResponse.json({
                 worker: {
                     workerId,
                     profileId: null,
-                    verifiedDocuments: (documents || []).filter((document) => document.status === "verified").length,
+                    verifiedDocuments: documentProgress.verifiedCount,
                     documents: documents || [],
                 },
                 sandbox: true,
@@ -99,12 +100,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
             console.error("[AgencyWorkerDocuments GET] Document fetch failed:", documentsError);
             return NextResponse.json({ error: "Failed to load worker documents" }, { status: 500 });
         }
+        const documentProgress = getWorkerDocumentProgress(documents || []);
 
         return NextResponse.json({
             worker: {
                 workerId: worker.id,
                 profileId: worker.profile_id || null,
-                verifiedDocuments: (documents || []).filter((document) => document.status === "verified").length,
+                verifiedDocuments: documentProgress.verifiedCount,
                 documents: documents || [],
             },
         });

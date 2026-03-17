@@ -9,6 +9,7 @@ import { getAdminTestAgencyWorker, getAdminTestAgencyWorkerDocuments } from "@/l
 import { getAgencyOwnedWorker, getAgencySchemaState, getAgencyWorkerEmail, getAgencyWorkerName, isAgencyWorkerClaimed } from "@/lib/agencies";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import AgencyWorkerClient from "./AgencyWorkerClient";
@@ -47,7 +48,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
             worker,
             documents,
         }, { phoneOptional: true });
-        const verifiedDocuments = documents.filter((document) => document.status === "verified").length;
+        const documentProgress = getWorkerDocumentProgress(documents);
         const hasPaidEntryFee =
             !!worker.entry_fee_paid ||
             !!worker.job_search_active ||
@@ -107,7 +108,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                         updatedAt: worker.updated_at || null,
                         completion: completionResult.completion,
                         missingFields: completionResult.missingFields,
-                        verifiedDocuments,
+                        verifiedDocuments: documentProgress.verifiedCount,
                         documents,
                         accessLabel: "Sandbox agency worker",
                         paymentLabel: hasPaidEntryFee ? "Paid" : "Not paid",
@@ -233,7 +234,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
         documents: documents || [],
     }, { phoneOptional: true });
 
-    const verifiedDocuments = (documents || []).filter((doc) => doc.status === "verified").length;
+    const documentProgress = getWorkerDocumentProgress(documents || []);
     const workerPayments = [...(payments || []), ...(agencyTargetPayments || [])];
     const hasPaidEntryFee =
         !!workerRecord.entry_fee_paid ||
@@ -291,7 +292,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                     updatedAt: workerRecord.updated_at || null,
                     completion: completionResult.completion,
                     missingFields: completionResult.missingFields,
-                    verifiedDocuments,
+                    verifiedDocuments: documentProgress.verifiedCount,
                     documents: documents || [],
                     accessLabel: claimed
                         ? "Worker account ready"

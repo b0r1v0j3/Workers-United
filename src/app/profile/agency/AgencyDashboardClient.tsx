@@ -721,7 +721,7 @@ export default function AgencyDashboardClient({
                                                 </td>
 
                                                 <td className="border-r border-[#f7f7f6] px-4 py-4 align-top">
-                                                    <div className="flex justify-center">
+                                                    <div className="flex flex-col items-center gap-2">
                                                         <button
                                                             type="button"
                                                             onClick={() => openWorkerDocuments(worker)}
@@ -730,6 +730,9 @@ export default function AgencyDashboardClient({
                                                             <Upload size={14} />
                                                             {readOnlyPreview ? "Review docs" : "Upload docs"}
                                                         </button>
+                                                        <div className="text-center text-[11px] font-medium leading-tight text-[#6b7280]">
+                                                            {worker.documentsLabel}
+                                                        </div>
                                                     </div>
                                                 </td>
 

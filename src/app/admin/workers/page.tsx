@@ -11,6 +11,7 @@ import WorkersTableClient, { WorkerTableRow } from "./WorkersTableClient";
 import { pickCanonicalWorkerRecord } from "@/lib/workers";
 import { getAgencyDraftDocumentOwnerId, resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { getAgencyWorkerEmail, getAgencyWorkerName } from "@/lib/agencies";
+import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 
 export default async function WorkersPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
@@ -105,7 +106,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
             const workerRecord = workerMap.get(authUser.id);
             const profileRecord = profileMap.get(authUser.id);
             const workerDocs = documentsByOwnerId.get(authUser.id) || [];
-            const verifiedDocs = workerDocs.filter((doc: any) => doc.status === "verified").length;
+            const documentProgress = getWorkerDocumentProgress(workerDocs);
             const agencyRecord = workerRecord?.agency_id ? agencyMap.get(workerRecord.agency_id) : null;
             const completion = getWorkerCompletion({
                 profile: profileRecord || null,
@@ -135,8 +136,8 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                 nationality: workerRecord?.nationality || "",
                 job: workerRecord?.preferred_job || "",
                 completion,
-                docsCount: workerDocs.length,
-                verifiedDocs,
+                docsCount: documentProgress.uploadedCount,
+                verifiedDocs: documentProgress.verifiedCount,
                 adminApproved: !!workerRecord?.admin_approved,
                 isCurrentUser: authUser.id === user.id,
                 entryFeePaid: !!workerRecord?.entry_fee_paid,
@@ -163,7 +164,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
             const agencyRecord = agencyMap.get(workerRow.agency_id) || null;
             const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(workerRow);
             const workerDocs = documentOwnerId ? documentsByOwnerId.get(documentOwnerId) || [] : [];
-            const verifiedDocs = workerDocs.filter((doc: any) => doc.status === "verified").length;
+            const documentProgress = getWorkerDocumentProgress(workerDocs);
             const displayName = getAgencyWorkerName({ submitted_full_name: workerRow.submitted_full_name, profiles: null });
             const displayEmail = getAgencyWorkerEmail({ submitted_email: workerRow.submitted_email, profiles: null }) || "No email yet";
             const completion = getWorkerCompletion({
@@ -192,8 +193,8 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                 nationality: workerRow.nationality || "",
                 job: workerRow.preferred_job || "",
                 completion,
-                docsCount: workerDocs.length,
-                verifiedDocs,
+                docsCount: documentProgress.uploadedCount,
+                verifiedDocs: documentProgress.verifiedCount,
                 adminApproved: !!workerRow.admin_approved,
                 isCurrentUser: false,
                 entryFeePaid: !!workerRow.entry_fee_paid,
@@ -238,7 +239,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         VISA_APPROVED: 'Visa Approved', PLACED: 'Placed', REJECTED: 'Rejected', REFUND_FLAGGED: 'Refund',
     };
     const filterLabel = filterLabels[filter] || 'All';
-    const readyWorkersCount = activeWorkers.filter((workerRow) => workerRow.completion === 100 && workerRow.verifiedDocs >= 3).length;
+    const readyWorkersCount = activeWorkers.filter((workerRow) => workerRow.completion === 100).length;
     const needsApprovalCount = activeWorkers.filter((workerRow) => workerRow.completion === 100 && !workerRow.adminApproved).length;
     const queueCount = activeWorkers.filter((workerRow) => workerRow.status === "IN_QUEUE").length;
     const paidWorkersCount = activeWorkers.filter((workerRow) => workerRow.entryFeePaid).length;
@@ -252,7 +253,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                     description="Use this list for two different jobs: inspect the real worker workspace, or open the admin case view for approvals, payments, documents, and queue handling."
                     metrics={[
                         { label: "Workers", value: activeWorkers.length, meta: `${filterLabel} view: ${filteredUsers.length}` },
-                        { label: "Ready", value: readyWorkersCount, meta: "100% profile + 3 docs" },
+                        { label: "Ready", value: readyWorkersCount, meta: "100% profile + required docs" },
                         { label: "Approval", value: needsApprovalCount, meta: "Waiting for admin" },
                         { label: "In Queue", value: queueCount, meta: "Active Job Finder workers" },
                         { label: "Paid", value: paidWorkersCount, meta: "Entry fee confirmed" },

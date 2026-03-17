@@ -267,7 +267,9 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                         {worker.docsCount > 0 ? (
                                             <span className={`flex items-center gap-1 text-[10px] font-bold ${worker.verifiedDocs >= 3 ? 'text-emerald-600' : 'text-amber-600'}`}>
                                                 {worker.verifiedDocs >= 3 ? <CheckCircle2 size={10} /> : <Clock size={10} />}
-                                                {worker.verifiedDocs}/3 Docs
+                                                {worker.verifiedDocs >= 3
+                                                    ? `${worker.verifiedDocs}/3 verified`
+                                                    : `${worker.docsCount}/3 uploaded · ${worker.verifiedDocs}/3 verified`}
                                             </span>
                                         ) : (
                                             <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400">

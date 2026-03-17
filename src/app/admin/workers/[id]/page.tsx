@@ -19,7 +19,7 @@ import DocumentPreview from "@/components/admin/DocumentPreview";
 import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2 } from "lucide-react";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
-import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import { getWorkerDocumentProgress, WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
 import { syncWorkerReviewStatus } from "@/lib/worker-review";
@@ -252,9 +252,10 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         phoneOptional,
         fullNameFallback: authUser?.user_metadata?.full_name || workerRecord?.submitted_full_name || null,
     });
-    const verifiedDocumentsCount = (documents || []).filter((doc: any) => doc.status === "verified").length;
-    const pendingDocumentsCount = (documents || []).filter((doc: any) => ["pending", "uploaded", "verifying", "manual_review"].includes(doc.status || "")).length;
-    const rejectedDocumentsCount = (documents || []).filter((doc: any) => doc.status === "rejected").length;
+    const documentProgress = getWorkerDocumentProgress(documents || []);
+    const verifiedDocumentsCount = documentProgress.verifiedCount;
+    const pendingDocumentsCount = documentProgress.pendingCount;
+    const rejectedDocumentsCount = documentProgress.rejectedCount;
     const completedPaymentsCount = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || "")).length;
     const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
     const latestSignature = signatures?.[0] || null;
