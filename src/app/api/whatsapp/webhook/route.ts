@@ -1148,7 +1148,7 @@ ${formatHistory(historyMessages, ROUTER_HISTORY_LIMIT)}`;
     } catch {
         return {
             intent: "general",
-            language: message.match(/[\u0400-\u04FF\u0100-\u017Fčćžšđ]/i) ? "Serbian" : "English",
+            language: resolveWhatsAppLanguageName(message),
             confidence: "low",
             reason: "Router fallback",
         };
