@@ -293,9 +293,9 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                     <div>{new Date(worker.created_at).toLocaleDateString('en-GB')}</div>
                                     {worker.daysUntilDeletion !== null && !worker.entryFeePaid && (
                                         <div className={`mt-1 flex items-center gap-1 text-[10px] font-bold ${worker.daysUntilDeletion <= 3 ? 'text-red-600' : worker.daysUntilDeletion <= 7 ? 'text-amber-600' : 'text-slate-400'
-                                            }`}>
+                                        }`}>
                                             <Trash2 size={10} />
-                                            {worker.daysUntilDeletion <= 0 ? 'Deleting...' : `${worker.daysUntilDeletion}d left`}
+                                            {worker.daysUntilDeletion <= 0 ? 'Inactive cleanup due' : `Inactive cleanup in ${worker.daysUntilDeletion}d`}
                                         </div>
                                     )}
                                 </td>

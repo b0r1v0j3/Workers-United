@@ -174,20 +174,20 @@ function getRoleWarningCopy(role: RecipientRole) {
     switch (role) {
         case "employer":
             return {
-                warningText: "Your company profile is incomplete and scheduled for cleanup.",
+                warningText: "Your company profile is still incomplete. If nothing changes, we will clean up this inactive account.",
                 buttonText: "Save Company Profile",
                 buttonUrl: getRecipientWorkspaceUrl("employer", "dashboard"),
             };
         case "agency":
             return {
-                warningText: "Your agency workspace is incomplete and scheduled for cleanup.",
+                warningText: "Your agency workspace is still incomplete. If nothing changes, we will clean up this inactive workspace.",
                 buttonText: "Save Agency Workspace",
                 buttonUrl: getRecipientWorkspaceUrl("agency", "dashboard"),
             };
         case "worker":
         default:
             return {
-                warningText: "Your worker profile is incomplete and scheduled for cleanup.",
+                warningText: "Your worker profile is still incomplete. If nothing changes, we will clean up this inactive account.",
                 buttonText: "Save My Profile",
                 buttonUrl: getRecipientWorkspaceUrl("worker", "setup"),
             };
@@ -198,18 +198,18 @@ function getRoleDeletionCopy(role: RecipientRole) {
     switch (role) {
         case "employer":
             return {
-                body: "Your employer account has been removed due to inactivity. You are always welcome to sign up again when you are ready to hire.",
+                body: "Your employer account was removed after a long period of inactivity while the profile stayed incomplete. You are always welcome to sign up again when you are ready to hire.",
                 buttonText: "Create New Employer Account",
             };
         case "agency":
             return {
-                body: "Your agency workspace has been removed due to inactivity. You are always welcome to sign up again when you are ready to manage worker cases.",
+                body: "Your agency workspace was removed after a long period of inactivity while setup stayed incomplete. You are always welcome to sign up again when you are ready to manage worker cases.",
                 buttonText: "Create New Agency Account",
             };
         case "worker":
         default:
             return {
-                body: "Your worker account has been removed due to inactivity. You are always welcome to sign up again when you are ready.",
+                body: "Your worker account was removed after a long period of inactivity while the profile stayed incomplete. You are always welcome to sign up again when you are ready.",
                 buttonText: "Create New Account",
             };
     }
@@ -853,18 +853,18 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             const warningCopy = getRoleWarningCopy(recipientRole);
 
             return {
-                subject: `Last chance: ${daysLeft} days left`,
+                subject: `Inactive account cleanup in ${daysLeft} days`,
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/ios/100/000000/high-priority.png" width="80" height="80" alt="Warning" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Account Warning</h1>
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Inactive Account Warning</h1>
                         <p style="font-size: 16px; color: #515154; margin-top: 5px;">
-                            Your account will be deleted in <strong>${daysLeft} days</strong>.
+                            If there is still no profile activity, we will clean up this incomplete account in <strong>${daysLeft} days</strong>.
                         </p>
                     </div>
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
-                        ${warningCopy.warningText} Please finish your signup to stay with us.
+                        ${warningCopy.warningText} Update your profile or documents to keep the account active.
                     </p>
 
                     <div style="text-align:center; margin-top:35px;">
@@ -879,7 +879,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
         case "profile_deletion": {
             const deletionCopy = getRoleDeletionCopy(recipientRole);
             return {
-                subject: "Account Removed",
+                subject: "Inactive Account Removed",
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
                         <img src="https://img.icons8.com/ios/100/000000/trash.png" width="80" height="80" alt="Deleted" style="margin-bottom: 20px;">

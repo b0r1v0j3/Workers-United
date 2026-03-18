@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
 import { queueEmail } from "@/lib/email-templates";
+import { logServerActivity } from "@/lib/activityLoggerServer";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { buildContractDataForMatch } from "@/lib/contract-data";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
@@ -464,6 +465,14 @@ export default async function WorkerDetailPage({ params }: PageProps) {
             phoneOptional,
             fullNameFallback: workerNameFallback,
         });
+
+        if (notificationUserId) {
+            await logServerActivity(notificationUserId, "document_reupload_requested", "documents", {
+                doc_type: docType,
+                reason: requestedReason,
+                admin_id: user.id,
+            }, "warning");
+        }
 
         if (userEmail && notificationUserId) {
             after(async () => {
