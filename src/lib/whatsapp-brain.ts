@@ -19,6 +19,17 @@ export interface EmployerWhatsAppRulesOptions extends CanonicalWhatsAppFactsOpti
     employerStatus?: string | null;
 }
 
+export interface RegisteredWorkerWhatsAppReplyOptions extends CanonicalWhatsAppFactsOptions {
+    message: string;
+    language: string;
+    intent: string;
+    workerStatus?: string | null;
+    entryFeePaid?: boolean | null;
+    adminApproved?: boolean | null;
+    queueJoinedAt?: string | null;
+    hasSupportAccess?: boolean;
+}
+
 export interface BrainLearningCandidate {
     category: string;
     content: string;
@@ -288,6 +299,367 @@ export function buildUnregisteredWorkerWhatsAppReply({
     }
 
     return null;
+}
+
+function isRegisteredWorkerPaymentReady({
+    workerStatus,
+    entryFeePaid,
+    adminApproved,
+}: {
+    workerStatus?: string | null;
+    entryFeePaid?: boolean | null;
+    adminApproved?: boolean | null;
+}) {
+    return !entryFeePaid && !!adminApproved && workerStatus === "APPROVED";
+}
+
+function isRegisteredWorkerPendingApproval({
+    workerStatus,
+    entryFeePaid,
+    adminApproved,
+}: {
+    workerStatus?: string | null;
+    entryFeePaid?: boolean | null;
+    adminApproved?: boolean | null;
+}) {
+    return !entryFeePaid && !adminApproved && workerStatus === "PENDING_APPROVAL";
+}
+
+export function buildRegisteredWorkerWhatsAppReply({
+    message,
+    language,
+    intent,
+    workerStatus,
+    entryFeePaid,
+    adminApproved,
+    queueJoinedAt,
+    hasSupportAccess = false,
+    website = "workersunited.eu",
+    supportEmail = "contact@workersunited.eu",
+}: RegisteredWorkerWhatsAppReplyOptions): string | null {
+    const normalized = message.trim().toLowerCase();
+    const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(message);
+    const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
+    const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
+    const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
+    const wantsStatus = intent === "status" || STATUS_HINT_PATTERN.test(normalized);
+    const wantsSupport = intent === "support" || /\b(help|support|human|agent|bug|error|problem|issue|not working|still|again|operator|tehni[cč]ki|podr[sš]ka|pomo[cć])\b/i.test(normalized);
+    const asksSpecificAvailability = SPECIFIC_AVAILABILITY_HINT_PATTERN.test(normalized);
+    const asksHowItWorks = PROCESS_HINT_PATTERN.test(normalized);
+    const wantsJobHelp = intent === "job_intent" || JOB_HINT_PATTERN.test(normalized) || looksLikeWorkerWhatsAppLead(message);
+
+    const paymentReady = isRegisteredWorkerPaymentReady({ workerStatus, entryFeePaid, adminApproved });
+    const pendingApproval = isRegisteredWorkerPendingApproval({ workerStatus, entryFeePaid, adminApproved });
+    const inQueue = !!entryFeePaid && !!queueJoinedAt;
+
+    if (isGreetingOnly && !wantsPrice && !wantsDocuments && !wantsStatus && !wantsSupport) {
+        switch (lang) {
+            case "sr":
+                return `Pozdrav! Mogu da pomognem oko vašeg statusa, dokumenata, uplate ili sledeceg koraka na Workers United. Samo mi napišite šta želite da proverimo.`;
+            case "ar":
+                return `مرحبًا! يمكنني مساعدتك بخصوص حالتك أو المستندات أو الدفع أو الخطوة التالية على Workers United. فقط اكتب لي ما الذي تريد التحقق منه.`;
+            case "fr":
+                return `Bonjour ! Je peux vous aider concernant votre statut, vos documents, votre paiement ou la prochaine étape sur Workers United. Dites-moi simplement ce que vous voulez vérifier.`;
+            case "pt":
+                return `Olá! Posso ajudar com seu status, documentos, pagamento ou próximo passo na Workers United. Basta me dizer o que você quer verificar.`;
+            case "hi":
+                return `नमस्ते! मैं आपके status, documents, payment या Workers United के अगले step में मदद कर सकता हूँ। बस लिखिए कि आप क्या check करना चाहते हैं।`;
+            default:
+                return `Hello! I can help with your Workers United status, documents, payment, or next step. Just tell me what you want to check.`;
+        }
+    }
+
+    if (wantsPrice) {
+        if (entryFeePaid) {
+            switch (lang) {
+                case "sr":
+                    return `Vaša Job Finder uplata je vec evidentirana, tako da ovde nema novog payment linka za slanje. Sledeci korak i status pratite kroz dashboard na ${website}/profile/worker.`;
+                case "ar":
+                    return `تم تسجيل دفعة Job Finder بالفعل، لذلك لا يوجد رابط دفع جديد لإرساله هنا. تابع الحالة والخطوة التالية من لوحة التحكم على ${website}/profile/worker.`;
+                case "fr":
+                    return `Votre paiement Job Finder est déjà enregistré, donc il n’y a pas de nouveau lien à envoyer ici. Suivez le statut et la prochaine étape depuis le tableau de bord sur ${website}/profile/worker.`;
+                case "pt":
+                    return `Seu pagamento do Job Finder já está registrado, então não há novo link para enviar aqui. Acompanhe o status e a próxima etapa no painel em ${website}/profile/worker.`;
+                case "hi":
+                    return `आपका Job Finder payment पहले से दर्ज है, इसलिए यहाँ कोई नया payment link भेजने की ज़रूरत नहीं है। अगला step और status ${website}/profile/worker dashboard में देखें।`;
+                default:
+                    return `Your Job Finder payment is already recorded, so there is no new payment link to send here. Please follow your status and next step in the dashboard at ${website}/profile/worker.`;
+            }
+        }
+
+        if (paymentReady) {
+            switch (lang) {
+                case "sr":
+                    return `Vaš profil je odobren i Job Finder checkout bi sada trebalo da bude dostupan u dashboard-u. Otvorite ${website}/profile/worker i pokrenite uplatu tamo, ne preko WhatsApp linka.`;
+                case "ar":
+                    return `تمت الموافقة على ملفك ويجب أن يكون Checkout الخاص بـ Job Finder متاحًا الآن في لوحة التحكم. افتح ${website}/profile/worker وابدأ الدفع من هناك، وليس عبر رابط WhatsApp.`;
+                case "fr":
+                    return `Votre profil est approuvé et le checkout Job Finder devrait maintenant être disponible dans le tableau de bord. Ouvrez ${website}/profile/worker et lancez le paiement là-bas, pas via un lien WhatsApp.`;
+                case "pt":
+                    return `Seu perfil foi aprovado e o checkout do Job Finder agora deve estar disponível no painel. Abra ${website}/profile/worker e inicie o pagamento por lá, não por um link no WhatsApp.`;
+                case "hi":
+                    return `आपका profile approve हो चुका है और Job Finder checkout अब dashboard में available होना चाहिए। ${website}/profile/worker खोलिए और payment वहीं से शुरू कीजिए, WhatsApp link से नहीं।`;
+                default:
+                    return `Your profile is approved and Job Finder checkout should now be available in the dashboard. Open ${website}/profile/worker and start payment there, not through a WhatsApp link.`;
+            }
+        }
+
+        switch (lang) {
+            case "sr":
+                return pendingApproval
+                    ? `Job Finder uplata jos nije otključana jer je vaš profil trenutno u admin review fazi. Kada admin potvrdi profil, checkout ce se pojaviti u dashboard-u na ${website}/profile/worker.`
+                    : `Job Finder uplata se otključava tek kada profil bude kompletan i admin ga odobri. Sledeci korak pratite kroz dashboard na ${website}/profile/worker, a placanje se pokrece tamo, ne preko WhatsApp-a.`;
+            case "ar":
+                return pendingApproval
+                    ? `دفع Job Finder لم يُفتح بعد لأن ملفك حاليًا في مراجعة الإدارة. عندما تؤكد الإدارة الملف سيظهر checkout في لوحة التحكم على ${website}/profile/worker.`
+                    : `يتم فتح دفع Job Finder فقط بعد اكتمال الملف وموافقة الإدارة. تابع الخطوة التالية عبر لوحة التحكم على ${website}/profile/worker، ويبدأ الدفع من هناك وليس عبر WhatsApp.`;
+            case "fr":
+                return pendingApproval
+                    ? `Le paiement Job Finder n’est pas encore débloqué car votre profil est actuellement en revue admin. Une fois le profil confirmé par l’admin, le checkout apparaîtra dans le tableau de bord sur ${website}/profile/worker.`
+                    : `Le paiement Job Finder ne s’ouvre qu’après profil complet et validation admin. Suivez la prochaine étape dans le tableau de bord sur ${website}/profile/worker, et le paiement démarre là-bas, pas sur WhatsApp.`;
+            case "pt":
+                return pendingApproval
+                    ? `O pagamento do Job Finder ainda não foi liberado porque seu perfil está em revisão administrativa. Quando o admin confirmar o perfil, o checkout aparecerá no painel em ${website}/profile/worker.`
+                    : `O pagamento do Job Finder só é liberado após perfil completo e aprovação administrativa. Acompanhe o próximo passo no painel em ${website}/profile/worker; o pagamento começa lá, não pelo WhatsApp.`;
+            case "hi":
+                return pendingApproval
+                    ? `Job Finder payment अभी unlock नहीं हुआ है क्योंकि आपका profile इस समय admin review में है। जब admin profile confirm करेगा, checkout ${website}/profile/worker dashboard में दिखेगा।`
+                    : `Job Finder payment तभी unlock होता है जब profile complete हो और admin approve करे। अगला step ${website}/profile/worker dashboard में follow करें; payment वहीं से शुरू होता है, WhatsApp से नहीं।`;
+            default:
+                return pendingApproval
+                    ? `Job Finder payment is not unlocked yet because your profile is currently in admin review. Once admin confirms the profile, checkout will appear in the dashboard at ${website}/profile/worker.`
+                    : `Job Finder payment unlocks only after the profile is complete and admin approves it. Please follow the next step in the dashboard at ${website}/profile/worker; payment starts there, not on WhatsApp.`;
+        }
+    }
+
+    if (wantsDocuments) {
+        switch (lang) {
+            case "sr":
+                return `Potrebna dokumenta su pasoš, diploma ili potvrda o radu, i biometrijska fotografija. Upload i status dokumenata pratite kroz dashboard na ${website}/profile/worker; WhatsApp prilozi se ne vezuju automatski za profil.`;
+            case "ar":
+                return `المستندات المطلوبة هي جواز السفر، الشهادة أو إثبات العمل، والصورة البيومترية. ارفع المستندات وتابع حالتها من لوحة التحكم على ${website}/profile/worker؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا.`;
+            case "fr":
+                return `Les documents requis sont le passeport, le diplôme ou certificat de travail, et la photo biométrique. Le téléversement et le statut se suivent dans le tableau de bord sur ${website}/profile/worker ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil.`;
+            case "pt":
+                return `Os documentos necessários são passaporte, diploma ou comprovante de trabalho, e foto biométrica. O envio e o status dos documentos são acompanhados no painel em ${website}/profile/worker; anexos do WhatsApp não são vinculados automaticamente ao perfil.`;
+            case "hi":
+                return `ज़रूरी documents हैं passport, diploma या work certificate, और biometric photo। Documents upload और उनका status ${website}/profile/worker dashboard में देखें; WhatsApp attachments अपने-आप profile से link नहीं होते।`;
+            default:
+                return `The required documents are passport, diploma or work certificate, and biometric photo. Uploads and document status are tracked in the dashboard at ${website}/profile/worker; WhatsApp attachments are not linked to the profile automatically.`;
+        }
+    }
+
+    if (wantsSupport) {
+        switch (lang) {
+            case "sr":
+                return hasSupportAccess
+                    ? `Mogu da pomognem ovde, a vaš support inbox je takodje otvoren u dashboard-u na ${website}/profile/worker/inbox. Ako se isti problem ponavlja, nastavite tamo ili pošaljite screenshot i kratak opis na ${supportEmail}.`
+                    : `Mogu da pomognem osnovnim informacijama ovde, ali support inbox se otključava tek posle $9 aktivacije. Ako imate tehnički problem pre toga, pošaljite screenshot i kratak opis na ${supportEmail}.`;
+            case "ar":
+                return hasSupportAccess
+                    ? `يمكنني المساعدة هنا، كما أن صندوق الدعم لديك مفتوح أيضًا في لوحة التحكم على ${website}/profile/worker/inbox. إذا كانت نفس المشكلة تتكرر، واصل من هناك أو أرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`
+                    : `يمكنني المساعدة بالمعلومات الأساسية هنا، لكن صندوق الدعم يُفتح فقط بعد تفعيل $9. إذا كانت لديك مشكلة تقنية قبل ذلك فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`;
+            case "fr":
+                return hasSupportAccess
+                    ? `Je peux aider ici, et votre boîte de support est aussi ouverte dans le tableau de bord sur ${website}/profile/worker/inbox. Si le même problème se répète, continuez là-bas ou envoyez une capture d’écran avec une courte description à ${supportEmail}.`
+                    : `Je peux aider ici avec les informations de base, mais la boîte de support ne s’ouvre qu’après l’activation à $9. Si vous avez un problème technique avant cela, envoyez une capture d’écran et une courte description à ${supportEmail}.`;
+            case "pt":
+                return hasSupportAccess
+                    ? `Posso ajudar por aqui, e sua caixa de suporte também está aberta no painel em ${website}/profile/worker/inbox. Se o mesmo problema continuar, siga por lá ou envie uma captura de tela com uma breve descrição para ${supportEmail}.`
+                    : `Posso ajudar por aqui com orientações básicas, mas a caixa de suporte só libera após a ativação de $9. Se houver um problema técnico antes disso, envie uma captura de tela e uma breve descrição para ${supportEmail}.`;
+            case "hi":
+                return hasSupportAccess
+                    ? `मैं यहाँ मदद कर सकता हूँ, और आपका support inbox भी ${website}/profile/worker/inbox dashboard में खुला है। अगर वही problem बार-बार आ रहा है, तो वहाँ जारी रखें या screenshot और short description ${supportEmail} पर भेजें।`
+                    : `मैं यहाँ basic guidance दे सकता हूँ, लेकिन support inbox $9 activation के बाद ही unlock होता है। अगर उससे पहले technical problem है, तो screenshot और short description ${supportEmail} पर भेजें।`;
+            default:
+                return hasSupportAccess
+                    ? `I can help here, and your support inbox is also open in the dashboard at ${website}/profile/worker/inbox. If the same issue keeps repeating, continue there or send a screenshot and a short description to ${supportEmail}.`
+                    : `I can help with basic guidance here, but the support inbox unlocks only after the $9 activation. If you have a technical problem before that, send a screenshot and a short description to ${supportEmail}.`;
+        }
+    }
+
+    if (wantsStatus) {
+        switch (lang) {
+            case "sr":
+                if (inQueue) {
+                    return `Vaša Job Finder uplata je evidentirana i vaš slučaj je već u aktivnom sledecem toku. Status i naredne korake pratite kroz dashboard na ${website}/profile/worker.`;
+                }
+                if (entryFeePaid) {
+                    return `Vaša Job Finder uplata je evidentirana. Sledeci korak i trenutni status pratite kroz dashboard na ${website}/profile/worker.`;
+                }
+                if (paymentReady) {
+                    return `Vaš profil je odobren i checkout bi sada trebalo da bude dostupan u dashboard-u na ${website}/profile/worker. Sledeci korak je da uplatu pokrenete tamo.`;
+                }
+                if (pendingApproval) {
+                    return `Vaš profil je trenutno u admin review fazi. Kada admin potvrdi profil, uplata ce se otključati u dashboard-u na ${website}/profile/worker.`;
+                }
+                return `Trenutni sledeci korak je da kroz dashboard na ${website}/profile/worker završite profil i obavezna dokumenta, pa zatim pratite admin review status tamo.`;
+            case "ar":
+                if (inQueue) {
+                    return `تم تسجيل دفعة Job Finder الخاصة بك وحالتك بالفعل في المسار التالي النشط. تابع الحالة والخطوات القادمة من لوحة التحكم على ${website}/profile/worker.`;
+                }
+                if (entryFeePaid) {
+                    return `تم تسجيل دفعة Job Finder الخاصة بك. تابع الخطوة التالية والحالة الحالية من لوحة التحكم على ${website}/profile/worker.`;
+                }
+                if (paymentReady) {
+                    return `تمت الموافقة على ملفك ويجب أن يكون checkout متاحًا الآن في لوحة التحكم على ${website}/profile/worker. الخطوة التالية هي بدء الدفع من هناك.`;
+                }
+                if (pendingApproval) {
+                    return `ملفك حاليًا في مراجعة الإدارة. عندما تؤكد الإدارة الملف سيتم فتح الدفع في لوحة التحكم على ${website}/profile/worker.`;
+                }
+                return `الخطوة التالية الحالية هي إكمال الملف والمستندات المطلوبة من خلال لوحة التحكم على ${website}/profile/worker، ثم متابعة حالة مراجعة الإدارة هناك.`;
+            case "fr":
+                if (inQueue) {
+                    return `Votre paiement Job Finder est enregistré et votre dossier est déjà dans l’étape active suivante. Suivez le statut et les prochaines étapes depuis le tableau de bord sur ${website}/profile/worker.`;
+                }
+                if (entryFeePaid) {
+                    return `Votre paiement Job Finder est enregistré. Suivez la prochaine étape et le statut actuel dans le tableau de bord sur ${website}/profile/worker.`;
+                }
+                if (paymentReady) {
+                    return `Votre profil est approuvé et le checkout devrait maintenant être disponible dans le tableau de bord sur ${website}/profile/worker. La prochaine étape est de démarrer le paiement depuis là-bas.`;
+                }
+                if (pendingApproval) {
+                    return `Votre profil est actuellement en revue admin. Quand l’admin confirme le profil, le paiement se débloque dans le tableau de bord sur ${website}/profile/worker.`;
+                }
+                return `La prochaine étape actuelle est de terminer le profil et les documents requis via le tableau de bord sur ${website}/profile/worker, puis de suivre la revue admin là-bas.`;
+            case "pt":
+                if (inQueue) {
+                    return `Seu pagamento do Job Finder está registrado e seu caso já entrou no próximo fluxo ativo. Acompanhe o status e os próximos passos no painel em ${website}/profile/worker.`;
+                }
+                if (entryFeePaid) {
+                    return `Seu pagamento do Job Finder está registrado. Acompanhe o próximo passo e o status atual no painel em ${website}/profile/worker.`;
+                }
+                if (paymentReady) {
+                    return `Seu perfil foi aprovado e o checkout agora deve estar disponível no painel em ${website}/profile/worker. O próximo passo é iniciar o pagamento por lá.`;
+                }
+                if (pendingApproval) {
+                    return `Seu perfil está atualmente em revisão administrativa. Quando o admin confirmar o perfil, o pagamento será liberado no painel em ${website}/profile/worker.`;
+                }
+                return `O próximo passo agora é concluir o perfil e os documentos obrigatórios pelo painel em ${website}/profile/worker e depois acompanhar a revisão administrativa por lá.`;
+            case "hi":
+                if (inQueue) {
+                    return `आपका Job Finder payment दर्ज हो चुका है और आपका case अगले active flow में है। Status और next steps ${website}/profile/worker dashboard में देखें।`;
+                }
+                if (entryFeePaid) {
+                    return `आपका Job Finder payment दर्ज हो चुका है। अगला step और current status ${website}/profile/worker dashboard में देखें।`;
+                }
+                if (paymentReady) {
+                    return `आपका profile approve हो चुका है और checkout अब ${website}/profile/worker dashboard में available होना चाहिए। अगला step वहीं से payment शुरू करना है।`;
+                }
+                if (pendingApproval) {
+                    return `आपका profile इस समय admin review में है। जब admin profile confirm करेगा, payment dashboard में unlock हो जाएगा।`;
+                }
+                return `अभी अगला step ${website}/profile/worker dashboard में profile और required documents पूरा करना है, और फिर admin review status वहीं follow करना है।`;
+            default:
+                if (inQueue) {
+                    return `Your Job Finder payment is recorded and your case is already in the next active flow. Please follow your status and next steps in the dashboard at ${website}/profile/worker.`;
+                }
+                if (entryFeePaid) {
+                    return `Your Job Finder payment is recorded. Please follow your current status and next step in the dashboard at ${website}/profile/worker.`;
+                }
+                if (paymentReady) {
+                    return `Your profile is approved and checkout should now be available in the dashboard at ${website}/profile/worker. The next step is to start payment there.`;
+                }
+                if (pendingApproval) {
+                    return `Your profile is currently in admin review. Once admin confirms it, payment will unlock in the dashboard at ${website}/profile/worker.`;
+                }
+                return `The current next step is to finish your profile and required documents through the dashboard at ${website}/profile/worker, and then follow your admin-review status there.`;
+        }
+    }
+
+    if (asksSpecificAvailability) {
+        switch (lang) {
+            case "sr":
+                return `Ne mogu da potvrdim konkretan otvoren posao preko WhatsApp-a. Workers United radi kroz vođeni matching proces, pa je najbolje da svoj status i sledece korake pratite kroz dashboard, a ovde mogu da objasnim proces ili pomognem oko statusa, dokumenata i uplate.`;
+            case "ar":
+                return `لا أستطيع تأكيد وظيفة محددة مفتوحة عبر WhatsApp. يعمل Workers United من خلال مطابقة موجهة، لذلك من الأفضل متابعة حالتك والخطوات التالية من خلال لوحة التحكم، ويمكنني هنا شرح العملية أو المساعدة بشأن الحالة أو المستندات أو الدفع.`;
+            case "fr":
+                return `Je ne peux pas confirmer une offre précise ouverte via WhatsApp. Workers United fonctionne avec un processus d’appariement guidé ; il vaut mieux suivre votre statut et les prochaines étapes dans le tableau de bord, et je peux ici expliquer le processus ou aider sur le statut, les documents ou le paiement.`;
+            case "pt":
+                return `Eu não posso confirmar uma vaga específica aberta pelo WhatsApp. A Workers United trabalha com um processo guiado de matching, então o melhor é acompanhar seu status e os próximos passos no painel, e por aqui eu posso explicar o processo ou ajudar com status, documentos e pagamento.`;
+            case "hi":
+                return `मैं WhatsApp पर किसी specific open job की पुष्टि नहीं कर सकता। Workers United guided matching process के ज़रिए काम करता है, इसलिए बेहतर है कि status और next steps dashboard में follow करें; यहाँ मैं process, status, documents या payment में मदद कर सकता हूँ।`;
+            default:
+                return `I cannot confirm a specific open job over WhatsApp. Workers United works through a guided matching process, so it is best to follow your status and next steps in the dashboard, and I can help here with the process, status, documents, or payment.`;
+        }
+    }
+
+    if (wantsJobHelp) {
+        switch (lang) {
+            case "sr":
+                return asksHowItWorks
+                    ? `Workers United radi kroz vođeni matching proces: profil, dokumenta, admin approval, pa tek onda Job Finder aktivacija i dalje pracenje kroz dashboard. Ako želite, mogu odmah da pomognem oko statusa, dokumenata ili uplate.`
+                    : `Mogu da pomognem oko sledeceg koraka. Ako želite, napišite da li vas zanima status, dokumenta, uplata ili kako proces dalje funkcioniše.`;
+            case "ar":
+                return asksHowItWorks
+                    ? `يعمل Workers United من خلال مطابقة موجهة: الملف، ثم المستندات، ثم موافقة الإدارة، وبعدها فقط تفعيل Job Finder ومتابعة الخطوات من خلال لوحة التحكم. إذا أردت يمكنني الآن المساعدة بخصوص الحالة أو المستندات أو الدفع.`
+                    : `يمكنني مساعدتك بخصوص الخطوة التالية. إذا أردت، أخبرني هل تريد معرفة الحالة أو المستندات أو الدفع أو كيف تستمر العملية.`;
+            case "fr":
+                return asksHowItWorks
+                    ? `Workers United fonctionne avec un processus d’appariement guidé : profil, documents, validation admin, puis activation de Job Finder et suivi des étapes dans le tableau de bord. Si vous voulez, je peux aider tout de suite sur le statut, les documents ou le paiement.`
+                    : `Je peux vous aider pour la prochaine étape. Si vous voulez, dites-moi si vous avez besoin du statut, des documents, du paiement, ou du fonctionnement du processus.`;
+            case "pt":
+                return asksHowItWorks
+                    ? `A Workers United trabalha com um processo guiado de matching: perfil, documentos, aprovação administrativa, e só depois ativação do Job Finder e acompanhamento dos próximos passos no painel. Se quiser, posso ajudar agora com status, documentos ou pagamento.`
+                    : `Posso ajudar com o próximo passo. Se quiser, me diga se você precisa de ajuda com status, documentos, pagamento ou como o processo funciona.`;
+            case "hi":
+                return asksHowItWorks
+                    ? `Workers United guided matching process के साथ काम करता है: profile, documents, admin approval, और उसके बाद Job Finder activation और dashboard follow-up। अगर चाहें तो मैं अभी status, documents या payment में मदद कर सकता हूँ।`
+                    : `मैं अगले step में मदद कर सकता हूँ। अगर चाहें तो बताइए कि आपको status, documents, payment या process समझने में मदद चाहिए।`;
+            default:
+                return asksHowItWorks
+                    ? `Workers United works through a guided matching process: profile, documents, admin approval, and only then Job Finder activation with next steps tracked in the dashboard. If you want, I can help right away with status, documents, or payment.`
+                    : `I can help with the next step. If you want, tell me whether you need help with status, documents, payment, or how the process works.`;
+        }
+    }
+
+    return null;
+}
+
+export function buildWhatsAppAutoHandoffReply({
+    language,
+    hasSupportAccess,
+    website = "workersunited.eu",
+    supportEmail = "contact@workersunited.eu",
+}: {
+    language: string;
+    hasSupportAccess: boolean;
+    website?: string;
+    supportEmail?: string;
+}): string {
+    const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(language);
+
+    if (!hasSupportAccess) {
+        switch (lang) {
+            case "sr":
+                return `Vidim da se isti problem ponavlja. Nemam ovde otvoren support inbox za vaš nalog, zato pošaljite screenshot i kratak opis na ${supportEmail}, a status profila proverite i kroz ${website}/profile/worker.`;
+            case "ar":
+                return `أرى أن نفس المشكلة تتكرر. لا يوجد صندوق دعم مفتوح لهذا الحساب هنا، لذلك أرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}، وتحقق أيضًا من حالة الملف عبر ${website}/profile/worker.`;
+            case "fr":
+                return `Je vois que le même problème se répète. Il n’y a pas de boîte de support ouverte pour ce compte ici, donc envoyez une capture d’écran et une courte description à ${supportEmail}, et vérifiez aussi le statut du profil via ${website}/profile/worker.`;
+            case "pt":
+                return `Vejo que o mesmo problema está se repetindo. Não há uma caixa de suporte liberada para esta conta aqui, então envie uma captura de tela com uma breve descrição para ${supportEmail} e também confira o status do perfil em ${website}/profile/worker.`;
+            case "hi":
+                return `मैं देख रहा हूँ कि वही problem बार-बार हो रहा है। इस account के लिए यहाँ support inbox खुला नहीं है, इसलिए screenshot और short description ${supportEmail} पर भेजें, और profile status ${website}/profile/worker में भी check करें।`;
+            default:
+                return `I can see the same issue is repeating. There is no support inbox unlocked for this account here, so please send a screenshot and a short description to ${supportEmail}, and also check your profile status at ${website}/profile/worker.`;
+        }
+    }
+
+    switch (lang) {
+        case "sr":
+            return `Vidim da se isti problem ponavlja, pa sam ovu poruku prebacio i u vaš support inbox. Nastavite kroz ${website}/profile/worker/inbox ili ovde pošaljite jednu kratku dopunu ako treba.`;
+        case "ar":
+            return `أرى أن نفس المشكلة تتكرر، لذلك قمت أيضًا بإرسال هذه الرسالة إلى صندوق الدعم الخاص بك. تابع عبر ${website}/profile/worker/inbox أو أرسل هنا إضافة قصيرة إذا لزم الأمر.`;
+        case "fr":
+            return `Je vois que le même problème se répète, donc j’ai aussi enregistré ce message dans votre boîte de support. Continuez via ${website}/profile/worker/inbox ou envoyez ici un court complément si nécessaire.`;
+        case "pt":
+            return `Vejo que o mesmo problema está se repetindo, então também registrei esta mensagem na sua caixa de suporte. Continue por ${website}/profile/worker/inbox ou envie aqui uma breve atualização se precisar.`;
+        case "hi":
+            return `मैं देख रहा हूँ कि वही problem बार-बार हो रहा है, इसलिए मैंने यह message आपके support inbox में भी save कर दिया है। आगे ${website}/profile/worker/inbox से जारी रखें या ज़रूरत हो तो यहाँ एक short update भेजें।`;
+        default:
+            return `I can see the same issue is repeating, so I also saved this message into your support inbox. Please continue through ${website}/profile/worker/inbox or send one short update here if needed.`;
+    }
 }
 
 export function buildCanonicalWhatsAppFacts({

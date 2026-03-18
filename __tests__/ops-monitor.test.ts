@@ -17,6 +17,15 @@ const baseSnapshot: AdminExceptionSnapshot = {
     verifiedButUnpaid: [],
     paidButNotInQueue: [],
     openJobRequestsWithoutOffers: [],
+    whatsappQuality: {
+        deterministicReplies: 0,
+        guardedReplies: 0,
+        languageFallbacks: 0,
+        autoHandoffs: 0,
+        openAIFailures: 0,
+        mediaFallbacks: 0,
+        recentAutoHandoffs: [],
+    },
 };
 
 describe("ops monitor helpers", () => {
