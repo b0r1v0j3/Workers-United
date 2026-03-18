@@ -19,6 +19,8 @@ interface FunnelData {
         abandoned: number;
         bank_declined: number;
         stripe_blocked: number;
+        worker_countries?: Array<{ country: string; count: number }>;
+        billing_countries?: Array<{ country: string; count: number }>;
         recent_issues: Array<{
             profile_id: string;
             full_name: string;
@@ -27,6 +29,9 @@ interface FunnelData {
             outcome: string;
             outcome_label: string;
             outcome_detail: string;
+            worker_country: string | null;
+            billing_country: string | null;
+            card_country: string | null;
             hours_since_checkout: number | null;
             last_event_at: string | null;
             workspace_href: string;
@@ -87,6 +92,9 @@ export default function AnalyticsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [period, setPeriod] = useState<Period>("all");
+    const [paymentOutcomeFilter, setPaymentOutcomeFilter] = useState("all");
+    const [workerCountryFilter, setWorkerCountryFilter] = useState("all");
+    const [billingCountryFilter, setBillingCountryFilter] = useState("all");
 
     const loadData = (p: Period) => {
         setLoading(true);
@@ -157,6 +165,27 @@ export default function AnalyticsPage() {
         this_month: "This Month",
         last_month: "Last Month",
     };
+    const paymentIssues = data.payment_quality?.recent_issues || [];
+    const workerCountryOptions = [
+        "all",
+        ...Array.from(new Set(paymentIssues.map((issue) => issue.worker_country).filter(Boolean) as string[])).sort(),
+    ];
+    const billingCountryOptions = [
+        "all",
+        ...Array.from(new Set(paymentIssues.map((issue) => issue.billing_country).filter(Boolean) as string[])).sort(),
+    ];
+    const filteredPaymentIssues = paymentIssues.filter((issue) => {
+        if (paymentOutcomeFilter !== "all" && issue.outcome !== paymentOutcomeFilter) {
+            return false;
+        }
+        if (workerCountryFilter !== "all" && issue.worker_country !== workerCountryFilter) {
+            return false;
+        }
+        if (billingCountryFilter !== "all" && issue.billing_country !== billingCountryFilter) {
+            return false;
+        }
+        return true;
+    });
 
     return (
         <div className="p-6 space-y-6">
@@ -339,10 +368,79 @@ export default function AnalyticsPage() {
                     ))}
                 </div>
 
+                <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-xl border border-[#dddfe2] bg-[#fcfcfd] p-4">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-[#65676b]">Top worker countries</div>
+                        <div className="mt-3 space-y-2">
+                            {(data.payment_quality?.worker_countries || []).slice(0, 5).map((entry) => (
+                                <div key={`worker-country-${entry.country}`} className="flex items-center justify-between text-sm">
+                                    <span className="text-[#050505]">{entry.country}</span>
+                                    <span className="font-semibold text-[#2563eb]">{entry.count}</span>
+                                </div>
+                            ))}
+                            {(data.payment_quality?.worker_countries || []).length === 0 && (
+                                <div className="text-sm italic text-slate-400">No worker-country signal yet.</div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="rounded-xl border border-[#dddfe2] bg-[#fcfcfd] p-4">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-[#65676b]">Top billing countries</div>
+                        <div className="mt-3 space-y-2">
+                            {(data.payment_quality?.billing_countries || []).slice(0, 5).map((entry) => (
+                                <div key={`billing-country-${entry.country}`} className="flex items-center justify-between text-sm">
+                                    <span className="text-[#050505]">{entry.country}</span>
+                                    <span className="font-semibold text-[#7c3aed]">{entry.count}</span>
+                                </div>
+                            ))}
+                            {(data.payment_quality?.billing_countries || []).length === 0 && (
+                                <div className="text-sm italic text-slate-400">No billing-country signal yet.</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 <div className="mt-6 space-y-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[#65676b]">Recent payment issues</h3>
-                    {data.payment_quality?.recent_issues?.length ? (
-                        data.payment_quality.recent_issues.slice(0, 6).map((issue) => (
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-[#65676b]">Recent payment issues</h3>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <AdaptiveSelect
+                                value={paymentOutcomeFilter}
+                                onChange={(event) => setPaymentOutcomeFilter(event.target.value)}
+                                className="min-w-[170px] rounded-lg border border-[#dddfe2] bg-white px-3 py-2 text-sm font-medium text-[#050505]"
+                                desktopSearchThreshold={999}
+                            >
+                                <option value="all">All issue types</option>
+                                <option value="issuer_declined">Bank declined</option>
+                                <option value="stripe_blocked">Stripe blocked</option>
+                                <option value="expired">Checkout expired</option>
+                                <option value="abandoned">Abandoned</option>
+                            </AdaptiveSelect>
+                            <AdaptiveSelect
+                                value={workerCountryFilter}
+                                onChange={(event) => setWorkerCountryFilter(event.target.value)}
+                                className="min-w-[170px] rounded-lg border border-[#dddfe2] bg-white px-3 py-2 text-sm font-medium text-[#050505]"
+                                desktopSearchThreshold={999}
+                            >
+                                <option value="all">All worker countries</option>
+                                {workerCountryOptions.filter((value) => value !== "all").map((value) => (
+                                    <option key={`worker-filter-${value}`} value={value}>{value}</option>
+                                ))}
+                            </AdaptiveSelect>
+                            <AdaptiveSelect
+                                value={billingCountryFilter}
+                                onChange={(event) => setBillingCountryFilter(event.target.value)}
+                                className="min-w-[170px] rounded-lg border border-[#dddfe2] bg-white px-3 py-2 text-sm font-medium text-[#050505]"
+                                desktopSearchThreshold={999}
+                            >
+                                <option value="all">All billing countries</option>
+                                {billingCountryOptions.filter((value) => value !== "all").map((value) => (
+                                    <option key={`billing-filter-${value}`} value={value}>{value}</option>
+                                ))}
+                            </AdaptiveSelect>
+                        </div>
+                    </div>
+                    {filteredPaymentIssues.length ? (
+                        filteredPaymentIssues.slice(0, 6).map((issue) => (
                             <div key={`${issue.profile_id}-${issue.outcome}-${issue.last_event_at || "unknown"}`} className="rounded-xl border border-[#e6e6e1] bg-[#fcfcfb] p-4">
                                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                     <div className="min-w-0 flex-1">
@@ -358,6 +456,16 @@ export default function AnalyticsPage() {
                                             <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">
                                                 {issue.outcome_label}
                                             </span>
+                                            {issue.worker_country && (
+                                                <span className="rounded-full border border-[#dbeafe] bg-[#eff6ff] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1d4ed8]">
+                                                    Worker {issue.worker_country}
+                                                </span>
+                                            )}
+                                            {issue.billing_country && (
+                                                <span className="rounded-full border border-[#ede9fe] bg-[#f5f3ff] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6d28d9]">
+                                                    Billing {issue.billing_country}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="mt-3 text-xs text-[#71717a]">
                                             {issue.outcome_detail}

@@ -16,6 +16,12 @@ export interface PaymentQualityClassification {
     severity: PaymentQualitySeverity;
 }
 
+export interface PaymentQualityMarketSignals {
+    workerCountry: string | null;
+    billingCountry: string | null;
+    cardCountry: string | null;
+}
+
 function asObject(value: unknown): Record<string, unknown> | null {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
         return null;
@@ -44,6 +50,26 @@ function humanizeCode(value: string | null) {
         .trim()
         .replace(/\s+/g, " ")
         .replace(/^\w/, (char) => char.toUpperCase());
+}
+
+function normalizeCountrySignal(value: string | null) {
+    if (!value) {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
+export function readPaymentQualityMarketSignals(metadata: unknown): PaymentQualityMarketSignals {
+    return {
+        workerCountry: normalizeCountrySignal(extractStringField(metadata, "worker_country")),
+        billingCountry: normalizeCountrySignal(
+            extractStringField(metadata, "stripe_billing_country")
+            || extractStringField(metadata, "stripe_customer_country")
+        ),
+        cardCountry: normalizeCountrySignal(extractStringField(metadata, "stripe_card_country")),
+    };
 }
 
 export function classifyEntryFeePaymentQuality(params: {

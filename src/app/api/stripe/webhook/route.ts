@@ -137,6 +137,8 @@ export async function POST(req: NextRequest) {
             stripe_failure_type: failure?.type || null,
             stripe_failure_payment_method: typeof failure?.payment_method?.id === "string" ? failure.payment_method.id : null,
             stripe_failure_at: new Date().toISOString(),
+            stripe_billing_country: null,
+            stripe_card_country: null,
         };
 
         try {
@@ -180,6 +182,9 @@ export async function POST(req: NextRequest) {
             stripe_network_status: charge.outcome?.network_status || null,
             stripe_risk_level: charge.outcome?.risk_level || null,
             stripe_failure_at: new Date().toISOString(),
+            stripe_billing_country: charge.billing_details.address?.country || null,
+            stripe_billing_postal_code: charge.billing_details.address?.postal_code || null,
+            stripe_card_country: charge.payment_method_details?.card?.country || null,
         };
 
         const paymentId = getMetadataValue(charge.metadata?.payment_id);
@@ -262,6 +267,8 @@ export async function POST(req: NextRequest) {
                 stripe_currency: session.currency?.toUpperCase() || "USD",
                 stripe_session_status: session.status,
                 stripe_payment_status: session.payment_status,
+                stripe_customer_country: session.customer_details?.address?.country || null,
+                stripe_customer_postal_code: session.customer_details?.address?.postal_code || null,
             };
 
             const paymentPayload = {
