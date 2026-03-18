@@ -9,6 +9,7 @@ import {
     looksLikeGreetingOnlyWhatsAppMessage,
     looksLikeEmployerWhatsAppLead,
     looksLikeWorkerWhatsAppLead,
+    replyMatchesExpectedWhatsAppLanguage,
     resolveWhatsAppLanguageName,
     shouldStartWhatsAppOnboarding,
 } from "@/lib/whatsapp-brain";
@@ -95,6 +96,11 @@ describe("whatsapp-brain guards", () => {
         expect(detectWhatsAppLanguageCode("Kako da se prijavim")).toBe("sr");
         expect(resolveWhatsAppLanguageName("Pozdrav", "English")).toBe("Serbian");
         expect(resolveWhatsAppLanguageName("Treba mi posao", "English")).toBe("Serbian");
+    });
+
+    it("rejects English replies when the latest user message is Serbian", () => {
+        expect(replyMatchesExpectedWhatsAppLanguage("Serbian", "Hi! Create your account at workersunited.eu/signup.")).toBe(false);
+        expect(replyMatchesExpectedWhatsAppLanguage("Serbian", "Naravno. Prvi korak je da napravite nalog na workersunited.eu/signup.")).toBe(true);
     });
 
     it("does not treat an ordinary Serbian worker lead as an employer lead", () => {

@@ -124,6 +124,15 @@ export function resolveWhatsAppLanguageName(message: string, detectedLanguage?: 
     return getLanguageName(detectedCode);
 }
 
+export function replyMatchesExpectedWhatsAppLanguage(expectedLanguage: string, responseText: string): boolean {
+    const expectedCode = getLanguageCodeFromLabel(expectedLanguage);
+    if (!expectedCode) {
+        return true;
+    }
+
+    return detectWhatsAppLanguageCode(responseText) === expectedCode;
+}
+
 export function looksLikeEmployerWhatsAppLead(message: string): boolean {
     const normalized = message.trim().toLowerCase();
     return EMPLOYER_LEAD_PATTERN.test(normalized) && !WORKER_LEAD_PATTERN.test(normalized);
