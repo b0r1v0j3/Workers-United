@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, Users, FileCheck, Briefcase, Shield, Calendar } from "lucide-react";
+import { BarChart3, TrendingUp, Users, FileCheck, Briefcase, Shield, Calendar, CreditCard, ExternalLink } from "lucide-react";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { RegistrationsChart, RevenueChart } from "@/components/admin/AnalyticsCharts";
 
@@ -11,6 +12,27 @@ interface FunnelData {
     uploaded_documents: number;
     verified: number;
     job_matched: number;
+    payment_quality?: {
+        paid: number;
+        active: number;
+        expired: number;
+        abandoned: number;
+        bank_declined: number;
+        stripe_blocked: number;
+        recent_issues: Array<{
+            profile_id: string;
+            full_name: string;
+            email: string;
+            worker_status: string;
+            outcome: string;
+            outcome_label: string;
+            outcome_detail: string;
+            hours_since_checkout: number | null;
+            last_event_at: string | null;
+            workspace_href: string;
+            case_href: string;
+        }>;
+    };
     supply_demand?: { industry: string; supply: number; demand: number }[];
     time_series?: { date: string; workers: number; employers: number; revenue: number }[];
 }
@@ -45,6 +67,19 @@ function getDateRange(period: Period): { from?: string; to?: string } {
         default:
             return {};
     }
+}
+
+function formatDateTime(value?: string | null) {
+    if (!value) {
+        return "—";
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return "—";
+    }
+
+    return parsed.toLocaleString("en-GB");
 }
 
 export default function AnalyticsPage() {
@@ -259,6 +294,100 @@ export default function AnalyticsPage() {
                             </div>
                         );
                     })}
+                </div>
+            </div>
+
+            {/* Payment Quality */}
+            <div className="bg-white rounded-xl border border-[#dddfe2] p-6 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <h2 className="text-lg font-bold text-[#050505]">Payment Quality</h2>
+                        <p className="text-sm text-[#65676b]">
+                            Latest $9 Job Finder checkout attempt per worker, split between clean payments, active windows,
+                            expired sessions, bank declines, and Stripe risk blocks.
+                        </p>
+                    </div>
+                    <Link
+                        href="/internal/ops#payment-quality"
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#dddfe2] bg-white px-4 py-2 text-sm font-semibold text-[#050505] hover:bg-[#f7f8fa]"
+                    >
+                        Open internal ops
+                        <ExternalLink size={14} />
+                    </Link>
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-6">
+                    {[
+                        { label: "Paid", value: data.payment_quality?.paid || 0, color: "#059669" },
+                        { label: "Active", value: data.payment_quality?.active || 0, color: "#2563eb" },
+                        { label: "Expired", value: data.payment_quality?.expired || 0, color: "#d97706" },
+                        { label: "Abandoned", value: data.payment_quality?.abandoned || 0, color: "#b45309" },
+                        { label: "Bank Declined", value: data.payment_quality?.bank_declined || 0, color: "#dc2626" },
+                        { label: "Stripe Blocked", value: data.payment_quality?.stripe_blocked || 0, color: "#7c3aed" },
+                    ].map((metric) => (
+                        <div key={metric.label} className="rounded-xl border border-[#dddfe2] bg-[#fcfcfd] p-4">
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg text-white" style={{ backgroundColor: metric.color }}>
+                                    <CreditCard size={16} />
+                                </div>
+                                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#65676b]">
+                                    {metric.label}
+                                </span>
+                            </div>
+                            <div className="mt-3 text-2xl font-bold text-[#050505]">{metric.value}</div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-6 space-y-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[#65676b]">Recent payment issues</h3>
+                    {data.payment_quality?.recent_issues?.length ? (
+                        data.payment_quality.recent_issues.slice(0, 6).map((issue) => (
+                            <div key={`${issue.profile_id}-${issue.outcome}-${issue.last_event_at || "unknown"}`} className="rounded-xl border border-[#e6e6e1] bg-[#fcfcfb] p-4">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-semibold text-[#050505]">{issue.full_name}</div>
+                                        <div className="mt-1 text-sm text-[#65676b]">
+                                            {issue.email}
+                                            {issue.hours_since_checkout ? ` • ${issue.hours_since_checkout}h since checkout` : ""}
+                                        </div>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            <span className="rounded-full border border-[#e5e7eb] bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#57534e]">
+                                                {issue.worker_status.replace(/_/g, " ")}
+                                            </span>
+                                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">
+                                                {issue.outcome_label}
+                                            </span>
+                                        </div>
+                                        <div className="mt-3 text-xs text-[#71717a]">
+                                            {issue.outcome_detail}
+                                            {issue.last_event_at ? ` • last event ${formatDateTime(issue.last_event_at)}` : ""}
+                                        </div>
+                                    </div>
+                                    <div className="flex w-full flex-col gap-2 lg:w-[220px]">
+                                        <Link
+                                            href={issue.workspace_href}
+                                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e0ddd5] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:border-[#cfc9bf] hover:bg-[#fafaf9]"
+                                        >
+                                            <ExternalLink size={16} />
+                                            Inspect worker
+                                        </Link>
+                                        <Link
+                                            href={issue.case_href}
+                                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e0ddd5] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:border-[#cfc9bf] hover:bg-[#fafaf9]"
+                                        >
+                                            <Shield size={16} />
+                                            Open case
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="rounded-xl border border-dashed border-[#dddfe2] bg-[#fafaf9] p-8 text-center text-sm italic text-slate-400">
+                            No recent bank declines, Stripe blocks, or expired checkout sessions in the selected period.
+                        </div>
+                    )}
                 </div>
             </div>
 
