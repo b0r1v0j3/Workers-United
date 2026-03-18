@@ -1,25 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import { Crop, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
+
+type CropSelection = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
 
 interface DocumentViewerModalProps {
     url: string;
+    documentId: string;
     documentType: string;
     status: string;
     isPdf: boolean;
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
-export default function DocumentViewerModal({ url, documentType, status, isPdf, children }: DocumentViewerModalProps) {
+function formatPercent(value: number) {
+    return `${value.toFixed(1)}%`;
+}
+
+export default function DocumentViewerModal({
+    url,
+    documentId,
+    documentType,
+    status,
+    isPdf,
+    children,
+}: DocumentViewerModalProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
     const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
     const [pdfLoading, setPdfLoading] = useState(false);
     const [pdfError, setPdfError] = useState<string | null>(null);
+    const [imageVersion, setImageVersion] = useState(0);
+    const [cropMode, setCropMode] = useState(false);
+    const [cropSelection, setCropSelection] = useState<CropSelection | null>(null);
+    const [cropError, setCropError] = useState<string | null>(null);
+    const [cropSuccess, setCropSuccess] = useState<string | null>(null);
+    const [isSavingCrop, setIsSavingCrop] = useState(false);
+    const [isDrawingCrop, setIsDrawingCrop] = useState(false);
+    const imageRef = useRef<HTMLImageElement | null>(null);
+    const cropStartRef = useRef<{ x: number; y: number } | null>(null);
 
-    // Prevent scrolling on body when modal is open
+    const previewUrl = useMemo(() => {
+        const separator = url.includes("?") ? "&" : "?";
+        return `${url}${separator}preview_ts=${imageVersion}`;
+    }, [url, imageVersion]);
+
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = "hidden";
@@ -30,6 +63,29 @@ export default function DocumentViewerModal({ url, documentType, status, isPdf, 
             document.body.style.overflow = "auto";
         };
     }, [isOpen]);
+
+    useEffect(() => {
+        if (!cropMode) {
+            setIsDrawingCrop(false);
+            cropStartRef.current = null;
+        }
+    }, [cropMode]);
+
+    useEffect(() => {
+        if (!isDrawingCrop) {
+            return;
+        }
+
+        const handleWindowPointerUp = () => {
+            setIsDrawingCrop(false);
+            cropStartRef.current = null;
+        };
+
+        window.addEventListener("pointerup", handleWindowPointerUp);
+        return () => {
+            window.removeEventListener("pointerup", handleWindowPointerUp);
+        };
+    }, [isDrawingCrop]);
 
     useEffect(() => {
         if (!isOpen || !isPdf) {
@@ -94,6 +150,137 @@ export default function DocumentViewerModal({ url, documentType, status, isPdf, 
         };
     }, [isOpen, isPdf, url]);
 
+    function resetCropUi() {
+        setCropSelection(null);
+        setCropError(null);
+        setCropSuccess(null);
+        setIsDrawingCrop(false);
+        cropStartRef.current = null;
+    }
+
+    function startCropMode() {
+        setZoom(1);
+        setRotation(0);
+        resetCropUi();
+        setCropMode(true);
+    }
+
+    function cancelCropMode() {
+        resetCropUi();
+        setCropMode(false);
+    }
+
+    function getRelativePoint(clientX: number, clientY: number) {
+        const rect = imageRef.current?.getBoundingClientRect();
+        if (!rect || rect.width <= 0 || rect.height <= 0) {
+            return null;
+        }
+
+        const rawX = ((clientX - rect.left) / rect.width) * 100;
+        const rawY = ((clientY - rect.top) / rect.height) * 100;
+
+        return {
+            x: Math.max(0, Math.min(100, rawX)),
+            y: Math.max(0, Math.min(100, rawY)),
+        };
+    }
+
+    function updateCropSelection(current: { x: number; y: number }) {
+        const start = cropStartRef.current;
+        if (!start) {
+            return;
+        }
+
+        const x = Math.min(start.x, current.x);
+        const y = Math.min(start.y, current.y);
+        const width = Math.abs(current.x - start.x);
+        const height = Math.abs(current.y - start.y);
+
+        setCropSelection({ x, y, width, height });
+    }
+
+    function handleCropPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+        const point = getRelativePoint(event.clientX, event.clientY);
+        if (!point) {
+            return;
+        }
+
+        setCropError(null);
+        setCropSuccess(null);
+        cropStartRef.current = point;
+        setCropSelection({ x: point.x, y: point.y, width: 0, height: 0 });
+        setIsDrawingCrop(true);
+        event.currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    function handleCropPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+        if (!isDrawingCrop) {
+            return;
+        }
+
+        const point = getRelativePoint(event.clientX, event.clientY);
+        if (!point) {
+            return;
+        }
+
+        updateCropSelection(point);
+    }
+
+    function handleCropPointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+        if (!isDrawingCrop) {
+            return;
+        }
+
+        const point = getRelativePoint(event.clientX, event.clientY);
+        if (point) {
+            updateCropSelection(point);
+        }
+
+        setIsDrawingCrop(false);
+        cropStartRef.current = null;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    async function saveManualCrop() {
+        if (!cropSelection || isSavingCrop) {
+            return;
+        }
+
+        if (cropSelection.width < 3 || cropSelection.height < 3) {
+            setCropError("Draw a larger crop box before saving.");
+            return;
+        }
+
+        setIsSavingCrop(true);
+        setCropError(null);
+        setCropSuccess(null);
+
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ crop: cropSelection, documentId }),
+            });
+
+            const data = await response.json().catch(() => null) as { error?: string } | null;
+            if (!response.ok) {
+                throw new Error(data?.error || `Crop request failed (${response.status})`);
+            }
+
+            setImageVersion(Date.now());
+            setCropSuccess("Crop saved. The preview has been refreshed and the original file backup was preserved.");
+            setCropMode(false);
+            setCropSelection(null);
+        } catch (error) {
+            setCropError(error instanceof Error ? error.message : "Failed to save the crop.");
+        } finally {
+            setIsSavingCrop(false);
+        }
+    }
+
     if (!isOpen) {
         return (
             <button
@@ -107,32 +294,56 @@ export default function DocumentViewerModal({ url, documentType, status, isPdf, 
     }
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col md:flex-row animate-in fade-in duration-200">
-            {/* Left/Top: Document Viewer */}
-            <div className="flex-1 relative flex flex-col h-[60vh] md:h-full border-b md:border-b-0 md:border-r border-white/20">
-                {/* Toolbar */}
-                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/60 to-transparent">
-                    <div className="flex bg-black/50 backdrop-blur-md rounded-lg p-1 gap-1 border border-white/10">
+        <div className="fixed inset-0 z-[100] flex flex-col bg-black/90 animate-in fade-in duration-200 md:flex-row">
+            <div className="relative flex h-[60vh] flex-1 flex-col border-b border-white/20 md:h-full md:border-b-0 md:border-r">
+                <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent p-4">
+                    <div className="flex gap-1 rounded-lg border border-white/10 bg-black/50 p-1 backdrop-blur-md">
                         {isPdf ? (
-                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-white text-xs px-3 py-1.5 font-medium hover:bg-white/10 rounded">
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="rounded px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10">
                                 Open in New Tab
                             </a>
                         ) : (
                             <>
-                                <button onClick={() => setZoom(z => Math.min(z + 0.25, 3))} className="p-1.5 text-white hover:bg-white/20 rounded" title="Zoom In"><ZoomIn size={16} /></button>
-                                <button onClick={() => setZoom(z => Math.max(z - 0.25, 0.5))} className="p-1.5 text-white hover:bg-white/20 rounded" title="Zoom Out"><ZoomOut size={16} /></button>
-                                <button onClick={() => setRotation(r => r + 90)} className="p-1.5 text-white hover:bg-white/20 rounded" title="Rotate"><RotateCw size={16} /></button>
+                                <button
+                                    onClick={() => setZoom((value) => Math.min(value + 0.25, 3))}
+                                    className="rounded p-1.5 text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                    title="Zoom In"
+                                    disabled={cropMode}
+                                >
+                                    <ZoomIn size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setZoom((value) => Math.max(value - 0.25, 0.5))}
+                                    className="rounded p-1.5 text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                    title="Zoom Out"
+                                    disabled={cropMode}
+                                >
+                                    <ZoomOut size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setRotation((value) => value + 90)}
+                                    className="rounded p-1.5 text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                    title="Rotate"
+                                    disabled={cropMode}
+                                >
+                                    <RotateCw size={16} />
+                                </button>
+                                <button
+                                    onClick={cropMode ? cancelCropMode : startCropMode}
+                                    className={`rounded p-1.5 text-white transition hover:bg-white/20 ${cropMode ? "bg-white/20" : ""}`}
+                                    title={cropMode ? "Cancel crop" : "Start manual crop"}
+                                >
+                                    <Crop size={16} />
+                                </button>
                             </>
                         )}
                     </div>
-                    {/* Mobile Close Button */}
-                    <button onClick={() => setIsOpen(false)} className="md:hidden bg-white/10 text-white p-2 rounded-full backdrop-blur-md border border-white/20">
+                    <button onClick={() => setIsOpen(false)} className="rounded-full border border-white/20 bg-white/10 p-2 text-white backdrop-blur-md md:hidden">
                         <X size={20} />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-auto flex items-center justify-center bg-[#0f172a] p-4 relative">
+                <div className="relative flex flex-1 items-center justify-center overflow-auto bg-[#0f172a] p-4">
                     {isPdf ? (
                         pdfError ? (
                             <div className="flex max-w-md flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-8 text-center text-white">
@@ -153,41 +364,134 @@ export default function DocumentViewerModal({ url, documentType, status, isPdf, 
                                 <p className="mt-4 text-sm font-medium text-white/80">Loading PDF preview...</p>
                             </div>
                         ) : (
-                            <iframe src={`${pdfBlobUrl}#view=FitH`} className="w-full h-full rounded bg-white" title={documentType} />
+                            <iframe src={`${pdfBlobUrl}#view=FitH`} className="h-full w-full rounded bg-white" title={documentType} />
                         )
                     ) : (
                         <div
-                            className="transition-transform duration-200 origin-center"
-                            style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }}
+                            className="origin-center transition-transform duration-200"
+                            style={cropMode ? undefined : { transform: `scale(${zoom}) rotate(${rotation}deg)` }}
                         >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                                src={url}
-                                alt={documentType}
-                                className="max-w-full max-h-full object-contain rounded drop-shadow-2xl"
-                                style={{ maxHeight: '85vh' }}
-                            />
+                            <div className="relative inline-block select-none">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    ref={imageRef}
+                                    src={previewUrl}
+                                    alt={documentType}
+                                    className="max-h-[85vh] max-w-full rounded object-contain drop-shadow-2xl"
+                                    draggable={false}
+                                />
+
+                                {cropMode ? (
+                                    <div
+                                        className="absolute inset-0 cursor-crosshair touch-none rounded"
+                                        onPointerDown={handleCropPointerDown}
+                                        onPointerMove={handleCropPointerMove}
+                                        onPointerUp={handleCropPointerUp}
+                                    >
+                                        <div className="absolute inset-0 rounded border border-dashed border-white/35 bg-black/10" />
+                                        {cropSelection ? (
+                                            <div
+                                                className="absolute border-2 border-sky-300 bg-sky-300/15 shadow-[0_0_0_9999px_rgba(15,23,42,0.28)]"
+                                                style={{
+                                                    left: `${cropSelection.x}%`,
+                                                    top: `${cropSelection.y}%`,
+                                                    width: `${cropSelection.width}%`,
+                                                    height: `${cropSelection.height}%`,
+                                                }}
+                                            />
+                                        ) : null}
+                                    </div>
+                                ) : null}
+                            </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Right/Bottom: Actions Sidebar */}
-            <div className="w-full md:w-[420px] bg-white flex flex-col h-[40vh] md:h-full overflow-y-auto">
+            <div className="flex h-[40vh] w-full flex-col overflow-y-auto bg-white md:h-full md:w-[420px]">
                 <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e7e5e4] bg-white p-5">
                     <div>
-                        <h2 className="text-xl font-semibold text-slate-900 capitalize">{documentType}</h2>
+                        <h2 className="text-xl font-semibold capitalize text-slate-900">{documentType}</h2>
                         <div className="mt-1 flex items-center gap-2 text-sm text-slate-500">
                             Status: <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase">{status}</span>
                         </div>
                     </div>
-                    {/* Desktop Close Button */}
-                    <button onClick={() => setIsOpen(false)} className="hidden md:flex bg-slate-100 text-slate-600 p-2 rounded-full hover:bg-slate-200 transition-colors">
+                    <button onClick={() => setIsOpen(false)} className="hidden rounded-full bg-slate-100 p-2 text-slate-600 transition-colors hover:bg-slate-200 md:flex">
                         <X size={20} />
                     </button>
                 </div>
 
-                <div className="p-5 flex-1 flex flex-col gap-6">
+                <div className="flex flex-1 flex-col gap-6 p-5">
+                    {!isPdf ? (
+                        <div className="rounded-[22px] border border-[#dbe7ff] bg-[#f5f9ff] p-4">
+                            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#3b82f6]">
+                                <Crop size={14} />
+                                Manual crop tool
+                            </div>
+                            <p className="mt-3 text-sm leading-relaxed text-slate-700">
+                                Use this when AI kept extra page content, background, or margins. Draw a box over only the part you want to keep, then save.
+                            </p>
+                            <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                                Saving a crop refreshes this preview immediately and keeps an admin backup of the original image in storage.
+                            </p>
+
+                            {cropSelection ? (
+                                <div className="mt-3 rounded-xl border border-[#d8e6ff] bg-white px-3 py-2 text-xs text-slate-600">
+                                    Selection: {formatPercent(cropSelection.width)} wide x {formatPercent(cropSelection.height)} high
+                                </div>
+                            ) : null}
+
+                            {cropError ? (
+                                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                                    {cropError}
+                                </div>
+                            ) : null}
+
+                            {cropSuccess ? (
+                                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                                    {cropSuccess}
+                                </div>
+                            ) : null}
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                                {!cropMode ? (
+                                    <button
+                                        type="button"
+                                        onClick={startCropMode}
+                                        className="rounded-xl bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
+                                    >
+                                        Start manual crop
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCropSelection(null)}
+                                            className="rounded-xl border border-[#d6d3d1] bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                        >
+                                            Clear selection
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={cancelCropMode}
+                                            className="rounded-xl border border-[#d6d3d1] bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={saveManualCrop}
+                                            disabled={!cropSelection || isSavingCrop}
+                                            className="rounded-xl bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:bg-[#93c5fd]"
+                                        >
+                                            {isSavingCrop ? "Saving crop..." : "Save crop"}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    ) : null}
+
                     {children}
                 </div>
             </div>

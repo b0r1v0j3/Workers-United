@@ -1119,6 +1119,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                             {doc.storage_path ? (
                                                 <DocumentViewerModal
                                                     url={previewUrl}
+                                                    documentId={doc.id}
                                                     documentType={doc.document_type}
                                                     status={doc.status}
                                                     isPdf={isPdf}
