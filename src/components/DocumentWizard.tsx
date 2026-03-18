@@ -164,10 +164,8 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                         uploadFile = await processBiometricPhoto(file);
                     } else {
                         uploadFile = await fixImageOrientation(file);
+                        uploadFile = await compressImage(uploadFile);
                     }
-
-                    // 2. Compress
-                    uploadFile = await compressImage(uploadFile);
 
                 } catch (processErr) {
                     console.warn('[Upload] Image processing failed, uploading original:', processErr);
@@ -487,7 +485,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                             </div>
                             <div>
                                 <div className="font-semibold text-[#183b56]">Biometric Photo *</div>
-                                <div className="text-xs text-[#64748b]">Passport-style, white background</div>
+                                <div className="text-xs text-[#64748b]">Recent passport-style photo, plain light background, centered face, sharp image</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">

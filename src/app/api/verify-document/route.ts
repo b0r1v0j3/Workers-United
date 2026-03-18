@@ -467,26 +467,23 @@ export async function POST(request: Request) {
                             analyzed_at: new Date().toISOString(),
                             ai_recommendation: "approve",
                             review_state: "awaiting_admin_approval",
+                            ...(result.documentKind ? { document_kind: result.documentKind } : {}),
+                            ...(result.summary ? { summary: result.summary } : {}),
+                            ...(result.workerGuidance ? { worker_guidance: result.workerGuidance } : {}),
+                            ...(result.qualityIssues.length > 0 ? { issues: result.qualityIssues } : {}),
                         };
+                        qualityIssues = result.qualityIssues || [];
                     } else {
                         status = 'rejected';
-                        // Provide helpful guidance for biometric photo
-                        const issues = result.qualityIssues || [];
-                        if (issues.some((i: string) => i.toLowerCase().includes('no face'))) {
-                            rejectReason = "We couldn't detect a face in your photo. Please take a clear front-facing selfie or passport-style photo with your face clearly visible.";
-                        } else if (issues.some((i: string) => i.toLowerCase().includes('multiple'))) {
-                            rejectReason = "Multiple people detected. Please upload a photo of only yourself.";
-                        } else if (issues.some((i: string) => i.toLowerCase().includes('blurry') || i.toLowerCase().includes('dark'))) {
-                            rejectReason = "Photo is too blurry or dark. Please take it in good lighting and hold your phone steady.";
-                        } else {
-                            rejectReason = "Photo doesn't meet requirements. Please take a clear front-facing photo with good lighting and a plain background.";
-                        }
-                        qualityIssues = issues;
+                        qualityIssues = result.qualityIssues || [];
                         ocrJson = {
                             issues: result.qualityIssues,
                             confidence: result.confidence,
-                            worker_guidance: rejectReason,
+                            ...(result.documentKind ? { document_kind: result.documentKind } : {}),
+                            ...(result.summary ? { summary: result.summary } : {}),
+                            ...(result.workerGuidance ? { worker_guidance: result.workerGuidance } : {}),
                         };
+                        rejectReason = buildDocumentRequestReason("biometric_photo", ocrJson);
                     }
                     break;
                 }

@@ -6,8 +6,8 @@ import { COMPRESSED_IMAGE_QUALITY, COMPRESSED_MAX_WIDTH, COMPRESSED_MAX_HEIGHT }
  * and high-quality compression to reduce upload implementation size.
  */
 
-const BIOMETRIC_WIDTH = 600;
-const BIOMETRIC_HEIGHT = 770; // ~35x45mm ratio (7:9)
+const BIOMETRIC_MAX_WIDTH = 1050;
+const BIOMETRIC_MAX_HEIGHT = 1350; // ~35x45mm ratio (7:9)
 
 /**
  * Compress an image file while maintaining aspect ratio.
@@ -81,8 +81,8 @@ export async function fixImageOrientation(file: File): Promise<File> {
 }
 
 /**
- * Fix EXIF orientation and auto-crop to biometric photo ratio (7:9).
- * Returns a new File ready for upload.
+ * Fix EXIF orientation and normalize to biometric photo ratio (7:9)
+ * while preserving as much original detail as possible.
  */
 export async function processBiometricPhoto(file: File): Promise<File> {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
@@ -106,16 +106,23 @@ export async function processBiometricPhoto(file: File): Promise<File> {
         cropY = Math.round((bitmap.height - cropH) / 2);
     }
 
+    const scale = Math.min(
+        1,
+        Math.min(BIOMETRIC_MAX_WIDTH / cropW, BIOMETRIC_MAX_HEIGHT / cropH)
+    );
+    const outputWidth = Math.max(1, Math.round(cropW * scale));
+    const outputHeight = Math.max(1, Math.round(cropH * scale));
+
     // Draw cropped and resized result
     const canvas = document.createElement("canvas");
-    canvas.width = BIOMETRIC_WIDTH;
-    canvas.height = BIOMETRIC_HEIGHT;
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
     const ctx = canvas.getContext("2d")!;
 
     ctx.drawImage(
         bitmap,
         cropX, cropY, cropW, cropH,     // source crop
-        0, 0, BIOMETRIC_WIDTH, BIOMETRIC_HEIGHT  // destination
+        0, 0, outputWidth, outputHeight  // destination
     );
 
     bitmap.close();

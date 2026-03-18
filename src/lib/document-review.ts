@@ -39,6 +39,8 @@ export function buildDocumentAiSummary(documentType: string, ocrJson: unknown, r
     const summary = readString(ai.summary)
         || readString(ai.document_summary)
         || readString(ai.document_description);
+    const issues = readStringArray(ai.issues).map((issue) => issue.toLowerCase());
+    const documentKind = readString(ai.document_kind)?.toLowerCase();
 
     if (summary) {
         return summary;
@@ -85,10 +87,38 @@ export function buildDocumentAiSummary(documentType: string, ocrJson: unknown, r
     }
 
     if (documentType === "biometric_photo") {
+        if (documentKind === "printed_photo_scan" || issues.includes("scan_of_printed_photo")) {
+            return "Printed portrait scan detected";
+        }
+
+        if (issues.some((issue) => [
+            "blurry",
+            "low_resolution",
+            "pixelated",
+            "dark",
+            "shadow_on_face",
+            "glare",
+            "background_not_plain",
+            "background_too_busy",
+            "face_not_centered",
+            "face_too_small",
+            "head_cropped",
+            "tilted_head",
+            "eyes_not_visible",
+            "filtered_image",
+        ].includes(issue))) {
+            const confidence = typeof ai.confidence === "number"
+                ? `${Math.round(ai.confidence * 100)}% confidence`
+                : null;
+            return confidence
+                ? `Biometric photo detected, but quality is too weak for embassy use • ${confidence}`
+                : "Biometric photo detected, but quality is too weak for embassy use";
+        }
+
         const confidence = typeof ai.confidence === "number"
             ? `${Math.round(ai.confidence * 100)}% confidence`
             : null;
-        return confidence ? `Face photo detected • ${confidence}` : "Face photo detected";
+        return confidence ? `Biometric photo detected • ${confidence}` : "Biometric photo detected";
     }
 
     return null;
@@ -125,7 +155,45 @@ export function buildDocumentRequestReason(documentType: string, ocrJson: unknow
     }
 
     if (documentType === "biometric_photo") {
-        return "Please upload a clear photo of yourself only. Your face should be visible, centered, and taken in good lighting.";
+        if (documentKind === "printed_photo_scan" || issues.includes("scan_of_printed_photo")) {
+            return "Please upload the original digital biometric photo or take a new passport-style photo. Do not upload a scan or a photo of an older printed portrait.";
+        }
+
+        if (issues.includes("multiple_people")) {
+            return "Please upload a recent passport-style photo of only yourself. No other people can appear in the image.";
+        }
+
+        if (issues.includes("no_face_detected")) {
+            return "Please upload a recent passport-style photo of only yourself with your full face clearly visible and facing forward.";
+        }
+
+        const guidanceParts: string[] = [];
+
+        if (issues.some((issue) => ["blurry", "low_resolution", "pixelated"].includes(issue))) {
+            guidanceParts.push("a sharper, higher-resolution image");
+        }
+
+        if (issues.some((issue) => ["dark", "shadow_on_face", "glare"].includes(issue))) {
+            guidanceParts.push("bright, even lighting with no heavy shadows or glare");
+        }
+
+        if (issues.some((issue) => ["background_not_plain", "background_too_busy"].includes(issue))) {
+            guidanceParts.push("a plain light background with no distracting objects");
+        }
+
+        if (issues.some((issue) => ["face_not_centered", "face_too_small", "head_cropped", "tilted_head", "eyes_not_visible"].includes(issue))) {
+            guidanceParts.push("a centered, front-facing pose with your head and upper shoulders fully visible");
+        }
+
+        if (issues.includes("filtered_image")) {
+            guidanceParts.push("no beauty filters or heavy retouching");
+        }
+
+        if (guidanceParts.length > 0) {
+            return `Please upload a recent passport-style biometric photo of only yourself with ${guidanceParts.join(", ")}.`;
+        }
+
+        return "Please upload a recent passport-style biometric photo of only yourself with a plain light background, centered face, sharp quality, and even lighting.";
     }
 
     if (documentType === "diploma") {

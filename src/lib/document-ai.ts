@@ -187,6 +187,74 @@ const DIPLOMA_POSITIVE_PATTERNS = [
     /\bgraduation certificate\b/i,
 ];
 
+const BIOMETRIC_EXPLICIT_REJECT_KINDS = new Set([
+    "non_portrait",
+    "multiple_people",
+    "document_scan",
+    "printed_photo_scan",
+    "unclear",
+]);
+
+const BIOMETRIC_QUALITY_REJECT_ISSUES = new Set([
+    "blurry",
+    "low_resolution",
+    "pixelated",
+    "dark",
+    "shadow_on_face",
+    "glare",
+    "background_not_plain",
+    "background_too_busy",
+    "face_not_centered",
+    "face_too_small",
+    "head_cropped",
+    "tilted_head",
+    "eyes_not_visible",
+    "scan_of_printed_photo",
+    "filtered_image",
+]);
+
+function buildBiometricWorkerGuidance(issues: string[]) {
+    if (issues.includes("no_face_detected")) {
+        return "Please upload a recent passport-style photo of only yourself. Your full face must be clearly visible.";
+    }
+
+    if (issues.includes("multiple_people")) {
+        return "Please upload a passport-style photo of only yourself. No other people can appear in the image.";
+    }
+
+    if (issues.includes("scan_of_printed_photo")) {
+        return "Please upload the original passport-style photo file or take a new photo. Do not upload a scan or a photo of an old printed picture.";
+    }
+
+    const guidanceParts: string[] = [];
+
+    if (issues.some((issue) => ["blurry", "low_resolution", "pixelated"].includes(issue))) {
+        guidanceParts.push("use a sharper, higher-quality image");
+    }
+
+    if (issues.some((issue) => ["dark", "shadow_on_face", "glare"].includes(issue))) {
+        guidanceParts.push("use even lighting with no shadows or glare");
+    }
+
+    if (issues.some((issue) => ["background_not_plain", "background_too_busy"].includes(issue))) {
+        guidanceParts.push("stand in front of a plain light background");
+    }
+
+    if (issues.some((issue) => ["face_not_centered", "face_too_small", "head_cropped", "tilted_head", "eyes_not_visible"].includes(issue))) {
+        guidanceParts.push("keep your head and upper shoulders centered, fully visible, and facing the camera");
+    }
+
+    if (issues.includes("filtered_image")) {
+        guidanceParts.push("do not use filters or heavy edits");
+    }
+
+    if (guidanceParts.length === 0) {
+        return "Please upload a recent passport-style biometric photo with a plain light background, even lighting, and a sharp front-facing image.";
+    }
+
+    return `Please upload a recent passport-style biometric photo and ${guidanceParts.join(", ")}.`;
+}
+
 export function evaluateDiplomaGuardrails(parsed: Record<string, unknown>) {
     const documentKind = readModelString(parsed.document_kind)?.toLowerCase() || "";
     const documentTitle = readModelString(parsed.document_title);
@@ -254,6 +322,84 @@ export function evaluateDiplomaGuardrails(parsed: Record<string, unknown>) {
             : "Formal education document detected."),
         workerGuidance: null,
         issues: [] as string[],
+    };
+}
+
+export function evaluateBiometricPhotoGuardrails(parsed: Record<string, unknown>) {
+    const documentKind = readModelString(parsed.document_kind)?.toLowerCase() || "";
+    const summary = readModelString(parsed.summary)
+        || readModelString(parsed.document_description)
+        || null;
+    const qualityIssues = Array.from(new Set(
+        readModelStringArray(parsed.quality_issues).map((issue) => issue.toLowerCase())
+    ));
+    const faceVisible = parsed.face_visible !== false && !qualityIssues.includes("no_face_detected");
+    const exactlyOnePerson = parsed.exactly_one_person !== false && !qualityIssues.includes("multiple_people");
+    const embassyReady = parsed.meets_embassy_quality === true;
+    const qualityRejectIssues = qualityIssues.filter((issue) => BIOMETRIC_QUALITY_REJECT_ISSUES.has(issue));
+
+    if (!faceVisible) {
+        return {
+            isAccepted: false,
+            isCorrectType: false,
+            documentKind: documentKind || "non_portrait",
+            summary: summary || "No clear single face detected in the upload.",
+            workerGuidance: buildBiometricWorkerGuidance(["no_face_detected"]),
+            issues: Array.from(new Set([...qualityIssues, "no_face_detected"])),
+        };
+    }
+
+    if (!exactlyOnePerson || documentKind === "multiple_people") {
+        return {
+            isAccepted: false,
+            isCorrectType: false,
+            documentKind: "multiple_people",
+            summary: summary || "Multiple people detected in the photo.",
+            workerGuidance: buildBiometricWorkerGuidance(["multiple_people"]),
+            issues: Array.from(new Set([...qualityIssues, "multiple_people"])),
+        };
+    }
+
+    if (documentKind === "printed_photo_scan" || qualityIssues.includes("scan_of_printed_photo")) {
+        return {
+            isAccepted: false,
+            isCorrectType: true,
+            documentKind: "printed_photo_scan",
+            summary: summary || "This looks like a scan or photo of an older printed portrait.",
+            workerGuidance: buildBiometricWorkerGuidance(["scan_of_printed_photo"]),
+            issues: Array.from(new Set([...qualityIssues, "scan_of_printed_photo"])),
+        };
+    }
+
+    if (BIOMETRIC_EXPLICIT_REJECT_KINDS.has(documentKind)) {
+        return {
+            isAccepted: false,
+            isCorrectType: false,
+            documentKind,
+            summary: summary || "This upload does not look like a usable biometric portrait photo.",
+            workerGuidance: buildBiometricWorkerGuidance(qualityIssues),
+            issues: qualityIssues,
+        };
+    }
+
+    if (!embassyReady || qualityRejectIssues.length > 0) {
+        return {
+            isAccepted: false,
+            isCorrectType: true,
+            documentKind: documentKind || "passport_style_photo",
+            summary: summary || "Biometric photo detected, but the quality is not strong enough for embassy use.",
+            workerGuidance: buildBiometricWorkerGuidance(qualityRejectIssues),
+            issues: qualityIssues,
+        };
+    }
+
+    return {
+        isAccepted: true,
+        isCorrectType: true,
+        documentKind: documentKind || "passport_style_photo",
+        summary: summary || "Passport-style biometric photo detected.",
+        workerGuidance: null,
+        issues: qualityIssues,
     };
 }
 
@@ -647,46 +793,92 @@ Return ONLY the JSON object, no other text.`;
 
 export async function verifyBiometricPhoto(imageUrl: string): Promise<DocumentQualityResult> {
     try {
-        const prompt = `You are a biometric photo analyzer.
-Be EXTREMELY LENIENT. Accept almost ANY photo that shows a person.
-Only set is_valid_photo to false if:
-- The image contains NO person at all (e.g., a landscape, a document, a blank image)
-- The image is completely black or blank
+        const prompt = `You are an embassy-grade biometric photo verifier.
+Decide whether this upload is a strong passport-style biometric photo suitable for visa or embassy paperwork.
 
-Accept even if:
-- Photo is slightly blurry or dark
-- Person is not looking at camera
-- Background is not plain
-- Photo has poor quality
-- Multiple people (just note it as an issue but still accept)
+Accept ONLY if:
+- exactly one person is visible
+- the face is clear, front-facing, and centered
+- the head and upper shoulders are visible
+- the image is sharp enough, not blurry, not pixelated, and not too dark
+- the background is plain and light enough
+- there are no strong shadows, glare, filters, or heavy edits
+- it does NOT look like a scan or photo of an old printed picture or a crop from another document
+
+Reject if:
+- no clear face is visible
+- multiple people are visible
+- the image is blurry, low-resolution, pixelated, too dark, or shadowy
+- the face is too small, off-center, cropped, tilted, or eyes are not clearly visible
+- the background is busy or dark
+- the upload looks like a scan/photo of a printed portrait or document crop
 
 Return JSON:
 {
-  "is_valid_photo": true/false,
-  "quality_issues": ["list any minor issues"],
+  "is_biometric_photo": true/false,
+  "meets_embassy_quality": true/false,
+  "document_kind": "passport_style_photo | selfie_photo | printed_photo_scan | document_scan | multiple_people | non_portrait | unclear",
+  "summary": "short admin-facing summary of what is visible",
+  "worker_guidance": "short direct instruction telling the worker what to upload next",
+  "exactly_one_person": true/false,
+  "face_visible": true/false,
+  "background_plain_light": true/false,
+  "facing_forward": true/false,
+  "head_and_shoulders_visible": true/false,
+  "face_centered": true/false,
+  "sharp_enough": true/false,
+  "lighting_even": true/false,
+  "quality_issues": ["no_face_detected | multiple_people | blurry | low_resolution | pixelated | dark | shadow_on_face | glare | background_not_plain | background_too_busy | face_not_centered | face_too_small | head_cropped | tilted_head | eyes_not_visible | scan_of_printed_photo | filtered_image"],
   "confidence": 0.0-1.0
 }
 
-IMPORTANT: If you can see ANY person in the photo, set is_valid_photo to true. We will verify manually later.
 Return ONLY the JSON object, no other text.`;
 
         const content = await callDocumentVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
+        const guardrail = evaluateBiometricPhotoGuardrails(parsed);
+        const aiAccepted = parsed.is_biometric_photo === true || parsed.is_valid_photo === true;
+        const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
+        const qualityIssues = Array.from(new Set([
+            ...guardrail.issues,
+            ...readModelStringArray(parsed.quality_issues).map((issue) => issue.toLowerCase()),
+        ]));
+        const summary = readModelString(parsed.summary)
+            || guardrail.summary
+            || null;
+        const workerGuidance = readModelString(parsed.worker_guidance)
+            || guardrail.workerGuidance
+            || null;
+        const isCorrectType = guardrail.isCorrectType && (
+            aiAccepted
+            || guardrail.documentKind === "passport_style_photo"
+            || guardrail.documentKind === "selfie_photo"
+        );
 
         return {
-            success: parsed.is_valid_photo === true,
-            isCorrectType: parsed.is_valid_photo === true,
-            qualityIssues: parsed.quality_issues || [],
-            confidence: parsed.confidence || 0.7,
+            success: isCorrectType && guardrail.isAccepted && confidence >= 0.8,
+            isCorrectType,
+            qualityIssues,
+            confidence,
+            documentKind: guardrail.documentKind,
+            summary: summary || undefined,
+            workerGuidance: workerGuidance || undefined,
+            rawResponse: content,
         };
     } catch (error) {
         console.error("Photo verification error:", error);
-        return {
-            success: true,
-            isCorrectType: true,
-            qualityIssues: ["Auto-accepted for manual review"],
-            confidence: 0.5,
-        };
+        if (error instanceof AIInfraError) {
+            return {
+                success: true,
+                isCorrectType: true,
+                qualityIssues: ["system_error: AI verification unavailable — accepted for manual review"],
+                confidence: 0.3,
+                summary: "Biometric photo AI verification was unavailable.",
+                workerGuidance: "Please wait while our team reviews your biometric photo manually.",
+            };
+        }
+
+        throw error;
     }
 }
 
