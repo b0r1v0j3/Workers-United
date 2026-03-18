@@ -12,6 +12,7 @@ import {
     filterSafeWhatsAppBrainMemory,
     looksLikeEmployerWhatsAppLead,
     looksLikeWorkerWhatsAppLead,
+    replyMatchesExpectedWhatsAppLanguage,
     resolveWhatsAppLanguageName,
     shouldStartWhatsAppOnboarding,
 } from "@/lib/whatsapp-brain";
@@ -716,6 +717,7 @@ export async function POST(request: NextRequest) {
                 // ─── WhatsApp Onboarding Flow (before GPT) ───────────────
                 // Detect language from router or simple heuristic
                 const quickLang = detectWhatsAppLanguageCode(content);
+                const latestMessageLanguage = resolveWhatsAppLanguageName(content);
 
                 if (!isTextLikeMessageType(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
@@ -811,7 +813,7 @@ export async function POST(request: NextRequest) {
                             profile,
                             historyMessages,
                         });
-                        routerDecision.language = resolveWhatsAppLanguageName(content, routerDecision.language);
+                        routerDecision.language = latestMessageLanguage;
 
                         await logServerActivity(
                             workerRecord?.profile_id || "anonymous",
@@ -903,12 +905,16 @@ export async function POST(request: NextRequest) {
                 // Send reply via Vercel (using our existing WhatsApp token)
                 const guardrailResult = applyWhatsAppReplyGuardrails({
                     responseText: cleanResponse,
-                    language: routerDecision?.language || quickLang,
+                    language: routerDecision?.language || latestMessageLanguage,
                     workerRecord,
                 });
                 const replyText = guardrailResult.text || await getFallbackResponse(content, workerRecord, profile);
-                if (replyText) {
-                    await sendWhatsAppText(normalizedPhone, replyText, workerRecord?.profile_id || undefined);
+                const finalReplyText = replyText && !replyMatchesExpectedWhatsAppLanguage(latestMessageLanguage, replyText)
+                    ? await getFallbackResponse(content, workerRecord, profile)
+                    : replyText;
+
+                if (finalReplyText) {
+                    await sendWhatsAppText(normalizedPhone, finalReplyText, workerRecord?.profile_id || undefined);
                     // Log GPT response for quality review
                     await logServerActivity(
                         workerRecord?.profile_id || "anonymous",
@@ -917,12 +923,14 @@ export async function POST(request: NextRequest) {
                         {
                             phone: normalizedPhone,
                             user_message: content.substring(0, 200),
-                            bot_response: replyText.substring(0, 500),
+                            bot_response: finalReplyText.substring(0, 500),
                             response_type: aiResponse
-                                ? (guardrailResult.triggered ? "gpt_guarded" : "gpt")
+                                ? (guardrailResult.triggered ? "gpt_guarded" : (finalReplyText !== replyText ? "gpt_language_fallback" : "gpt"))
                                 : "fallback",
                             model: aiResponse ? WHATSAPP_RESPONSE_MODEL : "fallback",
                             guardrail_reason: guardrailResult.reason,
+                            expected_language: latestMessageLanguage,
+                            language_forced_to_fallback: finalReplyText !== replyText,
                         }
                     );
                 }
