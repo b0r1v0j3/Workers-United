@@ -24,111 +24,11 @@ import {
     AGENCY_DRAFT_DOCUMENT_OWNER_KEY,
     resolveAgencyWorkerDocumentOwnerId,
 } from "@/lib/agency-draft-documents";
-
-type DocumentCrop = { x: number; y: number; width: number; height: number };
-type ProcessedImageMimeType = "image/jpeg" | "image/png" | "image/webp";
-
-function getProcessedImageMimeType(mimeType: string): ProcessedImageMimeType {
-    if (mimeType === "image/png") {
-        return "image/png";
-    }
-
-    if (mimeType === "image/webp") {
-        return "image/webp";
-    }
-
-    return "image/jpeg";
-}
-
-function resolveRotationToApply(
-    primaryRotation: 0 | 90 | 180 | 270,
-    primaryConfidence: number,
-    fallbackRotation?: number
-): 0 | 90 | 180 | 270 {
-    const normalizedFallback =
-        fallbackRotation === 90 || fallbackRotation === 180 || fallbackRotation === 270
-            ? fallbackRotation
-            : 0;
-
-    if (primaryConfidence >= 0.45) {
-        return primaryRotation;
-    }
-
-    if (primaryRotation === normalizedFallback) {
-        return primaryRotation;
-    }
-
-    if (primaryRotation === 0) {
-        return normalizedFallback;
-    }
-
-    if (normalizedFallback === 0) {
-        return primaryRotation;
-    }
-
-    return normalizedFallback;
-}
-
-async function processImageBuffer(
-    buffer: Buffer,
-    mimeType: string,
-    rotationDegrees: 0 | 90 | 180 | 270,
-    crop?: DocumentCrop
-): Promise<{ buffer: Buffer; contentType: ProcessedImageMimeType; cropApplied: boolean }> {
-    let pipeline = sharp(buffer).rotate();
-
-    if (rotationDegrees !== 0) {
-        pipeline = pipeline.rotate(rotationDegrees);
-    }
-
-    let cropApplied = false;
-
-    if (crop) {
-        const rotatedBuffer = await pipeline.toBuffer();
-        const metadata = await sharp(rotatedBuffer).metadata();
-        const imgW = metadata.width || 1;
-        const imgH = metadata.height || 1;
-        const cropX = Math.round((crop.x / 100) * imgW);
-        const cropY = Math.round((crop.y / 100) * imgH);
-        const cropW = Math.min(Math.round((crop.width / 100) * imgW), imgW - cropX);
-        const cropH = Math.min(Math.round((crop.height / 100) * imgH), imgH - cropY);
-
-        if (cropW > 50 && cropH > 50) {
-            pipeline = sharp(rotatedBuffer).extract({
-                left: cropX,
-                top: cropY,
-                width: cropW,
-                height: cropH,
-            });
-            cropApplied = true;
-        } else {
-            pipeline = sharp(rotatedBuffer);
-        }
-    }
-
-    const contentType = getProcessedImageMimeType(mimeType);
-
-    switch (contentType) {
-        case "image/png":
-            return {
-                buffer: await pipeline.png().toBuffer(),
-                contentType,
-                cropApplied,
-            };
-        case "image/webp":
-            return {
-                buffer: await pipeline.webp({ quality: 92 }).toBuffer(),
-                contentType,
-                cropApplied,
-            };
-        default:
-            return {
-                buffer: await pipeline.jpeg({ quality: 92 }).toBuffer(),
-                contentType,
-                cropApplied,
-            };
-    }
-}
+import {
+    buildAutoCropOcrPatch,
+    processDocumentImageBuffer,
+    resolveDocumentRotationToApply,
+} from "@/lib/document-image-processing";
 
 export async function POST(request: Request) {
     // Rate limit: 10 requests per minute per IP (AI verification is expensive)
@@ -307,50 +207,52 @@ export async function POST(request: Request) {
             const orientation = await detectDocumentOrientation(imageData, normalizedDocType);
             const bounds = await detectDocumentBounds(imageData, normalizedDocType);
             const crop = bounds.found ? bounds.crop : undefined;
-            const rotationToApply = resolveRotationToApply(
+            const rotationToApply = resolveDocumentRotationToApply(
                 orientation.rotationDegrees,
                 orientation.confidence,
                 bounds.rotationDegrees
             );
-            const hasOrientationSignal = orientation.confidence > 0 || !!orientation.summary || bounds.found;
+            const imageBuffer = Buffer.from(imageData.data, "base64");
+            const shouldRewriteImage = rotationToApply !== 0 || !!crop;
+            let cropApplied = false;
 
-            if (hasOrientationSignal) {
-                const imageBuffer = Buffer.from(imageData.data, "base64");
-                const shouldRewriteImage = rotationToApply !== 0 || !!crop || orientation.confidence > 0 || !!orientation.summary;
-                let cropApplied = false;
+            if (shouldRewriteImage) {
+                const { data: currentDoc } = await readClient
+                    .from("worker_documents")
+                    .select("storage_path")
+                    .eq("id", document.id)
+                    .single();
 
-                if (shouldRewriteImage) {
-                    const { data: currentDoc } = await readClient
-                        .from("worker_documents")
-                        .select("storage_path")
-                        .eq("id", document.id)
-                        .single();
+                const storagePath = currentDoc?.storage_path || document.storage_path;
+                const processed = await processDocumentImageBuffer(imageBuffer, imageData.mimeType, rotationToApply, crop);
+                cropApplied = processed.cropApplied;
 
-                    const storagePath = currentDoc?.storage_path || document.storage_path;
-                    const processed = await processImageBuffer(imageBuffer, imageData.mimeType, rotationToApply, crop);
-                    cropApplied = processed.cropApplied;
+                await storageClient.storage
+                    .from(WORKER_DOCUMENTS_BUCKET)
+                    .update(storagePath, processed.buffer, {
+                        contentType: processed.contentType,
+                        upsert: true
+                    });
 
-                    await storageClient.storage
-                        .from(WORKER_DOCUMENTS_BUCKET)
-                        .update(storagePath, processed.buffer, {
-                            contentType: processed.contentType,
-                            upsert: true
-                        });
+                const { data: newUrlData } = await storageClient.storage
+                    .from(WORKER_DOCUMENTS_BUCKET)
+                    .createSignedUrl(storagePath, 600);
+                imageUrl = newUrlData?.signedUrl || imageUrl;
+            }
 
-                    const { data: newUrlData } = await storageClient.storage
-                        .from(WORKER_DOCUMENTS_BUCKET)
-                        .createSignedUrl(storagePath, 600);
-                    imageUrl = newUrlData?.signedUrl || imageUrl;
-                }
-
-                orientationOcrPatch = buildDocumentOrientationOcrPatch({
+            orientationOcrPatch = {
+                ...buildDocumentOrientationOcrPatch({
                     detectedRotationDegrees: rotationToApply,
                     appliedRotationDegrees: shouldRewriteImage ? rotationToApply : 0,
                     confidence: orientation.confidence,
                     summary: orientation.summary,
                     cropApplied,
-                });
-            }
+                }),
+                ...buildAutoCropOcrPatch({
+                    cropApplied,
+                    crop: cropApplied ? crop : undefined,
+                }),
+            };
         } catch (cropErr) {
             console.warn("[Verify] Auto-crop/rotate failed, continuing with original:", cropErr);
         }

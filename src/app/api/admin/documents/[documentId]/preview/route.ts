@@ -3,14 +3,44 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
-import { buildDocumentOrientationOcrPatch, detectDocumentOrientation } from "@/lib/document-ai";
-import sharp from "sharp";
+import {
+    buildDocumentOrientationOcrPatch,
+    detectDocumentBounds,
+    detectDocumentOrientation,
+} from "@/lib/document-ai";
+import {
+    buildAutoCropOcrPatch,
+    buildManualCropOcrPatch,
+    processDocumentImageBuffer,
+    resolveDocumentRotationToApply,
+    sanitizeDocumentCrop,
+} from "@/lib/document-image-processing";
 
 export const dynamic = "force-dynamic";
 
 interface RouteProps {
     params: Promise<{ documentId: string }>;
 }
+
+type AuthorizedAdminResult =
+    | { admin: ReturnType<typeof createAdminClient> }
+    | { response: NextResponse };
+
+type DocumentContextResult =
+    | {
+        admin: ReturnType<typeof createAdminClient>;
+        document: {
+            id: string;
+            storage_path: string;
+            document_type: string;
+            ocr_json: unknown;
+        };
+        buffer: Buffer;
+        fileName: string;
+        contentType: string;
+        ocrJson: Record<string, unknown>;
+    }
+    | { response: NextResponse };
 
 function getMimeType(fileName: string, fallback?: string | null) {
     if (fallback && fallback.trim().length > 0 && fallback !== "application/octet-stream") {
@@ -48,40 +78,40 @@ function hasProcessedOrientation(ocrJson: Record<string, unknown>) {
     return typeof ocrJson.orientation_processed_at === "string" && ocrJson.orientation_processed_at.trim().length > 0;
 }
 
-async function renderNormalizedImage(buffer: Buffer, mimeType: string, rotationDegrees: 0 | 90 | 180 | 270) {
-    let pipeline = sharp(buffer).rotate();
-
-    if (rotationDegrees !== 0) {
-        pipeline = pipeline.rotate(rotationDegrees);
-    }
-
-    if (mimeType === "image/png") {
-        return {
-            buffer: await pipeline.png().toBuffer(),
-            contentType: "image/png",
-        };
-    }
-
-    if (mimeType === "image/webp") {
-        return {
-            buffer: await pipeline.webp({ quality: 92 }).toBuffer(),
-            contentType: "image/webp",
-        };
-    }
-
-    return {
-        buffer: await pipeline.jpeg({ quality: 92 }).toBuffer(),
-        contentType: "image/jpeg",
-    };
+function hasProcessedAutoCrop(ocrJson: Record<string, unknown>) {
+    return typeof ocrJson.auto_crop_processed_at === "string" && ocrJson.auto_crop_processed_at.trim().length > 0;
 }
 
-export async function GET(_request: Request, { params }: RouteProps) {
-    const { documentId } = await params;
+function hasManualCrop(ocrJson: Record<string, unknown>) {
+    return ocrJson.manual_crop_applied === true;
+}
+
+function buildInlineResponse(buffer: Buffer, contentType: string, fileName: string) {
+    return new NextResponse(new Uint8Array(buffer), {
+        headers: {
+            "Content-Type": contentType,
+            "Content-Disposition": `inline; filename="${fileName}"`,
+            "Cache-Control": "private, no-store, max-age=0",
+            "X-Content-Type-Options": "nosniff",
+        },
+    });
+}
+
+function buildManualCropBackupPath(storagePath: string) {
+    const segments = storagePath.split("/");
+    const fileName = segments.pop() || "document";
+    const directory = segments.join("/");
+    return `${directory}/_admin-originals/${fileName}`;
+}
+
+async function authorizeAdmin(): Promise<AuthorizedAdminResult> {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return {
+            response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        };
     }
 
     const { data: profile } = await supabase
@@ -91,18 +121,31 @@ export async function GET(_request: Request, { params }: RouteProps) {
         .maybeSingle();
 
     if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        return {
+            response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        };
     }
 
-    const admin = createAdminClient();
+    return { admin: createAdminClient() };
+}
+
+async function loadDocumentContext(documentId: string): Promise<DocumentContextResult> {
+    const auth = await authorizeAdmin();
+    if ("response" in auth) {
+        return auth;
+    }
+
+    const { admin } = auth;
     const { data: document, error: documentError } = await admin
         .from("worker_documents")
-        .select("storage_path, document_type, ocr_json")
+        .select("id, storage_path, document_type, ocr_json")
         .eq("id", documentId)
         .maybeSingle();
 
     if (documentError || !document?.storage_path) {
-        return NextResponse.json({ error: "Document not found" }, { status: 404 });
+        return {
+            response: NextResponse.json({ error: "Document not found" }, { status: 404 }),
+        };
     }
 
     const { data: file, error: downloadError } = await admin.storage
@@ -110,99 +153,217 @@ export async function GET(_request: Request, { params }: RouteProps) {
         .download(document.storage_path);
 
     if (downloadError || !file) {
-        return NextResponse.json({ error: "Stored document not found" }, { status: 404 });
+        return {
+            response: NextResponse.json({ error: "Stored document not found" }, { status: 404 }),
+        };
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const fileName = getInlineFileName(document.storage_path, document.document_type);
     const contentType = getMimeType(fileName, file.type);
-    const ocrJson = normalizeOcrJson(document.ocr_json);
 
-    if (!isImageMimeType(contentType) || hasProcessedOrientation(ocrJson)) {
-        return new NextResponse(new Uint8Array(buffer), {
-            headers: {
-                "Content-Type": contentType,
-                "Content-Disposition": `inline; filename="${fileName}"`,
-                "Cache-Control": "private, no-store, max-age=0",
-                "X-Content-Type-Options": "nosniff",
-            },
-        });
+    return {
+        admin,
+        document,
+        buffer,
+        fileName,
+        contentType,
+        ocrJson: normalizeOcrJson(document.ocr_json),
+    };
+}
+
+export async function GET(_request: Request, { params }: RouteProps) {
+    const { documentId } = await params;
+    const context = await loadDocumentContext(documentId);
+
+    if ("response" in context) {
+        return context.response;
+    }
+
+    const { admin, document, buffer, fileName, contentType, ocrJson } = context;
+
+    if (!isImageMimeType(contentType)) {
+        return buildInlineResponse(buffer, contentType, fileName);
+    }
+
+    const orientationProcessed = hasProcessedOrientation(ocrJson);
+    const autoCropProcessed = hasProcessedAutoCrop(ocrJson) || hasManualCrop(ocrJson);
+
+    if (orientationProcessed && autoCropProcessed) {
+        return buildInlineResponse(buffer, contentType, fileName);
     }
 
     try {
-        const orientation = await detectDocumentOrientation({
+        const imageInput = {
             data: buffer.toString("base64"),
             mimeType: contentType,
-        }, document.document_type);
+        };
+        const orientation = orientationProcessed
+            ? { rotationDegrees: 0 as const, confidence: 0, summary: undefined as string | undefined }
+            : await detectDocumentOrientation(imageInput, document.document_type);
+        const bounds = autoCropProcessed
+            ? { found: false as const, crop: undefined, rotationDegrees: undefined as number | undefined }
+            : await detectDocumentBounds(imageInput, document.document_type);
+        const rotationToApply = orientationProcessed
+            ? 0
+            : resolveDocumentRotationToApply(
+                orientation.rotationDegrees,
+                orientation.confidence,
+                bounds.rotationDegrees
+            );
+        const safeCrop = bounds.found ? sanitizeDocumentCrop(bounds.crop) : null;
+        const shouldRewriteImage = rotationToApply !== 0 || !!safeCrop;
+        const processed = shouldRewriteImage
+            ? await processDocumentImageBuffer(buffer, contentType, rotationToApply, safeCrop)
+            : { buffer, contentType, cropApplied: false };
+        const patch = {
+            ...(orientationProcessed ? {} : buildDocumentOrientationOcrPatch({
+                detectedRotationDegrees: rotationToApply,
+                appliedRotationDegrees: shouldRewriteImage ? rotationToApply : 0,
+                confidence: orientation.confidence,
+                summary: orientation.summary,
+                cropApplied: processed.cropApplied,
+            })),
+            ...(autoCropProcessed ? {} : buildAutoCropOcrPatch({
+                cropApplied: processed.cropApplied,
+                crop: processed.cropApplied ? safeCrop : undefined,
+            })),
+        };
 
-        const hasOrientationSignal = orientation.confidence > 0 || !!orientation.summary;
+        if (Object.keys(patch).length > 0) {
+            after(async () => {
+                if (shouldRewriteImage) {
+                    const { error: uploadError } = await admin.storage
+                        .from(WORKER_DOCUMENTS_BUCKET)
+                        .update(document.storage_path, processed.buffer, {
+                            contentType: processed.contentType,
+                            upsert: true,
+                        });
 
-        if (!hasOrientationSignal) {
-            return new NextResponse(new Uint8Array(buffer), {
-                headers: {
-                    "Content-Type": contentType,
-                    "Content-Disposition": `inline; filename="${fileName}"`,
-                    "Cache-Control": "private, no-store, max-age=0",
-                    "X-Content-Type-Options": "nosniff",
-                },
+                    if (uploadError) {
+                        console.warn("[Admin preview] Failed to persist normalized document:", uploadError);
+                        return;
+                    }
+                }
+
+                const { error: updateError } = await admin
+                    .from("worker_documents")
+                    .update({
+                        ocr_json: {
+                            ...ocrJson,
+                            ...patch,
+                        },
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", documentId);
+
+                if (updateError) {
+                    console.warn("[Admin preview] Failed to persist image normalization metadata:", updateError);
+                }
             });
         }
 
-        const normalized = await renderNormalizedImage(buffer, contentType, orientation.rotationDegrees);
-        const orientationOcrPatch = buildDocumentOrientationOcrPatch({
-            detectedRotationDegrees: orientation.rotationDegrees,
-            appliedRotationDegrees: orientation.rotationDegrees,
-            confidence: orientation.confidence,
-            summary: orientation.summary,
-        });
-
-        after(async () => {
-            const { error: uploadError } = await admin.storage
-                .from(WORKER_DOCUMENTS_BUCKET)
-                .update(document.storage_path, normalized.buffer, {
-                    contentType: normalized.contentType,
-                    upsert: true,
-                });
-
-            if (uploadError) {
-                console.warn("[Admin preview] Failed to persist normalized document:", uploadError);
-                return;
-            }
-
-            const { error: updateError } = await admin
-                .from("worker_documents")
-                .update({
-                    ocr_json: {
-                        ...ocrJson,
-                        ...orientationOcrPatch,
-                    },
-                    updated_at: new Date().toISOString(),
-                })
-                .eq("id", documentId);
-
-            if (updateError) {
-                console.warn("[Admin preview] Failed to persist orientation metadata:", updateError);
-            }
-        });
-
-        return new NextResponse(new Uint8Array(normalized.buffer), {
-            headers: {
-                "Content-Type": normalized.contentType,
-                "Content-Disposition": `inline; filename="${fileName}"`,
-                "Cache-Control": "private, no-store, max-age=0",
-                "X-Content-Type-Options": "nosniff",
-            },
-        });
+        return buildInlineResponse(processed.buffer, processed.contentType, fileName);
     } catch (error) {
-        console.warn("[Admin preview] Orientation normalization failed:", error);
+        console.warn("[Admin preview] Image normalization failed:", error);
     }
 
-    return new NextResponse(new Uint8Array(buffer), {
-        headers: {
-            "Content-Type": contentType,
-            "Content-Disposition": `inline; filename="${fileName}"`,
-            "Cache-Control": "private, no-store, max-age=0",
-            "X-Content-Type-Options": "nosniff",
-        },
+    return buildInlineResponse(buffer, contentType, fileName);
+}
+
+export async function POST(request: Request, { params }: RouteProps) {
+    const { documentId } = await params;
+    const context = await loadDocumentContext(documentId);
+
+    if ("response" in context) {
+        return context.response;
+    }
+
+    const { admin, document, buffer, contentType, ocrJson } = context;
+
+    if (!isImageMimeType(contentType)) {
+        return NextResponse.json({ error: "Manual crop is only available for images." }, { status: 400 });
+    }
+
+    let body: unknown;
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    }
+
+    const crop = sanitizeDocumentCrop((body as { crop?: unknown } | null)?.crop);
+    if (!crop) {
+        return NextResponse.json({ error: "A valid crop selection is required." }, { status: 400 });
+    }
+
+    let backupStoragePath =
+        typeof ocrJson.manual_crop_original_storage_path === "string" && ocrJson.manual_crop_original_storage_path.trim().length > 0
+            ? ocrJson.manual_crop_original_storage_path.trim()
+            : null;
+
+    if (!backupStoragePath) {
+        backupStoragePath = buildManualCropBackupPath(document.storage_path);
+        const { error: backupError } = await admin.storage
+            .from(WORKER_DOCUMENTS_BUCKET)
+            .upload(backupStoragePath, buffer, {
+                contentType,
+                upsert: true,
+            });
+
+        if (backupError) {
+            console.warn("[Admin preview] Failed to create manual-crop backup:", backupError);
+            return NextResponse.json({ error: "Could not preserve the original image before cropping." }, { status: 500 });
+        }
+    }
+
+    const processed = await processDocumentImageBuffer(buffer, contentType, 0, crop);
+
+    if (!processed.cropApplied) {
+        return NextResponse.json({ error: "The selected crop area is too small. Please draw a larger box." }, { status: 400 });
+    }
+
+    const { error: uploadError } = await admin.storage
+        .from(WORKER_DOCUMENTS_BUCKET)
+        .update(document.storage_path, processed.buffer, {
+            contentType: processed.contentType,
+            upsert: true,
+        });
+
+    if (uploadError) {
+        console.warn("[Admin preview] Failed to save manual crop:", uploadError);
+        return NextResponse.json({ error: "Failed to save the cropped document." }, { status: 500 });
+    }
+
+    const appliedAt = new Date().toISOString();
+    const { error: updateError } = await admin
+        .from("worker_documents")
+        .update({
+            ocr_json: {
+                ...ocrJson,
+                ...buildManualCropOcrPatch({
+                    crop,
+                    backupStoragePath,
+                    appliedAt,
+                }),
+                ...buildAutoCropOcrPatch({
+                    cropApplied: true,
+                    crop,
+                    processedAt: appliedAt,
+                }),
+            },
+            updated_at: appliedAt,
+        })
+        .eq("id", documentId);
+
+    if (updateError) {
+        console.warn("[Admin preview] Failed to persist manual crop metadata:", updateError);
+        return NextResponse.json({ error: "Crop was saved, but metadata update failed." }, { status: 500 });
+    }
+
+    return NextResponse.json({
+        ok: true,
+        previewUrl: `/api/admin/documents/${documentId}/preview?v=${Date.now()}`,
+        manualCrop: crop,
     });
 }

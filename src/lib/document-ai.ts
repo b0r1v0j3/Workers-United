@@ -934,18 +934,21 @@ Return ONLY the JSON object.`;
     }
 }
 
-export async function detectDocumentBounds(input: string | DocumentVisionImagePayload, docType: string): Promise<{
-    found: boolean;
-    crop?: { x: number; y: number; width: number; height: number };
-    rotationDegrees?: number;
-}> {
-    try {
-        const docLabel = docType === 'passport' ? 'passport data page' :
-            docType === 'diploma' ? 'diploma, certificate, or educational document' :
-                docType === 'biometric_photo' ? 'person photo' :
-                    'document';
+export function buildDocumentBoundsPrompt(docType: string) {
+    const docLabel = docType === "passport" ? "passport data page" :
+        docType === "diploma" ? "diploma, certificate, or educational document" :
+            docType === "biometric_photo" ? "person photo" :
+                "document";
 
-        const prompt = `You are a document detector and orientation analyzer. Find the ${docLabel} in this image.
+    const passportCroppingRules = docType === "passport"
+        ? `
+- For passports, keep ONLY the single biodata / identity page with the holder photo and personal details.
+- If an open passport spread shows two pages, a spine, annotations page, visa page, or other adjacent page, crop those parts OUT.
+- Prefer the page that contains the portrait photo, passport number, date of birth, issue/expiry dates, and the machine-readable zone (MRZ).
+- Even if the open passport fills most of the image, still set needs_cropping to true when extra passport pages, spine, or large blank margins are visible.`
+        : "";
+
+    return `You are a document detector and orientation analyzer. Find the ${docLabel} in this image.
 The document may be photographed on a table, desk, or other surface with background visible.
 The document may also be ROTATED — text might be sideways or upside down.
 
@@ -969,10 +972,19 @@ Rules for rotation_degrees_to_upright:
 - ONLY use values: 0, 90, 180, or 270
 
 Rules for cropping:
-- If the document fills most of the image (>80% area), set needs_cropping to false
 - crop_x_percent and crop_y_percent are the top-left corner of the document
-- Add 2% padding around the document edges for safety
+- Add about 2% padding around the desired document edges for safety
+- If the target document already fills most of the image (>80% area), set needs_cropping to false unless extra pages, margins, or background still need to be removed.${passportCroppingRules}
 - Return ONLY the JSON object, no other text.`;
+}
+
+export async function detectDocumentBounds(input: string | DocumentVisionImagePayload, docType: string): Promise<{
+    found: boolean;
+    crop?: { x: number; y: number; width: number; height: number };
+    rotationDegrees?: number;
+}> {
+    try {
+        const prompt = buildDocumentBoundsPrompt(docType);
 
         const content = await callDocumentVision(input, prompt);
         const parsed = JSON.parse(content);

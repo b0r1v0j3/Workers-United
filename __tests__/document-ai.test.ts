@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     buildDocumentOrientationOcrPatch,
+    buildDocumentBoundsPrompt,
     evaluateBiometricPhotoGuardrails,
     evaluateDiplomaGuardrails,
     normalizeQuarterTurnRotation,
@@ -40,6 +41,16 @@ describe("document-ai orientation helpers", () => {
             orientation_summary: "Document is upside down.",
             auto_crop_applied: true,
         });
+    });
+});
+
+describe("document-ai crop prompts", () => {
+    it("tells passport detection to prefer only the biodata page", () => {
+        const prompt = buildDocumentBoundsPrompt("passport");
+
+        expect(prompt).toContain("biodata / identity page");
+        expect(prompt).toContain("crop those parts OUT");
+        expect(prompt).toContain("machine-readable zone");
     });
 });
 
