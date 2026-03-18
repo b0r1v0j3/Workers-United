@@ -4,6 +4,7 @@ import {
     BadgeCheck,
     Briefcase,
     Clock3,
+    CreditCard,
     ExternalLink,
     FileSearch,
     Hourglass,
@@ -55,7 +56,7 @@ export default async function AdminExceptionsPage() {
                 <AdminSectionHero
                     eyebrow="Internal ops"
                     title="Operational Exceptions"
-                    description="Internal incident screen for email hygiene, checkout drift, document review, approval backlog, queue/payment mismatches, and open job requests with no worker pipeline yet."
+                    description="Internal incident screen for email hygiene, checkout drift, payment quality, document review, approval backlog, queue/payment mismatches, and open job requests with no worker pipeline yet."
                     metrics={[
                         { label: "Signals", value: snapshot.totalSignals, meta: "Open issues that need action" },
                         { label: "Checkout", value: snapshot.openedCheckoutButUnpaid.length, meta: "Opened, not paid" },
@@ -82,6 +83,14 @@ export default async function AdminExceptionsPage() {
                         meta="Workers who opened $9 checkout and stopped"
                         tone={snapshot.openedCheckoutButUnpaid.length > 0 ? "warning" : "neutral"}
                         icon={<Clock3 size={18} />}
+                    />
+                    <ActionCard
+                        href="/internal/ops#payment-quality"
+                        title="Payment Quality"
+                        value={snapshot.paymentQuality.recentIssues.length}
+                        meta="Bank declines, Stripe blocks, and expired checkout sessions"
+                        tone={snapshot.paymentQuality.recentIssues.length > 0 ? "warning" : "neutral"}
+                        icon={<CreditCard size={18} />}
                     />
                     <ActionCard
                         href="/admin/review"
@@ -279,6 +288,54 @@ export default async function AdminExceptionsPage() {
                         </div>
                     </section>
                 </div>
+
+                <section
+                    id="payment-quality"
+                    className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]"
+                >
+                    <SectionHeader
+                        title="Payment Quality"
+                        description="Latest entry-fee attempt per worker, split between active checkout windows, expired sessions, bank declines, and Stripe risk blocks."
+                        href="/admin/analytics"
+                        label="Open analytics"
+                    />
+                    <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                        <MiniMetric label="Paid" value={snapshot.paymentQuality.completed} />
+                        <MiniMetric label="Active" value={snapshot.paymentQuality.activePending} />
+                        <MiniMetric label="Expired" value={snapshot.paymentQuality.expired} />
+                        <MiniMetric label="Abandoned" value={snapshot.paymentQuality.abandoned} />
+                        <MiniMetric label="Bank decline" value={snapshot.paymentQuality.issuerDeclined} />
+                        <MiniMetric label="Stripe block" value={snapshot.paymentQuality.stripeBlocked} />
+                    </div>
+
+                    <div className="mt-5 space-y-4">
+                        <SubSectionLabel label="Recent payment issues" />
+                        {snapshot.paymentQuality.recentIssues.length === 0 ? (
+                            <EmptyState copy="No recent issuer declines, Stripe risk blocks, or expired checkout sessions on the latest worker attempts." />
+                        ) : (
+                            snapshot.paymentQuality.recentIssues.slice(0, 6).map((entry) => (
+                                <WorkerIssueRow
+                                    key={`quality-${entry.paymentId}`}
+                                    title={entry.fullName}
+                                    subtitle={
+                                        entry.hoursSinceCheckout
+                                            ? `${entry.email} • ${entry.hoursSinceCheckout}h since checkout`
+                                            : entry.email
+                                    }
+                                    chips={[
+                                        entry.workerStatus.replace(/_/g, " "),
+                                        entry.outcomeLabel,
+                                    ]}
+                                    details={`${entry.outcomeDetail}${entry.lastEventAt ? ` • last event ${formatDate(entry.lastEventAt)}` : ""}${entry.deadlineAt ? ` • deadline ${formatDate(entry.deadlineAt)}` : ""}`}
+                                    primaryHref={entry.workspaceHref}
+                                    primaryLabel="Inspect worker"
+                                    secondaryHref={entry.caseHref}
+                                    secondaryLabel="Open case"
+                                />
+                            ))
+                        )}
+                    </div>
+                </section>
 
                 <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
                     <SectionHeader

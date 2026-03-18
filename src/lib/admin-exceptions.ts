@@ -1,6 +1,7 @@
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import type { Json, Tables } from "@/lib/database.types";
 import { normalizeUserType } from "@/lib/domain";
+import { classifyEntryFeePaymentQuality, type PaymentQualityOutcome } from "@/lib/payment-quality";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import {
     isInternalOrTestEmail,
@@ -94,6 +95,28 @@ export interface CheckoutException extends ExceptionWorkerBase {
     deadlineAt: string | null;
 }
 
+export interface PaymentQualityException extends ExceptionWorkerBase {
+    paymentId: string;
+    paymentStatus: string;
+    outcome: PaymentQualityOutcome;
+    outcomeLabel: string;
+    outcomeDetail: string;
+    checkoutStartedAt: string | null;
+    hoursSinceCheckout: number | null;
+    lastEventAt: string | null;
+    deadlineAt: string | null;
+}
+
+export interface PaymentQualitySnapshot {
+    completed: number;
+    activePending: number;
+    expired: number;
+    abandoned: number;
+    issuerDeclined: number;
+    stripeBlocked: number;
+    recentIssues: PaymentQualityException[];
+}
+
 export interface ManualReviewException extends ExceptionWorkerBase {
     manualReviewCount: number;
     latestReviewAt: string | null;
@@ -139,6 +162,7 @@ export interface AdminExceptionSnapshot {
     invalidEmailProfiles: InvalidEmailException[];
     openedCheckoutButUnpaid: CheckoutException[];
     stalePendingPayments: CheckoutException[];
+    paymentQuality: PaymentQualitySnapshot;
     manualReviewProfiles: ManualReviewException[];
     pendingAdminApproval: PendingApprovalException[];
     verifiedButUnpaid: WorkerReadinessException[];
@@ -234,6 +258,44 @@ function getNextRecoveryStepLabel(hoursSinceCheckout: number) {
     return "72h abandonment window";
 }
 
+function getPaymentFailureOrExpiryAt(payment: PaymentRow, activities: ActivityRow[]) {
+    const metadataFailureAt = parseIsoDate(extractStringField(payment.metadata, "stripe_failure_at"));
+    if (metadataFailureAt) {
+        return metadataFailureAt;
+    }
+
+    const metadataExpiredAt = parseIsoDate(extractStringField(payment.metadata, "stripe_session_expired_at"));
+    if (metadataExpiredAt) {
+        return metadataExpiredAt;
+    }
+
+    const activityByPayment = activities.find((activity) =>
+        (activity.action === "payment_failed" || activity.action === "checkout_session_expired")
+        && extractStringField(activity.details, "payment_id") === payment.id
+    );
+    if (activityByPayment?.created_at) {
+        return parseIsoDate(activityByPayment.created_at);
+    }
+
+    if (payment.stripe_checkout_session_id) {
+        const activityBySession = activities.find((activity) =>
+            activity.action === "checkout_session_expired"
+            && extractStringField(activity.details, "stripe_session_id") === payment.stripe_checkout_session_id
+        );
+        if (activityBySession?.created_at) {
+            return parseIsoDate(activityBySession.created_at);
+        }
+    }
+
+    return null;
+}
+
+function getPaymentLastEventAt(payment: PaymentRow, activities: ActivityRow[]) {
+    return parseIsoDate(payment.paid_at)
+        || getPaymentFailureOrExpiryAt(payment, activities)
+        || getCheckoutCreatedAt(payment, activities);
+}
+
 function getRoleFromProfile(
     profile: ProfileRow,
     employerProfileIds: Set<string>,
@@ -298,7 +360,7 @@ export async function getAdminExceptionSnapshot() {
         admin
             .from("user_activity")
             .select("user_id, action, created_at, details")
-            .in("action", ["checkout_session_created", "payment_completed"])
+            .in("action", ["checkout_session_created", "payment_completed", "payment_failed", "checkout_session_expired"])
             .range(0, 3999),
         admin
             .from("user_activity")
@@ -481,6 +543,94 @@ export async function getAdminExceptionSnapshot() {
     openedCheckoutButUnpaid.sort((left, right) => right.hoursSinceCheckout - left.hoursSinceCheckout);
     stalePendingPayments.sort((left, right) => right.hoursSinceCheckout - left.hoursSinceCheckout);
 
+    const latestEntryFeeAttemptByProfile = new Map<string, {
+        payment: PaymentRow;
+        checkoutCreatedAt: Date | null;
+        lastEventAt: Date | null;
+    }>();
+
+    for (const payment of typedPayments.filter((entry) => entry.payment_type === "entry_fee" && entry.profile_id)) {
+        const profileId = payment.profile_id as string;
+        const activities = paymentActivitiesByProfile.get(profileId) || [];
+        const checkoutCreatedAt = getCheckoutCreatedAt(payment, activities);
+        const lastEventAt = getPaymentLastEventAt(payment, activities);
+
+        if (!lastEventAt && !checkoutCreatedAt) {
+            continue;
+        }
+
+        const current = latestEntryFeeAttemptByProfile.get(profileId);
+        const currentTimestamp = current?.lastEventAt?.getTime() || current?.checkoutCreatedAt?.getTime() || 0;
+        const nextTimestamp = lastEventAt?.getTime() || checkoutCreatedAt?.getTime() || 0;
+
+        if (!current || nextTimestamp >= currentTimestamp) {
+            latestEntryFeeAttemptByProfile.set(profileId, {
+                payment,
+                checkoutCreatedAt,
+                lastEventAt,
+            });
+        }
+    }
+
+    const paymentQualityRecentIssues: Array<PaymentQualityException & { _sortTime: number }> = [];
+    const paymentQuality: PaymentQualitySnapshot = {
+        completed: 0,
+        activePending: 0,
+        expired: 0,
+        abandoned: 0,
+        issuerDeclined: 0,
+        stripeBlocked: 0,
+        recentIssues: [],
+    };
+
+    for (const [profileId, latestAttempt] of latestEntryFeeAttemptByProfile.entries()) {
+        const profile = profileMap.get(profileId);
+        if (!profile || !isReportablePaymentProfile(profile)) {
+            continue;
+        }
+
+        const worker = workerMap.get(profileId) || null;
+        const hoursSinceCheckout = latestAttempt.checkoutCreatedAt
+            ? Math.max(1, Math.floor((Date.now() - latestAttempt.checkoutCreatedAt.getTime()) / (1000 * 60 * 60)))
+            : null;
+        const paymentStatus = latestAttempt.payment.status || "unknown";
+        const classification = classifyEntryFeePaymentQuality({
+            status: latestAttempt.payment.status,
+            metadata: latestAttempt.payment.metadata,
+            hoursSinceCheckout,
+        });
+
+        if (classification.outcome === "completed") paymentQuality.completed += 1;
+        if (classification.outcome === "active") paymentQuality.activePending += 1;
+        if (classification.outcome === "expired") paymentQuality.expired += 1;
+        if (classification.outcome === "abandoned") paymentQuality.abandoned += 1;
+        if (classification.outcome === "issuer_declined") paymentQuality.issuerDeclined += 1;
+        if (classification.outcome === "stripe_blocked") paymentQuality.stripeBlocked += 1;
+
+        if (classification.outcome === "completed" || classification.outcome === "active") {
+            continue;
+        }
+
+        const lastEventAtIso = latestAttempt.lastEventAt?.toISOString() || latestAttempt.checkoutCreatedAt?.toISOString() || null;
+        paymentQualityRecentIssues.push({
+            ...buildWorkerBase(profile, worker),
+            paymentId: latestAttempt.payment.id,
+            paymentStatus,
+            outcome: classification.outcome,
+            outcomeLabel: classification.label,
+            outcomeDetail: classification.detail,
+            checkoutStartedAt: latestAttempt.checkoutCreatedAt?.toISOString() || null,
+            hoursSinceCheckout,
+            lastEventAt: lastEventAtIso,
+            deadlineAt: latestAttempt.payment.deadline_at,
+            _sortTime: latestAttempt.lastEventAt?.getTime() || latestAttempt.checkoutCreatedAt?.getTime() || 0,
+        });
+    }
+
+    paymentQuality.recentIssues = paymentQualityRecentIssues
+        .sort((left, right) => right._sortTime - left._sortTime)
+        .map(({ _sortTime: _unusedSortTime, ...entry }) => entry);
+
     const manualReviewProfiles: ManualReviewException[] = Array.from(docsByUser.entries())
         .map(([profileId, documentsForUser]) => {
             const manualDocs = documentsForUser.filter((document) => document.status === "manual_review");
@@ -643,6 +793,7 @@ export async function getAdminExceptionSnapshot() {
         invalidEmailProfiles,
         openedCheckoutButUnpaid,
         stalePendingPayments,
+        paymentQuality,
         manualReviewProfiles,
         pendingAdminApproval,
         verifiedButUnpaid,

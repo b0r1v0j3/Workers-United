@@ -100,6 +100,7 @@ export default async function QueuePage({
                                         <Shield size={14} className="mt-0.5 shrink-0 text-gray-400 sm:mt-0" />
                                         <span className="min-w-0">Sandbox only: the card unlocks at 100% like a real worker, but payment still stays fake and instant here</span>
                                     </div>
+                                    <PaymentAttemptGuidance sandbox />
                                 </div>
                             ) : (
                             <LockedEntryFeeState
@@ -321,6 +322,7 @@ export default async function QueuePage({
                                             <Shield size={14} className="mt-0.5 shrink-0 text-gray-400 sm:mt-0" />
                                             <span className="min-w-0">100% money-back guarantee if no job offer in 90 days</span>
                                         </div>
+                                        <PaymentAttemptGuidance />
                                     </>
                                 )}
                             </div>
@@ -419,6 +421,28 @@ export default async function QueuePage({
                     </div>
                 )}
             </main>
+        </div>
+    );
+}
+
+function PaymentAttemptGuidance({ sandbox = false }: { sandbox?: boolean }) {
+    return (
+        <div className="w-full max-w-md rounded-[22px] border border-[#dbe4ff] bg-[#f7faff] px-4 py-4 text-left shadow-[0_16px_35px_-30px_rgba(37,99,235,0.35)]">
+            <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-[#2563eb] shadow-sm">
+                    <Shield size={16} />
+                </div>
+                <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#1d4ed8]">
+                        {sandbox ? "Live checkout guidance" : "Before you pay"}
+                    </p>
+                    <ul className="mt-2 list-disc space-y-1.5 pl-4 text-xs leading-relaxed text-[#475569]">
+                        <li>Use the same cardholder name and billing address that your bank has on file.</li>
+                        <li>Complete any bank verification step that appears during checkout.</li>
+                        <li>If the card is declined, contact your bank or try another card before retrying.</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     );
 }
