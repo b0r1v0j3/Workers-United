@@ -1542,10 +1542,10 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
     }
 
     if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز")) {
-        if (fallbackLang === 'sr') return `Zdravo ${name}! Dokumenta uploadujete na ${WEBSITE}/profile/worker. Potrebni su: ${config.supported_documents || "pasoš, diploma ili potvrda o radu, i biometrijska fotografija"}. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
-        if (fallbackLang === 'ne') return `नमस्ते ${name}! कागजातहरू ${WEBSITE}/profile/worker मा अपलोड गर्नुहोस्। आवश्यक: ${config.supported_documents || "पासपोर्ट, डिप्लोमा वा काम प्रमाणपत्र, र बायोमेट्रिक फोटो"}. WhatsApp attachment हरू अहिले प्रोफाइलसँग स्वतः जोडिँदैनन्।`;
-        if (fallbackLang === 'ar') return `مرحباً ${name}! يمكنك رفع المستندات على ${WEBSITE}/profile/worker. المطلوب: ${config.supported_documents || "جواز السفر، شهادة أو شهادة عمل، وصورة بيومترية"}. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
-        return `Hi ${name}! Upload documents at ${WEBSITE}/profile/worker. We need: ${config.supported_documents || "passport, diploma or work certificate, and a biometric photo"}. WhatsApp attachments are not linked to the profile automatically yet.`;
+        if (fallbackLang === 'sr') return `Zdravo ${name}! Dokumenta uploadujete na ${WEBSITE}/profile/worker. Potrebni su: pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
+        if (fallbackLang === 'ne') return `नमस्ते ${name}! कागजातहरू ${WEBSITE}/profile/worker मा अपलोड गर्नुहोस्। आवश्यक: पासपोर्ट, बायोमेट्रिक फोटो, र final school, university, वा formal vocational diploma। WhatsApp attachment हरू अहिले प्रोफाइलसँग स्वतः जोडिँदैनन्।`;
+        if (fallbackLang === 'ar') return `مرحباً ${name}! يمكنك رفع المستندات على ${WEBSITE}/profile/worker. المطلوب: جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
+        return `Hi ${name}! Upload documents at ${WEBSITE}/profile/worker. We need: passport, biometric photo, and a final school, university, or formal vocational diploma. WhatsApp attachments are not linked to the profile automatically yet.`;
     }
 
     // Catch-all
@@ -2338,8 +2338,8 @@ export async function handleWhatsAppOnboarding(
         const name = collected.full_name?.split(" ")[0] || "";
         const lk = getLangKey(lang);
         const finalMsg: Record<LangKey, string> = {
-            en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder* — then we start searching for your job across Europe!\n\n👉 workersunited.eu/profile/worker\n\nWe'll also need your documents (passport photo, diploma/work certificate, biometric photo) — you can upload them on the website. If you have any questions, I'm here!`,
-            sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 workersunited.eu/profile/worker\n\nTreba nam i vaša dokumentacija (fotografija pasoša, diploma/potvrda o radu, biometrijska fotografija) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
+            en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder* — then we start searching for your job across Europe!\n\n👉 workersunited.eu/profile/worker\n\nWe'll also need your documents (passport photo, biometric photo, and a final school, university, or formal vocational diploma) — you can upload them on the website. If you have any questions, I'm here!`,
+            sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 workersunited.eu/profile/worker\n\nTreba nam i vaša dokumentacija (fotografija pasoša, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
             hi: `धन्यवाद, ${name}! 🎉 आपका प्रोफ़ाइल सहेज लिया गया है।\n\nअंतिम चरण है वेबसाइट पर रजिस्टर करना और *Job Finder* सक्रिय करना — फिर हम पूरे यूरोप में आपके लिए नौकरी खोजना शुरू करते हैं!\n\n👉 workersunited.eu/profile/worker`,
             ar: `شكراً، ${name}! 🎉 تم حفظ ملفك الشخصي.\n\nالخطوة الأخيرة هي التسجيل على الموقع وتفعيل *Job Finder* — ثم نبدأ في البحث عن وظيفة لك في جميع أنحاء أوروبا!\n\n👉 workersunited.eu/profile/worker`,
             fr: `Merci, ${name}! 🎉 Votre profil a été sauvegardé.\n\nLa dernière étape est de vous inscrire sur le site et d'activer *Job Finder* — puis nous commençons à chercher votre emploi dans toute l'Europe!\n\n👉 workersunited.eu/profile/worker`,

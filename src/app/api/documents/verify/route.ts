@@ -178,21 +178,28 @@ async function verifyPhoto(document: { file_url: string }) {
     };
 }
 
-// Diploma/certificate verification with quality check
+// Diploma verification with formal-education guardrails
 async function verifyEducation(document: { file_url: string }) {
     const result = await verifyDiploma(document.file_url);
 
     const qualityIssues = [...result.qualityIssues];
 
-    // Add specific flags for wrong document type
+    if (result.workerGuidance) {
+        qualityIssues.unshift(result.workerGuidance);
+    }
+
     if (!result.isCorrectType) {
-        qualityIssues.unshift("This does not appear to be a diploma or certificate");
+        qualityIssues.unshift("This does not appear to be a final school, university, or formal vocational diploma.");
     }
 
     return {
         status: result.success ? "verified" : "manual_review",
         qualityIssues,
-        extractedData: result.extractedData || {},
+        extractedData: {
+            ...(result.extractedData || {}),
+            ...(result.documentKind ? { document_kind: result.documentKind } : {}),
+            ...(result.summary ? { summary: result.summary } : {}),
+        },
         confidence: result.confidence
     };
 }

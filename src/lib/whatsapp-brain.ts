@@ -41,6 +41,8 @@ export interface WhatsAppBrainMemoryEntry {
     confidence: number;
 }
 
+const CANONICAL_REQUIRED_WORKER_DOCUMENTS = "passport, biometric photo, and a final school, university, or formal vocational diploma";
+
 export type WhatsAppLanguageCode = "en" | "sr" | "ar" | "fr" | "pt" | "hi";
 
 const WHATSAPP_ONBOARDING_PATTERN = /fill.*profile.*whatsapp|complete.*profile.*whatsapp|register.*whatsapp|whatsapp.*profile|whatsapp.*register|profile.*on whatsapp|popuni.*profil.*whatsapp|profil.*na whatsapp|registr.*preko whatsapp|registro.*whatsapp|perfil.*whatsapp/i;
@@ -163,7 +165,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
     intent,
     website = "workersunited.eu",
     supportEmail = "contact@workersunited.eu",
-    requiredDocuments = "passport, diploma or work certificate, and biometric photo",
+    requiredDocuments = CANONICAL_REQUIRED_WORKER_DOCUMENTS,
     isFirstContact = false,
 }: {
     message: string;
@@ -435,17 +437,17 @@ export function buildRegisteredWorkerWhatsAppReply({
     if (wantsDocuments) {
         switch (lang) {
             case "sr":
-                return `Potrebna dokumenta su pasoš, diploma ili potvrda o radu, i biometrijska fotografija. Upload i status dokumenata pratite kroz dashboard na ${website}/profile/worker; WhatsApp prilozi se ne vezuju automatski za profil.`;
+                return `Potrebna dokumenta su pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. Upload i status dokumenata pratite kroz dashboard na ${website}/profile/worker; WhatsApp prilozi se ne vezuju automatski za profil.`;
             case "ar":
-                return `المستندات المطلوبة هي جواز السفر، الشهادة أو إثبات العمل، والصورة البيومترية. ارفع المستندات وتابع حالتها من لوحة التحكم على ${website}/profile/worker؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا.`;
+                return `المستندات المطلوبة هي جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية. ارفع المستندات وتابع حالتها من لوحة التحكم على ${website}/profile/worker؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا.`;
             case "fr":
-                return `Les documents requis sont le passeport, le diplôme ou certificat de travail, et la photo biométrique. Le téléversement et le statut se suivent dans le tableau de bord sur ${website}/profile/worker ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil.`;
+                return `Les documents requis sont le passeport, la photo biométrique, et le diplôme final scolaire, universitaire ou professionnel formel. Le téléversement et le statut se suivent dans le tableau de bord sur ${website}/profile/worker ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil.`;
             case "pt":
-                return `Os documentos necessários são passaporte, diploma ou comprovante de trabalho, e foto biométrica. O envio e o status dos documentos são acompanhados no painel em ${website}/profile/worker; anexos do WhatsApp não são vinculados automaticamente ao perfil.`;
+                return `Os documentos necessários são passaporte, foto biométrica e diploma final escolar, universitário ou profissional formal. O envio e o status dos documentos são acompanhados no painel em ${website}/profile/worker; anexos do WhatsApp não são vinculados automaticamente ao perfil.`;
             case "hi":
-                return `ज़रूरी documents हैं passport, diploma या work certificate, और biometric photo। Documents upload और उनका status ${website}/profile/worker dashboard में देखें; WhatsApp attachments अपने-आप profile से link नहीं होते।`;
+                return `ज़रूरी documents हैं passport, biometric photo, और final school, university, या formal vocational diploma। Documents upload और उनका status ${website}/profile/worker dashboard में देखें; WhatsApp attachments अपने-आप profile से link नहीं होते।`;
             default:
-                return `The required documents are passport, diploma or work certificate, and biometric photo. Uploads and document status are tracked in the dashboard at ${website}/profile/worker; WhatsApp attachments are not linked to the profile automatically.`;
+                return `The required documents are passport, biometric photo, and a final school, university, or formal vocational diploma. Uploads and document status are tracked in the dashboard at ${website}/profile/worker; WhatsApp attachments are not linked to the profile automatically.`;
         }
     }
 
@@ -673,7 +675,7 @@ export function buildCanonicalWhatsAppFacts({
         `- Registration starts at ${website}/signup.`,
         "- Job Finder payment unlocks only after the worker profile is fully complete and approved by admin.",
         "- WhatsApp can answer questions and, when the user explicitly asks, collect some text profile details here. Document uploads and screenshots are not processed as WhatsApp attachments yet; those belong in the dashboard.",
-        "- Required worker documents are passport, diploma or work certificate, and biometric photo.",
+        "- Required worker documents are passport, biometric photo, and a final school, university, or formal vocational diploma.",
         "- Employers do not pay platform fees.",
         `- Support email: ${supportEmail}.`,
     ].join("\n");

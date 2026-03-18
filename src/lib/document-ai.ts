@@ -41,6 +41,10 @@ export interface DocumentQualityResult {
     qualityIssues: string[];
     confidence: number;
     extractedData?: Record<string, string>;
+    documentKind?: string;
+    summary?: string;
+    workerGuidance?: string;
+    rawResponse?: string;
 }
 
 export interface DocumentVisionImagePayload {
@@ -110,6 +114,147 @@ export class AIInfraError extends Error {
 
 function cleanModelJson(text: string): string {
     return text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+}
+
+function readModelString(value: unknown): string | null {
+    return typeof value === "string" && value.trim().length > 0
+        ? value.trim()
+        : null;
+}
+
+function readModelStringArray(value: unknown): string[] {
+    return Array.isArray(value)
+        ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+        : [];
+}
+
+const DIPLOMA_EXPLICIT_ACCEPT_KINDS = new Set([
+    "formal_diploma",
+    "formal_vocational_certificate",
+    "school_leaving_certificate",
+]);
+
+const DIPLOMA_EXPLICIT_REJECT_KINDS = new Set([
+    "short_course_certificate",
+    "attendance_or_participation_certificate",
+    "transcript_or_marksheet",
+    "non_educational",
+    "unclear",
+]);
+
+const DIPLOMA_NEGATIVE_PATTERNS = [
+    /\bcertificate of completion\b/i,
+    /\bcompletion certificate\b/i,
+    /\bcourse completion\b/i,
+    /\battendance certificate\b/i,
+    /\bcertificate of attendance\b/i,
+    /\bcertificate of participation\b/i,
+    /\bparticipation certificate\b/i,
+    /\bworkshop\b/i,
+    /\bseminar\b/i,
+    /\bwebinar\b/i,
+    /\bbootcamp\b/i,
+    /\bshort course\b/i,
+    /\bonline course\b/i,
+    /\btraining certificate\b/i,
+    /\btraining completion\b/i,
+    /\bvirtual productivity assistant\b/i,
+];
+
+const DIPLOMA_TRANSCRIPT_PATTERNS = [
+    /\btranscript\b/i,
+    /\bmark\s?sheet\b/i,
+    /\bmarksheet\b/i,
+    /\breport card\b/i,
+];
+
+const DIPLOMA_POSITIVE_PATTERNS = [
+    /\bdiploma\b/i,
+    /\bdegree\b/i,
+    /\bbachelor'?s?\b/i,
+    /\bmaster'?s?\b/i,
+    /\bph\.?d\b/i,
+    /\bdoctorate\b/i,
+    /\bhigh school\b/i,
+    /\bsecondary school\b/i,
+    /\bschool leaving\b/i,
+    /\bcollege\b/i,
+    /\buniversity\b/i,
+    /\bpolytechnic\b/i,
+    /\btechnical institute\b/i,
+    /\btrade school\b/i,
+    /\bvocational\b/i,
+    /\bgraduation certificate\b/i,
+];
+
+export function evaluateDiplomaGuardrails(parsed: Record<string, unknown>) {
+    const documentKind = readModelString(parsed.document_kind)?.toLowerCase() || "";
+    const documentTitle = readModelString(parsed.document_title);
+    const documentDescription = readModelString(parsed.document_description);
+    const degreeType = readModelString(parsed.degree_type);
+    const institutionName = readModelString(parsed.institution_name);
+    const summary = readModelString(parsed.summary) || documentDescription;
+
+    const searchableText = [
+        documentKind,
+        documentTitle,
+        documentDescription,
+        degreeType,
+        institutionName,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    const hasShortCourseSignals =
+        documentKind === "short_course_certificate"
+        || documentKind === "attendance_or_participation_certificate"
+        || DIPLOMA_NEGATIVE_PATTERNS.some((pattern) => pattern.test(searchableText));
+
+    const transcriptOnly =
+        documentKind === "transcript_or_marksheet"
+        || DIPLOMA_TRANSCRIPT_PATTERNS.some((pattern) => pattern.test(searchableText));
+
+    const hasFormalSignals =
+        DIPLOMA_EXPLICIT_ACCEPT_KINDS.has(documentKind)
+        || DIPLOMA_POSITIVE_PATTERNS.some((pattern) => pattern.test(searchableText));
+
+    if (transcriptOnly) {
+        return {
+            isAccepted: false,
+            documentKind: documentKind || "transcript_or_marksheet",
+            summary: summary || "Transcript or marksheet detected without a final diploma.",
+            workerGuidance: "Please upload your final school, university, or formal vocational diploma or degree certificate. A transcript or marksheet alone is not enough.",
+            issues: ["transcript_only"],
+        };
+    }
+
+    if (hasShortCourseSignals) {
+        return {
+            isAccepted: false,
+            documentKind: documentKind || "short_course_certificate",
+            summary: summary || "Short course or completion certificate detected instead of a formal diploma.",
+            workerGuidance: "Please upload your final school, university, or formal vocational diploma. We cannot accept short course, workshop, attendance, or certificate of completion files.",
+            issues: ["short_course_not_accepted"],
+        };
+    }
+
+    if (DIPLOMA_EXPLICIT_REJECT_KINDS.has(documentKind) || !hasFormalSignals) {
+        return {
+            isAccepted: false,
+            documentKind: documentKind || "non_educational",
+            summary: summary || "This upload does not look like a final formal education credential.",
+            workerGuidance: "Please upload your final school, university, or formal vocational diploma. The document title, institution name, your name, and the main text must be clearly visible.",
+            issues: ["not_formal_education"],
+        };
+    }
+
+    return {
+        isAccepted: true,
+        documentKind: documentKind || "formal_diploma",
+        summary: summary || (institutionName
+            ? `Formal education document detected from ${institutionName}.`
+            : "Formal education document detected."),
+        workerGuidance: null,
+        issues: [] as string[],
+    };
 }
 
 export function normalizeQuarterTurnRotation(value: unknown): 0 | 90 | 180 | 270 {
@@ -396,24 +541,31 @@ export function compareNames(aiName: string, signupName: string): boolean {
 
 export async function verifyDiploma(imageUrl: string): Promise<DocumentQualityResult> {
     try {
-        const prompt = `You are a document verification helper. Determine if this is an educational document.
+        const prompt = `You are a formal education credential verifier.
+Decide whether this upload is a FINAL FORMAL EDUCATION DOCUMENT that we can accept as the worker's diploma.
 
-Be VERY LENIENT. Accept ANY educational or training document:
-- School diplomas, university degrees
-- Vocational certificates, trade school certificates
-- Professional certificates, training certificates
-- Course completion certificates
-- Language certificates
-- Any document from an educational institution
+Accept ONLY documents such as:
+- high school / secondary school diplomas or school-leaving certificates
+- university / college degree diplomas or degree certificates
+- final vocational / trade / technical diplomas or certificates from a formal school, polytechnic, technical institute, or government-recognized training institution
 
-Only set is_school_diploma to false if:
-- The image is clearly NOT any kind of certificate/diploma (e.g., a selfie, passport, receipt, blank page)
-- The image is completely unreadable
+Reject documents such as:
+- certificate of completion
+- course completion certificate
+- workshop / seminar / webinar / bootcamp certificate
+- attendance / participation certificate
+- generic training certificate for a short course
+- online course certificate
+- transcript / marksheet / report card when the final diploma or degree certificate is not visible
+- any non-education file
 
 Return JSON:
 {
-  "is_school_diploma": true/false,
+  "is_formal_education_document": true/false,
+  "document_kind": "formal_diploma | formal_vocational_certificate | school_leaving_certificate | transcript_or_marksheet | short_course_certificate | attendance_or_participation_certificate | non_educational | unclear",
+  "document_title": "main title if visible",
   "document_description": "brief description of what this document actually is",
+  "worker_guidance": "short direct instruction telling the worker what to upload next",
   "readable": true/false,
   "quality_issues": [],
   "confidence": 0.0-1.0,
@@ -422,23 +574,56 @@ Return JSON:
   "graduation_year": "year if readable"
 }
 
-IMPORTANT: If it looks like ANY kind of certificate or educational document, accept it. We verify manually later.
+Rules:
+- If the title says "Certificate of Completion" or similar, reject it as short_course_certificate unless it is clearly the final graduation certificate from a real school or university.
+- If the upload is only a transcript, marksheet, or report card, reject it as transcript_or_marksheet.
+- Set readable=true only when the main title, institution name, holder name, and main body text are visible enough to understand the document.
+- worker_guidance must tell the worker exactly what to upload next.
+
 Return ONLY the JSON object, no other text.`;
 
         const content = await callDocumentVision(imageUrl, prompt);
         const parsed = JSON.parse(content);
+        const guardrail = evaluateDiplomaGuardrails(parsed);
+        const aiAccepted = parsed.is_formal_education_document === true || parsed.is_school_diploma === true;
+        const readable = parsed.readable !== false;
+        const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
+        const qualityIssues = Array.from(new Set([
+            ...guardrail.issues,
+            ...readModelStringArray(parsed.quality_issues),
+        ]));
+
+        if (!readable && !qualityIssues.includes("unreadable_fields")) {
+            qualityIssues.push("unreadable_fields");
+        }
+
+        const workerGuidance = readModelString(parsed.worker_guidance)
+            || guardrail.workerGuidance
+            || (!readable
+                ? "Please upload a clearer image or scan of your final school, university, or formal vocational diploma. The document title, institution name, your name, and the main text must be readable."
+                : null);
+        const summary = readModelString(parsed.document_description)
+            || readModelString(parsed.summary)
+            || guardrail.summary
+            || null;
+        const isCorrectType = aiAccepted && guardrail.isAccepted;
 
         return {
-            success: parsed.is_school_diploma === true && (parsed.confidence ?? 0) >= 0.7,
-            isCorrectType: parsed.is_school_diploma || false,
-            qualityIssues: parsed.quality_issues || [],
-            confidence: parsed.confidence || 0,
+            success: isCorrectType && readable && confidence >= 0.75,
+            isCorrectType,
+            qualityIssues,
+            confidence,
             extractedData: {
-                institution_name: parsed.institution_name,
-                degree_type: parsed.degree_type,
-                graduation_year: parsed.graduation_year,
-                document_description: parsed.document_description,
+                institution_name: parsed.institution_name || "",
+                degree_type: parsed.degree_type || "",
+                graduation_year: parsed.graduation_year || "",
+                document_title: parsed.document_title || "",
+                document_description: parsed.document_description || "",
             },
+            documentKind: guardrail.documentKind,
+            summary: summary || undefined,
+            workerGuidance: workerGuidance || undefined,
+            rawResponse: content,
         };
     } catch (error) {
         console.error("Diploma verification error:", error);

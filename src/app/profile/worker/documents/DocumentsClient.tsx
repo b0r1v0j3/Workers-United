@@ -53,7 +53,7 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
                 <div className="space-y-4">
                     <DocumentRow label="Passport" type="passport" status={getDocStatus("passport")} />
                     <DocumentRow label="Biometric Photo" type="biometric_photo" status={getDocStatus("biometric_photo")} />
-                    <DocumentRow label="Diploma / Certificate" type="diploma" status={getDocStatus("diploma")} />
+                    <DocumentRow label="Formal Diploma" type="diploma" status={getDocStatus("diploma")} />
                 </div>
             </div>
         </div>

@@ -8,6 +8,8 @@ export interface PlatformConfig {
     [key: string]: string;
 }
 
+export const CANONICAL_REQUIRED_WORKER_DOCUMENTS = "passport, biometric photo, and a final school, university, or formal vocational diploma";
+
 let cachedConfig: PlatformConfig | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -107,7 +109,7 @@ export async function getBusinessFactsForAI(): Promise<string> {
         "Pricing rule: workers pay the $9 service charge to activate Job Finder and any placement fee after a job is found; employers never pay platform fees.",
         "LANGUAGE RULE: In Serbian, always say 'naknada za uslugu' or 'servisna naknada' for the $9 cost. NEVER say 'ulazna taksa', 'taksa', or 'ulazna naknada'.",
         `Processing time: ${c.processing_time || "2-8 weeks"}`,
-        `Required documents: ${c.supported_documents || "passport, diploma, biometric photo"}`,
+        `Required documents: ${CANONICAL_REQUIRED_WORKER_DOCUMENTS}`,
         `Contact: ${c.contact_email || "contact@workersunited.eu"}`,
     ].join("\n");
 }
@@ -125,7 +127,7 @@ function getDefaults(): PlatformConfig {
         website_url: "workersunited.eu",
         contact_email: "contact@workersunited.eu",
         platform_name: "Workers United",
-        supported_documents: "passport, diploma, biometric photo",
+        supported_documents: CANONICAL_REQUIRED_WORKER_DOCUMENTS,
         processing_time: "2-8 weeks depending on country",
         bot_greeting_en: "Welcome to Workers United! 🌍 We help workers find jobs in Europe and handle all visa paperwork.",
         bot_greeting_sr: "Dobrodošli u Workers United! 🌍 Pomažemo radnicima da nađu posao u Evropi.",
