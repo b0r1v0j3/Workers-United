@@ -43,7 +43,7 @@ Workers-United/
 │   ├── FULL_SETUP.sql         # Comprehensive DB setup
 │   ├── schema.sql             # Core tables
 │   ├── queue-schema.sql       # Queue & matching tables
-│   ├── migrations/            # Incremental migrations (including live `20260308193000_worker_physical_tables.sql` stage 1, live `20260308210000_worker_fk_transition.sql` stage 2, and live `20260308223000_drop_legacy_candidate_fk_columns.sql` stage 3)
+│   ├── migrations/            # Incremental migrations (including live `20260308193000_worker_physical_tables.sql` stage 1, live `20260308210000_worker_fk_transition.sql` stage 2, live `20260308223000_drop_legacy_candidate_fk_columns.sql` stage 3, and pending `20260318194000_employer_profile_uniqueness.sql` for employer dedupe + `profile_id` uniqueness)
 │   └── ...                    # Other SQL patches
 ├── src/
 │   ├── app/
@@ -66,7 +66,7 @@ Workers-United/
 │   │   │   ├── email-health/  # Legacy route that now renders the internal email-hygiene copy; business admin no longer links here directly
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
 │   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, filters out hidden agency draft document-owner auth profiles, renders real agency draft worker rows with agency source labels, and worker case detail now resolves by canonical `worker_onboarding.id` as well as legacy profile/auth ids so agency drafts use the right document-owner id plus agency workspace inspect links instead of leaking through fake `/profile/worker` previews
-│   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout
+│   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout; hides internal/admin-owned employer rows and collapses duplicate employer records per `profile_id` via the shared employer integrity helper
 │   │   │   ├── queue/         # Queue operations screen with shared admin hero, 90-day watch, and inspect-vs-case actions
 │   │   │   ├── jobs/          # Smart Match Hub with shared admin hero/guidance wrapper around matching client
 │   │   │   ├── announcements/ # Bulk email sender
@@ -146,6 +146,7 @@ Workers-United/
 │   │   ├── reporting.ts       # Reporting filters + email hygiene helpers (exclude Codex/test/internal-orphan payments, `.dev`/`.internal`/draft-worker contacts, typo correction suggestions, undeliverable error detection)
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
+│   │   ├── employers.ts       # Canonical employer integrity helpers: pick/ensure one employer per `profile_id`, block admin/internal sandbox employer provisioning, and hide test/admin employer rows from business admin views/search
 │   │   ├── auth-redirect.ts   # Shared post-auth provisioning + role-aware redirect resolver for callback/hash login finalize flows; queues automated welcome only for real deliverable contacts
 │   │   ├── constants.ts       # Shared constants
 │   │   ├── workers.ts         # Canonical worker lookup + normalization helpers (duplicate-safe worker record selection over legacy physical worker table via `worker_onboarding`, phone normalization, storage filename sanitization)
@@ -218,6 +219,7 @@ User (Browser)
 2. For Google OAuth from signup page: `user_type` is passed via URL param and set in metadata; the live auth metadata-sync trigger then aligns `profiles.user_type` plus the canonical worker/employer row after callback
 3. For Google OAuth from login page (first time): user is redirected to `/auth/select-role` to choose worker/employer/agency
 4. Email confirmation, password recovery, and Supabase magic-link flows can land on `/login` with `#access_token=...`; `src/app/login/LoginClient.tsx` now restores that session client-side, and `POST /api/auth/finalize` reuses the shared post-auth resolver to return the correct workspace URL
+5. Employer provisioning now goes through `src/lib/employers.ts#ensureEmployerRecord()`, so role selection, auth redirect self-heal, and first employer profile save all reuse the same duplicate-safe logic and refuse to create live employer rows for admin/internal sandbox accounts
 5. Self-service worker/employer profile saves now call `POST /api/profile/auth-contact`, which mirrors canonical phone/full-name data back into Auth `raw_user_meta_data` and the visible Auth `phone` stub when a valid international phone is present
 6. `/auth/callback` remains the code-exchange path for OAuth, but when there is no `code` it now forwards the browser back to `/login?mode=confirm|recovery` so the hash-session flow can finish instead of dumping users onto a dead auth error state
 7. Agency-submitted worker drafts can be claimed via `/signup?type=worker&claim=<worker-record-id>`; callback/API links the draft to the real worker auth/profile only when the worker signs up with the same invited email, and the claim token resolves against the canonical worker record id

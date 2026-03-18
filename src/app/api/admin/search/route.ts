@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { normalizeUserType } from "@/lib/domain";
+import { pickCanonicalEmployerRecord, shouldHideEmployerFromBusinessViews } from "@/lib/employers";
 import { createClient } from "@/lib/supabase/server";
 import { isGodModeUser } from "@/lib/godmode";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
@@ -14,6 +15,15 @@ type WorkerSearchRow = {
     entry_fee_paid: boolean | null;
     queue_joined_at: string | null;
     updated_at: string | null;
+};
+
+type EmployerSearchRow = {
+    id: string;
+    profile_id: string | null;
+    company_name: string | null;
+    status: string | null;
+    tax_id: string | null;
+    contact_email: string | null;
 };
 
 export async function GET(req: Request) {
@@ -59,16 +69,41 @@ export async function GET(req: Request) {
                 .ilike("passport_number", `%${q}%`)
                 .limit(10),
             adminClient.from("employers")
-                .select("id, profile_id, company_name, status, tax_id")
+                .select("id, profile_id, company_name, status, tax_id, contact_email")
                 .or(`company_name.ilike.%${q}%,tax_id.ilike.%${q}%`)
                 .limit(10)
         ]);
 
+        const profileMap = new Map((profiles || []).map((profile) => [profile.id, profile]));
+        const employerGroups = new Map<string, EmployerSearchRow[]>();
+        for (const employer of (employers || []) as EmployerSearchRow[]) {
+            const profileId = employer.profile_id || employer.id;
+            const current = employerGroups.get(profileId) || [];
+            current.push(employer);
+            employerGroups.set(profileId, current);
+        }
+
+        const visibleEmployers = Array.from(employerGroups.entries())
+            .map(([profileId, rows]) => {
+                const employer = pickCanonicalEmployerRecord(rows);
+                if (!employer) {
+                    return null;
+                }
+
+                const profileEntry = employer.profile_id ? profileMap.get(employer.profile_id) || null : profileMap.get(profileId) || null;
+                if (shouldHideEmployerFromBusinessViews({ employer, profile: profileEntry })) {
+                    return null;
+                }
+
+                return employer;
+            })
+            .filter(Boolean) as EmployerSearchRow[];
+
         const results: Array<{ id: string; type: string; title: string; subtitle: string; link: string }> = [];
 
         // Map employers
-        if (employers) {
-            employers.forEach((employer) => {
+        if (visibleEmployers.length > 0) {
+            visibleEmployers.forEach((employer) => {
                 results.push({
                     id: employer.profile_id || employer.id,
                     type: "Employer",
@@ -133,8 +168,11 @@ export async function GET(req: Request) {
         // Add matching employers from profiles search if company name didn't match
         profiles?.forEach((p) => {
             if (normalizeUserType(p.user_type) === "employer") {
+                if (shouldHideEmployerFromBusinessViews({ profile: p })) {
+                    return;
+                }
                 // Ignore if we already added it via employers search
-                if (!employers?.find(e => e.profile_id === p.id)) {
+                if (!visibleEmployers.find(e => e.profile_id === p.id)) {
                     results.push({
                         id: p.id,
                         type: "Employer",

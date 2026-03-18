@@ -7,6 +7,7 @@ import {
 import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
 import { normalizeUserType } from "@/lib/domain";
+import { pickCanonicalEmployerRecord, shouldHideEmployerFromBusinessViews } from "@/lib/employers";
 import { isReportablePaymentProfile } from "@/lib/reporting";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -67,6 +68,28 @@ export default async function AdminDashboard() {
         .map((rows) => pickCanonicalWorkerRecord(rows))
         .filter(Boolean) as any[];
     const profileMap = new Map((profiles || []).map((entry: any) => [entry.id, entry]));
+    const employerGroups = new Map<string, any[]>();
+    for (const employer of employers || []) {
+        if (!employer?.profile_id) continue;
+        const current = employerGroups.get(employer.profile_id) || [];
+        current.push(employer);
+        employerGroups.set(employer.profile_id, current);
+    }
+    const canonicalEmployers = Array.from(employerGroups.entries())
+        .map(([profileId, rows]) => {
+            const employer = pickCanonicalEmployerRecord(rows);
+            if (!employer) {
+                return null;
+            }
+
+            const profile = profileMap.get(profileId) || null;
+            if (shouldHideEmployerFromBusinessViews({ employer, profile })) {
+                return null;
+            }
+
+            return employer;
+        })
+        .filter(Boolean) as any[];
     const docsByUser = new Map<string, Array<{ user_id: string; document_type: string; status: string | null }>>();
     for (const doc of documents || []) {
         const current = docsByUser.get(doc.user_id) || [];
@@ -77,13 +100,13 @@ export default async function AdminDashboard() {
     // Totals
     const workerAuthUsers = allAuthUsers.filter((entry: any) => !["employer", "admin", "agency"].includes(entry.user_metadata?.user_type));
     const totalWorkers = workerAuthUsers.length || workers.length;
-    const totalEmployers = employers?.length || 0;
+    const totalEmployers = canonicalEmployers.length;
     const totalAgencies = agencies?.length || 0;
 
     // Today activity
     const newWorkersToday = workerAuthUsers.filter((entry: any) => new Date(entry.created_at) >= todayStart).length;
     const newWorkersThisWeek = workerAuthUsers.filter((entry: any) => new Date(entry.created_at) >= weekAgo).length;
-    const newEmployersThisWeek = (employers || []).filter((entry: any) => new Date(entry.created_at) >= weekAgo).length;
+    const newEmployersThisWeek = canonicalEmployers.filter((entry: any) => new Date(entry.created_at) >= weekAgo).length;
     const newAgenciesThisWeek = (agencies || []).filter((entry: any) => new Date(entry.created_at) >= weekAgo).length;
 
     // Payments
@@ -117,7 +140,7 @@ export default async function AdminDashboard() {
     const workersReadyForApproval = workers.filter((worker: any) =>
         (worker.status === "PROFILE_COMPLETE" || worker.status === "PENDING_APPROVAL") && !worker.admin_approved
     ).length;
-    const pendingEmployers = (employers || []).filter((employer: any) => employer.status === "PENDING").length;
+    const pendingEmployers = canonicalEmployers.filter((employer: any) => employer.status === "PENDING").length;
     const manualReviewDocs = (documents || []).filter((document: any) => document.status === "manual_review").length;
     const waitingOnSupportThreads = (supportConversations || []).filter((c: any) => c.status === "waiting_on_support").length;
 

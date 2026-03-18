@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { normalizeUserType } from "@/lib/domain";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { queueEmail } from "@/lib/email-templates";
+import { ensureEmployerRecord } from "@/lib/employers";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { claimAgencyWorkerDraft, ensureAgencyRecord, getAgencySchemaState } from "@/lib/agencies";
 import { syncAuthContactFields } from "@/lib/auth-contact-sync";
@@ -94,28 +95,29 @@ export async function resolvePostAuthRedirect({
     }
 
     if (normalizedUserType === "employer") {
-        const { data: employer } = await adminClient
-            .from("employers")
-            .select("id, contact_phone")
-            .eq("profile_id", user.id)
-            .maybeSingle();
+        const employerResult = await ensureEmployerRecord(adminClient, {
+            userId: user.id,
+            email: user.email,
+            fullName: user.user_metadata?.full_name,
+            companyName: user.user_metadata?.company_name,
+            contactPhone: null,
+            contactEmail: user.email,
+        });
 
-        if (!employer) {
-            await adminClient.from("employers").insert({
-                profile_id: user.id,
-                company_name: user.user_metadata?.company_name || null,
-                status: "PENDING",
-            });
-        } else {
+        if (employerResult.employer) {
             await syncAuthContactFields(adminClient, {
                 userId: user.id,
-                phone: employer.contact_phone,
+                phone: employerResult.employer.contact_phone,
             }).catch((error) => {
                 console.warn("[Auth Redirect] Employer auth contact sync failed:", error);
             });
         }
 
-        await logServerActivity(user.id, "auth_login", "auth", { role: "employer", is_new: !employer });
+        await logServerActivity(user.id, "auth_login", "auth", {
+            role: "employer",
+            is_new: employerResult.employerCreated,
+            employer_duplicates: employerResult.duplicates,
+        });
         return `${origin}/profile/employer`;
     }
 
