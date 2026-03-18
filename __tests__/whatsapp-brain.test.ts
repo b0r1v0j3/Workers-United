@@ -121,17 +121,39 @@ describe("whatsapp-brain guards", () => {
         expect(reply).not.toContain("$9");
     });
 
-    it("builds a safe pre-registration worker reply without premature payment for generic job intent", () => {
+    it("greets generic pre-registration job intent without sounding defensive", () => {
         const reply = buildUnregisteredWorkerWhatsAppReply({
             message: "Ocu posao",
             language: "Serbian",
             intent: "job_intent",
         });
 
-        expect(reply).toContain("ne mogu da potvrdim konkretan otvoren posao");
-        expect(reply).toContain("vođeni matching proces");
+        expect(reply).toContain("Prvi korak je da napravite nalog");
         expect(reply).toContain("workersunited.eu/signup");
         expect(reply).not.toContain("$9");
+        expect(reply).not.toContain("ne mogu da potvrdim konkretan otvoren posao");
+    });
+
+    it("explains guided matching only when the user asks how the process works", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "Kako radi Workers United proces?",
+            language: "Serbian",
+            intent: "job_intent",
+        });
+
+        expect(reply).toContain("vođeni matching proces");
+        expect(reply).toContain("workersunited.eu/signup");
+    });
+
+    it("uses the availability guard only for concrete open-job questions", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "Ima li trenutno neki posao za vozaca?",
+            language: "Serbian",
+            intent: "job_intent",
+        });
+
+        expect(reply).toContain("ne mogu da potvrdim konkretan otvoren posao");
+        expect(reply).toContain("vođeni matching proces");
     });
 
     it("allows price explanations for unregistered workers without implying direct WhatsApp payment", () => {
