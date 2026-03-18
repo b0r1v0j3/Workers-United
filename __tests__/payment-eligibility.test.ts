@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { getEntryFeeEligibility, WORKER_ENTRY_FEE_READINESS_COLUMNS } from "@/lib/payment-eligibility";
+import {
+    getEntryFeeEligibility,
+    resolveEntryFeeEligibilityForWorker,
+    WORKER_ENTRY_FEE_READINESS_COLUMNS,
+} from "@/lib/payment-eligibility";
 
 describe("getEntryFeeEligibility", () => {
     it("keeps the checkout readiness columns aligned with worker completion requirements", () => {
@@ -68,5 +72,75 @@ describe("getEntryFeeEligibility", () => {
         const result = getEntryFeeEligibility(candidate);
 
         expect(result.allowed).toBe(true);
+    });
+
+    it("resolves checkout eligibility from the full worker/profile/document snapshot", () => {
+        const resolution = resolveEntryFeeEligibilityForWorker({
+            profile: { full_name: "Sanae Benyoussef" },
+            worker: {
+                entry_fee_paid: false,
+                admin_approved: false,
+                phone: "+212656548490",
+                nationality: "Moroccan",
+                current_country: "Morocco",
+                preferred_job: "Hospitality",
+                gender: "Female",
+                date_of_birth: "1996-01-01",
+                birth_country: "Morocco",
+                birth_city: "Casablanca",
+                citizenship: "Moroccan",
+                marital_status: "Single",
+                passport_number: "AB123456",
+                passport_issued_by: "Morocco",
+                passport_issue_date: "2024-01-01",
+                passport_expiry_date: "2034-01-01",
+                lives_abroad: false,
+                previous_visas: false,
+            },
+            documents: [
+                { document_type: "passport" },
+                { document_type: "biometric_photo" },
+                { document_type: "diploma" },
+            ],
+        });
+
+        expect(resolution.profileCompletion).toBe(100);
+        expect(resolution.unlockState.allowed).toBe(false);
+        expect(resolution.unlockState.reason).toBe("pending_admin_review");
+    });
+
+    it("marks the same full snapshot as ready once admin approval exists", () => {
+        const resolution = resolveEntryFeeEligibilityForWorker({
+            profile: { full_name: "Sanae Benyoussef" },
+            worker: {
+                entry_fee_paid: false,
+                admin_approved: true,
+                phone: "+212656548490",
+                nationality: "Moroccan",
+                current_country: "Morocco",
+                preferred_job: "Hospitality",
+                gender: "Female",
+                date_of_birth: "1996-01-01",
+                birth_country: "Morocco",
+                birth_city: "Casablanca",
+                citizenship: "Moroccan",
+                marital_status: "Single",
+                passport_number: "AB123456",
+                passport_issued_by: "Morocco",
+                passport_issue_date: "2024-01-01",
+                passport_expiry_date: "2034-01-01",
+                lives_abroad: false,
+                previous_visas: false,
+            },
+            documents: [
+                { document_type: "passport" },
+                { document_type: "biometric_photo" },
+                { document_type: "diploma" },
+            ],
+        });
+
+        expect(resolution.profileCompletion).toBe(100);
+        expect(resolution.unlockState.allowed).toBe(true);
+        expect(resolution.unlockState.reason).toBe("ready");
     });
 });
