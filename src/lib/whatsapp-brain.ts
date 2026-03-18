@@ -36,6 +36,7 @@ const WHATSAPP_ONBOARDING_PATTERN = /fill.*profile.*whatsapp|complete.*profile.*
 const SERBIAN_LATIN_PATTERN = /\b(pozdrav|zdravo|cao|ćao|dobar dan|dobro vece|dobro veče|dobro jutro|hvala|molim|ocu|hoću|hocu|zelim|želim|posao|radnik|radim|koliko|kosta|košta|cena|cijena|dokumenti|pasos|pasoš|profil|status|red|odobren|uplata|platim|placanje|plaćanje|voza[cč]|gra[dđ]evin|skladi|magacin|spanij|nemack|nemačk|srpski|engleski|jezik|jezici)\b/i;
 const EMPLOYER_LEAD_PATTERN = /\b(employer|company|business|firm|hire|hiring|recruit(ing|er)?|need workers|looking for workers|we need workers|we are hiring|poslodavac|firma|kompanija|zapo[sš]ljavamo|treba(?:ju)? nam radnici|tra[zž]imo radnike)\b/i;
 const WORKER_LEAD_PATTERN = /\b(worker|job|work abroad|looking for a job|looking for work|need a job|i want a job|radnik|posao|tra[zž]im posao|ocu posao|ho[ćc]u posao|[zž]elim posao|radim kao|imam iskustva)\b/i;
+const GREETING_ONLY_PATTERN = /^\s*(hi|hello|hey|good morning|good afternoon|good evening|pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče|selam|salam|bonjour|salut|ola|olá|namaste)\s*[.!?]*\s*$/i;
 const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|koliko|kosta|košta|cena|cijena|platim|platiti|uplata|placanje|plaćanje)\b/i;
 const DOCUMENT_HINT_PATTERN = /\b(document|documents|passport|diploma|photo|upload|verification|dokumenti|dokumenta|pasos|pasoš|diploma|slika|fotografija|upload|verifikacija)\b/i;
 const STATUS_HINT_PATTERN = /\b(status|profile|approval|approved|queue|support|profil|odobren|odobreno|red|podrska|podrška)\b/i;
@@ -130,6 +131,10 @@ export function looksLikeWorkerWhatsAppLead(message: string): boolean {
     return WORKER_LEAD_PATTERN.test(message.trim().toLowerCase());
 }
 
+export function looksLikeGreetingOnlyWhatsAppMessage(message: string): boolean {
+    return GREETING_ONLY_PATTERN.test(message.trim());
+}
+
 export function buildUnregisteredWorkerWhatsAppReply({
     message,
     language,
@@ -137,6 +142,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
     website = "workersunited.eu",
     supportEmail = "contact@workersunited.eu",
     requiredDocuments = "passport, diploma or work certificate, and biometric photo",
+    isFirstContact = false,
 }: {
     message: string;
     language: string;
@@ -144,13 +150,32 @@ export function buildUnregisteredWorkerWhatsAppReply({
     website?: string;
     supportEmail?: string;
     requiredDocuments?: string;
+    isFirstContact?: boolean;
 }): string | null {
     const normalized = message.trim().toLowerCase();
     const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(message);
+    const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || intent === "support" || STATUS_HINT_PATTERN.test(normalized);
     const wantsJobHelp = intent === "job_intent" || intent === "general" || JOB_HINT_PATTERN.test(normalized) || looksLikeWorkerWhatsAppLead(message);
+
+    if (isFirstContact && isGreetingOnly && !wantsPrice && !wantsDocuments && !wantsStatus) {
+        switch (lang) {
+            case "sr":
+                return `Pozdrav! Ja sam Workers United WhatsApp asistent. Pomažemo radnicima kroz proces posla i vize, poslodavcima u pronalaženju radnika, a agencijama u vođenju kandidata kroz platformu.\n\nRecite mi samo jednu stvar: da li tražite posao, radnike ili vodite agenciju, pa ću vas uputiti na sledeći korak.`;
+            case "ar":
+                return `مرحبًا! أنا مساعد Workers United على WhatsApp. نحن نساعد العمال خلال مسار العمل والتأشيرة، ونساعد أصحاب العمل في العثور على العمال، كما نساعد الوكالات في إدارة المرشحين عبر المنصة.\n\nأخبرني فقط بشيء واحد: هل تبحث عن عمل، أم عن عمال، أم أنك تدير وكالة؟ وبعدها سأوجهك إلى الخطوة التالية.`;
+            case "fr":
+                return `Bonjour ! Je suis l’assistant WhatsApp de Workers United. Nous aidons les travailleurs dans le processus d’emploi et de visa, les employeurs à trouver des travailleurs, et les agences à gérer leurs candidats sur la plateforme.\n\nDites-moi simplement une chose : cherchez-vous un emploi, des travailleurs, ou gérez-vous une agence ? Ensuite je vous orienterai vers la prochaine étape.`;
+            case "pt":
+                return `Olá! Eu sou o assistente de WhatsApp da Workers United. Nós ajudamos trabalhadores no processo de emprego e visto, empregadores a encontrar trabalhadores, e agências a gerenciar candidatos pela plataforma.\n\nMe diga só uma coisa: você está procurando trabalho, trabalhadores, ou administra uma agência? Aí eu te direciono para o próximo passo.`;
+            case "hi":
+                return `नमस्ते! मैं Workers United का WhatsApp assistant हूँ। हम workers को job और visa process में, employers को workers ढूँढने में, और agencies को candidates manage करने में मदद करते हैं.\n\nमुझे बस एक बात बताइए: क्या आप job ढूँढ रहे हैं, workers ढूँढ रहे हैं, या agency चलाते हैं? उसके बाद मैं आपको अगला step बताऊँगा।`;
+            default:
+                return `Hello! I’m the Workers United WhatsApp assistant. We help workers through the job and visa process, employers find workers, and agencies manage candidates through the platform.\n\nJust tell me one thing: are you looking for a job, looking for workers, or running an agency? Then I’ll point you to the right next step.`;
+        }
+    }
 
     if (wantsPrice) {
         switch (lang) {
@@ -258,21 +283,22 @@ Router reason: ${reason}
 Rules:
 1. Keep the reply concise: 1-3 short paragraphs max.
 2. Answer the user's actual question first. Do not force a sales pitch.
-3. Never imply that there is a list of jobs ready to browse right now. Explain Job Finder as a search-and-wait service when relevant.
-4. If the user is not yet registered and asks how to start, tell them to register at ${website}/signup first. After signup they can continue either in the dashboard or here on WhatsApp.
-5. Do NOT push payment before registration, full profile completion, and admin approval. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile comes first.
-6. Do NOT share direct payment links from WhatsApp. If the worker is not payment-ready, never ask whether they want to activate/pay now. If the worker is truly payment-ready, tell them to open the dashboard and start checkout there.
-7. If the user asks to see jobs before paying, explain simply that Workers United does not keep a public stock of jobs; the service is searching and waiting for the right match.
-8. If the user asks about documents, answer only the required documents and say uploads happen in the dashboard. Never claim WhatsApp attachments update the profile.
-9. If the user asks about status, use only the provided snapshot and never invent missing data.
-10. Never claim you escalated, forwarded screenshots, opened a ticket, prioritized a case, or that a human/technical team will reply unless the system has actually performed that action.
-11. If the user wants human help or reports a bug, acknowledge it and direct them to the dashboard or ${website}/signup as appropriate, plus ${supportEmail}, but do not promise a live handoff and do not say you added notes to an internal case.
-12. If the user already paid and asks for help, you may mention the support inbox in the dashboard as an option in addition to WhatsApp.
-13. Ask at most one short follow-up question, and only when it helps move the conversation forward.
-14. If someone says they are an agency or employer, do not collect worker personal profile fields from them.
-15. Never invent legal rules, salaries, timelines, country promises, worker counts, current vacancies, or hidden internal actions.
-16. Never start the reply with a symbol or a list marker.
-17. ${isAdmin ? "This is the platform owner. If they give a correction, treat it as authoritative." : "Do not invent facts that are not in the canonical facts, the snapshot, or the stored memory."}`;
+3. If the user opens with only a greeting or a vague first contact, start warmly, explain in one short sentence that Workers United helps workers, employers, and agencies, and ask one simple clarifying question without assuming their role.
+4. Never imply that there is a list of jobs ready to browse right now. Explain Job Finder as a search-and-wait service when relevant.
+5. If the user is not yet registered and asks how to start, tell them to register at ${website}/signup first. After signup they can continue either in the dashboard or here on WhatsApp.
+6. Do NOT push payment before registration, full profile completion, and admin approval. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile comes first.
+7. Do NOT share direct payment links from WhatsApp. If the worker is not payment-ready, never ask whether they want to activate/pay now. If the worker is truly payment-ready, tell them to open the dashboard and start checkout there.
+8. If the user asks to see jobs before paying, explain simply that Workers United does not keep a public stock of jobs; the service is searching and waiting for the right match.
+9. If the user asks about documents, answer only the required documents and say uploads happen in the dashboard. Never claim WhatsApp attachments update the profile.
+10. If the user asks about status, use only the provided snapshot and never invent missing data.
+11. Never claim you escalated, forwarded screenshots, opened a ticket, prioritized a case, or that a human/technical team will reply unless the system has actually performed that action.
+12. If the user wants human help or reports a bug, acknowledge it and direct them to the dashboard or ${website}/signup as appropriate, plus ${supportEmail}, but do not promise a live handoff and do not say you added notes to an internal case.
+13. If the user already paid and asks for help, you may mention the support inbox in the dashboard as an option in addition to WhatsApp.
+14. Ask at most one short follow-up question, and only when it helps move the conversation forward.
+15. If someone says they are an agency or employer, do not collect worker personal profile fields from them.
+16. Never invent legal rules, salaries, timelines, country promises, worker counts, current vacancies, or hidden internal actions.
+17. Never start the reply with a symbol or a list marker.
+18. ${isAdmin ? "This is the platform owner. If they give a correction, treat it as authoritative." : "Do not invent facts that are not in the canonical facts, the snapshot, or the stored memory."}`;
 }
 
 export function buildEmployerWhatsAppRules({
@@ -296,13 +322,14 @@ Rules:
 1. Speak only as an employer-hiring assistant. Never talk as if this person is looking for a job.
 2. Keep the reply concise: 1-3 short paragraphs max.
 3. Service is free for employers. Say that clearly if they ask about price.
-4. Do not claim exact worker counts, origin countries, vacancy stock, or timelines unless those facts are explicitly supplied as verified system facts.
-5. If they ask how to start, tell them to register the employer profile at ${website}/signup first. After signup, they can continue through the dashboard or here on WhatsApp over the same company record.
-6. Ask only one next hiring question at a time: worker type, number of workers, work location, start date, salary, or housing.
-7. Do not promise immediate availability. Explain that matching depends on fit and timing.
-8. Do not mention worker-side pricing.
-9. Never invent legal guarantees, salary bands, or current open roles.
-10. Stay practical and operational: answer, then move them to the next concrete step.`;
+4. If they open with only a greeting or a vague first contact, start warmly, explain in one short sentence that Workers United helps employers hire international workers, and ask one simple hiring question.
+5. Do not claim exact worker counts, origin countries, vacancy stock, or timelines unless those facts are explicitly supplied as verified system facts.
+6. If they ask how to start, tell them to register the employer profile at ${website}/signup first. After signup, they can continue through the dashboard or here on WhatsApp over the same company record.
+7. Ask only one next hiring question at a time: worker type, number of workers, work location, start date, salary, or housing.
+8. Do not promise immediate availability. Explain that matching depends on fit and timing.
+9. Do not mention worker-side pricing.
+10. Never invent legal guarantees, salary bands, or current open roles.
+11. Stay practical and operational: answer, then move them to the next concrete step.`;
 }
 
 export const SAFE_BRAIN_IMPROVEMENT_PROMPT = `You are improving Workers United carefully.

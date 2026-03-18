@@ -21,7 +21,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Storage | **Supabase Storage** | Canonical and only active worker document bucket is `worker-docs`; runtime helpers resolve only `worker-docs`, while legacy `candidate-docs` and empty `documents` buckets are retired |
 | Payments | **Stripe** | Checkout Sessions + Webhooks |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
-| AI (Chatbot) | **GPT-5 mini** | WhatsApp AI now uses a small intent router + response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, canonical `workerRecord` runtime naming, and simpler role-safe worker/employer behavior |
+| AI (Chatbot) | **GPT-5 mini + GPT-5.4 mini** | WhatsApp AI now uses a small intent router + richer response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, canonical `workerRecord` runtime naming, simpler role-safe worker/employer behavior, and a deterministic neutral greeting intro for first-contact messages |
 | AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, failure runs are saved instead of blasting raw crash mail, and technical monitoring surfaces now live behind the owner-only `/internal` hub instead of the business admin shell |
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
@@ -95,7 +95,7 @@ Workers-United/
 │   │   │   ├── profile/       # Profile API
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router/response flow)
+│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow)
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth code callback + hash-link rescue redirect + agency draft claim linking
@@ -350,7 +350,7 @@ User (Browser)
 | `src/lib/mailer.ts` | `sendEmail()` — Nodemailer wrapper |
 | `src/lib/email-templates.ts` | All HTML email templates; includes `checkout_recovery` and reuses the existing WhatsApp `status_update` template when a valid worker phone exists |
 | `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
-| `src/lib/whatsapp-brain.ts` | Shared canonical WhatsApp facts/rules, safer worker/employer prompting, explicit `profile complete + admin approval -> payment unlock` guard language, no-fake-escalation rule set, onboarding trigger detection, and low-risk learning filter used by `/api/whatsapp/webhook` + `/api/brain/improve` |
+| `src/lib/whatsapp-brain.ts` | Shared canonical WhatsApp facts/rules, safer worker/employer prompting, deterministic first-contact greeting reply, explicit `profile complete + admin approval -> payment unlock` guard language, no-fake-escalation rule set, onboarding trigger detection, and low-risk learning filter used by `/api/whatsapp/webhook` + `/api/brain/improve` |
 | `src/lib/smoke-evaluator.ts` | Shared health evaluator (`healthy/degraded/critical`) for smoke checks |
 | `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback); passport verifier now rejects closed covers / wrong pages, emits structured worker guidance, and exposes quarter-turn orientation + canonical `ocr_json` patch helpers used by verify/admin preview auto-rotation |
 | `src/lib/document-review.ts` | Shared review helper that turns canonical `ocr_json` / `reject_reason` into admin-facing summaries and worker-facing re-upload guidance |
@@ -367,7 +367,7 @@ User (Browser)
 | `src/lib/domain.ts` | Canonical role/domain helper; normalizes legacy `candidate` metadata into the `worker` domain and exposes worker storage constants |
 | `src/lib/workers.ts` | Canonical worker helper layer; use `loadCanonicalWorkerRecord()` / `pickCanonicalWorkerRecord()` instead of raw `.single()` / `.maybeSingle()` on `worker_onboarding`/`workers`, plus shared phone normalization and storage filename sanitization |
 | `src/lib/agencies.ts` | Agency provisioning + ownership helper; schema guard, claim-link context, claim linking, and agency-owned worker resolution over `worker_onboarding` / physical `workers` |
-| `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: GPT-5 mini intent router + response generator, shorter history windows, canonical `workerRecord` snapshot context, shared facts/rules from `src/lib/whatsapp-brain.ts`, explicit WhatsApp onboarding only when the user actually asks for profile completion over WhatsApp, and single-response media fallback that avoids pretending WhatsApp attachments already update worker profiles |
+| `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: GPT-5 mini intent router + GPT-5.4 mini response generator, shorter history windows, canonical `workerRecord` snapshot context, shared facts/rules from `src/lib/whatsapp-brain.ts`, deterministic neutral greeting handling for vague first contact, explicit WhatsApp onboarding only when the user actually asks for profile completion over WhatsApp, and single-response media fallback that avoids pretending WhatsApp attachments already update worker profiles |
 | `src/app/api/brain/collect/route.ts` | Brain/ops data collector; aggregates funnel, payment telemetry, auth drift, recent user activity, recent WhatsApp conversations, canonical `whatsappTemplateHealth` + failed-template samples, and a shared `opsSnapshot` so the daily monitor sees real operational signals instead of only top-level counts |
 | `src/app/api/brain/improve/route.ts` | Daily low-risk conversation improver; analyzes DB/conversation/error summaries but may only persist safe `common_question / error_fix / copy_rule` learnings after `filterSafeBrainLearnings()` rejects numbers, pricing, country claims, document/legal facts, and URLs |
 | `src/app/api/brain/act/route.ts` | Brain action executor; now accepts canonical `update_worker_status` while still honoring legacy `update_candidate_status` during the transition |
@@ -451,7 +451,7 @@ When adding a new feature, follow this order:
 | `OWNER_PHONE` / `OWNER_PHONES` | Admin WhatsApp command auth | Optional, comma-separated phone list |
 | `OPENAI_API_KEY` | OpenAI | For WhatsApp router/response models + primary document verification |
 | `WHATSAPP_ROUTER_MODEL` | OpenAI | Optional override for WhatsApp intent classifier (`gpt-5-mini` default) |
-| `WHATSAPP_RESPONSE_MODEL` | OpenAI | Optional override for WhatsApp response generator (`gpt-5-mini` default) |
+| `WHATSAPP_RESPONSE_MODEL` | OpenAI | Optional override for WhatsApp response generator (`gpt-5.4-mini` default) |
 | `BRAIN_DAILY_MODEL` | OpenAI | Optional override for daily Brain snapshots/exception reports (`gpt-5-mini` default) |
 
 ---
