@@ -66,7 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_signatures_user ON signatures(user_id);
 CREATE INDEX IF NOT EXISTS idx_signatures_type ON signatures(document_type);
 
 -- ================================================================
--- 4. EMAIL QUEUE TABLE (for n8n integration)
+-- 4. EMAIL QUEUE TABLE
 -- ================================================================
 CREATE TABLE IF NOT EXISTS email_queue (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

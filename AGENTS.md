@@ -172,7 +172,6 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **AI:** OpenAI GPT-4o-mini (primarni vision sloj za verifikaciju dokumenata), GPT-5 mini (`WHATSAPP_ROUTER_MODEL` + `WHATSAPP_RESPONSE_MODEL`) za WhatsApp intent router/response sloj, Gemini fallback chain za document verification (`gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`), i GPT-5 mini (`BRAIN_DAILY_MODEL`) za daily Brain snapshots / exception reports
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
 - **Hosting:** Vercel Pro (sa cron jobovima)
-- **Automation:** n8n Cloud (email/ops automations i budući tool workflows)
 - **Icons:** Lucide React
 
 ### Planovi i pretplate:
@@ -265,9 +264,6 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 #### Sledeće
 - [ ] **Payment recovery automation v2** — source attribution + admin funnel signal za `opened checkout but not paid` sada kada je osnovni abandoned checkout follow-up (`1h / 24h / 72h`) live
 - [ ] **Agency operations v2** — filteri, search, `needs action`, `missing contact`, `verified but unpaid`, `paid but waiting`, bulk operacije
-- [ ] **n8n Email AI Auto-Responder** — novi workflow: AI odgovara na emailove (`contact@workersunited.eu`)
-- [ ] **n8n AI Agent sa tools** — bot dobija mogućnost da radi akcije (provera otvorenih pozicija, ažuriranje statusa, slanje emaila)
-- [ ] **n8n email automation** — retry failed emails, auto-responder za inbox
 
 #### Kasnije / uslovno
 - [ ] **Per-country placement fee engine** — priprema za više zemalja i različite confirmation/placement cene po destinaciji
@@ -277,8 +273,9 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Legacy automation retirement cleanup: uklonjeni su preostali runtime automation tragovi iz `src/app/api/health/route.ts`, `src/app/api/cron/system-smoke/route.ts`, `src/app/api/email-queue/route.ts`, `scripts/cloud-doctor.ps1` i lokalnog env setup-a, a dokumentacija/changelog istorija su preformulisani tako da platforma više nigde ne računa na taj retired servis kao aktivan deo sistema — 18.03.2026
 - [x] Admin document modal PDF preview fix: `src/app/admin/workers/[id]/DocumentViewerModal.tsx` više ne pokušava da ubaci auth-zaštićeni PDF preview direktno kroz iframe ka `/api/admin/documents/.../preview`, nego prvo povuče fajl kao authenticated blob URL i tek njega renderuje inline sa loading/error fallback-om; `vercel.json` CSP je pritom minimalno proširen na `frame-src 'self' blob: https://js.stripe.com`, pa admin modal više ne pokazuje Chrome `This content is blocked` ekran dok isti dokument radi u `Open in New Tab` — 18.03.2026
-- [x] Prod verification + monitoring truthfulness hardening: production deploy na `www.workersunited.eu` je odrađen, novi manual ops pass je potvrdio da `/api/health`, `/api/cron/system-smoke`, public auth stranice i route protection rade na live domenu; `src/app/api/brain/collect/route.ts` više ne predstavlja 30-dnevne payment fail/event podatke kao “recent” nego payment telemetry za ops monitor računa poslednja 24h, `src/app/api/health/route.ts` više ne vraća lažno `healthy` kada je obavezni servis samo `degraded/not_configured` niti tretira n8n `404` kao `ok`, a login/signup auth forme sada imaju ispravne `autocomplete` hintove pa Chrome više ne prijavljuje password-field warninge na live auth ekranima — 18.03.2026
+- [x] Prod verification + monitoring truthfulness hardening: production deploy na `www.workersunited.eu` je odrađen, novi manual ops pass je potvrdio da `/api/health`, `/api/cron/system-smoke`, public auth stranice i route protection rade na live domenu; `src/app/api/brain/collect/route.ts` više ne predstavlja 30-dnevne payment fail/event podatke kao “recent” nego payment telemetry za ops monitor računa poslednja 24h, `src/app/api/health/route.ts` više ne vraća lažno `healthy` kada je obavezni servis samo `degraded/not_configured`, a login/signup auth forme sada imaju ispravne `autocomplete` hintove pa Chrome više ne prijavljuje password-field warninge na live auth ekranima — 18.03.2026
 - [x] Checkout profile self-heal hardening: `src/app/api/stripe/create-checkout/route.ts` više ne pokušava da čita critical profile/payment state kroz user-scoped RLS query koji je live worker-ima vraćao lažni `Profile not found` i `checkout_profile_missing`, nego posle auth check-a koristi admin client za canonical `profiles` read + self-heal fetch i payment insert, pa approved worker može ponovo da otvori `$9` checkout čak i kad session/RLS drift sakrije profil server route-u — 18.03.2026
 - [x] Ops signal-noise + WhatsApp truthfulness pass: `src/app/api/brain/collect/route.ts` sada računa `whatsappTemplateHealth` i `recentFailedWhatsApp` nad stvarnih poslednjih 24h umesto nad 30-dnevnim history skupom, `src/lib/admin-exceptions.ts` / auth health više ne tretiraju hidden `draft-worker-...@workersunited.internal` profile kao email hygiene incident, a `src/app/api/whatsapp/webhook/route.ts` ima novi tvrdi post-response guard koji preseče izmišljene `tech ticket / technical team / payment link here` poruke i zameni ih kanonskim dashboard/email odgovorom — 18.03.2026
 - [x] Admin/internal separation pass: business `/admin` sidebar i dashboard više ne reklamiraju debug/incident alate (`Exceptions`, `Email Health`), a novi owner-only `/internal` hub sada drži tehničke ekrane `/internal/ops`, `/internal/email-health` i `/internal/email-preview`; isti ulaz je dodat i u `GodModePanel`, pa firmine operativne stranice ostaju odvojene od incident monitoringa i template sandbox-a — 17.03.2026
@@ -391,7 +388,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] Workspace shell polish pass 12: agency workspace više nema dupli sidebar ulaz za isti `/profile/agency` ekran; kanonski home entry je sada jedini `Agency Workers` povratak ka listi, dok `Worker Editor` ostaje poseban samo kada se stvarno gleda pojedinačni agency worker — 08.03.2026
 - [x] Workspace shell polish pass 11: logout confirm više nije renderovan unutar sidebar stabla nego kroz pravi portal u `document.body`, pa se confirm modal sada otvara centrirano preko celog viewport-a i ne ostaje zalepljen za levu kolonu ni kada workspace shell koristi blur/overflow slojeve — 08.03.2026
 - [x] Workspace shell polish pass 10: sidebar unutrašnji layout sada koristi punu visinu pa je `Logout` stvarno zalepljen za dno bez praznog repa ispod, a worker overview surface kartice (`hero`, support, info) više ne koriste agresivniji custom radius nego isti blaži `rounded-2xl` ritam kao workspace shell — 08.03.2026
-- [x] Ops monitoring precision pass: `api/health` sada proverava Stripe/SMTP/WhatsApp/n8n paralelno, klasifikuje WhatsApp template failove na platform-side (`template/config/provider`) vs recipient-side (`undeliverable` / country restriction), a `system-smoke` više diže lažno `healthy` stanje kada je opcioni servis stvarno `degraded`; dodati su i test guardovi za smoke evaluator i WhatsApp health klasifikaciju — 08.03.2026
+- [x] Ops monitoring precision pass: `api/health` sada proverava Stripe/SMTP/WhatsApp paralelno, klasifikuje WhatsApp template failove na platform-side (`template/config/provider`) vs recipient-side (`undeliverable` / country restriction), a `system-smoke` više diže lažno `healthy` stanje kada je opcioni servis stvarno `degraded`; dodati su i test guardovi za smoke evaluator i WhatsApp health klasifikaciju — 08.03.2026
 - [x] Brain + ops monitoring hardening: `brain-monitor` sada robustno parsira OpenAI Responses JSON, upisuje stvarni `structured_report` objekat umesto raw output niza, pravilno obeležava email delivery rezultat i razume `retry_email` akcije koje vraćaju `email_ids`; `api/health` i `system-smoke` više ne kriju recent WhatsApp template failove, pa je današnji Brain exception run ručno ponovo pokrenut i uspešno poslat mailom — 08.03.2026
 - [x] Workspace shell polish pass 9: uklonjen je suvišni `Signed in as` profil blok iz workspace sidebara, pa leva kolona ostaje čista navigacija bez dupliranja identiteta koji već postoji u header-u — 08.03.2026
 - [x] Workspace shell polish pass 8: dashboard header više ne koristi stari levo-zakucani full-logo raspored, već prati isti sistem kao public header sa wordmark-om levo i centriranom logo-ikonicom kroz profile/settings/workspace ekrane — 08.03.2026
@@ -469,7 +466,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] Hero desktop card layering tweak: zelena `Employer_Request.doc` kartica spuštena (`top-[120px]`) i podignuta iznad plave (`z-20`) da blago preklopi `Operational handover` i otkrije više teksta na braon kartici — 06.03.2026
 - [x] Social preview update: globalni Open Graph/Twitter preview prebačen na standardni logo (`/logo-centered.png`) sa cache-bust query (`?v=20260306`) radi osvežavanja LinkedIn thumbnail-a — 06.03.2026
 - [x] Reliability fix pass: `admin/email-preview` prebačen na reactive template loading (nema stale preview state), a `worker/edit ProfileClient` dobio timezone-safe date parsing (`YYYY-MM-DD`) + stabilan `fetchProfile` lifecycle (`useCallback`/`useEffect`) — 06.03.2026
-- [x] Cloud connection hardening: `scripts/cloud-doctor.ps1` stabilizovan (Vercel auth false-fail fix), dodate optional n8n + `/api/health` provere i `npm run cloud:doctor` za one-command dijagnostiku — 06.03.2026
+- [x] Cloud connection hardening: `scripts/cloud-doctor.ps1` stabilizovan (Vercel auth false-fail fix), dodate cloud health provere i `npm run cloud:doctor` za one-command dijagnostiku — 06.03.2026
 - [x] Footer mobile social icon sizing correction: vraćena stara veličina ikonica (`w/h-8`), uz zbijeni razmak (`gap-1.5`) i `flex-nowrap` da sve mreže ostanu u jednom redu na telefonu — 05.03.2026
 - [x] Public navbar branding correction: levi `Workers United` vraćen sa plain teksta na originalni wordmark asset (`logo-wordmark.png`) po vizuelnom zahtevu — 05.03.2026
 - [x] Footer mobile social layout fix: uklonjen wrap i smanjen mobilni gap/ikonice (`gap-2`, `w/h-6`) da svih 7 mreža stane u jedan red na telefonu — 05.03.2026
@@ -515,19 +512,19 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [x] Core lint debt pass 2 — stricter API typing + cleanup (`AppShell`, `UnifiedNavbar`, `WorkerSidebar`, `ReviewClient`, Stripe/Health/GodMode routes); warnings 223 → 193, lint/test/build green — 05.03.2026
 - [x] Lint stabilization + React hook purity fixes + date locale cleanup (`en-US` → `en-GB`) — 05.03.2026
 - [x] Brain memory dedup + WhatsApp webhook hardening + system-smoke alert cooldown (6h anti-spam) — 05.03.2026
-- [x] Reliability autopilot v1 — `/api/cron/system-smoke` + expanded `/api/health` (Supabase/Stripe/SMTP/WhatsApp/n8n checks + alerting) — 05.03.2026
+- [x] Reliability autopilot v1 — `/api/cron/system-smoke` + expanded `/api/health` (Supabase/Stripe/SMTP/WhatsApp checks + alerting) — 05.03.2026
 - [x] Hotfix: entry payment unlocked for all worker profiles (uklonjen admin approval gate na checkout + queue UI) — 04.03.2026
 - [x] Payment/queue hardening + real offer links + admin status alignment + notification sync — 04.03.2026
 - [x] Next.js 16 proxy migration (`src/middleware.ts` → `src/proxy.ts`) — 04.03.2026
-- [x] Platform Config — centralized business facts DB, admin UI editor, WhatsApp + Brain + n8n integration — 02.03.2026
+- [x] Platform Config — centralized business facts DB, admin UI editor, WhatsApp + Brain integration — 02.03.2026
 - [x] Brain Monitor dedup fix — checks open + closed issues, feeds resolved titles to AI — 02.03.2026
 - [x] WhatsApp refund policy fix — 30 days → 90 days in fallback bot — 02.03.2026
 - [x] AI Brain autonomous — platform monitoring, GitHub Issues, Supabase action logging — 02.03.2026
 - [x] Gemini 3.0-flash + model fallback chain (3 modela) + AI error reclassification — 02.03.2026
-- [x] WhatsApp n8n retry (2 pokušaja), smart fallback sa tačnim cenama — 02.03.2026
+- [x] WhatsApp delivery retry (2 pokušaja), smart fallback sa tačnim cenama — 02.03.2026
 - [x] Email ID tracking za brain retry (`recentFailedEmails[]`) — 02.03.2026
 - [x] WhatsApp chatbot upgrade: GPT-4o + 100-message memorija + enriched data — 28.02.2026
-- [x] WhatsApp AI chatbot (n8n + GPT-4o) — 28.02.2026
+- [x] WhatsApp AI chatbot (GPT-4o) — 28.02.2026
 - [x] AGENTS.md restrukturisan + CHANGELOG.md izveden — 28.02.2026
 - [x] Stripe $9 Entry Fee live — 28.02.2026
 - [x] Cron jobovi re-enabled — 28.02.2026
@@ -622,7 +619,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 | `/api/cron/profile-reminders` | Daily 9 AM UTC | Podsetnik za nepotpune profile (reminder + warning + deletion) |
 | `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert za pasoš koji ističe za <6 meseci (max 1 email/30 dana) |
 | `/api/cron/match-jobs` | Svakih 6 sati | Auto-matching radnika i poslova |
-| `/api/cron/system-smoke` | Svaki sat (:30) | Automatizovan smoke monitoring ruta + servisa (Stripe/SMTP/WA/n8n) |
+| `/api/cron/system-smoke` | Svaki sat (:30) | Automatizovan smoke monitoring ruta + servisa (Stripe/SMTP/WA) |
 
 ### ⚠️ Email & WhatsApp Common Gotchas:
 - **Email + WhatsApp dual-send** — `queueEmail()` prima opcionalni `recipientPhone` parametar. Kad ga prosledite, automatski šalje i WhatsApp template. WhatsApp failure NIKAD ne blokira email.
@@ -701,8 +698,6 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Agency draft-documents smoke** — dodati kanonski E2E smoke koji pravi agency draft worker-a, uploaduje namerno pogrešan dokument, očekuje `rejected/manual_review` state umesto 500, pa zatim potvrđuje da dashboard i detail vide isti document status preko shared owner sloja
 - [ ] **User activity policy cleanup** — srediti `user_activity` insert policy ili write path tako da client-side fire-and-forget logging više ne puni browser konzolu `403` greškama tokom normalnog worker/employer/agency korišćenja
 - [ ] **WhatsApp delivery policy map** — pre slanja template nudževa razlikovati `invalid / no WhatsApp / country-restricted` brojeve od pravih platformskih kvarova, pa unsupported regione automatski prebacivati na email-only ili admin review umesto da stalno pune fail log
-- [ ] **n8n Email AI Auto-Responder** — AI obrada inbox thread-ova
-- [ ] **n8n AI Agent sa Tools** — aktivne radnje umesto čistog chat-a
 - [ ] **Auth Design System unification** — shared auth komponente za `/signup` i `/login`
 - [ ] **Auth link smoke guard** — generisati test Supabase hash link i proveriti da `/login#access_token...` završava sa session cookie-jima i redirect-om na pravi workspace pre svakog prod deploy-a
 - [ ] **Brand assets hardening** — shared `BrandLogo` + guard da se legacy logo ne vrati
@@ -916,9 +911,8 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 6. ✅ Supabase Pro + password strength
 7. ✅ Stripe plaćanja ($9 entry fee) — LIVE 28.02.2026
 8. ✅ Cron jobovi aktivni (4 joba u `vercel.json`) — 28.02.2026
-9. ✅ WhatsApp AI chatbot (n8n + GPT-4) — 28.02.2026
+9. ✅ WhatsApp AI chatbot — 28.02.2026
 10. ⬜ Final smoke test
-11. ⬜ n8n email automation (retry failed emails)
 
 ### Trenutno čitanje ovog statusa — 07.03.2026
 - Platforma je live i naplaćuje `$9 Job Finder`
@@ -990,12 +984,6 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 25. **Document AI provider chain** — `src/lib/document-ai.ts` koristi OpenAI GPT-4o-mini kao primarni vision provider, pa tek onda Gemini fallback chain `gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`. Ako primarni provider padne (5xx, rate limit, outage), automatski se probava sledeći. Custom `AIInfraError` klasa razlikuje AI infra greške od pravih document issues. Kad AI padne, dokumenti idu na `manual_review` umesto da se odbiju korisniku.
 
-26. **n8n Tool čvorovi sa `$fromAI()` — body mora biti "Using Fields Below"** — Nikad ne mešati `{{ $fromAI() }}` expression-e unutar raw JSON stringa. n8n ne može da parsira `{"action": {{ $fromAI('action') }}}` kao validan JSON. Umesto toga koristiti "Specify Body: Using Fields Below" i dodati svako polje pojedinačno. `$fromAI()` expressions prikazuju "undefined" u editoru — to je normalno, popunjavaju se u runtime-u.
-
-27. **Brain Action API Tool nepotreban kad postoji Supabase Tool** — Umesto da brain šalje HTTP request na Vercel API koji onda piše u Supabase (n8n → HTTP → Vercel → Supabase), koristiti Supabase Tool čvor direktno (n8n → Supabase). Manje koda, manje tačaka pucanja, isti rezultat.
-
-28. **n8n AI builder je nesiguran za kompleksne konfiguracije** — Za jednostavne promene OK, ali za JSON body formatting, expression syntax, i credential setup bolje davati korisniku ručna uputstva korak-po-korak nego prompt za n8n AI.
-
 29. **Brain collect NE SME da guta query/schema greške** — Ako `src/app/api/brain/collect/route.ts` koristi nepostojeću kolonu (`recipient` umesto `recipient_email`, `profiles.phone`, `matches.created_at`, itd.), rezultat NE SME da bude `data: null` prosleđen AI-u. Ruta mora da fail-uje sa 500 i jasnim logom, inače Brain generiše lažne P0/P1 zaključke iz praznih setova. Pre svake izmene u brain query-ima proveri `src/lib/database.types.ts`.
 
 ---
@@ -1007,6 +995,5 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 1. Consider adding article/section numbers back to UGOVOR O RADU — the original DOCX didn't have numbered articles (just section headers), but adding them could improve readability.
 2. The POZIVNO PISMO has a hardcoded "1 ЈЕДНА (ONE)" for number of visits — this could be made configurable.
 3. Consider adding a PDF preview feature in the admin panel before generating final documents.
-4. **Brain multi-model debata** — Proširiti n8n workflow da koristi 3 modela (GPT, Claude, Gemini) u 4 runde kako je opisano u `brain_system_design.md`, ali tek kad core operativa bude stabilna.
 5. **Automated DB backup verification** — Supabase Pro radi daily backup, ali treba bar jednom testirati restore.
 6. **OpenGraph dynamic slike** — Generisati OG slike sa brojem radnika / zemljama za social sharing.

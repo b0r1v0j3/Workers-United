@@ -1,5 +1,5 @@
 -- Migration: Create platform_config table for centralized business facts
--- All systems (WhatsApp bot, Brain Monitor, n8n AI) read from this single source of truth
+-- All systems (WhatsApp bot, Brain Monitor) read from this single source of truth
 
 CREATE TABLE IF NOT EXISTS platform_config (
   key TEXT PRIMARY KEY,

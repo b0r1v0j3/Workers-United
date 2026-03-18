@@ -17,7 +17,6 @@ interface HealthChecks {
     stripe: ServiceCheck;
     smtp: ServiceCheck;
     whatsapp: ServiceCheck;
-    n8n: ServiceCheck;
     timestamp: string;
 }
 
@@ -157,27 +156,6 @@ async function checkWhatsApp(adminClient: ReturnType<typeof createAdminClient>):
     }
 }
 
-async function checkN8n(): Promise<ServiceCheck> {
-    if (!process.env.N8N_WHATSAPP_WEBHOOK_URL) {
-        return { state: "not_configured", details: "Missing N8N_WHATSAPP_WEBHOOK_URL" };
-    }
-
-    try {
-        const res = await fetch(process.env.N8N_WHATSAPP_WEBHOOK_URL, {
-            method: "HEAD",
-            signal: AbortSignal.timeout(8000),
-        });
-        return res.ok
-            ? { state: "ok", details: `Reachable (${res.status})` }
-            : { state: "degraded", details: `HTTP ${res.status}` };
-    } catch (err) {
-        return {
-            state: "degraded",
-            details: err instanceof Error ? err.message : "n8n check failed",
-        };
-    }
-}
-
 export async function GET(request: NextRequest) {
     const detailedAuthHeader = request.headers.get("authorization");
     const canViewDetails = detailedAuthHeader === `Bearer ${process.env.CRON_SECRET}`;
@@ -189,23 +167,20 @@ export async function GET(request: NextRequest) {
         stripe: { state: "not_configured", details: "Missing STRIPE_SECRET_KEY" },
         smtp: { state: "not_configured", details: "Missing SMTP_USER/SMTP_PASS" },
         whatsapp: { state: "not_configured", details: "Missing WHATSAPP_TOKEN/WHATSAPP_PHONE_NUMBER_ID" },
-        n8n: { state: "not_configured", details: "Missing N8N_WHATSAPP_WEBHOOK_URL" },
         timestamp: new Date().toISOString(),
     };
 
-    const [supabase, stripe, smtp, whatsapp, n8n] = await Promise.all([
+    const [supabase, stripe, smtp, whatsapp] = await Promise.all([
         checkSupabase(adminClient),
         checkStripe(),
         checkSmtp(),
         checkWhatsApp(adminClient),
-        checkN8n(),
     ]);
 
     checks.supabase = supabase;
     checks.stripe = stripe;
     checks.smtp = smtp;
     checks.whatsapp = whatsapp;
-    checks.n8n = n8n;
 
     const status = summarizeStatus(checks);
     const code = status === "healthy" ? 200 : 503;
