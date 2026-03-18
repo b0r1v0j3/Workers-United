@@ -26,6 +26,79 @@ function getMetadataValue(value: string | null | undefined): string | null {
     return trimmed.length > 0 ? trimmed : null;
 }
 
+function mergeStripeMetadata(
+    existing: Stripe.MetadataParam | Record<string, unknown> | null | undefined,
+    next: Record<string, unknown>
+): Record<string, unknown> {
+    const base = existing && typeof existing === "object" && !Array.isArray(existing)
+        ? existing
+        : {};
+
+    return {
+        ...base,
+        ...next,
+    };
+}
+
+async function updatePaymentRecordByReference(params: {
+    supabase: ReturnType<typeof createAdminClient>;
+    paymentId?: string | null;
+    stripeSessionId?: string | null;
+    patch: Record<string, unknown>;
+    pendingOnly?: boolean;
+}) {
+    const { supabase, paymentId, stripeSessionId, patch, pendingOnly = false } = params;
+    const selector = paymentId
+        ? supabase.from("payments").select("id, metadata").eq("id", paymentId)
+        : stripeSessionId
+            ? supabase.from("payments").select("id, metadata").eq("stripe_checkout_session_id", stripeSessionId)
+            : null;
+
+    if (!selector) {
+        return;
+    }
+
+    const { data: existingRow, error: existingRowError } = await selector.maybeSingle();
+    if (existingRowError) {
+        throw existingRowError;
+    }
+
+    if (!existingRow?.id) {
+        return;
+    }
+
+    const nextPatch = {
+        ...patch,
+        ...(patch.metadata && typeof patch.metadata === "object"
+            ? { metadata: mergeStripeMetadata(existingRow.metadata as Record<string, unknown> | null | undefined, patch.metadata as Record<string, unknown>) }
+            : {}),
+    };
+
+    if (paymentId) {
+        let query = supabase.from("payments").update(nextPatch).eq("id", existingRow.id);
+        if (pendingOnly) {
+            query = query.eq("status", "pending");
+        }
+        const { error } = await query;
+        if (!error) {
+            return;
+        }
+        throw error;
+    }
+
+    if (stripeSessionId) {
+        let query = supabase.from("payments").update(nextPatch).eq("id", existingRow.id);
+        if (pendingOnly) {
+            query = query.eq("status", "pending");
+        }
+        const { error } = await query;
+        if (!error) {
+            return;
+        }
+        throw error;
+    }
+}
+
 export async function POST(req: NextRequest) {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
@@ -44,6 +117,107 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    if (event.type === "payment_intent.payment_failed") {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const paymentId = getMetadataValue(paymentIntent.metadata?.payment_id);
+        const userId = getMetadataValue(paymentIntent.metadata?.user_id);
+        const targetProfileId = getMetadataValue(paymentIntent.metadata?.target_profile_id);
+        const targetWorkerId = getMetadataValue(paymentIntent.metadata?.target_worker_id);
+        const paymentType = paymentIntent.metadata?.payment_type || "entry_fee";
+        const activitySubjectId = targetProfileId || userId;
+        const failure = paymentIntent.last_payment_error;
+
+        const failureMetadata = {
+            stripe_payment_intent_id: paymentIntent.id,
+            stripe_failure_event: "payment_intent.payment_failed",
+            stripe_failure_code: failure?.code || null,
+            stripe_decline_code: failure?.decline_code || null,
+            stripe_failure_message: failure?.message || null,
+            stripe_failure_type: failure?.type || null,
+            stripe_failure_payment_method: typeof failure?.payment_method?.id === "string" ? failure.payment_method.id : null,
+            stripe_failure_at: new Date().toISOString(),
+        };
+
+        try {
+            await updatePaymentRecordByReference({
+                supabase,
+                paymentId,
+                patch: {
+                    metadata: mergeStripeMetadata(paymentIntent.metadata, failureMetadata),
+                },
+            });
+        } catch (error) {
+            console.error("Failed to persist payment_intent failure metadata:", error);
+        }
+
+        if (activitySubjectId) {
+            await logServerActivity(activitySubjectId, "payment_failed", "payment", {
+                type: paymentType,
+                payment_id: paymentId,
+                stripe_payment_intent_id: paymentIntent.id,
+                target_worker_id: targetWorkerId,
+                failure_code: failure?.code || null,
+                decline_code: failure?.decline_code || null,
+                error: failure?.message || "Payment was declined before completion",
+            }, "warning");
+        }
+
+        return NextResponse.json({ received: true });
+    }
+
+    if (event.type === "charge.failed") {
+        const charge = event.data.object as Stripe.Charge;
+        const paymentIntentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id || null;
+        const failureMetadata = {
+            stripe_payment_intent_id: paymentIntentId,
+            stripe_failure_event: "charge.failed",
+            stripe_charge_id: charge.id,
+            stripe_failure_code: charge.failure_code || null,
+            stripe_failure_message: charge.failure_message || null,
+            stripe_outcome_type: charge.outcome?.type || null,
+            stripe_outcome_reason: charge.outcome?.reason || null,
+            stripe_network_status: charge.outcome?.network_status || null,
+            stripe_risk_level: charge.outcome?.risk_level || null,
+            stripe_failure_at: new Date().toISOString(),
+        };
+
+        const paymentId = getMetadataValue(charge.metadata?.payment_id);
+        const userId = getMetadataValue(charge.metadata?.user_id);
+        const targetProfileId = getMetadataValue(charge.metadata?.target_profile_id);
+        const targetWorkerId = getMetadataValue(charge.metadata?.target_worker_id);
+        const paymentType = charge.metadata?.payment_type || "entry_fee";
+        const activitySubjectId = targetProfileId || userId;
+
+        try {
+            await updatePaymentRecordByReference({
+                supabase,
+                paymentId,
+                patch: {
+                    metadata: mergeStripeMetadata(charge.metadata, failureMetadata),
+                },
+            });
+        } catch (error) {
+            console.error("Failed to persist charge failure metadata:", error);
+        }
+
+        if (activitySubjectId) {
+            await logServerActivity(activitySubjectId, "payment_failed", "payment", {
+                type: paymentType,
+                payment_id: paymentId,
+                stripe_payment_intent_id: paymentIntentId,
+                stripe_charge_id: charge.id,
+                target_worker_id: targetWorkerId,
+                failure_code: charge.failure_code || null,
+                outcome_reason: charge.outcome?.reason || null,
+                network_status: charge.outcome?.network_status || null,
+                risk_level: charge.outcome?.risk_level || null,
+                error: charge.failure_message || "Charge failed before completion",
+            }, "warning");
+        }
+
+        return NextResponse.json({ received: true });
+    }
 
     if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -313,6 +487,45 @@ export async function POST(req: NextRequest) {
             await logServerActivity(userId, "payment_failed", "payment", { type: paymentType, error: message }, "error");
             return NextResponse.json({ error: "Database error" }, { status: 500 });
         }
+    }
+
+    if (event.type === "checkout.session.expired") {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const paymentId = getMetadataValue(session.metadata?.payment_id);
+        const userId = getMetadataValue(session.metadata?.user_id);
+        const targetProfileId = getMetadataValue(session.metadata?.target_profile_id);
+        const targetWorkerId = getMetadataValue(session.metadata?.target_worker_id);
+        const paymentType = session.metadata?.payment_type || "entry_fee";
+        const activitySubjectId = targetProfileId || userId;
+
+        try {
+            await updatePaymentRecordByReference({
+                supabase,
+                paymentId,
+                stripeSessionId: session.id,
+                pendingOnly: true,
+                patch: {
+                    metadata: mergeStripeMetadata(session.metadata, {
+                        stripe_session_status: session.status,
+                        stripe_payment_status: session.payment_status,
+                        stripe_session_expired_at: new Date().toISOString(),
+                    }),
+                },
+            });
+        } catch (error) {
+            console.error("Failed to persist checkout.session.expired metadata:", error);
+        }
+
+        if (activitySubjectId) {
+            await logServerActivity(activitySubjectId, "checkout_session_expired", "payment", {
+                type: paymentType,
+                payment_id: paymentId,
+                stripe_session_id: session.id,
+                target_worker_id: targetWorkerId,
+            }, "warning");
+        }
+
+        return NextResponse.json({ received: true });
     }
 
     return NextResponse.json({ received: true });

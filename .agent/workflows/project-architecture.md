@@ -19,7 +19,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Auth | **Supabase Auth** | Email/password, Google OAuth, password reset; live auth triggers now keep `profiles` + canonical `workers`/`employers` in sync on both signup and later metadata role updates, without depending on the retired `candidates` alias, while `/login` now finishes hash-based confirm/magic-link/recovery sessions and hands post-auth redirecting to a shared resolver. A shared auth-contact sync layer now mirrors canonical worker/employer phones back into the Auth `phone` field and metadata during self-service saves, admin edits, agency-managed claimed-worker edits, and post-login self-heal passes. |
 | Database | **Supabase (PostgreSQL)** | RLS policies, cron-triggered functions, in-platform messaging tables (`conversations*`); worker app-layer runtime reads/writes through `worker_onboarding` / `worker_documents`, live Supabase physically uses `workers` / `worker_documents`, `documents / matches / offers` carry only canonical `worker_id` FKs, `contract_data` worker overrides are `worker_*`, and the live public schema no longer exposes the old `candidates` / `candidate_documents` aliases |
 | Storage | **Supabase Storage** | Canonical and only active worker document bucket is `worker-docs`; runtime helpers resolve only `worker-docs`, while legacy `candidate-docs` and empty `documents` buckets are retired |
-| Payments | **Stripe** | Checkout Sessions + Webhooks |
+| Payments | **Stripe** | Checkout Sessions + Webhooks; checkout now reuses/prefills Stripe Customers from canonical worker/agency payment identity data, and webhook failure telemetry stores issuer/Radar decline context (`payment_intent.payment_failed`, `charge.failed`, `checkout.session.expired`) back into `payments.metadata` + `user_activity` |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
 | AI (Chatbot) | **GPT-5 mini + GPT-5.4 mini** | WhatsApp AI now uses a small intent router + richer response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, shared live quality/handoff heuristics from `src/lib/whatsapp-quality.ts`, canonical `workerRecord` runtime naming, deterministic worker flows for the most common status/docs/payment/support questions, honest support auto-handoff into the real inbox for repeated paid-worker confusion, and a deterministic neutral greeting intro for first-contact messages |
 | AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, failure runs are saved instead of blasting raw crash mail, and technical monitoring surfaces now live behind the owner-only `/internal` hub instead of the business admin shell |
@@ -87,7 +87,7 @@ Workers-United/
 │   │   │   ├── cron/          # 9 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
-│   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback
+│   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback; checkout now prebuilds Stripe Customer identity context from canonical worker data and webhook persists decline/risk telemetry on failed attempts
 │   │   │   ├── email-queue/   # Email queue processor
 │   │   │   ├── godmode/       # Dev testing endpoint
 │   │   │   ├── health/        # Health check (parallelized service probes + WhatsApp delivery audit)
@@ -136,6 +136,7 @@ Workers-United/
 │   │   ├── document-image-processing.ts # Shared document image rotate/crop + OCR metadata helpers used by verify uploads and admin preview/manual-crop flows
 │   │   ├── document-review.ts # Shared admin/worker document-review copy helpers derived from canonical `ocr_json` + `reject_reason`, including strict diploma summaries plus biometric-photo summaries/re-upload guidance that explain whether the issue is quality, framing, lighting, background, or wrong document type
 │   │   ├── stripe.ts          # Stripe client initialization
+│   │   ├── stripe-checkout.ts # Shared Stripe Checkout customer identity + metadata helpers (customer prefill/reuse, webhook correlation payload)
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
 │   │   ├── brain-memory.ts    # Brain memory dedup + normalization helpers
