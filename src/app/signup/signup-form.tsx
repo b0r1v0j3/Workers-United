@@ -329,6 +329,7 @@ export function SignupForm({ userType, claimContext = null }: SignupFormProps) {
                     onChange={setFullName}
                     placeholder={userType === "worker" ? "John Doe" : "John Smith"}
                     readOnly={Boolean(claimContext?.claimable && claimContext.workerName)}
+                    autoComplete="name"
                 />
 
                 {(userType === "employer" || userType === "agency") && (
@@ -338,6 +339,7 @@ export function SignupForm({ userType, claimContext = null }: SignupFormProps) {
                         value={companyName}
                         onChange={setCompanyName}
                         placeholder={userType === "agency" ? "Your Agency Name" : "Your Company Ltd."}
+                        autoComplete="organization"
                     />
                 )}
 
@@ -352,6 +354,7 @@ export function SignupForm({ userType, claimContext = null }: SignupFormProps) {
                         invalid={Boolean(emailValidation.error)}
                         warning={!emailValidation.error && Boolean(emailValidation.suggestion)}
                         readOnly={claimEmailLocked}
+                        autoComplete="email"
                     />
                     {emailValidation.error && email && (
                         <p className="px-1 text-xs font-medium text-red-500">{emailValidation.error}</p>
@@ -376,6 +379,7 @@ export function SignupForm({ userType, claimContext = null }: SignupFormProps) {
                         onChange={setPassword}
                         placeholder="••••••••"
                         minLength={8}
+                        autoComplete="new-password"
                     />
                     {password.length > 0 ? (
                         <div className="grid grid-cols-1 gap-1 rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-3 py-2 sm:grid-cols-2">
@@ -400,6 +404,7 @@ export function SignupForm({ userType, claimContext = null }: SignupFormProps) {
                         placeholder="••••••••"
                         minLength={8}
                         invalid={Boolean(password && confirmPassword && !passwordsMatch)}
+                        autoComplete="new-password"
                     />
                     {password && confirmPassword && !passwordsMatch && (
                         <p className="px-1 text-xs font-medium text-red-500">Passwords do not match</p>
@@ -469,6 +474,7 @@ interface InputFieldProps {
     invalid?: boolean;
     warning?: boolean;
     readOnly?: boolean;
+    autoComplete?: string;
 }
 
 function InputField({
@@ -482,6 +488,7 @@ function InputField({
     invalid = false,
     warning = false,
     readOnly = false,
+    autoComplete,
 }: InputFieldProps) {
     const tone = invalid
         ? "border-red-300 focus:border-red-400 focus:ring-red-100"
@@ -503,6 +510,7 @@ function InputField({
                 required
                 readOnly={readOnly}
                 placeholder={placeholder}
+                autoComplete={autoComplete}
                 className={`w-full rounded-2xl border bg-[#f8f8f6] px-4 py-3 text-[15px] text-[#18181b] outline-none transition placeholder:text-[#a1a1aa] focus:bg-white focus:ring-2 ${readOnly ? "cursor-not-allowed opacity-80" : ""} ${tone}`}
             />
         </div>
