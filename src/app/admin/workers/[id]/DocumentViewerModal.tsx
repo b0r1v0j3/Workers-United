@@ -15,6 +15,9 @@ export default function DocumentViewerModal({ url, documentType, status, isPdf, 
     const [isOpen, setIsOpen] = useState(false);
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
+    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+    const [pdfLoading, setPdfLoading] = useState(false);
+    const [pdfError, setPdfError] = useState<string | null>(null);
 
     // Prevent scrolling on body when modal is open
     useEffect(() => {
@@ -27,6 +30,69 @@ export default function DocumentViewerModal({ url, documentType, status, isPdf, 
             document.body.style.overflow = "auto";
         };
     }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || !isPdf) {
+            setPdfLoading(false);
+            setPdfError(null);
+            setPdfBlobUrl((current) => {
+                if (current) URL.revokeObjectURL(current);
+                return null;
+            });
+            return;
+        }
+
+        const controller = new AbortController();
+        let cancelled = false;
+
+        async function loadPdfPreview() {
+            try {
+                setPdfLoading(true);
+                setPdfError(null);
+
+                const response = await fetch(url, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Preview request failed (${response.status})`);
+                }
+
+                const blob = await response.blob();
+                const objectUrl = URL.createObjectURL(blob);
+
+                if (cancelled) {
+                    URL.revokeObjectURL(objectUrl);
+                    return;
+                }
+
+                setPdfBlobUrl((current) => {
+                    if (current) URL.revokeObjectURL(current);
+                    return objectUrl;
+                });
+            } catch (error) {
+                if (cancelled || controller.signal.aborted) return;
+                setPdfError(error instanceof Error ? error.message : "Failed to load PDF preview");
+            } finally {
+                if (!cancelled) {
+                    setPdfLoading(false);
+                }
+            }
+        }
+
+        void loadPdfPreview();
+
+        return () => {
+            cancelled = true;
+            controller.abort();
+            setPdfBlobUrl((current) => {
+                if (current) URL.revokeObjectURL(current);
+                return null;
+            });
+        };
+    }, [isOpen, isPdf, url]);
 
     if (!isOpen) {
         return (
@@ -68,7 +134,27 @@ export default function DocumentViewerModal({ url, documentType, status, isPdf, 
                 {/* Content */}
                 <div className="flex-1 overflow-auto flex items-center justify-center bg-[#0f172a] p-4 relative">
                     {isPdf ? (
-                        <iframe src={`${url}#view=FitH`} className="w-full h-full rounded bg-white" title={documentType} />
+                        pdfError ? (
+                            <div className="flex max-w-md flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-8 text-center text-white">
+                                <p className="text-sm font-semibold">PDF preview could not be loaded inline.</p>
+                                <p className="mt-2 text-sm text-white/75">{pdfError}</p>
+                                <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-4 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#18181b] transition hover:bg-[#f5f5f5]"
+                                >
+                                    Open document in new tab
+                                </a>
+                            </div>
+                        ) : pdfLoading || !pdfBlobUrl ? (
+                            <div className="flex flex-col items-center justify-center text-center text-white">
+                                <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                                <p className="mt-4 text-sm font-medium text-white/80">Loading PDF preview...</p>
+                            </div>
+                        ) : (
+                            <iframe src={`${pdfBlobUrl}#view=FitH`} className="w-full h-full rounded bg-white" title={documentType} />
+                        )
                     ) : (
                         <div
                             className="transition-transform duration-200 origin-center"
