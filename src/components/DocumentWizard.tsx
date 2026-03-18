@@ -561,8 +561,8 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                                 <GraduationCap size={24} />
                             </div>
                             <div>
-                                <div className="font-semibold text-[#183b56]">Diploma / Certificate *</div>
-                                <div className="text-xs text-[#64748b]">Select 1-2 photos (front & back)</div>
+                                <div className="font-semibold text-[#183b56]">Formal Diploma *</div>
+                                <div className="text-xs text-[#64748b]">Final school, university, or vocational diploma only</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">

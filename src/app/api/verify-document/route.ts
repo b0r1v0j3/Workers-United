@@ -502,20 +502,23 @@ export async function POST(request: Request) {
                             analyzed_at: new Date().toISOString(),
                             ai_recommendation: "approve",
                             review_state: "awaiting_admin_approval",
+                            ...(result.documentKind ? { document_kind: result.documentKind } : {}),
+                            ...(result.summary ? { summary: result.summary } : {}),
+                            ...(result.workerGuidance ? { worker_guidance: result.workerGuidance } : {}),
+                            ...(result.qualityIssues.length > 0 ? { issues: result.qualityIssues } : {}),
                         };
                     } else {
-                        // Reject wrong document types — worker must upload a real school diploma
                         status = 'rejected';
-                        rejectReason = !result.isCorrectType
-                            ? "This does not appear to be a school diploma. Please upload your high school or university diploma."
-                            : result.qualityIssues?.join(", ") || "Could not verify diploma";
                         qualityIssues = result.qualityIssues || [];
                         ocrJson = {
                             issues: result.qualityIssues,
                             confidence: result.confidence,
                             ...(result.extractedData ? result.extractedData : {}),
-                            worker_guidance: rejectReason,
+                            ...(result.documentKind ? { document_kind: result.documentKind } : {}),
+                            ...(result.summary ? { summary: result.summary } : {}),
+                            ...(result.workerGuidance ? { worker_guidance: result.workerGuidance } : {}),
                         };
+                        rejectReason = buildDocumentRequestReason("diploma", ocrJson);
                     }
                     break;
                 }

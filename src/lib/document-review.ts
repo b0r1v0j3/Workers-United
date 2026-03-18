@@ -60,8 +60,20 @@ export function buildDocumentAiSummary(documentType: string, ocrJson: unknown, r
     }
 
     if (documentType === "diploma") {
+        const documentKind = readString(ai.document_kind)?.toLowerCase();
         const institution = readString(ai.institution_name);
         const degreeType = readString(ai.degree_type);
+
+        if (documentKind === "short_course_certificate" || documentKind === "attendance_or_participation_certificate") {
+            return institution
+                ? `Short course certificate detected from ${institution}`
+                : "Short course certificate detected";
+        }
+
+        if (documentKind === "transcript_or_marksheet") {
+            return "Transcript or marksheet detected";
+        }
+
         const pieces = [
             institution ? `Diploma detected from ${institution}` : null,
             degreeType,
@@ -117,7 +129,19 @@ export function buildDocumentRequestReason(documentType: string, ocrJson: unknow
     }
 
     if (documentType === "diploma") {
-        return "Please upload your diploma or education certificate again. The document title, institution name, and main text should be visible and readable.";
+        if (documentKind === "short_course_certificate" || documentKind === "attendance_or_participation_certificate" || issues.includes("short_course_not_accepted")) {
+            return "Please upload your final school, university, or formal vocational diploma. Short course, workshop, attendance, and certificate of completion files cannot be accepted.";
+        }
+
+        if (documentKind === "transcript_or_marksheet" || issues.includes("transcript_only")) {
+            return "Please upload your final diploma or degree certificate, not only a transcript or marksheet.";
+        }
+
+        if (issues.some((issue) => ["blurry", "cropped", "unreadable_fields", "missing_title"].includes(issue))) {
+            return "Please upload a clearer image or scan of your final school, university, or formal vocational diploma. The document title, institution name, your name, and the main text must all be visible.";
+        }
+
+        return "Please upload your final school, university, or formal vocational diploma. The document title, institution name, your name, and the main text must all be visible.";
     }
 
     return `Please upload a clearer ${humanizeDocumentType(documentType).toLowerCase()} file.`;

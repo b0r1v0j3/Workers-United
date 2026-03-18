@@ -117,7 +117,7 @@ Workers-United/
 │   │   ├── CookieConsent.tsx   # GDPR cookie banner
 │   │   ├── AgencySetupRequired.tsx # Graceful setup-required card when agency migration is missing
 │   │   ├── messaging/         # Shared conversation thread UI, including the shared worker/agency support inbox client
-│   │   ├── DocumentWizard.tsx  # Document upload flow; verify requests now send only canonical `workerId`
+│   │   ├── DocumentWizard.tsx  # Document upload flow; verify requests now send only canonical `workerId`, and the diploma card now explicitly asks for a final school/university/formal-vocational diploma instead of generic certificates
 │   │   ├── DocumentGenerator.tsx # Admin: generate 4 DOCX visa docs
 │   │   ├── SignaturePad.tsx    # Digital signature component
 │   │   ├── DeleteUserButton.tsx # Admin: delete user completely
@@ -132,8 +132,8 @@ Workers-United/
 │   │   │   └── middleware.ts  # Auth middleware / proxy
 │   │   ├── mailer.ts          # sendEmail() via Nodemailer
 │   │   ├── email-templates.ts # HTML email templates + checkout recovery notification mapping
-│   │   ├── document-ai.ts     # GPT-primary document AI helpers with Gemini fallback; passport verification is now strict about requiring the actual biodata page instead of accepting closed passport covers, and shared quarter-turn orientation helpers/ocr patches now power auto-rotation for verify + admin preview flows
-│   │   ├── document-review.ts # Shared admin/worker document-review copy helpers derived from canonical `ocr_json` + `reject_reason`
+│   │   ├── document-ai.ts     # GPT-primary document AI helpers with Gemini fallback; passport verification is now strict about requiring the actual biodata page instead of accepting closed passport covers, diploma verification now uses a strict post-AI formal-education guard that rejects short-course/completion/attendance/transcript-only uploads, and shared quarter-turn orientation helpers/ocr patches now power auto-rotation for verify + admin preview flows
+│   │   ├── document-review.ts # Shared admin/worker document-review copy helpers derived from canonical `ocr_json` + `reject_reason`, including diploma-specific summaries and re-upload guidance for short-course or transcript-only uploads
 │   │   ├── stripe.ts          # Stripe client initialization
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
@@ -266,7 +266,7 @@ User (Browser)
 | `src/app/layout.tsx` | Root layout — loads Montserrat font, GodModeWrapper, CookieConsent |
 | `src/app/login/LoginClient.tsx` | Login/auth recovery screen — handles classic login, request-reset, password update, and Supabase hash-session finalize for confirm/magic-link/recovery links |
 | `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, exposes agency `Support` directly in the shared shell, keeps only `Back to Admin` plus the current role navigation inside preview workspaces, keeps business admin navigation free of debug/incident entries, and uses a wider neutral dashboard canvas |
-| `src/components/DocumentWizard.tsx` | Worker document upload flow; upload keys now pass through `sanitizeStorageFileName()` so camera-style filenames like `IMG_...~2.jpg` cannot break Supabase Storage with `Invalid key`, and the UI resolves the canonical `worker-docs` bucket through a shared worker-first helper |
+| `src/components/DocumentWizard.tsx` | Worker document upload flow; upload keys now pass through `sanitizeStorageFileName()` so camera-style filenames like `IMG_...~2.jpg` cannot break Supabase Storage with `Invalid key`, the UI resolves the canonical `worker-docs` bucket through a shared worker-first helper, and the diploma card copy now explicitly asks for a final school/university/formal-vocational diploma |
 | `src/lib/worker-documents.ts` | Shared worker-first wrapper for the canonical `worker-docs` bucket, public URL builder, and canonical required-doc progress helper (`uploaded / verified / pending / rejected`) used to keep agency/admin counters aligned |
 | `src/lib/agency-draft-documents.ts` | Shared draft-document owner helper for agency-managed workers; ensures every draft document points to a real auth/profile id, stores that owner id in `worker_onboarding.application_data`, and relinks/cleans it up during claim |
 | `src/components/UnifiedNavbar.tsx` | Top navigation bar (logo, links, user menu); dashboard logo routes by role and surfaces `Admin Preview` when admin is viewing worker/employer/agency workspaces |
@@ -357,8 +357,8 @@ User (Browser)
 | `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
 | `src/lib/whatsapp-brain.ts` | Shared canonical WhatsApp facts/rules, safer worker/employer prompting, deterministic first-contact greeting reply, explicit `profile complete + admin approval -> payment unlock` guard language, no-fake-escalation rule set, onboarding trigger detection, and low-risk learning filter used by `/api/whatsapp/webhook` + `/api/brain/improve` |
 | `src/lib/smoke-evaluator.ts` | Shared health evaluator (`healthy/degraded/critical`) for smoke checks |
-| `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback); passport verifier now rejects closed covers / wrong pages, emits structured worker guidance, and exposes quarter-turn orientation + canonical `ocr_json` patch helpers used by verify/admin preview auto-rotation |
-| `src/lib/document-review.ts` | Shared review helper that turns canonical `ocr_json` / `reject_reason` into admin-facing summaries and worker-facing re-upload guidance |
+| `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback); passport verifier now rejects closed covers / wrong pages, diploma verification now has a strict post-AI formal-education guard that rejects short-course / completion / attendance / transcript-only uploads, both emit structured worker guidance, and the file exposes quarter-turn orientation + canonical `ocr_json` patch helpers used by verify/admin preview auto-rotation |
+| `src/lib/document-review.ts` | Shared review helper that turns canonical `ocr_json` / `reject_reason` into admin-facing summaries and worker-facing re-upload guidance, including strict diploma-specific copy for short-course certificates and transcript-only uploads |
 | `src/lib/worker-review.ts` | Shared worker review/readiness helpers; keeps `PENDING_APPROVAL` gated behind truly admin-verified required documents, safely backfills blank passport issue/expiry/issuer fields from the latest passport `ocr_json` before recalculating completion, and syncs worker status after verify/admin doc decisions |
 | `src/lib/profile-retention.ts` | Shared inactivity-retention signals + thresholds (`90` day delete window, `14 / 7 / 3` warning cadence, admin-list near-cleanup window) derived from the latest meaningful auth/profile/role/docs/signature/case-email/user-activity timestamp |
 | `src/lib/stripe.ts` | Stripe client init |

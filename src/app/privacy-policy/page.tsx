@@ -90,7 +90,7 @@ export default async function PrivacyPolicyPage() {
                                 <ul className="list-disc pl-5 space-y-1.5 marker:text-[#86868B]">
                                     <li>Passport scan/photo</li>
                                     <li>Biometric photograph</li>
-                                    <li>Diploma or educational certificate</li>
+                                    <li>Final school, university, or formal vocational diploma</li>
                                 </ul>
                             </div>
 

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildDocumentOrientationOcrPatch, normalizeQuarterTurnRotation } from "@/lib/document-ai";
+import {
+    buildDocumentOrientationOcrPatch,
+    evaluateDiplomaGuardrails,
+    normalizeQuarterTurnRotation,
+} from "@/lib/document-ai";
 
 describe("document-ai orientation helpers", () => {
     beforeEach(() => {
@@ -35,5 +39,44 @@ describe("document-ai orientation helpers", () => {
             orientation_summary: "Document is upside down.",
             auto_crop_applied: true,
         });
+    });
+});
+
+describe("document-ai diploma guardrails", () => {
+    it("rejects certificate-of-completion uploads as short-course documents", () => {
+        const result = evaluateDiplomaGuardrails({
+            document_title: "Certificate of Completion",
+            document_description: "Certificate of Completion for Virtual Productivity Assistant training",
+            institution_name: "VM Academy",
+        });
+
+        expect(result.isAccepted).toBe(false);
+        expect(result.documentKind).toBe("short_course_certificate");
+        expect(result.issues).toContain("short_course_not_accepted");
+        expect(result.workerGuidance).toContain("cannot accept short course");
+    });
+
+    it("rejects transcript-only uploads", () => {
+        const result = evaluateDiplomaGuardrails({
+            document_kind: "transcript_or_marksheet",
+            document_title: "Academic Transcript",
+            institution_name: "Example University",
+        });
+
+        expect(result.isAccepted).toBe(false);
+        expect(result.documentKind).toBe("transcript_or_marksheet");
+        expect(result.issues).toContain("transcript_only");
+    });
+
+    it("accepts formal diploma wording from a school", () => {
+        const result = evaluateDiplomaGuardrails({
+            document_kind: "formal_diploma",
+            document_title: "Bachelor of Science Degree",
+            institution_name: "Example University",
+            degree_type: "Bachelor of Science",
+        });
+
+        expect(result.isAccepted).toBe(true);
+        expect(result.documentKind).toBe("formal_diploma");
     });
 });

@@ -23,7 +23,7 @@ const WORKER_FIELD_LABELS: Record<string, string> = {
     previous_visas: "Previous Visas",
     passport_doc: "Passport Document",
     biometric_photo_doc: "Biometric Photo",
-    diploma_doc: "Diploma / Certificate",
+    diploma_doc: "Formal Diploma",
     spouse_data: "Spouse Details (required if married)",
 };
 

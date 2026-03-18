@@ -35,12 +35,12 @@ interface AgencyWorkerDocumentsPanelProps {
 const documentDefinitions: Array<{ key: AgencyDocType; label: string; helper: string }> = [
     { key: "passport", label: "Passport", helper: "Upload the main passport photo page." },
     { key: "biometric_photo", label: "Biometric photo", helper: "Clear front-facing photo with a neutral background." },
-    { key: "diploma", label: "Diploma", helper: "School or university diploma for visa processing." },
+    { key: "diploma", label: "Formal diploma", helper: "Final school, university, or vocational diploma only. Short course certificates are not accepted." },
 ];
 
 function getDocumentLabel(docType: AgencyDocType) {
     if (docType === "biometric_photo") return "Biometric photo";
-    if (docType === "diploma") return "Diploma";
+    if (docType === "diploma") return "Formal diploma";
     return "Passport";
 }
 

@@ -35,4 +35,24 @@ describe("document-review helpers", () => {
     it("humanizes snake_case document names", () => {
         expect(humanizeDocumentType("biometric_photo")).toBe("Biometric Photo");
     });
+
+    it("gives strict diploma guidance for short-course certificates", () => {
+        const reason = buildDocumentRequestReason("diploma", {
+            document_kind: "short_course_certificate",
+            issues: ["short_course_not_accepted"],
+        });
+
+        expect(reason).toContain("formal vocational diploma");
+        expect(reason).toContain("certificate of completion");
+    });
+
+    it("creates a short-course summary for rejected diploma uploads", () => {
+        const summary = buildDocumentAiSummary("diploma", {
+            document_kind: "short_course_certificate",
+            institution_name: "VM Academy",
+        });
+
+        expect(summary).toContain("Short course certificate");
+        expect(summary).toContain("VM Academy");
+    });
 });
