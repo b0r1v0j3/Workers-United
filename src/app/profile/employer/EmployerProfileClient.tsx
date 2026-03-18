@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
+import { syncCurrentUserAuthContact } from "@/lib/auth-contact-sync-client";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import {
@@ -298,6 +299,7 @@ export default function EmployerProfilePage({
         }
         setSaving(true);
         setCompanyAlert(null);
+        let authSyncWarning = false;
         try {
             if (!companyForm.company_name.trim()) throw new Error("Company name is required");
             if (!companyForm.country.trim()) throw new Error("Country is required");
@@ -362,11 +364,24 @@ export default function EmployerProfilePage({
                         .insert({ ...data, profile_id: user.id, status: "PENDING" });
                     if (error) throw error;
                 }
+
+                const authSync = await syncCurrentUserAuthContact({
+                    phone: data.contact_phone,
+                });
+                if (!authSync.ok) {
+                    authSyncWarning = true;
+                    console.warn("[EmployerProfile] Auth contact sync failed:", authSync.error);
+                }
             }
 
             await fetchData();
 
-            setCompanyAlert({ type: "success", msg: "Company info saved!" });
+            setCompanyAlert({
+                type: "success",
+                msg: authSyncWarning
+                    ? "Company info saved. Auth phone sync will retry on your next sign-in."
+                    : "Company info saved!",
+            });
             setEditing(false);
             setTimeout(() => setCompanyAlert(null), 3000);
         } catch (err: unknown) {

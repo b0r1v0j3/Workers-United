@@ -8,6 +8,7 @@ import {
     updateAdminTestAgencyWorker,
 } from "@/lib/admin-test-data";
 import { getAgencyOwnedWorker, getAgencySchemaState } from "@/lib/agencies";
+import { syncAuthContactFields } from "@/lib/auth-contact-sync";
 import { normalizeAgencyWorkerPayload } from "@/lib/agency-worker-payload";
 import { normalizeUserType } from "@/lib/domain";
 import { deleteUserData } from "@/lib/user-management";
@@ -271,6 +272,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             if (profileUpdateError) {
                 console.error("[AgencyWorker PATCH] Profile update failed:", profileUpdateError);
                 return NextResponse.json({ error: "Failed to sync worker profile" }, { status: 500 });
+            }
+
+            try {
+                await syncAuthContactFields(admin, {
+                    userId: worker.profile_id,
+                    phone: normalized.phone,
+                    fullName: normalized.fullName,
+                });
+            } catch (authSyncError) {
+                console.warn("[AgencyWorker PATCH] Auth contact sync failed:", authSyncError);
             }
         }
 
