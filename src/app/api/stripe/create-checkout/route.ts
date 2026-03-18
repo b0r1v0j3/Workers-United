@@ -10,6 +10,7 @@ import { getAdminTestWorkerWorkspace, markAdminTestAgencyWorkerEntryFeePaid, mar
 import { normalizeUserType } from "@/lib/domain";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { buildStripeCheckoutPaymentMetadata, ensureStripeCheckoutCustomer } from "@/lib/stripe-checkout";
 
 function normalizeRelativePath(value: unknown): string | null {
     if (typeof value !== "string") {
@@ -526,17 +527,61 @@ export async function POST(request: NextRequest) {
         // Create Stripe checkout session
         const priceConfig = type === "entry_fee" ? PRICES.ENTRY_FEE : PRICES.CONFIRMATION_FEE;
 
-        // Build Stripe Checkout session with pre-filled worker data for better Radar scoring
+        // Build Stripe Checkout session with pre-filled customer data for better issuer/Radar context
         const workerPhone = (workerRecord as any)?.phone || "";
         const workerCountry = (workerRecord as any)?.current_country || (workerRecord as any)?.nationality || "";
-        const workerAddress = (workerRecord as any)?.address || "";
+        const stripeCustomerId = await ensureStripeCheckoutCustomer(stripe, {
+            paymentType: type,
+            requesterRole,
+            paymentOwnerName,
+            paymentOwnerEmail,
+            workerPhone,
+            workerCountry,
+            paymentOwnerProfileId,
+            targetWorkerId: agencyTargetWorkerId,
+            isAgencyPayingForWorker,
+        });
+
+        const stripeCheckoutMetadata = buildStripeCheckoutPaymentMetadata({
+            paymentId: payment.id,
+            userId: user.id,
+            paymentType: type,
+            offerId: offerId || "",
+            paymentOwnerName,
+            paymentOwnerEmail,
+            workerPhone,
+            workerCountry,
+            paymentOwnerProfileId,
+            targetWorkerId: agencyTargetWorkerId,
+            paidByProfileId: isAgencyPayingForWorker ? user.id : "",
+            requesterRole,
+            isAgencyPayingForWorker,
+        });
+
+        const paymentDescription = type === "entry_fee"
+            ? `Job Finder Service for ${paymentOwnerName}`
+            : `Position Confirmation for ${paymentOwnerName}`;
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             mode: "payment",
-            customer_email: paymentOwnerEmail || user.email,
+            client_reference_id: payment.id,
+            customer: stripeCustomerId || undefined,
+            customer_email: stripeCustomerId ? undefined : (paymentOwnerEmail || user.email),
+            customer_creation: stripeCustomerId ? undefined : "always",
+            customer_update: stripeCustomerId
+                ? {
+                    address: "auto",
+                    name: "auto",
+                }
+                : undefined,
             phone_number_collection: { enabled: true },
             billing_address_collection: "required",
+            custom_text: {
+                submit: {
+                    message: "Use the same cardholder name and billing address that your bank has on file to reduce declines.",
+                },
+            },
             line_items: [
                 {
                     price_data: {
@@ -558,26 +603,11 @@ export async function POST(request: NextRequest) {
             ],
             success_url: getCheckoutSuccessUrl(type, offerId, normalizedSuccessPath),
             cancel_url: getCheckoutCancelUrl(type, offerId, normalizedCancelPath),
-            metadata: {
-                payment_id: payment.id,
-                user_id: user.id,
-                payment_type: type,
-                offer_id: offerId || "",
-                target_profile_id: paymentOwnerProfileId || "",
-                target_worker_id: agencyTargetWorkerId || "",
-                paid_by_profile_id: isAgencyPayingForWorker ? user.id : "",
-                agency_checkout: isAgencyPayingForWorker ? "true" : "",
-                worker_name: paymentOwnerName,
-                worker_country: workerCountry,
-            },
+            metadata: stripeCheckoutMetadata,
             payment_intent_data: {
-                description: `Job Finder Service for ${paymentOwnerName}`,
-                metadata: {
-                    worker_name: paymentOwnerName,
-                    worker_email: paymentOwnerEmail,
-                    worker_phone: workerPhone,
-                    worker_country: workerCountry,
-                },
+                description: paymentDescription,
+                receipt_email: paymentOwnerEmail || user.email || undefined,
+                metadata: stripeCheckoutMetadata,
             },
         });
 
