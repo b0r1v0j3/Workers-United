@@ -4,9 +4,15 @@ import { sendWhatsAppText } from "@/lib/whatsapp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { saveBrainFactsDedup } from "@/lib/brain-memory";
 import {
+    buildUnregisteredWorkerWhatsAppReply,
     buildCanonicalWhatsAppFacts,
     buildEmployerWhatsAppRules,
     buildWorkerWhatsAppRules,
+    detectWhatsAppLanguageCode,
+    filterSafeWhatsAppBrainMemory,
+    looksLikeEmployerWhatsAppLead,
+    looksLikeWorkerWhatsAppLead,
+    resolveWhatsAppLanguageName,
     shouldStartWhatsAppOnboarding,
 } from "@/lib/whatsapp-brain";
 import { loadCanonicalWorkerRecord, pickCanonicalWorkerRecord } from "@/lib/workers";
@@ -50,6 +56,13 @@ const GUARDED_PAYMENT_PATTERNS = [
     /\bwould you like me to activate\b/i,
     /\bwould you like me to send\b.*\blink\b/i,
     /\bI can send the payment link\b/i,
+];
+const GUARDED_AVAILABILITY_PATTERNS = [
+    /\bwe offer jobs(?:\s+for|\s+across)?\b/i,
+    /\bnudimo poslove(?:\s+za|\s+širom|\s+sirom)?\b/i,
+    /\bverified workers\b/i,
+    /\bavailable workers\b/i,
+    /\bimamo\s+\d+\+?\s+verifikovan/i,
 ];
 const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+38166299444")
     .split(",")
@@ -325,6 +338,38 @@ function getPaymentGuardReply(language: GuardrailLanguage, workerRecord: WhatsAp
     return "Job Finder checkout is unlocked for your account, but payment still starts only from the dashboard. Open workersunited.eu/profile/worker and start the secure checkout there; we do not send payment links over WhatsApp.";
 }
 
+function getAvailabilityGuardReply(language: GuardrailLanguage, workerRecord: WhatsAppWorkerRecord | null | undefined): string {
+    if (language === "sr") {
+        return workerRecord
+            ? "Ne mogu da potvrdim konkretan otvoren posao ili listu dostupnih radnika preko WhatsApp-a. Workers United nije javni oglasnik; pratite svoj profil i sledeće korake kroz dashboard, a ovde mogu da objasnim proces."
+            : "Ne mogu da potvrdim konkretan otvoren posao preko WhatsApp-a. Workers United nije javni oglasnik; prvo napravite nalog na workersunited.eu/signup i popunite profil, a zatim nastavljamo kroz dashboard i pitanja o procesu.";
+    }
+    if (language === "ar") {
+        return workerRecord
+            ? "لا أستطيع تأكيد وظيفة محددة مفتوحة أو قائمة عمال متاحين عبر WhatsApp. Workers United ليس لوحة وظائف عامة؛ تابع ملفك والخطوات التالية من خلال لوحة التحكم، ويمكنني هنا شرح العملية."
+            : "لا أستطيع تأكيد وظيفة محددة مفتوحة عبر WhatsApp. Workers United ليس لوحة وظائف عامة؛ أنشئ حسابك أولاً على workersunited.eu/signup وأكمل ملفك، ثم نتابع من خلال لوحة التحكم وأسئلة العملية.";
+    }
+    if (language === "fr") {
+        return workerRecord
+            ? "Je ne peux pas confirmer une offre précise ouverte ni une liste de travailleurs disponibles via WhatsApp. Workers United n’est pas un tableau public d’annonces ; suivez votre profil et les prochaines étapes dans le tableau de bord, et je peux ici expliquer le processus."
+            : "Je ne peux pas confirmer une offre précise ouverte via WhatsApp. Workers United n’est pas un tableau public d’annonces ; créez d’abord votre compte sur workersunited.eu/signup et complétez votre profil, puis nous continuons via le tableau de bord et les questions sur le processus.";
+    }
+    if (language === "pt") {
+        return workerRecord
+            ? "Eu não posso confirmar uma vaga específica aberta nem uma lista de trabalhadores disponíveis pelo WhatsApp. Workers United não é um quadro público de vagas; acompanhe seu perfil e os próximos passos no painel, e por aqui eu posso explicar o processo."
+            : "Eu não posso confirmar uma vaga específica aberta pelo WhatsApp. Workers United não é um quadro público de vagas; primeiro crie sua conta em workersunited.eu/signup e complete seu perfil, e depois seguimos pelo painel e pelas dúvidas sobre o processo.";
+    }
+    if (language === "hi") {
+        return workerRecord
+            ? "मैं WhatsApp पर किसी specific open job या available workers list की पुष्टि नहीं कर सकता। Workers United public job board नहीं है; अपना profile और next steps dashboard में follow कीजिए, और मैं यहाँ process समझा सकता हूँ।"
+            : "मैं WhatsApp पर किसी specific open job की पुष्टि नहीं कर सकता। Workers United public job board नहीं है; पहले workersunited.eu/signup पर account बनाइए और profile पूरा कीजिए, फिर हम dashboard और process सवालों के साथ आगे बढ़ते हैं।";
+    }
+
+    return workerRecord
+        ? "I cannot confirm a specific open job or a list of available workers over WhatsApp. Workers United is not a public job board; please follow your profile and next steps in the dashboard, and I can explain the process here."
+        : "I cannot confirm a specific open job over WhatsApp. Workers United is not a public job board; first create your account at workersunited.eu/signup and complete your profile, then we continue through the dashboard and any process questions here.";
+}
+
 function applyWhatsAppReplyGuardrails({
     responseText,
     language,
@@ -354,6 +399,14 @@ function applyWhatsAppReplyGuardrails({
             text: getPaymentGuardReply(guardrailLanguage, workerRecord),
             triggered: true,
             reason: "payment",
+        };
+    }
+
+    if (GUARDED_AVAILABILITY_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+        return {
+            text: getAvailabilityGuardReply(guardrailLanguage, workerRecord),
+            triggered: true,
+            reason: null,
         };
     }
 
@@ -575,7 +628,9 @@ export async function POST(request: NextRequest) {
                     .select("id, company_name, contact_name, status")
                     .or(`phone.eq.${normalizedPhone},contact_phone.eq.${normalizedPhone}`)
                     .maybeSingle();
-                const isLikelyEmployer = isEuropean && !isRegisteredWorker && !isAdmin;
+                const explicitlyLooksLikeEmployer = looksLikeEmployerWhatsAppLead(content);
+                const explicitlyLooksLikeWorker = looksLikeWorkerWhatsAppLead(content);
+                const isLikelyEmployer = isEuropean && !isRegisteredWorker && !isAdmin && explicitlyLooksLikeEmployer && !explicitlyLooksLikeWorker;
                 const isEmployer = !!employerRecord || isLikelyEmployer;
 
                 // ─── Admin Commands (direct brain control via WhatsApp) ───
@@ -660,10 +715,7 @@ export async function POST(request: NextRequest) {
 
                 // ─── WhatsApp Onboarding Flow (before GPT) ───────────────
                 // Detect language from router or simple heuristic
-                const quickLang = /[\u0900-\u097F]/.test(content) ? "hi"
-                    : /[\u0600-\u06FF]/.test(content) ? "ar"
-                    : /[čćžšđ]/i.test(content) ? "sr"
-                    : "en";
+                const quickLang = detectWhatsAppLanguageCode(content);
 
                 if (!isTextLikeMessageType(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
@@ -759,6 +811,7 @@ export async function POST(request: NextRequest) {
                             profile,
                             historyMessages,
                         });
+                        routerDecision.language = resolveWhatsAppLanguageName(content, routerDecision.language);
 
                         await logServerActivity(
                             workerRecord?.profile_id || "anonymous",
@@ -774,7 +827,15 @@ export async function POST(request: NextRequest) {
                             }
                         );
 
-                        aiResponse = await generateWhatsAppReply({
+                        const deterministicUnregisteredReply = !workerRecord && !isEmployer && !isAdmin
+                            ? buildUnregisteredWorkerWhatsAppReply({
+                                message: content,
+                                language: routerDecision.language,
+                                intent: routerDecision.intent,
+                            })
+                            : null;
+
+                        aiResponse = deterministicUnregisteredReply || await generateWhatsAppReply({
                             apiKey: OPENAI_API_KEY,
                             message: content,
                             normalizedPhone,
@@ -939,11 +1000,11 @@ async function loadBrainMemory(
             .select("category, content, confidence")
             .order("confidence", { ascending: false })
             .limit(BRAIN_MEMORY_LIMIT);
-        return (data || []).map((entry) => ({
+        return filterSafeWhatsAppBrainMemory((data || []).map((entry) => ({
             category: entry.category,
             content: entry.content,
             confidence: entry.confidence ?? 0,
-        }));
+        })));
     } catch {
         return [];
     }
@@ -1227,16 +1288,8 @@ async function getFallbackResponse(message: string, workerRecord: any, profile: 
     const WEBSITE = config.website_url || "workersunited.eu";
     const GREETING_EN = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers through the full job-search and visa process in Europe.";
     const GREETING_SR = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima kroz ceo proces traženja posla i vize u Evropi.";
-    // Language detection for fallback
-    const isSerboCroatian = /[čćžšđ]/.test(message) || /zdravo|pozdrav|pomoć|pomoc|posao|rad|plata|cena|cijena|koliko|dokumenti|pasos|pasoš|profil|status|registr/i.test(msg);
-    const isNepali = /[\u0900-\u097F]/.test(message);
-    const isArabic = /[\u0600-\u06FF]/.test(message);
-    const isFrench = /bonjour|salut|emploi|travail|passeport|comment|merci|oui|non/i.test(msg);
-    const isPortuguese = /olá|ola|emprego|trabalho|passaporte|obrigado|sim|não|nao/i.test(msg);
-    const isHindi = /[\u0900-\u097F]/.test(message) && !/[\u0900-\u097F\u0966-\u096F]/.test(message); // Hindi subset
-    
-    // Determine active language for fallback
-    const fallbackLang = isSerboCroatian ? 'sr' : isNepali ? 'ne' : isArabic ? 'ar' : isFrench ? 'fr' : isPortuguese ? 'pt' : 'en';
+    const detectedLanguage = detectWhatsAppLanguageCode(message);
+    const fallbackLang = detectedLanguage === "hi" ? "ne" : detectedLanguage;
     // Multilingual fallback messages
     const greetings: Record<string, string> = {
         sr: GREETING_SR,
