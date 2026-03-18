@@ -41,6 +41,19 @@ export function normalizeAuthContactPhone(phone: string | null | undefined): str
     return /^\+\d{7,15}$/.test(normalized) ? normalized : null;
 }
 
+function normalizeStoredAuthPhone(phone: string | null | undefined): string | null {
+    if (typeof phone !== "string") {
+        return null;
+    }
+
+    const normalized = phone.replace(/[\s\-()+]/g, "").trim();
+    if (!normalized) {
+        return null;
+    }
+
+    return /^\d{7,15}$/.test(normalized) ? `+${normalized}` : null;
+}
+
 export function buildAuthContactSyncPlan(
     authUser: AuthUserSnapshot,
     input: AuthContactSyncInput
@@ -73,7 +86,7 @@ export function buildAuthContactSyncPlan(
         }
     }
 
-    const currentPhone = normalizeAuthContactPhone(authUser.phone);
+    const currentPhone = normalizeStoredAuthPhone(authUser.phone);
     const shouldSetPhone = Boolean(normalizedPhone)
         && (currentPhone !== normalizedPhone || !authUser.phone_confirmed_at);
 

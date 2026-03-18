@@ -55,7 +55,7 @@ describe("auth contact sync helpers", () => {
     it("stays idle when auth phone and metadata are already aligned", () => {
         const plan = buildAuthContactSyncPlan(
             {
-                phone: "+381641234567",
+                phone: "381641234567",
                 phone_confirmed_at: "2026-03-18T10:00:00.000Z",
                 user_metadata: {
                     full_name: "Worker One",
@@ -69,6 +69,28 @@ describe("auth contact sync helpers", () => {
             }
         );
 
+        expect(plan.shouldSetPhone).toBe(false);
+        expect(plan.shouldUpdate).toBe(false);
+    });
+
+    it("treats stored auth phones without a leading plus as already aligned", () => {
+        const plan = buildAuthContactSyncPlan(
+            {
+                phone: "212656548490",
+                phone_confirmed_at: "2026-03-18T10:00:00.000Z",
+                user_metadata: {
+                    full_name: "Sanae Benyoussef",
+                    phone: "+212656548490",
+                },
+            },
+            {
+                userId: "worker-2",
+                phone: "+212656548490",
+                fullName: "Sanae Benyoussef",
+            }
+        );
+
+        expect(plan.normalizedPhone).toBe("+212656548490");
         expect(plan.shouldSetPhone).toBe(false);
         expect(plan.shouldUpdate).toBe(false);
     });
