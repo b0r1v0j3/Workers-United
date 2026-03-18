@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
+import { pickCanonicalEmployerRecord, shouldHideEmployerFromBusinessViews } from "@/lib/employers";
 import { getEmployerCompletion } from "@/lib/profile-completion";
 import { Building2, Briefcase, Globe, MapPin, Phone, Users } from "lucide-react";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
@@ -37,10 +38,33 @@ export default async function EmployersPage() {
         .select("id, email, full_name");
 
     const profileLookup = new Map(allProfiles?.map((p: any) => [p.id, p]) || []);
-    const employers = (rawEmployers || []).map((e: any) => ({
-        ...e,
-        profiles: profileLookup.get(e.profile_id) || { email: "Unknown", full_name: "Unknown" }
-    }));
+    const employerGroups = new Map<string, any[]>();
+    for (const employer of rawEmployers || []) {
+        const profileId = employer?.profile_id;
+        if (!profileId) continue;
+        const current = employerGroups.get(profileId) || [];
+        current.push(employer);
+        employerGroups.set(profileId, current);
+    }
+
+    const employers = Array.from(employerGroups.entries())
+        .map(([profileId, rows]) => {
+            const employer = pickCanonicalEmployerRecord(rows);
+            if (!employer) {
+                return null;
+            }
+
+            const employerProfile = profileLookup.get(profileId) || null;
+            if (shouldHideEmployerFromBusinessViews({ employer, profile: employerProfile })) {
+                return null;
+            }
+
+            return {
+                ...employer,
+                profiles: employerProfile || { email: "Unknown", full_name: "Unknown" },
+            };
+        })
+        .filter(Boolean) as any[];
 
     // Count jobs per employer
     const { data: jobCounts } = await adminClient

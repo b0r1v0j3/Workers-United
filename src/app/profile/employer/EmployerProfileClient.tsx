@@ -9,6 +9,7 @@ import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { syncCurrentUserAuthContact } from "@/lib/auth-contact-sync-client";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
+import { ensureEmployerRecord } from "@/lib/employers";
 import {
     Building2, MapPin, Globe, Phone, Calendar, FileText, Hash, Users,
     Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, Banknote
@@ -352,16 +353,23 @@ export default function EmployerProfilePage({
                     const { error } = await supabase.from("employers").update(data).eq("id", employer.id);
                     if (error) throw error;
                 } else {
-                    const { error: profileErr } = await supabase.from("profiles").upsert({
-                        id: user.id,
-                        email: user.email || "",
-                        full_name: user.user_metadata?.full_name || "",
-                        user_type: "employer",
-                    }, { onConflict: "id" });
-                    if (profileErr) throw profileErr;
+                    const employerResult = await ensureEmployerRecord(supabase, {
+                        userId: user.id,
+                        email: user.email,
+                        fullName: user.user_metadata?.full_name,
+                        companyName: data.company_name,
+                        contactPhone: data.contact_phone,
+                        contactEmail: user.email,
+                    });
 
-                    const { error } = await supabase.from("employers")
-                        .insert({ ...data, profile_id: user.id, status: "PENDING" });
+                    if (!employerResult.employer) {
+                        throw new Error("Failed to create employer record.");
+                    }
+
+                    const { error } = await supabase
+                        .from("employers")
+                        .update(data)
+                        .eq("id", employerResult.employer.id);
                     if (error) throw error;
                 }
 

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Briefcase, HardHat, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { ensureAgencyRecord, getAgencySchemaState } from "@/lib/agencies";
+import { ensureEmployerRecord } from "@/lib/employers";
 import { ensureWorkerRecord } from "@/lib/workers";
 
 export default function SelectRolePage() {
@@ -59,20 +60,12 @@ export default function SelectRolePage() {
             }
 
             if (role === "employer") {
-                // Create employer record
-                const { data: existingEmployer } = await supabase
-                    .from("employers")
-                    .select("id")
-                    .eq("profile_id", user.id)
-                    .single();
-
-                if (!existingEmployer) {
-                    await supabase.from("employers").insert({
-                        profile_id: user.id,
-                        company_name: null,
-                        status: "PENDING",
-                    });
-                }
+                await ensureEmployerRecord(supabase, {
+                    userId: user.id,
+                    email: user.email,
+                    fullName: user.user_metadata?.full_name,
+                    companyName: user.user_metadata?.company_name,
+                });
 
                 router.push("/profile/employer");
             } else if (role === "agency") {
