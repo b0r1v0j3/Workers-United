@@ -55,4 +55,22 @@ describe("document-review helpers", () => {
         expect(summary).toContain("Short course certificate");
         expect(summary).toContain("VM Academy");
     });
+
+    it("gives embassy-grade biometric guidance for blurry or dark photos", () => {
+        const reason = buildDocumentRequestReason("biometric_photo", {
+            document_kind: "passport_style_photo",
+            issues: ["blurry", "dark"],
+        });
+
+        expect(reason).toContain("bright, even lighting");
+    });
+
+    it("flags printed portrait scans in biometric summaries", () => {
+        const summary = buildDocumentAiSummary("biometric_photo", {
+            document_kind: "printed_photo_scan",
+            issues: ["scan_of_printed_photo"],
+        });
+
+        expect(summary).toContain("Printed portrait scan");
+    });
 });

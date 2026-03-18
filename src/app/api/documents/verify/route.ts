@@ -169,11 +169,20 @@ async function verifyPassport(
 // Biometric photo verification
 async function verifyPhoto(document: { file_url: string }) {
     const result = await verifyBiometricPhoto(document.file_url);
+    const qualityIssues = [...(result.qualityIssues || [])];
+
+    if (result.workerGuidance) {
+        qualityIssues.unshift(result.workerGuidance);
+    }
 
     return {
         status: result.success ? "verified" : "manual_review",
-        qualityIssues: result.qualityIssues,
-        extractedData: {},
+        qualityIssues,
+        extractedData: {
+            ...(result.documentKind ? { document_kind: result.documentKind } : {}),
+            ...(result.summary ? { summary: result.summary } : {}),
+            ...(result.workerGuidance ? { worker_guidance: result.workerGuidance } : {}),
+        },
         confidence: result.confidence
     };
 }

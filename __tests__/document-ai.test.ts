@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     buildDocumentOrientationOcrPatch,
+    evaluateBiometricPhotoGuardrails,
     evaluateDiplomaGuardrails,
     normalizeQuarterTurnRotation,
 } from "@/lib/document-ai";
@@ -78,5 +79,57 @@ describe("document-ai diploma guardrails", () => {
 
         expect(result.isAccepted).toBe(true);
         expect(result.documentKind).toBe("formal_diploma");
+    });
+});
+
+describe("document-ai biometric guardrails", () => {
+    it("rejects printed portrait scans even when a face is visible", () => {
+        const result = evaluateBiometricPhotoGuardrails({
+            document_kind: "printed_photo_scan",
+            summary: "This looks like a scan of an older printed portrait.",
+            face_visible: true,
+            exactly_one_person: true,
+            meets_embassy_quality: false,
+            quality_issues: ["scan_of_printed_photo"],
+        });
+
+        expect(result.isAccepted).toBe(false);
+        expect(result.isCorrectType).toBe(true);
+        expect(result.documentKind).toBe("printed_photo_scan");
+        expect(result.issues).toContain("scan_of_printed_photo");
+        expect(result.workerGuidance).toContain("Do not upload a scan");
+    });
+
+    it("rejects blurry low-resolution portrait photos for embassy quality", () => {
+        const result = evaluateBiometricPhotoGuardrails({
+            document_kind: "passport_style_photo",
+            summary: "Biometric photo detected, but the image is soft and pixelated.",
+            face_visible: true,
+            exactly_one_person: true,
+            meets_embassy_quality: false,
+            quality_issues: ["blurry", "low_resolution", "pixelated"],
+        });
+
+        expect(result.isAccepted).toBe(false);
+        expect(result.isCorrectType).toBe(true);
+        expect(result.issues).toContain("blurry");
+        expect(result.workerGuidance).toContain("sharper");
+        expect(result.summary).toContain("pixelated");
+    });
+
+    it("accepts strong passport-style biometric photos", () => {
+        const result = evaluateBiometricPhotoGuardrails({
+            document_kind: "passport_style_photo",
+            summary: "Strong passport-style biometric portrait with even lighting.",
+            face_visible: true,
+            exactly_one_person: true,
+            meets_embassy_quality: true,
+            quality_issues: [],
+        });
+
+        expect(result.isAccepted).toBe(true);
+        expect(result.isCorrectType).toBe(true);
+        expect(result.documentKind).toBe("passport_style_photo");
+        expect(result.workerGuidance).toBeNull();
     });
 });

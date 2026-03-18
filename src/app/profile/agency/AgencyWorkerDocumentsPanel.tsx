@@ -34,7 +34,7 @@ interface AgencyWorkerDocumentsPanelProps {
 
 const documentDefinitions: Array<{ key: AgencyDocType; label: string; helper: string }> = [
     { key: "passport", label: "Passport", helper: "Upload the main passport photo page." },
-    { key: "biometric_photo", label: "Biometric photo", helper: "Clear front-facing photo with a neutral background." },
+    { key: "biometric_photo", label: "Biometric photo", helper: "Recent passport-style photo, plain light background, centered face, and sharp quality." },
     { key: "diploma", label: "Formal diploma", helper: "Final school, university, or vocational diploma only. Short course certificates are not accepted." },
 ];
 
