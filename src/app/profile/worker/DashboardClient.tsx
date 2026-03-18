@@ -136,10 +136,14 @@ export default function DashboardClient({
                 spread: 70,
                 origin: { y: 0.6 },
             });
-            toast.success("Profile 100% Complete! You can now activate Job Finder.");
+            toast.success(
+                entryFeeUnlockState.reason === "ready"
+                    ? "Profile 100% Complete! You can now activate Job Finder."
+                    : "Profile 100% Complete! Your case is now waiting for admin review before Job Finder unlocks."
+            );
             sessionStorage.setItem("celebrated_profile", "true");
         }
-    }, [profileCompletion]);
+    }, [entryFeeUnlockState.reason, profileCompletion]);
 
     useEffect(() => {
         const claimState = searchParams.get("claim");
@@ -205,7 +209,7 @@ export default function DashboardClient({
                                         Complete Your Profile
                                     </h3>
                                     <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
-                                        Fill in all required fields to unlock Job Finder. Once your profile reaches 100%, you can activate the service and start receiving job matches.
+                                        Fill in all required fields to unlock Job Finder. Once your profile reaches 100% and passes admin review, you can activate the service and start receiving job matches.
                                     </p>
                                 </div>
 

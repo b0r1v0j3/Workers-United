@@ -4,6 +4,38 @@ export interface EntryFeeWorkerState {
     admin_approved?: boolean | null;
 }
 
+// Keep this list aligned with getWorkerCompletion() so the checkout gate
+// evaluates the same readiness fields that the worker workspace/admin use.
+export const WORKER_ENTRY_FEE_READINESS_COLUMNS = [
+    "id",
+    "updated_at",
+    "entry_fee_paid",
+    "job_search_active",
+    "admin_approved",
+    "queue_joined_at",
+    "status",
+    "phone",
+    "nationality",
+    "current_country",
+    "preferred_job",
+    "submitted_full_name",
+    "submitted_email",
+    "gender",
+    "date_of_birth",
+    "birth_country",
+    "birth_city",
+    "citizenship",
+    "marital_status",
+    "passport_number",
+    "passport_issued_by",
+    "passport_issue_date",
+    "passport_expiry_date",
+    "lives_abroad",
+    "previous_visas",
+    "family_data",
+    "address",
+].join(", ");
+
 export interface EntryFeeEligibility {
     allowed: boolean;
     status?: number;

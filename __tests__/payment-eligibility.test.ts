@@ -1,7 +1,33 @@
 import { describe, it, expect } from "vitest";
-import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
+import { getEntryFeeEligibility, WORKER_ENTRY_FEE_READINESS_COLUMNS } from "@/lib/payment-eligibility";
 
 describe("getEntryFeeEligibility", () => {
+    it("keeps the checkout readiness columns aligned with worker completion requirements", () => {
+        const requiredWorkerFields = [
+            "phone",
+            "nationality",
+            "current_country",
+            "preferred_job",
+            "gender",
+            "date_of_birth",
+            "birth_country",
+            "birth_city",
+            "citizenship",
+            "marital_status",
+            "passport_number",
+            "passport_issued_by",
+            "passport_issue_date",
+            "passport_expiry_date",
+            "lives_abroad",
+            "previous_visas",
+            "family_data",
+        ];
+
+        for (const field of requiredWorkerFields) {
+            expect(WORKER_ENTRY_FEE_READINESS_COLUMNS).toContain(field);
+        }
+    });
+
     it("blocks when worker profile is missing", () => {
         const result = getEntryFeeEligibility(null);
 
