@@ -41,6 +41,8 @@ const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|koliko|kosta|košta|ce
 const DOCUMENT_HINT_PATTERN = /\b(document|documents|passport|diploma|photo|upload|verification|dokumenti|dokumenta|pasos|pasoš|diploma|slika|fotografija|upload|verifikacija)\b/i;
 const STATUS_HINT_PATTERN = /\b(status|profile|approval|approved|queue|support|profil|odobren|odobreno|red|podrska|podrška)\b/i;
 const JOB_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|ocu posao|ho[ćc]u posao|tra[zž]im posao|looking for work|looking for a job)\b/i;
+const SPECIFIC_AVAILABILITY_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|open job|open position|what jobs|which jobs|koji poslovi|lista poslova|available workers list)\b/i;
+const PROCESS_HINT_PATTERN = /\b(how does it work|how it works|process|steps|next step|how do i start|kako radi|kako funkcioni[sš]e|kako ide|koji su koraci|sledeci korak|sledeći korak|kako da krenem)\b/i;
 
 const SAFE_BRAIN_LEARNING_CATEGORIES = new Set([
     "common_question",
@@ -158,6 +160,8 @@ export function buildUnregisteredWorkerWhatsAppReply({
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || intent === "support" || STATUS_HINT_PATTERN.test(normalized);
+    const asksSpecificAvailability = SPECIFIC_AVAILABILITY_HINT_PATTERN.test(normalized);
+    const asksHowItWorks = PROCESS_HINT_PATTERN.test(normalized);
     const wantsJobHelp = intent === "job_intent" || intent === "general" || JOB_HINT_PATTERN.test(normalized) || looksLikeWorkerWhatsAppLead(message);
 
     if (isFirstContact && isGreetingOnly && !wantsPrice && !wantsDocuments && !wantsStatus) {
@@ -228,7 +232,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
         }
     }
 
-    if (wantsJobHelp) {
+    if (asksSpecificAvailability) {
         switch (lang) {
             case "sr":
                 return `Mogu da pomognem, ali ne mogu da potvrdim konkretan otvoren posao preko WhatsApp-a. Workers United radi kroz vođeni matching proces, pa je prvi korak da napravite nalog na ${website}/signup i popunite profil; posle toga pratimo sledeće korake kroz dashboard, a ovde mogu da objasnim proces.`;
@@ -242,6 +246,35 @@ export function buildUnregisteredWorkerWhatsAppReply({
                 return `मैं मदद कर सकता हूँ, लेकिन WhatsApp पर किसी specific open job की पुष्टि नहीं कर सकता। Workers United guided matching process के ज़रिए काम करता है, इसलिए पहला step ${website}/signup पर account बनाना और profile पूरा करना है; उसके बाद next steps dashboard में follow होते हैं, और मैं यहाँ process समझा सकता हूँ।`;
             default:
                 return `I can help, but I cannot confirm a specific open job over WhatsApp. Workers United works through a guided matching process, so the first step is to create an account at ${website}/signup and complete the profile; after that, the next steps are tracked in the dashboard, and I can explain the process here.`;
+        }
+    }
+
+    if (wantsJobHelp) {
+        switch (lang) {
+            case "sr":
+                return asksHowItWorks
+                    ? `Naravno. Workers United radi kroz vođeni matching proces: prvo napravite nalog na ${website}/signup i popunite profil, zatim kroz dashboard pratite dokumenta i sledeće korake, a kada profil bude spreman mi nastavljamo sa traženjem odgovarajućeg match-a.`
+                    : `Naravno. Prvi korak je da napravite nalog na ${website}/signup i popunite profil. Posle toga kroz dashboard pratite dokumenta i sledeće korake, a ovde mogu da pomognem ako imate pitanje oko registracije, dokumenata ili procesa.`;
+            case "ar":
+                return asksHowItWorks
+                    ? `بالتأكيد. يعمل Workers United من خلال مطابقة موجهة: تنشئ حسابًا أولاً على ${website}/signup وتكمل ملفك، ثم تتابع المستندات والخطوات التالية من خلال لوحة التحكم، وبعد أن يصبح الملف جاهزًا نواصل البحث عن المطابقة المناسبة.`
+                    : `بالتأكيد. الخطوة الأولى هي إنشاء حساب على ${website}/signup وإكمال ملفك. بعد ذلك تتابع المستندات والخطوات التالية من خلال لوحة التحكم، ويمكنني هنا المساعدة إذا كانت لديك أسئلة عن التسجيل أو المستندات أو العملية.`;
+            case "fr":
+                return asksHowItWorks
+                    ? `Bien sûr. Workers United fonctionne avec un processus d’appariement guidé : vous créez d’abord un compte sur ${website}/signup et complétez votre profil, puis vous suivez les documents et les prochaines étapes dans le tableau de bord, et une fois le profil prêt nous poursuivons la recherche du bon match.`
+                    : `Bien sûr. La première étape est de créer un compte sur ${website}/signup et de compléter votre profil. Ensuite vous suivez les documents et les prochaines étapes dans le tableau de bord, et je peux vous aider ici si vous avez des questions sur l’inscription, les documents ou le processus.`;
+            case "pt":
+                return asksHowItWorks
+                    ? `Claro. A Workers United trabalha com um processo guiado de matching: primeiro você cria sua conta em ${website}/signup e completa o perfil, depois acompanha documentos e próximos passos no painel, e quando o perfil estiver pronto nós seguimos com a busca pelo match adequado.`
+                    : `Claro. O primeiro passo é criar sua conta em ${website}/signup e completar o perfil. Depois disso você acompanha documentos e próximos passos no painel, e eu posso ajudar por aqui se tiver dúvidas sobre cadastro, documentos ou processo.`;
+            case "hi":
+                return asksHowItWorks
+                    ? `ज़रूर। Workers United guided matching process के ज़रिए काम करता है: पहले ${website}/signup पर account बनाइए और profile पूरा कीजिए, फिर dashboard में documents और next steps follow कीजिए, और जब profile तैयार हो जाए तो हम सही match ढूँढने की प्रक्रिया आगे बढ़ाते हैं।`
+                    : `ज़रूर। पहला step ${website}/signup पर account बनाना और profile पूरा करना है। उसके बाद dashboard में documents और next steps follow होते हैं, और अगर registration, documents या process को लेकर सवाल हो तो मैं यहाँ मदद कर सकता हूँ।`;
+            default:
+                return asksHowItWorks
+                    ? `Of course. Workers United works through a guided matching process: first you create an account at ${website}/signup and complete your profile, then you follow documents and next steps in the dashboard, and once the profile is ready we continue with the search for the right match.`
+                    : `Of course. The first step is to create your account at ${website}/signup and complete the profile. After that, you follow documents and next steps in the dashboard, and I can help here if you have questions about registration, documents, or the process.`;
         }
     }
 
@@ -289,16 +322,17 @@ Rules:
 6. Do NOT push payment before registration, full profile completion, and admin approval. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile comes first.
 7. Do NOT share direct payment links from WhatsApp. If the worker is not payment-ready, never ask whether they want to activate/pay now. If the worker is truly payment-ready, tell them to open the dashboard and start checkout there.
 8. If the user asks to see jobs before paying, explain simply that Workers United works through guided matching rather than a live public jobs list; the service is searching and waiting for the right match.
-9. If the user asks about documents, answer only the required documents and say uploads happen in the dashboard. Never claim WhatsApp attachments update the profile.
-10. If the user asks about status, use only the provided snapshot and never invent missing data.
-11. Never claim you escalated, forwarded screenshots, opened a ticket, prioritized a case, or that a human/technical team will reply unless the system has actually performed that action.
-12. If the user wants human help or reports a bug, acknowledge it and direct them to the dashboard or ${website}/signup as appropriate, plus ${supportEmail}, but do not promise a live handoff and do not say you added notes to an internal case.
-13. If the user already paid and asks for help, you may mention the support inbox in the dashboard as an option in addition to WhatsApp.
-14. Ask at most one short follow-up question, and only when it helps move the conversation forward.
-15. If someone says they are an agency or employer, do not collect worker personal profile fields from them.
-16. Never invent legal rules, salaries, timelines, country promises, worker counts, current vacancies, or hidden internal actions.
-17. Never start the reply with a symbol or a list marker.
-18. ${isAdmin ? "This is the platform owner. If they give a correction, treat it as authoritative." : "Do not invent facts that are not in the canonical facts, the snapshot, or the stored memory."}`;
+9. Do not lead with the guided-matching explanation unless the user asked how the process works or asked to see or confirm current openings.
+10. If the user asks about documents, answer only the required documents and say uploads happen in the dashboard. Never claim WhatsApp attachments update the profile.
+11. If the user asks about status, use only the provided snapshot and never invent missing data.
+12. Never claim you escalated, forwarded screenshots, opened a ticket, prioritized a case, or that a human/technical team will reply unless the system has actually performed that action.
+13. If the user wants human help or reports a bug, acknowledge it and direct them to the dashboard or ${website}/signup as appropriate, plus ${supportEmail}, but do not promise a live handoff and do not say you added notes to an internal case.
+14. If the user already paid and asks for help, you may mention the support inbox in the dashboard as an option in addition to WhatsApp.
+15. Ask at most one short follow-up question, and only when it helps move the conversation forward.
+16. If someone says they are an agency or employer, do not collect worker personal profile fields from them.
+17. Never invent legal rules, salaries, timelines, country promises, worker counts, current vacancies, or hidden internal actions.
+18. Never start the reply with a symbol or a list marker.
+19. ${isAdmin ? "This is the platform owner. If they give a correction, treat it as authoritative." : "Do not invent facts that are not in the canonical facts, the snapshot, or the stored memory."}`;
 }
 
 export function buildEmployerWhatsAppRules({
