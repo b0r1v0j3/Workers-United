@@ -91,7 +91,10 @@ describe("whatsapp-brain guards", () => {
     it("detects Serbian written in plain Latin and keeps the reply language Serbian", () => {
         expect(detectWhatsAppLanguageCode("Pozdrav")).toBe("sr");
         expect(detectWhatsAppLanguageCode("Ocu posao")).toBe("sr");
+        expect(detectWhatsAppLanguageCode("Treba mi posao")).toBe("sr");
+        expect(detectWhatsAppLanguageCode("Kako da se prijavim")).toBe("sr");
         expect(resolveWhatsAppLanguageName("Pozdrav", "English")).toBe("Serbian");
+        expect(resolveWhatsAppLanguageName("Treba mi posao", "English")).toBe("Serbian");
     });
 
     it("does not treat an ordinary Serbian worker lead as an employer lead", () => {
