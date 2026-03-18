@@ -142,33 +142,6 @@ try {
     $results += Add-Result -Service "Stripe" -Status "FAIL" -Details $_.Exception.Message
 }
 
-# n8n webhook reachability (optional)
-try {
-    $n8nUrl = Get-EnvValue -Name "N8N_WHATSAPP_WEBHOOK_URL"
-    if (-not $n8nUrl) {
-        $results += Add-Result -Service "n8n" -Status "WARN" -Details "N8N_WHATSAPP_WEBHOOK_URL is not set"
-    } else {
-        try {
-            Invoke-WebRequest -Uri $n8nUrl -Method Head -TimeoutSec 15 -MaximumRedirection 0 -ErrorAction Stop | Out-Null
-            $results += Add-Result -Service "n8n" -Status "OK" -Details "Webhook endpoint reachable"
-        } catch {
-            $response = $_.Exception.Response
-            if ($response -and $response.StatusCode) {
-                $statusCode = [int]$response.StatusCode.value__
-                if ($statusCode -lt 500) {
-                    $results += Add-Result -Service "n8n" -Status "OK" -Details "Endpoint reachable (HTTP $statusCode)"
-                } else {
-                    $results += Add-Result -Service "n8n" -Status "FAIL" -Details "Endpoint returned HTTP $statusCode"
-                }
-            } else {
-                $results += Add-Result -Service "n8n" -Status "FAIL" -Details $_.Exception.Message
-            }
-        }
-    }
-} catch {
-    $results += Add-Result -Service "n8n" -Status "FAIL" -Details $_.Exception.Message
-}
-
 # Production /api/health check (optional)
 try {
     $baseUrl = Get-EnvValue -Name "NEXT_PUBLIC_BASE_URL"

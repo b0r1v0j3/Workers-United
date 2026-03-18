@@ -5,11 +5,8 @@ import { sendEmail } from "@/lib/mailer";
 // This endpoint is called to get pending emails
 export async function GET(request: NextRequest) {
     try {
-        // Accept CRON_SECRET for authentication
-        const apiKey = request.headers.get("x-api-key");
         const authHeader = request.headers.get("authorization");
-        const isAuthorized = apiKey === process.env.N8N_API_KEY || authHeader === `Bearer ${process.env.CRON_SECRET}`;
-        if (!isAuthorized) {
+        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -35,10 +32,8 @@ export async function GET(request: NextRequest) {
 // Queue an email and send it immediately via SMTP
 export async function POST(request: NextRequest) {
     try {
-        const apiKey = request.headers.get("x-api-key");
         const authHeader = request.headers.get("authorization");
-        const isAuthorized = apiKey === process.env.N8N_API_KEY || authHeader === `Bearer ${process.env.CRON_SECRET}`;
-        if (!isAuthorized) {
+        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -100,10 +95,8 @@ export async function POST(request: NextRequest) {
 // Called to mark emails as sent
 export async function PATCH(request: NextRequest) {
     try {
-        const apiKey = request.headers.get("x-api-key");
         const authHeader = request.headers.get("authorization");
-        const isAuthorized = apiKey === process.env.N8N_API_KEY || authHeader === `Bearer ${process.env.CRON_SECRET}`;
-        if (!isAuthorized) {
+        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

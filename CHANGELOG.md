@@ -4,10 +4,13 @@
 
 ---
 
+**Legacy Automation Retirement Cleanup (18.03.2026)**
+- Uklonjeni preostali legacy automation runtime tragovi iz health/smoke/email-queue tokova i cloud dijagnostike
+- Dokumentacija i istorijski opisi preformulisani tako da retired automation servis više nije prikazan kao aktivni deo platforme
+
 **WhatsApp AI Chatbot LIVE (28.02.2026)**
-- Implementiran AI chatbot: `Vercel webhook → n8n AI (GPT-4o-mini) → Vercel → WhatsApp reply`
-- n8n workflow: WhatsApp Webhook → AI Response Generator → Respond to Webhook (3 čvora)
-- Vercel šalje odgovor korisniku koristeći sopstveni `WHATSAPP_TOKEN` (ne n8n)
+- Implementiran AI chatbot za WhatsApp odgovore
+- Vercel šalje odgovor korisniku koristeći sopstveni `WHATSAPP_TOKEN`
 - Kritičan fix: `POST /{WABA-ID}/subscribed_apps` API poziv — bez njega Meta ne isporučuje webhook event-ove
 
 **Stripe Live + Cron + Analytics (28.02.2026)**

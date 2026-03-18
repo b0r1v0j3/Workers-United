@@ -18,7 +18,6 @@ interface HealthApiResponse {
         stripe?: { state: string };
         smtp?: { state: string };
         whatsapp?: { state: string };
-        n8n?: { state: string };
     };
 }
 
@@ -120,7 +119,6 @@ export async function GET(request: Request) {
             mapService("stripe", healthJson.checks?.stripe?.state, true),
             mapService("smtp", healthJson.checks?.smtp?.state, true),
             mapService("whatsapp", healthJson.checks?.whatsapp?.state, false),
-            mapService("n8n", healthJson.checks?.n8n?.state, false),
         ];
 
         const evaluation = evaluateSmoke(serviceChecks, routeChecks);

@@ -1,7 +1,7 @@
 -- ============================================================
 -- MIGRATION: User Activity Tracking
 -- Records every significant user action for debugging and
--- AI-powered daily analysis via n8n + GPT 5.3 Codex
+-- AI-powered daily analysis via scheduled platform sweeps + GPT 5.3 Codex
 -- ============================================================
 
 -- 1. Create the user_activity table
@@ -59,5 +59,5 @@ GRANT ALL ON public.user_activity TO authenticated;
 GRANT SELECT ON public.user_activity TO anon;
 
 -- 5. Auto-cleanup: delete activity older than 90 days (run via cron)
--- This can be triggered by a Vercel cron or n8n scheduled job:
+-- This can be triggered by a Vercel cron job:
 -- DELETE FROM user_activity WHERE created_at < NOW() - INTERVAL '90 days';
