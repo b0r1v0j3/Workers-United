@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { queueEmail } from "@/lib/email-templates";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { claimAgencyWorkerDraft, ensureAgencyRecord, getAgencySchemaState } from "@/lib/agencies";
+import { syncAuthContactFields } from "@/lib/auth-contact-sync";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { ensureWorkerProfileRecord, ensureWorkerRecord, loadCanonicalWorkerRecord } from "@/lib/workers";
@@ -95,7 +96,7 @@ export async function resolvePostAuthRedirect({
     if (normalizedUserType === "employer") {
         const { data: employer } = await adminClient
             .from("employers")
-            .select("id")
+            .select("id, contact_phone")
             .eq("profile_id", user.id)
             .maybeSingle();
 
@@ -104,6 +105,13 @@ export async function resolvePostAuthRedirect({
                 profile_id: user.id,
                 company_name: user.user_metadata?.company_name || null,
                 status: "PENDING",
+            });
+        } else {
+            await syncAuthContactFields(adminClient, {
+                userId: user.id,
+                phone: employer.contact_phone,
+            }).catch((error) => {
+                console.warn("[Auth Redirect] Employer auth contact sync failed:", error);
             });
         }
 
@@ -123,6 +131,13 @@ export async function resolvePostAuthRedirect({
             email: user.email,
             fullName: user.user_metadata?.full_name,
             agencyName: user.user_metadata?.company_name,
+        });
+
+        await syncAuthContactFields(adminClient, {
+            userId: user.id,
+            phone: agencyResult.agency?.contact_phone || null,
+        }).catch((error) => {
+            console.warn("[Auth Redirect] Agency auth contact sync failed:", error);
         });
 
         await logServerActivity(user.id, "auth_login", "auth", {
@@ -182,6 +197,14 @@ export async function resolvePostAuthRedirect({
         user.id,
         "id, profile_id, agency_id, submitted_email, phone, nationality, updated_at, entry_fee_paid, queue_joined_at, job_search_active, current_country, preferred_job, status"
     );
+
+    await syncAuthContactFields(adminClient, {
+        userId: user.id,
+        phone: workerRecordCheck?.phone || null,
+        fullName: user.user_metadata?.full_name || null,
+    }).catch((error) => {
+        console.warn("[Auth Redirect] Worker auth contact sync failed:", error);
+    });
 
     if (!workerRecordCheck || !workerRecordCheck.phone || !workerRecordCheck.nationality) {
         const canSendWorkerNotifications = canSendWorkerDirectNotifications({

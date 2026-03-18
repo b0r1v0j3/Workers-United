@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncAuthContactFields } from "@/lib/auth-contact-sync";
 import { isGodModeUser } from "@/lib/godmode";
 import { buildContractDataForMatch } from "@/lib/contract-data";
 
@@ -131,6 +132,53 @@ async function updateGenericRecord(
         .eq("id", recordId);
 }
 
+async function syncRelatedAuthContact(
+    admin: ReturnType<typeof createAdminClient>,
+    table: EditableTableName,
+    recordId: string,
+    field: string,
+    normalizedValue: string | number | null
+) {
+    if (table === "profiles" && field === "full_name") {
+        await syncAuthContactFields(admin, {
+            userId: recordId,
+            fullName: typeof normalizedValue === "string" ? normalizedValue : null,
+        });
+        return;
+    }
+
+    if (table === "employers" && field === "contact_phone") {
+        const { data: employer } = await admin
+            .from("employers")
+            .select("profile_id")
+            .eq("id", recordId)
+            .maybeSingle();
+
+        if (employer?.profile_id) {
+            await syncAuthContactFields(admin, {
+                userId: employer.profile_id,
+                phone: typeof normalizedValue === "string" ? normalizedValue : null,
+            });
+        }
+        return;
+    }
+
+    if (table === "workers" && field === "phone") {
+        const { data: worker } = await admin
+            .from("workers")
+            .select("profile_id")
+            .eq("id", recordId)
+            .maybeSingle();
+
+        if (worker?.profile_id) {
+            await syncAuthContactFields(admin, {
+                userId: worker.profile_id,
+                phone: typeof normalizedValue === "string" ? normalizedValue : null,
+            });
+        }
+    }
+}
+
 function normalizeEditableTableName(table: unknown): EditableTableName | null {
     if (typeof table !== "string") {
         return null;
@@ -192,6 +240,10 @@ export async function POST(request: NextRequest) {
                 console.error("[Edit Data] Update error:", error);
                 return NextResponse.json({ error: error.message }, { status: 500 });
             }
+
+            await syncRelatedAuthContact(admin, table, recordId, field, normalizedValue).catch((syncError) => {
+                console.warn("[Edit Data] Auth contact sync failed:", syncError);
+            });
         } else {
             const { data: contractRecord, error: contractError } = await admin
                 .from("contract_data")
@@ -235,6 +287,13 @@ export async function POST(request: NextRequest) {
                 if (error) {
                     return NextResponse.json({ error: error.message }, { status: 500 });
                 }
+
+                await syncAuthContactFields(admin, {
+                    userId: contractBuild.workerProfile.id,
+                    fullName: normalizedValue ? String(normalizedValue) : null,
+                }).catch((syncError) => {
+                    console.warn("[Edit Data] Worker auth contact sync failed:", syncError);
+                });
             } else if (field === "worker_passport_number") {
                 const { error } = await admin
                     .from("worker_onboarding")
@@ -344,6 +403,13 @@ export async function POST(request: NextRequest) {
                 if (error) {
                     return NextResponse.json({ error: error.message }, { status: 500 });
                 }
+
+                await syncAuthContactFields(admin, {
+                    userId: contractBuild.employerProfile.id,
+                    fullName: normalizedValue ? String(normalizedValue) : null,
+                }).catch((syncError) => {
+                    console.warn("[Edit Data] Employer auth contact sync failed:", syncError);
+                });
             } else if (field === "job_title") {
                 const { error } = await admin
                     .from("job_requests")
