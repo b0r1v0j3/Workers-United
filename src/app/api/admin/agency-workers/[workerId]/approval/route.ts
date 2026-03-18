@@ -3,10 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeUserType } from "@/lib/domain";
 import { isGodModeUser } from "@/lib/godmode";
-import { getAgencyWorkerName } from "@/lib/agencies";
-import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
+import { syncWorkerReviewStatus } from "@/lib/worker-review";
 
 interface RouteContext {
     params: Promise<{ workerId: string }>;
@@ -73,31 +72,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Agency worker not found" }, { status: 404 });
         }
 
-        const { data: linkedProfile } = worker.profile_id
-            ? await admin
-                .from("profiles")
-                .select("full_name, email")
-                .eq("id", worker.profile_id)
-                .maybeSingle()
-            : { data: null as { full_name: string | null; email: string | null } | null };
-
         const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(worker);
-        const { data: documents, error: documentsError } = documentOwnerId
-            ? await admin
-                .from("worker_documents")
-                .select("document_type, status")
-                .eq("user_id", documentOwnerId)
-            : { data: [], error: null };
-        if (documentsError) {
-            console.error("[AdminAgencyWorkerApproval] Document lookup failed:", documentsError);
-            return NextResponse.json({ error: "Failed to load worker documents" }, { status: 500 });
-        }
-
-        const completion = getWorkerCompletion({
-            profile: { full_name: getAgencyWorkerName({ submitted_full_name: worker.submitted_full_name, profiles: linkedProfile }) },
-            worker,
-            documents: documents || [],
-        }, { phoneOptional: true }).completion;
+        const syncResult = await syncWorkerReviewStatus({
+            adminClient: admin,
+            profileId: worker.profile_id || null,
+            workerId: worker.id,
+            documentOwnerId,
+            phoneOptional: true,
+            fullNameFallback: worker.submitted_full_name || null,
+        });
+        const completion = syncResult.completion;
 
         if (action === "approve" && completion < 100) {
             return NextResponse.json({ error: "This profile must be 100% complete before approval." }, { status: 400 });
