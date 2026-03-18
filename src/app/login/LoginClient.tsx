@@ -285,6 +285,7 @@ export default function LoginPage() {
                                     value={password}
                                     onChange={setPassword}
                                     placeholder="••••••••"
+                                    autoComplete="new-password"
                                 />
 
                                 <div className="grid grid-cols-1 gap-1 rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-3 py-2 sm:grid-cols-2">
@@ -302,6 +303,7 @@ export default function LoginPage() {
                                     value={confirmPassword}
                                     onChange={setConfirmPassword}
                                     placeholder="••••••••"
+                                    autoComplete="new-password"
                                 />
 
                                 {password && confirmPassword && !recoveryPasswordsMatch && (
@@ -332,6 +334,7 @@ export default function LoginPage() {
                                     value={email}
                                     onChange={setEmail}
                                     placeholder="you@example.com"
+                                    autoComplete="email"
                                 />
 
                                 {resetSent && (
@@ -399,6 +402,7 @@ export default function LoginPage() {
                                         value={email}
                                         onChange={setEmail}
                                         placeholder="you@example.com"
+                                        autoComplete="email"
                                     />
 
                                     <div className="space-y-1.5">
@@ -422,6 +426,7 @@ export default function LoginPage() {
                                             type="password"
                                             required
                                             placeholder="••••••••"
+                                            autoComplete="current-password"
                                             className="w-full rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-4 py-3 text-[15px] text-[#18181b] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#27272a] focus:bg-white focus:ring-2 focus:ring-zinc-100"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
@@ -473,6 +478,7 @@ interface InputFieldProps {
     onChange: (value: string) => void;
     placeholder: string;
     type?: "text" | "email" | "password";
+    autoComplete?: string;
 }
 
 function InputField({
@@ -482,6 +488,7 @@ function InputField({
     onChange,
     placeholder,
     type = "text",
+    autoComplete,
 }: InputFieldProps) {
     return (
         <div className="space-y-1.5">
@@ -495,6 +502,7 @@ function InputField({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
+                autoComplete={autoComplete}
                 className="w-full rounded-2xl border border-[#e4e4df] bg-[#f8f8f6] px-4 py-3 text-[15px] text-[#18181b] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#27272a] focus:bg-white focus:ring-2 focus:ring-zinc-100"
             />
         </div>

@@ -316,20 +316,20 @@ export async function GET(request: NextRequest) {
 
     // ─── 9c. Payment Attempt Telemetry (Self-Improvement #1) ─────────────
     // Track ALL payment attempts (not just successful) to diagnose checkout drop-off
-    const checkoutCreateAttempts = paymentEvents.filter(event => event.action === "checkout_session_create_attempt").length;
-    const checkoutSessionsCreated = paymentEvents.filter(event => event.action === "checkout_session_created").length;
-    const paymentClicks = paymentEvents.filter(event => event.action === "payment_click").length;
-    const paymentCompletedEvents = paymentEvents.filter(event => event.action === "payment_completed").length;
-    const paymentFailedEvents = paymentEvents.filter(event => event.action === "payment_failed").length;
-    const totalPaymentAttempts = Math.max(checkoutCreateAttempts, checkoutSessionsCreated, paymentClicks, payments.length);
-    const completedPayments = Math.max(
-        payments.filter(p => successfulPaymentStatuses.has(p.status || "")).length,
-        paymentCompletedEvents
+    const recentPaymentEvents = paymentEvents.filter(event => toTimestamp(event.created_at) >= dayAgo.getTime());
+    const checkoutCreateAttempts = recentPaymentEvents.filter(event => event.action === "checkout_session_create_attempt").length;
+    const checkoutSessionsCreated = recentPaymentEvents.filter(event => event.action === "checkout_session_created").length;
+    const paymentClicks = recentPaymentEvents.filter(event => event.action === "payment_click").length;
+    const paymentCompletedEvents = recentPaymentEvents.filter(event => event.action === "payment_completed").length;
+    const paymentFailedEvents = recentPaymentEvents.filter(event => event.action === "payment_failed").length;
+    const totalPaymentAttempts = Math.max(
+        checkoutCreateAttempts,
+        checkoutSessionsCreated,
+        paymentClicks,
+        recentPaymentEvents.length
     );
-    const failedPayments = Math.max(
-        payments.filter(p => p.status === "failed").length,
-        paymentFailedEvents
-    );
+    const completedPayments = paymentCompletedEvents;
+    const failedPayments = paymentFailedEvents;
     const paymentTelemetry = {
         totalAttempts: totalPaymentAttempts,
         checkoutCreateAttempts,
@@ -339,12 +339,12 @@ export async function GET(request: NextRequest) {
         failed: failedPayments,
         pending: payments.filter(p => p.status === "pending" || p.status === "created").length,
         abandoned: payments.filter(p => p.status === "abandoned" || p.status === "expired").length,
-        dataSource: paymentEvents.length > 0 ? "payments + user_activity" : "payments",
+        dataSource: recentPaymentEvents.length > 0 ? "payments + user_activity (last 24h attempts/failures)" : "payments",
         conversionRate: totalPaymentAttempts > 0
             ? `${Math.round((completedPayments / totalPaymentAttempts) * 100)}%`
             : "No attempts",
-        recentAttempts: paymentEvents.length > 0
-            ? paymentEvents.slice(0, 20).map(event => ({
+        recentAttempts: recentPaymentEvents.length > 0
+            ? recentPaymentEvents.slice(0, 20).map(event => ({
                 action: event.action,
                 status: event.status,
                 created_at: event.created_at,

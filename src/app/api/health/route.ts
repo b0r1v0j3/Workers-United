@@ -23,8 +23,7 @@ interface HealthChecks {
 
 function summarizeStatus(checks: HealthChecks): "healthy" | "degraded" {
     const states = [checks.supabase, checks.stripe, checks.smtp].map((c) => c.state);
-    if (states.includes("down")) return "degraded";
-    return "healthy";
+    return states.every((state) => state === "ok") ? "healthy" : "degraded";
 }
 
 function publicPayload(status: "healthy" | "degraded", checks: HealthChecks) {
@@ -168,9 +167,9 @@ async function checkN8n(): Promise<ServiceCheck> {
             method: "HEAD",
             signal: AbortSignal.timeout(8000),
         });
-        return res.status >= 500
-            ? { state: "degraded", details: `HTTP ${res.status}` }
-            : { state: "ok", details: `Reachable (${res.status})` };
+        return res.ok
+            ? { state: "ok", details: `Reachable (${res.status})` }
+            : { state: "degraded", details: `HTTP ${res.status}` };
     } catch (err) {
         return {
             state: "degraded",
