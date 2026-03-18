@@ -3,8 +3,7 @@ import { stripe, PRICES, getCheckoutSuccessUrl, getCheckoutCancelUrl, PaymentTyp
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAgencyOwnedWorker, getAgencyWorkerName } from "@/lib/agencies";
-import { getWorkerCompletion } from "@/lib/profile-completion";
-import { getEntryFeeEligibility, WORKER_ENTRY_FEE_READINESS_COLUMNS } from "@/lib/payment-eligibility";
+import { resolveEntryFeeEligibilityForWorker, WORKER_ENTRY_FEE_READINESS_COLUMNS } from "@/lib/payment-eligibility";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { getAdminTestSession } from "@/lib/admin-test-mode";
 import { getAdminTestWorkerWorkspace, markAdminTestAgencyWorkerEntryFeePaid, markAdminTestWorkerEntryFeePaid } from "@/lib/admin-test-data";
@@ -91,23 +90,29 @@ export async function POST(request: NextRequest) {
                     full_name: sandboxWorker?.full_name || adminTestSession.activePersona.label,
                     email: sandboxWorker?.email || user.email || "",
                 };
-                const { completion: sandboxProfileCompletion } = getWorkerCompletion({
+                const { unlockState: sandboxUnlockState } = resolveEntryFeeEligibilityForWorker({
                     profile: sandboxProfile,
                     worker: sandboxWorker,
                     documents: workspace.documents,
-                });
-                const sandboxEligibility = getEntryFeeEligibility({
-                    entry_fee_paid:
-                        !!sandboxWorker?.entry_fee_paid ||
-                        !!sandboxWorker?.job_search_active ||
-                        isPostEntryFeeWorkerStatus(sandboxWorker?.status),
-                    profile_completion: sandboxProfileCompletion,
+                    fullNameFallback: sandboxProfile.full_name,
                 });
 
-                if (!sandboxEligibility.allowed) {
+                const sandboxAlreadyActivated =
+                    !!sandboxWorker?.entry_fee_paid ||
+                    !!sandboxWorker?.job_search_active ||
+                    isPostEntryFeeWorkerStatus(sandboxWorker?.status);
+
+                if (sandboxAlreadyActivated) {
                     return NextResponse.json(
-                        { error: sandboxEligibility.error || "Entry fee is not available" },
-                        { status: sandboxEligibility.status || 400 }
+                        { error: "Entry fee already paid" },
+                        { status: 400 }
+                    );
+                }
+
+                if (!sandboxUnlockState.allowed) {
+                    return NextResponse.json(
+                        { error: sandboxUnlockState.error || "Entry fee is not available" },
+                        { status: sandboxUnlockState.status || 400 }
                     );
                 }
 
@@ -427,7 +432,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: "Entry fee already paid" }, { status: 400 });
             }
 
-            let workerProfileCompletion: number | null = null;
             const paymentDocumentOwnerId = isAgencyPayingForWorker
                 ? paymentOwnerProfileId || agencyTargetWorkerId
                 : paymentOwnerProfileId;
@@ -442,27 +446,39 @@ export async function POST(request: NextRequest) {
                     return NextResponse.json({ error: "Failed to check worker payment readiness" }, { status: 500 });
                 }
 
-                workerProfileCompletion = getWorkerCompletion({
+                const { unlockState } = resolveEntryFeeEligibilityForWorker({
                     profile: isAgencyPayingForWorker
                         ? { full_name: paymentOwnerName }
                         : profile,
                     worker: workerRecord,
                     documents: paymentDocuments || [],
-                }, { phoneOptional: isAgencyPayingForWorker }).completion;
-            }
+                    phoneOptional: isAgencyPayingForWorker,
+                    fullNameFallback: paymentOwnerName,
+                });
 
-            const eligibility = getEntryFeeEligibility({
-                entry_fee_paid: workerRecord?.entry_fee_paid,
-                profile_completion: workerProfileCompletion,
-                admin_approved: isAgencyPayingForWorker || paymentOwnerProfileId
-                    ? !!workerRecord?.admin_approved
-                    : undefined,
-            });
-            if (!eligibility.allowed) {
-                return NextResponse.json(
-                    { error: eligibility.error || "Entry fee is not available" },
-                    { status: eligibility.status || 400 }
-                );
+                if (!unlockState.allowed) {
+                    return NextResponse.json(
+                        { error: unlockState.error || "Entry fee is not available" },
+                        { status: unlockState.status || 400 }
+                    );
+                }
+            } else {
+                const { unlockState } = resolveEntryFeeEligibilityForWorker({
+                    profile: isAgencyPayingForWorker
+                        ? { full_name: paymentOwnerName }
+                        : profile,
+                    worker: workerRecord,
+                    documents: [],
+                    phoneOptional: isAgencyPayingForWorker,
+                    fullNameFallback: paymentOwnerName,
+                });
+
+                if (!unlockState.allowed) {
+                    return NextResponse.json(
+                        { error: unlockState.error || "Entry fee is not available" },
+                        { status: unlockState.status || 400 }
+                    );
+                }
             }
         }
 

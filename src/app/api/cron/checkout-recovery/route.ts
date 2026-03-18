@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { queueEmail } from "@/lib/email-templates";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import {
+    resolveEntryFeeEligibilityForWorker,
+    type EntryFeeEligibilityDocumentState,
+    type EntryFeeEligibilityWorkerRecord,
+} from "@/lib/payment-eligibility";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord } from "@/lib/workers";
 
@@ -23,13 +28,10 @@ interface ProfileRow {
     full_name: string | null;
 }
 
-interface WorkerRow {
+interface WorkerRow extends EntryFeeEligibilityWorkerRecord {
     id: string | null;
     profile_id: string | null;
-    phone: string | null;
     updated_at: string | null;
-    entry_fee_paid: boolean | null;
-    job_search_active: boolean | null;
     queue_joined_at: string | null;
     status: string | null;
 }
@@ -47,6 +49,10 @@ interface ActivityRow {
     action: string;
     created_at: string | null;
     details: unknown;
+}
+
+interface WorkerDocumentRow extends EntryFeeEligibilityDocumentState {
+    user_id: string | null;
 }
 
 const FIRST_RECOVERY_AFTER_HOURS = 1;
@@ -204,6 +210,7 @@ export async function GET(request: Request) {
         const [
             { data: profiles, error: profilesError },
             { data: workerRows, error: workerRowsError },
+            { data: workerDocuments, error: workerDocumentsError },
             { data: completedPayments, error: completedPaymentsError },
             { data: recoveryEmails, error: recoveryEmailsError },
             { data: paymentActivities, error: paymentActivitiesError },
@@ -211,9 +218,13 @@ export async function GET(request: Request) {
             admin.from("profiles").select("id, email, full_name").in("id", profileIds),
             admin
                 .from("worker_onboarding")
-                .select("id, profile_id, phone, updated_at, entry_fee_paid, job_search_active, queue_joined_at, status")
+                .select("*")
                 .in("profile_id", profileIds)
                 .order("updated_at", { ascending: false }),
+            admin
+                .from("worker_documents")
+                .select("user_id, document_type")
+                .in("user_id", profileIds),
             admin
                 .from("payments")
                 .select("profile_id")
@@ -236,6 +247,7 @@ export async function GET(request: Request) {
 
         if (profilesError) throw profilesError;
         if (workerRowsError) throw workerRowsError;
+        if (workerDocumentsError) throw workerDocumentsError;
         if (completedPaymentsError) throw completedPaymentsError;
         if (recoveryEmailsError) throw recoveryEmailsError;
         if (paymentActivitiesError) throw paymentActivitiesError;
@@ -257,6 +269,18 @@ export async function GET(request: Request) {
                 workersByProfileId.set(worker.profile_id, []);
             }
             workersByProfileId.get(worker.profile_id)?.push(worker);
+        }
+
+        const documentsByProfileId = new Map<string, WorkerDocumentRow[]>();
+        for (const document of (workerDocuments || []) as WorkerDocumentRow[]) {
+            if (!document.user_id) {
+                continue;
+            }
+
+            if (!documentsByProfileId.has(document.user_id)) {
+                documentsByProfileId.set(document.user_id, []);
+            }
+            documentsByProfileId.get(document.user_id)?.push(document);
         }
 
         const emailsByProfileId = new Map<string, EmailQueueRow[]>();
@@ -307,6 +331,9 @@ export async function GET(request: Request) {
         let skipped = 0;
         let invalidEmailSkipped = 0;
         let alreadyPaidSkipped = 0;
+        let notEligibleSkipped = 0;
+        let needsCompletionSkipped = 0;
+        let pendingAdminReviewSkipped = 0;
         let noActivitySkipped = 0;
         let failed = 0;
         let step1 = 0;
@@ -335,6 +362,47 @@ export async function GET(request: Request) {
 
             if (completedProfileIds.has(profileId) || workerAlreadyActivated) {
                 alreadyPaidSkipped++;
+                continue;
+            }
+
+            const { unlockState } = resolveEntryFeeEligibilityForWorker({
+                profile: profile || null,
+                worker,
+                documents: documentsByProfileId.get(profileId) || [],
+                fullNameFallback: profile?.full_name || worker?.submitted_full_name || null,
+            });
+
+            if (!unlockState.allowed) {
+                notEligibleSkipped++;
+
+                if (unlockState.reason === "needs_completion") {
+                    needsCompletionSkipped++;
+                } else if (unlockState.reason === "pending_admin_review") {
+                    pendingAdminReviewSkipped++;
+                }
+
+                if (getRecoveryStep((now.getTime() - pendingEntry.checkoutCreatedAt.getTime()) / (1000 * 60 * 60)) === 3) {
+                    const { error: abandonError } = await admin
+                        .from("payments")
+                        .update({
+                            status: "abandoned",
+                            deadline_at: nowIso,
+                        })
+                        .eq("id", pendingEntry.payment.id)
+                        .eq("payment_type", "entry_fee")
+                        .eq("status", "pending");
+
+                    if (!abandonError) {
+                        markedAbandoned++;
+                    }
+                }
+
+                await logServerActivity(profileId, "checkout_recovery_suppressed", "payment", {
+                    payment_id: pendingEntry.payment.id,
+                    stripe_session_id: pendingEntry.payment.stripe_checkout_session_id,
+                    reason: unlockState.reason,
+                    error: unlockState.error || null,
+                }, "warning");
                 continue;
             }
 
@@ -443,6 +511,9 @@ export async function GET(request: Request) {
             skipped,
             invalidEmailSkipped,
             alreadyPaidSkipped,
+            notEligibleSkipped,
+            needsCompletionSkipped,
+            pendingAdminReviewSkipped,
             noActivitySkipped,
             failed,
         });
