@@ -3,6 +3,7 @@ import type { Json, Tables } from "@/lib/database.types";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import {
+    isInternalOrTestEmail,
     hasKnownInvalidOnlyEmailDomain,
     hasKnownTypoEmailDomain,
     isLikelyUndeliverableEmailError,
@@ -368,7 +369,10 @@ export async function getAdminExceptionSnapshot() {
     );
 
     const invalidEmailProfiles: InvalidEmailException[] = typedProfiles
-        .filter((profile) => normalizeUserType(profile.user_type) !== "admin")
+        .filter((profile) =>
+            normalizeUserType(profile.user_type) !== "admin"
+            && !isInternalOrTestEmail(profile.email)
+        )
         .map((profile) => {
             const normalizedEmail = profile.email.trim().toLowerCase();
             const bounceFailures = [

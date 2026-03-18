@@ -142,11 +142,12 @@ export async function POST(request: NextRequest) {
         });
 
         // Get user profile
-        let { data: profile } = await supabase
+        const { data: initialProfile, error: initialProfileError } = await admin
             .from("profiles")
             .select("*")
             .eq("id", user.id)
-            .single();
+            .maybeSingle();
+        let profile = initialProfile ?? null;
 
         if (!profile) {
             // Self-heal missing profile records to prevent onboarding dead-ends.
@@ -157,17 +158,30 @@ export async function POST(request: NextRequest) {
                 user_type: user.user_metadata?.user_type || "worker",
             });
 
-            const { data: repairedProfile } = await supabase
+            const { data: repairedProfile, error: repairedProfileError } = await admin
                 .from("profiles")
                 .select("*")
                 .eq("id", user.id)
                 .maybeSingle();
 
             profile = repairedProfile ?? null;
+
+            if (repairedProfileError) {
+                console.error("Checkout profile repair fetch error:", repairedProfileError);
+            }
         }
 
         if (!profile) {
-            await logServerActivity(user.id, "checkout_profile_missing", "payment", { type }, "error");
+            await logServerActivity(
+                user.id,
+                "checkout_profile_missing",
+                "payment",
+                {
+                    type,
+                    initial_profile_error: initialProfileError?.message || null,
+                },
+                "error"
+            );
             return NextResponse.json({ error: "Profile not found" }, { status: 404 });
         }
 
@@ -175,7 +189,7 @@ export async function POST(request: NextRequest) {
         let paymentOwnerProfileId: string | null = user.id;
         let paymentOwnerEmail = profile.email || user.email || "";
         let paymentOwnerName = profile.full_name || user.user_metadata?.full_name || "Worker";
-        let paymentRowClient = supabase;
+        let paymentRowClient = admin;
         let agencyTargetWorkerId: string | null = null;
         let isAgencyPayingForWorker = false;
         let agencyWorkerRecordForCheckout: {
