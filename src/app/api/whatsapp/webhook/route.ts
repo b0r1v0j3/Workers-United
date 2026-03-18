@@ -28,6 +28,29 @@ const BRAIN_MEMORY_LIMIT = 8;
 const WHATSAPP_ROUTER_MODEL = process.env.WHATSAPP_ROUTER_MODEL || "gpt-5-mini";
 const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "gpt-5-mini";
 const TEXT_LIKE_MESSAGE_TYPES = new Set(["text", "button", "interactive"]);
+const GUARDED_ESCALATION_PATTERNS = [
+    /\btech(?:nical)? team\b/i,
+    /\bticket\b/i,
+    /\bprioriti[sz](?:e|ed|ing)\b/i,
+    /\bescalat(?:e|ed|ing)\b/i,
+    /\bforward(?:ed|ing)?\b/i,
+    /\bI['’]ve added\b/i,
+    /\breply here or to\b/i,
+    /\bthey['’]ll reply\b/i,
+    /\bteam will (?:investigate|reply|contact)\b/i,
+    /\bsupport request in (?:your )?dashboard\b/i,
+];
+const GUARDED_PAYMENT_PATTERNS = [
+    /\bpayment link\b/i,
+    /\bactivation link\b/i,
+    /\bcheckout link\b/i,
+    /\bsend (?:the )?(?:secure )?(?:payment|activation|checkout) link\b/i,
+    /\bactivate it in your dashboard or here\b/i,
+    /\bactivate Job Finder now\b/i,
+    /\bwould you like me to activate\b/i,
+    /\bwould you like me to send\b.*\blink\b/i,
+    /\bI can send the payment link\b/i,
+];
 const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+38166299444")
     .split(",")
     .map((phone) => normalizePhone(phone))
@@ -117,6 +140,14 @@ interface WhatsAppWorkerRecord {
     marital_status: string | null;
 }
 
+type GuardrailLanguage = "en" | "sr" | "ar" | "fr" | "pt" | "hi";
+
+interface GuardrailResult {
+    text: string;
+    triggered: boolean;
+    reason: "escalation" | "payment" | null;
+}
+
 function normalizePhone(rawPhone: string): string {
     const digits = rawPhone.replace(/\D/g, "");
     return digits ? `+${digits}` : "";
@@ -124,6 +155,16 @@ function normalizePhone(rawPhone: string): string {
 
 function isTextLikeMessageType(messageType: string): boolean {
     return TEXT_LIKE_MESSAGE_TYPES.has(messageType);
+}
+
+function resolveGuardrailLanguage(language?: string | null): GuardrailLanguage {
+    const normalized = (language || "").trim().toLowerCase();
+    if (normalized.startsWith("sr") || normalized.includes("serbian")) return "sr";
+    if (normalized.startsWith("ar") || normalized.includes("arabic")) return "ar";
+    if (normalized.startsWith("fr") || normalized.includes("french")) return "fr";
+    if (normalized.startsWith("pt") || normalized.includes("portuguese")) return "pt";
+    if (normalized.startsWith("hi") || normalized.includes("hindi")) return "hi";
+    return "en";
 }
 
 function isWorkerPaymentUnlocked(workerRecord: WhatsAppWorkerRecord | null | undefined): boolean {
@@ -174,6 +215,153 @@ function getMediaAttachmentResponse(language: string): string {
     }
 
     return "Thanks — I received the attachment. WhatsApp images and documents are not linked to your Workers United profile automatically yet, so please upload documents in the dashboard or email screenshots to contact@workersunited.eu with a short description of the issue.";
+}
+
+function getEscalationGuardReply(language: GuardrailLanguage, workerRecord: WhatsAppWorkerRecord | null | undefined): string {
+    if (language === "sr") {
+        return workerRecord?.entry_fee_paid
+            ? "Žao mi je zbog problema. Ne mogu da otvorim ili ažuriram interni tehnički ticket direktno sa WhatsApp-a i ne treba da obećavam odgovor tima ovde. Ako ste već platili Job Finder, pošaljite poruku kroz support inbox u dashboard-u ili pošaljite screenshot i kratak opis na contact@workersunited.eu."
+            : "Žao mi je zbog problema. Ne mogu da otvorim ili ažuriram interni tehnički ticket direktno sa WhatsApp-a i ne treba da obećavam odgovor tima ovde. Pošaljite screenshot i kratak opis problema na contact@workersunited.eu, zajedno sa svojim brojem telefona, pa će zahtev biti pregledan kroz zvanični kanal.";
+    }
+    if (language === "ar") {
+        return workerRecord?.entry_fee_paid
+            ? "آسف بسبب هذه المشكلة. لا يمكنني فتح أو تحديث تذكرة تقنية داخلية مباشرة من WhatsApp، ولا ينبغي لي أن أعدك برد من الفريق هنا. إذا كنت قد دفعت Job Finder بالفعل، فاستخدم صندوق الدعم داخل لوحة التحكم أو أرسل لقطة الشاشة ووصفًا قصيرًا إلى contact@workersunited.eu."
+            : "آسف بسبب هذه المشكلة. لا يمكنني فتح أو تحديث تذكرة تقنية داخلية مباشرة من WhatsApp، ولا ينبغي لي أن أعدك برد من الفريق هنا. أرسل لقطة الشاشة ووصفًا قصيرًا للمشكلة إلى contact@workersunited.eu مع رقم هاتفك ليتم التعامل معها عبر القناة الرسمية.";
+    }
+    if (language === "fr") {
+        return workerRecord?.entry_fee_paid
+            ? "Désolé pour ce problème. Je ne peux pas ouvrir ni mettre à jour un ticket technique interne directement depuis WhatsApp, et je ne dois pas promettre une réponse d’équipe ici. Si Job Finder est déjà payé, utilisez la boîte de support dans le tableau de bord ou envoyez la capture d’écran et une courte description à contact@workersunited.eu."
+            : "Désolé pour ce problème. Je ne peux pas ouvrir ni mettre à jour un ticket technique interne directement depuis WhatsApp, et je ne dois pas promettre une réponse d’équipe ici. Envoyez la capture d’écran et une courte description du problème à contact@workersunited.eu avec votre numéro de téléphone pour le suivi officiel.";
+    }
+    if (language === "pt") {
+        return workerRecord?.entry_fee_paid
+            ? "Lamento por esse problema. Eu não posso abrir nem atualizar um ticket técnico interno diretamente pelo WhatsApp, e não devo prometer uma resposta da equipe por aqui. Se o Job Finder já foi pago, use a caixa de suporte no painel ou envie a captura de tela com uma breve descrição para contact@workersunited.eu."
+            : "Lamento por esse problema. Eu não posso abrir nem atualizar um ticket técnico interno diretamente pelo WhatsApp, e não devo prometer uma resposta da equipe por aqui. Envie a captura de tela e uma breve descrição do problema para contact@workersunited.eu com seu número de telefone para o atendimento oficial.";
+    }
+    if (language === "hi") {
+        return workerRecord?.entry_fee_paid
+            ? "इस समस्या के लिए खेद है। मैं WhatsApp से सीधे कोई internal technical ticket खोल या अपडेट नहीं कर सकता, और मुझे यहाँ टीम के जवाब का वादा भी नहीं करना चाहिए। अगर आपने Job Finder पहले ही pay कर दिया है, तो dashboard support inbox का उपयोग करें या screenshot और short description contact@workersunited.eu पर भेजें।"
+            : "इस समस्या के लिए खेद है। मैं WhatsApp से सीधे कोई internal technical ticket खोल या अपडेट नहीं कर सकता, और मुझे यहाँ टीम के जवाब का वादा भी नहीं करना चाहिए। कृपया screenshot, short description और अपना phone number contact@workersunited.eu पर भेजें ताकि इसे official channel से देखा जा सके।";
+    }
+
+    return workerRecord?.entry_fee_paid
+        ? "Sorry this is still causing trouble. I can’t open or update an internal technical ticket directly from WhatsApp, and I shouldn’t promise a team reply here. If you already paid for Job Finder, please use the support inbox in your dashboard or send the screenshot and a short description to contact@workersunited.eu."
+        : "Sorry this is still causing trouble. I can’t open or update an internal technical ticket directly from WhatsApp, and I shouldn’t promise a team reply here. Please send the screenshot, a short description, and your phone number to contact@workersunited.eu so it can be reviewed through the official channel.";
+}
+
+function getPaymentGuardReply(language: GuardrailLanguage, workerRecord: WhatsAppWorkerRecord | null | undefined): string {
+    if (!workerRecord) {
+        if (language === "sr") {
+            return "Da biste stigli do Job Finder uplate, prvo napravite nalog na workersunited.eu/signup i dovršite profil. Checkout se otključava tek kada profil bude kompletan i admin review bude završen, a uplata se pokreće iz dashboard-a, ne preko WhatsApp linka.";
+        }
+        if (language === "ar") {
+            return "للوصول إلى دفع Job Finder، أنشئ حسابك أولاً على workersunited.eu/signup وأكمل ملفك. يتم فتح الدفع فقط بعد اكتمال الملف ومراجعة الإدارة، ويبدأ الدفع من لوحة التحكم وليس عبر رابط WhatsApp.";
+        }
+        if (language === "fr") {
+            return "Pour accéder au paiement Job Finder, créez d’abord votre compte sur workersunited.eu/signup et complétez votre profil. Le paiement ne se débloque qu’après profil complet et revue admin, et il démarre depuis le tableau de bord, pas via un lien WhatsApp.";
+        }
+        if (language === "pt") {
+            return "Para chegar ao pagamento do Job Finder, primeiro crie sua conta em workersunited.eu/signup e complete seu perfil. O checkout só é liberado após perfil completo e revisão administrativa, e o pagamento começa no painel, não por link no WhatsApp.";
+        }
+        if (language === "hi") {
+            return "Job Finder payment तक पहुँचने के लिए पहले workersunited.eu/signup पर account बनाइए और profile पूरा कीजिए। Checkout तभी unlock होता है जब profile complete हो और admin review पूरा हो, और payment dashboard से शुरू होता है, WhatsApp link से नहीं।";
+        }
+        return "To reach Job Finder payment, first register at workersunited.eu/signup and complete your profile. Checkout unlocks only after the profile is complete and admin review is finished, and payment starts from the dashboard, not from a WhatsApp link.";
+    }
+
+    if (workerRecord.entry_fee_paid) {
+        if (language === "sr") {
+            return "Vaša Job Finder uplata je već evidentirana, tako da nema novog payment linka za slanje ovde. Sledeći korak i status pratite iz dashboard-a na workersunited.eu/profile/worker.";
+        }
+        if (language === "ar") {
+            return "تم تسجيل دفعة Job Finder بالفعل، لذلك لا يوجد رابط دفع جديد لإرساله هنا. تابع الحالة والخطوة التالية من لوحة التحكم على workersunited.eu/profile/worker.";
+        }
+        if (language === "fr") {
+            return "Votre paiement Job Finder est déjà enregistré, donc il n’y a pas de nouveau lien de paiement à envoyer ici. Suivez le statut et la prochaine étape depuis le tableau de bord sur workersunited.eu/profile/worker.";
+        }
+        if (language === "pt") {
+            return "Seu pagamento do Job Finder já está registrado, então não há novo link de pagamento para enviar aqui. Acompanhe o status e a próxima etapa no painel em workersunited.eu/profile/worker.";
+        }
+        if (language === "hi") {
+            return "आपका Job Finder payment पहले से दर्ज है, इसलिए यहाँ कोई नया payment link भेजने की ज़रूरत नहीं है। अगला step और status workersunited.eu/profile/worker dashboard में देखें।";
+        }
+        return "Your Job Finder payment is already recorded, so there is no new payment link to send here. Please follow your status and next step in the dashboard at workersunited.eu/profile/worker.";
+    }
+
+    if (!isWorkerPaymentUnlocked(workerRecord)) {
+        if (language === "sr") {
+            return "Job Finder checkout još nije otključan za vaš nalog. Potrebno je da profil bude kompletan, obavezna dokumenta završena i admin review odobren; tek tada se plaćanje pokreće iz dashboard-a, ne preko WhatsApp linka.";
+        }
+        if (language === "ar") {
+            return "لم يتم فتح Checkout الخاص بـ Job Finder لحسابك بعد. يجب أن يكتمل الملف، وتكتمل المستندات المطلوبة، ويتم اعتماد مراجعة الإدارة أولاً؛ وبعدها فقط يبدأ الدفع من لوحة التحكم وليس عبر رابط WhatsApp.";
+        }
+        if (language === "fr") {
+            return "Le checkout Job Finder n’est pas encore débloqué pour votre compte. Il faut d’abord un profil complet, les documents requis, puis la validation admin; ensuite seulement le paiement commence depuis le tableau de bord, jamais via un lien WhatsApp.";
+        }
+        if (language === "pt") {
+            return "O checkout do Job Finder ainda não está liberado para sua conta. Primeiro é preciso perfil completo, documentos obrigatórios concluídos e aprovação administrativa; só depois o pagamento começa no painel, nunca por link no WhatsApp.";
+        }
+        if (language === "hi") {
+            return "आपके account के लिए Job Finder checkout अभी unlock नहीं हुआ है। पहले profile complete होना चाहिए, required documents पूरे होने चाहिए और admin review approved होना चाहिए; उसके बाद ही payment dashboard से शुरू होता है, WhatsApp link से नहीं।";
+        }
+        return "Job Finder checkout is not unlocked for your account yet. Your profile must be complete, the required documents finished, and admin review approved first; after that, payment starts from the dashboard, never from a WhatsApp link.";
+    }
+
+    if (language === "sr") {
+        return "Vaš Job Finder checkout je otključan, ali uplata se i dalje pokreće samo iz dashboard-a. Otvorite workersunited.eu/profile/worker i tamo započnite bezbedan checkout; payment link ne šaljemo preko WhatsApp-a.";
+    }
+    if (language === "ar") {
+        return "تم فتح Checkout الخاص بـ Job Finder لحسابك، لكن الدفع يبدأ فقط من لوحة التحكم. افتح workersunited.eu/profile/worker وابدأ الدفع الآمن من هناك؛ نحن لا نرسل روابط الدفع عبر WhatsApp.";
+    }
+    if (language === "fr") {
+        return "Le checkout Job Finder est débloqué pour votre compte, mais le paiement démarre uniquement depuis le tableau de bord. Ouvrez workersunited.eu/profile/worker et lancez le checkout sécurisé depuis là; nous n’envoyons pas de lien de paiement via WhatsApp.";
+    }
+    if (language === "pt") {
+        return "O checkout do Job Finder está liberado para sua conta, mas o pagamento começa apenas pelo painel. Abra workersunited.eu/profile/worker e inicie o checkout seguro por lá; não enviamos link de pagamento pelo WhatsApp.";
+    }
+    if (language === "hi") {
+        return "आपके account के लिए Job Finder checkout unlock है, लेकिन payment फिर भी सिर्फ dashboard से शुरू होता है। workersunited.eu/profile/worker खोलिए और वहीं से secure checkout शुरू कीजिए; हम WhatsApp पर payment link नहीं भेजते।";
+    }
+    return "Job Finder checkout is unlocked for your account, but payment still starts only from the dashboard. Open workersunited.eu/profile/worker and start the secure checkout there; we do not send payment links over WhatsApp.";
+}
+
+function applyWhatsAppReplyGuardrails({
+    responseText,
+    language,
+    workerRecord,
+}: {
+    responseText: string | null | undefined;
+    language: string;
+    workerRecord: WhatsAppWorkerRecord | null | undefined;
+}): GuardrailResult {
+    const trimmed = (responseText || "").trim();
+    if (!trimmed) {
+        return { text: "", triggered: false, reason: null };
+    }
+
+    const guardrailLanguage = resolveGuardrailLanguage(language);
+
+    if (GUARDED_ESCALATION_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+        return {
+            text: getEscalationGuardReply(guardrailLanguage, workerRecord),
+            triggered: true,
+            reason: "escalation",
+        };
+    }
+
+    if (GUARDED_PAYMENT_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+        return {
+            text: getPaymentGuardReply(guardrailLanguage, workerRecord),
+            triggered: true,
+            reason: "payment",
+        };
+    }
+
+    return {
+        text: trimmed,
+        triggered: false,
+        reason: null,
+    };
 }
 
 // ─── Meta signature verification ─────────────────────────────────────────────
@@ -545,6 +733,7 @@ export async function POST(request: NextRequest) {
 
                 // ─── Intent-routed OpenAI AI Brain ───────────────────────
                 let aiResponse: string | null = null;
+                let routerDecision: WhatsAppRouterDecision | null = null;
                 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
                 if (OPENAI_API_KEY) {
@@ -562,7 +751,7 @@ export async function POST(request: NextRequest) {
                             })(),
                         ]);
 
-                        const routerDecision = await classifyWhatsAppIntent({
+                        routerDecision = await classifyWhatsAppIntent({
                             apiKey: OPENAI_API_KEY,
                             message: content,
                             normalizedPhone,
@@ -650,7 +839,12 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Send reply via Vercel (using our existing WhatsApp token)
-                const replyText = cleanResponse || await getFallbackResponse(content, workerRecord, profile);
+                const guardrailResult = applyWhatsAppReplyGuardrails({
+                    responseText: cleanResponse,
+                    language: routerDecision?.language || quickLang,
+                    workerRecord,
+                });
+                const replyText = guardrailResult.text || await getFallbackResponse(content, workerRecord, profile);
                 if (replyText) {
                     await sendWhatsAppText(normalizedPhone, replyText, workerRecord?.profile_id || undefined);
                     // Log GPT response for quality review
@@ -662,8 +856,11 @@ export async function POST(request: NextRequest) {
                             phone: normalizedPhone,
                             user_message: content.substring(0, 200),
                             bot_response: replyText.substring(0, 500),
-                            response_type: aiResponse ? "gpt" : "fallback",
+                            response_type: aiResponse
+                                ? (guardrailResult.triggered ? "gpt_guarded" : "gpt")
+                                : "fallback",
                             model: aiResponse ? WHATSAPP_RESPONSE_MODEL : "fallback",
+                            guardrail_reason: guardrailResult.reason,
                         }
                     );
                 }

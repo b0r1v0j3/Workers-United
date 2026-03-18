@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import { getAdminExceptionSnapshot } from "@/lib/admin-exceptions";
+import { isInternalOrTestEmail } from "@/lib/reporting";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { summarizeWhatsAppTemplateHealth } from "@/lib/whatsapp-health";
 
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = createTypedAdminClient();
     const now = new Date();
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
@@ -112,6 +114,9 @@ export async function GET(request: NextRequest) {
     const payments = paymentsResult.data || [];
     const emails = emailsResult.data || [];
     const whatsappMsgs = whatsappResult.data || [];
+    const recentWhatsAppMsgs = whatsappMsgs.filter((message) =>
+        toTimestamp(message.created_at) >= dayAgo.getTime()
+    );
     const employerData = employersResult.data || [];
     const jobRequests = jobRequestsResult.data || [];
     const matches = matchesResult.data || [];
@@ -381,9 +386,12 @@ export async function GET(request: NextRequest) {
 
     // ─── 10. System Health Indicators ───────────────────────────────────
     const failedWhatsApp = whatsappMsgs.filter(m => m.status === "failed");
+    const recentFailedWhatsApp = recentWhatsAppMsgs.filter(m => m.status === "failed");
     const whatsappTemplateHealth = summarizeWhatsAppTemplateHealth({
-        totalOutboundTemplates: chatbotStats.totalOutboundTemplates,
-        failedMessages: failedWhatsApp
+        totalOutboundTemplates: recentWhatsAppMsgs.filter(
+            (message) => message.direction === "outbound" && message.message_type === "template"
+        ).length,
+        failedMessages: recentFailedWhatsApp
             .filter((message) => message.direction === "outbound" && message.message_type === "template")
             .map((message) => ({
                 templateName: message.template_name,
@@ -399,14 +407,14 @@ export async function GET(request: NextRequest) {
             ? `${Math.round(((chatbotStats.totalMessages - chatbotStats.failed) / chatbotStats.totalMessages) * 100)}%`
             : "N/A",
         failedEmailCount: failedEmails.length,
-        failedWhatsAppCount: failedWhatsApp.length,
+        failedWhatsAppCount: recentFailedWhatsApp.length,
         whatsappTemplateHealth,
         recentFailedEmails: failedEmails.slice(0, 5).map(e => ({
             type: e.email_type,
             error: e.error_message,
             date: e.created_at,
         })),
-        recentFailedWhatsApp: failedWhatsApp.slice(0, 5).map(message => ({
+        recentFailedWhatsApp: recentFailedWhatsApp.slice(0, 5).map(message => ({
             template_name: message.template_name,
             error_message: message.error_message,
             status: message.status,
@@ -579,19 +587,22 @@ export async function GET(request: NextRequest) {
             try {
                 const { getAllAuthUsers } = await import("@/lib/supabase/admin");
                 const allAuthUsers = await getAllAuthUsers(supabase);
+                const reportableAuthUsers = allAuthUsers.filter((user) =>
+                    !isInternalOrTestEmail(user.email || null)
+                );
                 const profileIds = new Set(allProfiles.map(p => p.id));
 
-                const unconfirmedUsers = allAuthUsers.filter((u: SupabaseAuthUser) => !u.email_confirmed_at);
-                const noUserType = allAuthUsers.filter((u: SupabaseAuthUser) => !u.user_metadata?.user_type);
-                const workersWithoutProfile = allAuthUsers.filter((u: SupabaseAuthUser) =>
+                const unconfirmedUsers = reportableAuthUsers.filter((u: SupabaseAuthUser) => !u.email_confirmed_at);
+                const noUserType = reportableAuthUsers.filter((u: SupabaseAuthUser) => !u.user_metadata?.user_type);
+                const workersWithoutProfile = reportableAuthUsers.filter((u: SupabaseAuthUser) =>
                     u.user_metadata?.user_type === "worker" && !profileIds.has(u.id)
                 );
-                const workersWithoutWorkerOnboarding = allAuthUsers.filter((u: SupabaseAuthUser) =>
+                const workersWithoutWorkerOnboarding = reportableAuthUsers.filter((u: SupabaseAuthUser) =>
                     u.user_metadata?.user_type === "worker" && !workerRecordProfileIds.has(u.id)
                 );
 
                 // Users registered in last 7 days who never completed profile
-                const recentStuckUsers = allAuthUsers.filter((u: SupabaseAuthUser) => {
+                const recentStuckUsers = reportableAuthUsers.filter((u: SupabaseAuthUser) => {
                     const createdAt = new Date(u.created_at);
                     const isRecent = createdAt >= weekAgo;
                     const isWorker = u.user_metadata?.user_type === "worker";
@@ -600,7 +611,7 @@ export async function GET(request: NextRequest) {
                 });
 
                 return {
-                    totalAuthUsers: allAuthUsers.length,
+                    totalAuthUsers: reportableAuthUsers.length,
                     unconfirmedEmails: {
                         count: unconfirmedUsers.length,
                         users: unconfirmedUsers.slice(0, 20).map((u: SupabaseAuthUser) => ({
