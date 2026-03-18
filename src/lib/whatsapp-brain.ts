@@ -231,17 +231,17 @@ export function buildUnregisteredWorkerWhatsAppReply({
     if (wantsJobHelp) {
         switch (lang) {
             case "sr":
-                return `Mogu da pomognem, ali ne mogu da potvrdim konkretan otvoren posao preko WhatsApp-a. Workers United nije javni oglasnik; prvi korak je da napravite nalog na ${website}/signup i popunite profil, pa onda nastavljamo kroz dashboard ili ovde ako imate pitanja oko procesa.`;
+                return `Mogu da pomognem, ali ne mogu da potvrdim konkretan otvoren posao preko WhatsApp-a. Workers United radi kroz vođeni matching proces, pa je prvi korak da napravite nalog na ${website}/signup i popunite profil; posle toga pratimo sledeće korake kroz dashboard, a ovde mogu da objasnim proces.`;
             case "ar":
-                return `يمكنني المساعدة، لكن لا أستطيع تأكيد وظيفة محددة مفتوحة عبر WhatsApp. Workers United ليس لوحة وظائف عامة؛ الخطوة الأولى هي إنشاء حساب على ${website}/signup وإكمال الملف، وبعدها نتابع من خلال لوحة التحكم أو هنا إذا كانت لديك أسئلة عن العملية.`;
+                return `يمكنني المساعدة، لكن لا أستطيع تأكيد وظيفة محددة مفتوحة عبر WhatsApp. يعمل Workers United من خلال مطابقة موجهة، لذلك الخطوة الأولى هي إنشاء حساب على ${website}/signup وإكمال الملف، وبعدها نتابع الخطوات التالية من خلال لوحة التحكم ويمكنني هنا شرح العملية.`;
             case "fr":
-                return `Je peux aider, mais je ne peux pas confirmer une offre précise ouverte via WhatsApp. Workers United n’est pas un tableau public d’annonces ; la première étape est de créer un compte sur ${website}/signup et de compléter le profil, puis nous continuons via le tableau de bord ou ici pour les questions sur le processus.`;
+                return `Je peux aider, mais je ne peux pas confirmer une offre précise ouverte via WhatsApp. Workers United fonctionne avec un processus d’appariement guidé ; la première étape est donc de créer un compte sur ${website}/signup et de compléter le profil, puis nous suivons les prochaines étapes via le tableau de bord et je peux expliquer le processus ici.`;
             case "pt":
-                return `Posso ajudar, mas não posso confirmar uma vaga específica aberta pelo WhatsApp. Workers United não é um quadro público de vagas; o primeiro passo é criar uma conta em ${website}/signup e completar o perfil, e depois seguimos pelo painel ou por aqui para dúvidas sobre o processo.`;
+                return `Posso ajudar, mas não posso confirmar uma vaga específica aberta pelo WhatsApp. A Workers United trabalha com um processo guiado de matching, então o primeiro passo é criar uma conta em ${website}/signup e completar o perfil; depois acompanhamos os próximos passos no painel, e eu posso explicar o processo por aqui.`;
             case "hi":
-                return `मैं मदद कर सकता हूँ, लेकिन WhatsApp पर किसी specific open job की पुष्टि नहीं कर सकता। Workers United public job board नहीं है; पहला step ${website}/signup पर account बनाना और profile पूरा करना है, उसके बाद हम dashboard या यहीं process के सवालों पर आगे बढ़ते हैं।`;
+                return `मैं मदद कर सकता हूँ, लेकिन WhatsApp पर किसी specific open job की पुष्टि नहीं कर सकता। Workers United guided matching process के ज़रिए काम करता है, इसलिए पहला step ${website}/signup पर account बनाना और profile पूरा करना है; उसके बाद next steps dashboard में follow होते हैं, और मैं यहाँ process समझा सकता हूँ।`;
             default:
-                return `I can help, but I cannot confirm a specific open job over WhatsApp. Workers United is not a public job board; the first step is to create an account at ${website}/signup and complete the profile, then we continue through the dashboard or here for process questions.`;
+                return `I can help, but I cannot confirm a specific open job over WhatsApp. Workers United works through a guided matching process, so the first step is to create an account at ${website}/signup and complete the profile; after that, the next steps are tracked in the dashboard, and I can explain the process here.`;
         }
     }
 
@@ -253,9 +253,9 @@ export function buildCanonicalWhatsAppFacts({
     website = "workersunited.eu",
 }: CanonicalWhatsAppFactsOptions = {}): string {
     return [
-        "- Workers United is a full-service hiring and visa-support platform, not a public job board.",
+        "- Workers United is a full-service hiring and visa-support platform that works through guided matching.",
         "- Job Finder is a paid search service: the worker registers a profile first, then Workers United searches for a suitable match during the 90-day service period.",
-        "- There is no standing inventory of jobs and no public vacancy catalog waiting on the shelf. Openings appear over time and suitable places can be filled quickly.",
+        "- There is no live public vacancy feed to browse on demand. Openings appear over time, and suitable places can be filled quickly.",
         `- Registration starts at ${website}/signup.`,
         "- Job Finder payment unlocks only after the worker profile is fully complete and approved by admin.",
         "- WhatsApp can answer questions and, when the user explicitly asks, collect some text profile details here. Document uploads and screenshots are not processed as WhatsApp attachments yet; those belong in the dashboard.",
@@ -288,7 +288,7 @@ Rules:
 5. If the user is not yet registered and asks how to start, tell them to register at ${website}/signup first. After signup they can continue either in the dashboard or here on WhatsApp.
 6. Do NOT push payment before registration, full profile completion, and admin approval. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile comes first.
 7. Do NOT share direct payment links from WhatsApp. If the worker is not payment-ready, never ask whether they want to activate/pay now. If the worker is truly payment-ready, tell them to open the dashboard and start checkout there.
-8. If the user asks to see jobs before paying, explain simply that Workers United does not keep a public stock of jobs; the service is searching and waiting for the right match.
+8. If the user asks to see jobs before paying, explain simply that Workers United works through guided matching rather than a live public jobs list; the service is searching and waiting for the right match.
 9. If the user asks about documents, answer only the required documents and say uploads happen in the dashboard. Never claim WhatsApp attachments update the profile.
 10. If the user asks about status, use only the provided snapshot and never invent missing data.
 11. Never claim you escalated, forwarded screenshots, opened a ticket, prioritized a case, or that a human/technical team will reply unless the system has actually performed that action.

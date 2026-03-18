@@ -28,8 +28,8 @@ describe("whatsapp-brain guards", () => {
     it("keeps canonical facts aligned with the real Job Finder model", () => {
         const facts = buildCanonicalWhatsAppFacts();
 
-        expect(facts).toContain("not a public job board");
-        expect(facts).toContain("There is no standing inventory of jobs");
+        expect(facts).toContain("works through guided matching");
+        expect(facts).toContain("There is no live public vacancy feed");
         expect(facts).toContain("payment unlocks only after the worker profile is fully complete and approved by admin");
         expect(facts).toContain("Document uploads and screenshots are not processed as WhatsApp attachments yet");
     });
@@ -129,6 +129,7 @@ describe("whatsapp-brain guards", () => {
         });
 
         expect(reply).toContain("ne mogu da potvrdim konkretan otvoren posao");
+        expect(reply).toContain("vođeni matching proces");
         expect(reply).toContain("workersunited.eu/signup");
         expect(reply).not.toContain("$9");
     });

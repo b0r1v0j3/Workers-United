@@ -341,33 +341,33 @@ function getPaymentGuardReply(language: GuardrailLanguage, workerRecord: WhatsAp
 function getAvailabilityGuardReply(language: GuardrailLanguage, workerRecord: WhatsAppWorkerRecord | null | undefined): string {
     if (language === "sr") {
         return workerRecord
-            ? "Ne mogu da potvrdim konkretan otvoren posao ili listu dostupnih radnika preko WhatsApp-a. Workers United nije javni oglasnik; pratite svoj profil i sledeće korake kroz dashboard, a ovde mogu da objasnim proces."
-            : "Ne mogu da potvrdim konkretan otvoren posao preko WhatsApp-a. Workers United nije javni oglasnik; prvo napravite nalog na workersunited.eu/signup i popunite profil, a zatim nastavljamo kroz dashboard i pitanja o procesu.";
+            ? "Ne mogu da potvrdim konkretan otvoren posao ili listu dostupnih radnika preko WhatsApp-a. Workers United radi kroz vođeni matching proces; pratite svoj profil i sledeće korake kroz dashboard, a ovde mogu da objasnim proces."
+            : "Ne mogu da potvrdim konkretan otvoren posao preko WhatsApp-a. Workers United radi kroz vođeni matching proces; prvo napravite nalog na workersunited.eu/signup i popunite profil, a zatim nastavljamo kroz dashboard i pitanja o procesu.";
     }
     if (language === "ar") {
         return workerRecord
-            ? "لا أستطيع تأكيد وظيفة محددة مفتوحة أو قائمة عمال متاحين عبر WhatsApp. Workers United ليس لوحة وظائف عامة؛ تابع ملفك والخطوات التالية من خلال لوحة التحكم، ويمكنني هنا شرح العملية."
-            : "لا أستطيع تأكيد وظيفة محددة مفتوحة عبر WhatsApp. Workers United ليس لوحة وظائف عامة؛ أنشئ حسابك أولاً على workersunited.eu/signup وأكمل ملفك، ثم نتابع من خلال لوحة التحكم وأسئلة العملية.";
+            ? "لا أستطيع تأكيد وظيفة محددة مفتوحة أو قائمة عمال متاحين عبر WhatsApp. يعمل Workers United من خلال مطابقة موجهة؛ تابع ملفك والخطوات التالية من خلال لوحة التحكم، ويمكنني هنا شرح العملية."
+            : "لا أستطيع تأكيد وظيفة محددة مفتوحة عبر WhatsApp. يعمل Workers United من خلال مطابقة موجهة؛ أنشئ حسابك أولاً على workersunited.eu/signup وأكمل ملفك، ثم نتابع من خلال لوحة التحكم وأسئلة العملية.";
     }
     if (language === "fr") {
         return workerRecord
-            ? "Je ne peux pas confirmer une offre précise ouverte ni une liste de travailleurs disponibles via WhatsApp. Workers United n’est pas un tableau public d’annonces ; suivez votre profil et les prochaines étapes dans le tableau de bord, et je peux ici expliquer le processus."
-            : "Je ne peux pas confirmer une offre précise ouverte via WhatsApp. Workers United n’est pas un tableau public d’annonces ; créez d’abord votre compte sur workersunited.eu/signup et complétez votre profil, puis nous continuons via le tableau de bord et les questions sur le processus.";
+            ? "Je ne peux pas confirmer une offre précise ouverte ni une liste de travailleurs disponibles via WhatsApp. Workers United fonctionne avec un processus d’appariement guidé ; suivez votre profil et les prochaines étapes dans le tableau de bord, et je peux expliquer le processus ici."
+            : "Je ne peux pas confirmer une offre précise ouverte via WhatsApp. Workers United fonctionne avec un processus d’appariement guidé ; créez d’abord votre compte sur workersunited.eu/signup et complétez votre profil, puis nous continuons via le tableau de bord et les questions sur le processus.";
     }
     if (language === "pt") {
         return workerRecord
-            ? "Eu não posso confirmar uma vaga específica aberta nem uma lista de trabalhadores disponíveis pelo WhatsApp. Workers United não é um quadro público de vagas; acompanhe seu perfil e os próximos passos no painel, e por aqui eu posso explicar o processo."
-            : "Eu não posso confirmar uma vaga específica aberta pelo WhatsApp. Workers United não é um quadro público de vagas; primeiro crie sua conta em workersunited.eu/signup e complete seu perfil, e depois seguimos pelo painel e pelas dúvidas sobre o processo.";
+            ? "Eu não posso confirmar uma vaga específica aberta nem uma lista de trabalhadores disponíveis pelo WhatsApp. A Workers United trabalha com um processo guiado de matching; acompanhe seu perfil e os próximos passos no painel, e por aqui eu posso explicar o processo."
+            : "Eu não posso confirmar uma vaga específica aberta pelo WhatsApp. A Workers United trabalha com um processo guiado de matching; primeiro crie sua conta em workersunited.eu/signup e complete seu perfil, e depois seguimos pelo painel e pelas dúvidas sobre o processo.";
     }
     if (language === "hi") {
         return workerRecord
-            ? "मैं WhatsApp पर किसी specific open job या available workers list की पुष्टि नहीं कर सकता। Workers United public job board नहीं है; अपना profile और next steps dashboard में follow कीजिए, और मैं यहाँ process समझा सकता हूँ।"
-            : "मैं WhatsApp पर किसी specific open job की पुष्टि नहीं कर सकता। Workers United public job board नहीं है; पहले workersunited.eu/signup पर account बनाइए और profile पूरा कीजिए, फिर हम dashboard और process सवालों के साथ आगे बढ़ते हैं।";
+            ? "मैं WhatsApp पर किसी specific open job या available workers list की पुष्टि नहीं कर सकता। Workers United guided matching process के ज़रिए काम करता है; अपना profile और next steps dashboard में follow कीजिए, और मैं यहाँ process समझा सकता हूँ।"
+            : "मैं WhatsApp पर किसी specific open job की पुष्टि नहीं कर सकता। Workers United guided matching process के ज़रिए काम करता है; पहले workersunited.eu/signup पर account बनाइए और profile पूरा कीजिए, फिर dashboard और process सवालों के साथ आगे बढ़ते हैं।";
     }
 
     return workerRecord
-        ? "I cannot confirm a specific open job or a list of available workers over WhatsApp. Workers United is not a public job board; please follow your profile and next steps in the dashboard, and I can explain the process here."
-        : "I cannot confirm a specific open job over WhatsApp. Workers United is not a public job board; first create your account at workersunited.eu/signup and complete your profile, then we continue through the dashboard and any process questions here.";
+        ? "I cannot confirm a specific open job or a list of available workers over WhatsApp. Workers United works through a guided matching process; please follow your profile and next steps in the dashboard, and I can explain the process here."
+        : "I cannot confirm a specific open job over WhatsApp. Workers United works through a guided matching process; first create your account at workersunited.eu/signup and complete your profile, then we continue through the dashboard and any process questions here.";
 }
 
 function applyWhatsAppReplyGuardrails({
