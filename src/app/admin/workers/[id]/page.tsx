@@ -1089,6 +1089,10 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                             const aiSummary = buildDocumentAiSummary(doc.document_type, doc.ocr_json, doc.reject_reason);
                                             const requestReason = buildDocumentRequestReason(doc.document_type, doc.ocr_json, doc.reject_reason);
                                             const isPdf = typeof doc.storage_path === "string" && doc.storage_path.toLowerCase().endsWith(".pdf");
+                                            const hasManualCrop = !!doc.ocr_json
+                                                && typeof doc.ocr_json === "object"
+                                                && !Array.isArray(doc.ocr_json)
+                                                && (doc.ocr_json as Record<string, unknown>).manual_crop_applied === true;
 
                                             return (
                                         <article
@@ -1123,6 +1127,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                     documentType={doc.document_type}
                                                     status={doc.status}
                                                     isPdf={isPdf}
+                                                    hasManualCrop={hasManualCrop}
                                                 >
                                                     {aiSummary ? (
                                                         <ModalDetailCard title="AI review summary" icon={<Brain size={14} />} tone="blue">

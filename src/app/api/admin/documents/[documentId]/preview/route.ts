@@ -42,6 +42,10 @@ type DocumentContextResult =
     }
     | { response: NextResponse };
 
+type ManualCropActionBody =
+    | { action: "restore_original" }
+    | { crop: unknown; documentId?: string };
+
 function getMimeType(fileName: string, fallback?: string | null) {
     if (fallback && fallback.trim().length > 0 && fallback !== "application/octet-stream") {
         return fallback;
@@ -84,6 +88,14 @@ function hasProcessedAutoCrop(ocrJson: Record<string, unknown>) {
 
 function hasManualCrop(ocrJson: Record<string, unknown>) {
     return ocrJson.manual_crop_applied === true;
+}
+
+function stripManualCropMetadata(ocrJson: Record<string, unknown>) {
+    const next = { ...ocrJson };
+    delete next.manual_crop_applied;
+    delete next.manual_crop_applied_at;
+    delete next.manual_crop;
+    return next;
 }
 
 function buildInlineResponse(buffer: Buffer, contentType: string, fileName: string) {
@@ -292,6 +304,65 @@ export async function POST(request: Request, { params }: RouteProps) {
         return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
     }
 
+    const actionBody = body as ManualCropActionBody | null;
+
+    if (actionBody && typeof actionBody === "object" && "action" in actionBody && actionBody.action === "restore_original") {
+        const backupStoragePath =
+            typeof ocrJson.manual_crop_original_storage_path === "string" && ocrJson.manual_crop_original_storage_path.trim().length > 0
+                ? ocrJson.manual_crop_original_storage_path.trim()
+                : null;
+
+        if (!backupStoragePath) {
+            return NextResponse.json({ error: "No saved original image is available for this document." }, { status: 400 });
+        }
+
+        const { data: backupFile, error: backupError } = await admin.storage
+            .from(WORKER_DOCUMENTS_BUCKET)
+            .download(backupStoragePath);
+
+        if (backupError || !backupFile) {
+            console.warn("[Admin preview] Failed to load manual-crop backup:", backupError);
+            return NextResponse.json({ error: "Could not load the saved original image." }, { status: 500 });
+        }
+
+        const backupBuffer = Buffer.from(await backupFile.arrayBuffer());
+        const backupContentType = backupFile.type?.trim() || contentType;
+        const { error: restoreError } = await admin.storage
+            .from(WORKER_DOCUMENTS_BUCKET)
+            .update(document.storage_path, backupBuffer, {
+                contentType: backupContentType,
+                upsert: true,
+            });
+
+        if (restoreError) {
+            console.warn("[Admin preview] Failed to restore original image:", restoreError);
+            return NextResponse.json({ error: "Failed to restore the original image." }, { status: 500 });
+        }
+
+        const restoredAt = new Date().toISOString();
+        const { error: updateError } = await admin
+            .from("worker_documents")
+            .update({
+                ocr_json: {
+                    ...stripManualCropMetadata(ocrJson),
+                    original_restored_after_manual_crop_at: restoredAt,
+                },
+                updated_at: restoredAt,
+            })
+            .eq("id", documentId);
+
+        if (updateError) {
+            console.warn("[Admin preview] Failed to clear manual crop metadata after restore:", updateError);
+            return NextResponse.json({ error: "Original image was restored, but metadata cleanup failed." }, { status: 500 });
+        }
+
+        return NextResponse.json({
+            ok: true,
+            restored: true,
+            previewUrl: `/api/admin/documents/${documentId}/preview?v=${Date.now()}`,
+        });
+    }
+
     const crop = sanitizeDocumentCrop((body as { crop?: unknown } | null)?.crop);
     if (!crop) {
         return NextResponse.json({ error: "A valid crop selection is required." }, { status: 400 });
@@ -345,11 +416,6 @@ export async function POST(request: Request, { params }: RouteProps) {
                     crop,
                     backupStoragePath,
                     appliedAt,
-                }),
-                ...buildAutoCropOcrPatch({
-                    cropApplied: true,
-                    crop,
-                    processedAt: appliedAt,
                 }),
             },
             updated_at: appliedAt,
