@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAgencyOwnedWorker, getAgencyWorkerName } from "@/lib/agencies";
 import { getWorkerCompletion } from "@/lib/profile-completion";
-import { getEntryFeeEligibility } from "@/lib/payment-eligibility";
+import { getEntryFeeEligibility, WORKER_ENTRY_FEE_READINESS_COLUMNS } from "@/lib/payment-eligibility";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { getAdminTestSession } from "@/lib/admin-test-mode";
 import { getAdminTestWorkerWorkspace, markAdminTestAgencyWorkerEntryFeePaid, markAdminTestWorkerEntryFeePaid } from "@/lib/admin-test-data";
@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
 
                 const { data: agencyWorkerRecord, error: agencyWorkerRecordError } = await admin
                     .from("worker_onboarding")
-                    .select("id, entry_fee_paid, admin_approved, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, submitted_full_name, submitted_email")
+                    .select("*")
                     .eq("id", worker.id)
                     .maybeSingle();
 
@@ -366,7 +366,7 @@ export async function POST(request: NextRequest) {
                 ? await loadCanonicalWorkerRecord(
                     admin,
                     paymentOwnerProfileId,
-                    "id, entry_fee_paid, admin_approved, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, address"
+                    WORKER_ENTRY_FEE_READINESS_COLUMNS
                 )
                 : { data: null, error: null };
             workerRecord = paymentOwnerProfileId ? initialWorkerRecord : agencyWorkerRecordForCheckout;
@@ -401,7 +401,7 @@ export async function POST(request: NextRequest) {
                 } = await loadCanonicalWorkerRecord(
                     admin,
                     paymentOwnerProfileId,
-                    "id, entry_fee_paid, admin_approved, status, job_search_active, queue_joined_at, updated_at, phone, nationality, current_country, preferred_job, address"
+                    WORKER_ENTRY_FEE_READINESS_COLUMNS
                 );
 
                 if (repairedWorkerRecordError) {
