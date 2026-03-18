@@ -4,9 +4,11 @@ import { sendWhatsAppText } from "@/lib/whatsapp";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { saveBrainFactsDedup } from "@/lib/brain-memory";
 import {
+    buildRegisteredWorkerWhatsAppReply,
     buildUnregisteredWorkerWhatsAppReply,
     buildCanonicalWhatsAppFacts,
     buildEmployerWhatsAppRules,
+    buildWhatsAppAutoHandoffReply,
     buildWorkerWhatsAppRules,
     detectWhatsAppLanguageCode,
     filterSafeWhatsAppBrainMemory,
@@ -16,7 +18,16 @@ import {
     resolveWhatsAppLanguageName,
     shouldStartWhatsAppOnboarding,
 } from "@/lib/whatsapp-brain";
+import {
+    analyzeWhatsAppConfusion,
+    humanizeWhatsAppHandoffReason,
+} from "@/lib/whatsapp-quality";
 import { loadCanonicalWorkerRecord, pickCanonicalWorkerRecord } from "@/lib/workers";
+import {
+    appendConversationMessage,
+    ensureSupportConversation,
+    getSupportAccessState,
+} from "@/lib/messaging";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -160,6 +171,11 @@ interface GuardrailResult {
     text: string;
     triggered: boolean;
     reason: "escalation" | "payment" | null;
+}
+
+interface SupportAccessSnapshot {
+    allowed: boolean;
+    reason: string | null;
 }
 
 function normalizePhone(rawPhone: string): string {
@@ -418,6 +434,96 @@ function applyWhatsAppReplyGuardrails({
     };
 }
 
+function truncateWhatsAppPreview(value: string, maxLength = 240): string {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    if (normalized.length <= maxLength) {
+        return normalized;
+    }
+
+    return `${normalized.slice(0, maxLength - 3)}...`;
+}
+
+async function logDeterministicWhatsAppReply(params: {
+    userId: string | null;
+    phone: string;
+    userMessage: string;
+    botResponse: string;
+    language: string;
+    intent: string;
+    flowKey: string;
+    responseType?: "deterministic" | "auto_handoff";
+}) {
+    await logServerActivity(
+        params.userId,
+        "whatsapp_deterministic_response",
+        "messaging",
+        {
+            phone: params.phone,
+            user_message: params.userMessage.substring(0, 200),
+            bot_response: params.botResponse.substring(0, 500),
+            language: params.language,
+            intent: params.intent,
+            flow_key: params.flowKey,
+            response_type: params.responseType || "deterministic",
+        }
+    );
+}
+
+async function createWhatsAppAutoHandoff(params: {
+    supabase: ReturnType<typeof createAdminClient>;
+    profileId: string;
+    normalizedPhone: string;
+    latestMessage: string;
+    language: string;
+    reason: string;
+    snippets: string[];
+}) {
+    const { conversation } = await ensureSupportConversation(params.supabase, params.profileId, "worker");
+    const summaryLines = [
+        "[WhatsApp auto-handoff]",
+        `Reason: ${humanizeWhatsAppHandoffReason(params.reason)}`,
+        `Phone: ${params.normalizedPhone}`,
+        `Latest user message: ${truncateWhatsAppPreview(params.latestMessage, 500)}`,
+    ];
+
+    if (params.snippets.length > 0) {
+        summaryLines.push(
+            "Recent issue snippets:",
+            ...params.snippets.map((snippet) => `- ${truncateWhatsAppPreview(snippet, 180)}`)
+        );
+    }
+
+    const { message } = await appendConversationMessage(
+        params.supabase,
+        conversation,
+        params.profileId,
+        "worker",
+        summaryLines.join("\n")
+    );
+
+    await params.supabase.from("conversation_flags").insert({
+        conversation_id: conversation.id,
+        message_id: message.id,
+        flag_type: "whatsapp_auto_handoff",
+    });
+
+    await logServerActivity(
+        params.profileId,
+        "whatsapp_auto_handoff_created",
+        "messaging",
+        {
+            phone: params.normalizedPhone,
+            reason: params.reason,
+            preview: truncateWhatsAppPreview(params.latestMessage),
+            conversation_id: conversation.id,
+            language: params.language,
+        },
+        "warning"
+    );
+
+    return conversation.id;
+}
+
 // ─── Meta signature verification ─────────────────────────────────────────────
 function verifyMetaSignature(rawBody: string, signature: string | null): boolean {
     if (!APP_SECRET) {
@@ -612,7 +718,7 @@ export async function POST(request: NextRequest) {
                 await logServerActivity(
                     workerRecord?.profile_id || "anonymous",
                     "whatsapp_message_received",
-                    "documents",
+                    "messaging",
                     { phone: normalizedPhone, message_type: messageType, content_preview: content.substring(0, 100), is_registered: !!workerRecord }
                 );
                 // ─── Admin Phone Detection ────────────────────────────────
@@ -721,10 +827,22 @@ export async function POST(request: NextRequest) {
 
                 if (!isTextLikeMessageType(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
+                        const mediaFallbackReply = getMediaAttachmentResponse(quickLang);
                         await sendWhatsAppText(
                             normalizedPhone,
-                            getMediaAttachmentResponse(quickLang),
+                            mediaFallbackReply,
                             workerRecord?.profile_id || undefined
+                        );
+                        await logServerActivity(
+                            workerRecord?.profile_id || "anonymous",
+                            "whatsapp_media_fallback",
+                            "messaging",
+                            {
+                                phone: normalizedPhone,
+                                message_type: messageType,
+                                bot_response: mediaFallbackReply.substring(0, 500),
+                            },
+                            "warning"
                         );
                         attachmentReplySent.add(normalizedPhone);
                     }
@@ -788,11 +906,13 @@ export async function POST(request: NextRequest) {
                 // ─── Intent-routed OpenAI AI Brain ───────────────────────
                 let aiResponse: string | null = null;
                 let routerDecision: WhatsAppRouterDecision | null = null;
+                let deterministicReplyFlowKey: string | null = null;
+                let responseType: "gpt" | "fallback" | "deterministic" | "auto_handoff" = "fallback";
                 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
                 if (OPENAI_API_KEY) {
                     try {
-                        const [historyMessages, brainMemory, businessFacts] = await Promise.all([
+                        const [historyMessages, brainMemory, businessFacts, supportAccess] = await Promise.all([
                             loadConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
                             loadBrainMemory(supabase),
                             (async () => {
@@ -803,6 +923,9 @@ export async function POST(request: NextRequest) {
                                     return "";
                                 }
                             })(),
+                            workerRecord?.profile_id
+                                ? getSupportAccessState(supabase, workerRecord.profile_id, "worker")
+                                : Promise.resolve(null as SupportAccessSnapshot | null),
                         ]);
 
                         routerDecision = await classifyWhatsAppIntent({
@@ -818,7 +941,7 @@ export async function POST(request: NextRequest) {
                         await logServerActivity(
                             workerRecord?.profile_id || "anonymous",
                             "whatsapp_router_decision",
-                            "documents",
+                            "messaging",
                             {
                                 phone: normalizedPhone,
                                 intent: routerDecision.intent,
@@ -838,18 +961,66 @@ export async function POST(request: NextRequest) {
                             })
                             : null;
 
-                        aiResponse = deterministicUnregisteredReply || await generateWhatsAppReply({
-                            apiKey: OPENAI_API_KEY,
-                            message: content,
-                            normalizedPhone,
-                            workerRecord,
-                            profile,
-                            isAdmin,
-                            businessFacts,
-                            brainMemory,
-                            historyMessages,
-                            routerDecision,
-                        });
+                        const deterministicRegisteredReply = workerRecord && !isEmployer && !isAdmin
+                            ? buildRegisteredWorkerWhatsAppReply({
+                                message: content,
+                                language: routerDecision.language,
+                                intent: routerDecision.intent,
+                                workerStatus: workerRecord.status,
+                                entryFeePaid: workerRecord.entry_fee_paid,
+                                adminApproved: workerRecord.admin_approved,
+                                queueJoinedAt: workerRecord.queue_joined_at,
+                                hasSupportAccess: !!supportAccess?.allowed,
+                            })
+                            : null;
+
+                        const confusionAnalysis = workerRecord && supportAccess?.allowed
+                            ? analyzeWhatsAppConfusion(historyMessages.map((entry) => ({
+                                direction: entry.direction,
+                                content: entry.content,
+                                created_at: entry.created_at,
+                            })))
+                            : null;
+
+                        if (confusionAnalysis?.triggered && workerRecord?.profile_id) {
+                            await createWhatsAppAutoHandoff({
+                                supabase,
+                                profileId: workerRecord.profile_id,
+                                normalizedPhone,
+                                latestMessage: content,
+                                language: routerDecision.language,
+                                reason: confusionAnalysis.reason || "support_loop",
+                                snippets: confusionAnalysis.snippets,
+                            });
+                            aiResponse = buildWhatsAppAutoHandoffReply({
+                                language: routerDecision.language,
+                                hasSupportAccess: true,
+                            });
+                            deterministicReplyFlowKey = `auto_handoff_${confusionAnalysis.reason || "support_loop"}`;
+                            responseType = "auto_handoff";
+                        } else if (deterministicUnregisteredReply) {
+                            aiResponse = deterministicUnregisteredReply;
+                            deterministicReplyFlowKey = `unregistered_${routerDecision.intent}`;
+                            responseType = "deterministic";
+                        } else if (deterministicRegisteredReply) {
+                            aiResponse = deterministicRegisteredReply;
+                            deterministicReplyFlowKey = `registered_${routerDecision.intent}`;
+                            responseType = "deterministic";
+                        } else {
+                            aiResponse = await generateWhatsAppReply({
+                                apiKey: OPENAI_API_KEY,
+                                message: content,
+                                normalizedPhone,
+                                workerRecord,
+                                profile,
+                                isAdmin,
+                                businessFacts,
+                                brainMemory,
+                                historyMessages,
+                                routerDecision,
+                            });
+                            responseType = "gpt";
+                        }
 
                         console.log(
                             `[WhatsApp] 🧠 ${WHATSAPP_RESPONSE_MODEL} (${routerDecision.intent}) response:`,
@@ -914,25 +1085,37 @@ export async function POST(request: NextRequest) {
                     : replyText;
 
                 if (finalReplyText) {
-                    await sendWhatsAppText(normalizedPhone, finalReplyText, workerRecord?.profile_id || undefined);
-                    // Log GPT response for quality review
-                    await logServerActivity(
-                        workerRecord?.profile_id || "anonymous",
-                        aiResponse ? "whatsapp_gpt_response" : "whatsapp_fallback_response",
-                        "documents",
-                        {
-                            phone: normalizedPhone,
-                            user_message: content.substring(0, 200),
-                            bot_response: finalReplyText.substring(0, 500),
-                            response_type: aiResponse
-                                ? (guardrailResult.triggered ? "gpt_guarded" : (finalReplyText !== replyText ? "gpt_language_fallback" : "gpt"))
-                                : "fallback",
-                            model: aiResponse ? WHATSAPP_RESPONSE_MODEL : "fallback",
-                            guardrail_reason: guardrailResult.reason,
-                            expected_language: latestMessageLanguage,
-                            language_forced_to_fallback: finalReplyText !== replyText,
+                        await sendWhatsAppText(normalizedPhone, finalReplyText, workerRecord?.profile_id || undefined);
+                        if (responseType === "deterministic" || responseType === "auto_handoff") {
+                            await logDeterministicWhatsAppReply({
+                                userId: workerRecord?.profile_id || null,
+                                phone: normalizedPhone,
+                                userMessage: content,
+                                botResponse: finalReplyText,
+                                language: routerDecision?.language || latestMessageLanguage,
+                                intent: routerDecision?.intent || "general",
+                                flowKey: deterministicReplyFlowKey || "deterministic",
+                                responseType,
+                            });
+                        } else {
+                            await logServerActivity(
+                                workerRecord?.profile_id || "anonymous",
+                                aiResponse ? "whatsapp_gpt_response" : "whatsapp_fallback_response",
+                                "messaging",
+                                {
+                                    phone: normalizedPhone,
+                                    user_message: content.substring(0, 200),
+                                    bot_response: finalReplyText.substring(0, 500),
+                                    response_type: aiResponse
+                                        ? (guardrailResult.triggered ? "gpt_guarded" : (finalReplyText !== replyText ? "gpt_language_fallback" : "gpt"))
+                                        : "fallback",
+                                    model: aiResponse ? WHATSAPP_RESPONSE_MODEL : "fallback",
+                                    guardrail_reason: guardrailResult.reason,
+                                    expected_language: latestMessageLanguage,
+                                    language_forced_to_fallback: finalReplyText !== replyText,
+                                }
+                            );
                         }
-                    );
                 }
             }
         }

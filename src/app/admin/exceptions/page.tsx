@@ -9,6 +9,7 @@ import {
     Hourglass,
     ListOrdered,
     MailX,
+    MessageSquareMore,
     ShieldCheck,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -121,6 +122,25 @@ export default async function AdminExceptionsPage() {
                         meta="Employer requests with no worker pipeline yet"
                         tone={snapshot.openJobRequestsWithoutOffers.length > 0 ? "warning" : "neutral"}
                         icon={<Briefcase size={18} />}
+                    />
+                    <ActionCard
+                        href="/admin/inbox"
+                        title="WhatsApp Quality"
+                        value={
+                            snapshot.whatsappQuality.guardedReplies
+                            + snapshot.whatsappQuality.languageFallbacks
+                            + snapshot.whatsappQuality.autoHandoffs
+                            + snapshot.whatsappQuality.openAIFailures
+                        }
+                        meta="24h guardrails, language rescues, handoffs, and AI failures"
+                        tone={
+                            snapshot.whatsappQuality.languageFallbacks > 0
+                            || snapshot.whatsappQuality.openAIFailures > 0
+                            || snapshot.whatsappQuality.autoHandoffs > 0
+                                ? "warning"
+                                : "neutral"
+                        }
+                        icon={<MessageSquareMore size={18} />}
                     />
                 </section>
 
@@ -259,6 +279,44 @@ export default async function AdminExceptionsPage() {
                         </div>
                     </section>
                 </div>
+
+                <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                    <SectionHeader
+                        title="WhatsApp Quality"
+                        description="Last 24 hours of deterministic replies, guardrails, language rescue, media fallback, and auto-handoff behavior."
+                        href="/admin/inbox"
+                        label="Open inbox"
+                    />
+                    <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                        <MiniMetric label="Deterministic" value={snapshot.whatsappQuality.deterministicReplies} />
+                        <MiniMetric label="Guarded" value={snapshot.whatsappQuality.guardedReplies} />
+                        <MiniMetric label="Lang rescue" value={snapshot.whatsappQuality.languageFallbacks} />
+                        <MiniMetric label="Auto handoff" value={snapshot.whatsappQuality.autoHandoffs} />
+                        <MiniMetric label="AI failures" value={snapshot.whatsappQuality.openAIFailures} />
+                        <MiniMetric label="Media fallback" value={snapshot.whatsappQuality.mediaFallbacks} />
+                    </div>
+
+                    <div className="mt-5 space-y-4">
+                        <SubSectionLabel label="Recent auto-handoffs" />
+                        {snapshot.whatsappQuality.recentAutoHandoffs.length === 0 ? (
+                            <EmptyState copy="No WhatsApp threads needed automatic support handoff in the last 24 hours." />
+                        ) : (
+                            snapshot.whatsappQuality.recentAutoHandoffs.map((entry) => (
+                                <WorkerIssueRow
+                                    key={`${entry.phone}-${entry.createdAt || "unknown"}`}
+                                    title={entry.reason}
+                                    subtitle={`${entry.phone} • ${formatDate(entry.createdAt)}`}
+                                    chips={["WhatsApp", "Auto handoff"]}
+                                    details={entry.preview}
+                                    primaryHref="/admin/inbox"
+                                    primaryLabel="Open inbox"
+                                    secondaryHref={entry.profileId ? `/admin/workers/${entry.profileId}` : "/admin/inbox"}
+                                    secondaryLabel={entry.profileId ? "Inspect worker" : "Open thread list"}
+                                />
+                            ))
+                        )}
+                    </div>
+                </section>
 
                 <div className="grid gap-6 xl:grid-cols-2">
                     <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
@@ -482,6 +540,15 @@ function Chip({ label, tone }: { label: string; tone: "neutral" | "warning" }) {
         <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${toneClasses}`}>
             {label}
         </span>
+    );
+}
+
+function MiniMetric({ label, value }: { label: string; value: number }) {
+    return (
+        <div className="rounded-[20px] border border-[#e6e6e1] bg-[#fcfcfb] px-4 py-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">{label}</div>
+            <div className="mt-2 text-2xl font-semibold text-[#18181b]">{value}</div>
+        </div>
     );
 }
 

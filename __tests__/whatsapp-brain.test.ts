@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+    buildRegisteredWorkerWhatsAppReply,
+    buildWhatsAppAutoHandoffReply,
     buildUnregisteredWorkerWhatsAppReply,
     buildCanonicalWhatsAppFacts,
     buildWorkerWhatsAppRules,
@@ -13,6 +15,7 @@ import {
     resolveWhatsAppLanguageName,
     shouldStartWhatsAppOnboarding,
 } from "@/lib/whatsapp-brain";
+import { analyzeWhatsAppConfusion } from "@/lib/whatsapp-quality";
 
 describe("whatsapp-brain guards", () => {
     it("does not start onboarding for normal vacancy questions", () => {
@@ -174,6 +177,62 @@ describe("whatsapp-brain guards", () => {
 
         expect(reply).toContain("$9");
         expect(reply).toContain("ne preko WhatsApp-a");
+    });
+
+    it("answers registered worker payment status deterministically once approval is done", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "Kako da platim?",
+            language: "Serbian",
+            intent: "price",
+            workerStatus: "APPROVED",
+            adminApproved: true,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("profil je odobren");
+        expect(reply).toContain("dashboard");
+        expect(reply).not.toContain("payment link");
+    });
+
+    it("answers registered worker support requests without inventing a handoff", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "Imam problem sa uplatom",
+            language: "Serbian",
+            intent: "support",
+            workerStatus: "APPROVED",
+            adminApproved: true,
+            entryFeePaid: true,
+            queueJoinedAt: "2026-03-18T10:00:00.000Z",
+            hasSupportAccess: true,
+        });
+
+        expect(reply).toContain("support inbox");
+        expect(reply).toContain("contact@workersunited.eu");
+        expect(reply).not.toContain("otvorio");
+        expect(reply).not.toContain("ticket");
+    });
+
+    it("builds an honest auto-handoff reply only when support access exists", () => {
+        const reply = buildWhatsAppAutoHandoffReply({
+            language: "Serbian",
+            hasSupportAccess: true,
+        });
+
+        expect(reply).toContain("support inbox");
+        expect(reply).toContain("prebacio");
+    });
+
+    it("detects repeated unresolved payment confusion before another AI answer is sent", () => {
+        const analysis = analyzeWhatsAppConfusion([
+            { direction: "inbound", content: "Website is not allowing me to pay the required $9" },
+            { direction: "outbound", content: "Please try again from your dashboard." },
+            { direction: "inbound", content: "I already tried all the solutions you suggested, but the problem persists" },
+            { direction: "inbound", content: "still not working, payment problem again" },
+        ]);
+
+        expect(analysis.triggered).toBe(true);
+        expect(analysis.reason).toBe("payment_loop");
+        expect(analysis.inboundBurst).toBeGreaterThanOrEqual(2);
     });
 
     it("filters legacy risky WhatsApp brain memory before it reaches prompts", () => {

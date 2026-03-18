@@ -1,5 +1,6 @@
 import type { AdminExceptionSnapshot } from "@/lib/admin-exceptions";
 import { isRecipientSideWhatsAppFailure } from "@/lib/whatsapp-health";
+import { detectWhatsAppConfusionCases, humanizeWhatsAppHandoffReason } from "@/lib/whatsapp-quality";
 
 export type OpsSignalSeverity = "critical" | "high" | "medium";
 export type OpsSectionStatus = "OK" | "WARNING" | "CRITICAL";
@@ -138,40 +139,6 @@ export interface BuildOpsMonitorReportInput {
     documents?: DocumentStats | null;
 }
 
-interface WhatsAppConfusionCase {
-    phone: string;
-    inboundCount: number;
-    complaintCount: number;
-    unansweredBurst: number;
-    sample: string[];
-}
-
-const CONFUSION_KEYWORDS = [
-    /not working/i,
-    /\bproblem\b/i,
-    /\bissue\b/i,
-    /\berror\b/i,
-    /\bstuck\b/i,
-    /\bhow\b/i,
-    /\bwhy\b/i,
-    /\bwhere\b/i,
-    /\bwhat\b/i,
-    /\bcannot\b/i,
-    /\bcan'?t\b/i,
-    /\bupload\b/i,
-    /\bdocument\b/i,
-    /\bpassport\b/i,
-    /\bdiploma\b/i,
-    /\bphoto\b/i,
-    /\bpayment\b/i,
-    /\bpaid\b/i,
-    /\bqueue\b/i,
-    /\bapprove/i,
-    /\bverification\b/i,
-    /\bverify\b/i,
-    /\bwrong\b/i,
-];
-
 function getCount(value: number | null | undefined) {
     return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -208,61 +175,6 @@ function absoluteHref(href: string, baseUrl?: string) {
     }
 
     return `${baseUrl.replace(/\/$/, "")}${href.startsWith("/") ? href : `/${href}`}`;
-}
-
-function detectWhatsAppConfusionCases(conversations: WhatsAppConversation[] | undefined): WhatsAppConfusionCase[] {
-    if (!conversations || conversations.length === 0) {
-        return [];
-    }
-
-    return conversations
-        .map((conversation) => {
-            const messages = conversation.messages || [];
-            const inboundMessages = messages.filter((message) => message.role === "user");
-            const complaintMessages = inboundMessages
-                .map((message) => (message.content || "").trim())
-                .filter((content) => content.length > 0 && CONFUSION_KEYWORDS.some((pattern) => pattern.test(content)));
-
-            let consecutiveInbound = 0;
-            let maxConsecutiveInbound = 0;
-            for (const message of messages) {
-                if (message.role === "user") {
-                    consecutiveInbound += 1;
-                    if (consecutiveInbound > maxConsecutiveInbound) {
-                        maxConsecutiveInbound = consecutiveInbound;
-                    }
-                } else {
-                    consecutiveInbound = 0;
-                }
-            }
-
-            const looksConfused =
-                complaintMessages.length >= 2
-                || maxConsecutiveInbound >= 2
-                || (inboundMessages.length >= 3 && complaintMessages.length >= 1);
-
-            if (!looksConfused) {
-                return null;
-            }
-
-            return {
-                phone: conversation.phone || "unknown",
-                inboundCount: inboundMessages.length,
-                complaintCount: complaintMessages.length,
-                unansweredBurst: maxConsecutiveInbound,
-                sample: complaintMessages.slice(0, 2),
-            } satisfies WhatsAppConfusionCase;
-        })
-        .filter((entry): entry is WhatsAppConfusionCase => Boolean(entry))
-        .sort((left, right) => {
-            if (right.unansweredBurst !== left.unansweredBurst) {
-                return right.unansweredBurst - left.unansweredBurst;
-            }
-            if (right.complaintCount !== left.complaintCount) {
-                return right.complaintCount - left.complaintCount;
-            }
-            return right.inboundCount - left.inboundCount;
-        });
 }
 
 function sectionStatus(signals: OpsMonitorSignal[]): OpsSectionStatus {
@@ -342,7 +254,7 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
         summary: `${confusionCases.length} recent WhatsApp conversation${confusionCases.length === 1 ? "" : "s"} show repeated user confusion or unanswered bursts.`,
         evidence: confusionCases.slice(0, 3).map((entry) => {
             const snippets = entry.sample.join(" | ") || "Repeated inbound burst without a clear resolution";
-            return `${entry.phone} • ${entry.inboundCount} inbound • burst ${entry.unansweredBurst} • ${snippets}`;
+            return `${entry.phone} • ${entry.inboundCount} inbound • burst ${entry.unansweredBurst} • ${humanizeWhatsAppHandoffReason(entry.reason)} • ${snippets}`;
         }),
         links: [{ label: "Open admin inbox", href: "/admin/inbox" }],
     } : null);

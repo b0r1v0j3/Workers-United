@@ -11,6 +11,11 @@ import {
 } from "@/lib/reporting";
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { pickCanonicalWorkerRecord } from "@/lib/workers";
+import {
+    buildWhatsAppQualitySnapshot,
+    type WhatsAppQualityActivityRow,
+    type WhatsAppQualitySnapshot,
+} from "@/lib/whatsapp-quality";
 
 type ProfileRow = Pick<Tables<"profiles">, "id" | "email" | "full_name" | "user_type" | "created_at">;
 type WorkerRow = Tables<"worker_onboarding">;
@@ -38,6 +43,15 @@ type EmailQueueRow = Pick<
     "id" | "user_id" | "recipient_email" | "status" | "error_message" | "created_at" | "email_type"
 >;
 type ActivityRow = Pick<Tables<"user_activity">, "user_id" | "action" | "created_at" | "details">;
+
+const WHATSAPP_QUALITY_ACTIONS = [
+    "whatsapp_gpt_response",
+    "whatsapp_fallback_response",
+    "whatsapp_deterministic_response",
+    "whatsapp_auto_handoff_created",
+    "whatsapp_openai_failed",
+    "whatsapp_media_fallback",
+] as const;
 
 const POST_ENTRY_WORKER_STATUSES = new Set([
     "IN_QUEUE",
@@ -130,6 +144,7 @@ export interface AdminExceptionSnapshot {
     verifiedButUnpaid: WorkerReadinessException[];
     paidButNotInQueue: QueueDriftException[];
     openJobRequestsWithoutOffers: JobRequestException[];
+    whatsappQuality: WhatsAppQualitySnapshot;
 }
 
 function asObject(value: Json | null | undefined): Record<string, Json> | null {
@@ -248,6 +263,7 @@ function buildWorkerBase(profile: ProfileRow, worker: WorkerRow | null): Excepti
 export async function getAdminExceptionSnapshot() {
     const admin = createTypedAdminClient();
     const ninetyDaysAgoIso = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const twentyFourHoursAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const [
         { data: profiles, error: profilesError },
@@ -260,6 +276,7 @@ export async function getAdminExceptionSnapshot() {
         { data: offers, error: offersError },
         { data: failedEmails, error: failedEmailsError },
         { data: paymentActivities, error: paymentActivitiesError },
+        { data: recentWhatsAppActivities, error: recentWhatsAppActivitiesError },
     ] = await Promise.all([
         admin.from("profiles").select("id, email, full_name, user_type, created_at"),
         admin
@@ -283,6 +300,12 @@ export async function getAdminExceptionSnapshot() {
             .select("user_id, action, created_at, details")
             .in("action", ["checkout_session_created", "payment_completed"])
             .range(0, 3999),
+        admin
+            .from("user_activity")
+            .select("user_id, action, created_at, details")
+            .gte("created_at", twentyFourHoursAgoIso)
+            .in("action", [...WHATSAPP_QUALITY_ACTIONS])
+            .range(0, 1999),
     ]);
 
     if (profilesError) throw profilesError;
@@ -295,6 +318,7 @@ export async function getAdminExceptionSnapshot() {
     if (offersError) throw offersError;
     if (failedEmailsError) throw failedEmailsError;
     if (paymentActivitiesError) throw paymentActivitiesError;
+    if (recentWhatsAppActivitiesError) throw recentWhatsAppActivitiesError;
 
     const typedProfiles = (profiles || []) as ProfileRow[];
     const typedWorkers = (workerRows || []) as WorkerRow[];
@@ -308,6 +332,8 @@ export async function getAdminExceptionSnapshot() {
         (entry) => entry.status === "failed" || !!entry.error_message
     );
     const typedActivities = (paymentActivities || []) as ActivityRow[];
+    const typedRecentWhatsAppActivities = (recentWhatsAppActivities || []) as WhatsAppQualityActivityRow[];
+    const whatsappQuality = buildWhatsAppQualitySnapshot(typedRecentWhatsAppActivities);
 
     const profileMap = new Map(typedProfiles.map((profile) => [profile.id, profile]));
     const employerById = new Map(typedEmployers.map((employer) => [employer.id, employer]));
@@ -622,5 +648,6 @@ export async function getAdminExceptionSnapshot() {
         verifiedButUnpaid,
         paidButNotInQueue,
         openJobRequestsWithoutOffers,
+        whatsappQuality,
     } satisfies AdminExceptionSnapshot;
 }
