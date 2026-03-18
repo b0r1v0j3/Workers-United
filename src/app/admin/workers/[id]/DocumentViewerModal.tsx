@@ -17,6 +17,7 @@ interface DocumentViewerModalProps {
     documentType: string;
     status: string;
     isPdf: boolean;
+    hasManualCrop: boolean;
     children: ReactNode;
 }
 
@@ -30,6 +31,7 @@ export default function DocumentViewerModal({
     documentType,
     status,
     isPdf,
+    hasManualCrop,
     children,
 }: DocumentViewerModalProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -44,6 +46,8 @@ export default function DocumentViewerModal({
     const [cropError, setCropError] = useState<string | null>(null);
     const [cropSuccess, setCropSuccess] = useState<string | null>(null);
     const [isSavingCrop, setIsSavingCrop] = useState(false);
+    const [hasRestorableOriginal, setHasRestorableOriginal] = useState(hasManualCrop);
+    const [isRestoringOriginal, setIsRestoringOriginal] = useState(false);
     const [isDrawingCrop, setIsDrawingCrop] = useState(false);
     const imageRef = useRef<HTMLImageElement | null>(null);
     const cropStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -170,6 +174,42 @@ export default function DocumentViewerModal({
         setCropMode(false);
     }
 
+    async function restoreOriginalImage() {
+        if (isRestoringOriginal || !hasRestorableOriginal) {
+            return;
+        }
+
+        setIsRestoringOriginal(true);
+        setCropError(null);
+        setCropSuccess(null);
+        setCropMode(false);
+        setCropSelection(null);
+
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ action: "restore_original", documentId }),
+            });
+
+            const data = await response.json().catch(() => null) as { error?: string } | null;
+            if (!response.ok) {
+                throw new Error(data?.error || `Restore request failed (${response.status})`);
+            }
+
+            setImageVersion(Date.now());
+            setHasRestorableOriginal(false);
+            setCropSuccess("Original image restored from backup. The preview has been refreshed.");
+        } catch (error) {
+            setCropError(error instanceof Error ? error.message : "Failed to restore the original image.");
+        } finally {
+            setIsRestoringOriginal(false);
+        }
+    }
+
     function getRelativePoint(clientX: number, clientY: number) {
         const rect = imageRef.current?.getBoundingClientRect();
         if (!rect || rect.width <= 0 || rect.height <= 0) {
@@ -271,6 +311,7 @@ export default function DocumentViewerModal({
             }
 
             setImageVersion(Date.now());
+            setHasRestorableOriginal(true);
             setCropSuccess("Crop saved. The preview has been refreshed and the original file backup was preserved.");
             setCropMode(false);
             setCropSelection(null);
@@ -455,13 +496,25 @@ export default function DocumentViewerModal({
 
                             <div className="mt-4 flex flex-wrap gap-2">
                                 {!cropMode ? (
-                                    <button
-                                        type="button"
-                                        onClick={startCropMode}
-                                        className="rounded-xl bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
-                                    >
-                                        Start manual crop
-                                    </button>
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={startCropMode}
+                                            className="rounded-xl bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
+                                        >
+                                            Start manual crop
+                                        </button>
+                                        {hasRestorableOriginal ? (
+                                            <button
+                                                type="button"
+                                                onClick={restoreOriginalImage}
+                                                disabled={isRestoringOriginal}
+                                                className="rounded-xl border border-[#d6d3d1] bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                {isRestoringOriginal ? "Restoring..." : "Restore original"}
+                                            </button>
+                                        ) : null}
+                                    </>
                                 ) : (
                                     <>
                                         <button
