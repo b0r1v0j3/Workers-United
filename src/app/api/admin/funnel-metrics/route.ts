@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, getAllAuthUsers } from '@/lib/supabase/admin';
 import { isGodModeUser } from '@/lib/godmode';
-import { classifyEntryFeePaymentQuality } from '@/lib/payment-quality';
+import { classifyEntryFeePaymentQuality, readPaymentQualityMarketSignals } from '@/lib/payment-quality';
 import { getWorkerCompletion } from '@/lib/profile-completion';
 import { isReportablePaymentProfile } from '@/lib/reporting';
 import { pickCanonicalWorkerRecord } from '@/lib/workers';
@@ -384,6 +384,8 @@ export async function GET(request: Request) {
             abandoned: 0,
             bank_declined: 0,
             stripe_blocked: 0,
+            worker_countries: [] as Array<{ country: string; count: number }>,
+            billing_countries: [] as Array<{ country: string; count: number }>,
             recent_issues: [] as Array<{
                 profile_id: string;
                 full_name: string;
@@ -392,12 +394,17 @@ export async function GET(request: Request) {
                 outcome: string;
                 outcome_label: string;
                 outcome_detail: string;
+                worker_country: string | null;
+                billing_country: string | null;
+                card_country: string | null;
                 hours_since_checkout: number | null;
                 last_event_at: string | null;
                 workspace_href: string;
                 case_href: string;
             }>,
         };
+        const workerCountryCounts = new Map<string, number>();
+        const billingCountryCounts = new Map<string, number>();
 
         for (const [profileId, latestAttempt] of latestEntryFeeAttemptByProfile.entries()) {
             const profile = profileMap.get(profileId);
@@ -417,6 +424,7 @@ export async function GET(request: Request) {
             const hoursSinceCheckout = latestAttempt.checkoutCreatedAt
                 ? Math.max(1, Math.floor((Date.now() - latestAttempt.checkoutCreatedAt.getTime()) / (1000 * 60 * 60)))
                 : null;
+            const marketSignals = readPaymentQualityMarketSignals(latestAttempt.payment.metadata);
             const classification = classifyEntryFeePaymentQuality({
                 status: latestAttempt.payment.status,
                 metadata: latestAttempt.payment.metadata,
@@ -434,6 +442,19 @@ export async function GET(request: Request) {
                 continue;
             }
 
+            if (marketSignals.workerCountry) {
+                workerCountryCounts.set(
+                    marketSignals.workerCountry,
+                    (workerCountryCounts.get(marketSignals.workerCountry) || 0) + 1
+                );
+            }
+            if (marketSignals.billingCountry) {
+                billingCountryCounts.set(
+                    marketSignals.billingCountry,
+                    (billingCountryCounts.get(marketSignals.billingCountry) || 0) + 1
+                );
+            }
+
             paymentQuality.recent_issues.push({
                 profile_id: profileId,
                 full_name: profile.full_name || profile.email?.split('@')[0] || 'Worker',
@@ -442,6 +463,9 @@ export async function GET(request: Request) {
                 outcome: classification.outcome,
                 outcome_label: classification.label,
                 outcome_detail: classification.detail,
+                worker_country: marketSignals.workerCountry,
+                billing_country: marketSignals.billingCountry,
+                card_country: marketSignals.cardCountry,
                 hours_since_checkout: hoursSinceCheckout,
                 last_event_at: lastEventAt?.toISOString() || latestAttempt.checkoutCreatedAt?.toISOString() || null,
                 workspace_href: `/profile/worker?inspect=${profileId}`,
@@ -452,6 +476,12 @@ export async function GET(request: Request) {
         paymentQuality.recent_issues.sort((left, right) =>
             new Date(right.last_event_at || 0).getTime() - new Date(left.last_event_at || 0).getTime()
         );
+        paymentQuality.worker_countries = Array.from(workerCountryCounts.entries())
+            .map(([country, count]) => ({ country, count }))
+            .sort((left, right) => right.count - left.count);
+        paymentQuality.billing_countries = Array.from(billingCountryCounts.entries())
+            .map(([country, count]) => ({ country, count }))
+            .sort((left, right) => right.count - left.count);
 
         const timeSeriesData = Array.from(timeSeriesMap.values());
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyEntryFeePaymentQuality } from "@/lib/payment-quality";
+import { classifyEntryFeePaymentQuality, readPaymentQualityMarketSignals } from "@/lib/payment-quality";
 
 describe("payment quality helpers", () => {
     it("classifies issuer declines from charge telemetry", () => {
@@ -65,6 +65,18 @@ describe("payment quality helpers", () => {
         })).toMatchObject({
             outcome: "active",
             label: "Active checkout",
+        });
+    });
+
+    it("reads worker and billing market signals from payment metadata", () => {
+        expect(readPaymentQualityMarketSignals({
+            worker_country: "Morocco",
+            stripe_billing_country: "MA",
+            stripe_card_country: "MA",
+        })).toEqual({
+            workerCountry: "Morocco",
+            billingCountry: "MA",
+            cardCountry: "MA",
         });
     });
 });
