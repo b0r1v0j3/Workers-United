@@ -24,7 +24,22 @@ export interface BrainLearningCandidate {
     content: string;
 }
 
+export interface WhatsAppBrainMemoryEntry {
+    category: string;
+    content: string;
+    confidence: number;
+}
+
+export type WhatsAppLanguageCode = "en" | "sr" | "ar" | "fr" | "pt" | "hi";
+
 const WHATSAPP_ONBOARDING_PATTERN = /fill.*profile.*whatsapp|complete.*profile.*whatsapp|register.*whatsapp|whatsapp.*profile|whatsapp.*register|profile.*on whatsapp|popuni.*profil.*whatsapp|profil.*na whatsapp|registr.*preko whatsapp|registro.*whatsapp|perfil.*whatsapp/i;
+const SERBIAN_LATIN_PATTERN = /\b(pozdrav|zdravo|cao|ćao|dobar dan|dobro vece|dobro veče|dobro jutro|hvala|molim|ocu|hoću|hocu|zelim|želim|posao|radnik|radim|koliko|kosta|košta|cena|cijena|dokumenti|pasos|pasoš|profil|status|red|odobren|uplata|platim|placanje|plaćanje|voza[cč]|gra[dđ]evin|skladi|magacin|spanij|nemack|nemačk|srpski|engleski|jezik|jezici)\b/i;
+const EMPLOYER_LEAD_PATTERN = /\b(employer|company|business|firm|hire|hiring|recruit(ing|er)?|need workers|looking for workers|we need workers|we are hiring|poslodavac|firma|kompanija|zapo[sš]ljavamo|treba(?:ju)? nam radnici|tra[zž]imo radnike)\b/i;
+const WORKER_LEAD_PATTERN = /\b(worker|job|work abroad|looking for a job|looking for work|need a job|i want a job|radnik|posao|tra[zž]im posao|ocu posao|ho[ćc]u posao|[zž]elim posao|radim kao|imam iskustva)\b/i;
+const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|koliko|kosta|košta|cena|cijena|platim|platiti|uplata|placanje|plaćanje)\b/i;
+const DOCUMENT_HINT_PATTERN = /\b(document|documents|passport|diploma|photo|upload|verification|dokumenti|dokumenta|pasos|pasoš|diploma|slika|fotografija|upload|verifikacija)\b/i;
+const STATUS_HINT_PATTERN = /\b(status|profile|approval|approved|queue|support|profil|odobren|odobreno|red|podrska|podrška)\b/i;
+const JOB_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|ocu posao|ho[ćc]u posao|tra[zž]im posao|looking for work|looking for a job)\b/i;
 
 const SAFE_BRAIN_LEARNING_CATEGORIES = new Set([
     "common_question",
@@ -46,8 +61,166 @@ function normalizeBrainLearningContent(content: string): string {
     return content.trim().replace(/\s+/g, " ");
 }
 
+function getLanguageName(code: WhatsAppLanguageCode): string {
+    switch (code) {
+        case "sr":
+            return "Serbian";
+        case "ar":
+            return "Arabic";
+        case "fr":
+            return "French";
+        case "pt":
+            return "Portuguese";
+        case "hi":
+            return "Hindi";
+        default:
+            return "English";
+    }
+}
+
+function getLanguageCodeFromLabel(label?: string | null): WhatsAppLanguageCode | null {
+    const normalized = (label || "").trim().toLowerCase();
+    if (!normalized) return null;
+    if (normalized.startsWith("sr") || normalized.includes("serb") || normalized.includes("croat") || normalized.includes("bosnian") || normalized.includes("montenegrin")) return "sr";
+    if (normalized.startsWith("ar") || normalized.includes("arab")) return "ar";
+    if (normalized.startsWith("fr") || normalized.includes("french")) return "fr";
+    if (normalized.startsWith("pt") || normalized.includes("portug") || normalized.includes("brazil")) return "pt";
+    if (normalized.startsWith("hi") || normalized.includes("hindi")) return "hi";
+    if (normalized.startsWith("en") || normalized.includes("english")) return "en";
+    return null;
+}
+
 export function shouldStartWhatsAppOnboarding(message: string): boolean {
     return WHATSAPP_ONBOARDING_PATTERN.test(message.toLowerCase().trim());
+}
+
+export function detectWhatsAppLanguageCode(message: string): WhatsAppLanguageCode {
+    const normalized = message.trim().toLowerCase();
+
+    if (/[\u0600-\u06FF]/.test(message)) return "ar";
+    if (/[\u0900-\u097F]/.test(message)) return "hi";
+    if (/\b(bonjour|salut|emploi|travail|merci|oui|non)\b/i.test(normalized)) return "fr";
+    if (/\b(olá|ola|emprego|trabalho|obrigado|sim|não|nao)\b/i.test(normalized)) return "pt";
+    if (/[\u0400-\u04FF]/.test(message) || /[čćžšđ]/i.test(message) || SERBIAN_LATIN_PATTERN.test(normalized)) return "sr";
+
+    return "en";
+}
+
+export function resolveWhatsAppLanguageName(message: string, detectedLanguage?: string | null): string {
+    const quickCode = detectWhatsAppLanguageCode(message);
+    const detectedCode = getLanguageCodeFromLabel(detectedLanguage);
+
+    if (!detectedCode) {
+        return getLanguageName(quickCode);
+    }
+
+    if (quickCode !== "en" && detectedCode !== quickCode) {
+        return getLanguageName(quickCode);
+    }
+
+    return getLanguageName(detectedCode);
+}
+
+export function looksLikeEmployerWhatsAppLead(message: string): boolean {
+    const normalized = message.trim().toLowerCase();
+    return EMPLOYER_LEAD_PATTERN.test(normalized) && !WORKER_LEAD_PATTERN.test(normalized);
+}
+
+export function looksLikeWorkerWhatsAppLead(message: string): boolean {
+    return WORKER_LEAD_PATTERN.test(message.trim().toLowerCase());
+}
+
+export function buildUnregisteredWorkerWhatsAppReply({
+    message,
+    language,
+    intent,
+    website = "workersunited.eu",
+    supportEmail = "contact@workersunited.eu",
+    requiredDocuments = "passport, diploma or work certificate, and biometric photo",
+}: {
+    message: string;
+    language: string;
+    intent: string;
+    website?: string;
+    supportEmail?: string;
+    requiredDocuments?: string;
+}): string | null {
+    const normalized = message.trim().toLowerCase();
+    const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(message);
+    const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
+    const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
+    const wantsStatus = intent === "status" || intent === "support" || STATUS_HINT_PATTERN.test(normalized);
+    const wantsJobHelp = intent === "job_intent" || intent === "general" || JOB_HINT_PATTERN.test(normalized) || looksLikeWorkerWhatsAppLead(message);
+
+    if (wantsPrice) {
+        switch (lang) {
+            case "sr":
+                return `Job Finder košta $9, ali se to ne plaća odmah. Prvo napravite nalog na ${website}/signup i završite profil; checkout se otključava tek kada profil bude kompletan i admin ga odobri, a uplata se pokreće iz dashboard-a, ne preko WhatsApp-a.`;
+            case "ar":
+                return `تكلفة Job Finder هي $9، لكن ذلك لا يُدفع فورًا. أنشئ حسابك أولاً على ${website}/signup وأكمل ملفك؛ يتم فتح الدفع فقط بعد اكتمال الملف وموافقة الإدارة، ويبدأ الدفع من لوحة التحكم وليس عبر WhatsApp.`;
+            case "fr":
+                return `Job Finder coûte $9, mais ce n’est pas à payer immédiatement. Créez d’abord votre compte sur ${website}/signup et complétez votre profil ; le paiement ne s’ouvre qu’après profil complet et validation admin, et il démarre depuis le tableau de bord, pas via WhatsApp.`;
+            case "pt":
+                return `O Job Finder custa $9, mas isso não é pago imediatamente. Primeiro crie sua conta em ${website}/signup e complete seu perfil; o checkout só é liberado após perfil completo e aprovação admin, e o pagamento começa no painel, não pelo WhatsApp.`;
+            case "hi":
+                return `Job Finder की कीमत $9 है, लेकिन यह तुरंत pay नहीं किया जाता। पहले ${website}/signup पर account बनाइए और profile पूरा कीजिए; checkout तभी unlock होता है जब profile complete हो और admin approve करे, और payment dashboard से शुरू होता है, WhatsApp से नहीं।`;
+            default:
+                return `Job Finder costs $9, but that is not paid immediately. First create your account at ${website}/signup and complete your profile; checkout unlocks only after the profile is complete and admin approves it, and payment starts from the dashboard, not through WhatsApp.`;
+        }
+    }
+
+    if (wantsDocuments) {
+        switch (lang) {
+            case "sr":
+                return `Potrebna dokumenta su ${requiredDocuments}. Dokumenta se uploaduju kroz dashboard na ${website}/signup nakon registracije; WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
+            case "ar":
+                return `المستندات المطلوبة هي ${requiredDocuments}. يتم رفع المستندات من خلال لوحة التحكم بعد التسجيل على ${website}/signup؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
+            case "fr":
+                return `Les documents requis sont : ${requiredDocuments}. Les documents se téléversent dans le tableau de bord après inscription sur ${website}/signup ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil pour le moment.`;
+            case "pt":
+                return `Os documentos necessários são ${requiredDocuments}. Os documentos são enviados pelo painel após o cadastro em ${website}/signup; anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`;
+            case "hi":
+                return `ज़रूरी documents हैं: ${requiredDocuments}. Documents registration के बाद ${website}/signup से dashboard में upload किए जाते हैं; WhatsApp attachments अभी profile से automatically link नहीं होते।`;
+            default:
+                return `The required documents are ${requiredDocuments}. Documents are uploaded in the dashboard after registration at ${website}/signup; WhatsApp attachments are not linked to the profile automatically yet.`;
+        }
+    }
+
+    if (wantsStatus) {
+        switch (lang) {
+            case "sr":
+                return `Za ovaj broj još ne vidim registrovan worker nalog. Prvi korak je da napravite nalog na ${website}/signup; kada nalog postoji, status, dokumenta i sledeći koraci se prate kroz dashboard. Ako imate tehnički problem, pošaljite kratak opis na ${supportEmail}.`;
+            case "ar":
+                return `لا أرى حتى الآن حساب عامل مسجل لهذا الرقم. الخطوة الأولى هي إنشاء حساب على ${website}/signup؛ وبعد وجود الحساب تتم متابعة الحالة والمستندات والخطوات التالية من خلال لوحة التحكم. إذا كانت لديك مشكلة تقنية فأرسل وصفًا قصيرًا إلى ${supportEmail}.`;
+            case "fr":
+                return `Je ne vois pas encore de compte worker enregistré pour ce numéro. La première étape est de créer un compte sur ${website}/signup ; ensuite le statut, les documents et les prochaines étapes se suivent dans le tableau de bord. En cas de problème technique, envoyez une courte description à ${supportEmail}.`;
+            case "pt":
+                return `Ainda não vejo uma conta de worker registrada para este número. O primeiro passo é criar uma conta em ${website}/signup; depois disso, status, documentos e próximos passos são acompanhados no painel. Se houver problema técnico, envie uma breve descrição para ${supportEmail}.`;
+            case "hi":
+                return `इस नंबर के लिए अभी मुझे registered worker account नहीं दिख रहा। पहला step है ${website}/signup पर account बनाना; उसके बाद status, documents और next steps dashboard में दिखते हैं। अगर technical problem है तो short description ${supportEmail} पर भेजिए।`;
+            default:
+                return `I do not see a registered worker account for this number yet. The first step is to create an account at ${website}/signup; after that, status, documents, and next steps are tracked in the dashboard. If you have a technical issue, send a short description to ${supportEmail}.`;
+        }
+    }
+
+    if (wantsJobHelp) {
+        switch (lang) {
+            case "sr":
+                return `Mogu da pomognem, ali ne mogu da potvrdim konkretan otvoren posao preko WhatsApp-a. Workers United nije javni oglasnik; prvi korak je da napravite nalog na ${website}/signup i popunite profil, pa onda nastavljamo kroz dashboard ili ovde ako imate pitanja oko procesa.`;
+            case "ar":
+                return `يمكنني المساعدة، لكن لا أستطيع تأكيد وظيفة محددة مفتوحة عبر WhatsApp. Workers United ليس لوحة وظائف عامة؛ الخطوة الأولى هي إنشاء حساب على ${website}/signup وإكمال الملف، وبعدها نتابع من خلال لوحة التحكم أو هنا إذا كانت لديك أسئلة عن العملية.`;
+            case "fr":
+                return `Je peux aider, mais je ne peux pas confirmer une offre précise ouverte via WhatsApp. Workers United n’est pas un tableau public d’annonces ; la première étape est de créer un compte sur ${website}/signup et de compléter le profil, puis nous continuons via le tableau de bord ou ici pour les questions sur le processus.`;
+            case "pt":
+                return `Posso ajudar, mas não posso confirmar uma vaga específica aberta pelo WhatsApp. Workers United não é um quadro público de vagas; o primeiro passo é criar uma conta em ${website}/signup e completar o perfil, e depois seguimos pelo painel ou por aqui para dúvidas sobre o processo.`;
+            case "hi":
+                return `मैं मदद कर सकता हूँ, लेकिन WhatsApp पर किसी specific open job की पुष्टि नहीं कर सकता। Workers United public job board नहीं है; पहला step ${website}/signup पर account बनाना और profile पूरा करना है, उसके बाद हम dashboard या यहीं process के सवालों पर आगे बढ़ते हैं।`;
+            default:
+                return `I can help, but I cannot confirm a specific open job over WhatsApp. Workers United is not a public job board; the first step is to create an account at ${website}/signup and complete the profile, then we continue through the dashboard or here for process questions.`;
+        }
+    }
+
+    return null;
 }
 
 export function buildCanonicalWhatsAppFacts({
@@ -172,4 +345,22 @@ export function filterSafeBrainLearnings(candidates: BrainLearningCandidate[]): 
     }
 
     return filtered;
+}
+
+export function filterSafeWhatsAppBrainMemory(entries: WhatsAppBrainMemoryEntry[]): WhatsAppBrainMemoryEntry[] {
+    const safeEntries = filterSafeBrainLearnings(
+        entries.map((entry) => ({
+            category: entry.category,
+            content: entry.content,
+        }))
+    );
+
+    return safeEntries.map((safeEntry) => {
+        const original = entries.find((entry) => entry.category === safeEntry.category && normalizeBrainLearningContent(entry.content) === safeEntry.content);
+        return {
+            category: safeEntry.category,
+            content: safeEntry.content,
+            confidence: original?.confidence ?? 0,
+        };
+    });
 }

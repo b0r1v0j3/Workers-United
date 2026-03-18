@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+    buildUnregisteredWorkerWhatsAppReply,
     buildCanonicalWhatsAppFacts,
     buildWorkerWhatsAppRules,
+    detectWhatsAppLanguageCode,
+    filterSafeWhatsAppBrainMemory,
     filterSafeBrainLearnings,
+    looksLikeEmployerWhatsAppLead,
+    looksLikeWorkerWhatsAppLead,
+    resolveWhatsAppLanguageName,
     shouldStartWhatsAppOnboarding,
 } from "@/lib/whatsapp-brain";
 
@@ -77,6 +83,74 @@ describe("whatsapp-brain guards", () => {
             {
                 category: "copy_rule",
                 content: "Keep the first WhatsApp reply shorter and answer the first question before asking another.",
+            },
+        ]);
+    });
+
+    it("detects Serbian written in plain Latin and keeps the reply language Serbian", () => {
+        expect(detectWhatsAppLanguageCode("Pozdrav")).toBe("sr");
+        expect(detectWhatsAppLanguageCode("Ocu posao")).toBe("sr");
+        expect(resolveWhatsAppLanguageName("Pozdrav", "English")).toBe("Serbian");
+    });
+
+    it("does not treat an ordinary Serbian worker lead as an employer lead", () => {
+        expect(looksLikeWorkerWhatsAppLead("Ocu posao")).toBe(true);
+        expect(looksLikeEmployerWhatsAppLead("Pozdrav")).toBe(false);
+        expect(looksLikeEmployerWhatsAppLead("Trebaju nam radnici za firmu")).toBe(true);
+    });
+
+    it("builds a safe pre-registration worker reply without premature payment for generic job intent", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "Ocu posao",
+            language: "Serbian",
+            intent: "job_intent",
+        });
+
+        expect(reply).toContain("ne mogu da potvrdim konkretan otvoren posao");
+        expect(reply).toContain("workersunited.eu/signup");
+        expect(reply).not.toContain("$9");
+    });
+
+    it("allows price explanations for unregistered workers without implying direct WhatsApp payment", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "Koliko kosta",
+            language: "Serbian",
+            intent: "price",
+        });
+
+        expect(reply).toContain("$9");
+        expect(reply).toContain("ne preko WhatsApp-a");
+    });
+
+    it("filters legacy risky WhatsApp brain memory before it reaches prompts", () => {
+        const filtered = filterSafeWhatsAppBrainMemory([
+            {
+                category: "admin_rule",
+                content: "Always redirect users to the $9 sign-up and say we offer jobs across Europe.",
+                confidence: 1,
+            },
+            {
+                category: "error_fix",
+                content: "Avoid claiming specific role availability when available positions are unknown.",
+                confidence: 0.7,
+            },
+            {
+                category: "copy_rule",
+                content: "Keep the first WhatsApp reply shorter and answer the first question before asking another.",
+                confidence: 0.9,
+            },
+        ]);
+
+        expect(filtered).toEqual([
+            {
+                category: "error_fix",
+                content: "Avoid claiming specific role availability when available positions are unknown.",
+                confidence: 0.7,
+            },
+            {
+                category: "copy_rule",
+                content: "Keep the first WhatsApp reply shorter and answer the first question before asking another.",
+                confidence: 0.9,
             },
         ]);
     });
