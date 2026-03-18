@@ -1,9 +1,60 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@/lib/database.types";
 import { isGodModeUser } from "@/lib/godmode";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { queueEmail } from "@/lib/email-templates";
+import { syncWorkerReviewStatus } from "@/lib/worker-review";
+import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import {
+    AGENCY_DRAFT_DOCUMENT_OWNER_KEY,
+    resolveAgencyWorkerDocumentOwnerId,
+} from "@/lib/agency-draft-documents";
+
+async function resolveAdminReviewContext(admin: ReturnType<typeof createAdminClient>, userId: string) {
+    const canonicalWorker = await loadCanonicalWorkerRecord<{
+        id: string;
+        profile_id?: string | null;
+        submitted_full_name?: string | null;
+        application_data?: Json | null;
+    }>(
+        admin,
+        userId,
+        "id, profile_id, submitted_full_name, application_data"
+    ).then((result) => result.data);
+
+    if (canonicalWorker?.id) {
+        return {
+            workerId: canonicalWorker.id,
+            profileId: canonicalWorker.profile_id || userId,
+            documentOwnerId: resolveAgencyWorkerDocumentOwnerId(canonicalWorker) || userId,
+            fullNameFallback: canonicalWorker.submitted_full_name || null,
+        };
+    }
+
+    const { data: draftWorker } = await admin
+        .from("worker_onboarding")
+        .select("id, profile_id, submitted_full_name, application_data")
+        .contains("application_data", { [AGENCY_DRAFT_DOCUMENT_OWNER_KEY]: userId })
+        .maybeSingle();
+
+    if (draftWorker?.id) {
+        return {
+            workerId: draftWorker.id,
+            profileId: draftWorker.profile_id || null,
+            documentOwnerId: userId,
+            fullNameFallback: draftWorker.submitted_full_name || null,
+        };
+    }
+
+    return {
+        workerId: null,
+        profileId: userId,
+        documentOwnerId: userId,
+        fullNameFallback: null,
+    };
+}
 
 // ─── Admin Document Review ──────────────────────────────────────────────────
 // Admin approves or rejects a document with optional feedback.
@@ -29,36 +80,44 @@ export async function POST(request: Request) {
         }
 
         const admin = createAdminClient();
+        const reviewContext = await resolveAdminReviewContext(admin, userId);
+        const notificationProfileId = reviewContext.profileId || null;
 
         if (action === "approve") {
             // Set to verified
-            await admin.from("worker_documents").update({
+            const { error: approveError } = await admin.from("worker_documents").update({
                 status: "verified",
                 reject_reason: null,
                 verified_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
-            }).eq("user_id", userId).eq("document_type", docType);
+            }).eq("user_id", reviewContext.documentOwnerId).eq("document_type", docType);
+            if (approveError) {
+                return NextResponse.json({ error: "Failed to update document status" }, { status: 500 });
+            }
 
-            await logServerActivity(userId, "document_admin_approved", "documents", {
+            await syncWorkerReviewStatus({
+                adminClient: admin,
+                profileId: reviewContext.profileId,
+                workerId: reviewContext.workerId,
+                documentOwnerId: reviewContext.documentOwnerId,
+                phoneOptional: !!reviewContext.workerId && !reviewContext.profileId,
+                fullNameFallback: reviewContext.fullNameFallback,
+                notifyOnPendingApproval: true,
+            });
+
+            await logServerActivity(notificationProfileId || reviewContext.documentOwnerId, "document_admin_approved", "documents", {
                 doc_type: docType,
                 admin_id: user.id,
             });
 
-            // Check if all 3 docs are now verified → update worker status
-            const { data: allDocs } = await admin.from("worker_documents")
-                .select("document_type, status").eq("user_id", userId);
-            const verifiedTypes = new Set((allDocs || []).filter(d => d.status === "verified").map(d => d.document_type));
-            if (verifiedTypes.has("passport") && verifiedTypes.has("biometric_photo") && verifiedTypes.has("diploma")) {
-                await admin.from("worker_onboarding").update({ status: "VERIFIED" }).eq("profile_id", userId);
-                await logServerActivity(userId, "all_documents_verified", "documents", { via: "admin_review" });
-            }
-
             // Email the user
-            const { data: userProfile } = await admin.from("profiles").select("full_name, email").eq("id", userId).single();
-            if (userProfile?.email) {
+            const userProfile = notificationProfileId
+                ? await admin.from("profiles").select("full_name, email").eq("id", notificationProfileId).maybeSingle().then((result) => result.data)
+                : null;
+            if (userProfile?.email && notificationProfileId) {
                 const docName = docType.replace(/_/g, " ");
                 await queueEmail(
-                    admin, userId, "document_review_result",
+                    admin, notificationProfileId, "document_review_result",
                     userProfile.email,
                     userProfile.full_name || "there",
                     {
@@ -71,24 +130,39 @@ export async function POST(request: Request) {
 
         } else if (action === "reject") {
             // Set to rejected with admin feedback
-            await admin.from("worker_documents").update({
+            const { error: rejectError } = await admin.from("worker_documents").update({
                 status: "rejected",
                 reject_reason: feedback || "Document not accepted by admin.",
                 updated_at: new Date().toISOString(),
-            }).eq("user_id", userId).eq("document_type", docType);
+            }).eq("user_id", reviewContext.documentOwnerId).eq("document_type", docType);
+            if (rejectError) {
+                return NextResponse.json({ error: "Failed to update document status" }, { status: 500 });
+            }
 
-            await logServerActivity(userId, "document_admin_rejected", "documents", {
+            await syncWorkerReviewStatus({
+                adminClient: admin,
+                profileId: reviewContext.profileId,
+                workerId: reviewContext.workerId,
+                documentOwnerId: reviewContext.documentOwnerId,
+                phoneOptional: !!reviewContext.workerId && !reviewContext.profileId,
+                fullNameFallback: reviewContext.fullNameFallback,
+                notifyOnPendingApproval: true,
+            });
+
+            await logServerActivity(notificationProfileId || reviewContext.documentOwnerId, "document_admin_rejected", "documents", {
                 doc_type: docType,
                 admin_id: user.id,
                 feedback,
             });
 
             // Email the user with feedback
-            const { data: userProfile } = await admin.from("profiles").select("full_name, email").eq("id", userId).single();
-            if (userProfile?.email) {
+            const userProfile = notificationProfileId
+                ? await admin.from("profiles").select("full_name, email").eq("id", notificationProfileId).maybeSingle().then((result) => result.data)
+                : null;
+            if (userProfile?.email && notificationProfileId) {
                 const docName = docType.replace(/_/g, " ");
                 await queueEmail(
-                    admin, userId, "document_review_result",
+                    admin, notificationProfileId, "document_review_result",
                     userProfile.email,
                     userProfile.full_name || "there",
                     {

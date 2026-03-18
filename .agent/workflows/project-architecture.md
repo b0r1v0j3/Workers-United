@@ -358,7 +358,7 @@ User (Browser)
 | `src/lib/smoke-evaluator.ts` | Shared health evaluator (`healthy/degraded/critical`) for smoke checks |
 | `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback); passport verifier now rejects closed covers / wrong pages, emits structured worker guidance, and exposes quarter-turn orientation + canonical `ocr_json` patch helpers used by verify/admin preview auto-rotation |
 | `src/lib/document-review.ts` | Shared review helper that turns canonical `ocr_json` / `reject_reason` into admin-facing summaries and worker-facing re-upload guidance |
-| `src/lib/worker-review.ts` | Shared worker review/readiness helpers; keeps `PENDING_APPROVAL` gated behind truly admin-verified required documents and syncs worker status after admin doc decisions |
+| `src/lib/worker-review.ts` | Shared worker review/readiness helpers; keeps `PENDING_APPROVAL` gated behind truly admin-verified required documents, safely backfills blank passport issue/expiry/issuer fields from the latest passport `ocr_json` before recalculating completion, and syncs worker status after verify/admin doc decisions |
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals |
