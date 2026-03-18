@@ -7,11 +7,17 @@ import { getEmailTemplate } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { deleteUserData } from "@/lib/user-management";
+import {
+    getProfileRetentionState,
+    PROFILE_RETENTION_ACTIVITY_CATEGORIES,
+    PROFILE_RETENTION_CASE_EMAIL_TYPES,
+} from "@/lib/profile-retention";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 
 // ─── Main cron handler ──────────────────────────────────────────
-// Runs daily via Vercel cron — sends profile completion reminders + auto-deletes after 30 days
+// Runs daily via Vercel cron — sends profile completion reminders + auto-deletes only after long inactivity
 // Applies to worker, employer, and agency accounts
-// Performance: uses batch queries (~6 total) instead of per-user queries
+// Performance: uses batch queries instead of per-user queries
 
 export async function GET(request: Request) {
     // Verify cron secret (Vercel sends this header)
@@ -37,8 +43,9 @@ export async function GET(request: Request) {
         if (eligibleUsers.length === 0) {
             return NextResponse.json({ sent: 0, message: "No users to check" });
         }
+        const eligibleUserIds = eligibleUsers.map((entry) => entry.id);
 
-        // ─── BATCH FETCH ALL DATA (6 queries total instead of ~3N) ─────────
+        // ─── BATCH FETCH ALL DATA ─────────────────────────────────────────
         const [
             { data: allProfiles },
             { data: allWorkerRecords },
@@ -46,14 +53,21 @@ export async function GET(request: Request) {
             { data: allAgencies },
             { data: allDocs },
             { data: allEmails },
+            { data: allSignatures },
+            { data: allActivity },
         ] = await Promise.all([
-            supabase.from("profiles").select("id, full_name"),
+            supabase.from("profiles").select("id, full_name, created_at"),
             supabase.from("worker_onboarding").select("*"),
             supabase.from("employers").select("*"),
-            supabase.from("agencies").select("profile_id, display_name, legal_name, contact_email"),
-            supabase.from("worker_documents").select("user_id, document_type, status"),
-            supabase.from("email_queue").select("id, recipient_email, email_type, subject, created_at")
-                .in("email_type", ["profile_reminder", "profile_warning"]),
+            supabase.from("agencies").select("profile_id, display_name, legal_name, contact_email, created_at, updated_at"),
+            supabase.from("worker_documents").select("user_id, document_type, status, created_at, updated_at"),
+            supabase.from("email_queue").select("id, user_id, recipient_email, email_type, subject, created_at, sent_at")
+                .in("user_id", eligibleUserIds)
+                .in("email_type", ["profile_reminder", "profile_warning", ...PROFILE_RETENTION_CASE_EMAIL_TYPES]),
+            supabase.from("signatures").select("user_id, created_at").in("user_id", eligibleUserIds),
+            supabase.from("user_activity").select("user_id, category, created_at")
+                .in("user_id", eligibleUserIds)
+                .in("category", [...PROFILE_RETENTION_ACTIVITY_CATEGORIES]),
         ]);
 
         // Build lookup maps for O(1) access
@@ -66,6 +80,23 @@ export async function GET(request: Request) {
             if (!docsByUser.has(d.user_id)) docsByUser.set(d.user_id, []);
             docsByUser.get(d.user_id)!.push(d);
         }
+        const latestSignatureByUser = new Map<string, string>();
+        for (const signature of allSignatures || []) {
+            if (!signature.user_id || !signature.created_at) continue;
+            const previous = latestSignatureByUser.get(signature.user_id);
+            if (!previous || new Date(signature.created_at).getTime() > new Date(previous).getTime()) {
+                latestSignatureByUser.set(signature.user_id, signature.created_at);
+            }
+        }
+        const latestActivityByUser = new Map<string, string>();
+        for (const activity of allActivity || []) {
+            if (!activity.user_id || !activity.created_at) continue;
+            const previous = latestActivityByUser.get(activity.user_id);
+            if (!previous || new Date(activity.created_at).getTime() > new Date(previous).getTime()) {
+                latestActivityByUser.set(activity.user_id, activity.created_at);
+            }
+        }
+        const latestCaseEmailByUser = new Map<string, string>();
 
         // Build email dedup sets
         const recentReminders = new Set<string>(); // emails sent <24h ago
@@ -77,6 +108,17 @@ export async function GET(request: Request) {
             if (e.email_type === "profile_warning") {
                 warningSubjects.add(`${e.recipient_email}|${e.subject}`);
             }
+            if (
+                e.user_id
+                && PROFILE_RETENTION_CASE_EMAIL_TYPES.includes(e.email_type as (typeof PROFILE_RETENTION_CASE_EMAIL_TYPES)[number])
+            ) {
+                const activityAt = e.sent_at || e.created_at;
+                if (!activityAt) continue;
+                const previous = latestCaseEmailByUser.get(e.user_id);
+                if (!previous || new Date(activityAt).getTime() > new Date(previous).getTime()) {
+                    latestCaseEmailByUser.set(e.user_id, activityAt);
+                }
+            }
         }
 
         // ─── PROCESS EACH USER (no DB queries in this loop) ───────────────
@@ -84,9 +126,6 @@ export async function GET(request: Request) {
         let skipped = 0;
         let warned = 0;
         let deleted = 0;
-
-        const WARNING_DAYS = [23, 27, 29];
-        const DELETE_AFTER_DAYS = 30;
 
         for (const user of eligibleUsers) {
             const userId = user.id;
@@ -101,22 +140,36 @@ export async function GET(request: Request) {
                 continue;
             }
 
-            const accountAgeDays = Math.floor(
-                (Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)
-            );
-
             const profileData = profileMap.get(userId) || null;
+            const commonRetentionSignals = {
+                authCreatedAt: user.created_at,
+                profileCreatedAt: profileData?.created_at || null,
+                latestSignatureAt: latestSignatureByUser.get(userId) || null,
+                latestCaseEmailAt: latestCaseEmailByUser.get(userId) || null,
+                latestUserActivityAt: latestActivityByUser.get(userId) || null,
+            };
 
             let missingItems: string[];
+            let retentionState;
 
             if (recipientRole === "employer") {
                 const employer = employerMap.get(userId) || null;
                 const result = getEmployerCompletion({ employer });
                 missingItems = result.missingFields;
+                retentionState = getProfileRetentionState({
+                    ...commonRetentionSignals,
+                    roleRecordCreatedAt: employer?.created_at || null,
+                    roleRecordUpdatedAt: employer?.updated_at || null,
+                });
             } else if (recipientRole === "agency") {
                 const agency = agencyMap.get(userId) || null;
                 const result = getAgencyCompletion({ agency });
                 missingItems = result.missingFields;
+                retentionState = getProfileRetentionState({
+                    ...commonRetentionSignals,
+                    roleRecordCreatedAt: agency?.created_at || null,
+                    roleRecordUpdatedAt: agency?.updated_at || null,
+                });
             } else {
                 const workerRecord = workerRecordMap.get(userId) || null;
                 const docs = docsByUser.get(userId) || [];
@@ -131,8 +184,8 @@ export async function GET(request: Request) {
                     continue;
                 }
 
-                // NEVER delete paid workers or workers with accepted offers
-                if (workerRecord?.status === "IN_QUEUE" || workerRecord?.status === "OFFER_PENDING") {
+                // NEVER delete paid or post-payment worker cases.
+                if (workerRecord?.entry_fee_paid || isPostEntryFeeWorkerStatus(workerRecord?.status)) {
                     continue;
                 }
 
@@ -142,16 +195,31 @@ export async function GET(request: Request) {
                     documents: docs as { document_type: string }[]
                 });
                 missingItems = result.missingFields;
+                const latestDocumentAt = (docs || []).reduce<string | null>((latest, document) => {
+                    const candidate = document.updated_at || document.created_at || null;
+                    if (!candidate) return latest;
+                    if (!latest || new Date(candidate).getTime() > new Date(latest).getTime()) {
+                        return candidate;
+                    }
+                    return latest;
+                }, null);
+                retentionState = getProfileRetentionState({
+                    ...commonRetentionSignals,
+                    roleRecordCreatedAt: workerRecord?.created_at || null,
+                    roleRecordUpdatedAt: workerRecord?.updated_at || null,
+                    latestDocumentAt,
+                });
             }
 
             // Profile is complete — skip
             if (missingItems.length === 0) continue;
+            if (!retentionState) continue;
 
             const firstName = fullName?.split(" ")[0] || "there";
             const todoList = missingItems.map(item => `<li style="padding: 6px 0;">${item}</li>`).join("");
 
-            // ========== DAY 30+: DELETE ACCOUNT ==========
-            if (accountAgeDays >= DELETE_AFTER_DAYS) {
+            // ========== LONG INACTIVITY: DELETE ACCOUNT ==========
+            if (retentionState.shouldDelete) {
                 // Safety flag: auto-deletion must be explicitly enabled
                 if (process.env.ALLOW_AUTO_DELETION !== "true") {
                     console.warn(`[Reminders] Auto-deletion SKIPPED for ${email} (ALLOW_AUTO_DELETION not set)`);
@@ -175,8 +243,8 @@ export async function GET(request: Request) {
             }
 
             // ========== WARNING DAYS: SEND ESCALATING WARNINGS ==========
-            const daysLeft = DELETE_AFTER_DAYS - accountAgeDays;
-            const isWarningDay = WARNING_DAYS.includes(accountAgeDays);
+            const daysLeft = retentionState.daysUntilDeletion;
+            const isWarningDay = retentionState.isWarningDay;
 
             if (isWarningDay) {
                 const { subject: warningSubject, html } = getEmailTemplate("profile_warning", {

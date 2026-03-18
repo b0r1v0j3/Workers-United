@@ -13,6 +13,12 @@ import { getAgencyDraftDocumentOwnerId, resolveAgencyWorkerDocumentOwnerId } fro
 import { getAgencyWorkerEmail, getAgencyWorkerName } from "@/lib/agencies";
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import {
+    getProfileRetentionState,
+    PROFILE_INACTIVITY_UI_ALERT_DAYS,
+    PROFILE_RETENTION_ACTIVITY_CATEGORIES,
+    PROFILE_RETENTION_CASE_EMAIL_TYPES,
+} from "@/lib/profile-retention";
 
 export default async function WorkersPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const params = await searchParams;
@@ -44,6 +50,9 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         { data: allDocs },
         { data: employerRows },
         { data: agencies },
+        { data: signatures },
+        { data: retentionEmails },
+        { data: userActivity },
     ] = await Promise.all([
         getAllAuthUsers(adminClient),
         adminClient.from("worker_onboarding").select("*"),
@@ -51,9 +60,15 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         adminClient.from("worker_documents").select("*"),
         adminClient.from("employers").select("profile_id"),
         adminClient.from("agencies").select("id, profile_id, display_name, legal_name"),
+        adminClient.from("signatures").select("user_id, created_at"),
+        adminClient.from("email_queue")
+            .select("user_id, email_type, created_at, sent_at")
+            .in("email_type", [...PROFILE_RETENTION_CASE_EMAIL_TYPES]),
+        adminClient.from("user_activity")
+            .select("user_id, category, created_at")
+            .in("category", [...PROFILE_RETENTION_ACTIVITY_CATEGORIES]),
     ]);
 
-    const nowMs = new Date().getTime();
     const workerGroups = new Map<string, any[]>();
     const hiddenDraftOwnerIds = new Set<string>();
     for (const workerRow of workerRows || []) {
@@ -81,6 +96,32 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         const current = documentsByOwnerId.get(doc.user_id) || [];
         current.push(doc);
         documentsByOwnerId.set(doc.user_id, current);
+    }
+    const latestSignatureByUser = new Map<string, string>();
+    for (const signature of signatures || []) {
+        if (!signature?.user_id || !signature.created_at) continue;
+        const previous = latestSignatureByUser.get(signature.user_id);
+        if (!previous || new Date(signature.created_at).getTime() > new Date(previous).getTime()) {
+            latestSignatureByUser.set(signature.user_id, signature.created_at);
+        }
+    }
+    const latestCaseEmailByUser = new Map<string, string>();
+    for (const email of retentionEmails || []) {
+        if (!email?.user_id) continue;
+        const candidate = email.sent_at || email.created_at;
+        if (!candidate) continue;
+        const previous = latestCaseEmailByUser.get(email.user_id);
+        if (!previous || new Date(candidate).getTime() > new Date(previous).getTime()) {
+            latestCaseEmailByUser.set(email.user_id, candidate);
+        }
+    }
+    const latestActivityByUser = new Map<string, string>();
+    for (const activity of userActivity || []) {
+        if (!activity?.user_id || !activity.created_at) continue;
+        const previous = latestActivityByUser.get(activity.user_id);
+        if (!previous || new Date(activity.created_at).getTime() > new Date(previous).getTime()) {
+            latestActivityByUser.set(activity.user_id, activity.created_at);
+        }
     }
 
     // Exclude non-worker auth users and hidden agency draft document-owner accounts.
@@ -123,6 +164,24 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                 : isPostEntryFeeWorkerStatus(workerRecord?.status)
                     ? "In Queue"
                     : "Unpaid";
+            const latestDocumentAt = workerDocs.reduce<string | null>((latest, doc) => {
+                const candidate = doc?.updated_at || doc?.created_at || null;
+                if (!candidate) return latest;
+                if (!latest || new Date(candidate).getTime() > new Date(latest).getTime()) {
+                    return candidate;
+                }
+                return latest;
+            }, null);
+            const retentionState = getProfileRetentionState({
+                authCreatedAt: authUser.created_at,
+                profileCreatedAt: profileRecord?.created_at || null,
+                roleRecordCreatedAt: workerRecord?.created_at || null,
+                roleRecordUpdatedAt: workerRecord?.updated_at || null,
+                latestDocumentAt,
+                latestSignatureAt: latestSignatureByUser.get(authUser.id) || null,
+                latestCaseEmailAt: latestCaseEmailByUser.get(authUser.id) || null,
+                latestUserActivityAt: latestActivityByUser.get(authUser.id) || null,
+            });
 
             return {
                 id: workerRecord?.id || authUser.id,
@@ -141,8 +200,13 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                 adminApproved: !!workerRecord?.admin_approved,
                 isCurrentUser: authUser.id === user.id,
                 entryFeePaid: !!workerRecord?.entry_fee_paid,
-                daysUntilDeletion: !workerRecord?.agency_id && completion < 100 && !workerRecord?.entry_fee_paid
-                    ? Math.max(0, 30 - Math.floor((nowMs - new Date(authUser.created_at).getTime()) / (1000 * 60 * 60 * 24)))
+                daysUntilDeletion: !workerRecord?.agency_id
+                    && completion < 100
+                    && !workerRecord?.entry_fee_paid
+                    && !isPostEntryFeeWorkerStatus(workerRecord?.status)
+                    && retentionState.isNearDeletion
+                    && retentionState.daysUntilDeletion <= PROFILE_INACTIVITY_UI_ALERT_DAYS
+                    ? retentionState.daysUntilDeletion
                     : null,
                 authProvider: authUser.app_metadata?.provider || "email",
                 paymentState,

@@ -96,8 +96,8 @@ function getNotificationTitle(type: string): string {
         admin_update: "Update from Workers United",
         announcement: "New announcement",
         profile_reminder: "Reminder: complete your profile",
-        profile_warning: "Urgent: your account will be deleted soon",
-        profile_deletion: "Your account has been removed",
+        profile_warning: "Inactive account cleanup soon",
+        profile_deletion: "Inactive account removed",
     };
     return titles[type] || "Notification";
 }

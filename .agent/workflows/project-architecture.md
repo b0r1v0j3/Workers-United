@@ -154,6 +154,7 @@ Workers-United/
 │   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging, failed-send error capture)
 │   │   ├── whatsapp-brain.ts  # Canonical WhatsApp facts/rules, safe-learning filter, explicit onboarding trigger
 │   │   ├── whatsapp-health.ts # WhatsApp ops-health classification helpers (platform-side vs recipient-side failures)
+│   │   ├── profile-retention.ts # Shared inactivity-retention helper; derives the last meaningful profile activity across auth/profile/role/docs/signatures/admin case emails/user activity so reminders, cleanup, and admin countdowns stay aligned
 │   │   ├── sanitize.ts        # Input sanitization
 │   │   ├── user-management.ts # Shared user deletion logic; cascade cleanup deletes worker-domain rows (`worker_documents`, `workers`, matches/offers/contracts), employer-domain rows (`job_requests`, employer-owned `offers`/`matches`, related support conversations), removes document files by real `worker_documents.storage_path` before falling back to legacy user folders, also clears `payments.profile_id` + `user_activity`, and keeps canonical app-layer naming as `workerRecord`
 │   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types)
@@ -177,7 +178,7 @@ Configured in `vercel.json`:
 | Path | Schedule | Purpose |
 |---|---|---|
 | `/api/cron/check-expiry` | Every hour | Check for expired sessions/tokens |
-| `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles; worker sends skip hidden/internal/test contacts and agency draft workers without real direct contact data |
+| `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles, warn at `14 / 7 / 3` inactivity days-left, and auto-delete only after `90` days of real inactivity; worker sends skip hidden/internal/test contacts, agency draft workers without real direct contact data, and any paid/post-payment worker case |
 | `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months |
 | `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
 | `/api/cron/brain-monitor` | Daily 8 AM UTC | Deterministic ops-first daily sweep; stores a compact `brain_reports` snapshot every run and emails only when critical/high operational signals are present |
@@ -338,8 +339,8 @@ User (Browser)
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
-| `src/app/admin/workers/page.tsx` | Worker list with filter tabs |
-| `src/app/admin/workers/[id]/page.tsx` | Worker case surface with shared admin ops cards for profile snapshot, approvals, payments, contract payload, signature, and document review |
+| `src/app/admin/workers/page.tsx` | Worker list with filter tabs plus inactivity-based cleanup countdowns derived from the shared retention helper instead of raw signup age |
+| `src/app/admin/workers/[id]/page.tsx` | Worker case surface with shared admin ops cards for profile snapshot, approvals, payments, contract payload, signature, and document review; `Request new document` now logs `document_reupload_requested` activity so genuine admin follow-up resets the cleanup timer |
 | `src/app/admin/queue/page.tsx` | Queue operations screen; canonical worker dedupe prevents duplicate worker rows from inflating queue counts, refund watch, or urgent countdowns |
 | `src/app/admin/jobs/page.tsx` | Smart Match Hub; loads the queue through canonical worker dedupe before handing it to matching UI |
 | `src/app/admin/announcements/page.tsx` | Bulk email (Workers / Employers / Everyone) |
@@ -359,6 +360,7 @@ User (Browser)
 | `src/lib/document-ai.ts` | Shared document AI helpers (OpenAI primary, Gemini fallback); passport verifier now rejects closed covers / wrong pages, emits structured worker guidance, and exposes quarter-turn orientation + canonical `ocr_json` patch helpers used by verify/admin preview auto-rotation |
 | `src/lib/document-review.ts` | Shared review helper that turns canonical `ocr_json` / `reject_reason` into admin-facing summaries and worker-facing re-upload guidance |
 | `src/lib/worker-review.ts` | Shared worker review/readiness helpers; keeps `PENDING_APPROVAL` gated behind truly admin-verified required documents, safely backfills blank passport issue/expiry/issuer fields from the latest passport `ocr_json` before recalculating completion, and syncs worker status after verify/admin doc decisions |
+| `src/lib/profile-retention.ts` | Shared inactivity-retention signals + thresholds (`90` day delete window, `14 / 7 / 3` warning cadence, admin-list near-cleanup window) derived from the latest meaningful auth/profile/role/docs/signature/case-email/user-activity timestamp |
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals |
