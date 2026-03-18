@@ -62,6 +62,7 @@ Workers-United/
 │   │   │   ├── page.tsx       # Business admin dashboard (stats, action cards, queue watch, inbox, recent lists, direct `Preview Worker/Employer/Agency` entry points, and inspect links into real workspaces); preview cards are generic read-only entries, not derived from the admin's own legacy role rows
 │   │   │   ├── layout.tsx     # Admin layout (AppShell)
 │   │   │   ├── agencies/      # Agency registry with shared admin hero/metrics layout + direct agency workspace inspect links
+│   │   │   ├── analytics/     # Funnel dashboard plus payment-quality breakdown (paid vs active vs expired vs bank decline vs Stripe block) sourced from the same latest-attempt classifier as internal ops
 │   │   │   ├── exceptions/    # Legacy route that now renders the internal ops cockpit copy; business admin no longer links here directly
 │   │   │   ├── email-health/  # Legacy route that now renders the internal email-hygiene copy; business admin no longer links here directly
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
@@ -80,7 +81,7 @@ Workers-United/
 │   │   │   └── email-preview/ # Internal email template sandbox
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
-│   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics, admin inbox support list, agency-worker approval API, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
+│   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown), admin inbox support list, agency-worker approval API, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
@@ -137,7 +138,7 @@ Workers-United/
 │   │   ├── document-review.ts # Shared admin/worker document-review copy helpers derived from canonical `ocr_json` + `reject_reason`, including strict diploma summaries plus biometric-photo summaries/re-upload guidance that explain whether the issue is quality, framing, lighting, background, or wrong document type
 │   │   ├── stripe.ts          # Stripe client initialization
 │   │   ├── stripe-checkout.ts # Shared Stripe Checkout customer identity + metadata helpers (customer prefill/reuse, webhook correlation payload)
-│   │   ├── payment-quality.ts # Shared payment-attempt quality classifier (paid vs active vs expired vs abandoned vs bank decline vs Stripe block) used by internal ops
+│   │   ├── payment-quality.ts # Shared payment-attempt quality classifier (paid vs active vs expired vs abandoned vs bank decline vs Stripe block) used by internal ops and analytics
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
 │   │   ├── brain-memory.ts    # Brain memory dedup + normalization helpers

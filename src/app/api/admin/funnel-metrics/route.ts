@@ -2,11 +2,129 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, getAllAuthUsers } from '@/lib/supabase/admin';
 import { isGodModeUser } from '@/lib/godmode';
+import { classifyEntryFeePaymentQuality } from '@/lib/payment-quality';
 import { getWorkerCompletion } from '@/lib/profile-completion';
 import { isReportablePaymentProfile } from '@/lib/reporting';
 import { pickCanonicalWorkerRecord } from '@/lib/workers';
 
 export const dynamic = 'force-dynamic';
+
+interface PaymentRow {
+    id: string;
+    profile_id: string | null;
+    status: string | null;
+    payment_type: string | null;
+    stripe_checkout_session_id: string | null;
+    paid_at: string | null;
+    deadline_at: string | null;
+    metadata: unknown;
+    amount?: number | null;
+    amount_cents?: number | null;
+}
+
+interface PaymentActivityRow {
+    user_id: string | null;
+    action: string;
+    created_at: string | null;
+    details: unknown;
+}
+
+function asObject(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return null;
+    }
+
+    return value as Record<string, unknown>;
+}
+
+function extractStringField(value: unknown, key: string): string | null {
+    const objectValue = asObject(value);
+    if (!objectValue) {
+        return null;
+    }
+
+    const field = objectValue[key];
+    return typeof field === 'string' && field.trim() ? field.trim() : null;
+}
+
+function parseIsoDate(value: string | null | undefined) {
+    if (!value) {
+        return null;
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getCheckoutCreatedAt(payment: PaymentRow, activities: PaymentActivityRow[]) {
+    const metadataStartedAt = parseIsoDate(extractStringField(payment.metadata, 'checkout_started_at'));
+    if (metadataStartedAt) {
+        return metadataStartedAt;
+    }
+
+    const activityByPayment = activities.find((activity) =>
+        activity.action === 'checkout_session_created'
+        && extractStringField(activity.details, 'payment_id') === payment.id
+    );
+    if (activityByPayment?.created_at) {
+        return parseIsoDate(activityByPayment.created_at);
+    }
+
+    if (payment.stripe_checkout_session_id) {
+        const activityBySession = activities.find((activity) =>
+            activity.action === 'checkout_session_created'
+            && extractStringField(activity.details, 'stripe_session_id') === payment.stripe_checkout_session_id
+        );
+        if (activityBySession?.created_at) {
+            return parseIsoDate(activityBySession.created_at);
+        }
+    }
+
+    const deadlineAt = parseIsoDate(payment.deadline_at);
+    if (deadlineAt) {
+        return new Date(deadlineAt.getTime() - 72 * 60 * 60 * 1000);
+    }
+
+    return null;
+}
+
+function getPaymentFailureOrExpiryAt(payment: PaymentRow, activities: PaymentActivityRow[]) {
+    const metadataFailureAt = parseIsoDate(extractStringField(payment.metadata, 'stripe_failure_at'));
+    if (metadataFailureAt) {
+        return metadataFailureAt;
+    }
+
+    const metadataExpiredAt = parseIsoDate(extractStringField(payment.metadata, 'stripe_session_expired_at'));
+    if (metadataExpiredAt) {
+        return metadataExpiredAt;
+    }
+
+    const activityByPayment = activities.find((activity) =>
+        (activity.action === 'payment_failed' || activity.action === 'checkout_session_expired')
+        && extractStringField(activity.details, 'payment_id') === payment.id
+    );
+    if (activityByPayment?.created_at) {
+        return parseIsoDate(activityByPayment.created_at);
+    }
+
+    if (payment.stripe_checkout_session_id) {
+        const activityBySession = activities.find((activity) =>
+            activity.action === 'checkout_session_expired'
+            && extractStringField(activity.details, 'stripe_session_id') === payment.stripe_checkout_session_id
+        );
+        if (activityBySession?.created_at) {
+            return parseIsoDate(activityBySession.created_at);
+        }
+    }
+
+    return null;
+}
+
+function getPaymentLastEventAt(payment: PaymentRow, activities: PaymentActivityRow[]) {
+    return parseIsoDate(payment.paid_at)
+        || getPaymentFailureOrExpiryAt(payment, activities)
+        || getCheckoutCreatedAt(payment, activities);
+}
 
 export async function GET(request: Request) {
     try {
@@ -35,6 +153,11 @@ export async function GET(request: Request) {
         const url = new URL(request.url);
         const fromDate = url.searchParams.get('from');
         const toDate = url.searchParams.get('to');
+        const fromBoundary = fromDate ? new Date(fromDate) : null;
+        const toBoundary = toDate ? new Date(toDate) : null;
+        if (toBoundary) {
+            toBoundary.setHours(23, 59, 59, 999);
+        }
 
         // 1. Total Registered Workers (from auth — paginated to get ALL users)
         const allAuthUsers = await getAllAuthUsers(supabase);
@@ -44,13 +167,10 @@ export async function GET(request: Request) {
 
         // Filter by date range if provided
         if (fromDate) {
-            const from = new Date(fromDate);
-            workerUsers = workerUsers.filter((u: any) => new Date(u.created_at) >= from);
+            workerUsers = workerUsers.filter((u: any) => new Date(u.created_at) >= fromBoundary!);
         }
         if (toDate) {
-            const to = new Date(toDate);
-            to.setHours(23, 59, 59, 999);
-            workerUsers = workerUsers.filter((u: any) => new Date(u.created_at) <= to);
+            workerUsers = workerUsers.filter((u: any) => new Date(u.created_at) <= toBoundary!);
         }
 
         const totalWorkers = workerUsers.length;
@@ -63,7 +183,7 @@ export async function GET(request: Request) {
 
         const { data: allWorkerRecords } = await supabase
             .from('worker_onboarding')
-            .select('profile_id, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas');
+            .select('profile_id, status, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas');
 
         const { data: allDocs } = await supabase
             .from('worker_documents')
@@ -179,18 +299,18 @@ export async function GET(request: Request) {
         });
 
         // Populate revenue (need to fetch payments)
-        const paymentProfileMap = new Map(allProfiles?.map(p => [p.id, p]) || []);
-
         const { data: allPayments } = await supabase
             .from('payments')
-            .select('amount, amount_cents, paid_at, status, profile_id')
-            .in('status', ['paid', 'completed']);
-        allPayments?.forEach((p: any) => {
+            .select('id, profile_id, status, payment_type, stripe_checkout_session_id, paid_at, deadline_at, metadata, amount, amount_cents');
+        const typedPayments = (allPayments || []) as PaymentRow[];
+        typedPayments
+            .filter((payment) => ['paid', 'completed'].includes(payment.status || ''))
+            .forEach((p) => {
             if (!p.paid_at) {
                 return;
             }
 
-            const paymentProfile = p.profile_id ? paymentProfileMap.get(p.profile_id) || null : null;
+            const paymentProfile = p.profile_id ? profileMap.get(p.profile_id) || null : null;
             if (!isReportablePaymentProfile(paymentProfile)) {
                 return;
             }
@@ -200,7 +320,138 @@ export async function GET(request: Request) {
                 const value = p.amount != null ? Number(p.amount) : Number(p.amount_cents || 0) / 100;
                 timeSeriesMap.get(dateKey)!.revenue += Number.isFinite(value) ? value : 0;
             }
-        });
+            });
+
+        const entryFeePayments = typedPayments.filter((payment) => payment.payment_type === 'entry_fee' && !!payment.profile_id);
+        const paymentProfileIds = [...new Set(entryFeePayments.map((payment) => payment.profile_id).filter(Boolean))] as string[];
+        const { data: paymentActivities, error: paymentActivitiesError } = paymentProfileIds.length === 0
+            ? { data: [] as PaymentActivityRow[], error: null }
+            : await supabase
+                .from('user_activity')
+                .select('user_id, action, created_at, details')
+                .in('user_id', paymentProfileIds)
+                .in('action', ['checkout_session_created', 'payment_completed', 'payment_failed', 'checkout_session_expired'])
+                .range(0, 3999);
+
+        if (paymentActivitiesError) {
+            console.error('[Funnel] Payment activity error:', paymentActivitiesError);
+        }
+
+        const activitiesByProfile = new Map<string, PaymentActivityRow[]>();
+        for (const activity of (paymentActivities || []) as PaymentActivityRow[]) {
+            if (!activity.user_id) {
+                continue;
+            }
+
+            const current = activitiesByProfile.get(activity.user_id) || [];
+            current.push(activity);
+            activitiesByProfile.set(activity.user_id, current);
+        }
+
+        const latestEntryFeeAttemptByProfile = new Map<string, {
+            payment: PaymentRow;
+            checkoutCreatedAt: Date | null;
+            lastEventAt: Date | null;
+        }>();
+
+        for (const payment of entryFeePayments) {
+            const profileId = payment.profile_id as string;
+            const activities = activitiesByProfile.get(profileId) || [];
+            const checkoutCreatedAt = getCheckoutCreatedAt(payment, activities);
+            const lastEventAt = getPaymentLastEventAt(payment, activities);
+            const sortTime = lastEventAt?.getTime() || checkoutCreatedAt?.getTime() || 0;
+
+            if (!sortTime) {
+                continue;
+            }
+
+            const current = latestEntryFeeAttemptByProfile.get(profileId);
+            const currentSortTime = current?.lastEventAt?.getTime() || current?.checkoutCreatedAt?.getTime() || 0;
+
+            if (!current || sortTime >= currentSortTime) {
+                latestEntryFeeAttemptByProfile.set(profileId, {
+                    payment,
+                    checkoutCreatedAt,
+                    lastEventAt,
+                });
+            }
+        }
+
+        const paymentQuality = {
+            paid: 0,
+            active: 0,
+            expired: 0,
+            abandoned: 0,
+            bank_declined: 0,
+            stripe_blocked: 0,
+            recent_issues: [] as Array<{
+                profile_id: string;
+                full_name: string;
+                email: string;
+                worker_status: string;
+                outcome: string;
+                outcome_label: string;
+                outcome_detail: string;
+                hours_since_checkout: number | null;
+                last_event_at: string | null;
+                workspace_href: string;
+                case_href: string;
+            }>,
+        };
+
+        for (const [profileId, latestAttempt] of latestEntryFeeAttemptByProfile.entries()) {
+            const profile = profileMap.get(profileId);
+            if (!profile || !isReportablePaymentProfile(profile)) {
+                continue;
+            }
+
+            const lastEventAt = latestAttempt.lastEventAt;
+            if (fromBoundary && (!lastEventAt || lastEventAt < fromBoundary)) {
+                continue;
+            }
+            if (toBoundary && (!lastEventAt || lastEventAt > toBoundary)) {
+                continue;
+            }
+
+            const workerRecord = workerMap.get(profileId);
+            const hoursSinceCheckout = latestAttempt.checkoutCreatedAt
+                ? Math.max(1, Math.floor((Date.now() - latestAttempt.checkoutCreatedAt.getTime()) / (1000 * 60 * 60)))
+                : null;
+            const classification = classifyEntryFeePaymentQuality({
+                status: latestAttempt.payment.status,
+                metadata: latestAttempt.payment.metadata,
+                hoursSinceCheckout,
+            });
+
+            if (classification.outcome === 'completed') paymentQuality.paid += 1;
+            if (classification.outcome === 'active') paymentQuality.active += 1;
+            if (classification.outcome === 'expired') paymentQuality.expired += 1;
+            if (classification.outcome === 'abandoned') paymentQuality.abandoned += 1;
+            if (classification.outcome === 'issuer_declined') paymentQuality.bank_declined += 1;
+            if (classification.outcome === 'stripe_blocked') paymentQuality.stripe_blocked += 1;
+
+            if (classification.outcome === 'completed' || classification.outcome === 'active') {
+                continue;
+            }
+
+            paymentQuality.recent_issues.push({
+                profile_id: profileId,
+                full_name: profile.full_name || profile.email?.split('@')[0] || 'Worker',
+                email: profile.email || 'Unknown email',
+                worker_status: workerRecord?.status || 'NEW',
+                outcome: classification.outcome,
+                outcome_label: classification.label,
+                outcome_detail: classification.detail,
+                hours_since_checkout: hoursSinceCheckout,
+                last_event_at: lastEventAt?.toISOString() || latestAttempt.checkoutCreatedAt?.toISOString() || null,
+                workspace_href: `/profile/worker?inspect=${profileId}`,
+                case_href: `/admin/workers/${profileId}`,
+            });
+        }
+
+        paymentQuality.recent_issues.sort((left, right) =>
+            new Date(right.last_event_at || 0).getTime() - new Date(left.last_event_at || 0).getTime()
+        );
 
         const timeSeriesData = Array.from(timeSeriesMap.values());
 
@@ -212,6 +463,7 @@ export async function GET(request: Request) {
                 uploaded_documents: distinctUploaded,
                 verified: distinctVerified,
                 job_matched: distinctMatched,
+                payment_quality: paymentQuality,
                 supply_demand: supplyDemand,
                 time_series: timeSeriesData
             }
