@@ -1,18 +1,16 @@
 import { NextResponse } from "next/server";
 import type { AdminExceptionSnapshot } from "@/lib/admin-exceptions";
 import {
-    buildOpsMonitorEmailReport,
     buildOpsMonitorReport,
     getOpsMonitorEmailReasons,
 } from "@/lib/ops-monitor";
-import { sendEmail } from "@/lib/mailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const ADMIN_EMAIL = "cvetkovicborivoje@gmail.com";
 const OPS_MONITOR_MODEL = "ops-first-monitor";
+const OPS_MONITOR_EMAILS_ENABLED = false;
 const CRITICAL_ROUTES = ["/login", "/signup", "/auth/callback", "/api/health"];
 
 interface RouteHealthEntry {
@@ -176,19 +174,14 @@ export async function GET(request: Request) {
         results.highSignals = opsReport.metrics.highSignals;
 
         const emailReasons = getOpsMonitorEmailReasons(opsReport);
-        if (emailReasons.length > 0) {
-            const reportDate = new Date(opsReport.generatedAt).toLocaleDateString("en-GB");
-            const emailResult = await sendEmail(
-                ADMIN_EMAIL,
-                `Ops Monitor Alert — ${reportDate} — ${opsReport.healthScore}/100`,
-                buildOpsMonitorEmailReport(opsReport, baseUrl)
-            );
-            results.emailSent = emailResult.success;
-            results.emailReason = emailReasons.join("; ");
-            results.emailError = emailResult.success ? null : (emailResult.error || "Unknown email error");
+        if (emailReasons.length > 0 && OPS_MONITOR_EMAILS_ENABLED) {
+            results.emailSkipped = true;
+            results.emailReason = "Ops monitor emails are disabled; exception snapshot saved to brain_reports only";
         } else {
             results.emailSkipped = true;
-            results.emailReason = "No critical or high-priority ops signals — saved to brain_reports only";
+            results.emailReason = emailReasons.length > 0
+                ? "Ops monitor emails are disabled; exception snapshot saved to brain_reports only"
+                : "No critical or high-priority ops signals — saved to brain_reports only";
         }
 
         const reportPayload = {
@@ -196,12 +189,8 @@ export async function GET(request: Request) {
             monitor_mode: "ops_first",
             email_summary: opsReport.summary,
             email_reasons: emailReasons,
-            delivery_mode: emailReasons.length === 0
-                ? "db_only"
-                : results.emailSent
-                    ? "email_and_db"
-                    : "db_and_email_failed",
-            email_delivery: results.emailSkipped ? "skipped" : (results.emailSent ? "sent" : "failed"),
+            delivery_mode: "db_only",
+            email_delivery: emailReasons.length > 0 ? "suppressed" : "skipped",
             email_error: results.emailError,
             structured_report: {
                 ...opsReport,
