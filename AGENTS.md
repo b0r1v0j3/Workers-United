@@ -169,7 +169,7 @@ Workers United je **platforma za radne vize**. Povezujemo radnike koji traže po
 - **Styling:** Tailwind CSS v4, Montserrat font
 - **Backend:** Supabase (Auth + PostgreSQL + Storage)
 - **Plaćanja:** Stripe (Checkout Sessions + Webhooks)
-- **AI:** OpenAI GPT-4o-mini (primarni vision sloj za verifikaciju dokumenata), GPT-5 mini (`WHATSAPP_ROUTER_MODEL` + `WHATSAPP_RESPONSE_MODEL`) za WhatsApp intent router/response sloj, Gemini fallback chain za document verification (`gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`), i GPT-5 mini (`BRAIN_DAILY_MODEL`) za daily Brain snapshots / exception reports
+- **AI:** OpenAI GPT-4o-mini (primarni vision sloj za verifikaciju dokumenata), GPT-5 mini (`WHATSAPP_ROUTER_MODEL`) + GPT-5.4 mini (`WHATSAPP_RESPONSE_MODEL`) za WhatsApp intent router/response sloj, Gemini fallback chain za document verification (`gemini-3.0-flash → gemini-2.5-pro → gemini-2.5-flash`), i GPT-5 mini (`BRAIN_DAILY_MODEL`) za daily Brain snapshots / exception reports
 - **Email:** Nodemailer + Google Workspace SMTP (contact@workersunited.eu)
 - **Hosting:** Vercel Pro (sa cron jobovima)
 - **Icons:** Lucide React
@@ -205,7 +205,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
 # OpenAI
 OPENAI_API_KEY=your-openai-key
 WHATSAPP_ROUTER_MODEL=gpt-5-mini
-WHATSAPP_RESPONSE_MODEL=gpt-5-mini
+WHATSAPP_RESPONSE_MODEL=gpt-5.4-mini
 BRAIN_DAILY_MODEL=gpt-5-mini
 
 # Google Gemini AI (document verification fallback)
@@ -273,6 +273,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] WhatsApp first-contact conversation pass: neutralni prvi pozdrav tipa `Pozdrav` više ne sme da odmah pogađa worker/employer intent, nego `src/lib/whatsapp-brain.ts` sada prepoznaje greeting-only poruke i za prvi kontakt šalje toplu uvodnu poruku koja ukratko objašnjava da Workers United radi za radnike, poslodavce i agencije, pa tek onda pita da li korisnik traži posao, radnike ili vodi agenciju; isti tonalitet je dodat i u AI prompt pravila, a `src/app/api/whatsapp/webhook/route.ts` sada koristi `gpt-5.4-mini` kao podrazumevani response model dok router ostaje na `gpt-5-mini` — 18.03.2026
 - [x] WhatsApp Serbian worker guardrail pass: live pregled razgovora za broj `+38166033333` pokazao je da bot običan srpski latin tekst (`Pozdrav`, `Ocu posao`) pogrešno tretira kao English/employer lead i prerano gura `$9`; `src/lib/whatsapp-brain.ts` sada pouzdano prepoznaje plain-latin srpski, razlikuje worker vs employer signal i daje determinističan pre-registration worker odgovor bez haluciniranih otvorenih poslova, dok `src/app/api/whatsapp/webhook/route.ts` više ne flipuje svaki neregistrovani evropski broj u employer granu, filtrira risky legacy `brain_memory` pravila pre prompta i seče izmišljene “we offer jobs / available workers” tvrdnje — 18.03.2026
 - [x] Legacy automation retirement cleanup: uklonjeni su preostali runtime automation tragovi iz `src/app/api/health/route.ts`, `src/app/api/cron/system-smoke/route.ts`, `src/app/api/email-queue/route.ts`, `scripts/cloud-doctor.ps1` i lokalnog env setup-a, a dokumentacija/changelog istorija su preformulisani tako da platforma više nigde ne računa na taj retired servis kao aktivan deo sistema — 18.03.2026
 - [x] Admin document modal PDF preview fix: `src/app/admin/workers/[id]/DocumentViewerModal.tsx` više ne pokušava da ubaci auth-zaštićeni PDF preview direktno kroz iframe ka `/api/admin/documents/.../preview`, nego prvo povuče fajl kao authenticated blob URL i tek njega renderuje inline sa loading/error fallback-om; `vercel.json` CSP je pritom minimalno proširen na `frame-src 'self' blob: https://js.stripe.com`, pa admin modal više ne pokazuje Chrome `This content is blocked` ekran dok isti dokument radi u `Open in New Tab` — 18.03.2026
@@ -952,7 +953,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 
 12. **WhatsApp webhook requires WABA `subscribed_apps` API call** — After setting up the webhook in Meta Developer Portal, you MUST also call `POST /{WABA-ID}/subscribed_apps` via Graph API Explorer. Without this, Meta's "Test" button works but REAL incoming messages do NOT trigger the webhook. This is the #1 cause of "webhook configured but no events delivered" issues.
 
-13. **WhatsApp AI Chatbot architecture** — The flow is: `User → WhatsApp → Meta → Vercel webhook (route.ts) → GPT-5 mini intent router → GPT-5 mini response generator → Vercel → WhatsApp reply`. Vercel handles both routing and reply generation directly via OpenAI Responses API and sends the reply using its own `WHATSAPP_TOKEN`. Key env vars: `OPENAI_API_KEY`, `WHATSAPP_ROUTER_MODEL`, `WHATSAPP_RESPONSE_MODEL`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`/`CRON_SECRET`.
+13. **WhatsApp AI Chatbot architecture** — The flow is: `User → WhatsApp → Meta → Vercel webhook (route.ts) → GPT-5 mini intent router → GPT-5.4 mini response generator → Vercel → WhatsApp reply`. Vercel handles both routing and reply generation directly via OpenAI Responses API and sends the reply using its own `WHATSAPP_TOKEN`. Neutral greeting-only first contact now has a deterministic intro layer before the general AI response so the bot first explains that Workers United serves workers, employers, and agencies instead of guessing the role too early. Key env vars: `OPENAI_API_KEY`, `WHATSAPP_ROUTER_MODEL`, `WHATSAPP_RESPONSE_MODEL`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`/`CRON_SECRET`.
 
 14. **UVEK koristi `database.types.ts` za kolone** — Fajl `src/lib/database.types.ts` je generisan iz Supabase šeme i sadrži tačna imena kolona za sve tabele. Pre nego što napišeš `.select()` upit, pogledaj šta tip za tu tabelu kaže. Komanda za regenerisanje: `npx supabase gen types typescript --project-id qdwhwlusxjjtlinmpwms > src/lib/database.types.ts`. Pokreni ovo kad dodaš novu kolonu u bazu.
 

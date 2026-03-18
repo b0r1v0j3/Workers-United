@@ -21,9 +21,9 @@ import crypto from "crypto";
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
 // Handles:
 // 1. GET  — Webhook verification (hub.challenge)
-// 2. POST — Inbound messages + delivery status updates → intent router + GPT-5 mini AI
+// 2. POST — Inbound messages + delivery status updates → intent router + OpenAI response model
 //
-// Architecture: User → WhatsApp → Meta → Vercel → intent router → GPT-5 mini → Vercel → WhatsApp
+// Architecture: User → WhatsApp → Meta → Vercel → intent router → OpenAI response model → Vercel → WhatsApp
 // All AI processing happens directly via OpenAI API (no middleware).
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "";
@@ -32,7 +32,7 @@ const ROUTER_HISTORY_LIMIT = 8;
 const RESPONSE_HISTORY_LIMIT = 12;
 const BRAIN_MEMORY_LIMIT = 8;
 const WHATSAPP_ROUTER_MODEL = process.env.WHATSAPP_ROUTER_MODEL || "gpt-5-mini";
-const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "gpt-5-mini";
+const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "gpt-5.4-mini";
 const TEXT_LIKE_MESSAGE_TYPES = new Set(["text", "button", "interactive"]);
 const GUARDED_ESCALATION_PATTERNS = [
     /\btech(?:nical)? team\b/i,
@@ -832,6 +832,7 @@ export async function POST(request: NextRequest) {
                                 message: content,
                                 language: routerDecision.language,
                                 intent: routerDecision.intent,
+                                isFirstContact: historyMessages.length === 0,
                             })
                             : null;
 
@@ -1104,6 +1105,7 @@ Important:
 - If the user is talking about a local utility issue, accident, flooding, municipality, or unrelated complaint, classify as off_topic.
 - Detect the actual language from the latest user message, not the phone country code.
 - Registered worker context matters for status/support classification.
+- A plain greeting like "hello", "hi", "pozdrav", or "dobar dan" without a clear role or request stays general.
 - Keep reason short.`;
 
     const input = `Latest user message:

@@ -6,6 +6,7 @@ import {
     detectWhatsAppLanguageCode,
     filterSafeWhatsAppBrainMemory,
     filterSafeBrainLearnings,
+    looksLikeGreetingOnlyWhatsAppMessage,
     looksLikeEmployerWhatsAppLead,
     looksLikeWorkerWhatsAppLead,
     resolveWhatsAppLanguageName,
@@ -99,6 +100,27 @@ describe("whatsapp-brain guards", () => {
         expect(looksLikeEmployerWhatsAppLead("Trebaju nam radnici za firmu")).toBe(true);
     });
 
+    it("recognizes greeting-only first contact messages", () => {
+        expect(looksLikeGreetingOnlyWhatsAppMessage("Pozdrav")).toBe(true);
+        expect(looksLikeGreetingOnlyWhatsAppMessage("Hello!")).toBe(true);
+        expect(looksLikeGreetingOnlyWhatsAppMessage("Trebaju mi radnici")).toBe(false);
+    });
+
+    it("greets vague first-contact users without assuming their role", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "Pozdrav",
+            language: "Serbian",
+            intent: "general",
+            isFirstContact: true,
+        });
+
+        expect(reply).toContain("Pomažemo radnicima");
+        expect(reply).toContain("poslodavcima");
+        expect(reply).toContain("agencijama");
+        expect(reply).toContain("da li tražite posao, radnike ili vodite agenciju");
+        expect(reply).not.toContain("$9");
+    });
+
     it("builds a safe pre-registration worker reply without premature payment for generic job intent", () => {
         const reply = buildUnregisteredWorkerWhatsAppReply({
             message: "Ocu posao",
@@ -153,5 +175,19 @@ describe("whatsapp-brain guards", () => {
                 confidence: 0.9,
             },
         ]);
+    });
+
+    it("tells the model to start warmly on vague greetings", () => {
+        const rules = buildWorkerWhatsAppRules({
+            language: "Serbian",
+            intent: "general",
+            confidence: "high",
+            reason: "Greeting-only first contact",
+            isAdmin: false,
+        });
+
+        expect(rules).toContain("start warmly");
+        expect(rules).toContain("helps workers, employers, and agencies");
+        expect(rules).toContain("without assuming their role");
     });
 });
