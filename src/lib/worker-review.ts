@@ -42,6 +42,21 @@ interface SyncWorkerReviewStatusOptions {
     notifyOnPendingApproval?: boolean;
 }
 
+type WorkerReviewNotificationReason =
+    | "already_notified"
+    | "worker_direct_notifications_disabled"
+    | "missing_profile_email";
+
+interface SyncWorkerReviewStatusResult {
+    completion: number;
+    missingFields: string[];
+    reviewQueued: boolean;
+    targetStatus: string | null;
+    allDocumentsVerified: boolean;
+    notificationSent: boolean;
+    notificationReason: WorkerReviewNotificationReason | null;
+}
+
 const REQUIRED_WORKER_DOCUMENT_TYPES = ["passport", "biometric_photo", "diploma"] as const;
 const WORKER_REVIEW_SELECT = "id, profile_id, submitted_full_name, status, admin_approved, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data";
 const PASSPORT_REVIEW_STATUSES = ["manual_review", "verified"] as const;
@@ -270,7 +285,7 @@ export async function syncWorkerReviewStatus({
     phoneOptional = false,
     fullNameFallback = null,
     notifyOnPendingApproval = false,
-}: SyncWorkerReviewStatusOptions) {
+}: SyncWorkerReviewStatusOptions): Promise<SyncWorkerReviewStatusResult> {
     const workerRecord = profileId
         ? await loadCanonicalWorkerRecord<ReviewWorkerRecord>(adminClient, profileId, WORKER_REVIEW_SELECT).then((result) => result.data)
         : workerId
@@ -289,6 +304,8 @@ export async function syncWorkerReviewStatus({
             reviewQueued: false,
             targetStatus: null as string | null,
             allDocumentsVerified: false,
+            notificationSent: false,
+            notificationReason: null,
         };
     }
 
@@ -302,6 +319,8 @@ export async function syncWorkerReviewStatus({
             reviewQueued: false,
             targetStatus: null as string | null,
             allDocumentsVerified: false,
+            notificationSent: false,
+            notificationReason: null,
         };
     }
 
@@ -368,53 +387,55 @@ export async function syncWorkerReviewStatus({
 
     const effectiveStatus = (targetStatus || hydratedWorkerRecord.status || "NEW").toUpperCase();
     const reviewQueued = effectiveStatus === "PENDING_APPROVAL";
+    let notificationSent = false;
+    let notificationReason: WorkerReviewNotificationReason | null = null;
 
     if (
         notifyOnPendingApproval
         && reviewQueued
         && resolvedProfileId
         && !workerRecord.entry_fee_paid
-        && profile?.email
     ) {
-        const { data: existingEmail } = await adminClient
-            .from("email_queue")
-            .select("id")
-            .eq("user_id", resolvedProfileId)
-            .eq("email_type", "profile_complete")
-            .limit(1)
-            .maybeSingle();
+        if (!profile?.email) {
+            notificationReason = "missing_profile_email";
+        } else {
+            const { data: existingEmail } = await adminClient
+                .from("email_queue")
+                .select("id")
+                .eq("user_id", resolvedProfileId)
+                .eq("email_type", "profile_complete")
+                .limit(1)
+                .maybeSingle();
 
-        if (!existingEmail) {
-            const notificationName = profile.full_name?.trim()
-                || fullNameFallback?.trim()
-                || hydratedWorkerRecord.submitted_full_name?.trim()
-                || "there";
-            const canNotifyWorkerDirectly = canSendWorkerDirectNotifications({
-                email: profile.email,
-                phone: hydratedWorkerRecord.phone || undefined,
-                worker: hydratedWorkerRecord,
-            });
+            if (existingEmail) {
+                notificationReason = "already_notified";
+            } else {
+                const notificationName = profile.full_name?.trim()
+                    || fullNameFallback?.trim()
+                    || hydratedWorkerRecord.submitted_full_name?.trim()
+                    || "there";
+                const canNotifyWorkerDirectly = canSendWorkerDirectNotifications({
+                    email: profile.email,
+                    phone: hydratedWorkerRecord.phone || undefined,
+                    worker: hydratedWorkerRecord,
+                });
 
-            if (!canNotifyWorkerDirectly) {
-                return {
-                    completion: completionResult.completion,
-                    missingFields: completionResult.missingFields,
-                    reviewQueued,
-                    targetStatus,
-                    allDocumentsVerified,
-                };
+                if (!canNotifyWorkerDirectly) {
+                    notificationReason = "worker_direct_notifications_disabled";
+                } else {
+                    await queueEmail(
+                        adminClient,
+                        resolvedProfileId,
+                        "profile_complete",
+                        profile.email,
+                        notificationName,
+                        {},
+                        undefined,
+                        hydratedWorkerRecord.phone || undefined
+                    );
+                    notificationSent = true;
+                }
             }
-
-            await queueEmail(
-                adminClient,
-                resolvedProfileId,
-                "profile_complete",
-                profile.email,
-                notificationName,
-                {},
-                undefined,
-                hydratedWorkerRecord.phone || undefined
-            );
         }
     }
 
@@ -424,5 +445,7 @@ export async function syncWorkerReviewStatus({
         reviewQueued,
         targetStatus,
         allDocumentsVerified,
+        notificationSent,
+        notificationReason,
     };
 }
