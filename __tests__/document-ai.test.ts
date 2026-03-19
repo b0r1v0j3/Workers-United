@@ -5,6 +5,7 @@ import {
     evaluateBiometricPhotoGuardrails,
     evaluateDiplomaGuardrails,
     normalizeQuarterTurnRotation,
+    shouldTrustPassportExpiryExtraction,
 } from "@/lib/document-ai";
 
 describe("document-ai orientation helpers", () => {
@@ -51,6 +52,30 @@ describe("document-ai crop prompts", () => {
         expect(prompt).toContain("biodata / identity page");
         expect(prompt).toContain("crop those parts OUT");
         expect(prompt).toContain("machine-readable zone");
+    });
+});
+
+describe("document-ai passport expiry trust guard", () => {
+    it("does not trust low-confidence expiry reads from weak passport images", () => {
+        expect(shouldTrustPassportExpiryExtraction({
+            confidence: 0.85,
+            issues: ["cropped", "overexposed"],
+            documentKind: "passport_data_page",
+            fullName: "BOATENG YAW",
+            passportNumber: "G251558",
+            expiryDate: "2020-09-17",
+        })).toBe(false);
+    });
+
+    it("trusts strong readable passport expiry extraction", () => {
+        expect(shouldTrustPassportExpiryExtraction({
+            confidence: 0.97,
+            issues: [],
+            documentKind: "passport_data_page",
+            fullName: "ALI MOHSIN",
+            passportNumber: "VR1819542",
+            expiryDate: "2033-01-29",
+        })).toBe(true);
     });
 });
 

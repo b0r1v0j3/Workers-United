@@ -35,6 +35,14 @@ export interface VerificationResult {
     workerGuidance?: string;
 }
 
+const PASSPORT_UNTRUSTED_EXPIRY_ISSUES = new Set([
+    "blurry",
+    "glare",
+    "cropped",
+    "unreadable_fields",
+    "overexposed",
+]);
+
 export interface DocumentQualityResult {
     success: boolean;
     isCorrectType: boolean;
@@ -588,7 +596,7 @@ Return a JSON object with EXACTLY these fields:
   "place_of_birth": "CITY",
   "readable": true,
   "confidence": 0.0,
-  "issues": ["passport_cover_only | passport_other_page | non_passport | blurry | glare | cropped | unreadable_fields"]
+  "issues": ["passport_cover_only | passport_other_page | non_passport | blurry | glare | cropped | unreadable_fields | overexposed"]
 }
 
 Rules:
@@ -597,6 +605,8 @@ Rules:
 - Set document_kind to "non_passport" when it is clearly some other document or photo
 - Set readable=true ONLY when the biodata page is visible and the main identity details can be read
 - If the biodata page is present but some fields are hard to read, keep document_kind="passport_data_page", set readable=true, and list the quality issues
+- If any date, passport number, or key field is partly cropped, washed out, overexposed, or uncertain, leave that field empty and include "unreadable_fields" or "overexposed" in issues
+- Never guess or invent missing digits in passport numbers or dates
 - If you cannot confidently tell what the upload is, set document_kind="unclear", readable=false
 
 Return ONLY the JSON object, no other text.`;
@@ -661,6 +671,43 @@ Return ONLY the JSON object, no other text.`;
             issues: [`AI processing error: ${error instanceof Error ? error.message : "Unknown error"}`],
         };
     }
+}
+
+export function shouldTrustPassportExpiryExtraction(input: {
+    confidence: number;
+    issues: string[];
+    documentKind?: string | null;
+    fullName?: string | null;
+    passportNumber?: string | null;
+    expiryDate?: string | null;
+    autoCropSkippedReason?: string | null;
+}) {
+    if (!input.expiryDate) {
+        return false;
+    }
+
+    if (input.documentKind && input.documentKind !== "passport_data_page") {
+        return false;
+    }
+
+    if (!input.fullName || !input.passportNumber) {
+        return false;
+    }
+
+    if (input.autoCropSkippedReason) {
+        return false;
+    }
+
+    if (input.confidence < 0.9) {
+        return false;
+    }
+
+    const issues = input.issues.map((issue) => issue.toLowerCase());
+    if (issues.some((issue) => PASSPORT_UNTRUSTED_EXPIRY_ISSUES.has(issue))) {
+        return false;
+    }
+
+    return true;
 }
 
 export function compareNames(aiName: string, signupName: string): boolean {

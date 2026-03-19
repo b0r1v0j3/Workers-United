@@ -78,6 +78,79 @@ export function sanitizeDocumentCrop(crop: unknown): DocumentCrop | null {
     };
 }
 
+export function shouldApplyAutoCropForDocument(docType: string, crop: unknown): boolean {
+    const safeCrop = sanitizeDocumentCrop(crop);
+    if (!safeCrop) {
+        return false;
+    }
+
+    if (docType !== "passport") {
+        return true;
+    }
+
+    const coversAlmostFullWidth = safeCrop.x <= 2 && safeCrop.width >= 95;
+    const startsNearTop = safeCrop.y <= 2;
+    const mostlyTopSlice = safeCrop.height <= 85;
+    const almostWholeFrame = safeCrop.width >= 94 && safeCrop.height >= 90;
+
+    if ((coversAlmostFullWidth && startsNearTop && mostlyTopSlice) || almostWholeFrame) {
+        return false;
+    }
+
+    return true;
+}
+
+export function buildAiOriginalBackupPath(storagePath: string) {
+    const segments = storagePath.split("/");
+    const fileName = segments.pop() || "document";
+    const directory = segments.join("/");
+    return `${directory}/_ai-originals/${fileName}`;
+}
+
+export function getRestorableDocumentBackupPath(ocrJson: Record<string, unknown>): string | null {
+    const manualBackup = typeof ocrJson.manual_crop_original_storage_path === "string"
+        ? ocrJson.manual_crop_original_storage_path.trim()
+        : "";
+    if (manualBackup) {
+        return manualBackup;
+    }
+
+    const aiBackup = typeof ocrJson.ai_original_storage_path === "string"
+        ? ocrJson.ai_original_storage_path.trim()
+        : "";
+    return aiBackup || null;
+}
+
+export function collectDocumentStoragePathsForCleanup(
+    storagePath: string | null | undefined,
+    ocrJson?: Record<string, unknown> | null
+) {
+    const paths = new Set<string>();
+
+    if (typeof storagePath === "string" && storagePath.trim()) {
+        paths.add(storagePath.trim());
+    }
+
+    if (ocrJson && typeof ocrJson === "object") {
+        const manualBackup = typeof ocrJson.manual_crop_original_storage_path === "string"
+            ? ocrJson.manual_crop_original_storage_path.trim()
+            : "";
+        const aiBackup = typeof ocrJson.ai_original_storage_path === "string"
+            ? ocrJson.ai_original_storage_path.trim()
+            : "";
+
+        if (manualBackup) {
+            paths.add(manualBackup);
+        }
+
+        if (aiBackup) {
+            paths.add(aiBackup);
+        }
+    }
+
+    return [...paths];
+}
+
 export async function processDocumentImageBuffer(
     buffer: Buffer,
     mimeType: string,
@@ -145,11 +218,15 @@ export function buildAutoCropOcrPatch(options: {
     cropApplied: boolean;
     crop?: DocumentCrop | null;
     processedAt?: string;
+    backupStoragePath?: string | null;
+    skipReason?: string | null;
 }) {
     return {
         auto_crop_processed_at: options.processedAt || new Date().toISOString(),
         auto_crop_applied: options.cropApplied,
         ...(options.crop ? { auto_crop: options.crop } : {}),
+        ...(options.backupStoragePath ? { ai_original_storage_path: options.backupStoragePath } : {}),
+        ...(options.skipReason ? { auto_crop_skip_reason: options.skipReason } : {}),
     };
 }
 

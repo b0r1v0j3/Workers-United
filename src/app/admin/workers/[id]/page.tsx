@@ -23,6 +23,7 @@ import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { getWorkerDocumentProgress, WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
+import { collectDocumentStoragePathsForCleanup, getRestorableDocumentBackupPath } from "@/lib/document-image-processing";
 import { syncWorkerReviewStatus } from "@/lib/worker-review";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { getAgencyWorkerEmail } from "@/lib/agencies";
@@ -363,7 +364,6 @@ export default async function WorkerDetailPage({ params }: PageProps) {
     async function deleteDocument(formData: FormData) {
         "use server";
         const docId = formData.get("doc_id") as string;
-        const storagePath = formData.get("storage_path") as string;
 
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -384,11 +384,26 @@ export default async function WorkerDetailPage({ params }: PageProps) {
             throw new Error("Worker record not found");
         }
 
-        // Delete from storage
-        if (storagePath) {
+        const { data: existingDocument, error: existingDocumentError } = await adminClient
+            .from("worker_documents")
+            .select("storage_path, ocr_json")
+            .eq("id", docId)
+            .maybeSingle();
+        if (existingDocumentError) {
+            throw new Error(existingDocumentError.message);
+        }
+
+        const storagePathsToDelete = collectDocumentStoragePathsForCleanup(
+            existingDocument?.storage_path,
+            existingDocument?.ocr_json && typeof existingDocument.ocr_json === "object"
+                ? existingDocument.ocr_json as Record<string, unknown>
+                : null
+        );
+
+        if (storagePathsToDelete.length > 0) {
             await adminClient.storage
                 .from(WORKER_DOCUMENTS_BUCKET)
-                .remove([storagePath]);
+                .remove(storagePathsToDelete);
         }
 
         // Delete from database
@@ -410,12 +425,12 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         });
 
         revalidatePath(`/admin/workers/${id}`);
+        redirect(`/admin/workers/${id}?documentAction=deleted&ts=${Date.now()}`);
     }
 
     async function requestNewDocument(formData: FormData) {
         "use server";
         const docId = formData.get("doc_id") as string;
-        const storagePath = formData.get("storage_path") as string;
         const docType = formData.get("doc_type") as string;
         const reason = formData.get("reason") as string;
         const userEmail = formData.get("user_email") as string;
@@ -441,11 +456,26 @@ export default async function WorkerDetailPage({ params }: PageProps) {
             throw new Error("Worker record not found");
         }
 
-        // Delete from storage
-        if (storagePath) {
+        const { data: existingDocument, error: existingDocumentError } = await adminClient
+            .from("worker_documents")
+            .select("storage_path, ocr_json")
+            .eq("id", docId)
+            .maybeSingle();
+        if (existingDocumentError) {
+            throw new Error(existingDocumentError.message);
+        }
+
+        const storagePathsToDelete = collectDocumentStoragePathsForCleanup(
+            existingDocument?.storage_path,
+            existingDocument?.ocr_json && typeof existingDocument.ocr_json === "object"
+                ? existingDocument.ocr_json as Record<string, unknown>
+                : null
+        );
+
+        if (storagePathsToDelete.length > 0) {
             await adminClient.storage
                 .from(WORKER_DOCUMENTS_BUCKET)
-                .remove([storagePath]);
+                .remove(storagePathsToDelete);
         }
 
         // Delete from database  
@@ -492,6 +522,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
         }
 
         revalidatePath(`/admin/workers/${id}`);
+        redirect(`/admin/workers/${id}?documentAction=requested&ts=${Date.now()}`);
     }
 
     async function approveWorker(formData: FormData) {
@@ -1089,10 +1120,23 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                             const aiSummary = buildDocumentAiSummary(doc.document_type, doc.ocr_json, doc.reject_reason);
                                             const requestReason = buildDocumentRequestReason(doc.document_type, doc.ocr_json, doc.reject_reason);
                                             const isPdf = typeof doc.storage_path === "string" && doc.storage_path.toLowerCase().endsWith(".pdf");
-                                            const hasManualCrop = !!doc.ocr_json
+                                            const ocrJsonRecord = !!doc.ocr_json
                                                 && typeof doc.ocr_json === "object"
                                                 && !Array.isArray(doc.ocr_json)
-                                                && (doc.ocr_json as Record<string, unknown>).manual_crop_applied === true;
+                                                    ? doc.ocr_json as Record<string, unknown>
+                                                    : null;
+                                            const hasRestorableOriginal = !!(ocrJsonRecord && getRestorableDocumentBackupPath(ocrJsonRecord));
+                                            const autoCropApplied = ocrJsonRecord?.auto_crop_applied === true;
+                                            const autoCropSkipReason = typeof ocrJsonRecord?.auto_crop_skip_reason === "string"
+                                                ? ocrJsonRecord.auto_crop_skip_reason
+                                                : null;
+                                            const aiCropStatus = autoCropApplied
+                                                ? "Applied"
+                                                : autoCropSkipReason === "suspicious_passport_spread_crop"
+                                                    ? "Skipped suspicious crop"
+                                                    : typeof ocrJsonRecord?.auto_crop_processed_at === "string"
+                                                        ? "Checked"
+                                                        : "Not checked";
 
                                             return (
                                         <article
@@ -1118,6 +1162,8 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                 <InlineFact label="Storage" value={doc.storage_path ? "File attached" : "No file"} />
                                                 <InlineFact label="Worker Guidance" value={doc.reject_reason ? "Present" : "None"} />
                                                 <InlineFact label="AI Result" value={aiSummary || "None"} />
+                                                <InlineFact label="AI Auto-Crop" value={aiCropStatus} />
+                                                <InlineFact label="Original Backup" value={hasRestorableOriginal ? "Available" : "None"} />
                                             </div>
 
                                             {doc.storage_path ? (
@@ -1127,7 +1173,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                     documentType={doc.document_type}
                                                     status={doc.status}
                                                     isPdf={isPdf}
-                                                    hasManualCrop={hasManualCrop}
+                                                    hasRestorableOriginal={hasRestorableOriginal}
                                                 >
                                                     {aiSummary ? (
                                                         <ModalDetailCard title="AI review summary" icon={<Brain size={14} />} tone="blue">

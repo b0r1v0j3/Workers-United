@@ -10,6 +10,7 @@ import {
     detectDocumentOrientation,
     extractPassportData,
     fetchImageAsBase64,
+    shouldTrustPassportExpiryExtraction,
     verifyBiometricPhoto,
     verifyDiploma,
 } from "@/lib/document-ai";
@@ -25,9 +26,12 @@ import {
     resolveAgencyWorkerDocumentOwnerId,
 } from "@/lib/agency-draft-documents";
 import {
+    buildAiOriginalBackupPath,
     buildAutoCropOcrPatch,
     processDocumentImageBuffer,
     resolveDocumentRotationToApply,
+    sanitizeDocumentCrop,
+    shouldApplyAutoCropForDocument,
 } from "@/lib/document-image-processing";
 
 export async function POST(request: Request) {
@@ -206,7 +210,13 @@ export async function POST(request: Request) {
             const imageData = await fetchImageAsBase64(imageUrl);
             const orientation = await detectDocumentOrientation(imageData, normalizedDocType);
             const bounds = await detectDocumentBounds(imageData, normalizedDocType);
-            const crop = bounds.found ? bounds.crop : undefined;
+            const detectedCrop = bounds.found ? sanitizeDocumentCrop(bounds.crop) : null;
+            const crop = detectedCrop && shouldApplyAutoCropForDocument(normalizedDocType, detectedCrop)
+                ? detectedCrop
+                : undefined;
+            const autoCropSkippedReason = detectedCrop && !crop
+                ? "suspicious_passport_spread_crop"
+                : null;
             const rotationToApply = resolveDocumentRotationToApply(
                 orientation.rotationDegrees,
                 orientation.confidence,
@@ -215,6 +225,13 @@ export async function POST(request: Request) {
             const imageBuffer = Buffer.from(imageData.data, "base64");
             const shouldRewriteImage = rotationToApply !== 0 || !!crop;
             let cropApplied = false;
+            let aiOriginalStoragePath =
+                document.ocr_json
+                && typeof document.ocr_json === "object"
+                && !Array.isArray(document.ocr_json)
+                && typeof (document.ocr_json as Record<string, unknown>).ai_original_storage_path === "string"
+                    ? String((document.ocr_json as Record<string, unknown>).ai_original_storage_path).trim() || null
+                    : null;
 
             if (shouldRewriteImage) {
                 const { data: currentDoc } = await readClient
@@ -224,6 +241,21 @@ export async function POST(request: Request) {
                     .single();
 
                 const storagePath = currentDoc?.storage_path || document.storage_path;
+                if (!aiOriginalStoragePath) {
+                    aiOriginalStoragePath = buildAiOriginalBackupPath(storagePath);
+                    const { error: backupError } = await storageClient.storage
+                        .from(WORKER_DOCUMENTS_BUCKET)
+                        .upload(aiOriginalStoragePath, imageBuffer, {
+                            contentType: imageData.mimeType,
+                            upsert: true,
+                        });
+
+                    if (backupError) {
+                        console.warn("[Verify] Failed to preserve AI original before rewrite:", backupError);
+                        aiOriginalStoragePath = null;
+                    }
+                }
+
                 const processed = await processDocumentImageBuffer(imageBuffer, imageData.mimeType, rotationToApply, crop);
                 cropApplied = processed.cropApplied;
 
@@ -251,6 +283,8 @@ export async function POST(request: Request) {
                 ...buildAutoCropOcrPatch({
                     cropApplied,
                     crop: cropApplied ? crop : undefined,
+                    backupStoragePath: aiOriginalStoragePath,
+                    skipReason: autoCropSkippedReason,
                 }),
             };
         } catch (cropErr) {
@@ -288,11 +322,33 @@ export async function POST(request: Request) {
                             const expiryDate = new Date(result.data.expiry_date);
                             const sixMonthsFromNow = new Date();
                             sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+                            const autoCropSkippedReason =
+                                typeof orientationOcrPatch.auto_crop_skip_reason === "string"
+                                    ? orientationOcrPatch.auto_crop_skip_reason
+                                    : null;
+                            const expiryIsTrusted = shouldTrustPassportExpiryExtraction({
+                                confidence: result.confidence,
+                                issues: qualityIssues,
+                                documentKind: result.documentKind,
+                                fullName: result.data.full_name,
+                                passportNumber: result.data.passport_number,
+                                expiryDate: result.data.expiry_date,
+                                autoCropSkippedReason,
+                            });
 
                             if (expiryDate < new Date()) {
-                                status = 'rejected';
-                                rejectReason = "Your passport has expired. Please upload a valid, non-expired passport.";
-                            } else if (expiryDate < sixMonthsFromNow) {
+                                if (expiryIsTrusted) {
+                                    status = 'rejected';
+                                    rejectReason = "Your passport has expired. Please upload a valid, non-expired passport.";
+                                } else {
+                                    status = 'rejected';
+                                    qualityIssues = Array.from(new Set([
+                                        ...qualityIssues,
+                                        autoCropSkippedReason ? "cropped" : "unreadable_fields",
+                                    ]));
+                                    rejectReason = "Please upload a clearer passport identity page. Place the page flat, avoid glare, and make sure the full page is visible and readable.";
+                                }
+                            } else if (expiryDate < sixMonthsFromNow && expiryIsTrusted) {
                                 qualityIssues.push("Your passport expires within 6 months — this may cause issues with visa processing.");
                             }
                         }

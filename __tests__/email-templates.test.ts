@@ -122,8 +122,11 @@ describe('getEmailTemplate', () => {
         expect(subject).toBe('Your Biometric Photo Has Been Approved');
         expect(html).toContain('Biometric Photo Approved');
         expect(html).toContain('What Happens Next');
+        expect(html).toContain('Current Status');
         expect(html).not.toContain('#d1fae5');
         expect(html).not.toContain('Continue Registration');
+        expect(html).not.toContain('checked.png');
+        expect(html).not.toContain('✅ Your');
     });
 
     it('profile_incomplete uses the premium monochrome reminder layout', () => {
