@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, MailX, Mail, Shield, Wrench } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { createClient } from "@/lib/supabase/server";
+import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
 
 type InternalToolTone = "amber" | "rose" | "blue";
 
@@ -41,6 +42,37 @@ const TONE_STYLES: Record<InternalToolTone, string> = {
     blue: "border-blue-200 bg-blue-50 text-blue-950",
 };
 
+const INTERNAL_EMAIL_PREVIEWS = [
+    {
+        href: "/internal/email-preview",
+        label: "Open sandbox",
+        copy: "Browse every system template from one place.",
+    },
+    {
+        href: buildAdminEmailPreviewHref(
+            "document_review_result",
+            { name: "Marko Petrovic", approved: true, docType: "Passport" },
+            "/internal/email-preview"
+        ),
+        label: "Approved document sample",
+        copy: "See the exact premium approval layout for document review emails.",
+    },
+    {
+        href: buildAdminEmailPreviewHref(
+            "document_review_result",
+            {
+                name: "Marko Petrovic",
+                approved: false,
+                docType: "Passport",
+                feedback: "Please upload a clearer passport photo with the full biodata page visible.",
+            },
+            "/internal/email-preview"
+        ),
+        label: "Re-upload request sample",
+        copy: "Check the rejection/re-upload email without waiting for a real send.",
+    },
+];
+
 export default async function InternalToolsPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -76,6 +108,29 @@ export default async function InternalToolsPage() {
                             </Link>
                         );
                     })}
+                </section>
+
+                <section className="rounded-[24px] border border-[#e6e6e1] bg-white p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-[#dbeafe] bg-[#eff6ff] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1d4ed8]">
+                        <Mail size={13} />
+                        Popular email previews
+                    </div>
+                    <h2 className="mt-4 text-lg font-semibold text-[#18181b]">Open common worker emails directly</h2>
+                    <p className="mt-2 text-sm leading-6 text-[#57534e]">
+                        Use these shortcuts when you just want to inspect the exact visual treatment of the most sensitive worker-facing emails.
+                    </p>
+                    <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                        {INTERNAL_EMAIL_PREVIEWS.map((preview) => (
+                            <Link
+                                key={preview.href}
+                                href={preview.href}
+                                className="rounded-[20px] border border-[#e6e6e1] bg-[#fafaf9] px-4 py-4 transition hover:-translate-y-0.5 hover:border-[#d6d3d1] hover:bg-white"
+                            >
+                                <div className="text-sm font-semibold text-[#18181b]">{preview.label}</div>
+                                <p className="mt-2 text-sm leading-6 text-[#57534e]">{preview.copy}</p>
+                            </Link>
+                        ))}
+                    </div>
                 </section>
 
                 <section className="rounded-[24px] border border-dashed border-[#ddd6c8] bg-[#fafaf9] p-5">

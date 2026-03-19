@@ -41,6 +41,13 @@ import {
 } from "@/lib/whatsapp-worker-ai";
 import { getWhatsAppFallbackResponse } from "@/lib/whatsapp-fallback";
 import { persistWhatsAppDeliveryStatuses } from "@/lib/whatsapp-status-events";
+import {
+    extractWhatsAppMessageContent,
+    isDuplicateWhatsAppInboundMessage,
+    isTextLikeWhatsAppMessage,
+    normalizeWhatsAppPhone,
+    recordInboundWhatsAppMessage,
+} from "@/lib/whatsapp-inbound-events";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -57,10 +64,9 @@ const RESPONSE_HISTORY_LIMIT = 12;
 const BRAIN_MEMORY_LIMIT = 8;
 const WHATSAPP_ROUTER_MODEL = process.env.WHATSAPP_ROUTER_MODEL || "gpt-5-mini";
 const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "gpt-5.4-mini";
-const TEXT_LIKE_MESSAGE_TYPES = new Set(["text", "button", "interactive"]);
 const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+38166299444")
     .split(",")
-    .map((phone) => normalizePhone(phone))
+    .map((phone) => normalizeWhatsAppPhone(phone))
     .filter(Boolean);
 
 interface WhatsAppWorkerRecord {
@@ -87,15 +93,6 @@ interface WhatsAppWorkerRecord {
 interface SupportAccessSnapshot {
     allowed: boolean;
     reason: string | null;
-}
-
-function normalizePhone(rawPhone: string): string {
-    const digits = rawPhone.replace(/\D/g, "");
-    return digits ? `+${digits}` : "";
-}
-
-function isTextLikeMessageType(messageType: string): boolean {
-    return TEXT_LIKE_MESSAGE_TYPES.has(messageType);
 }
 
 async function logDeterministicWhatsAppReply(params: {
@@ -195,35 +192,16 @@ export async function POST(request: NextRequest) {
                 const phoneNumber = message.from;
                 const messageType = message.type;
                 const wamid = message.id;
-
-                // Extract text content
-                let content = "";
-                if (messageType === "text") {
-                    content = message.text?.body || "";
-                } else if (messageType === "button") {
-                    content = message.button?.text || "";
-                } else if (messageType === "interactive") {
-                    content = message.interactive?.button_reply?.title
-                        || message.interactive?.list_reply?.title
-                        || `[${messageType}]`;
-                } else {
-                    content = `[${messageType} message]`;
-                }
+                const content = extractWhatsAppMessageContent(message);
 
                 // ─── Deduplication: skip if this wamid was already processed ──
-                const { data: existingMsg } = await supabase
-                    .from("whatsapp_messages")
-                    .select("id")
-                    .eq("wamid", wamid)
-                    .eq("direction", "inbound")
-                    .maybeSingle();
-                if (existingMsg) {
+                if (await isDuplicateWhatsAppInboundMessage(supabase, wamid)) {
                     console.log(`[Webhook] Duplicate wamid ${wamid} — skipping`);
                     continue;
                 }
 
                 // Normalize phone for DB lookup (add + prefix)
-                const normalizedPhone = normalizePhone(phoneNumber);
+                const normalizedPhone = normalizeWhatsAppPhone(phoneNumber);
 
                 // ─── Fetch user profile (multi-layer phone lookup) ────────
                 const workerRecordSelect = `
@@ -286,14 +264,12 @@ export async function POST(request: NextRequest) {
                     : { data: null };
 
                 // ─── Log inbound message ────────────────────────────────
-                await supabase.from("whatsapp_messages").insert({
-                    user_id: workerRecord?.profile_id || null,
-                    phone_number: normalizedPhone,
-                    direction: "inbound",
-                    message_type: messageType,
+                await recordInboundWhatsAppMessage(supabase, {
+                    userId: workerRecord?.profile_id || null,
+                    normalizedPhone,
+                    messageType,
                     content,
                     wamid,
-                    status: "delivered",
                 });
 
                 // Log to activity tracking
@@ -335,7 +311,7 @@ export async function POST(request: NextRequest) {
                 const quickLang = detectWhatsAppLanguageCode(content);
                 const latestMessageLanguage = resolveWhatsAppLanguageName(content);
 
-                if (!isTextLikeMessageType(messageType)) {
+                if (!isTextLikeWhatsAppMessage(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
                         const mediaFallbackReply = getMediaAttachmentResponse(quickLang);
                         await sendWhatsAppText(

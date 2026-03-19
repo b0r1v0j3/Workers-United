@@ -49,7 +49,11 @@ export function isAdminEmailPreviewType(value: string | null | undefined): value
     return ADMIN_EMAIL_PREVIEW_TYPE_SET.has(value as EmailType);
 }
 
-export function buildAdminEmailPreviewHref(type: EmailType, data?: TemplateData | EmailPreviewData | null) {
+export function buildAdminEmailPreviewHref(
+    type: EmailType,
+    data?: TemplateData | EmailPreviewData | null,
+    basePath = "/admin/email-preview"
+) {
     const params = new URLSearchParams({ type });
     const previewData = sanitizePreviewData(data);
 
@@ -57,7 +61,7 @@ export function buildAdminEmailPreviewHref(type: EmailType, data?: TemplateData 
         params.set("data", JSON.stringify(previewData));
     }
 
-    return `/admin/email-preview?${params.toString()}`;
+    return `${basePath}?${params.toString()}`;
 }
 
 export function parseAdminEmailPreviewData(rawData: string | null | undefined): EmailPreviewData | null {
