@@ -11,7 +11,6 @@ import {
     buildWhatsAppAutoHandoffReply,
     buildWorkerWhatsAppRules,
     detectWhatsAppLanguageCode,
-    filterSafeWhatsAppBrainMemory,
     looksLikeEmployerWhatsAppLead,
     looksLikeWorkerWhatsAppLead,
     replyMatchesExpectedWhatsAppLanguage,
@@ -20,20 +19,21 @@ import {
 } from "@/lib/whatsapp-brain";
 import {
     analyzeWhatsAppConfusion,
-    humanizeWhatsAppHandoffReason,
 } from "@/lib/whatsapp-quality";
 import { loadCanonicalWorkerRecord, pickCanonicalWorkerRecord } from "@/lib/workers";
-import {
-    appendConversationMessage,
-    ensureSupportConversation,
-    getSupportAccessState,
-} from "@/lib/messaging";
+import { getSupportAccessState } from "@/lib/messaging";
 import {
     applyWhatsAppReplyGuardrails,
     buildWorkerPaymentSnapshot,
     getMediaAttachmentResponse,
     isWorkerPaymentUnlocked,
 } from "@/lib/whatsapp-reply-guardrails";
+import {
+    createWhatsAppAutoHandoff,
+    formatWhatsAppHistory,
+    loadWhatsAppBrainMemory,
+    loadWhatsAppConversationHistory,
+} from "@/lib/whatsapp-conversation-helpers";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -155,15 +155,6 @@ function isTextLikeMessageType(messageType: string): boolean {
     return TEXT_LIKE_MESSAGE_TYPES.has(messageType);
 }
 
-function truncateWhatsAppPreview(value: string, maxLength = 240): string {
-    const normalized = value.replace(/\s+/g, " ").trim();
-    if (normalized.length <= maxLength) {
-        return normalized;
-    }
-
-    return `${normalized.slice(0, maxLength - 3)}...`;
-}
-
 async function logDeterministicWhatsAppReply(params: {
     userId: string | null;
     phone: string;
@@ -188,61 +179,6 @@ async function logDeterministicWhatsAppReply(params: {
             response_type: params.responseType || "deterministic",
         }
     );
-}
-
-async function createWhatsAppAutoHandoff(params: {
-    supabase: ReturnType<typeof createAdminClient>;
-    profileId: string;
-    normalizedPhone: string;
-    latestMessage: string;
-    language: string;
-    reason: string;
-    snippets: string[];
-}) {
-    const { conversation } = await ensureSupportConversation(params.supabase, params.profileId, "worker");
-    const summaryLines = [
-        "[WhatsApp auto-handoff]",
-        `Reason: ${humanizeWhatsAppHandoffReason(params.reason)}`,
-        `Phone: ${params.normalizedPhone}`,
-        `Latest user message: ${truncateWhatsAppPreview(params.latestMessage, 500)}`,
-    ];
-
-    if (params.snippets.length > 0) {
-        summaryLines.push(
-            "Recent issue snippets:",
-            ...params.snippets.map((snippet) => `- ${truncateWhatsAppPreview(snippet, 180)}`)
-        );
-    }
-
-    const { message } = await appendConversationMessage(
-        params.supabase,
-        conversation,
-        params.profileId,
-        "worker",
-        summaryLines.join("\n")
-    );
-
-    await params.supabase.from("conversation_flags").insert({
-        conversation_id: conversation.id,
-        message_id: message.id,
-        flag_type: "whatsapp_auto_handoff",
-    });
-
-    await logServerActivity(
-        params.profileId,
-        "whatsapp_auto_handoff_created",
-        "messaging",
-        {
-            phone: params.normalizedPhone,
-            reason: params.reason,
-            preview: truncateWhatsAppPreview(params.latestMessage),
-            conversation_id: conversation.id,
-            language: params.language,
-        },
-        "warning"
-    );
-
-    return conversation.id;
 }
 
 // ─── Meta signature verification ─────────────────────────────────────────────
@@ -576,8 +512,8 @@ export async function POST(request: NextRequest) {
                     if (OPENAI_API_KEY_EMP) {
                         try {
                             const [empHistory, empBrainMemory] = await Promise.all([
-                                loadConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
-                                loadBrainMemory(supabase),
+                                loadWhatsAppConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
+                                loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT),
                             ]);
                             const employerReply = await generateEmployerWhatsAppReply({
                                 apiKey: OPENAI_API_KEY_EMP,
@@ -634,8 +570,8 @@ export async function POST(request: NextRequest) {
                 if (OPENAI_API_KEY) {
                     try {
                         const [historyMessages, brainMemory, businessFacts, supportAccess] = await Promise.all([
-                            loadConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
-                            loadBrainMemory(supabase),
+                            loadWhatsAppConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
+                            loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT),
                             (async () => {
                                 try {
                                     const { getBusinessFactsForAI } = await import("@/lib/platform-config");
@@ -705,7 +641,7 @@ export async function POST(request: NextRequest) {
 
                         if (confusionAnalysis?.triggered && workerRecord?.profile_id) {
                             await createWhatsAppAutoHandoff({
-                                supabase,
+                                admin: supabase,
                                 profileId: workerRecord.profile_id,
                                 normalizedPhone,
                                 latestMessage: content,
@@ -849,20 +785,6 @@ export async function POST(request: NextRequest) {
     }
 }
 
-function formatHistory(
-    historyMessages: Array<{ direction: string; content: string | null; created_at?: string | null }>,
-    limit: number
-): string {
-    const trimmed = historyMessages.slice(-limit);
-    if (trimmed.length === 0) {
-        return "(No recent history)";
-    }
-
-    return trimmed
-        .map((message) => `${message.direction === "inbound" ? "User" : "Assistant"}: ${(message.content || "").trim()}`)
-        .join("\n");
-}
-
 function buildWorkerSnapshot(workerRecord: any, profile: any): string {
     if (!workerRecord) {
         return [
@@ -884,43 +806,6 @@ function buildWorkerSnapshot(workerRecord: any, profile: any): string {
         `Current country: ${workerRecord.current_country || "not set"}`,
         `Email: ${profile?.email || "not set"}`,
     ].join("\n");
-}
-
-async function loadConversationHistory(
-    supabase: ReturnType<typeof createAdminClient>,
-    normalizedPhone: string,
-    limit: number
-): Promise<Array<{ direction: string; content: string | null; created_at?: string | null }>> {
-    try {
-        const { data } = await supabase
-            .from("whatsapp_messages")
-            .select("direction, content, created_at")
-            .eq("phone_number", normalizedPhone)
-            .order("created_at", { ascending: false })
-            .limit(limit);
-        return (data || []).reverse();
-    } catch {
-        return [];
-    }
-}
-
-async function loadBrainMemory(
-    supabase: ReturnType<typeof createAdminClient>
-): Promise<Array<{ category: string; content: string; confidence: number }>> {
-    try {
-        const { data } = await supabase
-            .from("brain_memory")
-            .select("category, content, confidence")
-            .order("confidence", { ascending: false })
-            .limit(BRAIN_MEMORY_LIMIT);
-        return filterSafeWhatsAppBrainMemory((data || []).map((entry) => ({
-            category: entry.category,
-            content: entry.content,
-            confidence: entry.confidence ?? 0,
-        })));
-    } catch {
-        return [];
-    }
 }
 
 async function callOpenAIResponseText(
@@ -1029,7 +914,7 @@ Worker snapshot:
 ${buildWorkerSnapshot(workerRecord, profile)}
 
 Recent history:
-${formatHistory(historyMessages, ROUTER_HISTORY_LIMIT)}`;
+${formatWhatsAppHistory(historyMessages, ROUTER_HISTORY_LIMIT)}`;
 
     try {
         const raw = await callOpenAIResponseText(apiKey, {
@@ -1126,7 +1011,7 @@ ${buildWorkerWhatsAppRules({
     return callOpenAIResponseText(apiKey, {
         model: WHATSAPP_RESPONSE_MODEL,
         instructions,
-        input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}\n\nRecent conversation:\n${formatHistory(historyMessages, RESPONSE_HISTORY_LIMIT)}`,
+        input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}\n\nRecent conversation:\n${formatWhatsAppHistory(historyMessages, RESPONSE_HISTORY_LIMIT)}`,
         maxOutputTokens: 4096,
     });
 }
@@ -1182,7 +1067,7 @@ ${buildEmployerWhatsAppRules({
     return callOpenAIResponseText(apiKey, {
         model: WHATSAPP_RESPONSE_MODEL,
         instructions,
-        input: `Phone: ${normalizedPhone}\nLatest message:\n${message}\n\nRecent conversation:\n${formatHistory(historyMessages, 10)}`,
+        input: `Phone: ${normalizedPhone}\nLatest message:\n${message}\n\nRecent conversation:\n${formatWhatsAppHistory(historyMessages, 10)}`,
         maxOutputTokens: 2048,
     });
 }
