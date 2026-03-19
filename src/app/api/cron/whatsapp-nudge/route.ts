@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendProfileIncomplete } from "@/lib/whatsapp";
 import { isRecipientSideWhatsAppFailure } from "@/lib/whatsapp-health";
-import { isInternalOrTestEmail } from "@/lib/reporting";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
+import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 
 // ─── WhatsApp Nudge Cron ────────────────────────────────────────────────────
 // Runs daily. Finds ALL users who haven't paid yet.
@@ -17,6 +17,8 @@ export const dynamic = "force-dynamic";
 interface NudgeWorkerRecord extends WorkerRecordSnapshot {
     id: string;
     profile_id: string | null;
+    agency_id: string | null;
+    submitted_email: string | null;
     phone: string | null;
     status: string | null;
     entry_fee_paid: boolean | null;
@@ -39,7 +41,7 @@ export async function GET(request: Request) {
         // Find all worker records that still haven't paid and have a phone number
         const { data: unpaidWorkerRows } = await supabase
             .from("worker_onboarding")
-            .select("id, profile_id, phone, status, entry_fee_paid, updated_at, queue_joined_at, job_search_active, nationality, current_country, preferred_job")
+            .select("id, profile_id, agency_id, submitted_email, phone, status, entry_fee_paid, updated_at, queue_joined_at, job_search_active, nationality, current_country, preferred_job")
             .eq("entry_fee_paid", false)
             .not("phone", "is", null);
 
@@ -123,7 +125,16 @@ export async function GET(request: Request) {
             }
 
             const profile = workerRecord.profile_id ? profileMap.get(workerRecord.profile_id) : null;
-            if (isInternalOrTestEmail(profile?.email)) {
+            if (!canSendWorkerDirectNotifications({
+                email: profile?.email || workerRecord.submitted_email,
+                phone,
+                worker: {
+                    agency_id: workerRecord.agency_id,
+                    profile_id: workerRecord.profile_id,
+                    submitted_email: workerRecord.submitted_email,
+                    phone: workerRecord.phone,
+                },
+            })) {
                 results.skipped++;
                 continue;
             }

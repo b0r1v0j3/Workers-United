@@ -63,6 +63,7 @@ const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRE
 const APP_SECRET = process.env.META_APP_SECRET || "";
 const RESPONSE_HISTORY_LIMIT = 12;
 const BRAIN_MEMORY_LIMIT = 8;
+const ONBOARDING_STATE_TTL_MS = 24 * 60 * 60 * 1000;
 const WHATSAPP_ROUTER_MODEL = process.env.WHATSAPP_ROUTER_MODEL || "gpt-5-mini";
 const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "gpt-5.4-mini";
 const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+38166299444")
@@ -89,6 +90,7 @@ interface WhatsAppWorkerRecord {
     updated_at: string | null;
     phone: string | null;
     marital_status: string | null;
+    onboarding_completed: boolean | null;
 }
 
 interface SupportAccessSnapshot {
@@ -120,6 +122,33 @@ async function logDeterministicWhatsAppReply(params: {
             response_type: params.responseType || "deterministic",
         }
     );
+}
+
+async function sendWhatsAppRouteReply(params: {
+    phone: string;
+    text: string;
+    userId?: string;
+    activityUserId?: string | null;
+    failureContext: string;
+}) {
+    const result = await sendWhatsAppText(params.phone, params.text, params.userId);
+    if (!result.success) {
+        await logServerActivity(
+            params.activityUserId || "anonymous",
+            "whatsapp_reply_delivery_failed",
+            "messaging",
+            {
+                phone: params.phone,
+                failure_context: params.failureContext,
+                error: result.error || "unknown",
+                reply_preview: params.text.substring(0, 500),
+            },
+            "error"
+        );
+        return false;
+    }
+
+    return true;
 }
 
 // ─── Meta signature verification ─────────────────────────────────────────────
@@ -210,7 +239,7 @@ export async function POST(request: NextRequest) {
                     entry_fee_paid, admin_approved, queue_joined_at,
                     nationality, current_country, gender, experience_years,
                     updated_at,
-                    phone, marital_status
+                    phone, marital_status, onboarding_completed
                 `;
                 const { workerRecord, profile } = await resolveWhatsAppWorkerIdentity<
                     WhatsAppWorkerRecord,
@@ -261,7 +290,7 @@ export async function POST(request: NextRequest) {
                     });
 
                     if (adminCommandHandled) {
-                        return NextResponse.json({ status: "ok" });
+                        continue;
                     }
                 }
 
@@ -273,23 +302,27 @@ export async function POST(request: NextRequest) {
                 if (!isTextLikeWhatsAppMessage(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
                         const mediaFallbackReply = getMediaAttachmentResponse(quickLang);
-                        await sendWhatsAppText(
-                            normalizedPhone,
-                            mediaFallbackReply,
-                            workerRecord?.profile_id || undefined
-                        );
-                        await logServerActivity(
-                            workerRecord?.profile_id || "anonymous",
-                            "whatsapp_media_fallback",
-                            "messaging",
-                            {
-                                phone: normalizedPhone,
-                                message_type: messageType,
-                                bot_response: mediaFallbackReply.substring(0, 500),
-                            },
-                            "warning"
-                        );
-                        attachmentReplySent.add(normalizedPhone);
+                        const mediaReplySent = await sendWhatsAppRouteReply({
+                            phone: normalizedPhone,
+                            text: mediaFallbackReply,
+                            userId: workerRecord?.profile_id || undefined,
+                            activityUserId: workerRecord?.profile_id || null,
+                            failureContext: "media_fallback",
+                        });
+                        if (mediaReplySent) {
+                            await logServerActivity(
+                                workerRecord?.profile_id || "anonymous",
+                                "whatsapp_media_fallback",
+                                "messaging",
+                                {
+                                    phone: normalizedPhone,
+                                    message_type: messageType,
+                                    bot_response: mediaFallbackReply.substring(0, 500),
+                                },
+                                "warning"
+                            );
+                            attachmentReplySent.add(normalizedPhone);
+                        }
                     }
                     continue;
                 }
@@ -297,36 +330,50 @@ export async function POST(request: NextRequest) {
                 // ─── Employer WhatsApp Flow ───────────────────────────────
                 if (isEmployer) {
                     const OPENAI_API_KEY_EMP = process.env.OPENAI_API_KEY;
+                    const employerHistory = await loadWhatsAppConversationHistory(
+                        supabase,
+                        normalizedPhone,
+                        RESPONSE_HISTORY_LIMIT
+                    );
+                    const employerLanguage = resolveWhatsAppLanguageName(content, null, employerHistory);
                     if (OPENAI_API_KEY_EMP) {
                         try {
-                            const [empHistory, empBrainMemory] = await Promise.all([
-                                loadWhatsAppConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
-                                loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT),
-                            ]);
-                            const employerLanguage = resolveWhatsAppLanguageName(content, null, empHistory);
+                            const empBrainMemory = await loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT);
                             const employerReply = await generateEmployerWhatsAppReply({
                                 callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY_EMP, options),
                                 model: WHATSAPP_RESPONSE_MODEL,
                                 message: content,
                                 normalizedPhone,
                                 employerRecord,
-                                historyMessages: empHistory,
+                                historyMessages: employerHistory,
                                 brainMemory: empBrainMemory,
                                 language: employerLanguage,
                             });
                             const finalEmployerReply = employerReply || getEmployerWhatsAppDefaultReply(employerLanguage);
-                            await sendWhatsAppText(normalizedPhone, finalEmployerReply, undefined);
-                            return NextResponse.json({ status: "ok" }); // Always return — never fall through to worker flow
+                            await sendWhatsAppRouteReply({
+                                phone: normalizedPhone,
+                                text: finalEmployerReply,
+                                failureContext: "employer_ai_reply",
+                            });
+                            continue;
                         } catch (empErr) {
                             console.error("[WhatsApp] Employer AI error:", empErr);
-                            const fallbackEmployer = getEmployerWhatsAppErrorReply(resolveWhatsAppLanguageName(content));
-                            await sendWhatsAppText(normalizedPhone, fallbackEmployer, undefined);
-                            return NextResponse.json({ status: "ok" });
+                            const fallbackEmployer = getEmployerWhatsAppErrorReply(employerLanguage);
+                            await sendWhatsAppRouteReply({
+                                phone: normalizedPhone,
+                                text: fallbackEmployer,
+                                failureContext: "employer_error_fallback",
+                            });
+                            continue;
                         }
                     }
-                    const staticEmployer = getEmployerWhatsAppStaticReply(resolveWhatsAppLanguageName(content));
-                    await sendWhatsAppText(normalizedPhone, staticEmployer, undefined);
-                    return NextResponse.json({ status: "ok" });
+                    const staticEmployer = getEmployerWhatsAppStaticReply(employerLanguage);
+                    await sendWhatsAppRouteReply({
+                        phone: normalizedPhone,
+                        text: staticEmployer,
+                        failureContext: "employer_static_fallback",
+                    });
+                    continue;
                 }
 
                 const onboardingReply = await handleWhatsAppOnboarding(
@@ -338,8 +385,14 @@ export async function POST(request: NextRequest) {
                 );
 
                 if (onboardingReply !== null) {
-                    await sendWhatsAppText(normalizedPhone, onboardingReply, workerRecord?.profile_id || undefined);
-                    return NextResponse.json({ status: "ok" });
+                    await sendWhatsAppRouteReply({
+                        phone: normalizedPhone,
+                        text: onboardingReply,
+                        userId: workerRecord?.profile_id || undefined,
+                        activityUserId: workerRecord?.profile_id || null,
+                        failureContext: "onboarding_reply",
+                    });
+                    continue;
                 }
 
                 // ─── Intent-routed OpenAI AI Brain ───────────────────────
@@ -425,6 +478,7 @@ export async function POST(request: NextRequest) {
                                 direction: entry.direction,
                                 content: entry.content,
                                 created_at: entry.created_at,
+                                status: entry.status,
                             })))
                             : null;
 
@@ -539,7 +593,17 @@ export async function POST(request: NextRequest) {
                     : replyText;
 
                 if (finalReplyText) {
-                        await sendWhatsAppText(normalizedPhone, finalReplyText, workerRecord?.profile_id || undefined);
+                        const replyDelivered = await sendWhatsAppRouteReply({
+                            phone: normalizedPhone,
+                            text: finalReplyText,
+                            userId: workerRecord?.profile_id || undefined,
+                            activityUserId: workerRecord?.profile_id || null,
+                            failureContext: aiResponse ? "ai_reply" : "fallback_reply",
+                        });
+                        if (!replyDelivered) {
+                            continue;
+                        }
+
                         if (responseType === "deterministic" || responseType === "auto_handoff") {
                             await logDeterministicWhatsAppReply({
                                 userId: workerRecord?.profile_id || null,
@@ -633,6 +697,7 @@ interface OnboardingState {
     current_step: OnboardingStep;
     collected_data: Record<string, string>;
     language: string;
+    updated_at?: string | null;
 }
 
 // ─── Translations ─────────────────────────────────────────────────────────────
@@ -874,6 +939,24 @@ function isSkip(msg: string): boolean {
     return /^(skip|preskoči|preskoci|pular|passer|تخطي|छोड़|skip)/.test(l);
 }
 
+function isCancelOnboarding(msg: string): boolean {
+    const l = msg.toLowerCase().trim();
+    return /^(cancel|stop|exit|quit|start over|restart|reset|otkaži|otkazi|prekini|izađi|izadji|odustani|ispočetka|ispocetka|annuler|arr[êe]ter|recommencer|cancelar|parar|reiniciar|إلغاء|الغاء|توقف|ابدأ من جديد|cancel karo|band karo|ruk jao|restart karo|शुरू से|रद्द)/.test(l);
+}
+
+function getOnboardingCancelledReply(language: string): string {
+    const lk = getLangKey(language);
+    const messages: Record<LangKey, string> = {
+        en: "No problem — I stopped the WhatsApp profile flow. If you want to continue later, say that you want to fill in your profile on WhatsApp, or use workersunited.eu/profile/worker.",
+        sr: "Nema problema — zaustavio sam popunjavanje profila preko WhatsApp-a. Ako želite kasnije da nastavite, recite da želite da popunite profil na WhatsApp-u ili koristite workersunited.eu/profile/worker.",
+        hi: "कोई बात नहीं — मैंने WhatsApp profile flow रोक दिया है। अगर बाद में जारी रखना हो, तो लिखें कि आप WhatsApp पर profile भरना चाहते हैं, या workersunited.eu/profile/worker खोलें।",
+        ar: "لا مشكلة — أوقفتُ تعبئة الملف عبر WhatsApp. إذا أردت المتابعة لاحقًا، أخبرني أنك تريد ملء الملف على WhatsApp أو استخدم workersunited.eu/profile/worker.",
+        fr: "Pas de problème — j’ai arrêté le remplissage du profil sur WhatsApp. Si vous voulez continuer plus tard, dites que vous voulez remplir votre profil sur WhatsApp ou utilisez workersunited.eu/profile/worker.",
+        pt: "Sem problema — parei o preenchimento do perfil pelo WhatsApp. Se quiser continuar depois, diga que quer preencher o perfil no WhatsApp ou use workersunited.eu/profile/worker.",
+    };
+    return messages[lk];
+}
+
 // Map numbered/worded marital status answer to English value
 function parseMaritalStatus(msg: string): string {
     const l = msg.toLowerCase().trim();
@@ -934,7 +1017,22 @@ async function getOnboardingState(supabase: any, phone: string): Promise<Onboard
         .select("*")
         .eq("phone_number", phone)
         .single();
-    return data || null;
+
+    const state = data as OnboardingState | null;
+    if (!state) {
+        return null;
+    }
+
+    const updatedAt = state.updated_at ? Date.parse(state.updated_at) : NaN;
+    const isExpired = Number.isFinite(updatedAt) && Date.now() - updatedAt > ONBOARDING_STATE_TTL_MS;
+    const hasKnownStep = ONBOARDING_STEPS.includes(state.current_step);
+
+    if (isExpired || !hasKnownStep) {
+        await clearOnboardingState(supabase, phone);
+        return null;
+    }
+
+    return state;
 }
 
 async function saveOnboardingState(supabase: any, phone: string, step: OnboardingStep, collectedData: Record<string, string>, language: string): Promise<void> {
@@ -1063,11 +1161,21 @@ export async function handleWhatsAppOnboarding(
     workerRecord: any,
     detectedLanguage: string
 ): Promise<string | null> {
-    // Only handle unregistered/incomplete users
-    if (workerRecord?.onboarding_completed) return null;
-
     const state = await getOnboardingState(supabase, phone);
     const lang = state?.language || detectedLanguage || "en";
+    const isRegisteredWorker = Boolean(workerRecord?.profile_id || workerRecord?.onboarding_completed);
+
+    if (state && isCancelOnboarding(message)) {
+        await clearOnboardingState(supabase, phone);
+        return getOnboardingCancelledReply(lang);
+    }
+
+    if (isRegisteredWorker) {
+        if (state) {
+            await clearOnboardingState(supabase, phone);
+        }
+        return null;
+    }
 
     // ── No state yet: only offer onboarding when the user explicitly asks to fill it on WhatsApp ──
     if (!state) {

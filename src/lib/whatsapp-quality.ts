@@ -5,6 +5,7 @@ export interface WhatsAppQualityMessage {
     role?: string | null;
     content?: string | null;
     created_at?: string | null;
+    status?: string | null;
 }
 
 export interface WhatsAppConversationLike {
@@ -157,7 +158,8 @@ function isInboundMessage(message: WhatsAppQualityMessage): boolean {
 }
 
 function isOutboundMessage(message: WhatsAppQualityMessage): boolean {
-    return message.direction === "outbound" || message.role === "assistant";
+    return (message.direction === "outbound" || message.role === "assistant")
+        && message.status !== "failed";
 }
 
 function asObject(value: Json | Record<string, unknown> | null | undefined): Record<string, unknown> | null {

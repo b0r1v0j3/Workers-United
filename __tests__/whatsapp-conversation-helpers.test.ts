@@ -48,13 +48,21 @@ function createReadAdmin() {
                                                 data: [
                                                     {
                                                         direction: "outbound",
+                                                        content: "Failed reply",
+                                                        created_at: "2026-03-19T10:02:00.000Z",
+                                                        status: "failed",
+                                                    },
+                                                    {
+                                                        direction: "outbound",
                                                         content: "Reply 1",
                                                         created_at: "2026-03-19T10:01:00.000Z",
+                                                        status: "sent",
                                                     },
                                                     {
                                                         direction: "inbound",
                                                         content: "Hello",
                                                         created_at: "2026-03-19T10:00:00.000Z",
+                                                        status: "delivered",
                                                     },
                                                 ],
                                             }),
@@ -113,7 +121,7 @@ describe("whatsapp-conversation-helpers", () => {
         ], 5)).toBe("User: Hi\nAssistant: Hello there");
     });
 
-    it("loads whatsapp history in chronological order", async () => {
+    it("loads whatsapp history in chronological order and excludes failed outbound turns", async () => {
         const history = await loadWhatsAppConversationHistory(createReadAdmin() as never, "+381600000000", 2);
 
         expect(history).toEqual([
@@ -121,11 +129,13 @@ describe("whatsapp-conversation-helpers", () => {
                 direction: "inbound",
                 content: "Hello",
                 created_at: "2026-03-19T10:00:00.000Z",
+                status: "delivered",
             },
             {
                 direction: "outbound",
                 content: "Reply 1",
                 created_at: "2026-03-19T10:01:00.000Z",
+                status: "sent",
             },
         ]);
     });
