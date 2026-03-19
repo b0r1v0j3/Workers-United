@@ -40,6 +40,7 @@ import {
     type WhatsAppRouterDecision,
 } from "@/lib/whatsapp-worker-ai";
 import { getWhatsAppFallbackResponse } from "@/lib/whatsapp-fallback";
+import { persistWhatsAppDeliveryStatuses } from "@/lib/whatsapp-status-events";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -186,25 +187,7 @@ export async function POST(request: NextRequest) {
         const attachmentReplySent = new Set<string>();
 
         // ─── Handle delivery status updates (keep locally) ──────────────
-        if (value.statuses && value.statuses.length > 0) {
-            for (const status of value.statuses) {
-                const wamid = status.id;
-                const statusValue = status.status;
-
-                if (wamid && statusValue) {
-                    const updateData: Record<string, string> = { status: statusValue };
-
-                    if (statusValue === "failed" && status.errors?.[0]) {
-                        updateData.error_message = `${status.errors[0].code}: ${status.errors[0].title}`;
-                    }
-
-                    await supabase
-                        .from("whatsapp_messages")
-                        .update(updateData)
-                        .eq("wamid", wamid);
-                }
-            }
-        }
+        await persistWhatsAppDeliveryStatuses(supabase, value.statuses);
 
         // ─── Handle incoming messages ───────────────────────────────────
         if (value.messages && value.messages.length > 0) {

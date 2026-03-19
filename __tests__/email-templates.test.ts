@@ -129,6 +129,22 @@ describe('getEmailTemplate', () => {
         expect(html).not.toContain('✅ Your');
     });
 
+    it('document_review_result rejected email uses the monochrome re-upload layout', () => {
+        const { html, subject } = getEmailTemplate('document_review_result', {
+            name: 'Nikola',
+            approved: false,
+            docType: 'passport',
+            feedback: 'Please upload a clearer passport photo.',
+        });
+        expect(subject).toBe('Your Passport Needs Attention');
+        expect(html).toContain('Passport Needs Attention');
+        expect(html).toContain('Issue Found');
+        expect(html).toContain('Before You Upload Again');
+        expect(html).not.toContain('⚠️ Your Passport needs attention');
+        expect(html).not.toContain('Issue with your Passport:');
+        expect(html).not.toContain('Continue Registration');
+    });
+
     it('profile_incomplete uses the premium monochrome reminder layout', () => {
         const { html } = getEmailTemplate('profile_incomplete', {
             name: 'Nikola',

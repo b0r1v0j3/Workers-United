@@ -1,11 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Mail, Monitor, Smartphone, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
+import type { EmailType } from "@/lib/email-templates";
+import {
+    isAdminEmailPreviewType,
+    parseAdminEmailPreviewData,
+    type EmailPreviewData,
+} from "@/lib/admin-email-preview";
 
 // ─── Mock data for each email template ──────────────────────────
 
-const MOCK_DATA: Record<string, Record<string, string | number | boolean>> = {
+const DEFAULT_EMAIL_TYPE: EmailType = "welcome";
+
+const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
     welcome: { name: "Marko Petrović" },
     profile_complete: { name: "Marko Petrović" },
     payment_success: { name: "Marko Petrović", amount: "$9" },
@@ -73,9 +82,12 @@ const MOCK_DATA: Record<string, Record<string, string | number | boolean>> = {
     profile_deletion: {
         name: "Marko Petrović",
     },
+    announcement_document_fix: {
+        name: "Marko Petrović",
+    },
 };
 
-const EMAIL_LABELS: Record<string, string> = {
+const EMAIL_LABELS: Record<EmailType, string> = {
     welcome: "Welcome",
     profile_complete: "Profile Complete",
     payment_success: "Payment Success",
@@ -92,16 +104,35 @@ const EMAIL_LABELS: Record<string, string> = {
     profile_reminder: "Profile Reminder",
     profile_warning: "Profile Warning",
     profile_deletion: "Profile Deletion",
+    announcement_document_fix: "Document Fix Announcement",
 };
 
 export default function EmailPreviewPage() {
-    const [selectedType, setSelectedType] = useState("welcome");
+    const searchParams = useSearchParams();
+    const [selectedType, setSelectedType] = useState<EmailType>(DEFAULT_EMAIL_TYPE);
     const [htmlContent, setHtmlContent] = useState("");
+    const [emailSubject, setEmailSubject] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
+    const queryType = searchParams.get("type");
+    const queryDataRaw = searchParams.get("data");
 
-    const loadPreview = useCallback(async (type: string) => {
+    const resolvePreviewData = useCallback((type: EmailType): EmailPreviewData => {
+        if (isAdminEmailPreviewType(queryType) && queryType === type) {
+            const parsedData = parseAdminEmailPreviewData(queryDataRaw);
+            if (parsedData) {
+                return {
+                    ...(MOCK_DATA[type] || {}),
+                    ...parsedData,
+                };
+            }
+        }
+
+        return MOCK_DATA[type] || {};
+    }, [queryDataRaw, queryType]);
+
+    const loadPreview = useCallback(async (type: EmailType, data: EmailPreviewData) => {
         setLoading(true);
         setError(null);
 
@@ -109,23 +140,32 @@ export default function EmailPreviewPage() {
             const res = await fetch("/api/admin/email-preview", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type, data: MOCK_DATA[type] || {} }),
+                body: JSON.stringify({ type, data }),
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
+            setEmailSubject(json.subject || "");
             setHtmlContent(json.html);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Failed to load preview");
+            setEmailSubject("");
             setHtmlContent("");
         } finally {
             setLoading(false);
         }
     }, []);
 
-    // Load preview whenever template changes
     useEffect(() => {
-        void loadPreview(selectedType);
-    }, [selectedType, loadPreview]);
+        if (isAdminEmailPreviewType(queryType)) {
+            setSelectedType(queryType);
+        }
+    }, [queryType]);
+
+    useEffect(() => {
+        void loadPreview(selectedType, resolvePreviewData(selectedType));
+    }, [loadPreview, resolvePreviewData, selectedType]);
+
+    const hasQueryDrivenPreview = isAdminEmailPreviewType(queryType) && queryType === selectedType && !!parseAdminEmailPreviewData(queryDataRaw);
 
     return (
         <div className="min-h-screen bg-[#f0f2f5] p-6 font-montserrat">
@@ -178,7 +218,7 @@ export default function EmailPreviewPage() {
                             </span>
                         </div>
                         <div className="divide-y divide-gray-100 max-h-[calc(100vh-200px)] overflow-y-auto">
-                            {Object.entries(EMAIL_LABELS).map(([key, label]) => (
+                            {(Object.entries(EMAIL_LABELS) as Array<[EmailType, string]>).map(([key, label]) => (
                                 <button
                                     key={key}
                                     onClick={() => setSelectedType(key)}
@@ -202,6 +242,11 @@ export default function EmailPreviewPage() {
                                 <span className="font-bold">Error:</span> {error}
                             </div>
                         )}
+                        {hasQueryDrivenPreview ? (
+                            <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-6 text-sm">
+                                This preview is using live payload data from an admin action link, not just the generic mock example.
+                            </div>
+                        ) : null}
 
                         <div className="bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-hidden min-h-[800px] flex flex-col transition-all duration-300">
                             {/* Preview Toolbar */}
@@ -216,10 +261,13 @@ export default function EmailPreviewPage() {
                                     <div className="flex flex-col">
                                         <span className="text-xs font-semibold text-gray-700">{EMAIL_LABELS[selectedType]}</span>
                                         <span className="text-[10px] text-gray-400 font-mono">{selectedType}.html</span>
+                                        {emailSubject ? (
+                                            <span className="mt-1 text-[11px] text-gray-500">{emailSubject}</span>
+                                        ) : null}
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => loadPreview(selectedType)}
+                                    onClick={() => loadPreview(selectedType, resolvePreviewData(selectedType))}
                                     disabled={loading}
                                     className="text-xs font-semibold text-gray-600 hover:text-[#1877f2] disabled:opacity-50 flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-md hover:bg-gray-50 transition-colors"
                                 >

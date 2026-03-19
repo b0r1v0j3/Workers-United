@@ -3,14 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getEmailTemplate } from "@/lib/email-templates";
 import { isGodModeUser } from "@/lib/godmode";
 import type { EmailType } from "@/lib/email-templates";
-
-const VALID_TYPES: EmailType[] = [
-    "welcome", "profile_complete", "payment_success", "checkout_recovery", "job_offer",
-    "offer_reminder", "refund_approved", "document_expiring", "job_match",
-    "admin_update", "announcement", "profile_incomplete", "document_review_result",
-    "profile_reminder", "profile_warning", "profile_deletion",
-    "announcement_document_fix"
-];
+import { isAdminEmailPreviewType } from "@/lib/admin-email-preview";
 
 export async function POST(request: Request) {
     try {
@@ -33,7 +26,7 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { type, data } = body;
 
-        if (!type || !VALID_TYPES.includes(type)) {
+        if (!isAdminEmailPreviewType(type)) {
             return NextResponse.json({ error: "Invalid email type" }, { status: 400 });
         }
 
