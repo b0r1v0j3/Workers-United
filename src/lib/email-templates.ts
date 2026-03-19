@@ -215,26 +215,21 @@ function getRoleDeletionCopy(role: RecipientRole) {
     }
 }
 
-function renderMonochromeHero(symbol: string, title: string, subtitle: string) {
-    const safeSymbol = escapeHtml(symbol);
-    const symbolFontSize = symbol.length > 1 ? 28 : 38;
-
+function renderIconHero(iconUrl: string, title: string, subtitle: string) {
     return `
         <div style="text-align: center;">
-            <div style="width:80px;height:80px;border:2px solid #111111;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
-                <span style="font-size:${symbolFontSize}px;line-height:1;color:#111111;font-weight:700;">${safeSymbol}</span>
-            </div>
+            <img src="${iconUrl}" width="80" height="80" alt="" style="margin-bottom: 20px;">
             <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${title}</h1>
             <p style="font-size: 16px; color: #515154; margin-top: 5px;">${subtitle}</p>
         </div>
     `;
 }
 
-function renderDarkPanel(title: string, bodyHtml: string) {
+function renderLightPanel(title: string, bodyHtml: string) {
     return `
-        <div style="background:#111111; border-radius:16px; padding:32px; margin:35px 0; color:white; text-align:center;">
-            <h3 style="margin:0 0 10px; font-size:22px; color: white;">${escapeHtml(title)}</h3>
-            <div style="margin:0; opacity:0.9; font-size: 16px; color: #E5E5EA; line-height: 1.7;">
+        <div style="background:#F5F5F7; border-radius:12px; padding:32px; margin:35px 0; border: 1px solid #E5E5EA; text-align:center;">
+            <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">${escapeHtml(title)}</h3>
+            <div style="margin:0; font-size: 15px; color: #1D1D1F; line-height: 1.6;">
                 ${bodyHtml}
             </div>
         </div>
@@ -475,11 +470,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Profile 100% Complete — Admin Review Started",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/verified-account.png" width="80" height="80" alt="Verified" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Congratulations, ${firstName}!</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">Your profile is now 100% complete.</p>
-                    </div>
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/verified-account.png", `Congratulations, ${firstName}!`, "Your profile is now 100% complete.")}
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
                         Your profile and required documents are now ready for admin review. We will check everything and unlock Job Finder as soon as your case is approved.
@@ -528,13 +519,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "You're in the Queue!",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("✓", "Payment Confirmed", "Your job search is now active.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/checked--v1.png", "Payment Confirmed", "Your job search is now active.")}
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
                         We have received your <strong>${amount}</strong> Job Finder payment. Your worker case is now active in the queue, and our system can start matching you with employers.
                     </p>
 
-                    ${renderDarkPanel("What Happens Next", `
+                    ${renderLightPanel("What Happens Next", `
                         1. Your profile stays active in the worker queue
                         <br>
                         2. We monitor new employer demand and match opportunities
@@ -588,7 +579,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: recoverySubjectMap[recoveryStep],
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("!", recoveryTitleMap[recoveryStep], `${firstName}, your profile is ready to continue.`)}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", recoveryTitleMap[recoveryStep], `${firstName}, your profile is ready to continue.`)}
 
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 20px; text-align: center;">
                         ${recoveryBodyMap[recoveryStep]}
@@ -606,7 +597,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                     </div>
 
-                    ${renderDarkPanel("What You Need To Know", `
+                    ${renderLightPanel("What You Need To Know", `
                         Only the checkout state changes here.
                         <br>
                         Your profile, documents, and review progress stay saved in the dashboard.
@@ -631,7 +622,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: `✨ Job Offer: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("★", "You've been picked!", "A company wants to hire you.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/star--v1.png", "You've been picked!", "A company wants to hire you.")}
 
                     <div style="background:#FFFFFF; border: 1px solid #E5E5EA; border-radius:16px; margin:30px 0; overflow: hidden;">
                         <div style="background: #111111; padding: 15px; border-bottom: 1px solid #111111; text-align: center;">
@@ -647,7 +638,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                     </div>
 
-                    ${renderDarkPanel("Response Window", "Please review this offer and respond within 24 hours so we can keep the hiring process moving.")}
+                    ${renderLightPanel("Response Window", "Please review this offer and respond within 24 hours so we can keep the hiring process moving.")}
                     
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${data.offerLink || "https://workersunited.eu/profile/worker/queue"}" style="${buttonStyle}">
@@ -662,13 +653,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Offer Expiring Soon!",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("!", "Hurry up!", "Your job offer is still waiting for a response.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Hurry up!", "Your job offer is still waiting for a response.")}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                         Hey ${firstName}, you have a pending job offer that expires soon. Don't let this opportunity slip away!
                     </p>
 
-                    ${renderDarkPanel("Why This Matters", "If the offer expires without a response, we may need to release the slot and move the case forward without you.")}
+                    ${renderLightPanel("Why This Matters", "If the offer expires without a response, we may need to release the slot and move the case forward without you.")}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${data.offerLink || "https://workersunited.eu/profile/worker/queue"}" style="${buttonStyle}">
@@ -683,13 +674,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Refund Processed",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("$", "Refund Sent", "Your 90-day guarantee refund has been processed.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/us-dollar-circled--v1.png", "Refund Sent", "Your 90-day guarantee refund has been processed.")}
 
                     <p style="color: #1D1D1F; margin-bottom: 25px; text-align: center; font-size: 16px;">
                         Hi ${firstName}, as per our 90-day guarantee, we have processed your refund of <strong>${amount}</strong>.
                     </p>
 
-                    ${renderDarkPanel("Refund Timeline", "The funds should appear back on the original payment method within 5 to 10 business days, depending on your bank.")}
+                    ${renderLightPanel("Refund Timeline", "The funds should appear back on the original payment method within 5 to 10 business days, depending on your bank.")}
                     
                     <p style="margin-top: 25px; color: #86868B; font-size: 15px; text-align: center;">
                         We're sorry we couldn't find the perfect match this time. You are always welcome back!
@@ -704,13 +695,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Document Alert",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("!", "Check your documents", "One of your required files is close to expiring.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Check your documents", "One of your required files is close to expiring.")}
 
                     <p style="color: #1D1D1F; text-align: center; margin-bottom: 30px; font-size: 16px;">
                         Your <strong>${documentType}</strong> is expiring on <strong>${expirationDate}</strong>.
                     </p>
 
-                    ${renderDarkPanel("Why Update Now", "Keeping your required documents current helps us avoid delays when your case reaches a live employer or visa-processing step.")}
+                    ${renderLightPanel("Why Update Now", "Keeping your required documents current helps us avoid delays when your case reaches a live employer or visa-processing step.")}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "documents")}" style="${buttonStyle}">
@@ -730,7 +721,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: `New Match: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("+", "New Match!", "We found a job that fits your case.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/handshake.png", "New Match!", "We found a job that fits your case.")}
 
                     <div style="background:white; border: 1px solid #E5E5EA; border-radius:16px; overflow:hidden; margin: 30px 0;">
                         <div style="padding: 25px; text-align: center;">
@@ -748,7 +739,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                     </div>
 
-                    ${renderDarkPanel("Next Step", "Open the case details to review the opportunity, expected conditions, and what we need from you next.")}
+                    ${renderLightPanel("Next Step", "Open the case details to review the opportunity, expected conditions, and what we need from you next.")}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${data.offerLink}" style="${buttonStyle}">
@@ -768,7 +759,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: data.subject || "Update from Workers United",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("i", "Profile Update", "There is a new message about your case.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/info--v1.png", "Profile Update", "There is a new message about your case.")}
 
                     <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:25px; margin:30px 0;">
                         <h3 style="margin-top:0; color: #1D1D1F; font-size: 18px;">${title}</h3>
@@ -793,13 +784,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ? `Your ${docName} Has Been Approved`
                     : `Your ${docName} Needs Attention`,
                 html: wrapModernTemplate(isApproved ? `
-                    ${renderMonochromeHero("✓", `${safeDocName} Approved`, "One more required step is now complete.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/checked--v1.png", `${safeDocName} Approved`, "One more required step is now complete.")}
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
                         Your <strong>${safeDocName}</strong> has been verified and approved by our team. It is now safely stored in your Workers United dashboard, and you do not need to upload this file again.
                     </p>
 
-                    ${renderDarkPanel("What Happens Next", `
+                    ${renderLightPanel("What Happens Next", `
                         1. Keep any remaining required documents moving forward
                         <br>
                         2. Your approved document stays locked in your case
@@ -817,14 +808,14 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Open My Documents</a>
                     </div>
                 ` : `
-                    ${renderMonochromeHero("!", `${safeDocName} Needs Attention`, "We still need a replacement file before your case can move forward.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", `${safeDocName} Needs Attention`, "We still need a replacement file before your case can move forward.")}
 
                     <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:25px; margin:30px 0;">
                         <p style="margin:0 0 10px; color: #86868B; font-size: 12px; font-weight:700; text-transform: uppercase; letter-spacing: 1px;">Issue Found</p>
                         <p style="margin:0; color: #1D1D1F; font-size: 16px;">${escapeHtml(data.feedback || "Document does not meet requirements.")}</p>
                     </div>
 
-                    ${renderDarkPanel("Next Step", `
+                    ${renderLightPanel("Next Step", `
                         Upload a clearer replacement for your ${safeDocName.toLowerCase()} from the dashboard. We will review the new file as soon as it arrives.
                     `)}
 
@@ -848,7 +839,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: data.subject || "Announcement",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("!", title, "Important information from Workers United.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", title, "Important information from Workers United.")}
 
                     <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:24px; color: #1D1D1F; font-size: 16px; line-height: 1.7; margin: 30px 0; white-space: pre-line; text-align: center;">
                         ${message}
@@ -869,7 +860,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Finish your profile!",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("!", "Almost there!", "You're missing a few things before we can move your case forward.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Almost there!", "You're missing a few things before we can move your case forward.")}
 
                     <div style="margin: 30px 0;">
                          <p style="color: #1D1D1F; text-align: center; margin-bottom: 20px; font-size: 16px;">
@@ -881,7 +872,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                          </div>
                     </div>
 
-                    ${renderDarkPanel("Why This Matters", "Your profile has to be complete before we can send the case to admin review and eventually unlock Job Finder.")}
+                    ${renderLightPanel("Why This Matters", "Your profile has to be complete before we can send the case to admin review and eventually unlock Job Finder.")}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "setup")}" style="${buttonStyle}">
@@ -897,7 +888,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: reminderCopy.subject,
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("!", reminderCopy.title, reminderCopy.text)}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", reminderCopy.title, reminderCopy.text)}
 
                    <div style="background:#F5F5F7; border-radius:12px; padding:25px; margin:30px 0; border: 1px solid #E5E5EA;">
                         <strong style="display:block; margin-bottom:15px; color:#1D1D1F; font-size: 16px;">What's missing:</strong>
@@ -906,7 +897,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </ul>
                     </div>
 
-                    ${renderDarkPanel("Keep The Case Moving", "Once the missing items are saved, your workspace can move to the next real step without starting over.")}
+                    ${renderLightPanel("Keep The Case Moving", "Once the missing items are saved, your workspace can move to the next real step without starting over.")}
 
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${reminderCopy.buttonUrl}" style="${buttonStyle}">
@@ -924,13 +915,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: `Inactive account cleanup in ${daysLeft} days`,
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("!", "Inactive Account Warning", `If there is still no profile activity, we will clean up this incomplete account in ${daysLeft} days.`)}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Inactive Account Warning", `If there is still no profile activity, we will clean up this incomplete account in ${daysLeft} days.`)}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                         ${warningCopy.warningText} Update your profile or documents to keep the account active.
                     </p>
 
-                    ${renderDarkPanel("Cleanup Timeline", `You still have <strong style="color:#ffffff;">${daysLeft} days</strong> to save activity on the account before the inactive cleanup runs.`)}
+                    ${renderLightPanel("Cleanup Timeline", `You still have <strong style="color:#ffffff;">${daysLeft} days</strong> to save activity on the account before the inactive cleanup runs.`)}
 
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${warningCopy.buttonUrl}" style="${buttonStyle}">
@@ -946,7 +937,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Inactive Account Removed",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("×", "Goodbye for now", "This incomplete inactive account has been removed.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/cancel.png", "Goodbye for now", "This incomplete inactive account has been removed.")}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                          ${deletionCopy.body}
@@ -971,7 +962,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Important: Document Upload System Fixed",
                 html: wrapModernTemplate(`
-                    ${renderMonochromeHero("✓", `Hi ${firstName},`, "We've fixed the document upload issue.")}
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/checked--v1.png", `Hi ${firstName},`, "We've fixed the document upload issue.")}
 
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 20px;">
                         If you recently tried to upload your passport or diploma and experienced errors, we sincerely apologize. We have completely resolved this technical issue.
@@ -981,7 +972,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Your profile is waiting for you. You can now securely upload your documents and complete your AI verification to join the hiring queue.
                     </p>
 
-                    ${renderDarkPanel("Next Step", "Return to your dashboard, upload the missing documents, and we will resume your case from there.")}
+                    ${renderLightPanel("Next Step", "Return to your dashboard, upload the missing documents, and we will resume your case from there.")}
                     
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "documents")}" style="${buttonStyle}">

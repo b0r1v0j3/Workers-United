@@ -1,0 +1,419 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e328]:
+    - navigation [ref=e329]:
+      - generic [ref=e330]:
+        - generic [ref=e331]:
+          - link "Workers United Logo Icon Workers United" [ref=e332] [cursor=pointer]:
+            - /url: /admin
+            - img "Workers United Logo Icon" [ref=e333]
+            - img "Workers United" [ref=e334]
+          - generic [ref=e335]: Admin
+        - generic [ref=e337]:
+          - img [ref=e339]
+          - textbox "Search users, emails, passports..." [ref=e342]
+        - generic [ref=e344]:
+          - button "Open notifications" [ref=e345]:
+            - img [ref=e346]
+          - generic [ref=e348]: Borivoje Cvetković
+    - generic [ref=e349]:
+      - complementary [ref=e350]:
+        - generic [ref=e352]:
+          - button "Toggle Menu" [ref=e353]:
+            - img [ref=e355]
+          - link "Dashboard" [ref=e357] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e359]
+          - link "Workers" [ref=e364] [cursor=pointer]:
+            - /url: /admin/workers
+            - img [ref=e366]
+          - link "Employers" [ref=e371] [cursor=pointer]:
+            - /url: /admin/employers
+            - img [ref=e373]
+          - link "Agencies" [ref=e377] [cursor=pointer]:
+            - /url: /admin/agencies
+            - img [ref=e379]
+          - link "Jobs" [ref=e384] [cursor=pointer]:
+            - /url: /admin/jobs
+            - img [ref=e386]
+          - link "Queue" [ref=e389] [cursor=pointer]:
+            - /url: /admin/queue
+            - img [ref=e391]
+          - link "Review" [ref=e394] [cursor=pointer]:
+            - /url: /admin/review
+            - img [ref=e396]
+          - link "Inbox" [ref=e401] [cursor=pointer]:
+            - /url: /admin/inbox
+            - img [ref=e403]
+          - link "Analytics" [ref=e405] [cursor=pointer]:
+            - /url: /admin/analytics
+            - img [ref=e407]
+          - link "Exceptions" [ref=e409] [cursor=pointer]:
+            - /url: /admin/exceptions
+            - img [ref=e411]
+          - link "Email Health" [ref=e413] [cursor=pointer]:
+            - /url: /admin/email-health
+            - img [ref=e415]
+          - link "WA Blast" [ref=e420] [cursor=pointer]:
+            - /url: /admin/whatsapp-blast
+            - img [ref=e422]
+          - link "Settings" [ref=e424] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e426]
+          - button "Logout" [ref=e431]:
+            - img [ref=e433]
+      - main [ref=e436]:
+        - generic [ref=e437]:
+          - navigation [ref=e438]:
+            - link "Dashboard" [ref=e439] [cursor=pointer]:
+              - /url: /admin
+            - generic [ref=e440]:
+              - generic [ref=e441]: ›
+              - generic [ref=e442]: Agencies
+          - generic [ref=e443]:
+            - generic [ref=e445]:
+              - generic [ref=e446]:
+                - generic [ref=e447]: Admin agencies
+                - heading "Agency Operations" [level=1] [ref=e448]
+                - paragraph [ref=e449]: Track every agency account, understand how many workers they brought in, and inspect the exact agency workspace without letting admin accidentally behave like an agency.
+              - generic [ref=e450]:
+                - generic [ref=e451]:
+                  - generic [ref=e452]: Agencies
+                  - generic [ref=e453]: "9"
+                  - generic [ref=e454]: 9 active
+                - generic [ref=e455]:
+                  - generic [ref=e456]: Workers
+                  - generic [ref=e457]: "4"
+                  - generic [ref=e458]: Submitted through agencies
+                - generic [ref=e459]:
+                  - generic [ref=e460]: Claimed
+                  - generic [ref=e461]: "1"
+                  - generic [ref=e462]: Workers who took control
+                - generic [ref=e463]:
+                  - generic [ref=e464]: Drafts
+                  - generic [ref=e465]: "3"
+                  - generic [ref=e466]: Still agency-managed only
+            - generic [ref=e467]:
+              - generic [ref=e468]:
+                - generic [ref=e469]:
+                  - img [ref=e471]
+                  - heading "Inspect workspace" [level=2] [ref=e475]
+                - paragraph [ref=e476]: Open the exact agency dashboard and worker list in read-only mode, without touching the admin role.
+              - generic [ref=e477]:
+                - generic [ref=e478]:
+                  - img [ref=e480]
+                  - heading "Claimed vs draft" [level=2] [ref=e483]
+                - paragraph [ref=e484]: Claimed means the worker took over the profile. Draft means the agency still owns the intake and the worker has not claimed it yet.
+              - generic [ref=e485]:
+                - generic [ref=e486]:
+                  - img [ref=e488]
+                  - heading "Operational view" [level=2] [ref=e493]
+                - paragraph [ref=e494]: This page is for agency health and volume. Use the agency workspace itself when you need worker-by-worker operational signals.
+            - generic [ref=e495]:
+              - generic [ref=e496]:
+                - heading "Agency registry" [level=2] [ref=e497]
+                - paragraph [ref=e498]: Every agency account with ownership volume and direct workspace inspection.
+              - generic [ref=e499]:
+                - generic [ref=e501]:
+                  - generic [ref=e502]:
+                    - generic [ref=e503]:
+                      - img [ref=e505]
+                      - generic [ref=e509]:
+                        - heading "Ombor Recruitment" [level=2] [ref=e510]
+                        - paragraph [ref=e511]: Md Hasmat Ullah Rubel • omborlimited@gmail.com
+                    - generic [ref=e512]:
+                      - generic [ref=e513]:
+                        - img [ref=e514]
+                        - text: omborlimited@gmail.com
+                      - generic [ref=e517]:
+                        - img [ref=e518]
+                        - text: 0 workers
+                  - generic [ref=e523]:
+                    - generic [ref=e524]:
+                      - generic [ref=e525]:
+                        - generic [ref=e526]: Total
+                        - generic [ref=e527]: "0"
+                      - generic [ref=e528]:
+                        - generic [ref=e529]: Claimed
+                        - generic [ref=e530]: "0"
+                      - generic [ref=e531]:
+                        - generic [ref=e532]: Drafts
+                        - generic [ref=e533]: "0"
+                    - generic [ref=e534]:
+                      - generic [ref=e535]: active
+                      - generic [ref=e536]:
+                        - link "Inspect workspace" [ref=e537] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=5abb0ef6-ac45-4d5d-a417-a80ee8ef61c5
+                        - button "Delete Ombor Recruitment" [ref=e538]:
+                          - img [ref=e539]
+                - generic [ref=e543]:
+                  - generic [ref=e544]:
+                    - generic [ref=e545]:
+                      - img [ref=e547]
+                      - generic [ref=e551]:
+                        - heading "Swati Enterprises" [level=2] [ref=e552]
+                        - paragraph [ref=e553]: Khurram Sheraz • swatienterprisesadvocate@gmail.com
+                    - generic [ref=e554]:
+                      - generic [ref=e555]:
+                        - img [ref=e556]
+                        - text: swatienterprisesadvocate@gmail.com
+                      - generic [ref=e559]:
+                        - img [ref=e560]
+                        - text: 0 workers
+                  - generic [ref=e565]:
+                    - generic [ref=e566]:
+                      - generic [ref=e567]:
+                        - generic [ref=e568]: Total
+                        - generic [ref=e569]: "0"
+                      - generic [ref=e570]:
+                        - generic [ref=e571]: Claimed
+                        - generic [ref=e572]: "0"
+                      - generic [ref=e573]:
+                        - generic [ref=e574]: Drafts
+                        - generic [ref=e575]: "0"
+                    - generic [ref=e576]:
+                      - generic [ref=e577]: active
+                      - generic [ref=e578]:
+                        - link "Inspect workspace" [ref=e579] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=a3df772f-e6a1-4fac-8380-f9e91728c978
+                        - button "Delete Swati Enterprises" [ref=e580]:
+                          - img [ref=e581]
+                - generic [ref=e585]:
+                  - generic [ref=e586]:
+                    - generic [ref=e587]:
+                      - img [ref=e589]
+                      - generic [ref=e593]:
+                        - heading "Geeta Consultant" [level=2] [ref=e594]
+                        - paragraph [ref=e595]: Keyur Patel • geetaconsultant26@gmail.com
+                    - generic [ref=e596]:
+                      - generic [ref=e597]:
+                        - img [ref=e598]
+                        - text: geetaconsultant26@gmail.com
+                      - generic [ref=e601]:
+                        - img [ref=e602]
+                        - text: 0 workers
+                  - generic [ref=e607]:
+                    - generic [ref=e608]:
+                      - generic [ref=e609]:
+                        - generic [ref=e610]: Total
+                        - generic [ref=e611]: "0"
+                      - generic [ref=e612]:
+                        - generic [ref=e613]: Claimed
+                        - generic [ref=e614]: "0"
+                      - generic [ref=e615]:
+                        - generic [ref=e616]: Drafts
+                        - generic [ref=e617]: "0"
+                    - generic [ref=e618]:
+                      - generic [ref=e619]: active
+                      - generic [ref=e620]:
+                        - link "Inspect workspace" [ref=e621] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=e58f796a-acee-49bb-a4f5-8702d11acffe
+                        - button "Delete Geeta Consultant" [ref=e622]:
+                          - img [ref=e623]
+                - generic [ref=e627]:
+                  - generic [ref=e628]:
+                    - generic [ref=e629]:
+                      - img [ref=e631]
+                      - generic [ref=e635]:
+                        - heading "European travel and visa Consultancy services pvt ltd" [level=2] [ref=e636]
+                        - paragraph [ref=e637]: Ratan mondal • europeantravel828@gmail.com
+                    - generic [ref=e638]:
+                      - generic [ref=e639]:
+                        - img [ref=e640]
+                        - text: europeantravel828@gmail.com
+                      - generic [ref=e643]:
+                        - img [ref=e644]
+                        - text: 0 workers
+                  - generic [ref=e649]:
+                    - generic [ref=e650]:
+                      - generic [ref=e651]:
+                        - generic [ref=e652]: Total
+                        - generic [ref=e653]: "0"
+                      - generic [ref=e654]:
+                        - generic [ref=e655]: Claimed
+                        - generic [ref=e656]: "0"
+                      - generic [ref=e657]:
+                        - generic [ref=e658]: Drafts
+                        - generic [ref=e659]: "0"
+                    - generic [ref=e660]:
+                      - generic [ref=e661]: active
+                      - generic [ref=e662]:
+                        - link "Inspect workspace" [ref=e663] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=7ed2f983-8e2d-471b-b46a-1d9ff6c98069
+                        - button "Delete European travel and visa Consultancy services pvt ltd" [ref=e664]:
+                          - img [ref=e665]
+                - generic [ref=e669]:
+                  - generic [ref=e670]:
+                    - generic [ref=e671]:
+                      - img [ref=e673]
+                      - generic [ref=e677]:
+                        - heading "Diamond Star Overseas Pvt. Ltd." [level=2] [ref=e678]
+                        - paragraph [ref=e679]: DIAMOND STAR OVERSEAS • hr.diamondstaroverseas@gmail.com
+                    - generic [ref=e680]:
+                      - generic [ref=e681]:
+                        - img [ref=e682]
+                        - text: hr.diamondstaroverseas@gmail.com
+                      - generic [ref=e685]:
+                        - img [ref=e686]
+                        - text: 1 workers
+                  - generic [ref=e691]:
+                    - generic [ref=e692]:
+                      - generic [ref=e693]:
+                        - generic [ref=e694]: Total
+                        - generic [ref=e695]: "1"
+                      - generic [ref=e696]:
+                        - generic [ref=e697]: Claimed
+                        - generic [ref=e698]: "0"
+                      - generic [ref=e699]:
+                        - generic [ref=e700]: Drafts
+                        - generic [ref=e701]: "1"
+                    - generic [ref=e702]:
+                      - generic [ref=e703]: active
+                      - generic [ref=e704]:
+                        - link "Inspect workspace" [ref=e705] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=e9292c41-8b18-483d-bf80-8b7d63cd5f64
+                        - button "Delete Diamond Star Overseas Pvt. Ltd." [ref=e706]:
+                          - img [ref=e707]
+                - generic [ref=e711]:
+                  - generic [ref=e712]:
+                    - generic [ref=e713]:
+                      - img [ref=e715]
+                      - generic [ref=e719]:
+                        - heading "Harsh Manpower Services Pvt Ltd" [level=2] [ref=e720]
+                        - paragraph [ref=e721]: Devendra Singh • info.hrservice2110@gmail.com
+                    - generic [ref=e722]:
+                      - generic [ref=e723]:
+                        - img [ref=e724]
+                        - text: info.hrservice2110@gmail.com
+                      - generic [ref=e727]:
+                        - img [ref=e728]
+                        - text: 0 workers
+                  - generic [ref=e733]:
+                    - generic [ref=e734]:
+                      - generic [ref=e735]:
+                        - generic [ref=e736]: Total
+                        - generic [ref=e737]: "0"
+                      - generic [ref=e738]:
+                        - generic [ref=e739]: Claimed
+                        - generic [ref=e740]: "0"
+                      - generic [ref=e741]:
+                        - generic [ref=e742]: Drafts
+                        - generic [ref=e743]: "0"
+                    - generic [ref=e744]:
+                      - generic [ref=e745]: active
+                      - generic [ref=e746]:
+                        - link "Inspect workspace" [ref=e747] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=d42cde55-0856-49d3-ad1e-4de056ea56d9
+                        - button "Delete Harsh Manpower Services Pvt Ltd" [ref=e748]:
+                          - img [ref=e749]
+                - generic [ref=e753]:
+                  - generic [ref=e754]:
+                    - generic [ref=e755]:
+                      - img [ref=e757]
+                      - generic [ref=e761]:
+                        - heading "Leonis consult Group in Ukraine" [level=2] [ref=e762]
+                        - paragraph [ref=e763]: Iryna Petrovska • robotaeuropa1@ukr.net
+                    - generic [ref=e764]:
+                      - generic [ref=e765]:
+                        - img [ref=e766]
+                        - text: robotaeuropa1@ukr.net
+                      - generic [ref=e769]:
+                        - img [ref=e770]
+                        - text: 0 workers
+                  - generic [ref=e775]:
+                    - generic [ref=e776]:
+                      - generic [ref=e777]:
+                        - generic [ref=e778]: Total
+                        - generic [ref=e779]: "0"
+                      - generic [ref=e780]:
+                        - generic [ref=e781]: Claimed
+                        - generic [ref=e782]: "0"
+                      - generic [ref=e783]:
+                        - generic [ref=e784]: Drafts
+                        - generic [ref=e785]: "0"
+                    - generic [ref=e786]:
+                      - generic [ref=e787]: active
+                      - generic [ref=e788]:
+                        - link "Inspect workspace" [ref=e789] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=a798657a-0180-4d8a-ba51-1fa355bf1239
+                        - button "Delete Leonis consult Group in Ukraine" [ref=e790]:
+                          - img [ref=e791]
+                - generic [ref=e795]:
+                  - generic [ref=e796]:
+                    - generic [ref=e797]:
+                      - img [ref=e799]
+                      - generic [ref=e803]:
+                        - heading "WORKERS UNITED" [level=2] [ref=e804]
+                        - paragraph [ref=e805]: WORKERS UNITED • contact@workersunited.eu
+                    - generic [ref=e806]:
+                      - generic [ref=e807]:
+                        - img [ref=e808]
+                        - text: contact@workersunited.eu
+                      - generic [ref=e811]:
+                        - img [ref=e812]
+                        - text: 2 workers
+                  - generic [ref=e817]:
+                    - generic [ref=e818]:
+                      - generic [ref=e819]:
+                        - generic [ref=e820]: Total
+                        - generic [ref=e821]: "2"
+                      - generic [ref=e822]:
+                        - generic [ref=e823]: Claimed
+                        - generic [ref=e824]: "0"
+                      - generic [ref=e825]:
+                        - generic [ref=e826]: Drafts
+                        - generic [ref=e827]: "2"
+                    - generic [ref=e828]:
+                      - generic [ref=e829]: active
+                      - generic [ref=e830]:
+                        - link "Inspect workspace" [ref=e831] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=e50bbf29-b28f-4e3d-a702-517b8e8abad3
+                        - button "Delete WORKERS UNITED" [ref=e832]:
+                          - img [ref=e833]
+                - generic [ref=e837]:
+                  - generic [ref=e838]:
+                    - generic [ref=e839]:
+                      - img [ref=e841]
+                      - generic [ref=e845]:
+                        - heading "Codex Test Agency" [level=2] [ref=e846]
+                        - paragraph [ref=e847]: Codex Agency Test • cvetkovicborivoje+wu-codex-agency-20260306@gmail.com
+                    - generic [ref=e848]:
+                      - generic [ref=e849]:
+                        - img [ref=e850]
+                        - text: cvetkovicborivoje+wu-codex-agency-20260306@gmail.com
+                      - generic [ref=e853]:
+                        - img [ref=e854]
+                        - text: 1 workers
+                  - generic [ref=e859]:
+                    - generic [ref=e860]:
+                      - generic [ref=e861]:
+                        - generic [ref=e862]: Total
+                        - generic [ref=e863]: "1"
+                      - generic [ref=e864]:
+                        - generic [ref=e865]: Claimed
+                        - generic [ref=e866]: "1"
+                      - generic [ref=e867]:
+                        - generic [ref=e868]: Drafts
+                        - generic [ref=e869]: "0"
+                    - generic [ref=e870]:
+                      - generic [ref=e871]: active
+                      - generic [ref=e872]:
+                        - link "Inspect workspace" [ref=e873] [cursor=pointer]:
+                          - /url: /profile/agency?inspect=29e68b51-f2f4-493a-a54e-80312eff5268
+                        - button "Delete Codex Test Agency" [ref=e874]:
+                          - img [ref=e875]
+  - button "Admin" [ref=e314]:
+    - img [ref=e316]
+    - generic [ref=e318]: Admin
+  - generic [ref=e320]:
+    - generic [ref=e321]:
+      - img "Cookie icon" [ref=e322]
+      - paragraph [ref=e324]:
+        - text: We only use essential cookies for sign-in and site functionality. No ads or tracking. See our
+        - link "Privacy Policy" [ref=e325] [cursor=pointer]:
+          - /url: /privacy-policy
+        - text: for details.
+    - button "Got it" [ref=e327]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e75] [cursor=pointer]:
+    - img [ref=e76]
+  - alert [ref=e79]

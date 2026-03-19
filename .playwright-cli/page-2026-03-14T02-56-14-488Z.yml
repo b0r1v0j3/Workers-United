@@ -1,0 +1,953 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e135]:
+    - navigation [ref=e136]:
+      - generic [ref=e137]:
+        - button "Open menu" [ref=e140]:
+          - img [ref=e141]
+        - link "Workers United Logo" [ref=e143] [cursor=pointer]:
+          - /url: /admin
+          - img "Workers United Logo" [ref=e144]
+        - button "Open notifications" [ref=e147]:
+          - img [ref=e148]
+    - generic [ref=e150]:
+      - complementary:
+        - generic:
+          - generic:
+            - link "Back to Admin":
+              - /url: /admin
+              - generic:
+                - img
+            - link "Worker Editor Preview":
+              - /url: /profile/agency/workers/c701c052-525c-4047-b669-37b203d4e26e?inspect=29e68b51-f2f4-493a-a54e-80312eff5268
+              - generic:
+                - img
+            - link "Support":
+              - /url: /profile/agency/inbox?inspect=29e68b51-f2f4-493a-a54e-80312eff5268
+              - generic:
+                - img
+            - link "Account Settings":
+              - /url: /profile/settings
+              - generic:
+                - img
+            - generic:
+              - button "Logout":
+                - generic:
+                  - img
+      - main [ref=e151]:
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - generic [ref=e155]: Admin Preview Mode
+              - generic [ref=e156]: Agency Workspace Preview
+              - paragraph [ref=e157]: You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow.
+            - link "Back to Admin" [ref=e158] [cursor=pointer]:
+              - /url: /admin
+          - link "← Back to agency dashboard" [ref=e160] [cursor=pointer]:
+            - /url: /profile/agency?inspect=29e68b51-f2f4-493a-a54e-80312eff5268
+          - generic [ref=e161]:
+            - generic [ref=e163]:
+              - generic [ref=e164]:
+                - generic [ref=e165]: Admin preview
+                - heading "Codex Agency Tester" [level=1] [ref=e166]
+                - paragraph [ref=e167]: Agencies can complete the same worker profile fields as workers. Email and phone stay optional unless you want this worker to receive notifications directly.
+              - generic [ref=e168]:
+                - img [ref=e169]
+                - text: Read-only admin preview
+            - generic [ref=e171]: This is a read-only admin preview. Use a real agency account to edit worker data, upload documents, and start payment.
+            - generic [ref=e172]:
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - generic [ref=e175]: Completion
+                  - img [ref=e176]
+                - generic [ref=e179]: 100%
+              - generic [ref=e180]:
+                - generic [ref=e181]:
+                  - generic [ref=e182]: Documents
+                  - img [ref=e183]
+                - generic [ref=e187]: 3/3 verified
+              - generic [ref=e188]:
+                - generic [ref=e189]:
+                  - generic [ref=e190]: Payment
+                  - img [ref=e191]
+                - generic [ref=e193]: Not paid
+              - generic [ref=e194]:
+                - generic [ref=e195]:
+                  - generic [ref=e196]: Status
+                  - img [ref=e197]
+                - generic [ref=e199]: VERIFIED
+            - generic [ref=e200]:
+              - group [ref=e201]:
+                - generic [ref=e202]:
+                  - generic [ref=e203]:
+                    - heading "Worker Identity" [level=2] [ref=e204]
+                    - paragraph [ref=e205]: Core worker profile data.
+                  - generic [ref=e206]:
+                    - generic [ref=e207]:
+                      - generic [ref=e208]: First Name
+                      - textbox "First Name" [disabled] [ref=e209]: Codex
+                    - generic [ref=e210]:
+                      - generic [ref=e211]: Last Name
+                      - textbox "Last Name" [disabled] [ref=e212]: Agency Tester
+                    - generic [ref=e213]:
+                      - generic [ref=e214]: Nationality
+                      - combobox "Nationality" [disabled] [ref=e215]:
+                        - option "Select nationality" [disabled] [selected]
+                        - option "Afghanistan" [disabled]
+                        - option "Albania" [disabled]
+                        - option "Algeria" [disabled]
+                        - option "Andorra" [disabled]
+                        - option "Angola" [disabled]
+                        - option "Argentina" [disabled]
+                        - option "Armenia" [disabled]
+                        - option "Australia" [disabled]
+                        - option "Austria" [disabled]
+                        - option "Azerbaijan" [disabled]
+                        - option "Bahrain" [disabled]
+                        - option "Bangladesh" [disabled]
+                        - option "Belarus" [disabled]
+                        - option "Belgium" [disabled]
+                        - option "Bolivia" [disabled]
+                        - option "Bosnia and Herzegovina" [disabled]
+                        - option "Brazil" [disabled]
+                        - option "Brunei" [disabled]
+                        - option "Bulgaria" [disabled]
+                        - option "Cameroon" [disabled]
+                        - option "Canada" [disabled]
+                        - option "Chile" [disabled]
+                        - option "China" [disabled]
+                        - option "Colombia" [disabled]
+                        - option "Congo" [disabled]
+                        - option "Costa Rica" [disabled]
+                        - option "Croatia" [disabled]
+                        - option "Cuba" [disabled]
+                        - option "Cyprus" [disabled]
+                        - option "Czech Republic" [disabled]
+                        - option "Denmark" [disabled]
+                        - option "Dominican Republic" [disabled]
+                        - option "Ecuador" [disabled]
+                        - option "Egypt" [disabled]
+                        - option "El Salvador" [disabled]
+                        - option "Estonia" [disabled]
+                        - option "Ethiopia" [disabled]
+                        - option "Finland" [disabled]
+                        - option "France" [disabled]
+                        - option "Georgia" [disabled]
+                        - option "Germany" [disabled]
+                        - option "Ghana" [disabled]
+                        - option "Greece" [disabled]
+                        - option "Guatemala" [disabled]
+                        - option "Honduras" [disabled]
+                        - option "Hungary" [disabled]
+                        - option "Iceland" [disabled]
+                        - option "India" [disabled]
+                        - option "Indonesia" [disabled]
+                        - option "Iran" [disabled]
+                        - option "Iraq" [disabled]
+                        - option "Ireland" [disabled]
+                        - option "Israel" [disabled]
+                        - option "Italy" [disabled]
+                        - option "Jamaica" [disabled]
+                        - option "Japan" [disabled]
+                        - option "Jordan" [disabled]
+                        - option "Kazakhstan" [disabled]
+                        - option "Kenya" [disabled]
+                        - option "Kuwait" [disabled]
+                        - option "Kyrgyzstan" [disabled]
+                        - option "Latvia" [disabled]
+                        - option "Lebanon" [disabled]
+                        - option "Libya" [disabled]
+                        - option "Liechtenstein" [disabled]
+                        - option "Lithuania" [disabled]
+                        - option "Luxembourg" [disabled]
+                        - option "Madagascar" [disabled]
+                        - option "Malaysia" [disabled]
+                        - option "Mali" [disabled]
+                        - option "Malta" [disabled]
+                        - option "Mexico" [disabled]
+                        - option "Moldova" [disabled]
+                        - option "Monaco" [disabled]
+                        - option "Mongolia" [disabled]
+                        - option "Montenegro" [disabled]
+                        - option "Morocco" [disabled]
+                        - option "Mozambique" [disabled]
+                        - option "Myanmar" [disabled]
+                        - option "Nepal" [disabled]
+                        - option "Netherlands" [disabled]
+                        - option "New Zealand" [disabled]
+                        - option "Nicaragua" [disabled]
+                        - option "Niger" [disabled]
+                        - option "Nigeria" [disabled]
+                        - option "North Korea" [disabled]
+                        - option "North Macedonia" [disabled]
+                        - option "Norway" [disabled]
+                        - option "Oman" [disabled]
+                        - option "Pakistan" [disabled]
+                        - option "Palestine" [disabled]
+                        - option "Panama" [disabled]
+                        - option "Paraguay" [disabled]
+                        - option "Peru" [disabled]
+                        - option "Philippines" [disabled]
+                        - option "Poland" [disabled]
+                        - option "Portugal" [disabled]
+                        - option "Qatar" [disabled]
+                        - option "Romania" [disabled]
+                        - option "Russia" [disabled]
+                        - option "Rwanda" [disabled]
+                        - option "Saudi Arabia" [disabled]
+                        - option "Senegal" [disabled]
+                        - option "Serbia" [disabled]
+                        - option "Singapore" [disabled]
+                        - option "Slovakia" [disabled]
+                        - option "Slovenia" [disabled]
+                        - option "Somalia" [disabled]
+                        - option "South Africa" [disabled]
+                        - option "South Korea" [disabled]
+                        - option "Spain" [disabled]
+                        - option "Sri Lanka" [disabled]
+                        - option "Sudan" [disabled]
+                        - option "Sweden" [disabled]
+                        - option "Switzerland" [disabled]
+                        - option "Syria" [disabled]
+                        - option "Taiwan" [disabled]
+                        - option "Tajikistan" [disabled]
+                        - option "Tanzania" [disabled]
+                        - option "Thailand" [disabled]
+                        - option "Tunisia" [disabled]
+                        - option "Turkey" [disabled]
+                        - option "Turkmenistan" [disabled]
+                        - option "Uganda" [disabled]
+                        - option "Ukraine" [disabled]
+                        - option "United Arab Emirates" [disabled]
+                        - option "United Kingdom" [disabled]
+                        - option "United States" [disabled]
+                        - option "Uruguay" [disabled]
+                        - option "Uzbekistan" [disabled]
+                        - option "Vatican City" [disabled]
+                        - option "Venezuela" [disabled]
+                        - option "Vietnam" [disabled]
+                        - option "Yemen" [disabled]
+                        - option "Zambia" [disabled]
+                        - option "Zimbabwe" [disabled]
+                    - generic [ref=e216]:
+                      - generic [ref=e217]: Date of Birth
+                      - textbox "Date of Birth" [disabled] [ref=e218]: 1992-10-19
+                    - generic [ref=e219]:
+                      - generic [ref=e220]: Gender
+                      - combobox "Gender" [disabled] [ref=e221]:
+                        - option "Select gender" [disabled] [selected]
+                        - option "Male" [disabled]
+                        - option "Female" [disabled]
+                    - generic [ref=e222]:
+                      - generic [ref=e223]: Marital Status
+                      - combobox "Marital Status" [disabled] [ref=e224]:
+                        - option "Select marital status" [disabled] [selected]
+                        - option "Single" [disabled]
+                        - option "Married" [disabled]
+                        - option "Divorced" [disabled]
+                        - option "Widowed" [disabled]
+                        - option "Separated" [disabled]
+                        - option "Other" [disabled]
+                - generic [ref=e225]:
+                  - generic [ref=e226]:
+                    - heading "Contact & Notifications" [level=2] [ref=e227]
+                    - paragraph [ref=e228]: Optional worker contact information.
+                  - generic [ref=e229]:
+                    - generic [ref=e230]:
+                      - generic [ref=e231]: Email
+                      - textbox "Email This worker already has their own login email." [disabled] [ref=e232]: cvetkovicborivoje+wu-codex-agency-worker-20260306@gmail.com
+                      - paragraph [ref=e233]: This worker already has their own login email.
+                    - generic [ref=e234]:
+                      - generic [ref=e235]: Phone
+                      - textbox "Phone Optional. Add phone only if this worker should receive WhatsApp or phone notifications." [disabled] [ref=e236]:
+                        - /placeholder: +381...
+                        - text: "+381600000121"
+                      - paragraph [ref=e237]: Optional. Add phone only if this worker should receive WhatsApp or phone notifications.
+                    - generic [ref=e238]:
+                      - generic [ref=e239]: Current Country
+                      - combobox "Current Country" [disabled] [ref=e240]:
+                        - option "Select current country" [disabled]
+                        - option "Afghanistan" [disabled]
+                        - option "Albania" [disabled]
+                        - option "Algeria" [disabled]
+                        - option "Andorra" [disabled]
+                        - option "Angola" [disabled]
+                        - option "Argentina" [disabled]
+                        - option "Armenia" [disabled]
+                        - option "Australia" [disabled]
+                        - option "Austria" [disabled]
+                        - option "Azerbaijan" [disabled]
+                        - option "Bahrain" [disabled]
+                        - option "Bangladesh" [disabled]
+                        - option "Belarus" [disabled]
+                        - option "Belgium" [disabled]
+                        - option "Bolivia" [disabled]
+                        - option "Bosnia and Herzegovina" [disabled]
+                        - option "Brazil" [disabled]
+                        - option "Brunei" [disabled]
+                        - option "Bulgaria" [disabled]
+                        - option "Cameroon" [disabled]
+                        - option "Canada" [disabled]
+                        - option "Chile" [disabled]
+                        - option "China" [disabled]
+                        - option "Colombia" [disabled]
+                        - option "Congo" [disabled]
+                        - option "Costa Rica" [disabled]
+                        - option "Croatia" [disabled]
+                        - option "Cuba" [disabled]
+                        - option "Cyprus" [disabled]
+                        - option "Czech Republic" [disabled]
+                        - option "Denmark" [disabled]
+                        - option "Dominican Republic" [disabled]
+                        - option "Ecuador" [disabled]
+                        - option "Egypt" [disabled]
+                        - option "El Salvador" [disabled]
+                        - option "Estonia" [disabled]
+                        - option "Ethiopia" [disabled]
+                        - option "Finland" [disabled]
+                        - option "France" [disabled]
+                        - option "Georgia" [disabled]
+                        - option "Germany" [disabled]
+                        - option "Ghana" [disabled]
+                        - option "Greece" [disabled]
+                        - option "Guatemala" [disabled]
+                        - option "Honduras" [disabled]
+                        - option "Hungary" [disabled]
+                        - option "Iceland" [disabled]
+                        - option "India" [disabled]
+                        - option "Indonesia" [disabled]
+                        - option "Iran" [disabled]
+                        - option "Iraq" [disabled]
+                        - option "Ireland" [disabled]
+                        - option "Israel" [disabled]
+                        - option "Italy" [disabled]
+                        - option "Jamaica" [disabled]
+                        - option "Japan" [disabled]
+                        - option "Jordan" [disabled]
+                        - option "Kazakhstan" [disabled]
+                        - option "Kenya" [disabled]
+                        - option "Kuwait" [disabled]
+                        - option "Kyrgyzstan" [disabled]
+                        - option "Latvia" [disabled]
+                        - option "Lebanon" [disabled]
+                        - option "Libya" [disabled]
+                        - option "Liechtenstein" [disabled]
+                        - option "Lithuania" [disabled]
+                        - option "Luxembourg" [disabled]
+                        - option "Madagascar" [disabled]
+                        - option "Malaysia" [disabled]
+                        - option "Mali" [disabled]
+                        - option "Malta" [disabled]
+                        - option "Mexico" [disabled]
+                        - option "Moldova" [disabled]
+                        - option "Monaco" [disabled]
+                        - option "Mongolia" [disabled]
+                        - option "Montenegro" [disabled]
+                        - option "Morocco" [disabled]
+                        - option "Mozambique" [disabled]
+                        - option "Myanmar" [disabled]
+                        - option "Nepal" [disabled]
+                        - option "Netherlands" [disabled]
+                        - option "New Zealand" [disabled]
+                        - option "Nicaragua" [disabled]
+                        - option "Niger" [disabled]
+                        - option "Nigeria" [disabled]
+                        - option "North Korea" [disabled]
+                        - option "North Macedonia" [disabled]
+                        - option "Norway" [disabled]
+                        - option "Oman" [disabled]
+                        - option "Pakistan" [disabled]
+                        - option "Palestine" [disabled]
+                        - option "Panama" [disabled]
+                        - option "Paraguay" [disabled]
+                        - option "Peru" [disabled]
+                        - option "Philippines" [disabled]
+                        - option "Poland" [disabled]
+                        - option "Portugal" [disabled]
+                        - option "Qatar" [disabled]
+                        - option "Romania" [disabled]
+                        - option "Russia" [disabled]
+                        - option "Rwanda" [disabled]
+                        - option "Saudi Arabia" [disabled]
+                        - option "Senegal" [disabled]
+                        - option "Serbia" [disabled] [selected]
+                        - option "Singapore" [disabled]
+                        - option "Slovakia" [disabled]
+                        - option "Slovenia" [disabled]
+                        - option "Somalia" [disabled]
+                        - option "South Africa" [disabled]
+                        - option "South Korea" [disabled]
+                        - option "Spain" [disabled]
+                        - option "Sri Lanka" [disabled]
+                        - option "Sudan" [disabled]
+                        - option "Sweden" [disabled]
+                        - option "Switzerland" [disabled]
+                        - option "Syria" [disabled]
+                        - option "Taiwan" [disabled]
+                        - option "Tajikistan" [disabled]
+                        - option "Tanzania" [disabled]
+                        - option "Thailand" [disabled]
+                        - option "Tunisia" [disabled]
+                        - option "Turkey" [disabled]
+                        - option "Turkmenistan" [disabled]
+                        - option "Uganda" [disabled]
+                        - option "Ukraine" [disabled]
+                        - option "United Arab Emirates" [disabled]
+                        - option "United Kingdom" [disabled]
+                        - option "United States" [disabled]
+                        - option "Uruguay" [disabled]
+                        - option "Uzbekistan" [disabled]
+                        - option "Vatican City" [disabled]
+                        - option "Venezuela" [disabled]
+                        - option "Vietnam" [disabled]
+                        - option "Yemen" [disabled]
+                        - option "Zambia" [disabled]
+                        - option "Zimbabwe" [disabled]
+                    - generic [ref=e241]:
+                      - generic [ref=e242]: Address
+                      - textbox "Address" [disabled] [ref=e243]: Test Street 1, Belgrade
+                - generic [ref=e244]:
+                  - generic [ref=e245]:
+                    - heading "Citizenship & Civil Data" [level=2] [ref=e246]
+                    - paragraph [ref=e247]: Fields used for matching and visa paperwork.
+                  - generic [ref=e248]:
+                    - generic [ref=e249]:
+                      - generic [ref=e250]: Birth Country
+                      - combobox "Birth Country" [disabled] [ref=e251]:
+                        - option "Select birth country" [disabled]
+                        - option "Afghanistan" [disabled]
+                        - option "Albania" [disabled]
+                        - option "Algeria" [disabled]
+                        - option "Andorra" [disabled]
+                        - option "Angola" [disabled]
+                        - option "Argentina" [disabled]
+                        - option "Armenia" [disabled]
+                        - option "Australia" [disabled]
+                        - option "Austria" [disabled]
+                        - option "Azerbaijan" [disabled]
+                        - option "Bahrain" [disabled]
+                        - option "Bangladesh" [disabled]
+                        - option "Belarus" [disabled]
+                        - option "Belgium" [disabled]
+                        - option "Bolivia" [disabled]
+                        - option "Bosnia and Herzegovina" [disabled]
+                        - option "Brazil" [disabled]
+                        - option "Brunei" [disabled]
+                        - option "Bulgaria" [disabled]
+                        - option "Cameroon" [disabled]
+                        - option "Canada" [disabled]
+                        - option "Chile" [disabled]
+                        - option "China" [disabled]
+                        - option "Colombia" [disabled]
+                        - option "Congo" [disabled]
+                        - option "Costa Rica" [disabled]
+                        - option "Croatia" [disabled]
+                        - option "Cuba" [disabled]
+                        - option "Cyprus" [disabled]
+                        - option "Czech Republic" [disabled]
+                        - option "Denmark" [disabled]
+                        - option "Dominican Republic" [disabled]
+                        - option "Ecuador" [disabled]
+                        - option "Egypt" [disabled]
+                        - option "El Salvador" [disabled]
+                        - option "Estonia" [disabled]
+                        - option "Ethiopia" [disabled]
+                        - option "Finland" [disabled]
+                        - option "France" [disabled]
+                        - option "Georgia" [disabled]
+                        - option "Germany" [disabled]
+                        - option "Ghana" [disabled]
+                        - option "Greece" [disabled]
+                        - option "Guatemala" [disabled]
+                        - option "Honduras" [disabled]
+                        - option "Hungary" [disabled]
+                        - option "Iceland" [disabled]
+                        - option "India" [disabled]
+                        - option "Indonesia" [disabled]
+                        - option "Iran" [disabled]
+                        - option "Iraq" [disabled]
+                        - option "Ireland" [disabled]
+                        - option "Israel" [disabled]
+                        - option "Italy" [disabled]
+                        - option "Jamaica" [disabled]
+                        - option "Japan" [disabled]
+                        - option "Jordan" [disabled]
+                        - option "Kazakhstan" [disabled]
+                        - option "Kenya" [disabled]
+                        - option "Kuwait" [disabled]
+                        - option "Kyrgyzstan" [disabled]
+                        - option "Latvia" [disabled]
+                        - option "Lebanon" [disabled]
+                        - option "Libya" [disabled]
+                        - option "Liechtenstein" [disabled]
+                        - option "Lithuania" [disabled]
+                        - option "Luxembourg" [disabled]
+                        - option "Madagascar" [disabled]
+                        - option "Malaysia" [disabled]
+                        - option "Mali" [disabled]
+                        - option "Malta" [disabled]
+                        - option "Mexico" [disabled]
+                        - option "Moldova" [disabled]
+                        - option "Monaco" [disabled]
+                        - option "Mongolia" [disabled]
+                        - option "Montenegro" [disabled]
+                        - option "Morocco" [disabled]
+                        - option "Mozambique" [disabled]
+                        - option "Myanmar" [disabled]
+                        - option "Nepal" [disabled]
+                        - option "Netherlands" [disabled]
+                        - option "New Zealand" [disabled]
+                        - option "Nicaragua" [disabled]
+                        - option "Niger" [disabled]
+                        - option "Nigeria" [disabled]
+                        - option "North Korea" [disabled]
+                        - option "North Macedonia" [disabled]
+                        - option "Norway" [disabled]
+                        - option "Oman" [disabled]
+                        - option "Pakistan" [disabled]
+                        - option "Palestine" [disabled]
+                        - option "Panama" [disabled]
+                        - option "Paraguay" [disabled]
+                        - option "Peru" [disabled]
+                        - option "Philippines" [disabled]
+                        - option "Poland" [disabled]
+                        - option "Portugal" [disabled]
+                        - option "Qatar" [disabled]
+                        - option "Romania" [disabled]
+                        - option "Russia" [disabled]
+                        - option "Rwanda" [disabled]
+                        - option "Saudi Arabia" [disabled]
+                        - option "Senegal" [disabled]
+                        - option "Serbia" [disabled] [selected]
+                        - option "Singapore" [disabled]
+                        - option "Slovakia" [disabled]
+                        - option "Slovenia" [disabled]
+                        - option "Somalia" [disabled]
+                        - option "South Africa" [disabled]
+                        - option "South Korea" [disabled]
+                        - option "Spain" [disabled]
+                        - option "Sri Lanka" [disabled]
+                        - option "Sudan" [disabled]
+                        - option "Sweden" [disabled]
+                        - option "Switzerland" [disabled]
+                        - option "Syria" [disabled]
+                        - option "Taiwan" [disabled]
+                        - option "Tajikistan" [disabled]
+                        - option "Tanzania" [disabled]
+                        - option "Thailand" [disabled]
+                        - option "Tunisia" [disabled]
+                        - option "Turkey" [disabled]
+                        - option "Turkmenistan" [disabled]
+                        - option "Uganda" [disabled]
+                        - option "Ukraine" [disabled]
+                        - option "United Arab Emirates" [disabled]
+                        - option "United Kingdom" [disabled]
+                        - option "United States" [disabled]
+                        - option "Uruguay" [disabled]
+                        - option "Uzbekistan" [disabled]
+                        - option "Vatican City" [disabled]
+                        - option "Venezuela" [disabled]
+                        - option "Vietnam" [disabled]
+                        - option "Yemen" [disabled]
+                        - option "Zambia" [disabled]
+                        - option "Zimbabwe" [disabled]
+                    - generic [ref=e252]:
+                      - generic [ref=e253]: Birth City
+                      - textbox "Birth City" [disabled] [ref=e254]: Belgrade
+                    - generic [ref=e255]:
+                      - generic [ref=e256]: Citizenship
+                      - combobox "Citizenship" [disabled] [ref=e257]:
+                        - option "Select citizenship" [disabled] [selected]
+                        - option "Afghanistan" [disabled]
+                        - option "Albania" [disabled]
+                        - option "Algeria" [disabled]
+                        - option "Andorra" [disabled]
+                        - option "Angola" [disabled]
+                        - option "Argentina" [disabled]
+                        - option "Armenia" [disabled]
+                        - option "Australia" [disabled]
+                        - option "Austria" [disabled]
+                        - option "Azerbaijan" [disabled]
+                        - option "Bahrain" [disabled]
+                        - option "Bangladesh" [disabled]
+                        - option "Belarus" [disabled]
+                        - option "Belgium" [disabled]
+                        - option "Bolivia" [disabled]
+                        - option "Bosnia and Herzegovina" [disabled]
+                        - option "Brazil" [disabled]
+                        - option "Brunei" [disabled]
+                        - option "Bulgaria" [disabled]
+                        - option "Cameroon" [disabled]
+                        - option "Canada" [disabled]
+                        - option "Chile" [disabled]
+                        - option "China" [disabled]
+                        - option "Colombia" [disabled]
+                        - option "Congo" [disabled]
+                        - option "Costa Rica" [disabled]
+                        - option "Croatia" [disabled]
+                        - option "Cuba" [disabled]
+                        - option "Cyprus" [disabled]
+                        - option "Czech Republic" [disabled]
+                        - option "Denmark" [disabled]
+                        - option "Dominican Republic" [disabled]
+                        - option "Ecuador" [disabled]
+                        - option "Egypt" [disabled]
+                        - option "El Salvador" [disabled]
+                        - option "Estonia" [disabled]
+                        - option "Ethiopia" [disabled]
+                        - option "Finland" [disabled]
+                        - option "France" [disabled]
+                        - option "Georgia" [disabled]
+                        - option "Germany" [disabled]
+                        - option "Ghana" [disabled]
+                        - option "Greece" [disabled]
+                        - option "Guatemala" [disabled]
+                        - option "Honduras" [disabled]
+                        - option "Hungary" [disabled]
+                        - option "Iceland" [disabled]
+                        - option "India" [disabled]
+                        - option "Indonesia" [disabled]
+                        - option "Iran" [disabled]
+                        - option "Iraq" [disabled]
+                        - option "Ireland" [disabled]
+                        - option "Israel" [disabled]
+                        - option "Italy" [disabled]
+                        - option "Jamaica" [disabled]
+                        - option "Japan" [disabled]
+                        - option "Jordan" [disabled]
+                        - option "Kazakhstan" [disabled]
+                        - option "Kenya" [disabled]
+                        - option "Kuwait" [disabled]
+                        - option "Kyrgyzstan" [disabled]
+                        - option "Latvia" [disabled]
+                        - option "Lebanon" [disabled]
+                        - option "Libya" [disabled]
+                        - option "Liechtenstein" [disabled]
+                        - option "Lithuania" [disabled]
+                        - option "Luxembourg" [disabled]
+                        - option "Madagascar" [disabled]
+                        - option "Malaysia" [disabled]
+                        - option "Mali" [disabled]
+                        - option "Malta" [disabled]
+                        - option "Mexico" [disabled]
+                        - option "Moldova" [disabled]
+                        - option "Monaco" [disabled]
+                        - option "Mongolia" [disabled]
+                        - option "Montenegro" [disabled]
+                        - option "Morocco" [disabled]
+                        - option "Mozambique" [disabled]
+                        - option "Myanmar" [disabled]
+                        - option "Nepal" [disabled]
+                        - option "Netherlands" [disabled]
+                        - option "New Zealand" [disabled]
+                        - option "Nicaragua" [disabled]
+                        - option "Niger" [disabled]
+                        - option "Nigeria" [disabled]
+                        - option "North Korea" [disabled]
+                        - option "North Macedonia" [disabled]
+                        - option "Norway" [disabled]
+                        - option "Oman" [disabled]
+                        - option "Pakistan" [disabled]
+                        - option "Palestine" [disabled]
+                        - option "Panama" [disabled]
+                        - option "Paraguay" [disabled]
+                        - option "Peru" [disabled]
+                        - option "Philippines" [disabled]
+                        - option "Poland" [disabled]
+                        - option "Portugal" [disabled]
+                        - option "Qatar" [disabled]
+                        - option "Romania" [disabled]
+                        - option "Russia" [disabled]
+                        - option "Rwanda" [disabled]
+                        - option "Saudi Arabia" [disabled]
+                        - option "Senegal" [disabled]
+                        - option "Serbia" [disabled]
+                        - option "Singapore" [disabled]
+                        - option "Slovakia" [disabled]
+                        - option "Slovenia" [disabled]
+                        - option "Somalia" [disabled]
+                        - option "South Africa" [disabled]
+                        - option "South Korea" [disabled]
+                        - option "Spain" [disabled]
+                        - option "Sri Lanka" [disabled]
+                        - option "Sudan" [disabled]
+                        - option "Sweden" [disabled]
+                        - option "Switzerland" [disabled]
+                        - option "Syria" [disabled]
+                        - option "Taiwan" [disabled]
+                        - option "Tajikistan" [disabled]
+                        - option "Tanzania" [disabled]
+                        - option "Thailand" [disabled]
+                        - option "Tunisia" [disabled]
+                        - option "Turkey" [disabled]
+                        - option "Turkmenistan" [disabled]
+                        - option "Uganda" [disabled]
+                        - option "Ukraine" [disabled]
+                        - option "United Arab Emirates" [disabled]
+                        - option "United Kingdom" [disabled]
+                        - option "United States" [disabled]
+                        - option "Uruguay" [disabled]
+                        - option "Uzbekistan" [disabled]
+                        - option "Vatican City" [disabled]
+                        - option "Venezuela" [disabled]
+                        - option "Vietnam" [disabled]
+                        - option "Yemen" [disabled]
+                        - option "Zambia" [disabled]
+                        - option "Zimbabwe" [disabled]
+                    - generic [ref=e258]:
+                      - generic [ref=e259]: Original Citizenship
+                      - generic [ref=e261]:
+                        - checkbox "Original Citizenship Same as current citizenship Leave the checkbox on if it is the same as current citizenship." [checked] [disabled] [ref=e262]
+                        - text: Same as current citizenship
+                      - paragraph [ref=e263]: Leave the checkbox on if it is the same as current citizenship.
+                    - generic [ref=e264]:
+                      - generic [ref=e265]: Maiden Name
+                      - textbox "Maiden Name Optional." [disabled] [ref=e266]
+                      - paragraph [ref=e267]: Optional.
+                    - generic [ref=e268]:
+                      - generic [ref=e269]: Father's First Name
+                      - textbox "Father's First Name Optional." [disabled] [ref=e270]
+                      - paragraph [ref=e271]: Optional.
+                    - generic [ref=e272]:
+                      - generic [ref=e273]: Mother's First Name
+                      - textbox "Mother's First Name Optional." [disabled] [ref=e274]
+                      - paragraph [ref=e275]: Optional.
+                - generic [ref=e276]:
+                  - generic [ref=e277]:
+                    - heading "Job Preferences" [level=2] [ref=e278]
+                    - paragraph [ref=e279]: Worker job target and country preferences.
+                  - generic [ref=e281]:
+                    - generic [ref=e282]: Preferred Job
+                    - combobox "Preferred Job" [disabled] [ref=e283]:
+                      - option "Select preferred job" [disabled] [selected]
+                      - option "Construction" [disabled]
+                      - option "Manufacturing" [disabled]
+                      - option "Agriculture" [disabled]
+                      - option "Hospitality" [disabled]
+                      - option "Transportation" [disabled]
+                      - option "Retail" [disabled]
+                      - option "Food Processing" [disabled]
+                      - option "Warehousing & Logistics" [disabled]
+                      - option "Cleaning Services" [disabled]
+                      - option "Driving" [disabled]
+                      - option "Any" [disabled]
+                  - generic [ref=e284]:
+                    - generic [ref=e285]: Desired Countries
+                    - generic [ref=e286]:
+                      - generic [ref=e287]:
+                        - checkbox "Any in Europe" [disabled] [ref=e288]
+                        - text: Any in Europe
+                      - generic [ref=e289]:
+                        - generic [ref=e290]:
+                          - checkbox "Albania" [disabled] [ref=e291]
+                          - text: Albania
+                        - generic [ref=e292]:
+                          - checkbox "Austria" [disabled] [ref=e293]
+                          - text: Austria
+                        - generic [ref=e294]:
+                          - checkbox "Belgium" [disabled] [ref=e295]
+                          - text: Belgium
+                        - generic [ref=e296]:
+                          - checkbox "Bosnia and Herzegovina" [disabled] [ref=e297]
+                          - text: Bosnia and Herzegovina
+                        - generic [ref=e298]:
+                          - checkbox "Bulgaria" [disabled] [ref=e299]
+                          - text: Bulgaria
+                        - generic [ref=e300]:
+                          - checkbox "Croatia" [disabled] [ref=e301]
+                          - text: Croatia
+                        - generic [ref=e302]:
+                          - checkbox "Cyprus" [disabled] [ref=e303]
+                          - text: Cyprus
+                        - generic [ref=e304]:
+                          - checkbox "Czech Republic" [disabled] [ref=e305]
+                          - text: Czech Republic
+                        - generic [ref=e306]:
+                          - checkbox "Denmark" [disabled] [ref=e307]
+                          - text: Denmark
+                        - generic [ref=e308]:
+                          - checkbox "Estonia" [disabled] [ref=e309]
+                          - text: Estonia
+                        - generic [ref=e310]:
+                          - checkbox "Finland" [disabled] [ref=e311]
+                          - text: Finland
+                        - generic [ref=e312]:
+                          - checkbox "France" [disabled] [ref=e313]
+                          - text: France
+                        - generic [ref=e314]:
+                          - checkbox "Germany" [disabled] [ref=e315]
+                          - text: Germany
+                        - generic [ref=e316]:
+                          - checkbox "Greece" [disabled] [ref=e317]
+                          - text: Greece
+                        - generic [ref=e318]:
+                          - checkbox "Hungary" [disabled] [ref=e319]
+                          - text: Hungary
+                        - generic [ref=e320]:
+                          - checkbox "Iceland" [disabled] [ref=e321]
+                          - text: Iceland
+                        - generic [ref=e322]:
+                          - checkbox "Ireland" [disabled] [ref=e323]
+                          - text: Ireland
+                        - generic [ref=e324]:
+                          - checkbox "Italy" [disabled] [ref=e325]
+                          - text: Italy
+                        - generic [ref=e326]:
+                          - checkbox "Latvia" [disabled] [ref=e327]
+                          - text: Latvia
+                        - generic [ref=e328]:
+                          - checkbox "Lithuania" [disabled] [ref=e329]
+                          - text: Lithuania
+                        - generic [ref=e330]:
+                          - checkbox "Luxembourg" [disabled] [ref=e331]
+                          - text: Luxembourg
+                        - generic [ref=e332]:
+                          - checkbox "Malta" [disabled] [ref=e333]
+                          - text: Malta
+                        - generic [ref=e334]:
+                          - checkbox "Montenegro" [disabled] [ref=e335]
+                          - text: Montenegro
+                        - generic [ref=e336]:
+                          - checkbox "Netherlands" [disabled] [ref=e337]
+                          - text: Netherlands
+                        - generic [ref=e338]:
+                          - checkbox "North Macedonia" [disabled] [ref=e339]
+                          - text: North Macedonia
+                        - generic [ref=e340]:
+                          - checkbox "Norway" [disabled] [ref=e341]
+                          - text: Norway
+                        - generic [ref=e342]:
+                          - checkbox "Poland" [disabled] [ref=e343]
+                          - text: Poland
+                        - generic [ref=e344]:
+                          - checkbox "Portugal" [disabled] [ref=e345]
+                          - text: Portugal
+                        - generic [ref=e346]:
+                          - checkbox "Romania" [disabled] [ref=e347]
+                          - text: Romania
+                        - generic [ref=e348]:
+                          - checkbox "Serbia" [disabled] [ref=e349]
+                          - text: Serbia
+                        - generic [ref=e350]:
+                          - checkbox "Slovakia" [disabled] [ref=e351]
+                          - text: Slovakia
+                        - generic [ref=e352]:
+                          - checkbox "Slovenia" [disabled] [ref=e353]
+                          - text: Slovenia
+                        - generic [ref=e354]:
+                          - checkbox "Spain" [disabled] [ref=e355]
+                          - text: Spain
+                        - generic [ref=e356]:
+                          - checkbox "Sweden" [disabled] [ref=e357]
+                          - text: Sweden
+                        - generic [ref=e358]:
+                          - checkbox "Switzerland" [disabled] [ref=e359]
+                          - text: Switzerland
+                        - generic [ref=e360]:
+                          - checkbox "United Kingdom" [disabled] [ref=e361]
+                          - text: United Kingdom
+                - generic [ref=e362]:
+                  - generic [ref=e363]:
+                    - heading "Family Information" [level=2] [ref=e364]
+                    - paragraph [ref=e365]: Complete spouse and children data when relevant.
+                  - generic [ref=e366]:
+                    - generic [ref=e368]:
+                      - checkbox "This worker has a spouse or partner" [disabled] [ref=e369]
+                      - text: This worker has a spouse or partner
+                    - generic [ref=e371]:
+                      - checkbox "This worker has children" [disabled] [ref=e372]
+                      - text: This worker has children
+                - generic [ref=e373]:
+                  - generic [ref=e374]:
+                    - heading "Passport & Travel" [level=2] [ref=e375]
+                    - paragraph [ref=e376]: Passport and travel history used in verification and visa steps.
+                  - generic [ref=e377]:
+                    - generic [ref=e378]:
+                      - generic [ref=e379]: Passport Number
+                      - textbox "Passport Number" [disabled] [ref=e380]: WU9384756
+                    - generic [ref=e381]:
+                      - generic [ref=e382]: Passport Issued By
+                      - textbox "Passport Issued By" [disabled] [ref=e383]: Ministry of Interior
+                    - generic [ref=e384]:
+                      - generic [ref=e385]: Passport Issue Date
+                      - textbox "Passport Issue Date" [disabled] [ref=e386]: 2024-01-15
+                    - generic [ref=e387]:
+                      - generic [ref=e388]: Passport Expiry Date
+                      - textbox "Passport Expiry Date" [disabled] [ref=e389]: 2034-01-14
+                    - generic [ref=e390]:
+                      - generic [ref=e391]: Lives Abroad
+                      - combobox "Lives Abroad" [disabled] [ref=e392]:
+                        - option "Select answer" [disabled]
+                        - option "Yes" [disabled]
+                        - option "No" [disabled] [selected]
+                    - generic [ref=e393]:
+                      - generic [ref=e394]: Previous Visas
+                      - combobox "Previous Visas" [disabled] [ref=e395]:
+                        - option "Select answer" [disabled]
+                        - option "Yes" [disabled]
+                        - option "No" [disabled] [selected]
+              - generic [ref=e396]:
+                - complementary [ref=e397]:
+                  - heading "Worker Access" [level=2] [ref=e398]
+                  - generic [ref=e399]:
+                    - generic [ref=e400]: Current state
+                    - generic [ref=e401]: Worker account ready
+                    - paragraph [ref=e402]: This worker already has their own platform account.
+                - complementary [ref=e403]:
+                  - heading "Payment & Queue" [level=2] [ref=e404]
+                  - generic [ref=e405]:
+                    - generic [ref=e406]: Entry fee
+                    - generic [ref=e407]: Not paid
+                    - paragraph [ref=e408]: Use this to activate Job Finder access for this worker.
+                  - paragraph [ref=e409]: Payments are disabled in admin preview.
+                - complementary [ref=e410]:
+                  - heading "Missing Fields" [level=2] [ref=e411]
+                  - paragraph [ref=e412]: This worker profile is currently complete.
+                - complementary [ref=e413]:
+                  - generic [ref=e414]:
+                    - generic [ref=e415]:
+                      - heading "Document Actions" [level=2] [ref=e416]
+                      - paragraph [ref=e417]: Upload, replace, and escalate worker documents from the agency workspace.
+                    - generic [ref=e418]: 3/3 verified
+                  - generic [ref=e419]:
+                    - generic [ref=e420]:
+                      - generic [ref=e421]:
+                        - generic [ref=e422]:
+                          - generic [ref=e423]: Passport
+                          - generic [ref=e424]: Upload the main passport photo page.
+                        - generic [ref=e425]:
+                          - img [ref=e426]
+                          - text: Verified
+                      - paragraph [ref=e429]: Document actions are disabled in admin preview.
+                    - generic [ref=e430]:
+                      - generic [ref=e431]:
+                        - generic [ref=e432]:
+                          - generic [ref=e433]: Biometric photo
+                          - generic [ref=e434]: Clear front-facing photo with a neutral background.
+                        - generic [ref=e435]:
+                          - img [ref=e436]
+                          - text: Verified
+                      - paragraph [ref=e439]: Document actions are disabled in admin preview.
+                    - generic [ref=e440]:
+                      - generic [ref=e441]:
+                        - generic [ref=e442]:
+                          - generic [ref=e443]: Diploma
+                          - generic [ref=e444]: School or university diploma for visa processing.
+                        - generic [ref=e445]:
+                          - img [ref=e446]
+                          - text: Verified
+                      - paragraph [ref=e449]: Document actions are disabled in admin preview.
+  - button "Admin" [ref=e450]:
+    - img [ref=e452]
+    - generic [ref=e454]: Admin
+  - generic [ref=e457]:
+    - paragraph [ref=e458]:
+      - text: Essential cookies only for sign-in and site functionality.
+      - link "Privacy Policy" [ref=e459] [cursor=pointer]:
+        - /url: /privacy-policy
+    - button "Got it" [ref=e460]
+  - region "Notifications alt+T"
+  - generic:
+    - link "Chat with us on WhatsApp":
+      - /url: https://wa.me/15557839521?text=Hi%2C%20I%20have%20a%20question%20about%20Workers%20United
+      - img
+  - alert [ref=e134]

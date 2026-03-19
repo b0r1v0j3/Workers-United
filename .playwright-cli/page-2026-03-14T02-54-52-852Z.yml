@@ -1,0 +1,107 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e332]:
+    - navigation [ref=e333]:
+      - generic [ref=e334]:
+        - button "Open menu" [ref=e337]:
+          - img [ref=e338]
+        - link "Workers United Logo" [ref=e340] [cursor=pointer]:
+          - /url: /admin
+          - img "Workers United Logo" [ref=e341]
+        - button "Open notifications" [ref=e344]:
+          - img [ref=e345]
+    - generic [ref=e347]:
+      - complementary:
+        - generic:
+          - generic:
+            - link "Back to Admin":
+              - /url: /admin
+              - generic:
+                - img
+            - link "Support":
+              - /url: /profile/agency/inbox?inspect=5abb0ef6-ac45-4d5d-a417-a80ee8ef61c5
+              - generic:
+                - img
+            - link "Account Settings":
+              - /url: /profile/settings
+              - generic:
+                - img
+            - generic:
+              - button "Logout":
+                - generic:
+                  - img
+      - main [ref=e348]:
+        - generic [ref=e349]:
+          - generic [ref=e350]:
+            - generic [ref=e351]:
+              - generic [ref=e352]: Admin Preview Mode
+              - generic [ref=e353]: Agency Workspace Preview
+              - paragraph [ref=e354]: You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow.
+            - link "Back to Admin" [ref=e355] [cursor=pointer]:
+              - /url: /admin
+          - generic [ref=e356]:
+            - generic [ref=e358]:
+              - generic [ref=e359]:
+                - generic [ref=e360]:
+                  - img [ref=e361]
+                  - text: Agency Workspace
+                - heading "Ombor Recruitment" [level=1] [ref=e365]
+                - paragraph [ref=e366]: One place for every worker profile. Create and edit the full worker form here, then use agency support anytime without leaving the workspace.
+                - paragraph [ref=e367]: omborlimited@gmail.com
+              - generic [ref=e368]:
+                - generic [ref=e369]:
+                  - generic [ref=e370]:
+                    - img [ref=e371]
+                    - generic [ref=e376]: Total
+                  - generic [ref=e377]: "0"
+                - generic [ref=e378]:
+                  - generic [ref=e379]:
+                    - img [ref=e380]
+                    - generic [ref=e384]: Ready
+                  - generic [ref=e385]: "0"
+                - generic [ref=e386]:
+                  - generic [ref=e387]:
+                    - img [ref=e388]
+                    - generic [ref=e390]: Paid
+                  - generic [ref=e391]: "0"
+                - generic [ref=e392]:
+                  - generic [ref=e393]:
+                    - img [ref=e394]
+                    - generic [ref=e397]: Drafts
+                  - generic [ref=e398]: "0"
+            - generic [ref=e400]:
+              - img [ref=e402]
+              - generic [ref=e404]:
+                - paragraph [ref=e405]: 90-day refund guarantee
+                - paragraph [ref=e406]: If we do not find a job for a worker within 90 days, the $9 Job Finder fee is refunded in full.
+            - generic [ref=e407]:
+              - generic [ref=e408]:
+                - generic [ref=e409]:
+                  - heading "Workers" [level=2] [ref=e410]
+                  - paragraph [ref=e411]: Manage every worker from one board. Agency support stays unlocked the whole time, and Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
+                - generic [ref=e412]:
+                  - generic [ref=e413]:
+                    - img
+                    - textbox [ref=e414]:
+                      - /placeholder: Search workers
+                  - button "Add worker" [ref=e415]:
+                    - img [ref=e416]
+                    - text: Add worker
+              - generic [ref=e419]:
+                - img [ref=e421]
+                - heading "No workers yet" [level=3] [ref=e424]
+                - paragraph [ref=e425]: Use the Add worker button above to open the full worker form.
+  - button "Admin" [ref=e321]:
+    - img [ref=e323]
+    - generic [ref=e325]: Admin
+  - generic [ref=e328]:
+    - paragraph [ref=e329]:
+      - text: Essential cookies only for sign-in and site functionality.
+      - link "Privacy Policy" [ref=e330] [cursor=pointer]:
+        - /url: /privacy-policy
+    - button "Got it" [ref=e331]
+  - region "Notifications alt+T"
+  - generic:
+    - link "Chat with us on WhatsApp":
+      - /url: https://wa.me/15557839521?text=Hi%2C%20I%20have%20a%20question%20about%20Workers%20United
+      - img
+  - alert [ref=e100]

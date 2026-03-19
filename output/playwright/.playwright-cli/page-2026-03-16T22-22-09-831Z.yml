@@ -1,0 +1,50 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "Workers United" [ref=e6] [cursor=pointer]:
+          - /url: /profile/worker
+          - img "Workers United" [ref=e7]
+        - link "Workers United Logo" [ref=e8] [cursor=pointer]:
+          - /url: /profile/worker
+          - img "Workers United Logo" [ref=e9]
+        - generic [ref=e11]:
+          - button "Open notifications" [ref=e12]:
+            - img [ref=e13]
+          - generic [ref=e15]: Storage Debug Worker 1773699279732
+    - generic [ref=e16]:
+      - complementary [ref=e17]:
+        - generic [ref=e19]:
+          - button "Toggle Menu" [ref=e20]:
+            - img [ref=e22]
+          - link "Overview" [ref=e24] [cursor=pointer]:
+            - /url: /profile/worker
+            - img [ref=e26]
+          - link "Documents" [ref=e31] [cursor=pointer]:
+            - /url: /profile/worker/documents
+            - img [ref=e33]
+          - link "Queue" [ref=e36] [cursor=pointer]:
+            - /url: /profile/worker/queue
+            - img [ref=e38]
+          - link "Support" [ref=e41] [cursor=pointer]:
+            - /url: /profile/worker/inbox
+            - img [ref=e43]
+          - link "Edit Profile" [ref=e45] [cursor=pointer]:
+            - /url: /profile/worker/edit
+            - img [ref=e47]
+          - link "Account Settings" [ref=e50] [cursor=pointer]:
+            - /url: /profile/settings
+            - img [ref=e52]
+          - button "Logout" [ref=e57]:
+            - img [ref=e59]
+      - main [ref=e62]:
+        - navigation [ref=e65]
+  - region "Notifications alt+T"
+  - generic [ref=e122]:
+    - generic: Need help? Chat with us!
+    - link "Chat with us on WhatsApp" [ref=e123] [cursor=pointer]:
+      - /url: https://wa.me/15557839521?text=Hi%2C%20I%20have%20a%20question%20about%20Workers%20United
+      - img [ref=e124]
+  - button "Open Next.js Dev Tools" [ref=e131] [cursor=pointer]:
+    - img [ref=e132]
+  - alert [ref=e135]

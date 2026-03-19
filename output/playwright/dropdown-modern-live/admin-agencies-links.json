@@ -1,0 +1,110 @@
+[
+  {
+    "text": "",
+    "href": "/admin"
+  },
+  {
+    "text": "Dashboard",
+    "href": "/admin"
+  },
+  {
+    "text": "Workers",
+    "href": "/admin/workers"
+  },
+  {
+    "text": "Employers",
+    "href": "/admin/employers"
+  },
+  {
+    "text": "Agencies",
+    "href": "/admin/agencies"
+  },
+  {
+    "text": "Jobs",
+    "href": "/admin/jobs"
+  },
+  {
+    "text": "Queue",
+    "href": "/admin/queue"
+  },
+  {
+    "text": "Review",
+    "href": "/admin/review"
+  },
+  {
+    "text": "Inbox",
+    "href": "/admin/inbox"
+  },
+  {
+    "text": "Analytics",
+    "href": "/admin/analytics"
+  },
+  {
+    "text": "Exceptions",
+    "href": "/admin/exceptions"
+  },
+  {
+    "text": "Email Health",
+    "href": "/admin/email-health"
+  },
+  {
+    "text": "WA Blast",
+    "href": "/admin/whatsapp-blast"
+  },
+  {
+    "text": "Settings",
+    "href": "/admin/settings"
+  },
+  {
+    "text": "Dashboard",
+    "href": "/admin"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=e4f9d1bb-867d-46f3-ac49-0604aafdb3c2"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=5abb0ef6-ac45-4d5d-a417-a80ee8ef61c5"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=a3df772f-e6a1-4fac-8380-f9e91728c978"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=e58f796a-acee-49bb-a4f5-8702d11acffe"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=7ed2f983-8e2d-471b-b46a-1d9ff6c98069"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=e9292c41-8b18-483d-bf80-8b7d63cd5f64"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=d42cde55-0856-49d3-ad1e-4de056ea56d9"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=a798657a-0180-4d8a-ba51-1fa355bf1239"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=e50bbf29-b28f-4e3d-a702-517b8e8abad3"
+  },
+  {
+    "text": "Inspect workspace",
+    "href": "/profile/agency?inspect=29e68b51-f2f4-493a-a54e-80312eff5268"
+  },
+  {
+    "text": "Privacy Policy",
+    "href": "/privacy-policy"
+  },
+  {
+    "text": "Privacy Policy",
+    "href": "/privacy-policy"
+  }
+]
