@@ -5,6 +5,9 @@ import { logServerActivity } from "@/lib/activityLoggerServer";
 import { finalizeConfirmationFeeOffer } from "@/lib/offer-finalization";
 import {
     activateEntryFeeWorkerAfterPayment,
+    buildStripeCheckoutExpiredActivityPayload,
+    buildStripePaymentCompletedActivityPayload,
+    buildStripePaymentFailedActivityPayload,
     getStripePaymentAmounts,
     mergeStripePaymentMetadata,
     persistCompletedStripeCheckoutPayment,
@@ -86,15 +89,21 @@ export async function POST(req: NextRequest) {
         }
 
         if (activitySubjectId) {
-            await logServerActivity(activitySubjectId, "payment_failed", "payment", {
-                type: paymentType,
-                payment_id: paymentId,
-                stripe_payment_intent_id: paymentIntent.id,
-                target_worker_id: targetWorkerId,
-                failure_code: failure?.code || null,
-                decline_code: failure?.decline_code || null,
-                error: failure?.message || "Payment was declined before completion",
-            }, "warning");
+            await logServerActivity(
+                activitySubjectId,
+                "payment_failed",
+                "payment",
+                buildStripePaymentFailedActivityPayload({
+                    paymentType,
+                    paymentId,
+                    stripePaymentIntentId: paymentIntent.id,
+                    targetWorkerId,
+                    failureCode: failure?.code || null,
+                    declineCode: failure?.decline_code || null,
+                    error: failure?.message || "Payment was declined before completion",
+                }),
+                "warning"
+            );
         }
 
         return NextResponse.json({ received: true });
@@ -139,18 +148,24 @@ export async function POST(req: NextRequest) {
         }
 
         if (activitySubjectId) {
-            await logServerActivity(activitySubjectId, "payment_failed", "payment", {
-                type: paymentType,
-                payment_id: paymentId,
-                stripe_payment_intent_id: paymentIntentId,
-                stripe_charge_id: charge.id,
-                target_worker_id: targetWorkerId,
-                failure_code: charge.failure_code || null,
-                outcome_reason: charge.outcome?.reason || null,
-                network_status: charge.outcome?.network_status || null,
-                risk_level: charge.outcome?.risk_level || null,
-                error: charge.failure_message || "Charge failed before completion",
-            }, "warning");
+            await logServerActivity(
+                activitySubjectId,
+                "payment_failed",
+                "payment",
+                buildStripePaymentFailedActivityPayload({
+                    paymentType,
+                    paymentId,
+                    stripePaymentIntentId: paymentIntentId,
+                    stripeChargeId: charge.id,
+                    targetWorkerId,
+                    failureCode: charge.failure_code || null,
+                    outcomeReason: charge.outcome?.reason || null,
+                    networkStatus: charge.outcome?.network_status || null,
+                    riskLevel: charge.outcome?.risk_level || null,
+                    error: charge.failure_message || "Charge failed before completion",
+                }),
+                "warning"
+            );
         }
 
         return NextResponse.json({ received: true });
@@ -209,13 +224,18 @@ export async function POST(req: NextRequest) {
                     targetWorkerId,
                 });
 
-                await logServerActivity(activitySubjectId, "payment_completed", "payment", {
-                    type: "entry_fee",
-                    amount: 9,
-                    currency: session.currency?.toUpperCase() || "USD",
-                    paid_by_profile_id: paidByProfileId || null,
-                    target_worker_id: targetWorkerId,
-                });
+                await logServerActivity(
+                    activitySubjectId,
+                    "payment_completed",
+                    "payment",
+                    buildStripePaymentCompletedActivityPayload({
+                        paymentType: "entry_fee",
+                        amount,
+                        currency: session.currency?.toUpperCase() || "USD",
+                        paidByProfileId: paidByProfileId || null,
+                        targetWorkerId,
+                    })
+                );
 
                 // Send payment confirmation email
                 if (!targetProfileId) {
@@ -247,18 +267,32 @@ export async function POST(req: NextRequest) {
                 }
                 await finalizeConfirmationFeeOffer(supabase, targetProfileId, offerId);
 
-                await logServerActivity(activitySubjectId, "payment_completed", "payment", {
-                    type: "confirmation_fee",
-                    amount: 190,
-                    offer_id: offerId,
-                    paid_by_profile_id: paidByProfileId || null,
-                });
+                await logServerActivity(
+                    activitySubjectId,
+                    "payment_completed",
+                    "payment",
+                    buildStripePaymentCompletedActivityPayload({
+                        paymentType: "confirmation_fee",
+                        amount,
+                        offerId,
+                        paidByProfileId: paidByProfileId || null,
+                    })
+                );
             }
 
         } catch (err: unknown) {
             const message = getErrorMessage(err);
             console.error(`Database error: ${message}`);
-            await logServerActivity(userId, "payment_failed", "payment", { type: paymentType, error: message }, "error");
+            await logServerActivity(
+                userId,
+                "payment_failed",
+                "payment",
+                buildStripePaymentFailedActivityPayload({
+                    paymentType,
+                    error: message,
+                }),
+                "error"
+            );
             return NextResponse.json({ error: "Database error" }, { status: 500 });
         }
     }
@@ -291,12 +325,18 @@ export async function POST(req: NextRequest) {
         }
 
         if (activitySubjectId) {
-            await logServerActivity(activitySubjectId, "checkout_session_expired", "payment", {
-                type: paymentType,
-                payment_id: paymentId,
-                stripe_session_id: session.id,
-                target_worker_id: targetWorkerId,
-            }, "warning");
+            await logServerActivity(
+                activitySubjectId,
+                "checkout_session_expired",
+                "payment",
+                buildStripeCheckoutExpiredActivityPayload({
+                    paymentType,
+                    paymentId,
+                    stripeSessionId: session.id,
+                    targetWorkerId,
+                }),
+                "warning"
+            );
         }
 
         return NextResponse.json({ received: true });

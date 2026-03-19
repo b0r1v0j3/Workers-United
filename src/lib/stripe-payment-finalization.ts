@@ -44,6 +44,39 @@ interface StripePaymentAmounts {
     amountCents: number;
 }
 
+interface StripePaymentFailedActivityPayloadOptions {
+    paymentType: string;
+    paymentId?: string | null;
+    stripePaymentIntentId?: string | null;
+    stripeChargeId?: string | null;
+    targetWorkerId?: string | null;
+    failureCode?: string | null;
+    declineCode?: string | null;
+    outcomeReason?: string | null;
+    networkStatus?: string | null;
+    riskLevel?: string | null;
+    error?: string | null;
+    source?: string | null;
+}
+
+interface StripePaymentCompletedActivityPayloadOptions {
+    paymentType: string;
+    amount: number;
+    paidByProfileId?: string | null;
+    targetWorkerId?: string | null;
+    currency?: string | null;
+    offerId?: string | null;
+    source?: string | null;
+    stripeSessionId?: string | null;
+}
+
+interface StripeCheckoutExpiredActivityPayloadOptions {
+    paymentType: string;
+    paymentId?: string | null;
+    stripeSessionId?: string | null;
+    targetWorkerId?: string | null;
+}
+
 type PaymentSuccessEmailResult =
     | { status: "queued"; recipientEmail: string }
     | { status: "already_queued" }
@@ -79,6 +112,72 @@ export function mergeStripePaymentMetadata(
     return {
         ...base,
         ...next,
+    };
+}
+
+export function buildStripePaymentFailedActivityPayload({
+    paymentType,
+    paymentId = null,
+    stripePaymentIntentId = null,
+    stripeChargeId = null,
+    targetWorkerId = null,
+    failureCode = null,
+    declineCode = null,
+    outcomeReason = null,
+    networkStatus = null,
+    riskLevel = null,
+    error = null,
+    source = null,
+}: StripePaymentFailedActivityPayloadOptions): Record<string, unknown> {
+    return {
+        type: paymentType,
+        payment_id: paymentId,
+        stripe_payment_intent_id: stripePaymentIntentId,
+        stripe_charge_id: stripeChargeId,
+        target_worker_id: targetWorkerId,
+        failure_code: failureCode,
+        decline_code: declineCode,
+        outcome_reason: outcomeReason,
+        network_status: networkStatus,
+        risk_level: riskLevel,
+        error,
+        ...(source ? { source } : {}),
+    };
+}
+
+export function buildStripePaymentCompletedActivityPayload({
+    paymentType,
+    amount,
+    paidByProfileId = null,
+    targetWorkerId = null,
+    currency = null,
+    offerId = null,
+    source = null,
+    stripeSessionId = null,
+}: StripePaymentCompletedActivityPayloadOptions): Record<string, unknown> {
+    return {
+        type: paymentType,
+        amount,
+        paid_by_profile_id: paidByProfileId,
+        ...(targetWorkerId ? { target_worker_id: targetWorkerId } : {}),
+        ...(currency ? { currency } : {}),
+        ...(offerId ? { offer_id: offerId } : {}),
+        ...(source ? { source } : {}),
+        ...(stripeSessionId ? { stripe_session_id: stripeSessionId } : {}),
+    };
+}
+
+export function buildStripeCheckoutExpiredActivityPayload({
+    paymentType,
+    paymentId = null,
+    stripeSessionId = null,
+    targetWorkerId = null,
+}: StripeCheckoutExpiredActivityPayloadOptions): Record<string, unknown> {
+    return {
+        type: paymentType,
+        payment_id: paymentId,
+        ...(stripeSessionId ? { stripe_session_id: stripeSessionId } : {}),
+        ...(targetWorkerId ? { target_worker_id: targetWorkerId } : {}),
     };
 }
 

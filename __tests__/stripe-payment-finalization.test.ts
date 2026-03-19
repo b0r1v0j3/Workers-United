@@ -1,6 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
     activateEntryFeeWorkerAfterPayment,
+    buildStripeCheckoutExpiredActivityPayload,
+    buildStripePaymentCompletedActivityPayload,
+    buildStripePaymentFailedActivityPayload,
     getStripePaymentAmounts,
     mergeStripePaymentMetadata,
     persistCompletedStripeCheckoutPayment,
@@ -35,6 +38,72 @@ describe("stripe-payment-finalization", () => {
         expect(getStripePaymentAmounts("confirmation_fee")).toEqual({
             amount: 190,
             amountCents: 19000,
+        });
+    });
+
+    it("builds canonical payment failed activity payloads", () => {
+        expect(
+            buildStripePaymentFailedActivityPayload({
+                paymentType: "entry_fee",
+                paymentId: "payment-1",
+                stripePaymentIntentId: "pi_1",
+                stripeChargeId: "ch_1",
+                targetWorkerId: "worker-1",
+                failureCode: "card_declined",
+                declineCode: "do_not_honor",
+                outcomeReason: "highest_risk_level",
+                networkStatus: "not_sent_to_network",
+                riskLevel: "highest",
+                error: "Issuer declined",
+                source: "confirm-session-route",
+            })
+        ).toEqual({
+            type: "entry_fee",
+            payment_id: "payment-1",
+            stripe_payment_intent_id: "pi_1",
+            stripe_charge_id: "ch_1",
+            target_worker_id: "worker-1",
+            failure_code: "card_declined",
+            decline_code: "do_not_honor",
+            outcome_reason: "highest_risk_level",
+            network_status: "not_sent_to_network",
+            risk_level: "highest",
+            error: "Issuer declined",
+            source: "confirm-session-route",
+        });
+    });
+
+    it("builds canonical payment completed and expired activity payloads", () => {
+        expect(
+            buildStripePaymentCompletedActivityPayload({
+                paymentType: "confirmation_fee",
+                amount: 190,
+                paidByProfileId: "profile-1",
+                offerId: "offer-1",
+                source: "confirm-session-route",
+                stripeSessionId: "cs_1",
+            })
+        ).toEqual({
+            type: "confirmation_fee",
+            amount: 190,
+            paid_by_profile_id: "profile-1",
+            offer_id: "offer-1",
+            source: "confirm-session-route",
+            stripe_session_id: "cs_1",
+        });
+
+        expect(
+            buildStripeCheckoutExpiredActivityPayload({
+                paymentType: "entry_fee",
+                paymentId: "payment-2",
+                stripeSessionId: "cs_2",
+                targetWorkerId: "worker-2",
+            })
+        ).toEqual({
+            type: "entry_fee",
+            payment_id: "payment-2",
+            stripe_session_id: "cs_2",
+            target_worker_id: "worker-2",
         });
     });
 
