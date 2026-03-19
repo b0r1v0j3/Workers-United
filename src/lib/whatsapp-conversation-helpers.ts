@@ -11,6 +11,7 @@ export interface WhatsAppHistoryMessage {
     direction: string;
     content: string | null;
     created_at?: string | null;
+    status?: string | null;
 }
 
 export interface WhatsAppBrainMemoryEntry {
@@ -48,13 +49,18 @@ export async function loadWhatsAppConversationHistory(
     limit: number
 ): Promise<WhatsAppHistoryMessage[]> {
     try {
+        const scanLimit = Math.max(limit * 3, limit + 12);
         const { data } = await admin
             .from("whatsapp_messages")
-            .select("direction, content, created_at")
+            .select("direction, content, created_at, status")
             .eq("phone_number", normalizedPhone)
             .order("created_at", { ascending: false })
-            .limit(limit);
-        return (data || []).reverse();
+            .limit(scanLimit);
+
+        return (data || [])
+            .filter((message) => !(message.direction === "outbound" && message.status === "failed"))
+            .reverse()
+            .slice(-limit);
     } catch {
         return [];
     }

@@ -1,4 +1,5 @@
 import { loadCanonicalWorkerRecord, pickCanonicalWorkerRecord } from "@/lib/workers";
+import { getAllAuthUsers } from "@/lib/supabase/admin";
 
 interface ResolveWhatsAppWorkerIdentityParams {
     admin: any;
@@ -34,8 +35,8 @@ export async function resolveWhatsAppWorkerIdentity<
 
     if (!workerRecord) {
         const phoneDigits = rawPhone.replace(/\D/g, "");
-        const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 });
-        const matchedUser = authData?.users?.find((user: any) => {
+        const authUsers = await getAllAuthUsers(admin);
+        const matchedUser = authUsers.find((user: any) => {
             const metadataPhone = String(user.user_metadata?.phone || "").replace(/\D/g, "");
             const userPhone = String(user.phone || "").replace(/\D/g, "");
             return (metadataPhone && metadataPhone === phoneDigits)
