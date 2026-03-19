@@ -6,6 +6,8 @@ import { logServerActivity } from "@/lib/activityLoggerServer";
 import { finalizeConfirmationFeeOffer } from "@/lib/offer-finalization";
 import {
     activateEntryFeeWorkerAfterPayment,
+    buildStripePaymentCompletedActivityPayload,
+    buildStripePaymentFailedActivityPayload,
     getStripePaymentAmounts,
     persistCompletedStripeCheckoutPayment,
     queueEntryFeePaymentSuccessEmail,
@@ -31,6 +33,7 @@ function getMetadataValue(value: string | null | undefined): string | null {
 export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const admin = createAdminClient();
+    let attemptedPaymentType = "entry_fee";
 
     const {
         data: { user },
@@ -49,6 +52,7 @@ export async function POST(request: NextRequest) {
         const session = await stripe.checkout.sessions.retrieve(sessionId);
         const sessionUserId = getMetadataValue(session.metadata?.user_id);
         const paymentType = session.metadata?.payment_type || "entry_fee";
+        attemptedPaymentType = paymentType;
         const paymentId = getMetadataValue(session.metadata?.payment_id);
         const offerId = getMetadataValue(session.metadata?.offer_id);
         const targetProfileId = getMetadataValue(session.metadata?.target_profile_id);
@@ -98,14 +102,19 @@ export async function POST(request: NextRequest) {
                 targetWorkerId,
             });
 
-            await logServerActivity(activitySubjectId, "payment_completed", "payment", {
-                type: "entry_fee",
-                amount: 9,
-                source: "confirm-session-route",
-                stripe_session_id: session.id,
-                paid_by_profile_id: paidByProfileId || null,
-                target_worker_id: targetWorkerId,
-            });
+            await logServerActivity(
+                activitySubjectId,
+                "payment_completed",
+                "payment",
+                buildStripePaymentCompletedActivityPayload({
+                    paymentType: "entry_fee",
+                    amount,
+                    source: "confirm-session-route",
+                    stripeSessionId: session.id,
+                    paidByProfileId: paidByProfileId || null,
+                    targetWorkerId,
+                })
+            );
 
             await queueEntryFeePaymentSuccessEmail({
                 admin,
@@ -127,13 +136,18 @@ export async function POST(request: NextRequest) {
             await finalizeConfirmationFeeOffer(admin, targetProfileId, offerId);
         }
 
-        await logServerActivity(activitySubjectId, "payment_completed", "payment", {
-            type: paymentType,
-            amount,
-            source: "confirm-session-route",
-            stripe_session_id: session.id,
-            paid_by_profile_id: paidByProfileId || null,
-        });
+        await logServerActivity(
+            activitySubjectId,
+            "payment_completed",
+            "payment",
+            buildStripePaymentCompletedActivityPayload({
+                paymentType,
+                amount,
+                source: "confirm-session-route",
+                stripeSessionId: session.id,
+                paidByProfileId: paidByProfileId || null,
+            })
+        );
 
         return NextResponse.json({ state: "paid", paymentType });
     } catch (error) {
@@ -141,7 +155,11 @@ export async function POST(request: NextRequest) {
             user.id,
             "payment_failed",
             "payment",
-            { source: "confirm-session-route", error: getErrorMessage(error) },
+            buildStripePaymentFailedActivityPayload({
+                paymentType: attemptedPaymentType,
+                source: "confirm-session-route",
+                error: getErrorMessage(error),
+            }),
             "error"
         );
         return NextResponse.json({ error: "Failed to confirm payment session" }, { status: 500 });
