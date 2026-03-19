@@ -347,11 +347,15 @@ export async function POST(request: NextRequest) {
                 let routerDecision: WhatsAppRouterDecision | null = null;
                 let deterministicReplyFlowKey: string | null = null;
                 let responseType: "gpt" | "fallback" | "deterministic" | "auto_handoff" = "fallback";
+                let historyMessages: Awaited<ReturnType<typeof loadWhatsAppConversationHistory>> = [];
+                let brainMemory: Awaited<ReturnType<typeof loadWhatsAppBrainMemory>> = [];
+                let businessFacts = "";
+                let supportAccess: SupportAccessSnapshot | null = null;
                 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
                 if (OPENAI_API_KEY) {
                     try {
-                        const [historyMessages, brainMemory, businessFacts, supportAccess] = await Promise.all([
+                        [historyMessages, brainMemory, businessFacts, supportAccess] = await Promise.all([
                             loadWhatsAppConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
                             loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT),
                             (async () => {
@@ -397,6 +401,7 @@ export async function POST(request: NextRequest) {
                                 message: content,
                                 language: routerDecision.language,
                                 intent: routerDecision.intent,
+                                historyMessages,
                                 isFirstContact: historyMessages.length === 0,
                             })
                             : null;
@@ -406,6 +411,7 @@ export async function POST(request: NextRequest) {
                                 message: content,
                                 language: routerDecision.language,
                                 intent: routerDecision.intent,
+                                historyMessages,
                                 workerStatus: workerRecord.status,
                                 entryFeePaid: workerRecord.entry_fee_paid,
                                 adminApproved: workerRecord.admin_approved,
@@ -525,10 +531,11 @@ export async function POST(request: NextRequest) {
                     content,
                     workerRecord,
                     profile,
-                    effectiveReplyLanguage
+                    effectiveReplyLanguage,
+                    historyMessages
                 );
                 const finalReplyText = replyText && !replyMatchesExpectedWhatsAppLanguage(effectiveReplyLanguage, replyText)
-                    ? await getWhatsAppFallbackResponse(content, workerRecord, profile, effectiveReplyLanguage)
+                    ? await getWhatsAppFallbackResponse(content, workerRecord, profile, effectiveReplyLanguage, historyMessages)
                     : replyText;
 
                 if (finalReplyText) {

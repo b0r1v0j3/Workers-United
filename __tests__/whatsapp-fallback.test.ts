@@ -89,4 +89,24 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("Workers United का AI assistant");
         expect(reply).not.toContain("Create your account");
     });
+
+    it("honors explicit language-switch requests instead of falling back to English", async () => {
+        const reply = await getWhatsAppFallbackResponse("Pisi na srpskom", null, {
+            full_name: "Ali Worker",
+        }, "English");
+
+        expect(reply).toContain("Nastaviću na srpskom");
+        expect(reply).not.toContain("Welcome to Workers United");
+    });
+
+    it("uses recent conversation language for short ambiguous fallback follow-ups", async () => {
+        const reply = await getWhatsAppFallbackResponse("ok", null, {
+            full_name: "Ali Worker",
+        }, "English", [
+            { direction: "inbound", content: "Bonjour, ça va ?" },
+        ]);
+
+        expect(reply).toContain("Bienvenue");
+        expect(reply).not.toContain("Welcome to Workers United");
+    });
 });
