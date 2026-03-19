@@ -225,6 +225,17 @@ function renderIconHero(iconUrl: string, title: string, subtitle: string) {
     `;
 }
 
+function renderDarkPanel(title: string, bodyHtml: string) {
+    return `
+        <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
+            <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">${escapeHtml(title)}</h3>
+            <div style="margin:0; font-size: 16px; color: #E5E5EA; line-height: 1.6;">
+                ${bodyHtml}
+            </div>
+        </div>
+    `;
+}
+
 function renderLightPanel(title: string, bodyHtml: string) {
     return `
         <div style="background:#F5F5F7; border-radius:12px; padding:32px; margin:35px 0; border: 1px solid #E5E5EA; text-align:center;">
@@ -271,6 +282,21 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
     <!-- Preheader text for inbox preview -->
     <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${subtitle}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
     
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+    </style>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F5F7; ${baseStyles}">
+    <!-- Preheader text for inbox preview -->
+    <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${subtitle}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+    
     <!-- Main Email Container -->
     <div style="max-width:600px; margin: 0 auto; padding: 0 15px;">
         <div style="height:28px; line-height:28px; font-size:1px;">&nbsp;</div>
@@ -280,7 +306,7 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
             
             <!-- Compact official wordmark header -->
             <div style="background: #FFFFFF; padding: 20px 24px; text-align: center; border-bottom: 1px solid #E5E5EA;">
-                <img src="https://workersunited.eu/logo-wordmark-email.png" alt="Workers United" width="168" height="12" style="display:block; margin:0 auto; width:168px; height:12px; border:0; outline:none; text-decoration:none;">
+                <img src="${BASE_URL}/logo-wordmark.png" alt="Workers United" width="168" height="auto" style="display:block; margin:0 auto; width:168px; height:auto; border:0; outline:none; text-decoration:none; color:#1D1D1F; font-size:16px; font-weight:700;">
             </div>
 
             <!-- Content Area -->
@@ -476,16 +502,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Your profile and required documents are now ready for admin review. We will check everything and unlock Job Finder as soon as your case is approved.
                     </p>
                     
-                    <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
-                        <h3 style="margin:0 0 10px; font-size:22px; color: white;">What Happens Next</h3>
-                        <p style="margin:0; opacity:0.9; font-size: 16px; color: #E5E5EA;">
-                            1. Admin reviews your profile
-                            <br>
-                            2. Job Finder unlocks after approval
-                            <br>
-                            3. You can then activate the $9 service
-                        </p>
-                    </div>
+                    ${renderDarkPanel("What Happens Next", `
+                        1. Admin reviews your profile
+                        <br>
+                        2. Job Finder unlocks after approval
+                        <br>
+                        3. You can then activate the $9 service
+                    `)}
 
                     <div style="background:#F5F5F7; border-radius:12px; padding:20px; margin:20px 0; border: 1px solid #E5E5EA;">
                         <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">While You Wait</h3>
@@ -525,7 +548,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         We have received your <strong>${amount}</strong> Job Finder payment. Your worker case is now active in the queue, and our system can start matching you with employers.
                     </p>
 
-                    ${renderLightPanel("What Happens Next", `
+                    ${renderDarkPanel("What Happens Next", `
                         1. Your profile stays active in the worker queue
                         <br>
                         2. We monitor new employer demand and match opportunities
@@ -585,14 +608,14 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         ${recoveryBodyMap[recoveryStep]}
                     </p>
 
-                    <div style="background:#F5F5F7; border-radius:16px; padding:24px; margin:30px 0; border: 1px solid #E5E5EA; text-align:center;">
-                        <div style="font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:10px;">
+                    <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
+                        <div style="font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:15px;">
                             Job Finder activation
                         </div>
-                        <div style="font-size:40px; font-weight:800; color:#111111; letter-spacing:-1px; margin-bottom:8px;">
+                        <div style="font-size:48px; font-weight:800; color:#FFFFFF; letter-spacing:-1.5px; margin-bottom:15px; line-height:1;">
                             ${amount}
                         </div>
-                        <div style="font-size:15px; color:#515154;">
+                        <div style="font-size:16px; color:#E5E5EA; line-height:1.6;">
                             ${recoveryNoteMap[recoveryStep]}
                         </div>
                     </div>
@@ -624,17 +647,17 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 html: wrapModernTemplate(`
                     ${renderIconHero("https://img.icons8.com/ios/100/000000/star--v1.png", "You've been picked!", "A company wants to hire you.")}
 
-                    <div style="background:#FFFFFF; border: 1px solid #E5E5EA; border-radius:16px; margin:30px 0; overflow: hidden;">
-                        <div style="background: #111111; padding: 15px; border-bottom: 1px solid #111111; text-align: center;">
-                             <div style="font-size: 12px; color: #E5E5EA; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">Official Offer</div>
-                        </div>
-                        <div style="padding: 30px; text-align: center;">
-                            <h2 style="margin:0 0 10px; font-size: 22px; color: #1D1D1F; font-weight: 700;">${jobTitle}</h2>
-                            <p style="margin:0 0 20px; color: #515154; font-size: 16px; font-weight: 500;">${companyName}</p>
-                            
-                            <div style="display: inline-block; background: #E5E5EA; color: #1D1D1F; padding: 6px 16px; border-radius: 99px; font-weight: 600; font-size: 13px;">
-                                ${country}
-                            </div>
+                    <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center; position:relative; overflow:hidden;">
+                        <!-- Premium gradient glow at the top -->
+                        <div style="position:absolute; top:0; left:0; right:0; height:4px; background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);"></div>
+                        
+                        <div style="font-size: 12px; color: #86868B; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 20px;">Official Offer</div>
+                        
+                        <h2 style="margin:0 0 15px; font-size: 26px; color: #FFFFFF; font-weight: 700; letter-spacing: -0.5px;">${jobTitle}</h2>
+                        <p style="margin:0 0 25px; color: #E5E5EA; font-size: 18px; font-weight: 500;">${companyName}</p>
+                        
+                        <div style="display: inline-block; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #FFFFFF; padding: 8px 20px; border-radius: 99px; font-weight: 600; font-size: 14px;">
+                            ${country}
                         </div>
                     </div>
 
@@ -721,21 +744,24 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: `New Match: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/handshake.png", "New Match!", "We found a job that fits your case.")}
+                    <div style="text-align: center;">
+                        <img src="${BASE_URL}/logo-icon.png" width="80" alt="Workers United" style="margin-bottom: 20px; border-radius: 16px;">
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">New Match!</h1>
+                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">We found a job that fits your case.</p>
+                    </div>
 
-                    <div style="background:white; border: 1px solid #E5E5EA; border-radius:16px; overflow:hidden; margin: 30px 0;">
-                        <div style="padding: 25px; text-align: center;">
-                            <h3 style="margin:0 0 5px; color:#1D1D1F; font-size: 20px; font-weight: 700;">${jobTitle}</h3>
-                            <div style="color: #515154; font-size: 16px; margin-bottom: 20px;">${industry}</div>
-                            
-                            <div style="display: flex; gap: 10px; justify-content: center;">
-                                <span style="background: #E5E5EA; color: #1D1D1F; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 600;">
-                                    ${location}
-                                </span>
-                                <span style="background: #E5E5EA; color: #1D1D1F; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 600;">
-                                    ${salary}
-                                </span>
-                            </div>
+                    <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center; position:relative; overflow:hidden;">
+                        <div style="position:absolute; top:0; left:0; right:0; height:4px; background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);"></div>
+                        <h3 style="margin:0 0 10px; color:#FFFFFF; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">${jobTitle}</h3>
+                        <div style="color: #86868B; font-size: 16px; margin-bottom: 25px;">${industry}</div>
+                        
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <span style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #FFFFFF; padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600;">
+                                ${location}
+                            </span>
+                            <span style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #FFFFFF; padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600;">
+                                ${salary}
+                            </span>
                         </div>
                     </div>
 
