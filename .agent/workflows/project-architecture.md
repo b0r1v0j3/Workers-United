@@ -343,7 +343,7 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/internal/layout.tsx` | Owner-only gate for internal tools; requires auth and `isGodModeUser(email)`, otherwise redirects to `/admin` |
-| `src/app/internal/page.tsx` | Hidden internal tools landing page; clearly separates technical monitors/template sandbox from firm-facing admin operations |
+| `src/app/internal/page.tsx` | Hidden internal tools landing page; clearly separates technical monitors/template sandbox from firm-facing admin operations and now exposes direct shortcut cards for the most common email preview scenarios |
 | `src/app/internal/ops/page.tsx` | Canonical entry point for the ops monitor / exception cockpit |
 | `src/app/internal/email-health/page.tsx` | Canonical entry point for bounced/invalid email hygiene |
 | `src/app/internal/email-preview/page.tsx` | Canonical entry point for email template preview/sandbox; can now open exact query-driven payload previews from admin worker document actions |
@@ -399,6 +399,7 @@ User (Browser)
 | `src/lib/whatsapp-fallback.ts` | Shared config-driven WhatsApp fallback helper; loads platform config and serves multilingual signup/status/payment/documents fallback copy so the webhook route no longer hardcodes the fallback bot block inline |
 | `src/lib/whatsapp-reply-guardrails.ts` | Shared deterministic WhatsApp guardrails; centralizes escalation/payment/inventory-safe replacement copy plus media-attachment fallback messaging so `src/app/api/whatsapp/webhook/route.ts` no longer hardcodes that copy inline |
 | `src/lib/whatsapp-status-events.ts` | Shared Meta delivery-status persistence helper; stores `sent/delivered/failed` plus failure details without keeping status merge logic inline in the webhook route |
+| `src/lib/whatsapp-inbound-events.ts` | Shared inbound WhatsApp helper; normalizes phone numbers, extracts text/media content, checks inbound `wamid` dedupe, and records inbound message rows so the webhook route no longer hardcodes that normalize/dedupe/log block inline |
 | `src/lib/whatsapp-worker-ai.ts` | Shared worker-side WhatsApp AI helper layer; builds the worker snapshot prompt context, GPT-5 mini intent-router prompt, and GPT-5.4 mini worker reply prompt so the webhook route no longer hardcodes worker AI prompt assembly inline |
 | `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: thinner runtime orchestrator around shared GPT-5 mini routing, GPT-5.4 response prompting, employer-flow helpers, fallback-copy helpers, status-event persistence, conversation loaders, admin commands, guardrails, deterministic worker replies for common status/docs/payment/support/process flows, truthful support auto-handoff, explicit opt-in WhatsApp onboarding, and single-response media fallback that avoids pretending WhatsApp attachments already update worker profiles |
 | `src/app/api/brain/collect/route.ts` | Brain/ops data collector; aggregates funnel, payment telemetry, auth drift, recent user activity, recent WhatsApp conversations, canonical `whatsappTemplateHealth` + failed-template samples, and a shared `opsSnapshot` so the daily monitor sees real operational signals instead of only top-level counts |

@@ -20,6 +20,16 @@ describe("admin-email-preview", () => {
         expect(url.searchParams.get("data")).toContain("\"docType\":\"Passport\"");
     });
 
+    it("supports custom preview base paths for internal tools", () => {
+        const href = buildAdminEmailPreviewHref(
+            "document_review_result",
+            { approved: true, docType: "Passport" },
+            "/internal/email-preview"
+        );
+
+        expect(href.startsWith("/internal/email-preview?")).toBe(true);
+    });
+
     it("accepts only supported admin preview email types", () => {
         expect(isAdminEmailPreviewType("document_review_result")).toBe(true);
         expect(isAdminEmailPreviewType("welcome")).toBe(true);

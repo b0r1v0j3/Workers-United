@@ -101,13 +101,22 @@ export function GodModePanel({ currentRole, userName, activeLabel = null, person
                         <div className="mb-2 pl-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">Switch Workspace</div>
                         <div className="grid gap-2">
                             {currentRole === "admin" && (
-                                <a
-                                    href="/internal"
-                                    className="w-full rounded-xl border border-slate-100 bg-white px-3 py-3 text-left text-slate-600 shadow-sm transition-all hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800 hover:shadow-md"
-                                >
-                                    <div className="text-sm font-semibold">Open Internal Tools</div>
-                                    <div className="mt-0.5 text-xs text-slate-400">Ops monitor, email health, and template sandbox stay outside the business admin flow.</div>
-                                </a>
+                                <>
+                                    <a
+                                        href="/internal"
+                                        className="w-full rounded-xl border border-slate-100 bg-white px-3 py-3 text-left text-slate-600 shadow-sm transition-all hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800 hover:shadow-md"
+                                    >
+                                        <div className="text-sm font-semibold">Open Internal Tools</div>
+                                        <div className="mt-0.5 text-xs text-slate-400">Ops monitor, email health, and template sandbox stay outside the business admin flow.</div>
+                                    </a>
+                                    <a
+                                        href="/internal/email-preview"
+                                        className="w-full rounded-xl border border-slate-100 bg-white px-3 py-3 text-left text-slate-600 shadow-sm transition-all hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800 hover:shadow-md"
+                                    >
+                                        <div className="text-sm font-semibold">Preview Emails</div>
+                                        <div className="mt-0.5 text-xs text-slate-400">Jump straight into the email sandbox without opening the full internal hub first.</div>
+                                    </a>
+                                </>
                             )}
 
                             {currentRole !== "admin" && (
