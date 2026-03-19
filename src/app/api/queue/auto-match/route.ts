@@ -123,11 +123,14 @@ export async function POST(request: NextRequest) {
             matchedOffers.push(offer);
 
             // Send notification
-            if (workerRow.profiles?.email) {
+            if (workerRow.profiles?.email && workerRow.profile_id) {
                 try {
                     await sendOfferNotification({
+                        supabase: admin,
+                        workerUserId: workerRow.profile_id,
                         workerEmail: workerRow.profiles.email,
                         workerName: workerRow.profiles.full_name || "Worker",
+                        workerPhone: workerRow.phone || undefined,
                         jobTitle: jobRequest.title,
                         companyName: jobRequest.employers?.company_name || "Employer",
                         country: jobRequest.destination_country,

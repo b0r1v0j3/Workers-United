@@ -374,8 +374,8 @@ User (Browser)
 | `src/lib/supabase/server.ts` | Server-side Supabase client (SSR) |
 | `src/lib/supabase/admin.ts` | Service-role clients: legacy `createAdminClient()` + staged `createTypedAdminClient()` for schema-sensitive routes |
 | `src/lib/mailer.ts` | `sendEmail()` — Nodemailer wrapper |
-| `src/lib/admin-email-preview.ts` | Shared admin email-preview type guards plus payload serialization/parsing for deep-linked live template previews |
-| `src/lib/email-templates.ts` | All HTML email templates; includes `checkout_recovery`, `document_review_result`, and a CTA-aware `admin_update` template reused by the shared approval-unlock mail payload |
+| `src/lib/admin-email-preview.ts` | Shared admin email-preview type guards plus payload serialization/parsing for deep-linked live template previews, including offer lifecycle templates like `job_offer`, `offer_reminder`, and `offer_expired` |
+| `src/lib/email-templates.ts` | All HTML email templates; includes `checkout_recovery`, `document_review_result`, `offer_expired`, and a CTA-aware `admin_update` template reused by the shared approval-unlock mail payload |
 | `src/lib/worker-approval-notifications.ts` | Shared `Job Finder Is Now Unlocked` email payload so self-managed worker approval, agency approval, and preview shortcuts all reuse the exact same copy |
 | `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
 | `src/lib/whatsapp-brain.ts` | Shared canonical WhatsApp facts/rules, safer worker/employer prompting, deterministic first-contact greeting reply, explicit `profile complete + admin approval -> payment unlock` guard language, no-fake-escalation rule set, onboarding trigger detection, and low-risk learning filter used by `/api/whatsapp/webhook` + `/api/brain/improve` |
@@ -415,7 +415,7 @@ User (Browser)
 | `src/app/api/cron/brain-monitor/route.ts` | Daily ops-first monitor: fetches `/api/brain/collect`, self-tests critical routes, builds a deterministic report via `src/lib/ops-monitor.ts`, stores `ops_daily_snapshot/exception` rows in `brain_reports`, and sends only compact critical/high alert mail with clickable admin links |
 | `src/app/api/brain/report/route.ts` | Brain report storage/read API; default model now follows `BRAIN_DAILY_MODEL` |
 | `src/lib/brain-monitor.ts` | Shared Brain parsing/normalization helpers; unwraps Responses API JSON, applies safe defaults for partial issue/action/operation payloads, and keeps exception reasoning stable even when the AI omits fields |
-| `src/lib/notifications.ts` | Email notification dispatch helpers |
+| `src/lib/notifications.ts` | Offer notification dispatch helpers; `sendOfferNotification()` / `sendOfferExpiredNotification()` now route through `queueEmail()` + the unified premium template system instead of bypassing the email queue with bespoke inline HTML |
 | `src/lib/docx-generator.ts` | DOCX generation from templates (docxtemplater + pizzip) |
 | `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging; failed sends now persist `error_message` into `whatsapp_messages` so delivery issues are debuggable |
 | `src/lib/constants.ts` | Shared constants (industries, countries, etc.) |
