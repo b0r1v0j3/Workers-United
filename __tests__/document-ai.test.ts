@@ -52,6 +52,8 @@ describe("document-ai crop prompts", () => {
         expect(prompt).toContain("biodata / identity page");
         expect(prompt).toContain("crop those parts OUT");
         expect(prompt).toContain("machine-readable zone");
+        expect(prompt).toContain("stacked vertically");
+        expect(prompt).toContain("Never return the full open passport spread");
     });
 });
 

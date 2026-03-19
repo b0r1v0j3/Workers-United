@@ -7,6 +7,10 @@ import { logServerActivity } from "@/lib/activityLoggerServer";
 import { queueEmail } from "@/lib/email-templates";
 import { syncWorkerReviewStatus } from "@/lib/worker-review";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { revalidatePath } from "next/cache";
+import { collectDocumentStoragePathsForCleanup } from "@/lib/document-image-processing";
+import { buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
+import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import {
     AGENCY_DRAFT_DOCUMENT_OWNER_KEY,
     resolveAgencyWorkerDocumentOwnerId,
@@ -56,6 +60,193 @@ async function resolveAdminReviewContext(admin: ReturnType<typeof createAdminCli
     };
 }
 
+async function resolveNotificationProfile(admin: ReturnType<typeof createAdminClient>, profileId: string | null) {
+    if (!profileId) {
+        return null;
+    }
+
+    return admin
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", profileId)
+        .maybeSingle()
+        .then((result) => result.data);
+}
+
+function redirectWithAction(request: Request, redirectTo: string | null | undefined, action: string, error?: string) {
+    const url = new URL(redirectTo || "/admin/workers", request.url);
+    url.searchParams.set("documentAction", action);
+    url.searchParams.set("ts", Date.now().toString());
+    if (error) {
+        url.searchParams.set("documentError", error);
+    }
+    return NextResponse.redirect(url, { status: 303 });
+}
+
+async function handleStructuredFormAction(
+    request: Request,
+    admin: ReturnType<typeof createAdminClient>,
+    currentUserId: string,
+    formData: FormData
+) {
+    const mode = String(formData.get("mode") || "").trim();
+    const workerId = String(formData.get("worker_id") || "").trim();
+    const docId = String(formData.get("doc_id") || "").trim();
+    const docType = String(formData.get("doc_type") || "").trim();
+    const redirectTo = String(formData.get("redirect_to") || "").trim() || "/admin/workers";
+
+    if (!mode || !workerId || !docId || !docType) {
+        return redirectWithAction(request, redirectTo, "error", "Missing document action payload.");
+    }
+
+    const reviewContext = await resolveAdminReviewContext(admin, workerId);
+    const notificationProfileId = reviewContext.profileId || null;
+    const userProfile = await resolveNotificationProfile(admin, notificationProfileId);
+
+    if (mode === "update_status") {
+        const status = String(formData.get("status") || "").trim();
+        const feedback = String(formData.get("feedback") || "").trim();
+
+        if (!status) {
+            return redirectWithAction(request, redirectTo, "error", "Missing document status.");
+        }
+
+        const rejectReason = status === "rejected"
+            ? (feedback || buildDocumentRequestReason(docType, null, null))
+            : null;
+
+        const updatePayload: Record<string, string | null> = {
+            status,
+            reject_reason: rejectReason,
+            updated_at: new Date().toISOString(),
+            verified_at: status === "verified" ? new Date().toISOString() : null,
+        };
+
+        const { error: updateError } = await admin
+            .from("worker_documents")
+            .update(updatePayload)
+            .eq("id", docId);
+
+        if (updateError) {
+            return redirectWithAction(request, redirectTo, "error", updateError.message);
+        }
+
+        await syncWorkerReviewStatus({
+            adminClient: admin,
+            profileId: reviewContext.profileId,
+            workerId: reviewContext.workerId,
+            documentOwnerId: reviewContext.documentOwnerId,
+            phoneOptional: !!reviewContext.workerId && !reviewContext.profileId,
+            fullNameFallback: reviewContext.fullNameFallback,
+            notifyOnPendingApproval: true,
+        });
+
+        if (status === "verified" || status === "rejected") {
+            await logServerActivity(notificationProfileId || reviewContext.documentOwnerId, status === "verified" ? "document_admin_approved" : "document_admin_rejected", "documents", {
+                doc_type: docType,
+                admin_id: currentUserId,
+                ...(status === "rejected" && rejectReason ? { feedback: rejectReason } : {}),
+            });
+        }
+
+        if ((status === "verified" || status === "rejected") && userProfile?.email && notificationProfileId) {
+            await queueEmail(
+                admin,
+                notificationProfileId,
+                "document_review_result",
+                userProfile.email,
+                userProfile.full_name || "there",
+                {
+                    approved: status === "verified",
+                    docType: humanizeDocumentType(docType),
+                    feedback: status === "verified" ? null : rejectReason,
+                }
+            );
+        }
+
+        revalidatePath(redirectTo);
+        return redirectWithAction(request, redirectTo, "updated");
+    }
+
+    if (mode === "request_new_document" || mode === "delete_document") {
+        const { data: existingDocument, error: existingDocumentError } = await admin
+            .from("worker_documents")
+            .select("storage_path, ocr_json")
+            .eq("id", docId)
+            .maybeSingle();
+
+        if (existingDocumentError) {
+            return redirectWithAction(request, redirectTo, "error", existingDocumentError.message);
+        }
+
+        const storagePathsToDelete = collectDocumentStoragePathsForCleanup(
+            existingDocument?.storage_path,
+            existingDocument?.ocr_json && typeof existingDocument.ocr_json === "object"
+                ? existingDocument.ocr_json as Record<string, unknown>
+                : null
+        );
+
+        if (storagePathsToDelete.length > 0) {
+            await admin.storage
+                .from(WORKER_DOCUMENTS_BUCKET)
+                .remove(storagePathsToDelete);
+        }
+
+        const { error: deleteError } = await admin
+            .from("worker_documents")
+            .delete()
+            .eq("id", docId);
+
+        if (deleteError) {
+            return redirectWithAction(request, redirectTo, "error", deleteError.message);
+        }
+
+        await syncWorkerReviewStatus({
+            adminClient: admin,
+            profileId: reviewContext.profileId,
+            workerId: reviewContext.workerId,
+            documentOwnerId: reviewContext.documentOwnerId,
+            phoneOptional: !!reviewContext.workerId && !reviewContext.profileId,
+            fullNameFallback: reviewContext.fullNameFallback,
+        });
+
+        if (mode === "request_new_document") {
+            const requestedReason = String(formData.get("reason") || "").trim() || buildDocumentRequestReason(docType, null, null);
+
+            if (notificationProfileId) {
+                await logServerActivity(notificationProfileId, "document_reupload_requested", "documents", {
+                    doc_type: docType,
+                    reason: requestedReason,
+                    admin_id: currentUserId,
+                }, "warning");
+            }
+
+            if (userProfile?.email && notificationProfileId) {
+                await queueEmail(
+                    admin,
+                    notificationProfileId,
+                    "document_review_result",
+                    userProfile.email,
+                    userProfile.full_name || "there",
+                    {
+                        approved: false,
+                        docType: humanizeDocumentType(docType),
+                        feedback: requestedReason,
+                    }
+                );
+            }
+
+            revalidatePath(redirectTo);
+            return redirectWithAction(request, redirectTo, "requested");
+        }
+
+        revalidatePath(redirectTo);
+        return redirectWithAction(request, redirectTo, "deleted");
+    }
+
+    return redirectWithAction(request, redirectTo, "error", "Unknown document action.");
+}
+
 // ─── Admin Document Review ──────────────────────────────────────────────────
 // Admin approves or rejects a document with optional feedback.
 // Sends email notification to the user.
@@ -74,12 +265,19 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
+        const admin = createAdminClient();
+        const contentType = request.headers.get("content-type") || "";
+
+        if (contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")) {
+            const formData = await request.formData();
+            return handleStructuredFormAction(request, admin, user.id, formData);
+        }
+
         const { userId, docType, action, feedback } = await request.json();
         if (!userId || !docType || !action) {
             return NextResponse.json({ error: "userId, docType, action required" }, { status: 400 });
         }
 
-        const admin = createAdminClient();
         const reviewContext = await resolveAdminReviewContext(admin, userId);
         const notificationProfileId = reviewContext.profileId || null;
 
@@ -111,9 +309,7 @@ export async function POST(request: Request) {
             });
 
             // Email the user
-            const userProfile = notificationProfileId
-                ? await admin.from("profiles").select("full_name, email").eq("id", notificationProfileId).maybeSingle().then((result) => result.data)
-                : null;
+            const userProfile = await resolveNotificationProfile(admin, notificationProfileId);
             if (userProfile?.email && notificationProfileId) {
                 const docName = docType.replace(/_/g, " ");
                 await queueEmail(
@@ -156,9 +352,7 @@ export async function POST(request: Request) {
             });
 
             // Email the user with feedback
-            const userProfile = notificationProfileId
-                ? await admin.from("profiles").select("full_name, email").eq("id", notificationProfileId).maybeSingle().then((result) => result.data)
-                : null;
+            const userProfile = await resolveNotificationProfile(admin, notificationProfileId);
             if (userProfile?.email && notificationProfileId) {
                 const docName = docType.replace(/_/g, " ");
                 await queueEmail(

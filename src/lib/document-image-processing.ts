@@ -90,7 +90,7 @@ export function shouldApplyAutoCropForDocument(docType: string, crop: unknown): 
 
     const coversAlmostFullWidth = safeCrop.x <= 2 && safeCrop.width >= 95;
     const startsNearTop = safeCrop.y <= 2;
-    const mostlyTopSlice = safeCrop.height <= 85;
+    const mostlyTopSlice = safeCrop.height <= 90;
     const almostWholeFrame = safeCrop.width >= 94 && safeCrop.height >= 90;
 
     if ((coversAlmostFullWidth && startsNearTop && mostlyTopSlice) || almostWholeFrame) {

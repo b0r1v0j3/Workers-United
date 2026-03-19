@@ -992,6 +992,9 @@ export function buildDocumentBoundsPrompt(docType: string) {
 - For passports, keep ONLY the single biodata / identity page with the holder photo and personal details.
 - If an open passport spread shows two pages, a spine, annotations page, visa page, or other adjacent page, crop those parts OUT.
 - Prefer the page that contains the portrait photo, passport number, date of birth, issue/expiry dates, and the machine-readable zone (MRZ).
+- If two passport pages are stacked vertically, crop ONLY the biodata page. When the biodata page is in the lower half, set crop_y_percent so the upper page is excluded.
+- If two passport pages are side-by-side, crop ONLY the page with the portrait photo / MRZ, even if that page occupies roughly half the frame.
+- Never return the full open passport spread as the target crop when more than one page is visible.
 - Even if the open passport fills most of the image, still set needs_cropping to true when extra passport pages, spine, or large blank margins are visible.`
         : "";
 
