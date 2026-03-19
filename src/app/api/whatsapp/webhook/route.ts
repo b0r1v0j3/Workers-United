@@ -6,9 +6,7 @@ import { saveBrainFactsDedup } from "@/lib/brain-memory";
 import {
     buildRegisteredWorkerWhatsAppReply,
     buildUnregisteredWorkerWhatsAppReply,
-    buildCanonicalWhatsAppFacts,
     buildWhatsAppAutoHandoffReply,
-    buildWorkerWhatsAppRules,
     detectWhatsAppLanguageCode,
     replyMatchesExpectedWhatsAppLanguage,
     resolveWhatsAppLanguageName,
@@ -21,13 +19,11 @@ import { loadCanonicalWorkerRecord, pickCanonicalWorkerRecord } from "@/lib/work
 import { getSupportAccessState } from "@/lib/messaging";
 import {
     applyWhatsAppReplyGuardrails,
-    buildWorkerPaymentSnapshot,
     getMediaAttachmentResponse,
     isWorkerPaymentUnlocked,
 } from "@/lib/whatsapp-reply-guardrails";
 import {
     createWhatsAppAutoHandoff,
-    formatWhatsAppHistory,
     loadWhatsAppBrainMemory,
     loadWhatsAppConversationHistory,
 } from "@/lib/whatsapp-conversation-helpers";
@@ -39,6 +35,11 @@ import {
     getEmployerWhatsAppStaticReply,
     resolveEmployerWhatsAppLead,
 } from "@/lib/whatsapp-employer-flow";
+import {
+    classifyWhatsAppIntent,
+    generateWorkerWhatsAppReply,
+    type WhatsAppRouterDecision,
+} from "@/lib/whatsapp-worker-ai";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -51,7 +52,6 @@ import crypto from "crypto";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "";
 const APP_SECRET = process.env.META_APP_SECRET || "";
-const ROUTER_HISTORY_LIMIT = 8;
 const RESPONSE_HISTORY_LIMIT = 12;
 const BRAIN_MEMORY_LIMIT = 8;
 const WHATSAPP_ROUTER_MODEL = process.env.WHATSAPP_ROUTER_MODEL || "gpt-5-mini";
@@ -61,25 +61,6 @@ const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+3
     .split(",")
     .map((phone) => normalizePhone(phone))
     .filter(Boolean);
-
-type WhatsAppIntent =
-    | "job_intent"
-    | "price"
-    | "documents"
-    | "support"
-    | "status"
-    | "general"
-    | "off_topic"
-    | "employer_inquiry"
-    | "employer_hiring"
-    | "employer_support";
-
-interface WhatsAppRouterDecision {
-    intent: WhatsAppIntent;
-    language: string;
-    confidence: "high" | "medium" | "low";
-    reason: string;
-}
 
 interface WhatsAppWorkerRecord {
     id: string;
@@ -468,7 +449,8 @@ export async function POST(request: NextRequest) {
                         ]);
 
                         routerDecision = await classifyWhatsAppIntent({
-                            apiKey: OPENAI_API_KEY,
+                            callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY, options),
+                            model: WHATSAPP_ROUTER_MODEL,
                             message: content,
                             normalizedPhone,
                             workerRecord,
@@ -546,8 +528,9 @@ export async function POST(request: NextRequest) {
                             deterministicReplyFlowKey = `registered_${routerDecision.intent}`;
                             responseType = "deterministic";
                         } else {
-                            aiResponse = await generateWhatsAppReply({
-                                apiKey: OPENAI_API_KEY,
+                            aiResponse = await generateWorkerWhatsAppReply({
+                                callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY, options),
+                                model: WHATSAPP_RESPONSE_MODEL,
                                 message: content,
                                 normalizedPhone,
                                 workerRecord,
@@ -667,29 +650,6 @@ export async function POST(request: NextRequest) {
     }
 }
 
-function buildWorkerSnapshot(workerRecord: any, profile: any): string {
-    if (!workerRecord) {
-        return [
-            "Registered: no",
-            "Worker status: not registered yet",
-            buildWorkerPaymentSnapshot(null),
-        ].join("\n");
-    }
-
-    return [
-        "Registered: yes",
-        `Worker status: ${workerRecord.status || "unknown"}`,
-        `Entry fee paid: ${workerRecord.entry_fee_paid ? "yes" : "no"}`,
-        `Admin approved: ${workerRecord.admin_approved ? "yes" : "no"}`,
-        `Queue joined: ${workerRecord.queue_joined_at ? "yes" : "no"}`,
-        buildWorkerPaymentSnapshot(workerRecord),
-        `Preferred job: ${workerRecord.preferred_job || "not set"}`,
-        `Nationality: ${workerRecord.nationality || "not set"}`,
-        `Current country: ${workerRecord.current_country || "not set"}`,
-        `Email: ${profile?.email || "not set"}`,
-    ].join("\n");
-}
-
 async function callOpenAIResponseText(
     apiKey: string,
     options: {
@@ -744,158 +704,6 @@ async function callOpenAIResponseText(
             return "";
         })();
     return (outputText || "").trim();
-}
-
-async function classifyWhatsAppIntent({
-    apiKey,
-    message,
-    normalizedPhone,
-    workerRecord,
-    profile,
-    historyMessages,
-}: {
-    apiKey: string;
-    message: string;
-    normalizedPhone: string;
-    workerRecord: any;
-    profile: any;
-    historyMessages: Array<{ direction: string; content: string | null; created_at?: string | null }>;
-}): Promise<WhatsAppRouterDecision> {
-    const instructions = `You classify inbound WhatsApp messages for Workers United.
-
-Return JSON only:
-{
-  "intent": "job_intent|price|documents|support|status|general|off_topic",
-  "language": "short language name in English",
-  "confidence": "high|medium|low",
-  "reason": "short explanation"
-}
-
-Intent rules:
-- job_intent: wants a job, asks how to start, how to register, or expresses interest in working in Europe
-- price: asks about cost, payment, fee, refund
-- documents: asks about passport, diploma, photo, upload, verification
-- support: asks for help with a Workers United problem, complaint, support channel, or human assistance related to the platform
-- status: asks about profile, approval, payment status, queue, verification, offer status
-- general: greeting or vague first contact that is still about Workers United
-- off_topic: unrelated civic issue, wrong number, spam, local complaint, or anything not actually about Workers United jobs/visa support
-
-Important:
-- If the user is talking about a local utility issue, accident, flooding, municipality, or unrelated complaint, classify as off_topic.
-- Detect the actual language from the latest user message, not the phone country code.
-- Registered worker context matters for status/support classification.
-- A plain greeting like "hello", "hi", "pozdrav", or "dobar dan" without a clear role or request stays general.
-- Keep reason short.`;
-
-    const input = `Latest user message:
-${message}
-
-Phone: ${normalizedPhone}
-Registered worker: ${workerRecord ? "yes" : "no"}
-Worker snapshot:
-${buildWorkerSnapshot(workerRecord, profile)}
-
-Recent history:
-${formatWhatsAppHistory(historyMessages, ROUTER_HISTORY_LIMIT)}`;
-
-    try {
-        const raw = await callOpenAIResponseText(apiKey, {
-            model: WHATSAPP_ROUTER_MODEL,
-            instructions,
-            input,
-            json: true,
-            maxOutputTokens: 1024,
-        });
-
-        const parsed = JSON.parse(raw) as Partial<WhatsAppRouterDecision>;
-        const intent: WhatsAppIntent = parsed.intent && [
-            "job_intent",
-            "price",
-            "documents",
-            "support",
-            "status",
-            "general",
-            "off_topic",
-        ].includes(parsed.intent) ? parsed.intent as WhatsAppIntent : "general";
-
-        return {
-            intent,
-            language: parsed.language?.trim() || "English",
-            confidence: parsed.confidence === "high" || parsed.confidence === "low" ? parsed.confidence : "medium",
-            reason: parsed.reason?.trim() || "No reason returned",
-        };
-    } catch {
-        return {
-            intent: "general",
-            language: resolveWhatsAppLanguageName(message),
-            confidence: "low",
-            reason: "Router fallback",
-        };
-    }
-}
-
-async function generateWhatsAppReply({
-    apiKey,
-    message,
-    normalizedPhone,
-    workerRecord,
-    profile,
-    isAdmin,
-    businessFacts,
-    brainMemory,
-    historyMessages,
-    routerDecision,
-}: {
-    apiKey: string;
-    message: string;
-    normalizedPhone: string;
-    workerRecord: any;
-    profile: any;
-    isAdmin: boolean;
-    businessFacts: string;
-    brainMemory: Array<{ category: string; content: string; confidence: number }>;
-    historyMessages: Array<{ direction: string; content: string | null; created_at?: string | null }>;
-    routerDecision: WhatsAppRouterDecision;
-}): Promise<string> {
-    const userName = profile?.full_name?.split(" ")[0] || "there";
-    const workerSnapshot = buildWorkerSnapshot(workerRecord, profile);
-    const memoryText = brainMemory.length > 0
-        ? brainMemory.map((entry) => `- [${entry.category}] ${entry.content}`).join("\n")
-        : "(No stored facts)";
-    const canonicalFacts = buildCanonicalWhatsAppFacts();
-    const instructions = `You are the official WhatsApp assistant for Workers United.
-
-Personality:
-- Friendly, warm, practical, and calm.
-- Treat the person with respect and keep things easy to understand.
-- If something is not available, say it simply and move them to the next safe step.
-
-Canonical facts (never contradict these):
-${canonicalFacts}
-
-Platform config facts (secondary; if they conflict with canonical facts, follow canonical facts):
-${businessFacts || "(No additional platform facts available)"}
-
-Worker snapshot:
-${workerSnapshot}
-
-Useful stored facts:
-${memoryText}
-
-${buildWorkerWhatsAppRules({
-        language: routerDecision.language,
-        intent: routerDecision.intent,
-        confidence: routerDecision.confidence,
-        reason: routerDecision.reason,
-        isAdmin,
-    })}`;
-
-    return callOpenAIResponseText(apiKey, {
-        model: WHATSAPP_RESPONSE_MODEL,
-        instructions,
-        input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}\n\nRecent conversation:\n${formatWhatsAppHistory(historyMessages, RESPONSE_HISTORY_LIMIT)}`,
-        maxOutputTokens: 4096,
-    });
 }
 
 // ─── Fallback Bot (used when OpenAI is unavailable) ──────────────────────────
