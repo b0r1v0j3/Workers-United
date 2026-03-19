@@ -15,7 +15,6 @@ import {
 import {
     analyzeWhatsAppConfusion,
 } from "@/lib/whatsapp-quality";
-import { loadCanonicalWorkerRecord, pickCanonicalWorkerRecord } from "@/lib/workers";
 import { getSupportAccessState } from "@/lib/messaging";
 import {
     applyWhatsAppReplyGuardrails,
@@ -48,6 +47,7 @@ import {
     normalizeWhatsAppPhone,
     recordInboundWhatsAppMessage,
 } from "@/lib/whatsapp-inbound-events";
+import { resolveWhatsAppWorkerIdentity } from "@/lib/whatsapp-identity";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -203,7 +203,6 @@ export async function POST(request: NextRequest) {
                 // Normalize phone for DB lookup (add + prefix)
                 const normalizedPhone = normalizeWhatsAppPhone(phoneNumber);
 
-                // ─── Fetch user profile (multi-layer phone lookup) ────────
                 const workerRecordSelect = `
                     id, profile_id, status, queue_position, preferred_job, 
                     desired_countries, refund_deadline, refund_eligible,
@@ -212,56 +211,15 @@ export async function POST(request: NextRequest) {
                     updated_at,
                     phone, marital_status
                 `;
-
-                // Layer 1: Direct phone match in worker onboarding
-                const { data: matchedWorkers } = await supabase
-                    .from("worker_onboarding")
-                    .select(workerRecordSelect)
-                    .or(`phone.eq.${normalizedPhone},phone.eq.${phoneNumber}`)
-                    .order("updated_at", { ascending: false })
-                    .limit(25);
-                let workerRecord = pickCanonicalWorkerRecord<WhatsAppWorkerRecord>(
-                    (matchedWorkers || []) as WhatsAppWorkerRecord[]
-                );
-
-                // Layer 2: If not found, search auth users by phone in metadata
-                // (covers Google OAuth users who have phone in user_metadata but not in worker_onboarding yet)
-                if (!workerRecord) {
-                    const phoneDigits = phoneNumber.replace(/\D/g, "");
-                    const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-                    const matchedUser = authData?.users?.find(u => {
-                        const metaPhone = (u.user_metadata?.phone || "").replace(/\D/g, "");
-                        const userPhone = (u.phone || "").replace(/\D/g, "");
-                        return (metaPhone && metaPhone === phoneDigits) ||
-                            (userPhone && userPhone === phoneDigits);
-                    });
-
-                    if (matchedUser) {
-                        // Found auth user — look up their worker record by profile_id
-                        const { data: linkedWorkerRecord } = await loadCanonicalWorkerRecord<WhatsAppWorkerRecord>(
-                            supabase,
-                            matchedUser.id,
-                            workerRecordSelect
-                        );
-
-                        if (linkedWorkerRecord) {
-                            workerRecord = linkedWorkerRecord;
-                            // Backfill phone in the worker onboarding table so future lookups are instant
-                            await supabase
-                                .from("worker_onboarding")
-                                .update({ phone: normalizedPhone })
-                                .eq("id", linkedWorkerRecord.id);
-                        }
-                    }
-                }
-
-                const { data: profile } = workerRecord?.profile_id
-                    ? await supabase
-                        .from("profiles")
-                        .select("full_name, email, user_type, created_at")
-                        .eq("id", workerRecord.profile_id)
-                        .single()
-                    : { data: null };
+                const { workerRecord, profile } = await resolveWhatsAppWorkerIdentity<
+                    WhatsAppWorkerRecord,
+                    { full_name?: string | null; email?: string | null; user_type?: string | null; created_at?: string | null }
+                >({
+                    admin: supabase,
+                    rawPhone: phoneNumber,
+                    normalizedPhone,
+                    workerSelect: workerRecordSelect,
+                });
 
                 // ─── Log inbound message ────────────────────────────────
                 await recordInboundWhatsAppMessage(supabase, {

@@ -3,6 +3,7 @@ import { AlertTriangle, MailX, Mail, Shield, Wrench } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { createClient } from "@/lib/supabase/server";
 import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
+import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
 
 type InternalToolTone = "amber" | "rose" | "blue";
 
@@ -56,6 +57,15 @@ const INTERNAL_EMAIL_PREVIEWS = [
         ),
         label: "Approved document sample",
         copy: "See the exact premium approval layout for document review emails.",
+    },
+    {
+        href: buildAdminEmailPreviewHref(
+            "admin_update",
+            { name: "Marko Petrovic", ...buildWorkerPaymentUnlockedEmailData() },
+            "/internal/email-preview"
+        ),
+        label: "Job Finder unlocked sample",
+        copy: "Preview the approval email that tells a worker payment is now unlocked.",
     },
     {
         href: buildAdminEmailPreviewHref(

@@ -50,6 +50,7 @@ const SERBIAN_LATIN_PATTERN = /\b(pozdrav|zdravo|cao|ćao|dobar dan|dobro vece|d
 const EMPLOYER_LEAD_PATTERN = /\b(employer|company|business|firm|hire|hiring|recruit(ing|er)?|need workers|looking for workers|we need workers|we are hiring|poslodavac|firma|kompanija|zapo[sš]ljavamo|treba(?:ju)? nam radnici|tra[zž]imo radnike)\b/i;
 const WORKER_LEAD_PATTERN = /\b(worker|job|work abroad|looking for a job|looking for work|need a job|i want a job|radnik|posao|tra[zž]im posao|ocu posao|ho[ćc]u posao|[zž]elim posao|radim kao|imam iskustva)\b/i;
 const GREETING_ONLY_PATTERN = /^\s*(hi|hello|hey|good morning|good afternoon|good evening|pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče|selam|salam|bonjour|salut|ola|olá|namaste)\s*[.!?]*\s*$/i;
+const WARM_GREETING_PATTERN = /^\s*(?:(?:hi|hello|hey|good morning|good afternoon|good evening|pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče|selam|salam|bonjour|salut|ola|olá|namaste)(?:\s+(?:how are you(?: today| doing)?|how is your day|kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|ca va|ça va|como vai))?|(?:how are you(?: today| doing)?|how is your day|kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|ca va|ça va|como vai))\s*[.!?]*\s*$/i;
 const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|koliko|kosta|košta|cena|cijena|platim|platiti|uplata|placanje|plaćanje)\b/i;
 const DOCUMENT_HINT_PATTERN = /\b(document|documents|passport|diploma|photo|upload|verification|dokumenti|dokumenta|pasos|pasoš|diploma|slika|fotografija|upload|verifikacija)\b/i;
 const STATUS_HINT_PATTERN = /\b(status|profile|approval|approved|queue|support|profil|odobren|odobreno|red|podrska|podrška)\b/i;
@@ -159,6 +160,10 @@ export function looksLikeGreetingOnlyWhatsAppMessage(message: string): boolean {
     return GREETING_ONLY_PATTERN.test(message.trim());
 }
 
+export function looksLikeWarmGreetingWhatsAppMessage(message: string): boolean {
+    return WARM_GREETING_PATTERN.test(message.trim());
+}
+
 export function buildUnregisteredWorkerWhatsAppReply({
     message,
     language,
@@ -179,27 +184,28 @@ export function buildUnregisteredWorkerWhatsAppReply({
     const normalized = message.trim().toLowerCase();
     const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(message);
     const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
+    const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || intent === "support" || STATUS_HINT_PATTERN.test(normalized);
     const asksSpecificAvailability = SPECIFIC_AVAILABILITY_HINT_PATTERN.test(normalized);
     const asksHowItWorks = PROCESS_HINT_PATTERN.test(normalized);
-    const wantsJobHelp = intent === "job_intent" || intent === "general" || JOB_HINT_PATTERN.test(normalized) || looksLikeWorkerWhatsAppLead(message);
+    const wantsJobHelp = intent === "job_intent" || JOB_HINT_PATTERN.test(normalized) || looksLikeWorkerWhatsAppLead(message);
 
-    if (isFirstContact && isGreetingOnly && !wantsPrice && !wantsDocuments && !wantsStatus) {
+    if ((isFirstContact || isWarmGreeting || isGreetingOnly) && isWarmGreeting && !wantsPrice && !wantsDocuments && !wantsStatus && !asksSpecificAvailability) {
         switch (lang) {
             case "sr":
-                return `Pozdrav! Ja sam Workers United WhatsApp asistent. Pomažemo radnicima kroz proces posla i vize, poslodavcima u pronalaženju radnika, a agencijama u vođenju kandidata kroz platformu.\n\nRecite mi samo jednu stvar: da li tražite posao, radnike ili vodite agenciju, pa ću vas uputiti na sledeći korak.`;
+                return `Pozdrav! Ja sam Workers United AI asistent i tu sam da pomognem.\n\nMogu da objasnim kako funkcionišu posao, dokumenta, status profila ili sledeći korak. Samo mi napišite šta vas zanima.`;
             case "ar":
-                return `مرحبًا! أنا مساعد Workers United على WhatsApp. نحن نساعد العمال خلال مسار العمل والتأشيرة، ونساعد أصحاب العمل في العثور على العمال، كما نساعد الوكالات في إدارة المرشحين عبر المنصة.\n\nأخبرني فقط بشيء واحد: هل تبحث عن عمل، أم عن عمال، أم أنك تدير وكالة؟ وبعدها سأوجهك إلى الخطوة التالية.`;
+                return `مرحبًا! أنا مساعد الذكاء الاصطناعي من Workers United وأنا هنا للمساعدة.\n\nيمكنني شرح الوظائف أو المستندات أو حالة الملف أو الخطوة التالية. فقط اكتب لي ما الذي تريد معرفته.`;
             case "fr":
-                return `Bonjour ! Je suis l’assistant WhatsApp de Workers United. Nous aidons les travailleurs dans le processus d’emploi et de visa, les employeurs à trouver des travailleurs, et les agences à gérer leurs candidats sur la plateforme.\n\nDites-moi simplement une chose : cherchez-vous un emploi, des travailleurs, ou gérez-vous une agence ? Ensuite je vous orienterai vers la prochaine étape.`;
+                return `Bonjour ! Je suis l’assistant IA de Workers United et je suis là pour aider.\n\nJe peux expliquer les emplois, les documents, le statut du profil ou la prochaine étape. Dites-moi simplement ce que vous voulez vérifier.`;
             case "pt":
-                return `Olá! Eu sou o assistente de WhatsApp da Workers United. Nós ajudamos trabalhadores no processo de emprego e visto, empregadores a encontrar trabalhadores, e agências a gerenciar candidatos pela plataforma.\n\nMe diga só uma coisa: você está procurando trabalho, trabalhadores, ou administra uma agência? Aí eu te direciono para o próximo passo.`;
+                return `Olá! Eu sou o assistente de IA da Workers United e estou aqui para ajudar.\n\nPosso explicar vagas, documentos, status do perfil ou o próximo passo. É só me dizer o que você quer verificar.`;
             case "hi":
-                return `नमस्ते! मैं Workers United का WhatsApp assistant हूँ। हम workers को job और visa process में, employers को workers ढूँढने में, और agencies को candidates manage करने में मदद करते हैं.\n\nमुझे बस एक बात बताइए: क्या आप job ढूँढ रहे हैं, workers ढूँढ रहे हैं, या agency चलाते हैं? उसके बाद मैं आपको अगला step बताऊँगा।`;
+                return `नमस्ते! मैं Workers United का AI assistant हूँ और मदद के लिए यहाँ हूँ।\n\nमैं jobs, documents, profile status या अगले step के बारे में समझा सकता हूँ। बस बताइए कि आप क्या check करना चाहते हैं।`;
             default:
-                return `Hello! I’m the Workers United WhatsApp assistant. We help workers through the job and visa process, employers find workers, and agencies manage candidates through the platform.\n\nJust tell me one thing: are you looking for a job, looking for workers, or running an agency? Then I’ll point you to the right next step.`;
+                return `Hello! I’m the Workers United AI assistant, and I’m here to help.\n\nI can explain jobs, documents, profile status, or the next step. Just tell me what you want to check.`;
         }
     }
 
@@ -342,6 +348,7 @@ export function buildRegisteredWorkerWhatsAppReply({
     const normalized = message.trim().toLowerCase();
     const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(message);
     const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
+    const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || STATUS_HINT_PATTERN.test(normalized);
@@ -354,20 +361,20 @@ export function buildRegisteredWorkerWhatsAppReply({
     const pendingApproval = isRegisteredWorkerPendingApproval({ workerStatus, entryFeePaid, adminApproved });
     const inQueue = !!entryFeePaid && !!queueJoinedAt;
 
-    if (isGreetingOnly && !wantsPrice && !wantsDocuments && !wantsStatus && !wantsSupport) {
+    if ((isGreetingOnly || isWarmGreeting) && !wantsPrice && !wantsDocuments && !wantsStatus && !wantsSupport) {
         switch (lang) {
             case "sr":
-                return `Pozdrav! Mogu da pomognem oko vašeg statusa, dokumenata, uplate ili sledeceg koraka na Workers United. Samo mi napišite šta želite da proverimo.`;
+                return `Pozdrav! Ja sam Workers United AI asistent. Mogu da pomognem oko vašeg statusa, dokumenata, uplate ili sledećeg koraka. Samo mi napišite šta želite da proverimo.`;
             case "ar":
-                return `مرحبًا! يمكنني مساعدتك بخصوص حالتك أو المستندات أو الدفع أو الخطوة التالية على Workers United. فقط اكتب لي ما الذي تريد التحقق منه.`;
+                return `مرحبًا! أنا مساعد الذكاء الاصطناعي من Workers United. يمكنني مساعدتك بخصوص حالتك أو المستندات أو الدفع أو الخطوة التالية. فقط اكتب لي ما الذي تريد التحقق منه.`;
             case "fr":
-                return `Bonjour ! Je peux vous aider concernant votre statut, vos documents, votre paiement ou la prochaine étape sur Workers United. Dites-moi simplement ce que vous voulez vérifier.`;
+                return `Bonjour ! Je suis l’assistant IA de Workers United. Je peux vous aider concernant votre statut, vos documents, votre paiement ou la prochaine étape. Dites-moi simplement ce que vous voulez vérifier.`;
             case "pt":
-                return `Olá! Posso ajudar com seu status, documentos, pagamento ou próximo passo na Workers United. Basta me dizer o que você quer verificar.`;
+                return `Olá! Eu sou o assistente de IA da Workers United. Posso ajudar com seu status, documentos, pagamento ou próximo passo. Basta me dizer o que você quer verificar.`;
             case "hi":
-                return `नमस्ते! मैं आपके status, documents, payment या Workers United के अगले step में मदद कर सकता हूँ। बस लिखिए कि आप क्या check करना चाहते हैं।`;
+                return `नमस्ते! मैं Workers United का AI assistant हूँ। मैं आपके status, documents, payment या अगले step में मदद कर सकता हूँ। बस लिखिए कि आप क्या check करना चाहते हैं।`;
             default:
-                return `Hello! I can help with your Workers United status, documents, payment, or next step. Just tell me what you want to check.`;
+                return `Hello! I’m the Workers United AI assistant. I can help with your status, documents, payment, or next step. Just tell me what you want to check.`;
         }
     }
 

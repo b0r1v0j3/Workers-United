@@ -9,6 +9,7 @@ import {
     filterSafeWhatsAppBrainMemory,
     filterSafeBrainLearnings,
     looksLikeGreetingOnlyWhatsAppMessage,
+    looksLikeWarmGreetingWhatsAppMessage,
     looksLikeEmployerWhatsAppLead,
     looksLikeWorkerWhatsAppLead,
     replyMatchesExpectedWhatsAppLanguage,
@@ -118,6 +119,12 @@ describe("whatsapp-brain guards", () => {
         expect(looksLikeGreetingOnlyWhatsAppMessage("Trebaju mi radnici")).toBe(false);
     });
 
+    it("recognizes warmer greeting small-talk openers", () => {
+        expect(looksLikeWarmGreetingWhatsAppMessage("Zdravo kako si danas")).toBe(true);
+        expect(looksLikeWarmGreetingWhatsAppMessage("Hello how are you today?")).toBe(true);
+        expect(looksLikeWarmGreetingWhatsAppMessage("Kako radi uplata?")).toBe(false);
+    });
+
     it("greets vague first-contact users without assuming their role", () => {
         const reply = buildUnregisteredWorkerWhatsAppReply({
             message: "Pozdrav",
@@ -126,11 +133,22 @@ describe("whatsapp-brain guards", () => {
             isFirstContact: true,
         });
 
-        expect(reply).toContain("Pomažemo radnicima");
-        expect(reply).toContain("poslodavcima");
-        expect(reply).toContain("agencijama");
-        expect(reply).toContain("da li tražite posao, radnike ili vodite agenciju");
+        expect(reply).toContain("Ja sam Workers United AI asistent");
+        expect(reply).toContain("šta vas zanima");
         expect(reply).not.toContain("$9");
+    });
+
+    it("answers warm first-contact greetings like a human before giving process help", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "Zdravo kako si danas",
+            language: "Serbian",
+            intent: "general",
+            isFirstContact: true,
+        });
+
+        expect(reply).toContain("Ja sam Workers United AI asistent");
+        expect(reply).toContain("šta vas zanima");
+        expect(reply).not.toContain("Prvi korak je da napravite nalog");
     });
 
     it("greets generic pre-registration job intent without sounding defensive", () => {
@@ -210,6 +228,21 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("contact@workersunited.eu");
         expect(reply).not.toContain("otvorio");
         expect(reply).not.toContain("ticket");
+    });
+
+    it("keeps registered-worker greetings warm instead of jumping straight into process instructions", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "Zdravo kako si danas",
+            language: "Serbian",
+            intent: "general",
+            workerStatus: "APPROVED",
+            adminApproved: true,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("Ja sam Workers United AI asistent");
+        expect(reply).toContain("šta želite da proverimo");
+        expect(reply).not.toContain("Prvi korak");
     });
 
     it("builds an honest auto-handoff reply only when support access exists", () => {

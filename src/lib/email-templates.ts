@@ -763,6 +763,8 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             {
             const title = escapeHtml(data.title || "Case Update");
             const message = escapeHtml(data.message || "There is a new update in your Workers United case.");
+            const actionLink = data.actionLink || "https://workersunited.eu/profile/worker";
+            const actionText = escapeHtml(data.actionText || "Check Profile");
             return {
                 subject: data.subject || "Update from Workers United",
                 html: wrapModernTemplate(`
@@ -774,8 +776,8 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                     
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="https://workersunited.eu/profile/worker" style="${buttonStyle}">
-                            Check Profile
+                        <a href="${actionLink}" style="${buttonStyle}">
+                            ${actionText}
                         </a>
                     </div>
                 `, "Account Update", "Notification")

@@ -145,6 +145,21 @@ describe('getEmailTemplate', () => {
         expect(html).not.toContain('Continue Registration');
     });
 
+    it('admin_update supports custom approval-unlock CTA copy', () => {
+        const { html, subject } = getEmailTemplate('admin_update', {
+            name: 'Nikola',
+            subject: 'Job Finder Is Now Unlocked',
+            title: 'Profile Approved',
+            message: 'Your profile has been approved by our team.',
+            actionText: 'Open Job Finder',
+            actionLink: 'https://workersunited.eu/profile/worker',
+        });
+        expect(subject).toBe('Job Finder Is Now Unlocked');
+        expect(html).toContain('Profile Approved');
+        expect(html).toContain('Open Job Finder');
+        expect(html).toContain('https://workersunited.eu/profile/worker');
+    });
+
     it('profile_incomplete uses the premium monochrome reminder layout', () => {
         const { html } = getEmailTemplate('profile_incomplete', {
             name: 'Nikola',
