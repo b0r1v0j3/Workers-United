@@ -6,8 +6,10 @@ import { finalizeConfirmationFeeOffer } from "@/lib/offer-finalization";
 import {
     activateEntryFeeWorkerAfterPayment,
     getStripePaymentAmounts,
+    mergeStripePaymentMetadata,
     persistCompletedStripeCheckoutPayment,
     queueEntryFeePaymentSuccessEmail,
+    updateStripePaymentRecordByReference,
 } from "@/lib/stripe-payment-finalization";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -27,79 +29,6 @@ function getMetadataValue(value: string | null | undefined): string | null {
 
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
-}
-
-function mergeStripeMetadata(
-    existing: Stripe.MetadataParam | Record<string, unknown> | null | undefined,
-    next: Record<string, unknown>
-): Record<string, unknown> {
-    const base = existing && typeof existing === "object" && !Array.isArray(existing)
-        ? existing
-        : {};
-
-    return {
-        ...base,
-        ...next,
-    };
-}
-
-async function updatePaymentRecordByReference(params: {
-    supabase: ReturnType<typeof createAdminClient>;
-    paymentId?: string | null;
-    stripeSessionId?: string | null;
-    patch: Record<string, unknown>;
-    pendingOnly?: boolean;
-}) {
-    const { supabase, paymentId, stripeSessionId, patch, pendingOnly = false } = params;
-    const selector = paymentId
-        ? supabase.from("payments").select("id, metadata").eq("id", paymentId)
-        : stripeSessionId
-            ? supabase.from("payments").select("id, metadata").eq("stripe_checkout_session_id", stripeSessionId)
-            : null;
-
-    if (!selector) {
-        return;
-    }
-
-    const { data: existingRow, error: existingRowError } = await selector.maybeSingle();
-    if (existingRowError) {
-        throw existingRowError;
-    }
-
-    if (!existingRow?.id) {
-        return;
-    }
-
-    const nextPatch = {
-        ...patch,
-        ...(patch.metadata && typeof patch.metadata === "object"
-            ? { metadata: mergeStripeMetadata(existingRow.metadata as Record<string, unknown> | null | undefined, patch.metadata as Record<string, unknown>) }
-            : {}),
-    };
-
-    if (paymentId) {
-        let query = supabase.from("payments").update(nextPatch).eq("id", existingRow.id);
-        if (pendingOnly) {
-            query = query.eq("status", "pending");
-        }
-        const { error } = await query;
-        if (!error) {
-            return;
-        }
-        throw error;
-    }
-
-    if (stripeSessionId) {
-        let query = supabase.from("payments").update(nextPatch).eq("id", existingRow.id);
-        if (pendingOnly) {
-            query = query.eq("status", "pending");
-        }
-        const { error } = await query;
-        if (!error) {
-            return;
-        }
-        throw error;
-    }
 }
 
 export async function POST(req: NextRequest) {
@@ -145,11 +74,11 @@ export async function POST(req: NextRequest) {
         };
 
         try {
-            await updatePaymentRecordByReference({
-                supabase,
+            await updateStripePaymentRecordByReference({
+                admin: supabase,
                 paymentId,
                 patch: {
-                    metadata: mergeStripeMetadata(paymentIntent.metadata, failureMetadata),
+                    metadata: mergeStripePaymentMetadata(paymentIntent.metadata, failureMetadata),
                 },
             });
         } catch (error) {
@@ -198,11 +127,11 @@ export async function POST(req: NextRequest) {
         const activitySubjectId = targetProfileId || userId;
 
         try {
-            await updatePaymentRecordByReference({
-                supabase,
+            await updateStripePaymentRecordByReference({
+                admin: supabase,
                 paymentId,
                 patch: {
-                    metadata: mergeStripeMetadata(charge.metadata, failureMetadata),
+                    metadata: mergeStripePaymentMetadata(charge.metadata, failureMetadata),
                 },
             });
         } catch (error) {
@@ -344,13 +273,13 @@ export async function POST(req: NextRequest) {
         const activitySubjectId = targetProfileId || userId;
 
         try {
-            await updatePaymentRecordByReference({
-                supabase,
+            await updateStripePaymentRecordByReference({
+                admin: supabase,
                 paymentId,
                 stripeSessionId: session.id,
                 pendingOnly: true,
                 patch: {
-                    metadata: mergeStripeMetadata(session.metadata, {
+                    metadata: mergeStripePaymentMetadata(session.metadata, {
                         stripe_session_status: session.status,
                         stripe_payment_status: session.payment_status,
                         stripe_session_expired_at: new Date().toISOString(),
