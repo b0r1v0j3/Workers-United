@@ -9,11 +9,14 @@ import {
     detectDocumentOrientation,
 } from "@/lib/document-ai";
 import {
+    buildAiOriginalBackupPath,
     buildAutoCropOcrPatch,
+    getRestorableDocumentBackupPath,
     buildManualCropOcrPatch,
     processDocumentImageBuffer,
     resolveDocumentRotationToApply,
     sanitizeDocumentCrop,
+    shouldApplyAutoCropForDocument,
 } from "@/lib/document-image-processing";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +98,16 @@ function stripManualCropMetadata(ocrJson: Record<string, unknown>) {
     delete next.manual_crop_applied;
     delete next.manual_crop_applied_at;
     delete next.manual_crop;
+    delete next.manual_crop_original_storage_path;
+    return next;
+}
+
+function stripAutoCropMetadata(ocrJson: Record<string, unknown>) {
+    const next = { ...ocrJson };
+    delete next.auto_crop;
+    delete next.auto_crop_applied;
+    delete next.auto_crop_skip_reason;
+    delete next.ai_original_storage_path;
     return next;
 }
 
@@ -223,11 +236,20 @@ export async function GET(_request: Request, { params }: RouteProps) {
                 orientation.confidence,
                 bounds.rotationDegrees
             );
-        const safeCrop = bounds.found ? sanitizeDocumentCrop(bounds.crop) : null;
+        const detectedCrop = bounds.found ? sanitizeDocumentCrop(bounds.crop) : null;
+        const safeCrop = detectedCrop && shouldApplyAutoCropForDocument(document.document_type, detectedCrop)
+            ? detectedCrop
+            : null;
+        const autoCropSkippedReason = detectedCrop && !safeCrop
+            ? "suspicious_passport_spread_crop"
+            : null;
         const shouldRewriteImage = rotationToApply !== 0 || !!safeCrop;
         const processed = shouldRewriteImage
             ? await processDocumentImageBuffer(buffer, contentType, rotationToApply, safeCrop)
             : { buffer, contentType, cropApplied: false };
+        let aiOriginalStoragePath = typeof ocrJson.ai_original_storage_path === "string"
+            ? ocrJson.ai_original_storage_path.trim() || null
+            : null;
         const patch = {
             ...(orientationProcessed ? {} : buildDocumentOrientationOcrPatch({
                 detectedRotationDegrees: rotationToApply,
@@ -239,12 +261,29 @@ export async function GET(_request: Request, { params }: RouteProps) {
             ...(autoCropProcessed ? {} : buildAutoCropOcrPatch({
                 cropApplied: processed.cropApplied,
                 crop: processed.cropApplied ? safeCrop : undefined,
+                backupStoragePath: aiOriginalStoragePath,
+                skipReason: autoCropSkippedReason,
             })),
         };
 
         if (Object.keys(patch).length > 0) {
             after(async () => {
                 if (shouldRewriteImage) {
+                    if (!aiOriginalStoragePath) {
+                        aiOriginalStoragePath = buildAiOriginalBackupPath(document.storage_path);
+                        const { error: backupError } = await admin.storage
+                            .from(WORKER_DOCUMENTS_BUCKET)
+                            .upload(aiOriginalStoragePath, buffer, {
+                                contentType,
+                                upsert: true,
+                            });
+
+                        if (backupError) {
+                            console.warn("[Admin preview] Failed to preserve AI original before normalization:", backupError);
+                            aiOriginalStoragePath = null;
+                        }
+                    }
+
                     const { error: uploadError } = await admin.storage
                         .from(WORKER_DOCUMENTS_BUCKET)
                         .update(document.storage_path, processed.buffer, {
@@ -263,6 +302,7 @@ export async function GET(_request: Request, { params }: RouteProps) {
                     .update({
                         ocr_json: {
                             ...ocrJson,
+                            ...(aiOriginalStoragePath ? { ai_original_storage_path: aiOriginalStoragePath } : {}),
                             ...patch,
                         },
                         updated_at: new Date().toISOString(),
@@ -307,10 +347,7 @@ export async function POST(request: Request, { params }: RouteProps) {
     const actionBody = body as ManualCropActionBody | null;
 
     if (actionBody && typeof actionBody === "object" && "action" in actionBody && actionBody.action === "restore_original") {
-        const backupStoragePath =
-            typeof ocrJson.manual_crop_original_storage_path === "string" && ocrJson.manual_crop_original_storage_path.trim().length > 0
-                ? ocrJson.manual_crop_original_storage_path.trim()
-                : null;
+        const backupStoragePath = getRestorableDocumentBackupPath(ocrJson);
 
         if (!backupStoragePath) {
             return NextResponse.json({ error: "No saved original image is available for this document." }, { status: 400 });
@@ -340,12 +377,21 @@ export async function POST(request: Request, { params }: RouteProps) {
         }
 
         const restoredAt = new Date().toISOString();
+        const restoredFromManualBackup =
+            typeof ocrJson.manual_crop_original_storage_path === "string"
+            && ocrJson.manual_crop_original_storage_path.trim() === backupStoragePath;
         const { error: updateError } = await admin
             .from("worker_documents")
             .update({
                 ocr_json: {
-                    ...stripManualCropMetadata(ocrJson),
-                    original_restored_after_manual_crop_at: restoredAt,
+                    ...stripAutoCropMetadata(stripManualCropMetadata(ocrJson)),
+                    orientation_processed_at: typeof ocrJson.orientation_processed_at === "string" ? ocrJson.orientation_processed_at : restoredAt,
+                    auto_crop_processed_at: typeof ocrJson.auto_crop_processed_at === "string" ? ocrJson.auto_crop_processed_at : restoredAt,
+                    auto_crop_applied: false,
+                    auto_rotation_applied_degrees: 0,
+                    ...(restoredFromManualBackup
+                        ? { original_restored_after_manual_crop_at: restoredAt }
+                        : { original_restored_after_ai_processing_at: restoredAt }),
                 },
                 updated_at: restoredAt,
             })

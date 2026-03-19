@@ -17,7 +17,7 @@ interface DocumentViewerModalProps {
     documentType: string;
     status: string;
     isPdf: boolean;
-    hasManualCrop: boolean;
+    hasRestorableOriginal: boolean;
     children: ReactNode;
 }
 
@@ -31,7 +31,7 @@ export default function DocumentViewerModal({
     documentType,
     status,
     isPdf,
-    hasManualCrop,
+    hasRestorableOriginal,
     children,
 }: DocumentViewerModalProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +46,7 @@ export default function DocumentViewerModal({
     const [cropError, setCropError] = useState<string | null>(null);
     const [cropSuccess, setCropSuccess] = useState<string | null>(null);
     const [isSavingCrop, setIsSavingCrop] = useState(false);
-    const [hasRestorableOriginal, setHasRestorableOriginal] = useState(hasManualCrop);
+    const [canRestoreOriginal, setCanRestoreOriginal] = useState(hasRestorableOriginal);
     const [isRestoringOriginal, setIsRestoringOriginal] = useState(false);
     const [isDrawingCrop, setIsDrawingCrop] = useState(false);
     const imageRef = useRef<HTMLImageElement | null>(null);
@@ -175,7 +175,7 @@ export default function DocumentViewerModal({
     }
 
     async function restoreOriginalImage() {
-        if (isRestoringOriginal || !hasRestorableOriginal) {
+        if (isRestoringOriginal || !canRestoreOriginal) {
             return;
         }
 
@@ -201,7 +201,7 @@ export default function DocumentViewerModal({
             }
 
             setImageVersion(Date.now());
-            setHasRestorableOriginal(false);
+            setCanRestoreOriginal(false);
             setCropSuccess("Original image restored from backup. The preview has been refreshed.");
         } catch (error) {
             setCropError(error instanceof Error ? error.message : "Failed to restore the original image.");
@@ -311,7 +311,7 @@ export default function DocumentViewerModal({
             }
 
             setImageVersion(Date.now());
-            setHasRestorableOriginal(true);
+            setCanRestoreOriginal(true);
             setCropSuccess("Crop saved. The preview has been refreshed and the original file backup was preserved.");
             setCropMode(false);
             setCropSelection(null);
@@ -473,7 +473,7 @@ export default function DocumentViewerModal({
                                 Use this when AI kept extra page content, background, or margins. Draw a box over only the part you want to keep, then save.
                             </p>
                             <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                                Saving a crop refreshes this preview immediately and keeps an admin backup of the original image in storage.
+                                Saving a crop refreshes this preview immediately and keeps a restorable original backup in storage.
                             </p>
 
                             {cropSelection ? (
@@ -504,7 +504,7 @@ export default function DocumentViewerModal({
                                         >
                                             Start manual crop
                                         </button>
-                                        {hasRestorableOriginal ? (
+                                        {canRestoreOriginal ? (
                                             <button
                                                 type="button"
                                                 onClick={restoreOriginalImage}

@@ -47,6 +47,13 @@ export function buildDocumentAiSummary(documentType: string, ocrJson: unknown, r
     }
 
     if (documentType === "passport") {
+        if (issues.some((issue) => ["blurry", "glare", "cropped", "unreadable_fields", "overexposed"].includes(issue))) {
+            const confidence = typeof ai.confidence === "number"
+                ? ` • ${Math.round(ai.confidence * 100)}% confidence`
+                : "";
+            return `Passport page detected, but image quality is too weak for a reliable read${confidence}`;
+        }
+
         const fullName = readString(ai.full_name);
         const passportNumber = readString(ai.passport_number);
         const expiryDate = readString(ai.expiry_date);
@@ -147,7 +154,7 @@ export function buildDocumentRequestReason(documentType: string, ocrJson: unknow
             return "Please upload the passport identity page with your photo and personal details. Visa pages, stamp pages, and other inside pages cannot be accepted.";
         }
 
-        if (issues.some((issue) => ["blurry", "glare", "cropped", "unreadable_fields"].includes(issue))) {
+        if (issues.some((issue) => ["blurry", "glare", "cropped", "unreadable_fields", "overexposed"].includes(issue))) {
             return "Please upload a clearer passport identity page. Place the page flat, avoid glare, and make sure the full page is visible and readable.";
         }
 

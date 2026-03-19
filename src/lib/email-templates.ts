@@ -791,70 +791,46 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ? `Your ${docName} Has Been Approved`
                     : `Your ${docName} Needs Attention`,
                 html: wrapModernTemplate(isApproved ? `
-                    <div style="text-align: center;">
-                        <div style="width:80px;height:80px;border:2px solid #111111;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
-                            <span style="font-size:38px;line-height:1;color:#111111;font-weight:700;">✓</span>
-                        </div>
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${safeDocName} Approved</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">One more required step is now complete.</p>
-                    </div>
+                    ${renderMonochromeHero("✓", `${safeDocName} Approved`, "One more required step is now complete.")}
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
                         Your <strong>${safeDocName}</strong> has been verified and approved by our team. It is now safely stored in your Workers United dashboard, and you do not need to upload this file again.
                     </p>
 
-                    <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
-                        <h3 style="margin:0 0 10px; font-size:22px; color: white;">What Happens Next</h3>
-                        <p style="margin:0; opacity:0.9; font-size: 16px; color: #E5E5EA;">
-                            1. Keep any remaining required documents moving forward
-                            <br>
-                            2. Your approved document stays locked in your case
-                            <br>
-                            3. We will notify you when the full profile reaches the next step
-                        </p>
-                    </div>
+                    ${renderDarkPanel("What Happens Next", `
+                        1. Keep any remaining required documents moving forward
+                        <br>
+                        2. Your approved document stays locked in your case
+                        <br>
+                        3. We will notify you when the full profile reaches the next step
+                    `)}
 
-                    <div style="background:#F5F5F7; border-radius:12px; padding:20px; margin:20px 0; border: 1px solid #E5E5EA;">
-                        <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">Current Status</h3>
-                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                                <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20" alt=""></td>
-                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">${safeDocName} is verified and saved</td>
-                            </tr>
-                            <tr>
-                                <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20" alt=""></td>
-                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">You can continue from your dashboard at any time</td>
-                            </tr>
-                            <tr>
-                                <td width="30" style="vertical-align: top;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20" alt=""></td>
-                                <td style="color: #1D1D1F; font-size: 14px;">No action is needed for this document right now</td>
-                            </tr>
-                        </table>
-                    </div>
+                    ${renderChecklistCard("Current Status", [
+                        `${safeDocName} is verified and saved`,
+                        "You can continue from your dashboard at any time",
+                        "No action is needed for this document right now",
+                    ])}
 
                     <div style="text-align:center; margin-top:30px;">
                         <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Open My Documents</a>
                     </div>
                 ` : `
-                    <div style="text-align: center;">
-                        <div style="width:80px;height:80px;border:2px solid #111111;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
-                            <span style="font-size:34px;line-height:1;color:#111111;font-weight:700;">!</span>
-                        </div>
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${safeDocName} Needs Attention</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">We still need a replacement file before your case can move forward.</p>
-                    </div>
+                    ${renderMonochromeHero("!", `${safeDocName} Needs Attention`, "We still need a replacement file before your case can move forward.")}
 
                     <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:25px; margin:30px 0;">
                         <p style="margin:0 0 10px; color: #86868B; font-size: 12px; font-weight:700; text-transform: uppercase; letter-spacing: 1px;">Issue Found</p>
                         <p style="margin:0; color: #1D1D1F; font-size: 16px;">${escapeHtml(data.feedback || "Document does not meet requirements.")}</p>
                     </div>
 
-                    <div style="background:#111111; border-radius:16px; padding:28px; margin:35px 0; color:white; text-align:center;">
-                        <h3 style="margin:0 0 10px; font-size:20px; color: white;">Next Step</h3>
-                        <p style="margin:0; opacity:0.9; font-size: 15px; color: #E5E5EA;">
-                            Upload a clearer replacement for your ${safeDocName.toLowerCase()} from the dashboard. We will review the new file as soon as it arrives.
-                        </p>
-                    </div>
+                    ${renderDarkPanel("Next Step", `
+                        Upload a clearer replacement for your ${safeDocName.toLowerCase()} from the dashboard. We will review the new file as soon as it arrives.
+                    `)}
+
+                    ${renderChecklistCard("Before You Upload Again", [
+                        "Make sure the full document is visible inside the frame",
+                        "Avoid glare, blur, shadows, or overexposed areas",
+                        "Upload the replacement from your dashboard documents section",
+                    ])}
 
                     <div style="text-align:center; margin-top:35px;">
                         <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Upload New Document</a>
