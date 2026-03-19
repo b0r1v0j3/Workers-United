@@ -7,12 +7,9 @@ import {
     buildRegisteredWorkerWhatsAppReply,
     buildUnregisteredWorkerWhatsAppReply,
     buildCanonicalWhatsAppFacts,
-    buildEmployerWhatsAppRules,
     buildWhatsAppAutoHandoffReply,
     buildWorkerWhatsAppRules,
     detectWhatsAppLanguageCode,
-    looksLikeEmployerWhatsAppLead,
-    looksLikeWorkerWhatsAppLead,
     replyMatchesExpectedWhatsAppLanguage,
     resolveWhatsAppLanguageName,
     shouldStartWhatsAppOnboarding,
@@ -35,6 +32,13 @@ import {
     loadWhatsAppConversationHistory,
 } from "@/lib/whatsapp-conversation-helpers";
 import { handleWhatsAppAdminCommand } from "@/lib/whatsapp-admin-commands";
+import {
+    generateEmployerWhatsAppReply,
+    getEmployerWhatsAppDefaultReply,
+    getEmployerWhatsAppErrorReply,
+    getEmployerWhatsAppStaticReply,
+    resolveEmployerWhatsAppLead,
+} from "@/lib/whatsapp-employer-flow";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -69,50 +73,6 @@ type WhatsAppIntent =
     | "employer_inquiry"
     | "employer_hiring"
     | "employer_support";
-
-// European country codes (Serbia + EU/EEA/Balkans)
-const EUROPEAN_COUNTRY_CODES = [
-    "381", // Serbia
-    "43",  // Austria
-    "32",  // Belgium
-    "359", // Bulgaria
-    "385", // Croatia
-    "357", // Cyprus
-    "420", // Czech Republic
-    "45",  // Denmark
-    "372", // Estonia
-    "358", // Finland
-    "33",  // France
-    "49",  // Germany
-    "30",  // Greece
-    "36",  // Hungary
-    "353", // Ireland
-    "39",  // Italy
-    "371", // Latvia
-    "370", // Lithuania
-    "352", // Luxembourg
-    "356", // Malta
-    "31",  // Netherlands
-    "47",  // Norway
-    "48",  // Poland
-    "351", // Portugal
-    "40",  // Romania
-    "421", // Slovakia
-    "386", // Slovenia
-    "34",  // Spain
-    "46",  // Sweden
-    "41",  // Switzerland
-    "44",  // UK
-    "387", // Bosnia
-    "382", // Montenegro
-    "389", // North Macedonia
-    "355", // Albania
-];
-
-function isEuropeanPhone(phone: string): boolean {
-    const digits = phone.replace(/\D/g, "");
-    return EUROPEAN_COUNTRY_CODES.some(code => digits.startsWith(code));
-}
 
 interface WhatsAppRouterDecision {
     intent: WhatsAppIntent;
@@ -381,22 +341,15 @@ export async function POST(request: NextRequest) {
                 );
                 // ─── Admin Phone Detection ────────────────────────────────
                 const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
-
-                // ─── Employer Detection ───────────────────────────────────
-                // European phones that are NOT registered workers → potential employers
-                const isEuropean = isEuropeanPhone(normalizedPhone);
-                const isRegisteredWorker = !!workerRecord;
-
-                // Check if this phone is a registered employer in DB
-                const { data: employerRecord } = await supabase
-                    .from("employers")
-                    .select("id, company_name, contact_name, status")
-                    .or(`phone.eq.${normalizedPhone},contact_phone.eq.${normalizedPhone}`)
-                    .maybeSingle();
-                const explicitlyLooksLikeEmployer = looksLikeEmployerWhatsAppLead(content);
-                const explicitlyLooksLikeWorker = looksLikeWorkerWhatsAppLead(content);
-                const isLikelyEmployer = isEuropean && !isRegisteredWorker && !isAdmin && explicitlyLooksLikeEmployer && !explicitlyLooksLikeWorker;
-                const isEmployer = !!employerRecord || isLikelyEmployer;
+                const employerLead = await resolveEmployerWhatsAppLead({
+                    admin: supabase,
+                    normalizedPhone,
+                    content,
+                    isAdmin,
+                    hasRegisteredWorker: !!workerRecord,
+                });
+                const employerRecord = employerLead.employerRecord;
+                const isEmployer = employerLead.isEmployer;
 
                 // ─── Admin Commands (direct brain control via WhatsApp) ───
                 if (isAdmin) {
@@ -452,7 +405,8 @@ export async function POST(request: NextRequest) {
                                 loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT),
                             ]);
                             const employerReply = await generateEmployerWhatsAppReply({
-                                apiKey: OPENAI_API_KEY_EMP,
+                                callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY_EMP, options),
+                                model: WHATSAPP_RESPONSE_MODEL,
                                 message: content,
                                 normalizedPhone,
                                 employerRecord,
@@ -460,25 +414,17 @@ export async function POST(request: NextRequest) {
                                 brainMemory: empBrainMemory,
                                 language: quickLang,
                             });
-                            const finalEmployerReply = employerReply || (quickLang === "sr"
-                                ? "Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike — besplatno za poslodavce. Kako mogu da Vam pomognem?"
-                                : "Hi! I'm the Workers United WhatsApp assistant. We help companies hire foreign workers — completely free for employers. How can I help you?");
+                            const finalEmployerReply = employerReply || getEmployerWhatsAppDefaultReply(quickLang);
                             await sendWhatsAppText(normalizedPhone, finalEmployerReply, undefined);
                             return NextResponse.json({ status: "ok" }); // Always return — never fall through to worker flow
                         } catch (empErr) {
                             console.error("[WhatsApp] Employer AI error:", empErr);
-                            // Even on error, send fallback and return — do not fall through to worker flow
-                            const fallbackEmployer = quickLang === "sr"
-                                ? "Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike besplatno. Pišite nam na contact@workersunited.eu ili posetite workersunited.eu."
-                                : "Hi! I'm the Workers United assistant. We help companies hire foreign workers for free. Contact us at contact@workersunited.eu or visit workersunited.eu.";
+                            const fallbackEmployer = getEmployerWhatsAppErrorReply(quickLang);
                             await sendWhatsAppText(normalizedPhone, fallbackEmployer, undefined);
                             return NextResponse.json({ status: "ok" });
                         }
                     }
-                    // No API key — send static employer fallback
-                    const staticEmployer = quickLang === "sr"
-                        ? "Zdravo! Workers United pomaže kompanijama da pronađu strane radnike — besplatno za poslodavce. Registrujte se na workersunited.eu/signup."
-                        : "Hi! Workers United helps companies hire foreign workers — free for employers. Register at workersunited.eu/signup.";
+                    const staticEmployer = getEmployerWhatsAppStaticReply(quickLang);
                     await sendWhatsAppText(normalizedPhone, staticEmployer, undefined);
                     return NextResponse.json({ status: "ok" });
                 }
@@ -949,62 +895,6 @@ ${buildWorkerWhatsAppRules({
         instructions,
         input: `Phone: ${normalizedPhone}\nUser name: ${userName}\nLatest message:\n${message}\n\nRecent conversation:\n${formatWhatsAppHistory(historyMessages, RESPONSE_HISTORY_LIMIT)}`,
         maxOutputTokens: 4096,
-    });
-}
-
-// ─── Employer WhatsApp AI Handler ─────────────────────────────────────────────
-// Handles inbound messages from European phone numbers (potential/registered employers)
-
-async function generateEmployerWhatsAppReply({
-    apiKey,
-    message,
-    normalizedPhone,
-    employerRecord,
-    historyMessages,
-    brainMemory,
-    language,
-}: {
-    apiKey: string;
-    message: string;
-    normalizedPhone: string;
-    employerRecord: any;
-    historyMessages: Array<{ direction: string; content: string | null; created_at?: string | null }>;
-    brainMemory: Array<{ category: string; content: string; confidence: number }>;
-    language: string;
-}): Promise<string> {
-    const isRegistered = !!employerRecord;
-    const companyName = employerRecord?.company_name || "";
-    const contactName = employerRecord?.contact_name || "";
-    const memoryText = brainMemory.length > 0
-        ? brainMemory.map(e => `- [${e.category}] ${e.content}`).join("\n")
-        : "(No stored facts)";
-    const canonicalFacts = buildCanonicalWhatsAppFacts();
-    const instructions = `You are the official WhatsApp assistant for Workers United.
-
-Personality:
-- Warm, professional, direct, and operational.
-- Answer first, then move the employer to one concrete next step.
-- Do not oversell or invent inventory.
-
-Canonical facts (never contradict these):
-${canonicalFacts}
-
-Useful stored facts:
-${memoryText}
-
-${buildEmployerWhatsAppRules({
-        language,
-        isRegistered,
-        companyName,
-        contactName,
-        employerStatus: employerRecord?.status || null,
-    })}`;
-
-    return callOpenAIResponseText(apiKey, {
-        model: WHATSAPP_RESPONSE_MODEL,
-        instructions,
-        input: `Phone: ${normalizedPhone}\nLatest message:\n${message}\n\nRecent conversation:\n${formatWhatsAppHistory(historyMessages, 10)}`,
-        maxOutputTokens: 2048,
     });
 }
 
