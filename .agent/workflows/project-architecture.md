@@ -66,7 +66,7 @@ Workers-United/
 │   │   │   ├── exceptions/    # Legacy route that now renders the internal ops cockpit copy; business admin no longer links here directly
 │   │   │   ├── email-health/  # Legacy route that now renders the internal email-hygiene copy; business admin no longer links here directly
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
-│   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, filters out hidden agency draft document-owner auth profiles, renders real agency draft worker rows with agency source labels, and worker case detail now resolves by canonical `worker_onboarding.id` as well as legacy profile/auth ids so agency drafts use the right document-owner id plus agency workspace inspect links instead of leaking through fake `/profile/worker` previews
+│   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, filters out hidden agency draft document-owner auth profiles, renders real agency draft worker rows with agency source labels, worker case detail resolves by canonical `worker_onboarding.id` as well as legacy profile/auth ids so agency drafts use the right document-owner id plus agency workspace inspect links instead of leaking through fake `/profile/worker` previews, and the document modal now exposes redirect-driven success/error banners plus direct preview links for the exact approval/re-upload email payload
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout; hides internal/admin-owned employer rows and collapses duplicate employer records per `profile_id` via the shared employer integrity helper
 │   │   │   ├── queue/         # Queue operations screen with shared admin hero, 90-day watch, and inspect-vs-case actions
 │   │   │   ├── jobs/          # Smart Match Hub with shared admin hero/guidance wrapper around matching client
@@ -78,7 +78,7 @@ Workers-United/
 │   │   │   ├── page.tsx       # Internal tools landing page
 │   │   │   ├── ops/           # Internal ops monitor entry (wraps the shared exception cockpit)
 │   │   │   ├── email-health/  # Internal bounced/invalid email hygiene screen
-│   │   │   └── email-preview/ # Internal email template sandbox
+│   │   │   └── email-preview/ # Internal email template sandbox; supports query-driven live payload preview links from admin document actions
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
@@ -96,7 +96,7 @@ Workers-United/
 │   │   │   ├── profile/       # Profile API + authenticated auth-contact sync route (`/api/profile/auth-contact`)
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow)
+│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow); delivery-status persistence is now delegated to a shared helper
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth code callback + hash-link rescue redirect + agency draft claim linking
@@ -133,6 +133,7 @@ Workers-United/
 │   │   │   └── middleware.ts  # Auth middleware / proxy
 │   │   ├── mailer.ts          # sendEmail() via Nodemailer
 │   │   ├── email-templates.ts # HTML email templates + checkout recovery notification mapping
+│   │   ├── admin-email-preview.ts # Shared admin email-preview type guards + deep-link payload serialization helpers
 │   │   ├── document-ai.ts     # GPT-primary document AI helpers with Gemini fallback; passport verification is strict about the actual biodata page, passport bounds detection now trims open-passport spreads down to the single biodata/MRZ page, diploma verification has a formal-education guard, biometric-photo verification uses embassy-grade quality guardrails, and shared quarter-turn orientation helpers/ocr patches power auto-rotation for verify + admin preview flows
 │   │   ├── document-image-processing.ts # Shared document image rotate/crop + OCR metadata helpers used by verify uploads and admin preview/manual-crop flows
 │   │   ├── document-review.ts # Shared admin/worker document-review copy helpers derived from canonical `ocr_json` + `reject_reason`, including strict diploma summaries plus biometric-photo summaries/re-upload guidance that explain whether the issue is quality, framing, lighting, background, or wrong document type
@@ -165,6 +166,7 @@ Workers-United/
 │   │   ├── whatsapp-employer-flow.ts # Shared employer lead detection + employer reply prompt/fallback helpers extracted from the webhook route
 │   │   ├── whatsapp-fallback.ts # Shared config-driven multilingual fallback copy extracted from the webhook route
 │   │   ├── whatsapp-reply-guardrails.ts # Shared deterministic WhatsApp payment/escalation/inventory guardrail copy + media fallback replies extracted from the webhook route
+│   │   ├── whatsapp-status-events.ts # Shared Meta delivery-status persistence helpers extracted from the webhook route
 │   │   ├── whatsapp-worker-ai.ts # Shared worker snapshot + intent-router prompt + worker response prompt helpers extracted from the webhook route
 │   │   ├── whatsapp-health.ts # WhatsApp ops-health classification helpers (platform-side vs recipient-side failures)
 │   │   ├── profile-retention.ts # Shared inactivity-retention helper; derives the last meaningful profile activity across auth/profile/role/docs/signatures/admin case emails/user activity so reminders, cleanup, and admin countdowns stay aligned
@@ -344,7 +346,7 @@ User (Browser)
 | `src/app/internal/page.tsx` | Hidden internal tools landing page; clearly separates technical monitors/template sandbox from firm-facing admin operations |
 | `src/app/internal/ops/page.tsx` | Canonical entry point for the ops monitor / exception cockpit |
 | `src/app/internal/email-health/page.tsx` | Canonical entry point for bounced/invalid email hygiene |
-| `src/app/internal/email-preview/page.tsx` | Canonical entry point for email template preview/sandbox |
+| `src/app/internal/email-preview/page.tsx` | Canonical entry point for email template preview/sandbox; can now open exact query-driven payload previews from admin worker document actions |
 
 ### Admin
 | File | Role |
@@ -354,7 +356,7 @@ User (Browser)
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
 | `src/app/admin/workers/page.tsx` | Worker list with filter tabs plus inactivity-based cleanup countdowns derived from the shared retention helper instead of raw signup age |
-| `src/app/admin/workers/[id]/page.tsx` | Worker case surface with shared admin ops cards for profile snapshot, approvals, payments, contract payload, signature, and document review; image preview modals now include a manual crop tool plus `Restore original` backup recovery for fixing extra passport pages/margins without forcing a re-upload, and `Request new document` logs `document_reupload_requested` activity so genuine admin follow-up resets the cleanup timer |
+| `src/app/admin/workers/[id]/page.tsx` | Worker case surface with shared admin ops cards for profile snapshot, approvals, payments, contract payload, signature, and document review; image preview modals now include a manual crop tool plus `Restore original` backup recovery for fixing extra passport pages/margins without forcing a re-upload, document actions surface redirect-driven success/error banners plus direct approval/re-upload email preview links, and `Request new document` logs `document_reupload_requested` activity so genuine admin follow-up resets the cleanup timer |
 | `src/app/admin/queue/page.tsx` | Queue operations screen; canonical worker dedupe prevents duplicate worker rows from inflating queue counts, refund watch, or urgent countdowns |
 | `src/app/admin/jobs/page.tsx` | Smart Match Hub; loads the queue through canonical worker dedupe before handing it to matching UI |
 | `src/app/admin/announcements/page.tsx` | Bulk email (Workers / Employers / Everyone) |
@@ -367,6 +369,7 @@ User (Browser)
 | `src/lib/supabase/server.ts` | Server-side Supabase client (SSR) |
 | `src/lib/supabase/admin.ts` | Service-role clients: legacy `createAdminClient()` + staged `createTypedAdminClient()` for schema-sensitive routes |
 | `src/lib/mailer.ts` | `sendEmail()` — Nodemailer wrapper |
+| `src/lib/admin-email-preview.ts` | Shared admin email-preview type guards plus payload serialization/parsing for deep-linked live template previews |
 | `src/lib/email-templates.ts` | All HTML email templates; includes `checkout_recovery` and reuses the existing WhatsApp `status_update` template when a valid worker phone exists |
 | `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
 | `src/lib/whatsapp-brain.ts` | Shared canonical WhatsApp facts/rules, safer worker/employer prompting, deterministic first-contact greeting reply, explicit `profile complete + admin approval -> payment unlock` guard language, no-fake-escalation rule set, onboarding trigger detection, and low-risk learning filter used by `/api/whatsapp/webhook` + `/api/brain/improve` |
@@ -395,8 +398,9 @@ User (Browser)
 | `src/lib/whatsapp-employer-flow.ts` | Shared employer-side WhatsApp helper layer; resolves European employer leads vs worker/admin collisions, loads matched employer records, builds employer AI prompts, and supplies deterministic fallback/static replies so the webhook route does not hardcode employer flow heuristics inline |
 | `src/lib/whatsapp-fallback.ts` | Shared config-driven WhatsApp fallback helper; loads platform config and serves multilingual signup/status/payment/documents fallback copy so the webhook route no longer hardcodes the fallback bot block inline |
 | `src/lib/whatsapp-reply-guardrails.ts` | Shared deterministic WhatsApp guardrails; centralizes escalation/payment/inventory-safe replacement copy plus media-attachment fallback messaging so `src/app/api/whatsapp/webhook/route.ts` no longer hardcodes that copy inline |
+| `src/lib/whatsapp-status-events.ts` | Shared Meta delivery-status persistence helper; stores `sent/delivered/failed` plus failure details without keeping status merge logic inline in the webhook route |
 | `src/lib/whatsapp-worker-ai.ts` | Shared worker-side WhatsApp AI helper layer; builds the worker snapshot prompt context, GPT-5 mini intent-router prompt, and GPT-5.4 mini worker reply prompt so the webhook route no longer hardcodes worker AI prompt assembly inline |
-| `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: thinner runtime orchestrator around shared GPT-5 mini routing, GPT-5.4 response prompting, employer-flow helpers, fallback-copy helpers, conversation loaders, admin commands, guardrails, deterministic worker replies for common status/docs/payment/support/process flows, truthful support auto-handoff, explicit opt-in WhatsApp onboarding, and single-response media fallback that avoids pretending WhatsApp attachments already update worker profiles |
+| `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: thinner runtime orchestrator around shared GPT-5 mini routing, GPT-5.4 response prompting, employer-flow helpers, fallback-copy helpers, status-event persistence, conversation loaders, admin commands, guardrails, deterministic worker replies for common status/docs/payment/support/process flows, truthful support auto-handoff, explicit opt-in WhatsApp onboarding, and single-response media fallback that avoids pretending WhatsApp attachments already update worker profiles |
 | `src/app/api/brain/collect/route.ts` | Brain/ops data collector; aggregates funnel, payment telemetry, auth drift, recent user activity, recent WhatsApp conversations, canonical `whatsappTemplateHealth` + failed-template samples, and a shared `opsSnapshot` so the daily monitor sees real operational signals instead of only top-level counts |
 | `src/app/api/brain/improve/route.ts` | Daily low-risk conversation improver; analyzes DB/conversation/error summaries but may only persist safe `common_question / error_fix / copy_rule` learnings after `filterSafeBrainLearnings()` rejects numbers, pricing, country claims, document/legal facts, and URLs |
 | `src/app/api/brain/act/route.ts` | Brain action executor; now accepts canonical `update_worker_status` while still honoring legacy `update_candidate_status` during the transition |

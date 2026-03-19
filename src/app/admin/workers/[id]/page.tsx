@@ -13,7 +13,6 @@ import { buildContractDataForMatch } from "@/lib/contract-data";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
 import ReVerifyButton from "@/components/admin/ReVerifyButton";
-import ActionSubmitButton from "@/components/admin/ActionSubmitButton";
 import SingleWorkerDownload from "@/components/admin/SingleWorkerDownload";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import DocumentPreview from "@/components/admin/DocumentPreview";
@@ -27,9 +26,11 @@ import { collectDocumentStoragePathsForCleanup, getRestorableDocumentBackupPath 
 import { syncWorkerReviewStatus } from "@/lib/worker-review";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { getAgencyWorkerEmail } from "@/lib/agencies";
+import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
 
 interface PageProps {
     params: Promise<{ id: string }>;
+    searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 async function getWorkerAdminGuardState(
@@ -112,8 +113,53 @@ async function getWorkerAdminGuardState(
     return { completion, hasPaidEntryFee };
 }
 
-export default async function WorkerDetailPage({ params }: PageProps) {
+function getSingleSearchParam(value: string | string[] | undefined) {
+    return Array.isArray(value) ? value[0] : value;
+}
+
+function getDocumentActionBanner(action: string | undefined, error: string | undefined) {
+    if (error) {
+        return {
+            tone: "amber" as const,
+            title: "Document action needs attention",
+            copy: error,
+            icon: <AlertTriangle size={18} />,
+        };
+    }
+
+    switch (action) {
+        case "updated":
+            return {
+                tone: "emerald" as const,
+                title: "Document decision saved",
+                copy: "The latest admin document decision was saved and the case view has been refreshed.",
+                icon: <Check size={18} />,
+            };
+        case "requested":
+            return {
+                tone: "blue" as const,
+                title: "Worker re-upload requested",
+                copy: "The current file was removed and the worker notification email was queued with your replacement guidance.",
+                icon: <Mail size={18} />,
+            };
+        case "deleted":
+            return {
+                tone: "rose" as const,
+                title: "Document deleted",
+                copy: "The current file and any stored crop backups were removed without notifying the worker.",
+                icon: <Trash2 size={18} />,
+            };
+        default:
+            return null;
+    }
+}
+
+export default async function WorkerDetailPage({ params, searchParams }: PageProps) {
     const { id } = await params;
+    const resolvedSearchParams = searchParams ? await searchParams : {};
+    const documentAction = getSingleSearchParam(resolvedSearchParams.documentAction);
+    const documentError = getSingleSearchParam(resolvedSearchParams.documentError);
+    const documentActionBanner = getDocumentActionBanner(documentAction, documentError);
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -728,6 +774,22 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                         { label: "Paid", value: completedPaymentsCount, meta: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} pending` : "No pending payments" },
                     ]}
                 />
+                {documentActionBanner ? (
+                    <div className={`mt-6 flex items-start gap-3 rounded-[24px] border px-5 py-4 ${documentActionBanner.tone === "emerald"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : documentActionBanner.tone === "blue"
+                            ? "border-blue-200 bg-blue-50 text-blue-900"
+                            : documentActionBanner.tone === "rose"
+                                ? "border-rose-200 bg-rose-50 text-rose-900"
+                                : "border-amber-200 bg-amber-50 text-amber-900"
+                        }`}>
+                        <div className="mt-0.5">{documentActionBanner.icon}</div>
+                        <div>
+                            <div className="text-sm font-semibold">{documentActionBanner.title}</div>
+                            <p className="mt-1 text-sm leading-relaxed">{documentActionBanner.copy}</p>
+                        </div>
+                    </div>
+                ) : null}
 
                 <div className="mt-6 grid gap-4 md:grid-cols-3">
                     <CaseHintCard
@@ -1119,6 +1181,7 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                             const previewUrl = `/api/admin/documents/${doc.id}/preview`;
                                             const aiSummary = buildDocumentAiSummary(doc.document_type, doc.ocr_json, doc.reject_reason);
                                             const requestReason = buildDocumentRequestReason(doc.document_type, doc.ocr_json, doc.reject_reason);
+                                            const humanizedDocumentType = humanizeDocumentType(doc.document_type);
                                             const isPdf = typeof doc.storage_path === "string" && doc.storage_path.toLowerCase().endsWith(".pdf");
                                             const ocrJsonRecord = !!doc.ocr_json
                                                 && typeof doc.ocr_json === "object"
@@ -1137,6 +1200,17 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                     : typeof ocrJsonRecord?.auto_crop_processed_at === "string"
                                                         ? "Checked"
                                                         : "Not checked";
+                                            const approvalEmailPreviewHref = buildAdminEmailPreviewHref("document_review_result", {
+                                                name: displayName,
+                                                approved: true,
+                                                docType: humanizedDocumentType,
+                                            });
+                                            const requestEmailPreviewHref = buildAdminEmailPreviewHref("document_review_result", {
+                                                name: displayName,
+                                                approved: false,
+                                                docType: humanizedDocumentType,
+                                                feedback: requestReason,
+                                            });
 
                                             return (
                                         <article
@@ -1196,6 +1270,27 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                             <p className="text-sm text-[#78350f]">{doc.reject_reason}</p>
                                                         </ModalDetailCard>
                                                     ) : null}
+
+                                                    <div className="grid gap-2 sm:grid-cols-2">
+                                                        <Link
+                                                            href={approvalEmailPreviewHref}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d6d3d1] bg-white px-4 py-3 text-sm font-semibold text-[#18181b] transition hover:bg-[#f5f5f4]"
+                                                        >
+                                                            <Mail size={16} />
+                                                            Preview approval email
+                                                        </Link>
+                                                        <Link
+                                                            href={requestEmailPreviewHref}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f2d7a6] bg-[#fff7ed] px-4 py-3 text-sm font-semibold text-[#9a3412] transition hover:bg-[#ffedd5]"
+                                                        >
+                                                            <Mail size={16} />
+                                                            Preview re-upload email
+                                                        </Link>
+                                                    </div>
 
                                                     <form action="/api/admin/admin-review" method="post" className="rounded-[22px] border border-[#e6e6e1] bg-[#faf8f3] p-4">
                                                         <input type="hidden" name="mode" value="update_status" />
