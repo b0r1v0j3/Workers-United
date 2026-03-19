@@ -109,9 +109,48 @@ const EMAIL_LABELS: Record<EmailType, string> = {
     announcement_document_fix: "Document Fix Announcement",
 };
 
+type EmailPreviewCategory =
+    | "all"
+    | "profile"
+    | "documents"
+    | "payments"
+    | "offers"
+    | "announcements";
+
+const EMAIL_CATEGORY_LABELS: Record<EmailPreviewCategory, string> = {
+    all: "All",
+    profile: "Profile",
+    documents: "Documents",
+    payments: "Payments",
+    offers: "Offers",
+    announcements: "Updates",
+};
+
+const EMAIL_CATEGORY_BY_TYPE: Record<EmailType, EmailPreviewCategory> = {
+    welcome: "profile",
+    profile_complete: "profile",
+    payment_success: "payments",
+    checkout_recovery: "payments",
+    job_offer: "offers",
+    offer_reminder: "offers",
+    refund_approved: "payments",
+    document_expiring: "documents",
+    job_match: "offers",
+    admin_update: "announcements",
+    announcement: "announcements",
+    profile_incomplete: "profile",
+    document_review_result: "documents",
+    profile_reminder: "profile",
+    profile_warning: "profile",
+    profile_deletion: "profile",
+    announcement_document_fix: "documents",
+};
+
 export default function EmailPreviewWorkspace() {
     const searchParams = useSearchParams();
     const [selectedType, setSelectedType] = useState<EmailType>(DEFAULT_EMAIL_TYPE);
+    const [activeCategory, setActiveCategory] = useState<EmailPreviewCategory>("all");
+    const [searchQuery, setSearchQuery] = useState("");
     const [htmlContent, setHtmlContent] = useState("");
     const [emailSubject, setEmailSubject] = useState("");
     const [loading, setLoading] = useState(false);
@@ -168,6 +207,31 @@ export default function EmailPreviewWorkspace() {
     }, [loadPreview, resolvePreviewData, selectedType]);
 
     const hasQueryDrivenPreview = isAdminEmailPreviewType(queryType) && queryType === selectedType && !!parseAdminEmailPreviewData(queryDataRaw);
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const filteredTemplates = (Object.entries(EMAIL_LABELS) as Array<[EmailType, string]>).filter(([type, label]) => {
+        const categoryMatches = activeCategory === "all" || EMAIL_CATEGORY_BY_TYPE[type] === activeCategory;
+        if (!categoryMatches) {
+            return false;
+        }
+
+        if (!normalizedSearch) {
+            return true;
+        }
+
+        const searchableText = [
+            label,
+            type,
+            EMAIL_CATEGORY_LABELS[EMAIL_CATEGORY_BY_TYPE[type]],
+        ].join(" ").toLowerCase();
+
+        return searchableText.includes(normalizedSearch);
+    });
+
+    useEffect(() => {
+        if (!filteredTemplates.some(([type]) => type === selectedType) && filteredTemplates[0]) {
+            setSelectedType(filteredTemplates[0][0]);
+        }
+    }, [filteredTemplates, selectedType]);
 
     return (
         <div className="space-y-5">
@@ -228,17 +292,58 @@ export default function EmailPreviewWorkspace() {
 
             <div className="grid items-start gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
                 <section className="overflow-hidden rounded-[28px] border border-[#e6e6e1] bg-white shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)] xl:sticky xl:top-6">
-                    <div className="flex items-center justify-between border-b border-[#ebe7dd] bg-[#faf8f3] px-5 py-4">
-                        <div>
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">All Templates</div>
-                            <div className="mt-1 text-sm text-[#57534e]">Izaberi mejl koji želiš da pregledaš.</div>
+                    <div className="border-b border-[#ebe7dd] bg-[#faf8f3] px-5 py-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">All Templates</div>
+                                <div className="mt-1 text-sm text-[#57534e]">Izaberi mejl koji želiš da pregledaš.</div>
+                            </div>
+                            <span className="rounded-full bg-[#111111] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
+                                {Object.keys(EMAIL_LABELS).length}
+                            </span>
                         </div>
-                        <span className="rounded-full bg-[#111111] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
-                            {Object.keys(EMAIL_LABELS).length}
-                        </span>
+                        <div className="mt-4">
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(event) => setSearchQuery(event.target.value)}
+                                placeholder="Search templates..."
+                                className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-2.5 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
+                            />
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {(Object.entries(EMAIL_CATEGORY_LABELS) as Array<[EmailPreviewCategory, string]>).map(([category, label]) => {
+                                const count = category === "all"
+                                    ? Object.keys(EMAIL_LABELS).length
+                                    : Object.values(EMAIL_CATEGORY_BY_TYPE).filter((value) => value === category).length;
+                                const isActive = activeCategory === category;
+                                return (
+                                    <button
+                                        key={category}
+                                        onClick={() => setActiveCategory(category)}
+                                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                            isActive
+                                                ? "border-[#111111] bg-[#111111] text-white"
+                                                : "border-[#ddd8cb] bg-white text-[#57534e] hover:border-[#bdb6aa] hover:text-[#18181b]"
+                                        }`}
+                                    >
+                                        <span>{label}</span>
+                                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                                            isActive ? "bg-white/15 text-white" : "bg-[#f5f5f4] text-[#78716c]"
+                                        }`}>
+                                            {count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                     <div className="max-h-[70vh] divide-y divide-[#f1ede4] overflow-y-auto">
-                        {(Object.entries(EMAIL_LABELS) as Array<[EmailType, string]>).map(([key, label]) => (
+                        {filteredTemplates.length === 0 ? (
+                            <div className="px-5 py-6 text-sm text-[#78716c]">
+                                Nema mejlova za ovaj filter. Promeni kategoriju ili search.
+                            </div>
+                        ) : filteredTemplates.map(([key, label]) => (
                             <button
                                 key={key}
                                 onClick={() => setSelectedType(key)}
@@ -248,7 +353,12 @@ export default function EmailPreviewWorkspace() {
                                         : "border-l-4 border-transparent text-[#57534e] hover:bg-[#faf8f3] hover:text-[#18181b]"
                                 }`}
                             >
-                                <span>{label}</span>
+                                <div>
+                                    <div>{label}</div>
+                                    <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#8a8479]">
+                                        {EMAIL_CATEGORY_LABELS[EMAIL_CATEGORY_BY_TYPE[key]]}
+                                    </div>
+                                </div>
                                 {selectedType === key ? <ChevronRight size={16} className="text-[#111111]" /> : null}
                             </button>
                         ))}

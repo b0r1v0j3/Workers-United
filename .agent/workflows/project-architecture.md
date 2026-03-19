@@ -112,7 +112,7 @@ Workers-United/
 │   │   ├── forms/InternationalPhoneField.tsx # Shared modern phone input shell (flag + calling code + searchable picker) used across worker/employer/agency forms
 │   │   ├── forms/NativeDateField.tsx # Shared compact date field: mobile keeps the native iPhone/Android picker, desktop opens a custom calendar popover and now delegates month/year dropdown styling to `AdaptiveSelect`
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
-│   │   ├── admin/EmailPreviewWorkspace.tsx # Shared client workspace that lists every system email template and renders the live iframe preview for both admin and internal email-preview routes
+│   │   ├── admin/EmailPreviewWorkspace.tsx # Shared client workspace that lists every system email template, adds category/search filtering, and renders the live iframe preview for both admin and internal email-preview routes
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
 │   │   ├── admin/ActionSubmitButton.tsx # Shared pending-aware submit button for slower admin document actions
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
@@ -356,7 +356,7 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/admin/page.tsx` | Business admin dashboard with actionable stats, queue watch, recent lists, preview shortcuts, and direct inspect links into real worker/employer/agency workspaces; technical incident/email-health tooling is intentionally kept out of this shell |
-| `src/app/admin/email-preview/page.tsx` | Business-admin email preview page inside the normal AppShell; exposes the full template list and live payload preview without requiring the internal tools hub |
+| `src/app/admin/email-preview/page.tsx` | Business-admin email preview page inside the normal AppShell; exposes the full template list, category/search filtering, and live payload preview without requiring the internal tools hub |
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
