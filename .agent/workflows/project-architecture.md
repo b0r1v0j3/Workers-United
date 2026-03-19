@@ -88,7 +88,7 @@ Workers-United/
 │   │   │   ├── cron/          # 9 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
-│   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback; checkout now prebuilds Stripe Customer identity context from canonical worker data, shows bank/cardholder guidance before redirect, and webhook persists decline/risk telemetry plus billing/card-country hints on failed/successful attempts
+│   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback; checkout now prebuilds Stripe Customer identity context from canonical worker data, webhook + confirm-session share payment/activation finalization helpers, and payment telemetry persists decline/risk plus billing/card-country hints
 │   │   │   ├── email-queue/   # Email queue processor
 │   │   │   ├── godmode/       # Dev testing endpoint
 │   │   │   ├── health/        # Health check (parallelized service probes + WhatsApp delivery audit)
@@ -138,6 +138,7 @@ Workers-United/
 │   │   ├── document-review.ts # Shared admin/worker document-review copy helpers derived from canonical `ocr_json` + `reject_reason`, including strict diploma summaries plus biometric-photo summaries/re-upload guidance that explain whether the issue is quality, framing, lighting, background, or wrong document type
 │   │   ├── stripe.ts          # Stripe client initialization
 │   │   ├── stripe-checkout.ts # Shared Stripe Checkout customer identity + metadata helpers (customer prefill/reuse, webhook correlation payload)
+│   │   ├── stripe-payment-finalization.ts # Shared completed-payment upsert + entry-fee queue activation helpers used by webhook and confirm-session
 │   │   ├── payment-quality.ts # Shared payment-attempt quality classifier plus market-signal reader (worker country, billing country, card country) used by internal ops and analytics
 │   │   ├── payment-eligibility.ts # Entry-fee eligibility rules (single source of truth)
 │   │   ├── messaging.ts       # Support conversation helpers (access gating, conversation creation, message persistence, summaries)
@@ -368,6 +369,7 @@ User (Browser)
 | `src/lib/worker-review.ts` | Shared worker review/readiness helpers; keeps `PENDING_APPROVAL` gated behind truly admin-verified required documents, safely backfills blank passport issue/expiry/issuer fields from the latest passport `ocr_json` before recalculating completion, and syncs worker status after verify/admin doc decisions |
 | `src/lib/profile-retention.ts` | Shared inactivity-retention signals + thresholds (`90` day delete window, `14 / 7 / 3` warning cadence, admin-list near-cleanup window) derived from the latest meaningful auth/profile/role/docs/signature/case-email/user-activity timestamp |
 | `src/lib/stripe.ts` | Stripe client init |
+| `src/lib/stripe-payment-finalization.ts` | Shared Stripe post-payment finalization helpers; centralizes canonical amount mapping, completed checkout payment upsert by `payment_id/session_id`, duplicate-insert recovery, and entry-fee worker queue activation for both direct and agency-managed workers |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals |
 | `src/lib/admin-exceptions.ts` | Shared technical exception snapshot helper used by the internal ops screens and the ops-first daily monitor; centralizes invalid-email, checkout drift, manual review, pending admin approval, worker readiness, queue/payment mismatch, open-demand-without-offers signals, and now a 24h WhatsApp quality snapshot (`guarded`, `language fallback`, `deterministic`, `auto handoff`, `media fallback`, `openai failure`) for `/internal/ops` |

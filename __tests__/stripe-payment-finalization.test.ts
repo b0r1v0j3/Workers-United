@@ -1,0 +1,190 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import {
+    activateEntryFeeWorkerAfterPayment,
+    getStripePaymentAmounts,
+    persistCompletedStripeCheckoutPayment,
+} from "@/lib/stripe-payment-finalization";
+
+const { loadCanonicalWorkerRecord } = vi.hoisted(() => ({
+    loadCanonicalWorkerRecord: vi.fn(),
+}));
+
+vi.mock("@/lib/workers", () => ({
+    loadCanonicalWorkerRecord,
+}));
+
+describe("stripe-payment-finalization", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it("returns canonical Stripe amounts for entry and confirmation fees", () => {
+        expect(getStripePaymentAmounts("entry_fee")).toEqual({
+            amount: 9,
+            amountCents: 900,
+        });
+
+        expect(getStripePaymentAmounts("confirmation_fee")).toEqual({
+            amount: 190,
+            amountCents: 19000,
+        });
+    });
+
+    it("persists completed checkout metadata through the shared payment upsert helper", async () => {
+        const paymentUpdateEq = vi.fn().mockResolvedValue({ error: null });
+        const paymentUpdate = vi.fn().mockReturnValue({ eq: paymentUpdateEq });
+
+        const admin = {
+            from: (table: string) => {
+                if (table !== "payments") {
+                    throw new Error(`Unexpected table: ${table}`);
+                }
+
+                return {
+                    update: paymentUpdate,
+                };
+            },
+        };
+
+        await persistCompletedStripeCheckoutPayment({
+            admin: admin as never,
+            session: {
+                id: "cs_test_123",
+                metadata: { original: "yes" },
+                payment_intent: "pi_123",
+                currency: "usd",
+                status: "complete",
+                payment_status: "paid",
+                customer_details: {
+                    address: {
+                        country: "MA",
+                        postal_code: "10000",
+                    },
+                },
+            } as never,
+            paymentId: "payment-row-1",
+            paymentType: "entry_fee",
+            targetProfileId: "worker-profile-1",
+            paidByProfileId: "worker-profile-1",
+            metadataPatch: {
+                confirmed_via: "confirm-session-route",
+            },
+        });
+
+        expect(paymentUpdate).toHaveBeenCalledWith(
+            expect.objectContaining({
+                user_id: "worker-profile-1",
+                profile_id: "worker-profile-1",
+                payment_type: "entry_fee",
+                amount: 9,
+                amount_cents: 900,
+                status: "completed",
+                stripe_checkout_session_id: "cs_test_123",
+                metadata: expect.objectContaining({
+                    original: "yes",
+                    stripe_payment_intent_id: "pi_123",
+                    stripe_currency: "USD",
+                    stripe_session_status: "complete",
+                    stripe_payment_status: "paid",
+                    stripe_customer_country: "MA",
+                    stripe_customer_postal_code: "10000",
+                    confirmed_via: "confirm-session-route",
+                    paid_by_profile_id: "worker-profile-1",
+                    target_worker_id: null,
+                }),
+            })
+        );
+        expect(paymentUpdateEq).toHaveBeenCalledWith("id", "payment-row-1");
+    });
+
+    it("activates direct worker payments without regressing post-entry-fee statuses", async () => {
+        const workerUpdateEq = vi.fn().mockResolvedValue({ error: null });
+        const workerUpdate = vi.fn().mockReturnValue({ eq: workerUpdateEq });
+
+        loadCanonicalWorkerRecord.mockResolvedValue({
+            data: {
+                id: "worker-row-1",
+                status: "OFFER_PENDING",
+                queue_joined_at: "2026-03-01T10:00:00.000Z",
+                entry_fee_paid: false,
+                job_search_active: false,
+            },
+            error: null,
+        });
+
+        const admin = {
+            from: (table: string) => {
+                if (table !== "worker_onboarding") {
+                    throw new Error(`Unexpected table: ${table}`);
+                }
+
+                return {
+                    update: workerUpdate,
+                };
+            },
+        };
+
+        await activateEntryFeeWorkerAfterPayment({
+            admin: admin as never,
+            targetProfileId: "worker-profile-1",
+            activatedAt: "2026-03-19T06:00:00.000Z",
+        });
+
+        expect(loadCanonicalWorkerRecord).toHaveBeenCalledWith(
+            admin,
+            "worker-profile-1",
+            "id, status, queue_joined_at, entry_fee_paid, job_search_active"
+        );
+        expect(workerUpdate).toHaveBeenCalledWith({
+            entry_fee_paid: true,
+            job_search_active: true,
+            job_search_activated_at: "2026-03-19T06:00:00.000Z",
+        });
+        expect(workerUpdateEq).toHaveBeenCalledWith("profile_id", "worker-profile-1");
+    });
+
+    it("activates agency-managed worker payments through the same shared helper", async () => {
+        const maybeSingle = vi.fn().mockResolvedValue({
+            data: {
+                id: "agency-worker-1",
+                status: "NEW",
+                queue_joined_at: null,
+            },
+            error: null,
+        });
+        const agencyUpdateEq = vi.fn().mockResolvedValue({ error: null });
+        const agencyUpdate = vi.fn().mockReturnValue({ eq: agencyUpdateEq });
+
+        const admin = {
+            from: (table: string) => {
+                if (table !== "worker_onboarding") {
+                    throw new Error(`Unexpected table: ${table}`);
+                }
+
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            maybeSingle,
+                        }),
+                    }),
+                    update: agencyUpdate,
+                };
+            },
+        };
+
+        await activateEntryFeeWorkerAfterPayment({
+            admin: admin as never,
+            targetWorkerId: "agency-worker-1",
+            activatedAt: "2026-03-19T06:00:00.000Z",
+        });
+
+        expect(agencyUpdate).toHaveBeenCalledWith({
+            entry_fee_paid: true,
+            job_search_active: true,
+            job_search_activated_at: "2026-03-19T06:00:00.000Z",
+            queue_joined_at: "2026-03-19T06:00:00.000Z",
+            status: "IN_QUEUE",
+        });
+        expect(agencyUpdateEq).toHaveBeenCalledWith("id", "agency-worker-1");
+    });
+});
