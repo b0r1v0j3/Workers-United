@@ -3,9 +3,13 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { queueEmail } from "@/lib/email-templates";
-import { resolveWorkerStatusAfterEntryFee } from "@/lib/worker-status";
 import { finalizeConfirmationFeeOffer } from "@/lib/offer-finalization";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import {
+    activateEntryFeeWorkerAfterPayment,
+    getStripePaymentAmounts,
+    persistCompletedStripeCheckoutPayment,
+} from "@/lib/stripe-payment-finalization";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
     apiVersion: "2024-04-10",
@@ -252,165 +256,30 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ received: true, message: "Payment not completed" });
             }
 
-            // Determine expected amount (in cents) and validate against Stripe
-            const expectedAmountCents = paymentType === "confirmation_fee" ? 19000 : 900;
-            const amount = paymentType === "confirmation_fee" ? 190 : 9;
+            const { amount, amountCents: expectedAmountCents } = getStripePaymentAmounts(paymentType);
 
             if (session.amount_total && session.amount_total !== expectedAmountCents) {
                 console.error(`[Stripe] Amount mismatch: expected ${expectedAmountCents}, got ${session.amount_total}`);
                 return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
             }
 
-            const paymentMetadata = {
-                ...(session.metadata || {}),
-                stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
-                stripe_currency: session.currency?.toUpperCase() || "USD",
-                stripe_session_status: session.status,
-                stripe_payment_status: session.payment_status,
-                stripe_customer_country: session.customer_details?.address?.country || null,
-                stripe_customer_postal_code: session.customer_details?.address?.postal_code || null,
-            };
-
-            const paymentPayload = {
-                user_id: targetProfileId,
-                profile_id: targetProfileId,
-                amount,
-                amount_cents: expectedAmountCents,
-                status: "completed",
-                stripe_checkout_session_id: session.id,
-                payment_type: paymentType,
-                paid_at: new Date().toISOString(),
-                metadata: {
-                    ...paymentMetadata,
-                    paid_by_profile_id: paidByProfileId || null,
-                    target_worker_id: targetWorkerId || null,
-                },
-            };
-
-            if (paymentId) {
-                const { error } = await supabase
-                    .from("payments")
-                    .update(paymentPayload)
-                    .eq("id", paymentId);
-
-                if (error) {
-                    console.error("Failed to update payment record by payment_id:", error);
-                    throw error;
-                }
-            } else {
-                // Fallback 1: update an existing row by checkout session ID.
-                const { data: existingBySession } = await supabase
-                    .from("payments")
-                    .select("id")
-                    .eq("stripe_checkout_session_id", session.id)
-                    .maybeSingle();
-
-                if (existingBySession?.id) {
-                    const { error } = await supabase
-                        .from("payments")
-                        .update(paymentPayload)
-                        .eq("id", existingBySession.id);
-                    if (error) throw error;
-                } else {
-                    // Fallback 2: insert completed payment row.
-                    const { error } = await supabase.from("payments").insert(paymentPayload);
-                    if (error) {
-                        if (error.code === "23505") {
-                            return NextResponse.json({ received: true, message: "Duplicate event ignored" });
-                        }
-                        throw error;
-                    }
-                }
-            }
+            await persistCompletedStripeCheckoutPayment({
+                admin: supabase,
+                session,
+                paymentId,
+                paymentType,
+                targetProfileId,
+                paidByProfileId,
+                targetWorkerId,
+            });
 
             // Handle post-payment actions based on type
             if (paymentType === "entry_fee") {
-                const nowIso = new Date().toISOString();
-                if (targetProfileId) {
-                    const { data: existingWorkerRecord, error: existingWorkerRecordError } = await loadCanonicalWorkerRecord(
-                        supabase,
-                        targetProfileId,
-                        "id, status, queue_joined_at, phone, updated_at, entry_fee_paid, job_search_active, nationality, current_country, preferred_job"
-                    );
-                    if (existingWorkerRecordError) {
-                        throw existingWorkerRecordError;
-                    }
-
-                    if (!existingWorkerRecord) {
-                        const { error: workerRecordUpsertError } = await supabase
-                            .from("worker_onboarding")
-                            .upsert(
-                                {
-                                    profile_id: targetProfileId,
-                                    entry_fee_paid: true,
-                                    status: "IN_QUEUE",
-                                    queue_joined_at: nowIso,
-                                    job_search_active: true,
-                                    job_search_activated_at: nowIso,
-                                },
-                                { onConflict: "profile_id" }
-                            );
-                        if (workerRecordUpsertError) {
-                            throw workerRecordUpsertError;
-                        }
-                    } else {
-                        const updatePayload: Record<string, unknown> = {
-                            entry_fee_paid: true,
-                            job_search_active: true,
-                            job_search_activated_at: nowIso,
-                        };
-
-                        if (!existingWorkerRecord.queue_joined_at) {
-                            updatePayload.queue_joined_at = nowIso;
-                        }
-
-                        const nextStatus = resolveWorkerStatusAfterEntryFee(existingWorkerRecord.status);
-                        if (existingWorkerRecord.status !== nextStatus) {
-                            updatePayload.status = nextStatus;
-                        }
-
-                        const { error: workerRecordUpdateError } = await supabase
-                            .from("worker_onboarding")
-                            .update(updatePayload)
-                            .eq("profile_id", targetProfileId);
-                        if (workerRecordUpdateError) {
-                            throw workerRecordUpdateError;
-                        }
-                    }
-                } else if (targetWorkerId) {
-                    const { data: agencyWorkerRecord, error: agencyWorkerRecordError } = await supabase
-                        .from("worker_onboarding")
-                        .select("id, status, queue_joined_at")
-                        .eq("id", targetWorkerId)
-                        .maybeSingle();
-
-                    if (agencyWorkerRecordError || !agencyWorkerRecord) {
-                        throw agencyWorkerRecordError || new Error("Agency worker not found");
-                    }
-
-                    const updatePayload: Record<string, unknown> = {
-                        entry_fee_paid: true,
-                        job_search_active: true,
-                        job_search_activated_at: nowIso,
-                    };
-
-                    if (!agencyWorkerRecord.queue_joined_at) {
-                        updatePayload.queue_joined_at = nowIso;
-                    }
-
-                    const nextStatus = resolveWorkerStatusAfterEntryFee(agencyWorkerRecord.status);
-                    if (agencyWorkerRecord.status !== nextStatus) {
-                        updatePayload.status = nextStatus;
-                    }
-
-                    const { error: agencyWorkerUpdateError } = await supabase
-                        .from("worker_onboarding")
-                        .update(updatePayload)
-                        .eq("id", targetWorkerId);
-                    if (agencyWorkerUpdateError) {
-                        throw agencyWorkerUpdateError;
-                    }
-                }
+                await activateEntryFeeWorkerAfterPayment({
+                    admin: supabase,
+                    targetProfileId,
+                    targetWorkerId,
+                });
 
                 await logServerActivity(activitySubjectId, "payment_completed", "payment", {
                     type: "entry_fee",
