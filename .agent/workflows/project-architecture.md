@@ -355,7 +355,7 @@ User (Browser)
 ### Admin
 | File | Role |
 |---|---|
-| `src/app/admin/page.tsx` | Business admin dashboard with actionable stats, queue watch, recent lists, preview shortcuts, and direct inspect links into real worker/employer/agency workspaces; technical incident/email-health tooling is intentionally kept out of this shell |
+| `src/app/admin/page.tsx` | Business admin dashboard with actionable stats, queue watch, recent lists, direct inspect links into real worker/employer/agency workspaces, and a prominent `Open Email Preview` CTA so admin can jump straight into the system-email sandbox without hunting through navigation |
 | `src/app/admin/email-preview/page.tsx` | Business-admin email preview page inside the normal AppShell; exposes the full template list, category/search filtering, and live payload preview without requiring the internal tools hub |
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |

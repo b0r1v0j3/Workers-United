@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
     AlertTriangle, Building2, CheckCircle2, Clock,
+    Mail,
     ShieldCheck, TrendingUp, Users, Wallet
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -231,6 +232,30 @@ export default async function AdminDashboard() {
                         <div className="mt-2 text-3xl font-semibold text-[#18181b]">{totalRevenue > 0 ? `$${totalRevenue}` : "—"}</div>
                         <div className="mt-1 text-xs text-[#78716c]">{revenueThisMonth > 0 ? `$${revenueThisMonth} this month` : "No payments this month"}{revenueToday > 0 ? ` · $${revenueToday} today` : ""}</div>
                     </Link>
+                </div>
+
+                <div className="rounded-[24px] border border-[#d9dced] bg-[#f7f9ff] p-5 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.2)]">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#111111] text-white shadow-sm">
+                                <Mail size={18} />
+                            </div>
+                            <div>
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">Email Preview</div>
+                                <h2 className="mt-1 text-lg font-semibold text-[#18181b]">Open all system emails</h2>
+                                <p className="mt-1 max-w-2xl text-sm text-[#57534e]">
+                                    Pogledaj kako stvarno izgledaju worker, payment, document i offer mejlovi pre nego što ih pošalješ korisnicima.
+                                </p>
+                            </div>
+                        </div>
+                        <Link
+                            href="/admin/email-preview"
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#111111] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#27272a]"
+                        >
+                            <Mail size={16} />
+                            Open Email Preview
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Action items — things that need your attention */}
