@@ -9,6 +9,7 @@ const ALL_EMAIL_TYPES: EmailType[] = [
     'checkout_recovery',
     'job_offer',
     'offer_reminder',
+    'offer_expired',
     'refund_approved',
     'document_expiring',
     'job_match',
@@ -90,6 +91,18 @@ describe('getEmailTemplate', () => {
         expect(subject).toContain('expired');
         expect(html).toContain('fresh checkout');
         expect(html).toContain('$9');
+    });
+
+    it('offer_expired includes queue continuity messaging', () => {
+        const { html, subject } = getEmailTemplate('offer_expired', {
+            name: 'Nikola',
+            jobTitle: 'Warehouse Worker',
+            queuePosition: 7,
+        });
+        expect(subject).toContain('Warehouse Worker');
+        expect(html).toContain('Offer Expired');
+        expect(html).toContain('queue position');
+        expect(html).toContain('#7');
     });
 
     it('payment_success uses the premium monochrome queue layout', () => {

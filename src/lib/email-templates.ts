@@ -9,6 +9,7 @@ export type EmailType =
     | "checkout_recovery"
     | "job_offer"
     | "offer_reminder"
+    | "offer_expired"
     | "refund_approved"
     | "document_expiring"
     | "job_match"
@@ -64,6 +65,9 @@ export interface TemplateData {
     approved?: boolean;
     docType?: string;
     feedback?: string | null;
+    // Offer
+    expiresAt?: string;
+    queuePosition?: number;
 }
 
 const baseStyles = `
@@ -692,6 +696,32 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 `, "Action Required", "Tick tock...")
             };
 
+        case "offer_expired": {
+            const jobTitle = escapeHtml(data.jobTitle || "Position");
+            const queuePosition = data.queuePosition ?? 0;
+            return {
+                subject: `Your job offer has expired — ${data.jobTitle || "Position"}`,
+                html: wrapModernTemplate(`
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Offer Expired", "The response window has closed.")}
+
+                    <p style="color: #1D1D1F; margin-bottom: 20px; text-align: center; font-size: 16px;">
+                        Hi ${firstName}, the offer for <strong>${jobTitle}</strong> has expired because it was not confirmed within 24 hours.
+                    </p>
+
+                    ${renderLightPanel("What Happens Now", `
+                        The position has been offered to the next worker in the queue.
+                        <br><br>
+                        <strong>Don't worry — you stay in the queue</strong> and will hear from us when the next matching opportunity appears.
+                        ${queuePosition > 0 ? `<br><br>Your current queue position: <strong>#${queuePosition}</strong>` : ""}
+                    `)}
+
+                    <p style="margin-top: 25px; color: #86868B; font-size: 15px; text-align: center;">
+                        Keep your profile and documents up to date so you are ready for the next opportunity.
+                    </p>
+                `, "Offer Expired", "Stay ready")
+            };
+        }
+
         case "refund_approved": {
             const amount = escapeHtml(data.amount || "$9");
             return {
@@ -1113,7 +1143,12 @@ export async function queueEmail(
                 case "announcement":
                     await wa.sendRoleAnnouncement(recipientPhone, templateData.title || "Announcement", templateData.message || "", recipientRole, templateData.actionLink, userId);
                     break;
-                // job_offer and offer_reminder are handled separately in notifications.ts
+                case "job_offer":
+                    if (enrichedTemplateData.jobTitle && enrichedTemplateData.companyName && enrichedTemplateData.country && enrichedTemplateData.offerLink) {
+                        const offerId = enrichedTemplateData.offerLink.split("/").pop() || "";
+                        await wa.sendJobOffer(recipientPhone, recipientName, enrichedTemplateData.jobTitle, enrichedTemplateData.companyName, enrichedTemplateData.country, offerId, userId);
+                    }
+                    break;
                 default:
                     break;
             }

@@ -67,12 +67,16 @@ export async function GET(request: Request) {
                             .eq("id", offer.worker_onboarding?.profile_id)
                             .single();
 
-                        await sendOfferExpiredNotification({
-                            workerEmail: workerProfile?.email || "",
-                            workerName: workerProfile?.full_name || "Worker",
-                            jobTitle: offer.job_requests?.title || "Position",
-                            queuePosition: offer.worker_onboarding?.queue_position || 0,
-                        });
+                        if (workerProfile?.email && offer.worker_onboarding?.profile_id) {
+                            await sendOfferExpiredNotification({
+                                supabase,
+                                workerUserId: offer.worker_onboarding.profile_id,
+                                workerEmail: workerProfile.email,
+                                workerName: workerProfile.full_name || "Worker",
+                                jobTitle: offer.job_requests?.title || "Position",
+                                queuePosition: offer.worker_onboarding?.queue_position || 0,
+                            });
+                        }
                     } catch (notifError) {
                         console.error("Failed to send expiry notification:", notifError);
                     }
@@ -227,11 +231,14 @@ async function shiftOfferToNextWorker(
         .single();
 
     // Send offer notification
-    if (profile) {
+    if (profile?.email && nextWorkerRecord.profile_id) {
         try {
             await sendOfferNotification({
+                supabase,
+                workerUserId: nextWorkerRecord.profile_id,
                 workerEmail: profile.email,
                 workerName: profile.full_name || "Worker",
+                workerPhone: nextWorkerRecord.phone || undefined,
                 jobTitle: jobRequest.title,
                 companyName: "Employer", // Would need employer join
                 country: jobRequest.destination_country,

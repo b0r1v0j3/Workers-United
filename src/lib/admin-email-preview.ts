@@ -10,6 +10,7 @@ export const ADMIN_EMAIL_PREVIEW_TYPES = [
     "checkout_recovery",
     "job_offer",
     "offer_reminder",
+    "offer_expired",
     "refund_approved",
     "document_expiring",
     "job_match",

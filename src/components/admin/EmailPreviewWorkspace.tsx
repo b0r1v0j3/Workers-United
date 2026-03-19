@@ -30,6 +30,11 @@ const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
         name: "Marko Petrović",
         offerLink: "https://workersunited.eu/profile/worker/offers/123",
     },
+    offer_expired: {
+        name: "Marko Petrović",
+        jobTitle: "Construction Worker",
+        queuePosition: 12,
+    },
     refund_approved: { name: "Marko Petrović", amount: "$9" },
     document_expiring: {
         name: "Marko Petrović",
@@ -96,6 +101,7 @@ const EMAIL_LABELS: Record<EmailType, string> = {
     checkout_recovery: "Checkout Recovery",
     job_offer: "Job Offer",
     offer_reminder: "Offer Reminder",
+    offer_expired: "Offer Expired",
     refund_approved: "Refund Approved",
     document_expiring: "Document Expiring",
     job_match: "Job Match",
@@ -133,6 +139,7 @@ const EMAIL_CATEGORY_BY_TYPE: Record<EmailType, EmailPreviewCategory> = {
     checkout_recovery: "payments",
     job_offer: "offers",
     offer_reminder: "offers",
+    offer_expired: "offers",
     refund_approved: "payments",
     document_expiring: "documents",
     job_match: "offers",
