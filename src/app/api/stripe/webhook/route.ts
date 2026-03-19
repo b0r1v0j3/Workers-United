@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logServerActivity } from "@/lib/activityLoggerServer";
-import { queueEmail } from "@/lib/email-templates";
 import { finalizeConfirmationFeeOffer } from "@/lib/offer-finalization";
-import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import {
     activateEntryFeeWorkerAfterPayment,
     getStripePaymentAmounts,
     persistCompletedStripeCheckoutPayment,
+    queueEntryFeePaymentSuccessEmail,
 } from "@/lib/stripe-payment-finalization";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -290,45 +289,20 @@ export async function POST(req: NextRequest) {
                 });
 
                 // Send payment confirmation email
-                if (targetProfileId) {
+                if (!targetProfileId) {
+                    await logServerActivity(activitySubjectId, "payment_success_email_skipped", "payment", {
+                        reason: "Agency-managed worker payment has no linked worker profile for worker-side payment_success template",
+                        target_worker_id: targetWorkerId,
+                    }, "warning");
+                } else {
                     try {
-                        const { data: existingPaymentEmail } = await supabase
-                            .from("email_queue")
-                            .select("id")
-                            .eq("user_id", targetProfileId)
-                            .eq("email_type", "payment_success")
-                            .in("status", ["pending", "sent"])
-                            .maybeSingle();
-
-                        if (existingPaymentEmail?.id) {
-                            return NextResponse.json({ received: true, message: "Payment already processed" });
-                        }
-
-                        const { data: profile } = await supabase
-                            .from("profiles")
-                            .select("full_name, email")
-                            .eq("id", targetProfileId)
-                            .single();
-
-                        const { data: workerRecord } = await loadCanonicalWorkerRecord(
-                            supabase,
+                        const emailResult = await queueEntryFeePaymentSuccessEmail({
+                            admin: supabase,
                             targetProfileId,
-                            "id, phone, updated_at"
-                        );
+                            sessionCustomerEmail: session.customer_email,
+                        });
 
-                        const recipientEmail = profile?.email || session.customer_email || "";
-                        if (recipientEmail) {
-                            await queueEmail(
-                                supabase,
-                                targetProfileId,
-                                "payment_success",
-                                recipientEmail,
-                                profile?.full_name || "Worker",
-                                { amount: "$9" },
-                                undefined,
-                                workerRecord?.phone || undefined
-                            );
-                        } else {
+                        if (emailResult.status === "missing_recipient") {
                             await logServerActivity(userId, "payment_success_email_skipped", "payment", {
                                 reason: "No recipient email found in session/customer/profile",
                             }, "warning");
@@ -337,11 +311,6 @@ export async function POST(req: NextRequest) {
                         console.error("Failed to send payment confirmation email:", emailErr);
                         // Don't fail the webhook for email errors
                     }
-                } else {
-                    await logServerActivity(activitySubjectId, "payment_success_email_skipped", "payment", {
-                        reason: "Agency-managed worker payment has no linked worker profile for worker-side payment_success template",
-                        target_worker_id: targetWorkerId,
-                    }, "warning");
                 }
             } else if (paymentType === "confirmation_fee" && offerId) {
                 if (!targetProfileId) {

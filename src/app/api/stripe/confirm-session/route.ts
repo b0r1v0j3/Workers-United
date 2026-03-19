@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { queueEmail } from "@/lib/email-templates";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { finalizeConfirmationFeeOffer } from "@/lib/offer-finalization";
-import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import {
     activateEntryFeeWorkerAfterPayment,
     getStripePaymentAmounts,
     persistCompletedStripeCheckoutPayment,
+    queueEntryFeePaymentSuccessEmail,
 } from "@/lib/stripe-payment-finalization";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -108,39 +107,11 @@ export async function POST(request: NextRequest) {
                 target_worker_id: targetWorkerId,
             });
 
-            // Send email fallback if webhook didn't send one yet
-            if (targetProfileId) {
-                const { data: existingPaymentEmail } = await admin
-                    .from("email_queue")
-                    .select("id")
-                    .eq("user_id", targetProfileId)
-                    .eq("email_type", "payment_success")
-                    .in("status", ["pending", "sent"])
-                    .maybeSingle();
-
-                if (!existingPaymentEmail?.id) {
-                    const [{ data: profile }, { data: workerRecord }] = await Promise.all([
-                        admin.from("profiles").select("full_name, email").eq("id", targetProfileId).maybeSingle(),
-                        loadCanonicalWorkerRecord(admin, targetProfileId, "id, phone, updated_at").then((result) => ({
-                            data: result.data,
-                        })),
-                    ]);
-
-                    const recipientEmail = profile?.email || session.customer_email || "";
-                    if (recipientEmail) {
-                        await queueEmail(
-                            admin,
-                            targetProfileId,
-                            "payment_success",
-                            recipientEmail,
-                            profile?.full_name || "Worker",
-                            { amount: "$9" },
-                            undefined,
-                            workerRecord?.phone || undefined
-                        );
-                    }
-                }
-            }
+            await queueEntryFeePaymentSuccessEmail({
+                admin,
+                targetProfileId,
+                sessionCustomerEmail: session.customer_email,
+            });
 
             return NextResponse.json({
                 state: "paid",
