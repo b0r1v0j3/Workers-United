@@ -34,6 +34,7 @@ import {
     loadWhatsAppBrainMemory,
     loadWhatsAppConversationHistory,
 } from "@/lib/whatsapp-conversation-helpers";
+import { handleWhatsAppAdminCommand } from "@/lib/whatsapp-admin-commands";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -400,79 +401,14 @@ export async function POST(request: NextRequest) {
                 // ─── Admin Commands (direct brain control via WhatsApp) ───
                 if (isAdmin) {
                     const adminClient = createAdminClient();
-                    const trimContent = content.trim();
+                    const adminCommandHandled = await handleWhatsAppAdminCommand({
+                        admin: adminClient,
+                        normalizedPhone,
+                        content,
+                        profileId: workerRecord?.profile_id,
+                    });
 
-                    // Admin correction: "ispravi: old fact -> new fact"
-                    if (trimContent.toLowerCase().startsWith("ispravi:")) {
-                        const correction = trimContent.substring(8).trim();
-                        const parts = correction.split("->");
-                        if (parts.length === 2) {
-                            const oldFact = parts[0].trim();
-                            const newFact = parts[1].trim();
-                            // Find and update matching memory
-                            const { data: matches } = await adminClient.from("brain_memory")
-                                .select("id, content")
-                                .ilike("content", `%${oldFact}%`)
-                                .limit(5);
-
-                            if (matches && matches.length > 0) {
-                                await adminClient.from("brain_memory")
-                                    .update({ content: newFact, confidence: 1.0 })
-                                    .eq("id", matches[0].id);
-                                await sendWhatsAppText(normalizedPhone, `✅ Ispravljeno!\n\nStaro: ${matches[0].content}\nNovo: ${newFact}\n\nConfidence: 1.0 (admin verified)`, workerRecord?.profile_id || undefined);
-                            } else {
-                                // No match found, add as new fact
-                                await saveBrainFactsDedup(adminClient, [
-                                    { category: "faq", content: newFact, confidence: 1.0 },
-                                ]);
-                                await sendWhatsAppText(normalizedPhone, `✅ Nisam našao staru činjenicu, dodao novu:\n${newFact}`, workerRecord?.profile_id || undefined);
-                            }
-                            return NextResponse.json({ status: "ok" });
-                        }
-                    }
-
-                    // Admin add: "zapamti: category | fact"
-                    if (trimContent.toLowerCase().startsWith("zapamti:")) {
-                        const factStr = trimContent.substring(8).trim();
-                        const pipeParts = factStr.split("|");
-                        const category = pipeParts.length > 1 ? pipeParts[0].trim() : "faq";
-                        const fact = pipeParts.length > 1 ? pipeParts.slice(1).join("|").trim() : factStr;
-                        await saveBrainFactsDedup(adminClient, [
-                            { category, content: fact, confidence: 1.0 },
-                        ]);
-                        await sendWhatsAppText(normalizedPhone, `🧠 Zapamćeno!\n[${category}] ${fact}\nConfidence: 1.0`, workerRecord?.profile_id || undefined);
-                        return NextResponse.json({ status: "ok" });
-                    }
-
-                    // Admin delete: "obrisi: fact text"
-                    if (trimContent.toLowerCase().startsWith("obrisi:") || trimContent.toLowerCase().startsWith("obriši:")) {
-                        const search = trimContent.substring(trimContent.indexOf(":") + 1).trim();
-                        const { data: matches } = await adminClient.from("brain_memory")
-                            .select("id, content, category")
-                            .ilike("content", `%${search}%`)
-                            .limit(5);
-
-                        if (matches && matches.length > 0) {
-                            await adminClient.from("brain_memory").delete().eq("id", matches[0].id);
-                            await sendWhatsAppText(normalizedPhone, `🗑️ Obrisano:\n[${matches[0].category}] ${matches[0].content}`, workerRecord?.profile_id || undefined);
-                        } else {
-                            await sendWhatsAppText(normalizedPhone, `❌ Nisam našao činjenicu sa: "${search}"`, workerRecord?.profile_id || undefined);
-                        }
-                        return NextResponse.json({ status: "ok" });
-                    }
-
-                    // Admin list: "memorija" — show all brain memory
-                    if (trimContent.toLowerCase() === "memorija" || trimContent.toLowerCase() === "memory") {
-                        const { data: allMemory } = await adminClient.from("brain_memory")
-                            .select("category, content, confidence")
-                            .order("confidence", { ascending: false });
-                        const list = (allMemory || []).map((m, i) =>
-                            `${i + 1}. [${m.category}] ${m.content} (${m.confidence})`
-                        ).join("\n");
-                        await sendWhatsAppText(normalizedPhone,
-                            `🧠 Brain Memory (${(allMemory || []).length} facts):\n\n${list || "(prazno)"}`,
-                            workerRecord?.profile_id || undefined
-                        );
+                    if (adminCommandHandled) {
                         return NextResponse.json({ status: "ok" });
                     }
                 }
