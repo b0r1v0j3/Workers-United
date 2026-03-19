@@ -41,6 +41,11 @@ export interface WhatsAppBrainMemoryEntry {
     confidence: number;
 }
 
+export interface WhatsAppLanguageHistoryEntry {
+    direction?: string | null;
+    content?: string | null;
+}
+
 const CANONICAL_REQUIRED_WORKER_DOCUMENTS = "passport, biometric photo, and a final school, university, or formal vocational diploma";
 
 export type WhatsAppLanguageCode = "en" | "sr" | "ar" | "fr" | "pt" | "hi";
@@ -49,14 +54,66 @@ const WHATSAPP_ONBOARDING_PATTERN = /fill.*profile.*whatsapp|complete.*profile.*
 const SERBIAN_LATIN_PATTERN = /\b(pozdrav|zdravo|cao|ćao|dobar dan|dobro vece|dobro veče|dobro jutro|hvala|molim|ocu|hoću|hocu|zelim|želim|treba mi|trebam|trazim|tražim|kako|kako da|kako radi|kako funkcionise|kako funkcioniše|sta|šta|zasto|zašto|gde|gdje|kad|imam|nemam|mogu li|moze li|može li|pomoc|pomoć|problem|sajt|nalog|broj|cekam|čekam|poruka|prijava|prijavim|registracija|posao|radnik|radnike|radim|koliko|kosta|košta|cena|cijena|dokumenti|dokumenta|pasos|pasoš|profil|status|red|odobren|uplata|platim|placanje|plaćanje|voza[cč]|gra[dđ]evin|skladi|magacin|spanij|nemack|nemačk|srpski|engleski|jezik|jezici)\b/i;
 const EMPLOYER_LEAD_PATTERN = /\b(employer|company|business|firm|hire|hiring|recruit(ing|er)?|need workers|looking for workers|we need workers|we are hiring|poslodavac|firma|kompanija|zapo[sš]ljavamo|treba(?:ju)? nam radnici|tra[zž]imo radnike)\b/i;
 const WORKER_LEAD_PATTERN = /\b(worker|job|work abroad|looking for a job|looking for work|need a job|i want a job|radnik|posao|tra[zž]im posao|ocu posao|ho[ćc]u posao|[zž]elim posao|radim kao|imam iskustva)\b/i;
-const GREETING_ONLY_PATTERN = /^\s*(hi|hello|hey|good morning|good afternoon|good evening|pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče|selam|salam|bonjour|salut|ola|olá|namaste)\s*[.!?]*\s*$/i;
-const WARM_GREETING_PATTERN = /^\s*(?:(?:hi|hello|hey|good morning|good afternoon|good evening|pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče|selam|salam|bonjour|salut|ola|olá|namaste)(?:\s+(?:how are you(?: today| doing)?|how is your day|kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|ca va|ça va|como vai))?|(?:how are you(?: today| doing)?|how is your day|kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|ca va|ça va|como vai))\s*[.!?]*\s*$/i;
 const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|koliko|kosta|košta|cena|cijena|platim|platiti|uplata|placanje|plaćanje)\b/i;
 const DOCUMENT_HINT_PATTERN = /\b(document|documents|passport|diploma|photo|upload|verification|dokumenti|dokumenta|pasos|pasoš|diploma|slika|fotografija|upload|verifikacija)\b/i;
 const STATUS_HINT_PATTERN = /\b(status|profile|approval|approved|queue|support|profil|odobren|odobreno|red|podrska|podrška)\b/i;
 const JOB_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|ocu posao|ho[ćc]u posao|tra[zž]im posao|looking for work|looking for a job)\b/i;
 const SPECIFIC_AVAILABILITY_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|open job|open position|what jobs|which jobs|koji poslovi|lista poslova|available workers list)\b/i;
 const PROCESS_HINT_PATTERN = /\b(how does it work|how it works|process|steps|next step|how do i start|kako radi|kako funkcioni[sš]e|kako ide|koji su koraci|sledeci korak|sledeći korak|kako da krenem)\b/i;
+const SERBIAN_WARM_GREETING_PATTERN = /^\s*(?:(?:pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče)(?:\s+(?:kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|jel si dobro|jesi dobro|jesi li dobro|dobro si))?|(?:kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|jel si dobro|jesi dobro|jesi li dobro|dobro si))\s*[.!?]*\s*$/i;
+const FRENCH_LANGUAGE_PATTERN = /\b(bonjour|salut|bonsoir|merci|emploi|travail|profil|documents?|passeport|paiement|ça va|ca va|comment ça va|comment ca va|comment vas[\s-]*tu|comment allez[\s-]*vous)\b/i;
+const PORTUGUESE_LANGUAGE_PATTERN = /\b(olá|ola|bom dia|boa tarde|boa noite|obrigad[oa]|emprego|trabalho|perfil|documentos?|passaporte|pagamento|tudo bem|como vai|como voce est[aá]|como você est[aá]|como estás)\b/i;
+const HINDI_LATIN_PATTERN = /\b(namaste|namaskar|kaise ho|kaisi ho|aap kaise ho|aap kaise hain|kya haal hai|sab thik|sab theek|naukri|kaam chahiye)\b/i;
+const ARABIC_LATIN_PATTERN = /\b(salam|selam|marhaba|ahlan|kifak|keefak|kifik|keefik|kayf halak|kayf halik|shlonak|shlonik)\b/i;
+const SHORT_ENGLISH_GREETING_PATTERN = /^\s*(?:(?:hi|hello|hey|good morning|good afternoon|good evening)(?:\s+(?:how are you(?: today| doing)?|how is your day|are you okay|you okay|you good))?|(?:how are you(?: today| doing)?|how is your day|are you okay|you okay|you good))\s*[.!?]*\s*$/i;
+const SHORT_FRENCH_GREETING_PATTERN = /^\s*(?:(?:bonjour|salut|bonsoir)(?:\s+(?:ça va|ca va|comment ça va|comment ca va|comment vas[\s-]*tu|comment allez[\s-]*vous))?|(?:ça va|ca va|comment ça va|comment ca va|comment vas[\s-]*tu|comment allez[\s-]*vous))\s*[.!?]*\s*$/i;
+const SHORT_PORTUGUESE_GREETING_PATTERN = /^\s*(?:(?:olá|ola|bom dia|boa tarde|boa noite)(?:\s+(?:tudo bem|como vai|como voce est[aá]|como você est[aá]|como estás))?|(?:tudo bem|como vai|como voce est[aá]|como você est[aá]|como estás))\s*[.!?]*\s*$/i;
+const SHORT_HINDI_GREETING_PATTERN = /^\s*(?:(?:namaste|namaskar|नमस्ते|नमस्कार|हाय|हेलो)(?:\s+(?:कैसे हो|कैसी हो|आप कैसे हो|क्या हाल है|kaise ho|kaisi ho|aap kaise ho|kya haal hai|sab thik|sab theek))?|(?:कैसे हो|कैसी हो|आप कैसे हो|क्या हाल है|kaise ho|kaisi ho|aap kaise ho|kya haal hai|sab thik|sab theek))\s*[.!?]*\s*$/i;
+const SHORT_ARABIC_GREETING_PATTERN = /^\s*(?:(?:مرحبا|أهلا|اهلا|السلام عليكم|سلام|salam|selam|marhaba)(?:\s+(?:كيفك|كيف حالك|كيف الحال|شلونك|kifak|keefak|kifik|keefik|kayf halak|kayf halik|shlonak|shlonik))?|(?:كيفك|كيف حالك|كيف الحال|شلونك|kifak|keefak|kifik|keefik|kayf halak|kayf halik|shlonak|shlonik))\s*[.!?]*\s*$/i;
+
+const GREETING_ONLY_PATTERNS: Record<WhatsAppLanguageCode, readonly RegExp[]> = {
+    en: [/^\s*(?:hi|hello|hey|good morning|good afternoon|good evening)\s*[.!?]*\s*$/i],
+    sr: [/^\s*(?:pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče)\s*[.!?]*\s*$/i],
+    ar: [/^\s*(?:مرحبا|أهلا|اهلا|السلام عليكم|سلام|salam|selam|marhaba)\s*[.!?؟]*\s*$/i],
+    fr: [/^\s*(?:bonjour|salut|bonsoir)\s*[.!?]*\s*$/i],
+    pt: [/^\s*(?:olá|ola|bom dia|boa tarde|boa noite)\s*[.!?]*\s*$/i],
+    hi: [/^\s*(?:नमस्ते|नमस्कार|हाय|हेलो|namaste|namaskar)\s*[.!?]*\s*$/i],
+};
+
+const WARM_GREETING_PATTERNS: Record<WhatsAppLanguageCode, readonly RegExp[]> = {
+    en: [SHORT_ENGLISH_GREETING_PATTERN],
+    sr: [SERBIAN_WARM_GREETING_PATTERN],
+    ar: [SHORT_ARABIC_GREETING_PATTERN],
+    fr: [SHORT_FRENCH_GREETING_PATTERN],
+    pt: [SHORT_PORTUGUESE_GREETING_PATTERN],
+    hi: [SHORT_HINDI_GREETING_PATTERN],
+};
+
+const NON_ENGLISH_LANGUAGE_PATTERNS: Record<Exclude<WhatsAppLanguageCode, "en">, readonly RegExp[]> = {
+    sr: [
+        SERBIAN_LATIN_PATTERN,
+        SERBIAN_WARM_GREETING_PATTERN,
+        /^\s*(?:jel si dobro|jesi dobro|jesi li dobro|dobro si)\s*[.!?]*\s*$/i,
+    ],
+    ar: [
+        /[\u0600-\u06FF]/,
+        SHORT_ARABIC_GREETING_PATTERN,
+        ARABIC_LATIN_PATTERN,
+    ],
+    fr: [
+        SHORT_FRENCH_GREETING_PATTERN,
+        FRENCH_LANGUAGE_PATTERN,
+    ],
+    pt: [
+        SHORT_PORTUGUESE_GREETING_PATTERN,
+        PORTUGUESE_LANGUAGE_PATTERN,
+    ],
+    hi: [
+        /[\u0900-\u097F]/,
+        SHORT_HINDI_GREETING_PATTERN,
+        HINDI_LATIN_PATTERN,
+    ],
+};
 
 const SAFE_BRAIN_LEARNING_CATEGORIES = new Set([
     "common_question",
@@ -76,6 +133,40 @@ const RISKY_BRAIN_LEARNING_PATTERNS = [
 
 function normalizeBrainLearningContent(content: string): string {
     return content.trim().replace(/\s+/g, " ");
+}
+
+function matchesAnyPattern(value: string, patterns: readonly RegExp[]): boolean {
+    return patterns.some((pattern) => pattern.test(value));
+}
+
+function getMostRecentNonEnglishHistoryLanguageCode(
+    historyMessages: WhatsAppLanguageHistoryEntry[] = []
+): Exclude<WhatsAppLanguageCode, "en"> | null {
+    for (let index = historyMessages.length - 1; index >= 0; index -= 1) {
+        const entry = historyMessages[index];
+        if (entry?.direction !== "inbound" || !entry.content?.trim()) {
+            continue;
+        }
+
+        const detected = detectWhatsAppLanguageCode(entry.content);
+        if (detected !== "en") {
+            return detected;
+        }
+    }
+
+    return null;
+}
+
+function shouldPreferWhatsAppHistoryLanguage(message: string): boolean {
+    const trimmed = message.trim();
+    if (!trimmed) {
+        return false;
+    }
+
+    const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+    return wordCount <= 4
+        || looksLikeGreetingOnlyWhatsAppMessage(trimmed)
+        || looksLikeWarmGreetingWhatsAppMessage(trimmed);
 }
 
 function getLanguageName(code: WhatsAppLanguageCode): string {
@@ -116,26 +207,49 @@ export function detectWhatsAppLanguageCode(message: string): WhatsAppLanguageCod
 
     if (/[\u0600-\u06FF]/.test(message)) return "ar";
     if (/[\u0900-\u097F]/.test(message)) return "hi";
-    if (/\b(bonjour|salut|emploi|travail|merci|oui|non)\b/i.test(normalized)) return "fr";
-    if (/\b(olá|ola|emprego|trabalho|obrigado|sim|não|nao)\b/i.test(normalized)) return "pt";
-    if (/[\u0400-\u04FF]/.test(message) || /[čćžšđ]/i.test(message) || SERBIAN_LATIN_PATTERN.test(normalized)) return "sr";
+    if (/[\u0400-\u04FF]/.test(message) || /[čćžšđ]/i.test(message)) return "sr";
+
+    if (matchesAnyPattern(normalized, NON_ENGLISH_LANGUAGE_PATTERNS.sr)) return "sr";
+    if (matchesAnyPattern(normalized, NON_ENGLISH_LANGUAGE_PATTERNS.fr)) return "fr";
+    if (matchesAnyPattern(normalized, NON_ENGLISH_LANGUAGE_PATTERNS.pt)) return "pt";
+    if (matchesAnyPattern(normalized, NON_ENGLISH_LANGUAGE_PATTERNS.hi)) return "hi";
+    if (matchesAnyPattern(normalized, NON_ENGLISH_LANGUAGE_PATTERNS.ar)) return "ar";
 
     return "en";
 }
 
-export function resolveWhatsAppLanguageName(message: string, detectedLanguage?: string | null): string {
+export function resolveWhatsAppLanguageCode(
+    message: string,
+    detectedLanguage?: string | null,
+    historyMessages: WhatsAppLanguageHistoryEntry[] = []
+): WhatsAppLanguageCode {
     const quickCode = detectWhatsAppLanguageCode(message);
     const detectedCode = getLanguageCodeFromLabel(detectedLanguage);
 
-    if (!detectedCode) {
-        return getLanguageName(quickCode);
+    if (quickCode !== "en") {
+        return quickCode;
     }
 
-    if (quickCode !== "en" && detectedCode !== quickCode) {
-        return getLanguageName(quickCode);
+    if (detectedCode && detectedCode !== "en") {
+        return detectedCode;
     }
 
-    return getLanguageName(detectedCode);
+    if (shouldPreferWhatsAppHistoryLanguage(message)) {
+        const historyCode = getMostRecentNonEnglishHistoryLanguageCode(historyMessages);
+        if (historyCode) {
+            return historyCode;
+        }
+    }
+
+    return detectedCode || "en";
+}
+
+export function resolveWhatsAppLanguageName(
+    message: string,
+    detectedLanguage?: string | null,
+    historyMessages: WhatsAppLanguageHistoryEntry[] = []
+): string {
+    return getLanguageName(resolveWhatsAppLanguageCode(message, detectedLanguage, historyMessages));
 }
 
 export function replyMatchesExpectedWhatsAppLanguage(expectedLanguage: string, responseText: string): boolean {
@@ -157,11 +271,13 @@ export function looksLikeWorkerWhatsAppLead(message: string): boolean {
 }
 
 export function looksLikeGreetingOnlyWhatsAppMessage(message: string): boolean {
-    return GREETING_ONLY_PATTERN.test(message.trim());
+    const normalized = message.trim();
+    return Object.values(GREETING_ONLY_PATTERNS).some((patterns) => matchesAnyPattern(normalized, patterns));
 }
 
 export function looksLikeWarmGreetingWhatsAppMessage(message: string): boolean {
-    return WARM_GREETING_PATTERN.test(message.trim());
+    const normalized = message.trim();
+    return Object.values(WARM_GREETING_PATTERNS).some((patterns) => matchesAnyPattern(normalized, patterns));
 }
 
 export function buildUnregisteredWorkerWhatsAppReply({
@@ -182,7 +298,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
     isFirstContact?: boolean;
 }): string | null {
     const normalized = message.trim().toLowerCase();
-    const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(message);
+    const lang = resolveWhatsAppLanguageCode(message, language);
     const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
     const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
@@ -346,7 +462,7 @@ export function buildRegisteredWorkerWhatsAppReply({
     supportEmail = "contact@workersunited.eu",
 }: RegisteredWorkerWhatsAppReplyOptions): string | null {
     const normalized = message.trim().toLowerCase();
-    const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(message);
+    const lang = resolveWhatsAppLanguageCode(message, language);
     const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
     const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);

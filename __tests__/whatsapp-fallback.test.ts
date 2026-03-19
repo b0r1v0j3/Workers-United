@@ -71,4 +71,22 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("Workers United AI asistent");
         expect(reply).not.toContain("Create your account");
     });
+
+    it("keeps short warm greetings in French instead of falling back to English", async () => {
+        const reply = await getWhatsAppFallbackResponse("Comment ça va", null, {
+            full_name: "Ali Worker",
+        });
+
+        expect(reply).toContain("Je suis l’assistant IA");
+        expect(reply).not.toContain("Create your account");
+    });
+
+    it("keeps transliterated Hindi warm greetings in Hindi fallback copy", async () => {
+        const reply = await getWhatsAppFallbackResponse("kaise ho", null, {
+            full_name: "Ali Worker",
+        });
+
+        expect(reply).toContain("Workers United का AI assistant");
+        expect(reply).not.toContain("Create your account");
+    });
 });
