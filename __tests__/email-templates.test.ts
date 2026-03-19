@@ -92,6 +92,27 @@ describe('getEmailTemplate', () => {
         expect(html).toContain('$9');
     });
 
+    it('payment_success uses the premium monochrome queue layout', () => {
+        const { html } = getEmailTemplate('payment_success', {
+            name: 'Nikola',
+            amount: '$9',
+        });
+        expect(html).toContain('What Happens Next');
+        expect(html).toContain('Current Status');
+        expect(html).not.toContain('rocket.png');
+    });
+
+    it('checkout_recovery uses the premium monochrome activation layout', () => {
+        const { html } = getEmailTemplate('checkout_recovery', {
+            name: 'Nikola',
+            amount: '$9',
+            recoveryStep: 2,
+        });
+        expect(html).toContain('What You Need To Know');
+        expect(html).toContain('Job Finder activation');
+        expect(html).not.toContain('bank-card-back-side.png');
+    });
+
     it('document_review_result approved email uses the monochrome approved layout', () => {
         const { html, subject } = getEmailTemplate('document_review_result', {
             name: 'Nikola',
@@ -103,6 +124,23 @@ describe('getEmailTemplate', () => {
         expect(html).toContain('What Happens Next');
         expect(html).not.toContain('#d1fae5');
         expect(html).not.toContain('Continue Registration');
+    });
+
+    it('profile_incomplete uses the premium monochrome reminder layout', () => {
+        const { html } = getEmailTemplate('profile_incomplete', {
+            name: 'Nikola',
+            missingFields: 'Phone number, passport upload',
+        });
+        expect(html).toContain('Why This Matters');
+        expect(html).not.toContain('edit-property.png');
+    });
+
+    it('announcement_document_fix uses the updated monochrome system-fix layout', () => {
+        const { html } = getEmailTemplate('announcement_document_fix', {
+            name: 'Nikola',
+        });
+        expect(html).toContain('Next Step');
+        expect(html).not.toContain('settings.png');
     });
 
     it('employer profile_reminder uses employer-specific text', () => {
