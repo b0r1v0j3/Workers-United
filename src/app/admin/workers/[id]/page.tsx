@@ -27,6 +27,7 @@ import { syncWorkerReviewStatus } from "@/lib/worker-review";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { getAgencyWorkerEmail } from "@/lib/agencies";
 import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
+import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -316,6 +317,10 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         submitted_email: workerRecord?.submitted_email,
         profiles: workerProfile ? [workerProfile] : null,
     }) || authUser?.email || null;
+    const approvalEmailPreviewHref = buildAdminEmailPreviewHref("admin_update", {
+        name: displayName,
+        ...buildWorkerPaymentUnlockedEmailData(),
+    });
     const workerNameFallback = workerProfile?.full_name || authUser?.user_metadata?.full_name || workerRecord?.submitted_full_name || null;
     const workerStatus = workerRecord?.status || "NEW";
     const approvalState = workerRecord?.admin_approved ? "Approved" : "Pending";
@@ -617,6 +622,17 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                     updated_at: new Date().toISOString()
                 })
                 .eq("id", workerRecord.id);
+
+            if (displayEmail && notificationUserId) {
+                await queueEmail(
+                    adminClient,
+                    notificationUserId,
+                    "admin_update",
+                    displayEmail,
+                    displayName,
+                    buildWorkerPaymentUnlockedEmailData()
+                );
+            }
         } else {
             await adminClient
                 .from("worker_onboarding")
@@ -989,6 +1005,13 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                 This button unlocks after the worker reaches 100% completion.
                                             </p>
                                         ) : null}
+                                        <Link
+                                            href={approvalEmailPreviewHref}
+                                            className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-[#2563eb] transition hover:text-[#1d4ed8]"
+                                        >
+                                            <Mail size={14} />
+                                            Preview unlock email
+                                        </Link>
                                     </div>
 
                                     <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5">

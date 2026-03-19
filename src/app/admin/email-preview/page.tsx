@@ -9,10 +9,12 @@ import {
     parseAdminEmailPreviewData,
     type EmailPreviewData,
 } from "@/lib/admin-email-preview";
+import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
 
 // ─── Mock data for each email template ──────────────────────────
 
 const DEFAULT_EMAIL_TYPE: EmailType = "welcome";
+const paymentUnlockedPreview = buildWorkerPaymentUnlockedEmailData();
 
 const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
     welcome: { name: "Marko Petrović" },
@@ -46,9 +48,11 @@ const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
     },
     admin_update: {
         name: "Marko Petrović",
-        subject: "Your document has been verified",
-        title: "Passport Verified",
-        message: "Your passport has been reviewed and verified by our team. You can now proceed to the next step.",
+        subject: paymentUnlockedPreview.subject || "Job Finder Is Now Unlocked",
+        title: paymentUnlockedPreview.title || "Profile Approved",
+        message: paymentUnlockedPreview.message || "Your profile has been approved by our team.",
+        actionText: paymentUnlockedPreview.actionText || "Open Job Finder",
+        actionLink: paymentUnlockedPreview.actionLink || "https://workersunited.eu/profile/worker",
     },
     announcement: {
         name: "Marko Petrović",

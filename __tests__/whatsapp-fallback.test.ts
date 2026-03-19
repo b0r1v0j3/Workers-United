@@ -62,4 +62,13 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("formal vocational diploma");
         expect(reply).toContain("not linked to the profile automatically");
     });
+
+    it("keeps warm greetings human for unregistered users", async () => {
+        const reply = await getWhatsAppFallbackResponse("zdravo kako si danas", null, {
+            full_name: "Ali Worker",
+        });
+
+        expect(reply).toContain("Workers United AI asistent");
+        expect(reply).not.toContain("Create your account");
+    });
 });

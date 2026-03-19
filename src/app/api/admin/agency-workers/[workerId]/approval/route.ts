@@ -6,6 +6,9 @@ import { isGodModeUser } from "@/lib/godmode";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { syncWorkerReviewStatus } from "@/lib/worker-review";
+import { queueEmail } from "@/lib/email-templates";
+import { getAgencyWorkerEmail } from "@/lib/agencies";
+import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
 
 interface RouteContext {
     params: Promise<{ workerId: string }>;
@@ -42,6 +45,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                 id,
                 agency_id,
                 profile_id,
+                submitted_email,
                 application_data,
                 submitted_full_name,
                 status,
@@ -109,6 +113,30 @@ export async function POST(request: NextRequest, context: RouteContext) {
         if (updateError) {
             console.error("[AdminAgencyWorkerApproval] Update failed:", updateError);
             return NextResponse.json({ error: "Failed to update approval state" }, { status: 500 });
+        }
+
+        if (approved && worker.profile_id) {
+            const { data: profileData } = await admin
+                .from("profiles")
+                .select("full_name, email")
+                .eq("id", worker.profile_id)
+                .maybeSingle();
+
+            const notificationEmail = getAgencyWorkerEmail({
+                submitted_email: worker.submitted_email ?? null,
+                profiles: profileData ? [profileData] : null,
+            });
+
+            if (notificationEmail) {
+                await queueEmail(
+                    admin,
+                    worker.profile_id,
+                    "admin_update",
+                    notificationEmail,
+                    profileData?.full_name || worker.submitted_full_name || "there",
+                    buildWorkerPaymentUnlockedEmailData()
+                );
+            }
         }
 
         return NextResponse.json({

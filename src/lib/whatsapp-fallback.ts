@@ -1,4 +1,4 @@
-import { detectWhatsAppLanguageCode } from "@/lib/whatsapp-brain";
+import { detectWhatsAppLanguageCode, looksLikeWarmGreetingWhatsAppMessage } from "@/lib/whatsapp-brain";
 import { isWorkerPaymentUnlocked } from "@/lib/whatsapp-reply-guardrails";
 import { getPlatformConfig } from "@/lib/platform-config";
 
@@ -56,6 +56,7 @@ export async function getWhatsAppFallbackResponse(
 
     const greeting = greetings[fallbackLang] || greetings.en;
     const startMessage = startMessages[fallbackLang] || startMessages.en;
+    const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
 
     if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر")) {
         if (!workerRecord) {
@@ -85,8 +86,22 @@ export async function getWhatsAppFallbackResponse(
         return `Hi ${name}! Job Finder is ready to activate. Open your dashboard at ${website}/profile/worker and start the secure checkout there for ${entryFee}. If we do not find you a job within 90 days, the full amount is refunded.`;
     }
 
+    if (!workerRecord && isWarmGreeting) {
+        if (fallbackLang === "sr") return `Zdravo ${name}! Ja sam Workers United AI asistent. Mogu da pomognem oko posla, dokumenata, statusa profila ili sledećeg koraka. Samo mi napišite šta vas zanima.`;
+        if (fallbackLang === "ne") return `नमस्ते ${name}! म Workers United AI assistant हुँ। म job, documents, profile status, वा next step बारे मद्दत गर्न सक्छु। के चाहिएको हो मलाई लेख्नुहोस्।`;
+        if (fallbackLang === "ar") return `مرحباً ${name}! أنا مساعد الذكاء الاصطناعي من Workers United. يمكنني المساعدة بخصوص الوظائف أو المستندات أو حالة الملف أو الخطوة التالية. فقط اكتب لي ما الذي تريد معرفته.`;
+        return `Hello ${name}! I’m the Workers United AI assistant. I can help with jobs, documents, profile status, or the next step. Just tell me what you want to check.`;
+    }
+
     if (!workerRecord) {
         return `${greeting} ${startMessage}`;
+    }
+
+    if (isWarmGreeting) {
+        if (fallbackLang === "sr") return `Zdravo ${name}! Ja sam Workers United AI asistent. Mogu da pomognem oko vašeg statusa, dokumenata, uplate ili sledećeg koraka. Samo napišite šta želite da proverimo.`;
+        if (fallbackLang === "ne") return `नमस्ते ${name}! म Workers United AI assistant हुँ। म तपाईंको status, documents, payment, वा next step मा मद्दत गर्न सक्छु। के check गर्न चाहनुहुन्छ लेख्नुहोस्।`;
+        if (fallbackLang === "ar") return `مرحباً ${name}! أنا مساعد الذكاء الاصطناعي من Workers United. يمكنني مساعدتك بخصوص حالتك أو المستندات أو الدفع أو الخطوة التالية. فقط اكتب لي ما الذي تريد التحقق منه.`;
+        return `Hello ${name}! I’m the Workers United AI assistant. I can help with your status, documents, payment, or next step. Just tell me what you want to check.`;
     }
 
     if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil") || msg.includes("स्थिति") || msg.includes("حالة")) {
