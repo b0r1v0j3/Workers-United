@@ -98,8 +98,29 @@ describe("whatsapp-brain guards", () => {
         expect(detectWhatsAppLanguageCode("Ocu posao")).toBe("sr");
         expect(detectWhatsAppLanguageCode("Treba mi posao")).toBe("sr");
         expect(detectWhatsAppLanguageCode("Kako da se prijavim")).toBe("sr");
+        expect(detectWhatsAppLanguageCode("Jel si dobro")).toBe("sr");
         expect(resolveWhatsAppLanguageName("Pozdrav", "English")).toBe("Serbian");
         expect(resolveWhatsAppLanguageName("Treba mi posao", "English")).toBe("Serbian");
+    });
+
+    it("detects short warm greetings across supported languages", () => {
+        expect(detectWhatsAppLanguageCode("Comment ça va")).toBe("fr");
+        expect(detectWhatsAppLanguageCode("Tudo bem")).toBe("pt");
+        expect(detectWhatsAppLanguageCode("kaise ho")).toBe("hi");
+        expect(detectWhatsAppLanguageCode("كيفك")).toBe("ar");
+    });
+
+    it("keeps the recent conversation language for short ambiguous follow-ups", () => {
+        expect(
+            resolveWhatsAppLanguageName(
+                "ok",
+                "English",
+                [
+                    { direction: "inbound", content: "Bonjour, ça va ?" },
+                    { direction: "outbound", content: "Bonjour ! Je suis l’assistant IA de Workers United." },
+                ]
+            )
+        ).toBe("French");
     });
 
     it("rejects English replies when the latest user message is Serbian", () => {
@@ -122,6 +143,11 @@ describe("whatsapp-brain guards", () => {
     it("recognizes warmer greeting small-talk openers", () => {
         expect(looksLikeWarmGreetingWhatsAppMessage("Zdravo kako si danas")).toBe(true);
         expect(looksLikeWarmGreetingWhatsAppMessage("Hello how are you today?")).toBe(true);
+        expect(looksLikeWarmGreetingWhatsAppMessage("Jel si dobro")).toBe(true);
+        expect(looksLikeWarmGreetingWhatsAppMessage("Comment ça va")).toBe(true);
+        expect(looksLikeWarmGreetingWhatsAppMessage("Tudo bem")).toBe(true);
+        expect(looksLikeWarmGreetingWhatsAppMessage("kaise ho")).toBe(true);
+        expect(looksLikeWarmGreetingWhatsAppMessage("كيفك")).toBe(true);
         expect(looksLikeWarmGreetingWhatsAppMessage("Kako radi uplata?")).toBe(false);
     });
 

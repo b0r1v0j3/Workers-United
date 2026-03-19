@@ -124,4 +124,10 @@ describe("whatsapp-employer-flow", () => {
         expect(getEmployerWhatsAppErrorReply("en")).toContain("contact@workersunited.eu");
         expect(getEmployerWhatsAppStaticReply("en")).toContain("Register at workersunited.eu/signup");
     });
+
+    it("supports multilingual employer fallback copy", () => {
+        expect(getEmployerWhatsAppDefaultReply("French")).toContain("entreprises");
+        expect(getEmployerWhatsAppErrorReply("Arabic")).toContain("contact@workersunited.eu");
+        expect(getEmployerWhatsAppStaticReply("Hindi")).toContain("workersunited.eu/signup");
+    });
 });

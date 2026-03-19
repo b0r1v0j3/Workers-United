@@ -303,6 +303,7 @@ export async function POST(request: NextRequest) {
                                 loadWhatsAppConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
                                 loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT),
                             ]);
+                            const employerLanguage = resolveWhatsAppLanguageName(content, null, empHistory);
                             const employerReply = await generateEmployerWhatsAppReply({
                                 callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY_EMP, options),
                                 model: WHATSAPP_RESPONSE_MODEL,
@@ -311,19 +312,19 @@ export async function POST(request: NextRequest) {
                                 employerRecord,
                                 historyMessages: empHistory,
                                 brainMemory: empBrainMemory,
-                                language: quickLang,
+                                language: employerLanguage,
                             });
-                            const finalEmployerReply = employerReply || getEmployerWhatsAppDefaultReply(quickLang);
+                            const finalEmployerReply = employerReply || getEmployerWhatsAppDefaultReply(employerLanguage);
                             await sendWhatsAppText(normalizedPhone, finalEmployerReply, undefined);
                             return NextResponse.json({ status: "ok" }); // Always return — never fall through to worker flow
                         } catch (empErr) {
                             console.error("[WhatsApp] Employer AI error:", empErr);
-                            const fallbackEmployer = getEmployerWhatsAppErrorReply(quickLang);
+                            const fallbackEmployer = getEmployerWhatsAppErrorReply(resolveWhatsAppLanguageName(content));
                             await sendWhatsAppText(normalizedPhone, fallbackEmployer, undefined);
                             return NextResponse.json({ status: "ok" });
                         }
                     }
-                    const staticEmployer = getEmployerWhatsAppStaticReply(quickLang);
+                    const staticEmployer = getEmployerWhatsAppStaticReply(resolveWhatsAppLanguageName(content));
                     await sendWhatsAppText(normalizedPhone, staticEmployer, undefined);
                     return NextResponse.json({ status: "ok" });
                 }
@@ -375,7 +376,7 @@ export async function POST(request: NextRequest) {
                             profile,
                             historyMessages,
                         });
-                        routerDecision.language = latestMessageLanguage;
+                        routerDecision.language = resolveWhatsAppLanguageName(content, routerDecision.language, historyMessages);
 
                         await logServerActivity(
                             workerRecord?.profile_id || "anonymous",
@@ -514,14 +515,20 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Send reply via Vercel (using our existing WhatsApp token)
+                const effectiveReplyLanguage = routerDecision?.language || latestMessageLanguage;
                 const guardrailResult = applyWhatsAppReplyGuardrails({
                     responseText: cleanResponse,
-                    language: routerDecision?.language || latestMessageLanguage,
+                    language: effectiveReplyLanguage,
                     workerRecord,
                 });
-                const replyText = guardrailResult.text || await getWhatsAppFallbackResponse(content, workerRecord, profile);
-                const finalReplyText = replyText && !replyMatchesExpectedWhatsAppLanguage(latestMessageLanguage, replyText)
-                    ? await getWhatsAppFallbackResponse(content, workerRecord, profile)
+                const replyText = guardrailResult.text || await getWhatsAppFallbackResponse(
+                    content,
+                    workerRecord,
+                    profile,
+                    effectiveReplyLanguage
+                );
+                const finalReplyText = replyText && !replyMatchesExpectedWhatsAppLanguage(effectiveReplyLanguage, replyText)
+                    ? await getWhatsAppFallbackResponse(content, workerRecord, profile, effectiveReplyLanguage)
                     : replyText;
 
                 if (finalReplyText) {
@@ -532,7 +539,7 @@ export async function POST(request: NextRequest) {
                                 phone: normalizedPhone,
                                 userMessage: content,
                                 botResponse: finalReplyText,
-                                language: routerDecision?.language || latestMessageLanguage,
+                                language: effectiveReplyLanguage,
                                 intent: routerDecision?.intent || "general",
                                 flowKey: deterministicReplyFlowKey || "deterministic",
                                 responseType,
@@ -551,7 +558,7 @@ export async function POST(request: NextRequest) {
                                         : "fallback",
                                     model: aiResponse ? WHATSAPP_RESPONSE_MODEL : "fallback",
                                     guardrail_reason: guardrailResult.reason,
-                                    expected_language: latestMessageLanguage,
+                                    expected_language: effectiveReplyLanguage,
                                     language_forced_to_fallback: finalReplyText !== replyText,
                                 }
                             );
