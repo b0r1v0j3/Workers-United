@@ -57,19 +57,6 @@ export async function getWhatsAppFallbackResponse(
     const greeting = greetings[fallbackLang] || greetings.en;
     const startMessage = startMessages[fallbackLang] || startMessages.en;
 
-    if (!workerRecord) {
-        return `${greeting} ${startMessage}`;
-    }
-
-    if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil") || msg.includes("स्थिति") || msg.includes("حالة")) {
-        const statusInfo = workerRecord.status === "REGISTERED" ? "registered ✅" : workerRecord.status;
-        const queueInfo = workerRecord.queue_position ? ` Queue position: #${workerRecord.queue_position}.` : "";
-        if (fallbackLang === "sr") return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${website}/profile/worker.`;
-        if (fallbackLang === "ne") return `नमस्ते ${name}! तपाईंको स्थिति: ${statusInfo}.${queueInfo} विवरण ${website}/profile/worker मा हेर्नुहोस्।`;
-        if (fallbackLang === "ar") return `مرحباً ${name}! حالتك: ${statusInfo}.${queueInfo} يمكنك رؤية التفاصيل على ${website}/profile/worker.`;
-        return `Hi ${name}! Your status is: ${statusInfo}.${queueInfo} You can see full details at ${website}/profile/worker.`;
-    }
-
     if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر")) {
         if (!workerRecord) {
             if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder košta ${entryFee}, ali uplata se ne otključava odmah. Prvo napravite profil na ${website}/signup, popunite ga do kraja i sačekajte admin odobrenje; tek tada se otvara checkout. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
@@ -96,6 +83,19 @@ export async function getWhatsAppFallbackResponse(
         if (fallbackLang === "ne") return `नमस्ते ${name}! Job Finder अब activate गर्न तयार छ। ${website}/profile/worker ड्यासबोर्ड खोल्नुहोस् र त्यहाँबाट ${entryFee} को सुरक्षित checkout सुरु गर्नुहोस्। ९० दिनभित्र काम नपाए पूरा फिर्ता हुन्छ।`;
         if (fallbackLang === "ar") return `مرحباً ${name}! أصبح Job Finder جاهزًا للتفعيل. افتح لوحة التحكم على ${website}/profile/worker وابدأ الدفع الآمن من هناك مقابل ${entryFee}. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
         return `Hi ${name}! Job Finder is ready to activate. Open your dashboard at ${website}/profile/worker and start the secure checkout there for ${entryFee}. If we do not find you a job within 90 days, the full amount is refunded.`;
+    }
+
+    if (!workerRecord) {
+        return `${greeting} ${startMessage}`;
+    }
+
+    if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil") || msg.includes("स्थिति") || msg.includes("حالة")) {
+        const statusInfo = workerRecord.status === "REGISTERED" ? "registered ✅" : workerRecord.status;
+        const queueInfo = workerRecord.queue_position ? ` Queue position: #${workerRecord.queue_position}.` : "";
+        if (fallbackLang === "sr") return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${website}/profile/worker.`;
+        if (fallbackLang === "ne") return `नमस्ते ${name}! तपाईंको स्थिति: ${statusInfo}.${queueInfo} विवरण ${website}/profile/worker मा हेर्नुहोस्।`;
+        if (fallbackLang === "ar") return `مرحباً ${name}! حالتك: ${statusInfo}.${queueInfo} يمكنك رؤية التفاصيل على ${website}/profile/worker.`;
+        return `Hi ${name}! Your status is: ${statusInfo}.${queueInfo} You can see full details at ${website}/profile/worker.`;
     }
 
     if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز")) {

@@ -5,10 +5,11 @@ import { Mail, Monitor, Smartphone, AlertCircle, RefreshCw, ChevronRight } from 
 
 // ─── Mock data for each email template ──────────────────────────
 
-const MOCK_DATA: Record<string, Record<string, string>> = {
+const MOCK_DATA: Record<string, Record<string, string | number | boolean>> = {
     welcome: { name: "Marko Petrović" },
     profile_complete: { name: "Marko Petrović" },
     payment_success: { name: "Marko Petrović", amount: "$9" },
+    checkout_recovery: { name: "Marko Petrović", amount: "$9", recoveryStep: 3 },
     job_offer: {
         name: "Marko Petrović",
         companyName: "TechCorp GmbH",
@@ -54,6 +55,12 @@ const MOCK_DATA: Record<string, Record<string, string>> = {
         missingFields: "• Phone Number<br>• Passport Number<br>• Biometric Photo<br>• Date of Birth<br>• Birth City<br>• Passport Document",
         completion: "63",
     },
+    document_review_result: {
+        name: "Marko Petrović",
+        approved: true,
+        docType: "Biometric Photo",
+        feedback: "",
+    },
     profile_reminder: {
         name: "Marko Petrović",
         todoList: '<li style="padding: 6px 0;">Upload Passport</li><li style="padding: 6px 0;">Add Phone Number</li><li style="padding: 6px 0;">Set Date of Birth</li>',
@@ -72,6 +79,7 @@ const EMAIL_LABELS: Record<string, string> = {
     welcome: "Welcome",
     profile_complete: "Profile Complete",
     payment_success: "Payment Success",
+    checkout_recovery: "Checkout Recovery",
     job_offer: "Job Offer",
     offer_reminder: "Offer Reminder",
     refund_approved: "Refund Approved",
@@ -80,6 +88,7 @@ const EMAIL_LABELS: Record<string, string> = {
     admin_update: "Admin Update",
     announcement: "Announcement",
     profile_incomplete: "Profile Incomplete",
+    document_review_result: "Document Review Result",
     profile_reminder: "Profile Reminder",
     profile_warning: "Profile Warning",
     profile_deletion: "Profile Deletion",

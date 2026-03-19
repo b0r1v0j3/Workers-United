@@ -15,6 +15,7 @@ const ALL_EMAIL_TYPES: EmailType[] = [
     'admin_update',
     'announcement',
     'profile_incomplete',
+    'document_review_result',
     'profile_reminder',
     'profile_warning',
     'profile_deletion',
@@ -89,6 +90,19 @@ describe('getEmailTemplate', () => {
         expect(subject).toContain('expired');
         expect(html).toContain('fresh checkout');
         expect(html).toContain('$9');
+    });
+
+    it('document_review_result approved email uses the monochrome approved layout', () => {
+        const { html, subject } = getEmailTemplate('document_review_result', {
+            name: 'Nikola',
+            approved: true,
+            docType: 'biometric photo',
+        });
+        expect(subject).toBe('Your Biometric Photo Has Been Approved');
+        expect(html).toContain('Biometric Photo Approved');
+        expect(html).toContain('What Happens Next');
+        expect(html).not.toContain('#d1fae5');
+        expect(html).not.toContain('Continue Registration');
     });
 
     it('employer profile_reminder uses employer-specific text', () => {
