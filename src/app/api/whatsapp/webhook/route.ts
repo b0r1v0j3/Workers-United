@@ -20,7 +20,6 @@ import { getSupportAccessState } from "@/lib/messaging";
 import {
     applyWhatsAppReplyGuardrails,
     getMediaAttachmentResponse,
-    isWorkerPaymentUnlocked,
 } from "@/lib/whatsapp-reply-guardrails";
 import {
     createWhatsAppAutoHandoff,
@@ -40,6 +39,7 @@ import {
     generateWorkerWhatsAppReply,
     type WhatsAppRouterDecision,
 } from "@/lib/whatsapp-worker-ai";
+import { getWhatsAppFallbackResponse } from "@/lib/whatsapp-fallback";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -601,9 +601,9 @@ export async function POST(request: NextRequest) {
                     language: routerDecision?.language || latestMessageLanguage,
                     workerRecord,
                 });
-                const replyText = guardrailResult.text || await getFallbackResponse(content, workerRecord, profile);
+                const replyText = guardrailResult.text || await getWhatsAppFallbackResponse(content, workerRecord, profile);
                 const finalReplyText = replyText && !replyMatchesExpectedWhatsAppLanguage(latestMessageLanguage, replyText)
-                    ? await getFallbackResponse(content, workerRecord, profile)
+                    ? await getWhatsAppFallbackResponse(content, workerRecord, profile)
                     : replyText;
 
                 if (finalReplyText) {
@@ -705,96 +705,6 @@ async function callOpenAIResponseText(
         })();
     return (outputText || "").trim();
 }
-
-// ─── Fallback Bot (used when OpenAI is unavailable) ──────────────────────────
-// Reads business facts from platform_config DB table (cached 5 min)
-
-async function getFallbackResponse(message: string, workerRecord: any, profile: any): Promise<string> {
-    const msg = message.toLowerCase().trim();
-    const name = profile?.full_name?.split(" ")[0] || "there";
-
-    // Read from centralized config (cached 5 min, fallback to defaults if DB down)
-    const { getPlatformConfig } = await import("@/lib/platform-config");
-    const config = await getPlatformConfig();
-
-    const ENTRY_FEE = config.entry_fee || "$9";
-    const WEBSITE = config.website_url || "workersunited.eu";
-    const GREETING_EN = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers through the full job-search and visa process in Europe.";
-    const GREETING_SR = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima kroz ceo proces traženja posla i vize u Evropi.";
-    const detectedLanguage = detectWhatsAppLanguageCode(message);
-    const fallbackLang = detectedLanguage === "hi" ? "ne" : detectedLanguage;
-    // Multilingual fallback messages
-    const greetings: Record<string, string> = {
-        sr: GREETING_SR,
-        ne: "Workers United मा स्वागत छ! 🌍 हामी युरोपमा काम खोज्न र भिसा प्रक्रियामा मद्दत गर्छौं।",
-        ar: "مرحباً بك في Workers United! 🌍 نساعد العمال في إيجاد وظائف في أوروبا وإجراءات التأشيرة.",
-        fr: "Bienvenue chez Workers United! 🌍 Nous aidons les travailleurs à trouver des emplois en Europe.",
-        pt: "Bem-vindo à Workers United! 🌍 Ajudamos trabalhadores a encontrar empregos na Europa.",
-        en: GREETING_EN,
-    };
-    const startMessages: Record<string, string> = {
-        sr: `Registrujte se na ${WEBSITE}/signup i popunite profil. Posle registracije možete nastaviti pitanja ovde na WhatsApp-u, ali profil i dokumenta završavate kroz dashboard. Job Finder se otključava tek kada je profil kompletan i admin ga odobri.`,
-        ne: `${WEBSITE}/signup मा खाता बनाउनुहोस् र प्रोफाइल पूरा गर्नुहोस्। दर्ता भएपछि प्रश्नहरू यहाँ WhatsApp मा गर्न सक्नुहुन्छ, तर प्रोफाइल र कागजातहरू ड्यासबोर्डमार्फत पूरा हुन्छन्। Job Finder प्रोफाइल पूरा भएर admin approval भएपछि मात्र खुल्छ।`,
-        ar: `أنشئ حسابك على ${WEBSITE}/signup وأكمل ملفك الشخصي. بعد التسجيل يمكنك متابعة الأسئلة هنا على WhatsApp، لكن الملف والمستندات تُستكمل من لوحة التحكم. يتم فتح Job Finder فقط بعد اكتمال الملف وموافقة الإدارة.`,
-        fr: `Créez votre compte sur ${WEBSITE}/signup et complétez votre profil. Après inscription, vous pouvez poser vos questions ici sur WhatsApp, mais le profil et les documents se terminent dans le tableau de bord. Job Finder ne s’ouvre qu’après profil complet et validation admin.`,
-        pt: `Crie sua conta em ${WEBSITE}/signup e complete seu perfil. Depois do registro, você pode continuar com perguntas aqui no WhatsApp, mas o perfil e os documentos são concluídos no painel. O Job Finder só é liberado após perfil completo e aprovação administrativa.`,
-        en: `Create your account at ${WEBSITE}/signup and complete your profile. After signup, you can keep asking questions here on WhatsApp, but profile completion and document uploads happen in the dashboard. Job Finder unlocks only after the profile is complete and admin approves it.`,
-    };
-    const greeting = greetings[fallbackLang] || greetings.en;
-    const startMessage = startMessages[fallbackLang] || startMessages.en;
-
-    if (!workerRecord) {
-        return `${greeting} ${startMessage}`;
-    }
-
-    if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil") || msg.includes("स्थिति") || msg.includes("حالة")) {
-        const statusInfo = workerRecord.status === "REGISTERED" ? "registered ✅" : workerRecord.status;
-        const queueInfo = workerRecord.queue_position ? ` Queue position: #${workerRecord.queue_position}.` : "";
-        if (fallbackLang === 'sr') return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${WEBSITE}/profile/worker.`;
-        if (fallbackLang === 'ne') return `नमस्ते ${name}! तपाईंको स्थिति: ${statusInfo}.${queueInfo} विवरण ${WEBSITE}/profile/worker मा हेर्नुहोस्।`;
-        if (fallbackLang === 'ar') return `مرحباً ${name}! حالتك: ${statusInfo}.${queueInfo} يمكنك رؤية التفاصيل على ${WEBSITE}/profile/worker.`;
-        return `Hi ${name}! Your status is: ${statusInfo}.${queueInfo} You can see full details at ${WEBSITE}/profile/worker.`;
-    }
-
-    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر")) {
-        if (!workerRecord) {
-            if (fallbackLang === 'sr') return `Zdravo ${name}! Job Finder košta ${ENTRY_FEE}, ali uplata se ne otključava odmah. Prvo napravite profil na ${WEBSITE}/signup, popunite ga do kraja i sačekajte admin odobrenje; tek tada se otvara checkout. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
-            if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder को शुल्क ${ENTRY_FEE} हो, तर भुक्तानी तुरुन्त खुल्दैन। पहिले ${WEBSITE}/signup मा प्रोफाइल बनाउनुहोस्, पूरा गर्नुहोस्, अनि admin approval पछि मात्र checkout खुल्छ। ९० दिनभित्र काम नपाए पूरा फिर्ता हुन्छ।`;
-            if (fallbackLang === 'ar') return `مرحباً ${name}! تكلفة Job Finder هي ${ENTRY_FEE}، لكن الدفع لا يُفتح فورًا. أنشئ ملفك أولاً على ${WEBSITE}/signup وأكمله بالكامل ثم انتظر موافقة الإدارة، وبعدها فقط يفتح الدفع. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
-            return `Hi ${name}! Job Finder costs ${ENTRY_FEE}, but payment does not unlock immediately. First create your profile at ${WEBSITE}/signup, complete it fully, and wait for admin approval; only then does checkout unlock. If no job is found within 90 days, the full amount is refunded.`;
-        }
-        if (workerRecord.entry_fee_paid) {
-            if (fallbackLang === 'sr') return `Zdravo ${name}! Vaša Job Finder uplata je već evidentirana. Sledeći korak i status možete pratiti na ${WEBSITE}/profile/worker.`;
-            if (fallbackLang === 'ne') return `नमस्ते ${name}! तपाईंको Job Finder भुक्तानी पहिले नै evidentirana छ। अर्को चरण र status ${WEBSITE}/profile/worker मा हेर्नुहोस्।`;
-            if (fallbackLang === 'ar') return `مرحباً ${name}! تم تسجيل دفعة Job Finder بالفعل. يمكنك متابعة الحالة والخطوة التالية على ${WEBSITE}/profile/worker.`;
-            return `Hi ${name}! Your Job Finder payment is already recorded. You can follow the next step and your status at ${WEBSITE}/profile/worker.`;
-        }
-        if (!isWorkerPaymentUnlocked(workerRecord)) {
-            if (fallbackLang === 'sr') return `Zdravo ${name}! Checkout za Job Finder još nije otključan. Potrebno je da profil bude kompletan i da prođe admin review; zatim pokrećete bezbednu uplatu iz dashboard-a na ${WEBSITE}/profile/worker.`;
-            if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder checkout अझै खुलेको छैन। प्रोफाइल पूरा भई admin review पास भएपछि मात्र ${WEBSITE}/profile/worker ड्यासबोर्डबाट सुरक्षित भुक्तानी सुरु हुन्छ।`;
-            if (fallbackLang === 'ar') return `مرحباً ${name}! لم يتم فتح Checkout الخاص بـ Job Finder بعد. يجب أن يكتمل الملف ويمر بمراجعة الإدارة أولاً، ثم تبدأ الدفع الآمن من لوحة التحكم على ${WEBSITE}/profile/worker.`;
-            return `Hi ${name}! Job Finder checkout is not unlocked yet. Your profile must be complete and pass admin review first; after that, you start the secure payment from the dashboard at ${WEBSITE}/profile/worker.`;
-        }
-        if (fallbackLang === 'sr') return `Zdravo ${name}! Job Finder je spreman za aktivaciju. Otvorite dashboard na ${WEBSITE}/profile/worker i odatle pokrenite bezbedan checkout za ${ENTRY_FEE}. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
-        if (fallbackLang === 'ne') return `नमस्ते ${name}! Job Finder अब activate गर्न तयार छ। ${WEBSITE}/profile/worker ड्यासबोर्ड खोल्नुहोस् र त्यहाँबाट ${ENTRY_FEE} को सुरक्षित checkout सुरु गर्नुहोस्। ९० दिनभित्र काम नपाए पूरा फिर्ता हुन्छ।`;
-        if (fallbackLang === 'ar') return `مرحباً ${name}! أصبح Job Finder جاهزًا للتفعيل. افتح لوحة التحكم على ${WEBSITE}/profile/worker وابدأ الدفع الآمن من هناك مقابل ${ENTRY_FEE}. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
-        return `Hi ${name}! Job Finder is ready to activate. Open your dashboard at ${WEBSITE}/profile/worker and start the secure checkout there for ${ENTRY_FEE}. If we do not find you a job within 90 days, the full amount is refunded.`;
-    }
-
-    if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز")) {
-        if (fallbackLang === 'sr') return `Zdravo ${name}! Dokumenta uploadujete na ${WEBSITE}/profile/worker. Potrebni su: pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
-        if (fallbackLang === 'ne') return `नमस्ते ${name}! कागजातहरू ${WEBSITE}/profile/worker मा अपलोड गर्नुहोस्। आवश्यक: पासपोर्ट, बायोमेट्रिक फोटो, र final school, university, वा formal vocational diploma। WhatsApp attachment हरू अहिले प्रोफाइलसँग स्वतः जोडिँदैनन्।`;
-        if (fallbackLang === 'ar') return `مرحباً ${name}! يمكنك رفع المستندات على ${WEBSITE}/profile/worker. المطلوب: جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
-        return `Hi ${name}! Upload documents at ${WEBSITE}/profile/worker. We need: passport, biometric photo, and a final school, university, or formal vocational diploma. WhatsApp attachments are not linked to the profile automatically yet.`;
-    }
-
-    // Catch-all
-    if (fallbackLang === 'sr') return `Zdravo ${name}! 👋 ${startMessage}`;
-    if (fallbackLang === 'ne') return `नमस्ते ${name}! 👋 ${startMessage}`;
-    if (fallbackLang === 'ar') return `مرحباً ${name}! 👋 ${startMessage}`;
-    return `Hi ${name}! 👋 ${startMessage}`;
-}
-
 
 // ─── WhatsApp Onboarding Flow ─────────────────────────────────────────────────
 // Mirrors the exact fields in the worker profile form (ProfileClient.tsx).
