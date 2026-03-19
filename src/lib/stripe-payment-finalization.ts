@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { queueEmail } from "@/lib/email-templates";
 import { resolveWorkerStatusAfterEntryFee } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 
@@ -24,10 +25,22 @@ interface ActivateEntryFeeWorkerAfterPaymentOptions {
     activatedAt?: string;
 }
 
+interface QueueEntryFeePaymentSuccessEmailOptions {
+    admin: AdminDbClient;
+    targetProfileId?: string | null;
+    sessionCustomerEmail?: string | null;
+}
+
 interface StripePaymentAmounts {
     amount: number;
     amountCents: number;
 }
+
+type PaymentSuccessEmailResult =
+    | { status: "queued"; recipientEmail: string }
+    | { status: "already_queued" }
+    | { status: "missing_target_profile" }
+    | { status: "missing_recipient" };
 
 function assertNoDbError(error: { message: string } | null | undefined, context: string): void {
     if (error) {
@@ -229,4 +242,56 @@ export async function activateEntryFeeWorkerAfterPayment({
         .update(updatePayload)
         .eq("id", targetWorkerId);
     assertNoDbError(agencyWorkerUpdateError, "Failed to update agency worker after payment");
+}
+
+export async function queueEntryFeePaymentSuccessEmail({
+    admin,
+    targetProfileId = null,
+    sessionCustomerEmail = null,
+}: QueueEntryFeePaymentSuccessEmailOptions): Promise<PaymentSuccessEmailResult> {
+    if (!targetProfileId) {
+        return { status: "missing_target_profile" };
+    }
+
+    const { data: existingPaymentEmail, error: existingPaymentEmailError } = await admin
+        .from("email_queue")
+        .select("id")
+        .eq("user_id", targetProfileId)
+        .eq("email_type", "payment_success")
+        .in("status", ["pending", "sent"])
+        .maybeSingle();
+    assertNoDbError(existingPaymentEmailError, "Failed to load existing payment success email");
+
+    if (existingPaymentEmail?.id) {
+        return { status: "already_queued" };
+    }
+
+    const [{ data: profile, error: profileError }, { data: workerRecord, error: workerRecordError }] = await Promise.all([
+        admin.from("profiles").select("full_name, email").eq("id", targetProfileId).maybeSingle(),
+        loadCanonicalWorkerRecord(admin, targetProfileId, "id, phone, updated_at"),
+    ]);
+
+    assertNoDbError(profileError, "Failed to load profile for payment success email");
+    assertNoDbError(workerRecordError, "Failed to load worker record for payment success email");
+
+    const recipientEmail = profile?.email || sessionCustomerEmail || "";
+    if (!recipientEmail) {
+        return { status: "missing_recipient" };
+    }
+
+    await queueEmail(
+        admin,
+        targetProfileId,
+        "payment_success",
+        recipientEmail,
+        profile?.full_name || "Worker",
+        { amount: "$9" },
+        undefined,
+        workerRecord?.phone || undefined
+    );
+
+    return {
+        status: "queued",
+        recipientEmail,
+    };
 }

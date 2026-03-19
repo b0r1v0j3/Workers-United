@@ -3,14 +3,20 @@ import {
     activateEntryFeeWorkerAfterPayment,
     getStripePaymentAmounts,
     persistCompletedStripeCheckoutPayment,
+    queueEntryFeePaymentSuccessEmail,
 } from "@/lib/stripe-payment-finalization";
 
-const { loadCanonicalWorkerRecord } = vi.hoisted(() => ({
+const { loadCanonicalWorkerRecord, queueEmail } = vi.hoisted(() => ({
     loadCanonicalWorkerRecord: vi.fn(),
+    queueEmail: vi.fn(),
 }));
 
 vi.mock("@/lib/workers", () => ({
     loadCanonicalWorkerRecord,
+}));
+
+vi.mock("@/lib/email-templates", () => ({
+    queueEmail,
 }));
 
 describe("stripe-payment-finalization", () => {
@@ -186,5 +192,114 @@ describe("stripe-payment-finalization", () => {
             status: "IN_QUEUE",
         });
         expect(agencyUpdateEq).toHaveBeenCalledWith("id", "agency-worker-1");
+    });
+
+    it("queues payment success email only once through the shared helper", async () => {
+        const existingEmailMaybeSingle = vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+        });
+        const profileMaybeSingle = vi.fn().mockResolvedValue({
+            data: {
+                full_name: "Worker One",
+                email: "worker@example.com",
+            },
+            error: null,
+        });
+
+        loadCanonicalWorkerRecord.mockResolvedValue({
+            data: {
+                id: "worker-row-1",
+                phone: "+123456789",
+            },
+            error: null,
+        });
+
+        const admin = {
+            from: (table: string) => {
+                if (table === "email_queue") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                eq: () => ({
+                                    in: () => ({
+                                        maybeSingle: existingEmailMaybeSingle,
+                                    }),
+                                }),
+                            }),
+                        }),
+                    };
+                }
+
+                if (table === "profiles") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                maybeSingle: profileMaybeSingle,
+                            }),
+                        }),
+                    };
+                }
+
+                throw new Error(`Unexpected table: ${table}`);
+            },
+        };
+
+        const result = await queueEntryFeePaymentSuccessEmail({
+            admin: admin as never,
+            targetProfileId: "worker-profile-1",
+            sessionCustomerEmail: "fallback@example.com",
+        });
+
+        expect(result).toEqual({
+            status: "queued",
+            recipientEmail: "worker@example.com",
+        });
+        expect(queueEmail).toHaveBeenCalledWith(
+            admin,
+            "worker-profile-1",
+            "payment_success",
+            "worker@example.com",
+            "Worker One",
+            { amount: "$9" },
+            undefined,
+            "+123456789"
+        );
+    });
+
+    it("returns already_queued when payment success email already exists", async () => {
+        const existingEmailMaybeSingle = vi.fn().mockResolvedValue({
+            data: { id: "email-row-1" },
+            error: null,
+        });
+
+        const admin = {
+            from: (table: string) => {
+                if (table !== "email_queue") {
+                    throw new Error(`Unexpected table: ${table}`);
+                }
+
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            eq: () => ({
+                                in: () => ({
+                                    maybeSingle: existingEmailMaybeSingle,
+                                }),
+                            }),
+                        }),
+                    }),
+                };
+            },
+        };
+
+        const result = await queueEntryFeePaymentSuccessEmail({
+            admin: admin as never,
+            targetProfileId: "worker-profile-1",
+            sessionCustomerEmail: "worker@example.com",
+        });
+
+        expect(result).toEqual({ status: "already_queued" });
+        expect(queueEmail).not.toHaveBeenCalled();
     });
 });
