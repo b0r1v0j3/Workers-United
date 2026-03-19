@@ -110,6 +110,12 @@ describe("whatsapp-brain guards", () => {
         expect(detectWhatsAppLanguageCode("كيفك")).toBe("ar");
     });
 
+    it("detects explicit language-switch requests and keeps the requested language", () => {
+        expect(resolveWhatsAppLanguageName("Pisi na srpskom", "English")).toBe("Serbian");
+        expect(resolveWhatsAppLanguageName("Reply in French", "English")).toBe("French");
+        expect(resolveWhatsAppLanguageName("Continue in Hindi", "English")).toBe("Hindi");
+    });
+
     it("keeps the recent conversation language for short ambiguous follow-ups", () => {
         expect(
             resolveWhatsAppLanguageName(
@@ -175,6 +181,17 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("Ja sam Workers United AI asistent");
         expect(reply).toContain("šta vas zanima");
         expect(reply).not.toContain("Prvi korak je da napravite nalog");
+    });
+
+    it("confirms the requested language for unregistered users before continuing", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "Pisi na srpskom",
+            language: "English",
+            intent: "general",
+        });
+
+        expect(reply).toContain("nastaviću na srpskom");
+        expect(reply).toContain("Kako mogu da pomognem");
     });
 
     it("greets generic pre-registration job intent without sounding defensive", () => {
@@ -269,6 +286,20 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("Ja sam Workers United AI asistent");
         expect(reply).toContain("šta želite da proverimo");
         expect(reply).not.toContain("Prvi korak");
+    });
+
+    it("confirms the requested language for registered workers before continuing", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "Pisi na srpskom",
+            language: "English",
+            intent: "general",
+            workerStatus: "PENDING_APPROVAL",
+            adminApproved: false,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("nastaviću na srpskom");
+        expect(reply).toContain("statusa, dokumenata, uplate");
     });
 
     it("builds an honest auto-handoff reply only when support access exists", () => {

@@ -1,5 +1,7 @@
 import {
+    detectExplicitWhatsAppLanguagePreference,
     looksLikeWarmGreetingWhatsAppMessage,
+    type WhatsAppLanguageHistoryEntry,
     resolveWhatsAppLanguageCode,
 } from "@/lib/whatsapp-brain";
 import { isWorkerPaymentUnlocked } from "@/lib/whatsapp-reply-guardrails";
@@ -21,16 +23,18 @@ interface WhatsAppFallbackProfileLike {
 
 function resolveFallbackLanguage(
     message: string,
-    preferredLanguage?: string | null
+    preferredLanguage?: string | null,
+    historyMessages: WhatsAppLanguageHistoryEntry[] = []
 ): WhatsAppFallbackLanguage {
-    return resolveWhatsAppLanguageCode(message, preferredLanguage) as WhatsAppFallbackLanguage;
+    return resolveWhatsAppLanguageCode(message, preferredLanguage, historyMessages) as WhatsAppFallbackLanguage;
 }
 
 export async function getWhatsAppFallbackResponse(
     message: string,
     workerRecord: WhatsAppFallbackWorkerLike | null,
     profile: WhatsAppFallbackProfileLike | null,
-    preferredLanguage?: string | null
+    preferredLanguage?: string | null,
+    historyMessages: WhatsAppLanguageHistoryEntry[] = []
 ): Promise<string> {
     const msg = message.toLowerCase().trim();
     const name = profile?.full_name?.split(" ")[0] || "there";
@@ -40,7 +44,8 @@ export async function getWhatsAppFallbackResponse(
     const website = config.website_url || "workersunited.eu";
     const greetingEn = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers through the full job-search and visa process in Europe.";
     const greetingSr = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima kroz ceo proces traženja posla i vize u Evropi.";
-    const fallbackLang = resolveFallbackLanguage(message, preferredLanguage);
+    const fallbackLang = resolveFallbackLanguage(message, preferredLanguage, historyMessages);
+    const explicitLanguagePreference = detectExplicitWhatsAppLanguagePreference(message);
 
     const greetings: Record<WhatsAppFallbackLanguage, string> = {
         sr: greetingSr,
@@ -63,8 +68,29 @@ export async function getWhatsAppFallbackResponse(
     const greeting = greetings[fallbackLang] || greetings.en;
     const startMessage = startMessages[fallbackLang] || startMessages.en;
     const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
+    const asksAboutPrice = msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر");
+    const asksAboutStatus = msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil") || msg.includes("स्थिति") || msg.includes("حالة");
+    const asksAboutDocuments = msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز");
 
-    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر")) {
+    if (explicitLanguagePreference && !asksAboutPrice && !asksAboutStatus && !asksAboutDocuments) {
+        if (!workerRecord) {
+            if (fallbackLang === "sr") return `Naravno ${name}! Nastaviću na srpskom. Ja sam Workers United AI asistent. Kako mogu da pomognem?`;
+            if (fallbackLang === "fr") return `Bien sûr ${name} ! Je continue en français. Je suis l’assistant IA de Workers United. Comment puis-je aider ?`;
+            if (fallbackLang === "pt") return `Claro ${name}! Vou continuar em português. Eu sou o assistente de IA da Workers United. Como posso ajudar?`;
+            if (fallbackLang === "hi") return `${name}, ज़रूर — मैं हिंदी में जारी रखूँगा। मैं Workers United का AI assistant हूँ। मैं कैसे मदद कर सकता हूँ?`;
+            if (fallbackLang === "ar") return `بالتأكيد ${name}! سأتابع بالعربية. أنا مساعد Workers United بالذكاء الاصطناعي. كيف يمكنني مساعدتك؟`;
+            return `Of course ${name}! I’ll continue in English. I’m the Workers United AI assistant. How can I help?`;
+        }
+
+        if (fallbackLang === "sr") return `Naravno ${name}! Nastaviću na srpskom. Ja sam Workers United AI asistent i mogu da pomognem oko statusa, dokumenata, uplate ili sledećeg koraka.`;
+        if (fallbackLang === "fr") return `Bien sûr ${name} ! Je continue en français. Je suis l’assistant IA de Workers United et je peux aider pour le statut, les documents, le paiement ou la prochaine étape.`;
+        if (fallbackLang === "pt") return `Claro ${name}! Vou continuar em português. Eu sou o assistente de IA da Workers United e posso ajudar com status, documentos, pagamento ou próximo passo.`;
+        if (fallbackLang === "hi") return `${name}, ज़रूर — मैं हिंदी में जारी रखूँगा। मैं Workers United का AI assistant हूँ और status, documents, payment या next step में मदद कर सकता हूँ।`;
+        if (fallbackLang === "ar") return `بالتأكيد ${name}! سأتابع بالعربية. أنا مساعد Workers United بالذكاء الاصطناعي ويمكنني المساعدة بخصوص الحالة أو المستندات أو الدفع أو الخطوة التالية.`;
+        return `Of course ${name}! I’ll continue in English. I’m the Workers United AI assistant and I can help with your status, documents, payment, or next step.`;
+    }
+
+    if (asksAboutPrice) {
         if (!workerRecord) {
             if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder košta ${entryFee}, ali uplata se ne otključava odmah. Prvo napravite profil na ${website}/signup, popunite ga do kraja i sačekajte admin odobrenje; tek tada se otvara checkout. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
             if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder की कीमत ${entryFee} है, लेकिन payment तुरंत unlock नहीं होती। पहले ${website}/signup पर profile बनाइए, उसे पूरा कीजिए, और admin approval का इंतज़ार कीजिए; उसके बाद ही checkout खुलता है। अगर 90 दिनों में job न मिले तो पूरा amount refund होता है।`;
@@ -114,7 +140,7 @@ export async function getWhatsAppFallbackResponse(
         return `Hello ${name}! I’m the Workers United AI assistant. I can help with your status, documents, payment, or next step. Just tell me what you want to check.`;
     }
 
-    if (msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil") || msg.includes("स्थिति") || msg.includes("حالة")) {
+    if (asksAboutStatus) {
         const statusInfo = workerRecord.status === "REGISTERED" ? "registered ✅" : workerRecord.status;
         const queueInfo = workerRecord.queue_position ? ` Queue position: #${workerRecord.queue_position}.` : "";
         if (fallbackLang === "sr") return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${website}/profile/worker.`;
@@ -123,7 +149,7 @@ export async function getWhatsAppFallbackResponse(
         return `Hi ${name}! Your status is: ${statusInfo}.${queueInfo} You can see full details at ${website}/profile/worker.`;
     }
 
-    if (msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز")) {
+    if (asksAboutDocuments) {
         if (fallbackLang === "sr") return `Zdravo ${name}! Dokumenta uploadujete na ${website}/profile/worker. Potrebni su: pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
         if (fallbackLang === "hi") return `नमस्ते ${name}! Documents ${website}/profile/worker पर upload कीजिए। ज़रूरी documents हैं passport, biometric photo, और final school, university, या formal vocational diploma। WhatsApp attachments अभी profile से automatically link नहीं होते।`;
         if (fallbackLang === "ar") return `مرحباً ${name}! يمكنك رفع المستندات على ${website}/profile/worker. المطلوب: جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;

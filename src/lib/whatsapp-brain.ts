@@ -23,6 +23,7 @@ export interface RegisteredWorkerWhatsAppReplyOptions extends CanonicalWhatsAppF
     message: string;
     language: string;
     intent: string;
+    historyMessages?: WhatsAppLanguageHistoryEntry[];
     workerStatus?: string | null;
     entryFeePaid?: boolean | null;
     adminApproved?: boolean | null;
@@ -115,6 +116,39 @@ const NON_ENGLISH_LANGUAGE_PATTERNS: Record<Exclude<WhatsAppLanguageCode, "en">,
     ],
 };
 
+const EXPLICIT_LANGUAGE_PREFERENCE_PATTERNS: Record<WhatsAppLanguageCode, readonly RegExp[]> = {
+    sr: [
+        /\b(?:pi[sš]i|govori|pri[cč]aj|odgovaraj|nastavi)\b.*\b(?:srpski|srpskom)\b/i,
+        /\b(?:na|po)\s+srpskom\b/i,
+        /\b(?:write|reply|respond|speak|continue)\b.*\bserbian\b/i,
+    ],
+    en: [
+        /\b(?:write|reply|respond|speak|continue)\b.*\benglish\b/i,
+        /\b(?:na|po)\s+engleskom\b/i,
+        /\bin english\b/i,
+    ],
+    fr: [
+        /\b(?:write|reply|respond|speak|continue)\b.*\b(?:french|fran[cç]ais|francais)\b/i,
+        /\ben\s+fran[cç]ais\b/i,
+        /\b(?:na|po)\s+francuskom\b/i,
+    ],
+    pt: [
+        /\b(?:write|reply|respond|speak|continue)\b.*\b(?:portuguese|portugu[eê]s)\b/i,
+        /\bem\s+portugu[eê]s\b/i,
+        /\b(?:na|po)\s+portugalskom\b/i,
+    ],
+    ar: [
+        /\b(?:write|reply|respond|speak|continue)\b.*\barabic\b/i,
+        /(?:اكتب|تكلم|رد)\s+بالعربية/i,
+        /\b(?:na|po)\s+arapskom\b/i,
+    ],
+    hi: [
+        /\b(?:write|reply|respond|speak|continue)\b.*\bhindi\b/i,
+        /(?:हिंदी में|हिन्दी में)/i,
+        /\b(?:na|po)\s+hind(?:i|iju)\b/i,
+    ],
+};
+
 const SAFE_BRAIN_LEARNING_CATEGORIES = new Set([
     "common_question",
     "error_fix",
@@ -137,6 +171,21 @@ function normalizeBrainLearningContent(content: string): string {
 
 function matchesAnyPattern(value: string, patterns: readonly RegExp[]): boolean {
     return patterns.some((pattern) => pattern.test(value));
+}
+
+export function detectExplicitWhatsAppLanguagePreference(message: string): WhatsAppLanguageCode | null {
+    const normalized = message.trim();
+    if (!normalized) {
+        return null;
+    }
+
+    for (const [code, patterns] of Object.entries(EXPLICIT_LANGUAGE_PREFERENCE_PATTERNS) as [WhatsAppLanguageCode, readonly RegExp[]][]) {
+        if (matchesAnyPattern(normalized, patterns)) {
+            return code;
+        }
+    }
+
+    return null;
 }
 
 function getMostRecentNonEnglishHistoryLanguageCode(
@@ -223,6 +272,11 @@ export function resolveWhatsAppLanguageCode(
     detectedLanguage?: string | null,
     historyMessages: WhatsAppLanguageHistoryEntry[] = []
 ): WhatsAppLanguageCode {
+    const explicitPreferenceCode = detectExplicitWhatsAppLanguagePreference(message);
+    if (explicitPreferenceCode) {
+        return explicitPreferenceCode;
+    }
+
     const quickCode = detectWhatsAppLanguageCode(message);
     const detectedCode = getLanguageCodeFromLabel(detectedLanguage);
 
@@ -284,6 +338,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
     message,
     language,
     intent,
+    historyMessages = [],
     website = "workersunited.eu",
     supportEmail = "contact@workersunited.eu",
     requiredDocuments = CANONICAL_REQUIRED_WORKER_DOCUMENTS,
@@ -292,21 +347,40 @@ export function buildUnregisteredWorkerWhatsAppReply({
     message: string;
     language: string;
     intent: string;
+    historyMessages?: WhatsAppLanguageHistoryEntry[];
     website?: string;
     supportEmail?: string;
     requiredDocuments?: string;
     isFirstContact?: boolean;
 }): string | null {
     const normalized = message.trim().toLowerCase();
-    const lang = resolveWhatsAppLanguageCode(message, language);
+    const lang = resolveWhatsAppLanguageCode(message, language, historyMessages);
     const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
     const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
+    const explicitLanguagePreference = detectExplicitWhatsAppLanguagePreference(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || intent === "support" || STATUS_HINT_PATTERN.test(normalized);
     const asksSpecificAvailability = SPECIFIC_AVAILABILITY_HINT_PATTERN.test(normalized);
     const asksHowItWorks = PROCESS_HINT_PATTERN.test(normalized);
     const wantsJobHelp = intent === "job_intent" || JOB_HINT_PATTERN.test(normalized) || looksLikeWorkerWhatsAppLead(message);
+
+    if (explicitLanguagePreference && !wantsPrice && !wantsDocuments && !wantsStatus && !asksSpecificAvailability && !wantsJobHelp) {
+        switch (lang) {
+            case "sr":
+                return "Naravno — nastaviću na srpskom. Ja sam Workers United AI asistent. Kako mogu da pomognem?";
+            case "ar":
+                return "بالتأكيد — سأتابع بالعربية. أنا مساعد Workers United بالذكاء الاصطناعي. كيف يمكنني مساعدتك؟";
+            case "fr":
+                return "Bien sûr — je continue en français. Je suis l’assistant IA de Workers United. Comment puis-je vous aider ?";
+            case "pt":
+                return "Claro — vou continuar em português. Eu sou o assistente de IA da Workers United. Como posso ajudar?";
+            case "hi":
+                return "ज़रूर — मैं हिंदी में जारी रखूँगा। मैं Workers United का AI assistant हूँ। मैं कैसे मदद कर सकता हूँ?";
+            default:
+                return "Of course — I’ll continue in English. I’m the Workers United AI assistant. How can I help?";
+        }
+    }
 
     if ((isFirstContact || isWarmGreeting || isGreetingOnly) && isWarmGreeting && !wantsPrice && !wantsDocuments && !wantsStatus && !asksSpecificAvailability) {
         switch (lang) {
@@ -453,6 +527,7 @@ export function buildRegisteredWorkerWhatsAppReply({
     message,
     language,
     intent,
+    historyMessages = [],
     workerStatus,
     entryFeePaid,
     adminApproved,
@@ -462,9 +537,10 @@ export function buildRegisteredWorkerWhatsAppReply({
     supportEmail = "contact@workersunited.eu",
 }: RegisteredWorkerWhatsAppReplyOptions): string | null {
     const normalized = message.trim().toLowerCase();
-    const lang = resolveWhatsAppLanguageCode(message, language);
+    const lang = resolveWhatsAppLanguageCode(message, language, historyMessages);
     const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
     const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
+    const explicitLanguagePreference = detectExplicitWhatsAppLanguagePreference(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || STATUS_HINT_PATTERN.test(normalized);
@@ -476,6 +552,23 @@ export function buildRegisteredWorkerWhatsAppReply({
     const paymentReady = isRegisteredWorkerPaymentReady({ workerStatus, entryFeePaid, adminApproved });
     const pendingApproval = isRegisteredWorkerPendingApproval({ workerStatus, entryFeePaid, adminApproved });
     const inQueue = !!entryFeePaid && !!queueJoinedAt;
+
+    if (explicitLanguagePreference && !wantsPrice && !wantsDocuments && !wantsStatus && !wantsSupport && !asksSpecificAvailability && !wantsJobHelp) {
+        switch (lang) {
+            case "sr":
+                return "Naravno — nastaviću na srpskom. Ja sam Workers United AI asistent. Mogu da pomognem oko statusa, dokumenata, uplate ili sledećeg koraka.";
+            case "ar":
+                return "بالتأكيد — سأتابع بالعربية. أنا مساعد Workers United بالذكاء الاصطناعي. يمكنني المساعدة بخصوص الحالة أو المستندات أو الدفع أو الخطوة التالية.";
+            case "fr":
+                return "Bien sûr — je continue en français. Je suis l’assistant IA de Workers United. Je peux aider pour le statut, les documents, le paiement ou la prochaine étape.";
+            case "pt":
+                return "Claro — vou continuar em português. Eu sou o assistente de IA da Workers United. Posso ajudar com status, documentos, pagamento ou próximo passo.";
+            case "hi":
+                return "ज़रूर — मैं हिंदी में जारी रखूँगा। मैं Workers United का AI assistant हूँ। मैं status, documents, payment या अगले step में मदद कर सकता हूँ।";
+            default:
+                return "Of course — I’ll continue in English. I’m the Workers United AI assistant. I can help with your status, documents, payment, or next step.";
+        }
+    }
 
     if ((isGreetingOnly || isWarmGreeting) && !wantsPrice && !wantsDocuments && !wantsStatus && !wantsSupport) {
         switch (lang) {
@@ -823,6 +916,7 @@ Rules:
 1. Keep the reply concise: 1-3 short paragraphs max.
 2. Answer the user's actual question first. Do not force a sales pitch.
 3. If the user opens with only a greeting or a vague first contact, start warmly, explain in one short sentence that Workers United helps workers, employers, and agencies, and ask one simple clarifying question without assuming their role.
+3a. If the user asks you to switch language, acknowledge that in one short sentence and continue fully in the requested language. Do not fall back to English after that.
 4. Never imply that there is a list of jobs ready to browse right now. Explain Job Finder as a search-and-wait service when relevant.
 5. If the user is not yet registered and asks how to start, tell them to register at ${website}/signup first. After signup they can continue either in the dashboard or here on WhatsApp.
 6. Do NOT push payment before registration, full profile completion, and admin approval. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile comes first.
@@ -863,6 +957,7 @@ Rules:
 2. Keep the reply concise: 1-3 short paragraphs max.
 3. Service is free for employers. Say that clearly if they ask about price.
 4. If they open with only a greeting or a vague first contact, start warmly, explain in one short sentence that Workers United helps employers hire international workers, and ask one simple hiring question.
+4a. If they ask to switch language, acknowledge it briefly and continue fully in that language.
 5. Do not claim exact worker counts, origin countries, vacancy stock, or timelines unless those facts are explicitly supplied as verified system facts.
 6. If they ask how to start, tell them to register the employer profile at ${website}/signup first. After signup, they can continue through the dashboard or here on WhatsApp over the same company record.
 7. Ask only one next hiring question at a time: worker type, number of workers, work location, start date, salary, or housing.
