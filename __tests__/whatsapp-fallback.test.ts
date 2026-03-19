@@ -21,14 +21,15 @@ describe("whatsapp-fallback", () => {
         });
     });
 
-    it("keeps unregistered fallback on the generic signup/start guidance", async () => {
+    it("gives unregistered users the direct fee and admin-approval answer for price questions", async () => {
         const reply = await getWhatsAppFallbackResponse("price please", null, {
             full_name: "Ali Worker",
         });
 
         expect(reply).toContain("https://www.workersunited.eu/signup");
-        expect(reply).toContain("Job Finder unlocks only after the profile is complete and admin approves it.");
-        expect(reply).toContain("Welcome to Workers United!");
+        expect(reply).toContain("$9");
+        expect(reply).toContain("admin approval");
+        expect(reply).not.toContain("Welcome to Workers United!");
     });
 
     it("keeps locked workers on the admin-review/payment gate", async () => {

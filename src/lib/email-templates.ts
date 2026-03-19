@@ -289,6 +289,14 @@ function getCheckoutRecoveryStatusMessage(step: number | undefined, amount: stri
     }
 }
 
+function formatDocumentNameForEmail(value: string | undefined | null) {
+    const raw = (value || "document").trim();
+    return raw
+        .replace(/_/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemplate {
     const name = escapeHtml(data.name || "friend");
     const firstName = escapeHtml((data.name || "friend").split(" ")[0]);
@@ -734,34 +742,78 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
         case "document_review_result": {
             const isApproved = data.approved;
-            const docName = data.docType || "document";
+            const docName = formatDocumentNameForEmail(data.docType);
+            const safeDocName = escapeHtml(docName);
             return {
                 subject: isApproved
-                    ? `✅ Your ${docName} has been approved!`
-                    : `⚠️ Your ${docName} needs attention`,
+                    ? `Your ${docName} Has Been Approved`
+                    : `Your ${docName} Needs Attention`,
                 html: wrapModernTemplate(isApproved ? `
                     <div style="text-align: center;">
-                        <div style="width:80px;height:80px;background:#d1fae5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
-                            <span style="font-size:40px;">✅</span>
+                        <div style="width:80px;height:80px;border:2px solid #111111;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                            <span style="font-size:38px;line-height:1;color:#111111;font-weight:700;">✓</span>
                         </div>
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Document Approved</h1>
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${safeDocName} Approved</h1>
+                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">One more required step is now complete.</p>
                     </div>
-                    <div style="background:#d1fae5; border: 1px solid #a7f3d0; border-radius:12px; padding:25px; margin:30px 0;">
-                        <p style="margin:0; color: #065f46; font-size: 16px;">Great news! Your <strong>${escapeHtml(docName)}</strong> has been verified and approved by our team.</p>
+
+                    <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
+                        Your <strong>${safeDocName}</strong> has been verified and approved by our team. It is now safely stored in your Workers United dashboard, and you do not need to upload this file again.
+                    </p>
+
+                    <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
+                        <h3 style="margin:0 0 10px; font-size:22px; color: white;">What Happens Next</h3>
+                        <p style="margin:0; opacity:0.9; font-size: 16px; color: #E5E5EA;">
+                            1. Keep any remaining required documents moving forward
+                            <br>
+                            2. Your approved document stays locked in your case
+                            <br>
+                            3. We will notify you when the full profile reaches the next step
+                        </p>
                     </div>
-                    <div style="text-align:center; margin-top:35px;">
-                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Continue Registration</a>
+
+                    <div style="background:#F5F5F7; border-radius:12px; padding:20px; margin:20px 0; border: 1px solid #E5E5EA;">
+                        <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">Current Status</h3>
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20" alt=""></td>
+                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">${safeDocName} is verified and saved</td>
+                            </tr>
+                            <tr>
+                                <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20" alt=""></td>
+                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">You can continue from your dashboard at any time</td>
+                            </tr>
+                            <tr>
+                                <td width="30" style="vertical-align: top;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20" alt=""></td>
+                                <td style="color: #1D1D1F; font-size: 14px;">No action is needed for this document right now</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div style="text-align:center; margin-top:30px;">
+                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Open My Documents</a>
                     </div>
                 ` : `
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <span style="font-size:48px; line-height:1; display:inline-block;">⚠️</span>
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 15px 0 10px;">Document Needs Attention</h1>
+                    <div style="text-align: center;">
+                        <div style="width:80px;height:80px;border:2px solid #111111;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                            <span style="font-size:34px;line-height:1;color:#111111;font-weight:700;">!</span>
+                        </div>
+                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${safeDocName} Needs Attention</h1>
+                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">We still need a replacement file before your case can move forward.</p>
                     </div>
-                    <div style="background:#fef3c7; border: 1px solid #fde68a; border-radius:12px; padding:25px; margin:30px 0;">
-                        <p style="margin:0 0 10px; color: #92400e; font-size: 14px; font-weight:600;">Issue with your ${escapeHtml(docName)}:</p>
-                        <p style="margin:0; color: #78350f; font-size: 16px;">${escapeHtml(data.feedback || "Document does not meet requirements.")}</p>
+
+                    <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:25px; margin:30px 0;">
+                        <p style="margin:0 0 10px; color: #86868B; font-size: 12px; font-weight:700; text-transform: uppercase; letter-spacing: 1px;">Issue Found</p>
+                        <p style="margin:0; color: #1D1D1F; font-size: 16px;">${escapeHtml(data.feedback || "Document does not meet requirements.")}</p>
                     </div>
-                    <p style="color:#515154; font-size:15px; text-align:center;">Please upload a new version of your ${escapeHtml(docName)} to continue.</p>
+
+                    <div style="background:#111111; border-radius:16px; padding:28px; margin:35px 0; color:white; text-align:center;">
+                        <h3 style="margin:0 0 10px; font-size:20px; color: white;">Next Step</h3>
+                        <p style="margin:0; opacity:0.9; font-size: 15px; color: #E5E5EA;">
+                            Upload a clearer replacement for your ${safeDocName.toLowerCase()} from the dashboard. We will review the new file as soon as it arrives.
+                        </p>
+                    </div>
+
                     <div style="text-align:center; margin-top:35px;">
                         <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Upload New Document</a>
                     </div>

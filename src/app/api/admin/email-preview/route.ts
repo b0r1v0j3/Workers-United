@@ -5,9 +5,9 @@ import { isGodModeUser } from "@/lib/godmode";
 import type { EmailType } from "@/lib/email-templates";
 
 const VALID_TYPES: EmailType[] = [
-    "welcome", "profile_complete", "payment_success", "job_offer",
+    "welcome", "profile_complete", "payment_success", "checkout_recovery", "job_offer",
     "offer_reminder", "refund_approved", "document_expiring", "job_match",
-    "admin_update", "announcement", "profile_incomplete",
+    "admin_update", "announcement", "profile_incomplete", "document_review_result",
     "profile_reminder", "profile_warning", "profile_deletion",
     "announcement_document_fix"
 ];
