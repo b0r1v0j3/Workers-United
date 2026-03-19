@@ -2,8 +2,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
     activateEntryFeeWorkerAfterPayment,
     getStripePaymentAmounts,
+    mergeStripePaymentMetadata,
     persistCompletedStripeCheckoutPayment,
     queueEntryFeePaymentSuccessEmail,
+    updateStripePaymentRecordByReference,
 } from "@/lib/stripe-payment-finalization";
 
 const { loadCanonicalWorkerRecord, queueEmail } = vi.hoisted(() => ({
@@ -34,6 +36,112 @@ describe("stripe-payment-finalization", () => {
             amount: 190,
             amountCents: 19000,
         });
+    });
+
+    it("merges Stripe payment metadata without dropping existing keys", () => {
+        expect(
+            mergeStripePaymentMetadata(
+                { existing: "keep", overwritten: "old" },
+                { overwritten: "new", added: "value" }
+            )
+        ).toEqual({
+            existing: "keep",
+            overwritten: "new",
+            added: "value",
+        });
+    });
+
+    it("updates failure metadata by reference and preserves existing metadata", async () => {
+        const maybeSingle = vi.fn().mockResolvedValue({
+            data: {
+                id: "payment-row-1",
+                metadata: {
+                    original: "keep",
+                },
+            },
+            error: null,
+        });
+        const updateEq = vi.fn().mockResolvedValue({ error: null });
+        const update = vi.fn().mockReturnValue({ eq: updateEq });
+
+        const admin = {
+            from: (table: string) => {
+                if (table !== "payments") {
+                    throw new Error(`Unexpected table: ${table}`);
+                }
+
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            maybeSingle,
+                        }),
+                    }),
+                    update,
+                };
+            },
+        };
+
+        await updateStripePaymentRecordByReference({
+            admin: admin as never,
+            paymentId: "payment-row-1",
+            patch: {
+                metadata: {
+                    stripe_failure_code: "card_declined",
+                },
+            },
+        });
+
+        expect(update).toHaveBeenCalledWith({
+            metadata: {
+                original: "keep",
+                stripe_failure_code: "card_declined",
+            },
+        });
+        expect(updateEq).toHaveBeenCalledWith("id", "payment-row-1");
+    });
+
+    it("honors pendingOnly when updating checkout-session-linked payment rows", async () => {
+        const maybeSingle = vi.fn().mockResolvedValue({
+            data: {
+                id: "payment-row-2",
+                metadata: null,
+            },
+            error: null,
+        });
+        const updateEqStatus = vi.fn().mockResolvedValue({ error: null });
+        const updateEqId = vi.fn().mockReturnValue({ eq: updateEqStatus });
+        const update = vi.fn().mockReturnValue({ eq: updateEqId });
+
+        const admin = {
+            from: (table: string) => {
+                if (table !== "payments") {
+                    throw new Error(`Unexpected table: ${table}`);
+                }
+
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            maybeSingle,
+                        }),
+                    }),
+                    update,
+                };
+            },
+        };
+
+        await updateStripePaymentRecordByReference({
+            admin: admin as never,
+            stripeSessionId: "cs_test_456",
+            pendingOnly: true,
+            patch: {
+                metadata: {
+                    stripe_session_expired_at: "2026-03-19T07:00:00.000Z",
+                },
+            },
+        });
+
+        expect(updateEqId).toHaveBeenCalledWith("id", "payment-row-2");
+        expect(updateEqStatus).toHaveBeenCalledWith("status", "pending");
     });
 
     it("persists completed checkout metadata through the shared payment upsert helper", async () => {

@@ -31,6 +31,14 @@ interface QueueEntryFeePaymentSuccessEmailOptions {
     sessionCustomerEmail?: string | null;
 }
 
+interface UpdateStripePaymentRecordByReferenceOptions {
+    admin: AdminDbClient;
+    paymentId?: string | null;
+    stripeSessionId?: string | null;
+    patch: Record<string, unknown>;
+    pendingOnly?: boolean;
+}
+
 interface StripePaymentAmounts {
     amount: number;
     amountCents: number;
@@ -58,6 +66,65 @@ export function getStripePaymentAmounts(paymentType: string): StripePaymentAmoun
     }
 
     return { amount: 9, amountCents: 900 };
+}
+
+export function mergeStripePaymentMetadata(
+    existing: Stripe.MetadataParam | Record<string, unknown> | null | undefined,
+    next: Record<string, unknown>
+): Record<string, unknown> {
+    const base = existing && typeof existing === "object" && !Array.isArray(existing)
+        ? existing
+        : {};
+
+    return {
+        ...base,
+        ...next,
+    };
+}
+
+export async function updateStripePaymentRecordByReference({
+    admin,
+    paymentId = null,
+    stripeSessionId = null,
+    patch,
+    pendingOnly = false,
+}: UpdateStripePaymentRecordByReferenceOptions): Promise<void> {
+    const selector = paymentId
+        ? admin.from("payments").select("id, metadata").eq("id", paymentId)
+        : stripeSessionId
+            ? admin.from("payments").select("id, metadata").eq("stripe_checkout_session_id", stripeSessionId)
+            : null;
+
+    if (!selector) {
+        return;
+    }
+
+    const { data: existingRow, error: existingRowError } = await selector.maybeSingle();
+    assertNoDbError(existingRowError, "Failed to load payment row by reference");
+
+    if (!existingRow?.id) {
+        return;
+    }
+
+    const nextPatch = {
+        ...patch,
+        ...(patch.metadata && typeof patch.metadata === "object"
+            ? {
+                metadata: mergeStripePaymentMetadata(
+                    existingRow.metadata as Record<string, unknown> | null | undefined,
+                    patch.metadata as Record<string, unknown>
+                ),
+            }
+            : {}),
+    } as Database["public"]["Tables"]["payments"]["Update"];
+
+    let query = admin.from("payments").update(nextPatch).eq("id", existingRow.id);
+    if (pendingOnly) {
+        query = query.eq("status", "pending");
+    }
+
+    const { error } = await query;
+    assertNoDbError(error, "Failed to update payment row by reference");
 }
 
 export async function persistCompletedStripeCheckoutPayment({
