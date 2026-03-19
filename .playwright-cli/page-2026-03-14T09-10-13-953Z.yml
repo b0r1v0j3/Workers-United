@@ -1,0 +1,394 @@
+- generic [ref=e1]:
+  - generic [ref=e9285]:
+    - navigation [ref=e9286]:
+      - generic [ref=e9287]:
+        - button "Open menu" [ref=e9290]:
+          - img [ref=e9291]
+        - generic [ref=e9294]:
+          - img [ref=e9296]
+          - textbox "Search users, emails, passports..." [ref=e9299]
+        - button "Open notifications" [ref=e9302]:
+          - img [ref=e9303]
+    - generic [ref=e9305]:
+      - complementary:
+        - generic:
+          - generic:
+            - link "Dashboard":
+              - /url: /admin
+              - generic:
+                - img
+            - link "Workers":
+              - /url: /admin/workers
+              - generic:
+                - img
+            - link "Employers":
+              - /url: /admin/employers
+              - generic:
+                - img
+            - link "Agencies":
+              - /url: /admin/agencies
+              - generic:
+                - img
+            - link "Jobs":
+              - /url: /admin/jobs
+              - generic:
+                - img
+            - link "Queue":
+              - /url: /admin/queue
+              - generic:
+                - img
+            - link "Review":
+              - /url: /admin/review
+              - generic:
+                - img
+            - link "Inbox":
+              - /url: /admin/inbox
+              - generic:
+                - img
+            - link "Analytics":
+              - /url: /admin/analytics
+              - generic:
+                - img
+            - link "Exceptions":
+              - /url: /admin/exceptions
+              - generic:
+                - img
+            - link "Email Health":
+              - /url: /admin/email-health
+              - generic:
+                - img
+            - link "WA Blast":
+              - /url: /admin/whatsapp-blast
+              - generic:
+                - img
+            - link "Settings":
+              - /url: /admin/settings
+              - generic:
+                - img
+            - generic:
+              - button "Logout":
+                - generic:
+                  - img
+      - main [ref=e9306]:
+        - generic [ref=e9307]:
+          - navigation [ref=e9308]:
+            - link "Dashboard" [ref=e9309] [cursor=pointer]:
+              - /url: /admin
+            - generic [ref=e9310]:
+              - generic [ref=e9311]: ›
+              - generic [ref=e9312]: Workers
+          - generic [ref=e9313]:
+            - generic [ref=e9315]:
+              - generic [ref=e9316]:
+                - generic [ref=e9317]: Admin workers
+                - heading "Worker Operations" [level=1] [ref=e9318]
+                - paragraph [ref=e9319]: "Use this list for two different jobs: inspect the real worker workspace, or open the admin case view for approvals, payments, documents, and queue handling."
+              - generic [ref=e9320]:
+                - generic [ref=e9321]:
+                  - generic [ref=e9322]: Workers
+                  - generic [ref=e9323]: "202"
+                  - generic [ref=e9324]: "All view: 202"
+                - generic [ref=e9325]:
+                  - generic [ref=e9326]: Ready
+                  - generic [ref=e9327]: "9"
+                  - generic [ref=e9328]: 100% profile + 3 docs
+                - generic [ref=e9329]:
+                  - generic [ref=e9330]: Approval
+                  - generic [ref=e9331]: "10"
+                  - generic [ref=e9332]: Waiting for admin
+                - generic [ref=e9333]:
+                  - generic [ref=e9334]: In Queue
+                  - generic [ref=e9335]: "1"
+                  - generic [ref=e9336]: Active Job Finder workers
+                - generic [ref=e9337]:
+                  - generic [ref=e9338]: Paid
+                  - generic [ref=e9339]: "1"
+                  - generic [ref=e9340]: Entry fee confirmed
+            - generic [ref=e9341]:
+              - generic [ref=e9342]:
+                - generic [ref=e9343]:
+                  - img [ref=e9345]
+                  - generic [ref=e9350]:
+                    - heading "Inspect workspace" [level=2] [ref=e9351]
+                    - paragraph [ref=e9352]: Read-only worker workspace with the exact user data.
+                - paragraph [ref=e9353]: Use the Inspect workspace action when you want to see what the worker sees.
+              - generic [ref=e9354]:
+                - generic [ref=e9355]:
+                  - img [ref=e9357]
+                  - generic [ref=e9360]:
+                    - heading "Case view" [level=2] [ref=e9361]
+                    - paragraph [ref=e9362]: Admin-only detail view for approvals, documents, and payments.
+                - paragraph [ref=e9363]: Use Open case when you need admin actions, review tools, or payment history.
+              - generic [ref=e9364]:
+                - generic [ref=e9365]:
+                  - img [ref=e9367]
+                  - generic [ref=e9370]:
+                    - heading "Current focus" [level=2] [ref=e9371]
+                    - paragraph [ref=e9372]: The filter pills below drive the list and table count.
+                - paragraph [ref=e9373]: You are looking at the full worker registry.
+            - generic [ref=e9374]:
+              - generic [ref=e9375]:
+                - generic [ref=e9376]:
+                  - heading "Worker filters" [level=2] [ref=e9377]
+                  - paragraph [ref=e9378]: 202 registered workers
+                - generic [ref=e9379]: Filters update the table below
+              - generic [ref=e9380]:
+                - link "All" [ref=e9381] [cursor=pointer]:
+                  - /url: /admin/workers
+                - link "New" [ref=e9382] [cursor=pointer]:
+                  - /url: /admin/workers?filter=NEW
+                - link "Verified" [ref=e9383] [cursor=pointer]:
+                  - /url: /admin/workers?filter=VERIFIED
+                - link "Approved" [ref=e9384] [cursor=pointer]:
+                  - /url: /admin/workers?filter=APPROVED
+                - link "In Queue" [ref=e9385] [cursor=pointer]:
+                  - /url: /admin/workers?filter=IN_QUEUE
+                - link "Offer" [ref=e9386] [cursor=pointer]:
+                  - /url: /admin/workers?filter=OFFER_PENDING
+                - link "Visa" [ref=e9387] [cursor=pointer]:
+                  - /url: /admin/workers?filter=VISA_PROCESS_STARTED
+                - link "Placed" [ref=e9388] [cursor=pointer]:
+                  - /url: /admin/workers?filter=PLACED
+                - link "Rejected" [ref=e9389] [cursor=pointer]:
+                  - /url: /admin/workers?filter=REJECTED
+                - link "Refund" [ref=e9390] [cursor=pointer]:
+                  - /url: /admin/workers?filter=REFUND_FLAGGED
+                - link "Needs Approval" [ref=e9391] [cursor=pointer]:
+                  - /url: /admin/workers?filter=needs_approval
+                  - img [ref=e9393]
+                  - text: Needs Approval
+            - generic [ref=e9396]:
+              - generic [ref=e9397]:
+                - generic [ref=e9399]:
+                  - generic [ref=e9400]: Worker registry
+                  - generic [ref=e9401]: 4 shown · 202 in current dataset · All workers
+                - generic [ref=e9402]:
+                  - generic [ref=e9403]:
+                    - img [ref=e9404]
+                    - textbox "Search workers..." [active] [ref=e9407]: Borivoje
+                  - generic [ref=e9408]:
+                    - combobox [ref=e9409]:
+                      - option "All Countries" [selected]
+                      - option "Algeria"
+                      - option "Algerian"
+                      - option "Algerian"
+                      - option "American"
+                      - option "Bangladesh"
+                      - option "Bangladesh"
+                      - option "Bangladeshi"
+                      - option "Bangladeshi"
+                      - option "Brasil"
+                      - option "Egyptian"
+                      - option "Filipino"
+                      - option "Filipino"
+                      - option "Ghanaian"
+                      - option "India"
+                      - option "India"
+                      - option "Indian"
+                      - option "Indian"
+                      - option "Indonesia"
+                      - option "Indonesian"
+                      - option "Kenya"
+                      - option "Kenyan"
+                      - option "Kenyan"
+                      - option "Moroccan"
+                      - option "Nawabshah"
+                      - option "Nepalese"
+                      - option "Nepali"
+                      - option "Nigeria"
+                      - option "Nigerian"
+                      - option "Nigerian"
+                      - option "Pakistan"
+                      - option "Pakistan"
+                      - option "Pakistani"
+                      - option "Pakistani"
+                      - option "Senegalese"
+                      - option "Serbian"
+                      - option "South African"
+                      - option "South African"
+                      - option "Ugandan"
+                      - option "e.g Bangladesh"
+                    - combobox [ref=e9410]:
+                      - option "All Jobs" [selected]
+                      - option "Agriculture"
+                      - option "Any"
+                      - option "Cleaning Services"
+                      - option "Construction"
+                      - option "Driving"
+                      - option "Hospitality"
+                      - option "Manufacturing"
+                      - option "Retail"
+                      - option "Transportation"
+                      - option "Warehouse Worker"
+                      - option "Warehousing & Logistics"
+              - table [ref=e9412]:
+                - rowgroup [ref=e9413]:
+                  - row "Name Status Progress Details Joined Actions" [ref=e9414]:
+                    - columnheader "Name" [ref=e9415] [cursor=pointer]:
+                      - generic [ref=e9416]: Name
+                    - columnheader "Status" [ref=e9417] [cursor=pointer]:
+                      - generic [ref=e9418]: Status
+                    - columnheader "Progress" [ref=e9419] [cursor=pointer]:
+                      - generic [ref=e9420]: Progress
+                    - columnheader "Details" [ref=e9421] [cursor=pointer]:
+                      - generic [ref=e9422]: Details
+                    - columnheader "Joined" [ref=e9423] [cursor=pointer]:
+                      - generic [ref=e9424]:
+                        - text: Joined
+                        - img [ref=e9425]
+                    - columnheader "Actions" [ref=e9427]
+                - rowgroup [ref=e9428]:
+                  - row "Borivoje Cvetković admin@workersunited.eu NEW Unpaid 5% No Docs 08/03/2026 25d left Inspect workspace Open case" [ref=e12511]:
+                    - cell "Borivoje Cvetković admin@workersunited.eu" [ref=e12512]:
+                      - generic [ref=e12513]:
+                        - img [ref=e12517]
+                        - generic [ref=e12522]:
+                          - paragraph [ref=e12523]: Borivoje Cvetković
+                          - paragraph [ref=e12524]: admin@workersunited.eu
+                    - cell "NEW Unpaid" [ref=e12525]:
+                      - generic [ref=e12526]:
+                        - generic [ref=e12527]: NEW
+                        - generic [ref=e12528]: Unpaid
+                    - cell "5% No Docs" [ref=e12529]:
+                      - generic [ref=e12533]: 5%
+                      - generic [ref=e12535]:
+                        - img [ref=e12536]
+                        - text: No Docs
+                    - cell [ref=e12539]
+                    - cell "08/03/2026 25d left" [ref=e12540]:
+                      - generic [ref=e12541]: 08/03/2026
+                      - generic [ref=e12542]:
+                        - img [ref=e12543]
+                        - text: 25d left
+                    - cell "Inspect workspace Open case" [ref=e12546]:
+                      - generic [ref=e12547]:
+                        - link "Inspect workspace" [ref=e12548] [cursor=pointer]:
+                          - /url: /profile/worker?inspect=05d65c2d-32df-45c6-b6f7-6a33d6b0a5f0
+                        - link "Open case" [ref=e12549] [cursor=pointer]:
+                          - /url: /admin/workers/05d65c2d-32df-45c6-b6f7-6a33d6b0a5f0
+                        - button "Delete Borivoje Cvetković" [ref=e12550]:
+                          - img [ref=e12551]
+                  - row "CA Codex Agency Tester cvetkovicborivoje+wu-codex-agency-worker-20260306@gmail.com VERIFIED Unpaid Needs Appr 100% 3/3 Docs Warehouse Worker Serbian +381600000121 06/03/2026 Inspect workspace Open case" [ref=e13105]:
+                    - cell "CA Codex Agency Tester cvetkovicborivoje+wu-codex-agency-worker-20260306@gmail.com" [ref=e13106]:
+                      - generic [ref=e13107]:
+                        - generic [ref=e13108]:
+                          - generic [ref=e13110]: CA
+                          - img [ref=e13112]
+                        - generic [ref=e13115]:
+                          - paragraph [ref=e13116]: Codex Agency Tester
+                          - paragraph [ref=e13117]: cvetkovicborivoje+wu-codex-agency-worker-20260306@gmail.com
+                    - cell "VERIFIED Unpaid Needs Appr" [ref=e13118]:
+                      - generic [ref=e13119]:
+                        - generic [ref=e13120]: VERIFIED
+                        - generic [ref=e13121]: Unpaid
+                        - generic [ref=e13122]:
+                          - img [ref=e13123]
+                          - text: Needs Appr
+                    - cell "100% 3/3 Docs" [ref=e13126]:
+                      - generic [ref=e13130]: 100%
+                      - generic [ref=e13132]:
+                        - img [ref=e13133]
+                        - text: 3/3 Docs
+                    - cell "Warehouse Worker Serbian +381600000121" [ref=e13136]:
+                      - generic [ref=e13137]:
+                        - generic [ref=e13138]: Warehouse Worker
+                        - generic [ref=e13139]:
+                          - img [ref=e13140]
+                          - text: Serbian
+                        - generic [ref=e13143]:
+                          - img [ref=e13144]
+                          - text: "+381600000121"
+                    - cell "06/03/2026" [ref=e13146]:
+                      - generic [ref=e13147]: 06/03/2026
+                    - cell "Inspect workspace Open case" [ref=e13148]:
+                      - generic [ref=e13149]:
+                        - link "Inspect workspace" [ref=e13150] [cursor=pointer]:
+                          - /url: /profile/worker?inspect=ea5a0e43-ea00-45a0-9233-89d3b63e6a6b
+                        - link "Open case" [ref=e13151] [cursor=pointer]:
+                          - /url: /admin/workers/ea5a0e43-ea00-45a0-9233-89d3b63e6a6b
+                        - button "Delete Codex Agency Tester" [ref=e13152]:
+                          - img [ref=e13153]
+                  - row "CA Codex Agency Test cvetkovicborivoje+wu-codex-agency-20260306@gmail.com NEW Unpaid 5% No Docs 06/03/2026 23d left Inspect workspace Open case" [ref=e13156]:
+                    - cell "CA Codex Agency Test cvetkovicborivoje+wu-codex-agency-20260306@gmail.com" [ref=e13157]:
+                      - generic [ref=e13158]:
+                        - generic [ref=e13159]:
+                          - generic [ref=e13161]: CA
+                          - img [ref=e13163]
+                        - generic [ref=e13166]:
+                          - paragraph [ref=e13167]: Codex Agency Test
+                          - paragraph [ref=e13168]: cvetkovicborivoje+wu-codex-agency-20260306@gmail.com
+                    - cell "NEW Unpaid" [ref=e13169]:
+                      - generic [ref=e13170]:
+                        - generic [ref=e13171]: NEW
+                        - generic [ref=e13172]: Unpaid
+                    - cell "5% No Docs" [ref=e13173]:
+                      - generic [ref=e13177]: 5%
+                      - generic [ref=e13179]:
+                        - img [ref=e13180]
+                        - text: No Docs
+                    - cell [ref=e13183]
+                    - cell "06/03/2026 23d left" [ref=e13184]:
+                      - generic [ref=e13185]: 06/03/2026
+                      - generic [ref=e13186]:
+                        - img [ref=e13187]
+                        - text: 23d left
+                    - cell "Inspect workspace Open case" [ref=e13190]:
+                      - generic [ref=e13191]:
+                        - link "Inspect workspace" [ref=e13192] [cursor=pointer]:
+                          - /url: /profile/worker?inspect=29e68b51-f2f4-493a-a54e-80312eff5268
+                        - link "Open case" [ref=e13193] [cursor=pointer]:
+                          - /url: /admin/workers/29e68b51-f2f4-493a-a54e-80312eff5268
+                        - button "Delete Codex Agency Test" [ref=e13194]:
+                          - img [ref=e13195]
+                  - row "CS Codex Standalone Tester cvetkovicborivoje+wu-codex-worker-20260306@gmail.com IN QUEUE Paid Needs Appr 100% 3/3 Docs Warehouse Worker Serbian +381600000122 06/03/2026 Inspect workspace Open case" [ref=e13198]:
+                    - cell "CS Codex Standalone Tester cvetkovicborivoje+wu-codex-worker-20260306@gmail.com" [ref=e13199]:
+                      - generic [ref=e13200]:
+                        - generic [ref=e13201]:
+                          - generic [ref=e13203]: CS
+                          - img [ref=e13205]
+                        - generic [ref=e13208]:
+                          - paragraph [ref=e13209]: Codex Standalone Tester
+                          - paragraph [ref=e13210]: cvetkovicborivoje+wu-codex-worker-20260306@gmail.com
+                    - cell "IN QUEUE Paid Needs Appr" [ref=e13211]:
+                      - generic [ref=e13212]:
+                        - generic [ref=e13213]: IN QUEUE
+                        - generic [ref=e13214]: Paid
+                        - generic [ref=e13215]:
+                          - img [ref=e13216]
+                          - text: Needs Appr
+                    - cell "100% 3/3 Docs" [ref=e13219]:
+                      - generic [ref=e13223]: 100%
+                      - generic [ref=e13225]:
+                        - img [ref=e13226]
+                        - text: 3/3 Docs
+                    - cell "Warehouse Worker Serbian +381600000122" [ref=e13229]:
+                      - generic [ref=e13230]:
+                        - generic [ref=e13231]: Warehouse Worker
+                        - generic [ref=e13232]:
+                          - img [ref=e13233]
+                          - text: Serbian
+                        - generic [ref=e13236]:
+                          - img [ref=e13237]
+                          - text: "+381600000122"
+                    - cell "06/03/2026" [ref=e13239]:
+                      - generic [ref=e13240]: 06/03/2026
+                    - cell "Inspect workspace Open case" [ref=e13241]:
+                      - generic [ref=e13242]:
+                        - link "Inspect workspace" [ref=e13243] [cursor=pointer]:
+                          - /url: /profile/worker?inspect=93174fec-0ec5-462c-a952-d0532f776fe5
+                        - link "Open case" [ref=e13244] [cursor=pointer]:
+                          - /url: /admin/workers/93174fec-0ec5-462c-a952-d0532f776fe5
+                        - button "Delete Codex Standalone Tester" [ref=e13245]:
+                          - img [ref=e13246]
+              - generic [ref=e18555]: Showing 4 of 202 workers in this view
+  - button "Admin" [ref=e9273]:
+    - img [ref=e9275]
+    - generic [ref=e9277]: Admin
+  - generic [ref=e9280]:
+    - paragraph [ref=e9281]:
+      - text: Essential cookies only for sign-in and site functionality.
+      - link "Privacy Policy" [ref=e9282] [cursor=pointer]:
+        - /url: /privacy-policy
+    - button "Got it" [ref=e9283]
+  - region "Notifications alt+T"
+  - alert [ref=e9284]

@@ -1,0 +1,209 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e78]:
+    - navigation [ref=e79]:
+      - generic [ref=e80]:
+        - button "Open menu" [ref=e83]:
+          - img [ref=e84]
+        - generic [ref=e87]:
+          - img [ref=e89]
+          - textbox "Search users, emails, passports..." [ref=e92]
+        - button "Open notifications" [ref=e95]:
+          - img [ref=e96]
+    - generic [ref=e98]:
+      - complementary:
+        - generic:
+          - generic:
+            - link "Dashboard":
+              - /url: /admin
+              - generic:
+                - img
+            - link "Workers":
+              - /url: /admin/workers
+              - generic:
+                - img
+            - link "Employers":
+              - /url: /admin/employers
+              - generic:
+                - img
+            - link "Agencies":
+              - /url: /admin/agencies
+              - generic:
+                - img
+            - link "Jobs":
+              - /url: /admin/jobs
+              - generic:
+                - img
+            - link "Queue":
+              - /url: /admin/queue
+              - generic:
+                - img
+            - link "Review":
+              - /url: /admin/review
+              - generic:
+                - img
+            - link "Inbox":
+              - /url: /admin/inbox
+              - generic:
+                - img
+            - link "Analytics":
+              - /url: /admin/analytics
+              - generic:
+                - img
+            - link "Exceptions":
+              - /url: /admin/exceptions
+              - generic:
+                - img
+            - link "Email Health":
+              - /url: /admin/email-health
+              - generic:
+                - img
+            - link "WA Blast":
+              - /url: /admin/whatsapp-blast
+              - generic:
+                - img
+            - link "Settings":
+              - /url: /admin/settings
+              - generic:
+                - img
+            - generic:
+              - button "Logout":
+                - generic:
+                  - img
+      - main [ref=e99]:
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - img [ref=e105]
+                - text: Admin
+              - heading "Operations" [level=1] [ref=e108]
+            - generic [ref=e109]:
+              - generic [ref=e110]: Saturday 14 March
+              - generic [ref=e111]: No new workers today
+          - generic [ref=e112]:
+            - link "Workers 192 +73 this week" [ref=e113] [cursor=pointer]:
+              - /url: /admin/workers
+              - generic [ref=e114]:
+                - generic [ref=e115]: Workers
+                - img [ref=e116]
+              - generic [ref=e121]: "192"
+              - generic [ref=e122]: +73 this week
+            - link "Employers 8 +2 this week" [ref=e123] [cursor=pointer]:
+              - /url: /admin/employers
+              - generic [ref=e124]:
+                - generic [ref=e125]: Employers
+                - img [ref=e126]
+              - generic [ref=e130]: "8"
+              - generic [ref=e131]: +2 this week
+            - link "Agencies 9 +8 this week · 2 workers added" [ref=e132] [cursor=pointer]:
+              - /url: /admin/agencies
+              - generic [ref=e133]:
+                - generic [ref=e134]: Agencies
+                - img [ref=e135]
+              - generic [ref=e140]: "9"
+              - generic [ref=e141]: +8 this week · 2 workers added
+            - link "Revenue — No payments this month" [ref=e142] [cursor=pointer]:
+              - /url: /admin/analytics
+              - generic [ref=e143]:
+                - generic [ref=e144]: Revenue
+                - img [ref=e145]
+              - generic [ref=e148]: —
+              - generic [ref=e149]: No payments this month
+          - generic [ref=e150]:
+            - generic [ref=e151]:
+              - img [ref=e152]
+              - heading "8 items need your attention" [level=2] [ref=e154]
+            - generic [ref=e155]:
+              - link "Pending employer accounts 8" [ref=e156] [cursor=pointer]:
+                - /url: /admin/employers
+                - generic [ref=e157]: Pending employer accounts
+                - generic [ref=e158]: "8"
+              - link "System exceptions 7" [ref=e159] [cursor=pointer]:
+                - /url: /admin/exceptions
+                - generic [ref=e160]: System exceptions
+                - generic [ref=e161]: "7"
+          - generic [ref=e162]:
+            - generic [ref=e163]:
+              - generic [ref=e164]:
+                - generic [ref=e165]:
+                  - img [ref=e166]
+                  - heading "Recent Registrations" [level=2] [ref=e169]
+                - link "View all" [ref=e170] [cursor=pointer]:
+                  - /url: /admin/workers
+              - generic [ref=e171]:
+                - link "A Anna Banda 13/03/2026" [ref=e172] [cursor=pointer]:
+                  - /url: /admin/workers/123f7ea4-20b0-44ff-a255-da4ac0af5bcb
+                  - generic [ref=e173]:
+                    - generic [ref=e174]: A
+                    - generic [ref=e175]: Anna Banda
+                  - generic [ref=e177]: 13/03/2026
+                - link "B Bello Sheriff Temilolu 13/03/2026" [ref=e178] [cursor=pointer]:
+                  - /url: /admin/workers/4026073e-b849-4f8a-afe1-aa903ad8e6a3
+                  - generic [ref=e179]:
+                    - generic [ref=e180]: B
+                    - generic [ref=e181]: Bello Sheriff Temilolu
+                  - generic [ref=e183]: 13/03/2026
+                - link "Y Yusra Adhan 12/03/2026" [ref=e184] [cursor=pointer]:
+                  - /url: /admin/workers/7c3c6228-3154-4e88-9c87-f98ba517b507
+                  - generic [ref=e185]:
+                    - generic [ref=e186]: "Y"
+                    - generic [ref=e187]: Yusra Adhan
+                  - generic [ref=e189]: 12/03/2026
+                - link "I irfan ullah 12/03/2026" [ref=e190] [cursor=pointer]:
+                  - /url: /admin/workers/82989fe8-ef1e-4a7b-8f72-fc43c5222228
+                  - generic [ref=e191]:
+                    - generic [ref=e192]: I
+                    - generic [ref=e193]: irfan ullah
+                  - generic [ref=e195]: 12/03/2026
+                - link "Y Yousaf Shafqat 12/03/2026" [ref=e196] [cursor=pointer]:
+                  - /url: /admin/workers/89b8e196-48c8-4cb0-92f2-6c1b41cd30da
+                  - generic [ref=e197]:
+                    - generic [ref=e198]: "Y"
+                    - generic [ref=e199]: Yousaf Shafqat
+                  - generic [ref=e201]: 12/03/2026
+            - generic [ref=e202]:
+              - generic [ref=e203]:
+                - generic [ref=e204]:
+                  - img [ref=e205]
+                  - heading "Recent Payments" [level=2] [ref=e208]
+                - link "View all" [ref=e209] [cursor=pointer]:
+                  - /url: /admin/analytics
+              - generic [ref=e210]: No payments yet.
+          - generic [ref=e211]:
+            - heading "Quick Navigation" [level=2] [ref=e212]
+            - generic [ref=e213]:
+              - link "Workers" [ref=e214] [cursor=pointer]:
+                - /url: /admin/workers
+              - link "Employers" [ref=e215] [cursor=pointer]:
+                - /url: /admin/employers
+              - link "Agencies" [ref=e216] [cursor=pointer]:
+                - /url: /admin/agencies
+              - link "Queue" [ref=e217] [cursor=pointer]:
+                - /url: /admin/queue
+              - link "Review" [ref=e218] [cursor=pointer]:
+                - /url: /admin/review
+              - link "Jobs" [ref=e219] [cursor=pointer]:
+                - /url: /admin/jobs
+              - link "Inbox" [ref=e220] [cursor=pointer]:
+                - /url: /admin/inbox
+              - link "Analytics" [ref=e221] [cursor=pointer]:
+                - /url: /admin/analytics
+              - link "Exceptions" [ref=e222] [cursor=pointer]:
+                - /url: /admin/exceptions
+              - link "Email Health" [ref=e223] [cursor=pointer]:
+                - /url: /admin/email-health
+              - link "Settings" [ref=e224] [cursor=pointer]:
+                - /url: /admin/settings
+  - button "Admin" [ref=e225]:
+    - img [ref=e227]
+    - generic [ref=e229]: Admin
+  - generic [ref=e232]:
+    - paragraph [ref=e233]:
+      - text: Essential cookies only for sign-in and site functionality.
+      - link "Privacy Policy" [ref=e234] [cursor=pointer]:
+        - /url: /privacy-policy
+    - button "Got it" [ref=e235]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e74] [cursor=pointer]:
+    - img [ref=e75]
+  - alert [ref=e236]

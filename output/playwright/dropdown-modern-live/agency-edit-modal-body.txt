@@ -1,0 +1,67 @@
+ADMIN PREVIEW
+Borivoje Cvetković
+Back to Admin
+Support
+Account Settings
+Logout
+ADMIN PREVIEW MODE
+Agency Workspace Preview
+
+You are inspecting a real agency workspace as admin. Admin stays admin while you review the live structure and worker flow.
+
+Back to Admin
+AGENCY WORKSPACE
+Wage
+
+One place for every worker profile. Create and edit the full worker form here, then use agency support anytime without leaving the workspace.
+
+SHAAFINAWAZ@GMAIL.COM
+
+TOTAL
+1
+READY
+0
+PAID
+0
+DRAFTS
+1
+
+90-day refund guarantee
+
+If we do not find a job for a worker within 90 days, the $9 Job Finder fee is refunded in full.
+
+Workers
+
+Manage every worker from one board. Agency support stays unlocked the whole time, and Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.
+
+Add worker
+#	WORKER	ADDED	COMPLETION	DOCUMENTS	PAYMENT	STATUS	ACTION
+
+1
+	
+Md Shafi
+Newaz
+Hospitality
+	
+14/03/2026
+	
+21%
+IN PROGRESS
+	
+Review docs	
+Locked
+Complete first
+	
+Complete required profile fields and documents before admin review.
+	
+Edit
+Preview only
+Loading worker form...
+This preview does not save draft workers.
+Close
+Admin
+
+We only use essential cookies for sign-in and site functionality. No ads or tracking. See our Privacy Policy for details.
+
+Got it
+Need help? Chat with us!

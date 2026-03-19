@@ -1,0 +1,6 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e3]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e75] [cursor=pointer]:
+    - img [ref=e76]
+  - alert [ref=e79]

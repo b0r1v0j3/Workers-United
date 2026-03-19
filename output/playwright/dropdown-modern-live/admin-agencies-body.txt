@@ -1,0 +1,183 @@
+ADMIN
+Borivoje Cvetković
+Dashboard
+›
+Agencies
+ADMIN AGENCIES
+Agency Operations
+
+Track every agency account, understand how many workers they brought in, and inspect the exact agency workspace without letting admin accidentally behave like an agency.
+
+AGENCIES
+10
+10 active
+WORKERS
+5
+Submitted through agencies
+CLAIMED
+1
+Workers who took control
+DRAFTS
+4
+Still agency-managed only
+Inspect workspace
+
+Open the exact agency dashboard and worker list in read-only mode, without touching the admin role.
+
+Claimed vs draft
+
+Claimed means the worker took over the profile. Draft means the agency still owns the intake and the worker has not claimed it yet.
+
+Operational view
+
+This page is for agency health and volume. Use the agency workspace itself when you need worker-by-worker operational signals.
+
+Agency registry
+
+Every agency account with ownership volume and direct workspace inspection.
+
+Wage
+
+Md Shafi Newaz • shaafinawaz@gmail.com
+
+shaafinawaz@gmail.com
+1 workers
+TOTAL
+1
+CLAIMED
+0
+DRAFTS
+1
+ACTIVE
+Inspect workspace
+Ombor Recruitment
+
+Md Hasmat Ullah Rubel • omborlimited@gmail.com
+
+omborlimited@gmail.com
+0 workers
+TOTAL
+0
+CLAIMED
+0
+DRAFTS
+0
+ACTIVE
+Inspect workspace
+Swati Enterprises
+
+Khurram Sheraz • swatienterprisesadvocate@gmail.com
+
+swatienterprisesadvocate@gmail.com
+0 workers
+TOTAL
+0
+CLAIMED
+0
+DRAFTS
+0
+ACTIVE
+Inspect workspace
+Geeta Consultant
+
+Keyur Patel • geetaconsultant26@gmail.com
+
+geetaconsultant26@gmail.com
+0 workers
+TOTAL
+0
+CLAIMED
+0
+DRAFTS
+0
+ACTIVE
+Inspect workspace
+European travel and visa Consultancy services pvt ltd
+
+Ratan mondal • europeantravel828@gmail.com
+
+europeantravel828@gmail.com
+0 workers
+TOTAL
+0
+CLAIMED
+0
+DRAFTS
+0
+ACTIVE
+Inspect workspace
+Diamond Star Overseas Pvt. Ltd.
+
+DIAMOND STAR OVERSEAS • hr.diamondstaroverseas@gmail.com
+
+hr.diamondstaroverseas@gmail.com
+1 workers
+TOTAL
+1
+CLAIMED
+0
+DRAFTS
+1
+ACTIVE
+Inspect workspace
+Harsh Manpower Services Pvt Ltd
+
+Devendra Singh • info.hrservice2110@gmail.com
+
+info.hrservice2110@gmail.com
+0 workers
+TOTAL
+0
+CLAIMED
+0
+DRAFTS
+0
+ACTIVE
+Inspect workspace
+Leonis consult Group in Ukraine
+
+Iryna Petrovska • robotaeuropa1@ukr.net
+
+robotaeuropa1@ukr.net
+0 workers
+TOTAL
+0
+CLAIMED
+0
+DRAFTS
+0
+ACTIVE
+Inspect workspace
+WORKERS UNITED
+
+WORKERS UNITED • contact@workersunited.eu
+
+contact@workersunited.eu
+2 workers
+TOTAL
+2
+CLAIMED
+0
+DRAFTS
+2
+ACTIVE
+Inspect workspace
+Codex Test Agency
+
+Codex Agency Test • cvetkovicborivoje+wu-codex-agency-20260306@gmail.com
+
+cvetkovicborivoje+wu-codex-agency-20260306@gmail.com
+1 workers
+TOTAL
+1
+CLAIMED
+1
+DRAFTS
+0
+ACTIVE
+Inspect workspace
+Admin
+
+We only use essential cookies for sign-in and site functionality. No ads or tracking. See our Privacy Policy for details.
+
+Got it

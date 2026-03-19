@@ -1,0 +1,233 @@
+{
+  "url": "http://localhost:3000/profile/agency",
+  "viewport": {
+    "width": 390,
+    "height": 664
+  },
+  "scrollWidth": 390,
+  "clientWidth": 390,
+  "overflow": 0,
+  "bodyText": "ADMIN SANDBOX MODE\nBorivoje Cvetković Agency Test Sandbox\n\nYou are testing this workspace with isolated sandbox data.\n\nBack to Admin\nAGENCY WORKSPACE\nBorivoje Cvetković Test Agency\n\nOne place for every worker profile. Create and edit the full worker form here, then use agency support anytime without leaving the workspace.\n\nCVETKOVICBORIVOJE+TEST-AGENCY@GMAIL.COM\n\nTOTAL\n0\nREADY\n0\nPAID\n0\nDRAFTS\n0\n\n90-day refund guarantee\n\nIf we do not find a job for a worker within 90 days, the $9 Job Finder fee is refunded in full.\n\nWorkers\n\nManage every worker from one board. Agency support stays unlocked the whole time, and Job Finder payment stays one worker at a time so Stripe never charges the wrong total by mistake.\n\nAdd worker\nNo workers yet\n\nUse the Add worker button above to open the full worker form without leaving this workspace.\n\nADD WORKER\nAdd worker\n\nFill the full worker form here without leaving the dashboard. Email and phone stay optional unless the worker should receive notifications.\n\n",
+  "offenders": [
+    {
+      "tag": "div",
+      "cls": "min-w-[96px] rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-3 sm:min-w-0",
+      "text": "Drafts0",
+      "width": 96,
+      "left": 341,
+      "right": 437,
+      "display": "block",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "mb-2 flex items-center justify-between text-[#9ca3af]",
+      "text": "Drafts",
+      "width": 62,
+      "left": 358,
+      "right": 420,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "span",
+      "cls": "text-[11px] font-semibold uppercase tracking-[0.18em]",
+      "text": "Drafts",
+      "width": 58,
+      "left": 362,
+      "right": 420,
+      "display": "block",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "text-2xl font-semibold tracking-tight text-[#111827]",
+      "text": "0",
+      "width": 62,
+      "left": 358,
+      "right": 420,
+      "display": "block",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "aside",
+      "cls": "\n                    fixed left-0 z-[55] w-[248px] max-w-[calc(100vw-1rem)] transition-all duration-300 ease-in-out px-2 lg:max-w-none lg:px-0\n                 ",
+      "text": "Agency WorkersSupportAccount SettingsLogout",
+      "width": 248,
+      "left": -298,
+      "right": -50,
+      "display": "block",
+      "position": "fixed",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "flex h-full flex-col items-center overflow-hidden rounded-[14px] border border-gray-200 bg-white p-1.5 shadow-sm backdrop-blur-sm lg:rounded-[14px] lg:border-wh",
+      "text": "Agency WorkersSupportAccount SettingsLogout",
+      "width": 232,
+      "left": -290,
+      "right": -58,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "hidden"
+    },
+    {
+      "tag": "div",
+      "cls": "flex h-full min-h-0 w-full flex-col items-center gap-1.5 overflow-y-auto lg:items-stretch",
+      "text": "Agency WorkersSupportAccount SettingsLogout",
+      "width": 218,
+      "left": -283,
+      "right": -65,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "auto"
+    },
+    {
+      "tag": "button",
+      "cls": "flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 group w-full justify-center text-slate-600 hover:bg-slate-50 hover:text-slate-9",
+      "text": "",
+      "width": 218,
+      "left": -283,
+      "right": -65,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "a",
+      "cls": "flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] border border-transparent transition-all duration-200 group relative overflow-hidden w-full justify-center ",
+      "text": "Agency Workers",
+      "width": 218,
+      "left": -283,
+      "right": -65,
+      "display": "flex",
+      "position": "relative",
+      "overflowX": "hidden"
+    },
+    {
+      "tag": "div",
+      "cls": "flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 w-full justify-center text-slate-300 cursor-not-allowed",
+      "text": "Support",
+      "width": 218,
+      "left": -283,
+      "right": -65,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 w-full justify-center text-slate-300 cursor-not-allowed",
+      "text": "Account Settings",
+      "width": 218,
+      "left": -283,
+      "right": -65,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "mt-auto w-full flex flex-col pt-2",
+      "text": "Logout",
+      "width": 218,
+      "left": -283,
+      "right": -65,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "my-2 border-t border-slate-100/80 w-full",
+      "text": "",
+      "width": 218,
+      "left": -283,
+      "right": -65,
+      "display": "block",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "button",
+      "cls": "flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] transition-all duration-200 group w-full justify-center text-slate-600 hover:bg-red-50 hover:text-red-600 f",
+      "text": "Logout",
+      "width": 218,
+      "left": -283,
+      "right": -65,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "w-6 h-6 flex items-center justify-center shrink-0 transition-colors text-slate-400 group-hover:text-slate-600",
+      "text": "",
+      "width": 24,
+      "left": -186,
+      "right": -162,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "w-6 h-6 flex items-center justify-center shrink-0 transition-colors text-emerald-600",
+      "text": "",
+      "width": 24,
+      "left": -186,
+      "right": -162,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "w-6 h-6 flex items-center justify-center shrink-0 text-slate-300",
+      "text": "",
+      "width": 24,
+      "left": -186,
+      "right": -162,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "w-6 h-6 flex items-center justify-center shrink-0 text-slate-300",
+      "text": "",
+      "width": 24,
+      "left": -186,
+      "right": -162,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "div",
+      "cls": "w-6 h-6 flex items-center justify-center shrink-0 transition-colors text-slate-400 group-hover:text-red-500",
+      "text": "",
+      "width": 24,
+      "left": -186,
+      "right": -162,
+      "display": "flex",
+      "position": "static",
+      "overflowX": "visible"
+    },
+    {
+      "tag": "svg",
+      "cls": "[object SVGAnimatedString]",
+      "text": "",
+      "width": 20,
+      "left": -184,
+      "right": -164,
+      "display": "block",
+      "position": "static",
+      "overflowX": "hidden"
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e42]:
+    - navigation [ref=e43]:
+      - generic [ref=e44]:
+        - button "Open menu" [ref=e47]:
+          - img [ref=e48]
+        - link "Workers United Logo" [ref=e50] [cursor=pointer]:
+          - /url: /profile/employer
+          - img "Workers United Logo" [ref=e51]
+        - button "Open notifications" [ref=e54]:
+          - img [ref=e55]
+    - generic [ref=e57]:
+      - complementary:
+        - generic:
+          - generic:
+            - link "Overview":
+              - /url: /profile/employer
+              - generic:
+                - img
+            - link "Job Requests":
+              - /url: /profile/employer?tab=jobs
+              - generic:
+                - img
+            - link "New Job Request":
+              - /url: /profile/employer?tab=post-job
+              - generic:
+                - img
+            - generic "Account Settings (disabled in admin sandbox)":
+              - generic:
+                - img
+            - generic:
+              - button "Logout":
+                - generic:
+                  - img
+      - main [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - generic [ref=e62]: Admin Sandbox Mode
+              - generic [ref=e63]: Borivoje Cvetković Employer Test Sandbox
+              - paragraph [ref=e64]: You are testing this workspace with isolated sandbox data.
+            - link "Back to Admin" [ref=e65] [cursor=pointer]:
+              - /url: /admin
+          - generic [ref=e66]:
+            - generic [ref=e68]:
+              - generic [ref=e69]:
+                - generic [ref=e70]:
+                  - img [ref=e71]
+                  - text: Employer Workspace
+                - heading "Borivoje Cvetković Test Employer" [level=1] [ref=e75]
+                - paragraph [ref=e76]: Keep company details, readiness, and job requests in one workspace.
+              - generic [ref=e77]:
+                - generic [ref=e78]:
+                  - generic [ref=e79]: Completion
+                  - generic [ref=e80]: 25%
+                - generic [ref=e81]:
+                  - generic [ref=e82]: Jobs
+                  - generic [ref=e83]: "0"
+                - generic [ref=e84]:
+                  - generic [ref=e85]: Open
+                  - generic [ref=e86]: "0"
+                - generic [ref=e87]:
+                  - generic [ref=e88]: Status
+                  - generic [ref=e89]: Setup
+            - generic [ref=e91]:
+              - heading "New Job Request" [level=3] [ref=e92]:
+                - img [ref=e94]
+                - text: New Job Request
+              - group [ref=e95]:
+                - generic [ref=e96]:
+                  - generic [ref=e97]:
+                    - generic [ref=e98]: Job Title *
+                    - textbox "e.g., Construction Worker, Welder" [ref=e99]
+                  - generic [ref=e100]:
+                    - generic [ref=e101]: Industry *
+                    - combobox [ref=e102]:
+                      - option "Select Industry" [selected]
+                      - option "Construction"
+                      - option "Manufacturing"
+                      - option "Agriculture"
+                      - option "Hospitality"
+                      - option "Transportation"
+                      - option "Retail"
+                      - option "Food Processing"
+                      - option "Warehousing & Logistics"
+                      - option "Cleaning Services"
+                      - option "Driving"
+                      - option "Other"
+                - generic [ref=e103]:
+                  - generic [ref=e104]: Job Description
+                  - textbox "Describe responsibilities, requirements..." [ref=e105]
+                - generic [ref=e106]:
+                  - generic [ref=e107]:
+                    - generic [ref=e108]: Positions *
+                    - spinbutton [ref=e109]: "1"
+                  - generic [ref=e110]:
+                    - generic [ref=e111]: Salary (RSD) *
+                    - spinbutton [ref=e112]: "70000"
+                  - generic [ref=e113]:
+                    - generic [ref=e114]: Schedule
+                    - combobox [ref=e115]:
+                      - option "Full-time (40h)" [selected]
+                      - option "Shift work"
+                  - generic [ref=e116]:
+                    - generic [ref=e117]: Contract
+                    - combobox [ref=e118]:
+                      - option "6 months"
+                      - option "12 months" [selected]
+                      - option "24 months"
+                      - option "36+ months"
+                - generic [ref=e119]:
+                  - generic [ref=e120]:
+                    - generic [ref=e121]: Accommodation City *
+                    - textbox "City where workers will be accommodated" [ref=e122]
+                  - generic [ref=e123]:
+                    - generic [ref=e124]: Accommodation Address *
+                    - textbox "Full address for accommodation" [ref=e125]
+                - button "Create Job Request" [ref=e127]:
+                  - img [ref=e128]
+                  - text: Create Job Request
+  - button "Employer" [ref=e129]:
+    - img [ref=e131]
+    - generic [ref=e133]: Employer
+  - generic [ref=e136]:
+    - paragraph [ref=e137]:
+      - text: Essential cookies only for sign-in and site functionality.
+      - link "Privacy Policy" [ref=e138] [cursor=pointer]:
+        - /url: /privacy-policy
+    - button "Got it" [ref=e139]
+  - region "Notifications alt+T"
+  - generic:
+    - link "Chat with us on WhatsApp":
+      - /url: https://wa.me/15557839521?text=Hi%2C%20I%20have%20a%20question%20about%20Workers%20United
+      - img
+  - button "Open Next.js Dev Tools" [ref=e145] [cursor=pointer]:
+    - img [ref=e146]
+  - alert [ref=e149]

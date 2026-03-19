@@ -1,0 +1,852 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - button "Open menu" [ref=e7]:
+          - img [ref=e8]
+        - link "Workers United Logo" [ref=e10] [cursor=pointer]:
+          - /url: /profile/worker
+          - img "Workers United Logo" [ref=e11]
+        - button "Open notifications" [ref=e14]:
+          - img [ref=e15]
+    - generic [ref=e17]:
+      - complementary:
+        - generic:
+          - generic:
+            - link "Overview":
+              - /url: /profile/worker
+              - generic:
+                - img
+            - link "Documents":
+              - /url: /profile/worker/documents
+              - generic:
+                - img
+            - link "Queue":
+              - /url: /profile/worker/queue
+              - generic:
+                - img
+            - generic "Support (disabled in admin sandbox)":
+              - generic:
+                - img
+            - link "Edit Profile":
+              - /url: /profile/worker/edit
+              - generic:
+                - img
+            - generic "Account Settings (disabled in admin sandbox)":
+              - generic:
+                - img
+            - generic:
+              - button "Logout":
+                - generic:
+                  - img
+      - main [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - generic [ref=e22]: Admin Sandbox Mode
+              - generic [ref=e23]: Borivoje Cvetković Worker Test Sandbox
+              - paragraph [ref=e24]: You are testing this workspace with isolated sandbox data.
+            - link "Back to Admin" [ref=e25] [cursor=pointer]:
+              - /url: /admin
+          - generic [ref=e89]:
+            - group [ref=e90]:
+              - generic [ref=e91]:
+                - heading "Account Information" [level=2] [ref=e93]
+                - generic [ref=e95]:
+                  - generic [ref=e96]:
+                    - generic [ref=e97]: Email
+                    - textbox [disabled] [ref=e98]: cvetkovicborivoje+test-worker@gmail.com
+                  - generic [ref=e99]:
+                    - generic [ref=e100]: Phone Number (WhatsApp) *
+                    - generic [ref=e101]:
+                      - textbox "1 (702) 123-4567" [ref=e102]: "+381"
+                      - 'button "Serbia: + 381" [ref=e104]'
+                    - paragraph [ref=e107]: Do not type '0' before your number. If your number is 0601234567, just type 601234567.
+              - generic [ref=e108]:
+                - heading "Personal Information" [level=2] [ref=e110]
+                - generic [ref=e111]:
+                  - generic [ref=e112]:
+                    - generic [ref=e113]:
+                      - generic [ref=e114]: First Name *
+                      - textbox "Your first name" [ref=e115]: Borivoje
+                    - generic [ref=e116]:
+                      - generic [ref=e117]: Last Name *
+                      - textbox "Your last name" [ref=e118]: Cvetković Worker Test
+                  - generic [ref=e119]:
+                    - generic [ref=e120]:
+                      - generic [ref=e121]: Gender *
+                      - combobox [ref=e122]:
+                        - option "Select gender..." [selected]
+                        - option "Male"
+                        - option "Female"
+                    - generic [ref=e123]:
+                      - generic [ref=e124]: Marital Status *
+                      - combobox [ref=e125]:
+                        - option "Select status..." [selected]
+                        - option "Single"
+                        - option "Married"
+                        - option "Divorced"
+                        - option "Widowed"
+                        - option "Separated"
+                        - option "Other"
+                  - generic [ref=e126]:
+                    - generic [ref=e127]:
+                      - generic [ref=e128]: Nationality *
+                      - textbox "e.g., Indian" [ref=e129]
+                    - generic [ref=e130]:
+                      - generic [ref=e131]: Date of Birth *
+                      - generic [ref=e132]:
+                        - combobox [ref=e133]:
+                          - option "Day" [selected]
+                          - option "1"
+                          - option "2"
+                          - option "3"
+                          - option "4"
+                          - option "5"
+                          - option "6"
+                          - option "7"
+                          - option "8"
+                          - option "9"
+                          - option "10"
+                          - option "11"
+                          - option "12"
+                          - option "13"
+                          - option "14"
+                          - option "15"
+                          - option "16"
+                          - option "17"
+                          - option "18"
+                          - option "19"
+                          - option "20"
+                          - option "21"
+                          - option "22"
+                          - option "23"
+                          - option "24"
+                          - option "25"
+                          - option "26"
+                          - option "27"
+                          - option "28"
+                          - option "29"
+                          - option "30"
+                          - option "31"
+                        - combobox [ref=e134]:
+                          - option "Month" [selected]
+                          - option "January"
+                          - option "February"
+                          - option "March"
+                          - option "April"
+                          - option "May"
+                          - option "June"
+                          - option "July"
+                          - option "August"
+                          - option "September"
+                          - option "October"
+                          - option "November"
+                          - option "December"
+                        - combobox [ref=e135]:
+                          - option "Year" [selected]
+                          - option "2008"
+                          - option "2007"
+                          - option "2006"
+                          - option "2005"
+                          - option "2004"
+                          - option "2003"
+                          - option "2002"
+                          - option "2001"
+                          - option "2000"
+                          - option "1999"
+                          - option "1998"
+                          - option "1997"
+                          - option "1996"
+                          - option "1995"
+                          - option "1994"
+                          - option "1993"
+                          - option "1992"
+                          - option "1991"
+                          - option "1990"
+                          - option "1989"
+                          - option "1988"
+                          - option "1987"
+                          - option "1986"
+                          - option "1985"
+                          - option "1984"
+                          - option "1983"
+                          - option "1982"
+                          - option "1981"
+                          - option "1980"
+                          - option "1979"
+                          - option "1978"
+                          - option "1977"
+                          - option "1976"
+                          - option "1975"
+                          - option "1974"
+                          - option "1973"
+                          - option "1972"
+                          - option "1971"
+                          - option "1970"
+                          - option "1969"
+                          - option "1968"
+                          - option "1967"
+                          - option "1966"
+                          - option "1965"
+                          - option "1964"
+                          - option "1963"
+                          - option "1962"
+                          - option "1961"
+                          - option "1960"
+                          - option "1959"
+                          - option "1958"
+                          - option "1957"
+                          - option "1956"
+                          - option "1955"
+                          - option "1954"
+                          - option "1953"
+                          - option "1952"
+                          - option "1951"
+                          - option "1950"
+                          - option "1949"
+                          - option "1948"
+                          - option "1947"
+                          - option "1946"
+                          - option "1945"
+                          - option "1944"
+                          - option "1943"
+                          - option "1942"
+                          - option "1941"
+                          - option "1940"
+                          - option "1939"
+                          - option "1938"
+                          - option "1937"
+                          - option "1936"
+                          - option "1935"
+                          - option "1934"
+                          - option "1933"
+                          - option "1932"
+                          - option "1931"
+                          - option "1930"
+                          - option "1929"
+                  - generic [ref=e136]:
+                    - generic [ref=e137]:
+                      - generic [ref=e138]: Country of Birth *
+                      - combobox [ref=e139]:
+                        - option "Select country..." [selected]
+                        - option "Afghanistan"
+                        - option "Albania"
+                        - option "Algeria"
+                        - option "Andorra"
+                        - option "Angola"
+                        - option "Argentina"
+                        - option "Armenia"
+                        - option "Australia"
+                        - option "Austria"
+                        - option "Azerbaijan"
+                        - option "Bahrain"
+                        - option "Bangladesh"
+                        - option "Belarus"
+                        - option "Belgium"
+                        - option "Bolivia"
+                        - option "Bosnia and Herzegovina"
+                        - option "Brazil"
+                        - option "Brunei"
+                        - option "Bulgaria"
+                        - option "Cameroon"
+                        - option "Canada"
+                        - option "Chile"
+                        - option "China"
+                        - option "Colombia"
+                        - option "Congo"
+                        - option "Costa Rica"
+                        - option "Croatia"
+                        - option "Cuba"
+                        - option "Cyprus"
+                        - option "Czech Republic"
+                        - option "Denmark"
+                        - option "Dominican Republic"
+                        - option "Ecuador"
+                        - option "Egypt"
+                        - option "El Salvador"
+                        - option "Estonia"
+                        - option "Ethiopia"
+                        - option "Finland"
+                        - option "France"
+                        - option "Georgia"
+                        - option "Germany"
+                        - option "Ghana"
+                        - option "Greece"
+                        - option "Guatemala"
+                        - option "Honduras"
+                        - option "Hungary"
+                        - option "Iceland"
+                        - option "India"
+                        - option "Indonesia"
+                        - option "Iran"
+                        - option "Iraq"
+                        - option "Ireland"
+                        - option "Israel"
+                        - option "Italy"
+                        - option "Jamaica"
+                        - option "Japan"
+                        - option "Jordan"
+                        - option "Kazakhstan"
+                        - option "Kenya"
+                        - option "Kuwait"
+                        - option "Kyrgyzstan"
+                        - option "Latvia"
+                        - option "Lebanon"
+                        - option "Libya"
+                        - option "Liechtenstein"
+                        - option "Lithuania"
+                        - option "Luxembourg"
+                        - option "Madagascar"
+                        - option "Malaysia"
+                        - option "Mali"
+                        - option "Malta"
+                        - option "Mexico"
+                        - option "Moldova"
+                        - option "Monaco"
+                        - option "Mongolia"
+                        - option "Montenegro"
+                        - option "Morocco"
+                        - option "Mozambique"
+                        - option "Myanmar"
+                        - option "Nepal"
+                        - option "Netherlands"
+                        - option "New Zealand"
+                        - option "Nicaragua"
+                        - option "Niger"
+                        - option "Nigeria"
+                        - option "North Korea"
+                        - option "North Macedonia"
+                        - option "Norway"
+                        - option "Oman"
+                        - option "Pakistan"
+                        - option "Palestine"
+                        - option "Panama"
+                        - option "Paraguay"
+                        - option "Peru"
+                        - option "Philippines"
+                        - option "Poland"
+                        - option "Portugal"
+                        - option "Qatar"
+                        - option "Romania"
+                        - option "Russia"
+                        - option "Rwanda"
+                        - option "Saudi Arabia"
+                        - option "Senegal"
+                        - option "Serbia"
+                        - option "Singapore"
+                        - option "Slovakia"
+                        - option "Slovenia"
+                        - option "Somalia"
+                        - option "South Africa"
+                        - option "South Korea"
+                        - option "Spain"
+                        - option "Sri Lanka"
+                        - option "Sudan"
+                        - option "Sweden"
+                        - option "Switzerland"
+                        - option "Syria"
+                        - option "Taiwan"
+                        - option "Tajikistan"
+                        - option "Tanzania"
+                        - option "Thailand"
+                        - option "Tunisia"
+                        - option "Turkey"
+                        - option "Turkmenistan"
+                        - option "Uganda"
+                        - option "Ukraine"
+                        - option "United Arab Emirates"
+                        - option "United Kingdom"
+                        - option "United States"
+                        - option "Uruguay"
+                        - option "Uzbekistan"
+                        - option "Vatican City"
+                        - option "Venezuela"
+                        - option "Vietnam"
+                        - option "Yemen"
+                        - option "Zambia"
+                        - option "Zimbabwe"
+                    - generic [ref=e140]:
+                      - generic [ref=e141]: City of Birth *
+                      - textbox "e.g., Mumbai" [ref=e142]
+                  - generic [ref=e143]:
+                    - generic [ref=e144]:
+                      - generic [ref=e145]: Citizenship *
+                      - combobox [ref=e146]:
+                        - option "Select country..." [selected]
+                        - option "Afghanistan"
+                        - option "Albania"
+                        - option "Algeria"
+                        - option "Andorra"
+                        - option "Angola"
+                        - option "Argentina"
+                        - option "Armenia"
+                        - option "Australia"
+                        - option "Austria"
+                        - option "Azerbaijan"
+                        - option "Bahrain"
+                        - option "Bangladesh"
+                        - option "Belarus"
+                        - option "Belgium"
+                        - option "Bolivia"
+                        - option "Bosnia and Herzegovina"
+                        - option "Brazil"
+                        - option "Brunei"
+                        - option "Bulgaria"
+                        - option "Cameroon"
+                        - option "Canada"
+                        - option "Chile"
+                        - option "China"
+                        - option "Colombia"
+                        - option "Congo"
+                        - option "Costa Rica"
+                        - option "Croatia"
+                        - option "Cuba"
+                        - option "Cyprus"
+                        - option "Czech Republic"
+                        - option "Denmark"
+                        - option "Dominican Republic"
+                        - option "Ecuador"
+                        - option "Egypt"
+                        - option "El Salvador"
+                        - option "Estonia"
+                        - option "Ethiopia"
+                        - option "Finland"
+                        - option "France"
+                        - option "Georgia"
+                        - option "Germany"
+                        - option "Ghana"
+                        - option "Greece"
+                        - option "Guatemala"
+                        - option "Honduras"
+                        - option "Hungary"
+                        - option "Iceland"
+                        - option "India"
+                        - option "Indonesia"
+                        - option "Iran"
+                        - option "Iraq"
+                        - option "Ireland"
+                        - option "Israel"
+                        - option "Italy"
+                        - option "Jamaica"
+                        - option "Japan"
+                        - option "Jordan"
+                        - option "Kazakhstan"
+                        - option "Kenya"
+                        - option "Kuwait"
+                        - option "Kyrgyzstan"
+                        - option "Latvia"
+                        - option "Lebanon"
+                        - option "Libya"
+                        - option "Liechtenstein"
+                        - option "Lithuania"
+                        - option "Luxembourg"
+                        - option "Madagascar"
+                        - option "Malaysia"
+                        - option "Mali"
+                        - option "Malta"
+                        - option "Mexico"
+                        - option "Moldova"
+                        - option "Monaco"
+                        - option "Mongolia"
+                        - option "Montenegro"
+                        - option "Morocco"
+                        - option "Mozambique"
+                        - option "Myanmar"
+                        - option "Nepal"
+                        - option "Netherlands"
+                        - option "New Zealand"
+                        - option "Nicaragua"
+                        - option "Niger"
+                        - option "Nigeria"
+                        - option "North Korea"
+                        - option "North Macedonia"
+                        - option "Norway"
+                        - option "Oman"
+                        - option "Pakistan"
+                        - option "Palestine"
+                        - option "Panama"
+                        - option "Paraguay"
+                        - option "Peru"
+                        - option "Philippines"
+                        - option "Poland"
+                        - option "Portugal"
+                        - option "Qatar"
+                        - option "Romania"
+                        - option "Russia"
+                        - option "Rwanda"
+                        - option "Saudi Arabia"
+                        - option "Senegal"
+                        - option "Serbia"
+                        - option "Singapore"
+                        - option "Slovakia"
+                        - option "Slovenia"
+                        - option "Somalia"
+                        - option "South Africa"
+                        - option "South Korea"
+                        - option "Spain"
+                        - option "Sri Lanka"
+                        - option "Sudan"
+                        - option "Sweden"
+                        - option "Switzerland"
+                        - option "Syria"
+                        - option "Taiwan"
+                        - option "Tajikistan"
+                        - option "Tanzania"
+                        - option "Thailand"
+                        - option "Tunisia"
+                        - option "Turkey"
+                        - option "Turkmenistan"
+                        - option "Uganda"
+                        - option "Ukraine"
+                        - option "United Arab Emirates"
+                        - option "United Kingdom"
+                        - option "United States"
+                        - option "Uruguay"
+                        - option "Uzbekistan"
+                        - option "Vatican City"
+                        - option "Venezuela"
+                        - option "Vietnam"
+                        - option "Yemen"
+                        - option "Zambia"
+                        - option "Zimbabwe"
+                    - generic [ref=e147]:
+                      - generic [ref=e148]: Original Citizenship
+                      - generic [ref=e149]:
+                        - checkbox "Same as current citizenship" [checked] [ref=e150]
+                        - generic [ref=e151]: Same as current citizenship
+                  - generic [ref=e153]:
+                    - generic [ref=e154]: Maiden Name (Birth Surname)
+                    - textbox "Only if different from current surname" [ref=e155]
+                    - paragraph [ref=e156]: Optional — if your surname changed after marriage
+                  - generic [ref=e157]:
+                    - generic [ref=e158]:
+                      - generic [ref=e159]: Father's First Name
+                      - textbox "Father's first name" [ref=e160]
+                      - paragraph [ref=e161]: Optional
+                    - generic [ref=e162]:
+                      - generic [ref=e163]: Mother's First Name
+                      - textbox "Mother's first name" [ref=e164]
+                      - paragraph [ref=e165]: Optional
+                  - generic [ref=e166]:
+                    - generic [ref=e167]:
+                      - generic [ref=e168]: Current Country *
+                      - textbox "Where you live now" [ref=e169]: Serbia
+                    - generic [ref=e170]:
+                      - generic [ref=e171]: Address
+                      - textbox "Your full address" [ref=e172]
+              - generic [ref=e173]:
+                - heading "Family Information" [level=2] [ref=e175]
+                - generic [ref=e176]:
+                  - generic [ref=e177]:
+                    - checkbox "I have a spouse / partner" [ref=e178]
+                    - generic [ref=e179]: I have a spouse / partner
+                  - generic [ref=e180]:
+                    - checkbox "I have children" [ref=e181]
+                    - generic [ref=e182]: I have children
+              - generic [ref=e183]:
+                - heading "Passport & Travel" [level=2] [ref=e185]
+                - generic [ref=e186]:
+                  - generic [ref=e187]:
+                    - generic [ref=e188]:
+                      - generic [ref=e189]: Passport Number *
+                      - textbox "e.g., AB1234567" [ref=e190]
+                    - generic [ref=e191]:
+                      - generic [ref=e192]: Issued By *
+                      - textbox "Issuing authority" [ref=e193]
+                  - generic [ref=e194]:
+                    - generic [ref=e195]:
+                      - generic [ref=e196]: Issue Date *
+                      - generic [ref=e197]:
+                        - combobox [ref=e198]:
+                          - option "Day" [selected]
+                          - option "1"
+                          - option "2"
+                          - option "3"
+                          - option "4"
+                          - option "5"
+                          - option "6"
+                          - option "7"
+                          - option "8"
+                          - option "9"
+                          - option "10"
+                          - option "11"
+                          - option "12"
+                          - option "13"
+                          - option "14"
+                          - option "15"
+                          - option "16"
+                          - option "17"
+                          - option "18"
+                          - option "19"
+                          - option "20"
+                          - option "21"
+                          - option "22"
+                          - option "23"
+                          - option "24"
+                          - option "25"
+                          - option "26"
+                          - option "27"
+                          - option "28"
+                          - option "29"
+                          - option "30"
+                          - option "31"
+                        - combobox [ref=e199]:
+                          - option "Month" [selected]
+                          - option "January"
+                          - option "February"
+                          - option "March"
+                          - option "April"
+                          - option "May"
+                          - option "June"
+                          - option "July"
+                          - option "August"
+                          - option "September"
+                          - option "October"
+                          - option "November"
+                          - option "December"
+                        - combobox [ref=e200]:
+                          - option "Year" [selected]
+                          - option "2026"
+                          - option "2025"
+                          - option "2024"
+                          - option "2023"
+                          - option "2022"
+                          - option "2021"
+                          - option "2020"
+                          - option "2019"
+                          - option "2018"
+                          - option "2017"
+                      - paragraph [ref=e201]: Must be within the last 10 years
+                    - generic [ref=e202]:
+                      - generic [ref=e203]: Expiry Date *
+                      - generic [ref=e204]:
+                        - combobox [ref=e205]:
+                          - option "Day" [selected]
+                          - option "1"
+                          - option "2"
+                          - option "3"
+                          - option "4"
+                          - option "5"
+                          - option "6"
+                          - option "7"
+                          - option "8"
+                          - option "9"
+                          - option "10"
+                          - option "11"
+                          - option "12"
+                          - option "13"
+                          - option "14"
+                          - option "15"
+                          - option "16"
+                          - option "17"
+                          - option "18"
+                          - option "19"
+                          - option "20"
+                          - option "21"
+                          - option "22"
+                          - option "23"
+                          - option "24"
+                          - option "25"
+                          - option "26"
+                          - option "27"
+                          - option "28"
+                          - option "29"
+                          - option "30"
+                          - option "31"
+                        - combobox [ref=e206]:
+                          - option "Month" [selected]
+                          - option "January"
+                          - option "February"
+                          - option "March"
+                          - option "April"
+                          - option "May"
+                          - option "June"
+                          - option "July"
+                          - option "August"
+                          - option "September"
+                          - option "October"
+                          - option "November"
+                          - option "December"
+                        - combobox [ref=e207]:
+                          - option "Year" [selected]
+                          - option "2026"
+                          - option "2027"
+                          - option "2028"
+                          - option "2029"
+                          - option "2030"
+                          - option "2031"
+                          - option "2032"
+                          - option "2033"
+                          - option "2034"
+                          - option "2035"
+                          - option "2036"
+                      - paragraph [ref=e208]: Must be valid for at least 3 months after departure
+                  - generic [ref=e209]:
+                    - generic [ref=e210]:
+                      - generic [ref=e211]: Do you live outside your home country? *
+                      - combobox [ref=e212]:
+                        - option "Select..." [selected]
+                        - option "No"
+                        - option "Yes"
+                    - generic [ref=e213]:
+                      - generic [ref=e214]: Have you had any visas in the last 3 years? *
+                      - combobox [ref=e215]:
+                        - option "Select..." [selected]
+                        - option "No"
+                        - option "Yes"
+              - generic [ref=e216]:
+                - heading "Job Preferences" [level=2] [ref=e218]
+                - generic [ref=e219]:
+                  - generic [ref=e220]:
+                    - generic [ref=e221]: Preferred Job / Industry *
+                    - combobox [ref=e222]:
+                      - option "Select industry..."
+                      - option "Construction" [selected]
+                      - option "Manufacturing"
+                      - option "Agriculture"
+                      - option "Hospitality"
+                      - option "Transportation"
+                      - option "Retail"
+                      - option "Food Processing"
+                      - option "Warehousing & Logistics"
+                      - option "Cleaning Services"
+                      - option "Driving"
+                      - option "Any"
+                  - generic [ref=e223]:
+                    - generic [ref=e224]: Preferred Destinations (Europe)
+                    - generic [ref=e225]:
+                      - generic [ref=e226]:
+                        - checkbox "Any (Open to anywhere in Europe)" [ref=e227]
+                        - generic [ref=e228]: Any (Open to anywhere in Europe)
+                      - generic [ref=e229]:
+                        - generic [ref=e230]:
+                          - checkbox "Albania" [ref=e231]
+                          - generic [ref=e232]: Albania
+                        - generic [ref=e233]:
+                          - checkbox "Austria" [ref=e234]
+                          - generic [ref=e235]: Austria
+                        - generic [ref=e236]:
+                          - checkbox "Belgium" [ref=e237]
+                          - generic [ref=e238]: Belgium
+                        - generic [ref=e239]:
+                          - checkbox "Bosnia and Herzegovina" [ref=e240]
+                          - generic [ref=e241]: Bosnia and Herzegovina
+                        - generic [ref=e242]:
+                          - checkbox "Bulgaria" [ref=e243]
+                          - generic [ref=e244]: Bulgaria
+                        - generic [ref=e245]:
+                          - checkbox "Croatia" [ref=e246]
+                          - generic [ref=e247]: Croatia
+                        - generic [ref=e248]:
+                          - checkbox "Cyprus" [ref=e249]
+                          - generic [ref=e250]: Cyprus
+                        - generic [ref=e251]:
+                          - checkbox "Czech Republic" [ref=e252]
+                          - generic [ref=e253]: Czech Republic
+                        - generic [ref=e254]:
+                          - checkbox "Denmark" [ref=e255]
+                          - generic [ref=e256]: Denmark
+                        - generic [ref=e257]:
+                          - checkbox "Estonia" [ref=e258]
+                          - generic [ref=e259]: Estonia
+                        - generic [ref=e260]:
+                          - checkbox "Finland" [ref=e261]
+                          - generic [ref=e262]: Finland
+                        - generic [ref=e263]:
+                          - checkbox "France" [ref=e264]
+                          - generic [ref=e265]: France
+                        - generic [ref=e266]:
+                          - checkbox "Germany" [ref=e267]
+                          - generic [ref=e268]: Germany
+                        - generic [ref=e269]:
+                          - checkbox "Greece" [ref=e270]
+                          - generic [ref=e271]: Greece
+                        - generic [ref=e272]:
+                          - checkbox "Hungary" [ref=e273]
+                          - generic [ref=e274]: Hungary
+                        - generic [ref=e275]:
+                          - checkbox "Iceland" [ref=e276]
+                          - generic [ref=e277]: Iceland
+                        - generic [ref=e278]:
+                          - checkbox "Ireland" [ref=e279]
+                          - generic [ref=e280]: Ireland
+                        - generic [ref=e281]:
+                          - checkbox "Italy" [ref=e282]
+                          - generic [ref=e283]: Italy
+                        - generic [ref=e284]:
+                          - checkbox "Latvia" [ref=e285]
+                          - generic [ref=e286]: Latvia
+                        - generic [ref=e287]:
+                          - checkbox "Lithuania" [ref=e288]
+                          - generic [ref=e289]: Lithuania
+                        - generic [ref=e290]:
+                          - checkbox "Luxembourg" [ref=e291]
+                          - generic [ref=e292]: Luxembourg
+                        - generic [ref=e293]:
+                          - checkbox "Malta" [ref=e294]
+                          - generic [ref=e295]: Malta
+                        - generic [ref=e296]:
+                          - checkbox "Montenegro" [ref=e297]
+                          - generic [ref=e298]: Montenegro
+                        - generic [ref=e299]:
+                          - checkbox "Netherlands" [ref=e300]
+                          - generic [ref=e301]: Netherlands
+                        - generic [ref=e302]:
+                          - checkbox "North Macedonia" [ref=e303]
+                          - generic [ref=e304]: North Macedonia
+                        - generic [ref=e305]:
+                          - checkbox "Norway" [ref=e306]
+                          - generic [ref=e307]: Norway
+                        - generic [ref=e308]:
+                          - checkbox "Poland" [ref=e309]
+                          - generic [ref=e310]: Poland
+                        - generic [ref=e311]:
+                          - checkbox "Portugal" [ref=e312]
+                          - generic [ref=e313]: Portugal
+                        - generic [ref=e314]:
+                          - checkbox "Romania" [ref=e315]
+                          - generic [ref=e316]: Romania
+                        - generic [ref=e317]:
+                          - checkbox "Serbia" [ref=e318]
+                          - generic [ref=e319]: Serbia
+                        - generic [ref=e320]:
+                          - checkbox "Slovakia" [ref=e321]
+                          - generic [ref=e322]: Slovakia
+                        - generic [ref=e323]:
+                          - checkbox "Slovenia" [ref=e324]
+                          - generic [ref=e325]: Slovenia
+                        - generic [ref=e326]:
+                          - checkbox "Spain" [ref=e327]
+                          - generic [ref=e328]: Spain
+                        - generic [ref=e329]:
+                          - checkbox "Sweden" [ref=e330]
+                          - generic [ref=e331]: Sweden
+                        - generic [ref=e332]:
+                          - checkbox "Switzerland" [ref=e333]
+                          - generic [ref=e334]: Switzerland
+                        - generic [ref=e335]:
+                          - checkbox "United Kingdom" [ref=e336]
+                          - generic [ref=e337]: United Kingdom
+                    - paragraph [ref=e338]: ⓘ Selecting a specific country doesn't guarantee a job there. You might receive offers from other EU countries.
+            - generic [ref=e339]:
+              - link "Cancel" [ref=e340] [cursor=pointer]:
+                - /url: /profile/worker
+              - button "Save Changes" [ref=e341]
+  - button "Worker" [ref=e342]:
+    - img [ref=e344]
+    - generic [ref=e346]: Worker
+  - generic [ref=e349]:
+    - paragraph [ref=e350]:
+      - text: Essential cookies only for sign-in and site functionality.
+      - link "Privacy Policy" [ref=e351] [cursor=pointer]:
+        - /url: /privacy-policy
+    - button "Got it" [ref=e352]
+  - region "Notifications alt+T"
+  - generic:
+    - link "Chat with us on WhatsApp":
+      - /url: https://wa.me/15557839521?text=Hi%2C%20I%20have%20a%20question%20about%20Workers%20United
+      - img
+  - button "Open Next.js Dev Tools" [ref=e358] [cursor=pointer]:
+    - img [ref=e359]
+  - alert [ref=e362]

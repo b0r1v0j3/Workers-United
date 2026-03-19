@@ -1,0 +1,9 @@
+[   44370ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://qdwhwlusxjjtlinmpwms.supabase.co/auth/v1/user:0
+[   44370ms] [ERROR] TypeError: Failed to fetch
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_8FcfyR3Gvg6dEUNNrtgzco8zFxKR:24:38485
+    at tx (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_8FcfyR3Gvg6dEUNNrtgzco8zFxKR:24:43425)
+    at tP (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_8FcfyR3Gvg6dEUNNrtgzco8zFxKR:24:42953)
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_8FcfyR3Gvg6dEUNNrtgzco8zFxKR:37:14906
+    at ru._useSession (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_8FcfyR3Gvg6dEUNNrtgzco8zFxKR:37:12424)
+    at async ru._getUser (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_8FcfyR3Gvg6dEUNNrtgzco8zFxKR:37:14737)
+    at async https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_8FcfyR3Gvg6dEUNNrtgzco8zFxKR:37:14531 @ https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_8FcfyR3Gvg6dEUNNrtgzco8zFxKR:23

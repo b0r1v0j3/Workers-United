@@ -1,0 +1,72 @@
+[
+  {
+    "name": "worker-dashboard",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 20
+  },
+  {
+    "name": "worker-edit",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 20
+  },
+  {
+    "name": "worker-documents",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 20
+  },
+  {
+    "name": "worker-queue",
+    "overflow": 5,
+    "scrollWidth": 395,
+    "clientWidth": 390,
+    "offenderCount": 20
+  },
+  {
+    "name": "employer-dashboard",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 20
+  },
+  {
+    "name": "agency-dashboard",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 20
+  },
+  {
+    "name": "agency-add-worker-modal",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 20
+  },
+  {
+    "name": "signup-worker",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 0
+  },
+  {
+    "name": "signup-employer",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 0
+  },
+  {
+    "name": "signup-agency",
+    "overflow": 0,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "offenderCount": 0
+  }
+]

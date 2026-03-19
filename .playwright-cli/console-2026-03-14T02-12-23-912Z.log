@@ -1,0 +1,41 @@
+[    5673ms] [WARNING] The resource https://img.icons8.com/fluency/48/facebook-new.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[    5673ms] [WARNING] The resource https://img.icons8.com/fluency/48/whatsapp.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[    5674ms] [WARNING] The resource https://img.icons8.com/fluency/48/linkedin.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[    5674ms] [WARNING] The resource https://img.icons8.com/ios-filled/50/threads.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[    5674ms] [WARNING] The resource https://img.icons8.com/fluency/48/instagram-new.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[    5674ms] [WARNING] The resource https://img.icons8.com/fluency/48/tiktok.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[    5674ms] [WARNING] The resource https://img.icons8.com/ios-filled/50/twitterx.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[   66229ms] [WARNING] The resource https://img.icons8.com/fluency/48/facebook-new.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[   66229ms] [WARNING] The resource https://img.icons8.com/fluency/48/whatsapp.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[   66229ms] [WARNING] The resource https://img.icons8.com/fluency/48/linkedin.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[   66229ms] [WARNING] The resource https://img.icons8.com/ios-filled/50/threads.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[   66229ms] [WARNING] The resource https://img.icons8.com/fluency/48/instagram-new.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[   66229ms] [WARNING] The resource https://img.icons8.com/fluency/48/tiktok.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[   66229ms] [WARNING] The resource https://img.icons8.com/ios-filled/50/twitterx.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://www.workersunited.eu/login:0
+[   91511ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://qdwhwlusxjjtlinmpwms.supabase.co/rest/v1/user_activity:0
+[  127750ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://qdwhwlusxjjtlinmpwms.supabase.co/rest/v1/user_activity:0
+[  211247ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://qdwhwlusxjjtlinmpwms.supabase.co/rest/v1/user_activity:0
+[ 3598329ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://qdwhwlusxjjtlinmpwms.supabase.co/auth/v1/token?grant_type=refresh_token:0
+[ 3598329ms] [ERROR] TypeError: Failed to fetch
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:24:38485
+    at tx (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:24:43425)
+    at tP (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:24:42953)
+    at r (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:25000)
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:25263
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:25340
+    at new Promise (<anonymous>)
+    at ru._refreshAccessToken (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:25194)
+    at ru._callRefreshToken (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:27943)
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:31547 @ https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:23
+[ 7149372ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://qdwhwlusxjjtlinmpwms.supabase.co/auth/v1/token?grant_type=refresh_token:0
+[ 7149373ms] [ERROR] TypeError: Failed to fetch
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:24:38485
+    at tx (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:24:43425)
+    at tP (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:24:42953)
+    at r (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:25000)
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:25263
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:25340
+    at new Promise (<anonymous>)
+    at ru._refreshAccessToken (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:25194)
+    at ru._callRefreshToken (https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:27943)
+    at https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:37:31547 @ https://www.workersunited.eu/_next/static/chunks/1ec42f73c955c9bb.js?dpl=dpl_Cwk3w7LoPwD8MJpXbNNpaRXhWaXW:23
