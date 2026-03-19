@@ -15,6 +15,7 @@ import {
     FileText,
     Pencil,
     Plus,
+    Mail,
 } from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
@@ -394,6 +395,7 @@ function SidebarContent({
                     <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} tone="violet" />
                     <div className={`px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${isCollapsed ? 'hidden' : 'block'}`}>Insights</div>
                     <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} tone="blue" />
+                    <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Emails" isCollapsed={isCollapsed} tone="blue" />
                     <SidebarLink href="/admin/whatsapp-blast" icon={<MessageSquareMore size={20} />} label="WA Blast" isCollapsed={isCollapsed} tone="emerald" />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} tone="slate" />
                 </>

@@ -78,7 +78,7 @@ Workers-United/
 │   │   │   ├── page.tsx       # Internal tools landing page
 │   │   │   ├── ops/           # Internal ops monitor entry (wraps the shared exception cockpit)
 │   │   │   ├── email-health/  # Internal bounced/invalid email hygiene screen
-│   │   │   └── email-preview/ # Internal email template sandbox; supports query-driven live payload preview links from admin document actions plus direct approval-unlock preview shortcuts
+│   │   │   └── email-preview/ # Internal email template sandbox; reuses the shared email-preview workspace while keeping owner-only shortcuts and query-driven payload previews separate from the business admin shell
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
@@ -112,6 +112,7 @@ Workers-United/
 │   │   ├── forms/InternationalPhoneField.tsx # Shared modern phone input shell (flag + calling code + searchable picker) used across worker/employer/agency forms
 │   │   ├── forms/NativeDateField.tsx # Shared compact date field: mobile keeps the native iPhone/Android picker, desktop opens a custom calendar popover and now delegates month/year dropdown styling to `AdaptiveSelect`
 │   │   ├── admin/AdminSectionHero.tsx # Shared admin hero + metrics surface for registry pages
+│   │   ├── admin/EmailPreviewWorkspace.tsx # Shared client workspace that lists every system email template and renders the live iframe preview for both admin and internal email-preview routes
 │   │   ├── admin/DocumentPreview.tsx # Admin contract-payload preview card aligned with the worker case ops UI
 │   │   ├── admin/ActionSubmitButton.tsx # Shared pending-aware submit button for slower admin document actions
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
@@ -349,12 +350,13 @@ User (Browser)
 | `src/app/internal/page.tsx` | Hidden internal tools landing page; clearly separates technical monitors/template sandbox from firm-facing admin operations and now exposes direct shortcut cards for the most common email preview scenarios |
 | `src/app/internal/ops/page.tsx` | Canonical entry point for the ops monitor / exception cockpit |
 | `src/app/internal/email-health/page.tsx` | Canonical entry point for bounced/invalid email hygiene |
-| `src/app/internal/email-preview/page.tsx` | Canonical entry point for email template preview/sandbox; can now open exact query-driven payload previews from admin worker document actions |
+| `src/app/internal/email-preview/page.tsx` | Owner-only wrapper around the shared email preview workspace; keeps internal banner/context while still opening exact query-driven payload previews from admin worker document actions |
 
 ### Admin
 | File | Role |
 |---|---|
 | `src/app/admin/page.tsx` | Business admin dashboard with actionable stats, queue watch, recent lists, preview shortcuts, and direct inspect links into real worker/employer/agency workspaces; technical incident/email-health tooling is intentionally kept out of this shell |
+| `src/app/admin/email-preview/page.tsx` | Business-admin email preview page inside the normal AppShell; exposes the full template list and live payload preview without requiring the internal tools hub |
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
