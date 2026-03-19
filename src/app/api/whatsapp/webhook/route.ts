@@ -48,6 +48,7 @@ import {
     recordInboundWhatsAppMessage,
 } from "@/lib/whatsapp-inbound-events";
 import { resolveWhatsAppWorkerIdentity } from "@/lib/whatsapp-identity";
+import { callOpenAIResponseText } from "@/lib/openai-response-text";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -565,62 +566,6 @@ export async function POST(request: NextRequest) {
         console.error("[WhatsApp Webhook] Error:", error);
         return NextResponse.json({ status: "error" });
     }
-}
-
-async function callOpenAIResponseText(
-    apiKey: string,
-    options: {
-        model: string;
-        instructions: string;
-        input: string;
-        json?: boolean;
-        maxOutputTokens?: number;
-    }
-): Promise<string> {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-            model: options.model,
-            instructions: options.instructions,
-            input: options.input,
-            ...(options.maxOutputTokens ? { max_output_tokens: options.maxOutputTokens } : {}),
-            ...(options.json ? {
-                text: {
-                    format: { type: "json_object" },
-                },
-            } : {}),
-        }),
-    });
-
-    if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`OpenAI responses failed: ${response.status} - ${errText.substring(0, 300)}`);
-    }
-
-    const data = await response.json();
-    // GPT-5-mini returns reasoning block at output[0] and message at output[1]
-    // We need to find the message block with actual text content
-    const outputText = data.output_text
-        || (() => {
-            const outputs = data.output || [];
-            for (const item of outputs) {
-                if (item.type === "message" && item.content?.[0]?.text) {
-                    return item.content[0].text;
-                }
-            }
-            // Fallback: try first item with content
-            for (const item of outputs) {
-                if (item.content?.[0]?.text) {
-                    return item.content[0].text;
-                }
-            }
-            return "";
-        })();
-    return (outputText || "").trim();
 }
 
 // ─── WhatsApp Onboarding Flow ─────────────────────────────────────────────────

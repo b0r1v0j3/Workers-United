@@ -96,7 +96,7 @@ Workers-United/
 │   │   │   ├── profile/       # Profile API + authenticated auth-contact sync route (`/api/profile/auth-contact`)
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow); delivery-status persistence is now delegated to a shared helper
+│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow); delivery-status persistence, identity resolution, and OpenAI Responses transport are now delegated to shared helpers
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth code callback + hash-link rescue redirect + agency draft claim linking
@@ -167,6 +167,7 @@ Workers-United/
 │   │   ├── whatsapp-employer-flow.ts # Shared employer lead detection + employer reply prompt/fallback helpers extracted from the webhook route
 │   │   ├── whatsapp-fallback.ts # Shared config-driven multilingual fallback copy extracted from the webhook route
 │   │   ├── whatsapp-identity.ts # Shared multi-layer WhatsApp worker/profile phone lookup (worker phone match, auth-phone fallback, profile load, phone backfill) extracted from the webhook route
+│   │   ├── openai-response-text.ts # Shared OpenAI Responses API caller + `output_text/output[]` extraction helper used by the WhatsApp webhook
 │   │   ├── whatsapp-reply-guardrails.ts # Shared deterministic WhatsApp payment/escalation/inventory guardrail copy + media fallback replies extracted from the webhook route
 │   │   ├── whatsapp-status-events.ts # Shared Meta delivery-status persistence helpers extracted from the webhook route
 │   │   ├── whatsapp-worker-ai.ts # Shared worker snapshot + intent-router prompt + worker response prompt helpers extracted from the webhook route
