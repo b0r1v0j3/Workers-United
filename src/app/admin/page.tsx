@@ -368,6 +368,7 @@ export default async function AdminDashboard() {
                             { href: "/admin/jobs", label: "Jobs" },
                             { href: "/admin/inbox", label: "Inbox" },
                             { href: "/admin/analytics", label: "Analytics" },
+                            { href: "/admin/email-preview", label: "Emails" },
                             { href: "/admin/settings", label: "Settings" },
                         ].map((item) => (
                             <Link
