@@ -1197,11 +1197,12 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                         </ModalDetailCard>
                                                     ) : null}
 
-                                                    <form action={updateDocumentStatus} className="rounded-[22px] border border-[#e6e6e1] bg-[#faf8f3] p-4">
+                                                    <form action="/api/admin/admin-review" method="post" className="rounded-[22px] border border-[#e6e6e1] bg-[#faf8f3] p-4">
+                                                        <input type="hidden" name="mode" value="update_status" />
+                                                        <input type="hidden" name="worker_id" value={workerRecord.id} />
+                                                        <input type="hidden" name="redirect_to" value={`/admin/workers/${id}`} />
                                                         <input type="hidden" name="doc_id" value={doc.id} />
                                                         <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                        <input type="hidden" name="user_email" value={displayEmail || ""} />
-                                                        <input type="hidden" name="user_name" value={displayName} />
                                                         <div className="mb-4">
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                                 Admin decision
@@ -1231,11 +1232,12 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                                 className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
                                                             />
                                                         </div>
-                                                        <ActionSubmitButton
-                                                            idleLabel="Save admin decision"
-                                                            pendingLabel="Saving..."
+                                                        <button
+                                                            type="submit"
                                                             className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
-                                                        />
+                                                        >
+                                                            Save admin decision
+                                                        </button>
                                                     </form>
 
                                                     <div className="space-y-3">
@@ -1250,12 +1252,12 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                                 <Mail size={16} />
                                                                 Request new document
                                                             </summary>
-                                                            <form action={requestNewDocument} className="space-y-3 border-t border-orange-200 px-4 py-4">
+                                                            <form action="/api/admin/admin-review" method="post" className="space-y-3 border-t border-orange-200 px-4 py-4">
+                                                                <input type="hidden" name="mode" value="request_new_document" />
+                                                                <input type="hidden" name="worker_id" value={workerRecord.id} />
+                                                                <input type="hidden" name="redirect_to" value={`/admin/workers/${id}`} />
                                                                 <input type="hidden" name="doc_id" value={doc.id} />
-                                                                <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
                                                                 <input type="hidden" name="doc_type" value={doc.document_type} />
-                                                                <input type="hidden" name="user_email" value={displayEmail || ""} />
-                                                                <input type="hidden" name="user_name" value={displayName} />
                                                                 <p className="text-xs leading-relaxed text-orange-900">
                                                                     This deletes the current file and emails the worker with a request to upload a new version.
                                                                 </p>
@@ -1272,11 +1274,12 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                                     defaultValue={requestReason}
                                                                     className="min-h-[110px] w-full rounded-xl border border-orange-300 bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
                                                                 />
-                                                                <ActionSubmitButton
-                                                                    idleLabel="Delete current file and notify worker"
-                                                                    pendingLabel="Deleting and notifying..."
+                                                                <button
+                                                                    type="submit"
                                                                     className="w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-700"
-                                                                />
+                                                                >
+                                                                    Delete current file and notify worker
+                                                                </button>
                                                             </form>
                                                         </details>
 
@@ -1285,17 +1288,21 @@ export default async function WorkerDetailPage({ params }: PageProps) {
                                                                 <Trash2 size={16} />
                                                                 Delete silently
                                                             </summary>
-                                                            <form action={deleteDocument} className="space-y-3 border-t border-red-200 px-4 py-4">
+                                                            <form action="/api/admin/admin-review" method="post" className="space-y-3 border-t border-red-200 px-4 py-4">
+                                                                <input type="hidden" name="mode" value="delete_document" />
+                                                                <input type="hidden" name="worker_id" value={workerRecord.id} />
+                                                                <input type="hidden" name="redirect_to" value={`/admin/workers/${id}`} />
                                                                 <input type="hidden" name="doc_id" value={doc.id} />
-                                                                <input type="hidden" name="storage_path" value={doc.storage_path || ""} />
+                                                                <input type="hidden" name="doc_type" value={doc.document_type} />
                                                                 <p className="text-xs leading-relaxed text-red-900">
                                                                     This removes the document without notifying the worker.
                                                                 </p>
-                                                                <ActionSubmitButton
-                                                                    idleLabel="Confirm silent delete"
-                                                                    pendingLabel="Deleting..."
+                                                                <button
+                                                                    type="submit"
                                                                     className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
-                                                                />
+                                                                >
+                                                                    Confirm silent delete
+                                                                </button>
                                                             </form>
                                                         </details>
                                                     </div>
