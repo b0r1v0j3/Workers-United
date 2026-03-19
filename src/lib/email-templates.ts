@@ -947,7 +947,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         ${warningCopy.warningText} Update your profile or documents to keep the account active.
                     </p>
 
-                    ${renderLightPanel("Cleanup Timeline", `You still have <strong style="color:#ffffff;">${daysLeft} days</strong> to save activity on the account before the inactive cleanup runs.`)}
+                    ${renderLightPanel("Cleanup Timeline", `You still have <strong style="color:#1D1D1F;">${daysLeft} days</strong> to save activity on the account before the inactive cleanup runs.`)}
 
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${warningCopy.buttonUrl}" style="${buttonStyle}">
