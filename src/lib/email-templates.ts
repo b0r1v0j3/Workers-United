@@ -215,6 +215,50 @@ function getRoleDeletionCopy(role: RecipientRole) {
     }
 }
 
+function renderMonochromeHero(symbol: string, title: string, subtitle: string) {
+    const safeSymbol = escapeHtml(symbol);
+    const symbolFontSize = symbol.length > 1 ? 28 : 38;
+
+    return `
+        <div style="text-align: center;">
+            <div style="width:80px;height:80px;border:2px solid #111111;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                <span style="font-size:${symbolFontSize}px;line-height:1;color:#111111;font-weight:700;">${safeSymbol}</span>
+            </div>
+            <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${title}</h1>
+            <p style="font-size: 16px; color: #515154; margin-top: 5px;">${subtitle}</p>
+        </div>
+    `;
+}
+
+function renderDarkPanel(title: string, bodyHtml: string) {
+    return `
+        <div style="background:#111111; border-radius:16px; padding:32px; margin:35px 0; color:white; text-align:center;">
+            <h3 style="margin:0 0 10px; font-size:22px; color: white;">${escapeHtml(title)}</h3>
+            <div style="margin:0; opacity:0.9; font-size: 16px; color: #E5E5EA; line-height: 1.7;">
+                ${bodyHtml}
+            </div>
+        </div>
+    `;
+}
+
+function renderChecklistCard(title: string, items: string[]) {
+    const rows = items.map((item, index) => `
+        <tr>
+            <td width="24" style="vertical-align: top; padding-bottom: ${index === items.length - 1 ? "0" : "10px"}; color:#111111; font-size:15px; font-weight:700; line-height:20px;">✓</td>
+            <td style="padding-bottom: ${index === items.length - 1 ? "0" : "10px"}; color: #1D1D1F; font-size: 14px; text-align: left;">${item}</td>
+        </tr>
+    `).join("");
+
+    return `
+        <div style="background:#F5F5F7; border-radius:12px; padding:20px; margin:20px 0; border: 1px solid #E5E5EA;">
+            <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">${escapeHtml(title)}</h3>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${rows}
+            </table>
+        </div>
+    `;
+}
+
 // Helper to wrap content in the Monochrome Apple Header design
 const wrapModernTemplate = (content: string, title: string = "Workers United", subtitle: string = ""): string => `
 <!DOCTYPE html>
@@ -479,46 +523,43 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             };
 
         case "payment_success":
+            {
+            const amount = escapeHtml(data.amount || "$9");
             return {
                 subject: "You're in the Queue!",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/rocket.png" width="80" height="80" alt="Rocket" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Payment Confirmed</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">Your job search is active.</p>
-                    </div>
+                    ${renderMonochromeHero("✓", "Payment Confirmed", "Your job search is now active.")}
 
-                    <div style="background:#F5F5F7; border-radius:12px; padding:15px; margin:30px 0; text-align: center; border: 1px solid #E5E5EA;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto; border-collapse:collapse;">
-                            <tr>
-                                <td style="padding:0 8px 0 0; vertical-align:middle;">
-                                    <img src="https://img.icons8.com/ios/50/000000/checked.png" width="20" height="20" alt="" style="display:block;">
-                                </td>
-                                <td style="padding:0; vertical-align:middle; color:#1D1D1F; font-weight:600; font-size:16px; white-space:nowrap;">
-                                    ${data.amount || "$9"} Payment Received
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    
-                    <div style="margin: 30px 0; text-align: center;">
-                        <h3 style="color:#1D1D1F; font-size: 18px; font-weight: 600;">What happens now?</h3>
-                        <p style="color:#515154;">
-                            Sit back and relax. Our system is now actively matching your profile with employers across Europe. You will receive an email instantly when we find a match!
-                        </p>
-                    </div>
+                    <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
+                        We have received your <strong>${amount}</strong> Job Finder payment. Your worker case is now active in the queue, and our system can start matching you with employers.
+                    </p>
+
+                    ${renderDarkPanel("What Happens Next", `
+                        1. Your profile stays active in the worker queue
+                        <br>
+                        2. We monitor new employer demand and match opportunities
+                        <br>
+                        3. You will hear from us as soon as a real case is ready
+                    `)}
+
+                    ${renderChecklistCard("Current Status", [
+                        `<strong>${amount}</strong> entry fee received successfully`,
+                        "Your Job Finder search is active",
+                        "Your in-platform support inbox remains available during the queue stage",
+                    ])}
 
                     <div style="text-align:center; margin-top:40px;">
-                        <a href="https://workersunited.eu/profile/worker/queue" style="${buttonStyle}">
+                        <a href="${getRecipientWorkspaceUrl("worker", "queue")}" style="${buttonStyle}">
                             View My Status
                         </a>
                     </div>
                 `, "Payment Confirmed", "Good luck!")
             };
+            }
 
         case "checkout_recovery": {
             const recoveryStep = data.recoveryStep === 2 || data.recoveryStep === 3 ? data.recoveryStep : 1;
-            const amount = data.amount || "$9";
+            const amount = escapeHtml(data.amount || "$9");
 
             const recoverySubjectMap: Record<1 | 2 | 3, string> = {
                 1: "Finish activating Job Finder",
@@ -547,11 +588,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: recoverySubjectMap[recoveryStep],
                 html: wrapModernTemplate(`
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <img src="https://img.icons8.com/ios/100/000000/bank-card-back-side.png" width="80" height="80" alt="Checkout reminder" style="margin-bottom: 20px;">
-                        <h1 style="margin:0; color:#1D1D1F; font-size: 26px; font-weight: 700;">${recoveryTitleMap[recoveryStep]}</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 10px;">${firstName}, your profile is ready to continue.</p>
-                    </div>
+                    ${renderMonochromeHero("!", recoveryTitleMap[recoveryStep], `${firstName}, your profile is ready to continue.`)}
 
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 20px; text-align: center;">
                         ${recoveryBodyMap[recoveryStep]}
@@ -569,6 +606,14 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                     </div>
 
+                    ${renderDarkPanel("What You Need To Know", `
+                        Only the checkout state changes here.
+                        <br>
+                        Your profile, documents, and review progress stay saved in the dashboard.
+                        <br>
+                        Open your account whenever you are ready to continue.
+                    `)}
+
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${BASE_URL}/profile/worker" style="${buttonStyle}">
                             Open dashboard
@@ -579,32 +624,30 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
         }
 
         case "job_offer":
+            {
+            const jobTitle = escapeHtml(data.jobTitle || "Job Opportunity");
+            const companyName = escapeHtml(data.companyName || "Workers United Employer");
+            const country = escapeHtml(data.country || "Europe");
             return {
                 subject: `✨ Job Offer: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/briefcase.png" width="80" height="80" alt="Job" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">You've been picked!</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">A company wants to hire you.</p>
-                    </div>
+                    ${renderMonochromeHero("★", "You've been picked!", "A company wants to hire you.")}
 
                     <div style="background:#FFFFFF; border: 1px solid #E5E5EA; border-radius:16px; margin:30px 0; overflow: hidden;">
-                        <div style="background: #F5F5F7; padding: 15px; border-bottom: 1px solid #E5E5EA; text-align: center;">
-                             <div style="font-size: 12px; color: #86868B; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">Official Offer</div>
+                        <div style="background: #111111; padding: 15px; border-bottom: 1px solid #111111; text-align: center;">
+                             <div style="font-size: 12px; color: #E5E5EA; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">Official Offer</div>
                         </div>
                         <div style="padding: 30px; text-align: center;">
-                            <h2 style="margin:0 0 10px; font-size: 22px; color: #1D1D1F; font-weight: 700;">${data.jobTitle}</h2>
-                            <p style="margin:0 0 20px; color: #515154; font-size: 16px; font-weight: 500;">${data.companyName}</p>
+                            <h2 style="margin:0 0 10px; font-size: 22px; color: #1D1D1F; font-weight: 700;">${jobTitle}</h2>
+                            <p style="margin:0 0 20px; color: #515154; font-size: 16px; font-weight: 500;">${companyName}</p>
                             
                             <div style="display: inline-block; background: #E5E5EA; color: #1D1D1F; padding: 6px 16px; border-radius: 99px; font-weight: 600; font-size: 13px;">
-                                ${data.country || "Europe"}
+                                ${country}
                             </div>
                         </div>
                     </div>
-                    
-                    <div style="background:#F5F5F7; border-radius:12px; padding:15px; text-align: center; color: #1D1D1F; font-weight: 600; font-size: 15px; border: 1px solid #E5E5EA;">
-                        ⏰ Please respond within 24 hours
-                    </div>
+
+                    ${renderDarkPanel("Response Window", "Please review this offer and respond within 24 hours so we can keep the hiring process moving.")}
                     
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${data.offerLink || "https://workersunited.eu/profile/worker/queue"}" style="${buttonStyle}">
@@ -613,20 +656,19 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                 `, "Job Offer", "Congrats!")
             };
+            }
 
         case "offer_reminder":
             return {
                 subject: "Offer Expiring Soon!",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/alarm-clock.png" width="80" height="80" alt="Clock" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Hurry up!</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">Your job offer is waiting.</p>
-                    </div>
+                    ${renderMonochromeHero("!", "Hurry up!", "Your job offer is still waiting for a response.")}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                         Hey ${firstName}, you have a pending job offer that expires soon. Don't let this opportunity slip away!
                     </p>
+
+                    ${renderDarkPanel("Why This Matters", "If the offer expires without a response, we may need to release the slot and move the case forward without you.")}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${data.offerLink || "https://workersunited.eu/profile/worker/queue"}" style="${buttonStyle}">
@@ -636,79 +678,77 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 `, "Action Required", "Tick tock...")
             };
 
-        case "refund_approved":
+        case "refund_approved": {
+            const amount = escapeHtml(data.amount || "$9");
             return {
                 subject: "Refund Processed",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/refund.png" width="80" height="80" alt="Refund" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Refund Sent</h1>
-                    </div>
+                    ${renderMonochromeHero("$", "Refund Sent", "Your 90-day guarantee refund has been processed.")}
 
                     <p style="color: #1D1D1F; margin-bottom: 25px; text-align: center; font-size: 16px;">
-                        Hi ${firstName}, as per our 90-day guarantee, we have processed your refund of <strong>${data.amount || "$9"}</strong>.
+                        Hi ${firstName}, as per our 90-day guarantee, we have processed your refund of <strong>${amount}</strong>.
                     </p>
-                    
-                    <div style="background:#F5F5F7; border-radius:12px; padding:20px; text-align: center; color: #515154; font-size: 14px; border: 1px solid #E5E5EA;">
-                        The funds should appear in your account within 5-10 business days.
-                    </div>
+
+                    ${renderDarkPanel("Refund Timeline", "The funds should appear back on the original payment method within 5 to 10 business days, depending on your bank.")}
                     
                     <p style="margin-top: 25px; color: #86868B; font-size: 15px; text-align: center;">
                         We're sorry we couldn't find the perfect match this time. You are always welcome back!
                     </p>
                 `, "Refund Processed", "Funds returned")
             };
+        }
 
-        case "document_expiring":
+        case "document_expiring": {
+            const documentType = escapeHtml(data.documentType || "document");
+            const expirationDate = escapeHtml(data.expirationDate || "soon");
             return {
                 subject: "Document Alert",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                         <img src="https://img.icons8.com/ios/100/000000/expired.png" width="80" height="80" alt="Expired" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Check your docs</h1>
-                    </div>
+                    ${renderMonochromeHero("!", "Check your documents", "One of your required files is close to expiring.")}
 
                     <p style="color: #1D1D1F; text-align: center; margin-bottom: 30px; font-size: 16px;">
-                        Your <strong>${data.documentType}</strong> is expiring on <strong>${data.expirationDate}</strong>.
+                        Your <strong>${documentType}</strong> is expiring on <strong>${expirationDate}</strong>.
                     </p>
-                    
-                    <div style="background:#F5F5F7; border-radius:12px; padding:20px; text-align: center; color: #1D1D1F; border: 1px solid #E5E5EA; font-weight: 500;">
-                        Please update it to keep your profile active.
-                    </div>
+
+                    ${renderDarkPanel("Why Update Now", "Keeping your required documents current helps us avoid delays when your case reaches a live employer or visa-processing step.")}
                     
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">
+                        <a href="${getRecipientWorkspaceUrl("worker", "documents")}" style="${buttonStyle}">
                             Update Document
                         </a>
                     </div>
                 `, "Document Alert", "Action needed")
             };
+        }
 
         case "job_match":
+            {
+            const jobTitle = escapeHtml(data.jobTitle || "Job Match");
+            const industry = escapeHtml(data.industry || "Industry");
+            const location = escapeHtml(data.location || "Europe");
+            const salary = escapeHtml(data.salary || "Salary to be confirmed");
             return {
                 subject: `New Match: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/bullish.png" width="80" height="80" alt="Match" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">New Match!</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">We found a job for you.</p>
-                    </div>
+                    ${renderMonochromeHero("+", "New Match!", "We found a job that fits your case.")}
 
                     <div style="background:white; border: 1px solid #E5E5EA; border-radius:16px; overflow:hidden; margin: 30px 0;">
                         <div style="padding: 25px; text-align: center;">
-                            <h3 style="margin:0 0 5px; color:#1D1D1F; font-size: 20px; font-weight: 700;">${data.jobTitle}</h3>
-                            <div style="color: #515154; font-size: 16px; margin-bottom: 20px;">${data.industry}</div>
+                            <h3 style="margin:0 0 5px; color:#1D1D1F; font-size: 20px; font-weight: 700;">${jobTitle}</h3>
+                            <div style="color: #515154; font-size: 16px; margin-bottom: 20px;">${industry}</div>
                             
                             <div style="display: flex; gap: 10px; justify-content: center;">
                                 <span style="background: #E5E5EA; color: #1D1D1F; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 600;">
-                                    ${data.location}
+                                    ${location}
                                 </span>
                                 <span style="background: #E5E5EA; color: #1D1D1F; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 600;">
-                                    ${data.salary}
+                                    ${salary}
                                 </span>
                             </div>
                         </div>
                     </div>
+
+                    ${renderDarkPanel("Next Step", "Open the case details to review the opportunity, expected conditions, and what we need from you next.")}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${data.offerLink}" style="${buttonStyle}">
@@ -717,19 +757,20 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                 `, "New Match", "Check it out")
             };
+            }
 
         case "admin_update":
+            {
+            const title = escapeHtml(data.title || "Case Update");
+            const message = escapeHtml(data.message || "There is a new update in your Workers United case.");
             return {
                 subject: data.subject || "Update from Workers United",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/commercial.png" width="80" height="80" alt="News" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Profile Update</h1>
-                    </div>
+                    ${renderMonochromeHero("i", "Profile Update", "There is a new message about your case.")}
 
                     <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:25px; margin:30px 0;">
-                        <h3 style="margin-top:0; color: #1D1D1F; font-size: 18px;">${data.title}</h3>
-                        <p style="margin-bottom:0; color: #515154; font-size: 16px;">${data.message}</p>
+                        <h3 style="margin-top:0; color: #1D1D1F; font-size: 18px;">${title}</h3>
+                        <p style="margin-bottom:0; color: #515154; font-size: 16px;">${message}</p>
                     </div>
                     
                     <div style="text-align:center; margin-top:35px;">
@@ -739,6 +780,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
                 `, "Account Update", "Notification")
             };
+            }
 
         case "document_review_result": {
             const isApproved = data.approved;
@@ -822,16 +864,16 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
         }
 
         case "announcement":
+            {
+            const title = escapeHtml(data.title || "Announcement");
+            const message = escapeHtml(data.message || "");
             return {
                 subject: data.subject || "Announcement",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/megaphone.png" width="80" height="80" alt="Announcement" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${data.title}</h1>
-                    </div>
+                    ${renderMonochromeHero("!", title, "Important information from Workers United.")}
 
-                    <div style="color: #1D1D1F; font-size: 16px; line-height: 1.7; margin: 30px 0; white-space: pre-line; text-align: center;">
-                        ${data.message}
+                    <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:24px; color: #1D1D1F; font-size: 16px; line-height: 1.7; margin: 30px 0; white-space: pre-line; text-align: center;">
+                        ${message}
                     </div>
 
                     ${data.actionLink ? `
@@ -843,29 +885,28 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ` : ''}
                 `, "Announcement", "News for you")
             };
+            }
 
         case "profile_incomplete":
             return {
                 subject: "Finish your profile!",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/edit-property.png" width="80" height="80" alt="Edit" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Almost there!</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">You're missing a few things.</p>
-                    </div>
+                    ${renderMonochromeHero("!", "Almost there!", "You're missing a few things before we can move your case forward.")}
 
                     <div style="margin: 30px 0;">
                          <p style="color: #1D1D1F; text-align: center; margin-bottom: 20px; font-size: 16px;">
                             We want to match you with a job, but we need these details first:
                          </p>
                          
-                         <div style="background:#F5F5F7; border: 1px dashed #E5E5EA; border-radius:12px; padding:20px; color: #1D1D1F; font-weight: 500; text-align: center;">
+                         <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:20px; color: #1D1D1F; font-weight: 500; text-align: center;">
                             ${data.missingFields}
                          </div>
                     </div>
+
+                    ${renderDarkPanel("Why This Matters", "Your profile has to be complete before we can send the case to admin review and eventually unlock Job Finder.")}
                     
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="https://workersunited.eu/profile/worker/edit" style="${buttonStyle}">
+                        <a href="${getRecipientWorkspaceUrl("worker", "setup")}" style="${buttonStyle}">
                             Finish Profile
                         </a>
                     </div>
@@ -878,11 +919,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: reminderCopy.subject,
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/todo-list.png" width="80" height="80" alt="Todo" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${reminderCopy.title}</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">${reminderCopy.text}</p>
-                    </div>
+                    ${renderMonochromeHero("!", reminderCopy.title, reminderCopy.text)}
 
                    <div style="background:#F5F5F7; border-radius:12px; padding:25px; margin:30px 0; border: 1px solid #E5E5EA;">
                         <strong style="display:block; margin-bottom:15px; color:#1D1D1F; font-size: 16px;">What's missing:</strong>
@@ -890,6 +927,8 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                             ${data.todoList}
                         </ul>
                     </div>
+
+                    ${renderDarkPanel("Keep The Case Moving", "Once the missing items are saved, your workspace can move to the next real step without starting over.")}
 
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${reminderCopy.buttonUrl}" style="${buttonStyle}">
@@ -907,17 +946,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: `Inactive account cleanup in ${daysLeft} days`,
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/high-priority.png" width="80" height="80" alt="Warning" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Inactive Account Warning</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 5px;">
-                            If there is still no profile activity, we will clean up this incomplete account in <strong>${daysLeft} days</strong>.
-                        </p>
-                    </div>
+                    ${renderMonochromeHero("!", "Inactive Account Warning", `If there is still no profile activity, we will clean up this incomplete account in ${daysLeft} days.`)}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                         ${warningCopy.warningText} Update your profile or documents to keep the account active.
                     </p>
+
+                    ${renderDarkPanel("Cleanup Timeline", `You still have <strong style="color:#ffffff;">${daysLeft} days</strong> to save activity on the account before the inactive cleanup runs.`)}
 
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${warningCopy.buttonUrl}" style="${buttonStyle}">
@@ -933,17 +968,20 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Inactive Account Removed",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center;">
-                        <img src="https://img.icons8.com/ios/100/000000/trash.png" width="80" height="80" alt="Deleted" style="margin-bottom: 20px;">
-                        <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">Goodbye for now</h1>
-                    </div>
+                    ${renderMonochromeHero("×", "Goodbye for now", "This incomplete inactive account has been removed.")}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                          ${deletionCopy.body}
                     </p>
+
+                    ${renderChecklistCard("What This Means", [
+                        "The inactive account has been cleared from our system",
+                        "No additional action is required unless you want to return",
+                        "You can create a fresh new account whenever you are ready",
+                    ])}
                     
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="https://workersunited.eu/signup" style="${buttonStyle}">
+                        <a href="${BASE_URL}/signup" style="${buttonStyle}">
                             ${deletionCopy.buttonText}
                         </a>
                     </div>
@@ -955,11 +993,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Important: Document Upload System Fixed",
                 html: wrapModernTemplate(`
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <img src="https://img.icons8.com/ios-filled/100/000000/settings.png" width="80" height="80" alt="System Update" style="margin-bottom: 20px;">
-                        <h1 style="margin:0; color:#1D1D1F; font-size: 26px; font-weight: 700;">Hi ${firstName},</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 10px;">We've fixed the document upload issue!</p>
-                    </div>
+                    ${renderMonochromeHero("✓", `Hi ${firstName},`, "We've fixed the document upload issue.")}
 
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 20px;">
                         If you recently tried to upload your passport or diploma and experienced errors, we sincerely apologize. We have completely resolved this technical issue.
@@ -968,9 +1002,11 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 30px;">
                         Your profile is waiting for you. You can now securely upload your documents and complete your AI verification to join the hiring queue.
                     </p>
+
+                    ${renderDarkPanel("Next Step", "Return to your dashboard, upload the missing documents, and we will resume your case from there.")}
                     
                     <div style="text-align:center; margin-top:40px;">
-                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">
+                        <a href="${getRecipientWorkspaceUrl("worker", "documents")}" style="${buttonStyle}">
                             Upload Documents Now
                         </a>
                     </div>
