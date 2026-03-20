@@ -1,7 +1,7 @@
 // Email templates for Workers United
 import { normalizeUserType, type CanonicalUserType } from "@/lib/domain";
 import { attachEmailQueueMeta, processQueuedEmailRecord, type EmailQueueDeliveryResult } from "@/lib/email-queue";
-import { buildPlatformUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
+import { buildPlatformUrl, buildPlatformWhatsAppUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { escapeHtml } from "@/lib/sanitize";
 
 export type EmailType =
@@ -331,7 +331,7 @@ function renderFooterSocialLinks() {
         { href: "https://www.facebook.com/profile.php?id=61585104076725", label: "Facebook" },
         { href: "https://www.instagram.com/workersunited.eu/", label: "Instagram" },
         { href: "https://www.threads.net/@workersunited.eu", label: "Threads" },
-        { href: "https://wa.me/15557839521", label: "WhatsApp" },
+        { href: buildPlatformWhatsAppUrl(), label: "WhatsApp" },
         { href: "https://x.com/WorkersUnitedEU", label: "X" },
         { href: "https://www.tiktok.com/@workersunited.eu", label: "TikTok" },
         { href: "https://www.linkedin.com/company/workersunited-eu/", label: "LinkedIn" },

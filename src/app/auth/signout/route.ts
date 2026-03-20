@@ -1,8 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { buildPlatformUrl } from "@/lib/platform-contact";
 
 export const dynamic = "force-dynamic";
+
+const HOME_URL = buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/");
 
 export async function GET() {
     try {
@@ -33,7 +36,7 @@ export async function GET() {
         await supabase.auth.signOut();
 
         // Redirect to home
-        const response = NextResponse.redirect("https://www.workersunited.eu/");
+        const response = NextResponse.redirect(HOME_URL);
 
         // Clear ALL supabase cookies
         const allCookies = cookieStore.getAll();
@@ -50,7 +53,7 @@ export async function GET() {
     } catch (error) {
         console.error("Signout error:", error);
         // Even on error, redirect to home
-        return NextResponse.redirect("https://www.workersunited.eu/");
+        return NextResponse.redirect(HOME_URL);
     }
 }
 

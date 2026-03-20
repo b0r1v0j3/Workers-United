@@ -1,5 +1,6 @@
 export const DEFAULT_PLATFORM_WEBSITE_URL = "https://workersunited.eu";
 export const DEFAULT_PLATFORM_SUPPORT_EMAIL = "contact@workersunited.eu";
+export const DEFAULT_PLATFORM_WHATSAPP_NUMBER = "15557839521";
 
 export interface PlatformContactInfo {
     websiteUrl: string;
@@ -20,10 +21,22 @@ export function normalizePlatformSupportEmail(value?: string | null): string {
     return (value || "").trim() || DEFAULT_PLATFORM_SUPPORT_EMAIL;
 }
 
+export function normalizePlatformWhatsAppNumber(value?: string | null): string {
+    const digitsOnly = (value || "").replace(/\D/g, "");
+    return digitsOnly || DEFAULT_PLATFORM_WHATSAPP_NUMBER;
+}
+
 export function buildPlatformUrl(baseUrl?: string | null, path = "/"): string {
     const normalizedBase = normalizePlatformWebsiteUrl(baseUrl);
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     return normalizedPath === "/" ? normalizedBase : `${normalizedBase}${normalizedPath}`;
+}
+
+export function buildPlatformWhatsAppUrl(number?: string | null, message?: string | null): string {
+    const normalizedNumber = normalizePlatformWhatsAppNumber(number);
+    const trimmedMessage = (message || "").trim();
+    const encodedMessage = trimmedMessage ? `?text=${encodeURIComponent(trimmedMessage)}` : "";
+    return `https://wa.me/${normalizedNumber}${encodedMessage}`;
 }
 
 function normalizeHostname(hostname: string) {

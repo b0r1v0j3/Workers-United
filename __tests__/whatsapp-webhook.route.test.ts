@@ -70,6 +70,19 @@ vi.mock("@/lib/whatsapp-admin-commands", () => ({
     handleWhatsAppAdminCommand,
 }));
 
+vi.mock("@/lib/platform-config", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/platform-config")>("@/lib/platform-config");
+
+    return {
+        ...actual,
+        getPlatformConfig: vi.fn(async () => ({
+            platform_name: "Workers United",
+            website_url: "https://workersunited.eu",
+            contact_email: "contact@workersunited.eu",
+        })),
+    };
+});
+
 describe("POST /api/whatsapp/webhook", () => {
     beforeEach(() => {
         vi.resetModules();

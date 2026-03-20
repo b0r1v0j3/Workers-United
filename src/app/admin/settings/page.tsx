@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
+import { normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import PlatformConfigEditor from "@/components/admin/PlatformConfigEditor";
 
 type ServiceCheck = {
@@ -34,11 +35,12 @@ async function checkVercel(): Promise<ServiceCheck> {
     if (!baseUrl) {
         const vercelUrl = process.env.VERCEL_URL;
         if (vercelUrl) {
-            baseUrl = `https://${vercelUrl}`;
+            baseUrl = vercelUrl;
         } else {
             return { name: "Vercel", description: "Hosting & Deployment", status: "degraded", details: "NEXT_PUBLIC_BASE_URL not set — add it in Vercel env vars" };
         }
     }
+    baseUrl = normalizePlatformWebsiteUrl(baseUrl);
     const healthUrl = `${baseUrl}/api/health`;
     const start = Date.now();
     try {
@@ -103,6 +105,12 @@ export default async function AdminSettingsPage() {
 
     const isOwner = isGodModeUser(user.email);
 
+    const siteUrl = normalizePlatformWebsiteUrl(
+        process.env.NEXT_PUBLIC_BASE_URL
+        || process.env.VERCEL_URL
+        || ""
+    );
+
     // Run all health checks in parallel
     const [supabaseCheck, vercelCheck] = await Promise.all([
         checkSupabase(),
@@ -160,7 +168,7 @@ export default async function AdminSettingsPage() {
                         <InfoRow label="Logged in as" value={user.email || "Unknown"} />
                         <InfoRow label="God Mode" value={isOwner ? "✅ Active" : "❌ Inactive"} />
                         <InfoRow label="Environment" value={process.env.NODE_ENV || "production"} />
-                        <InfoRow label="Site URL" value={process.env.NEXT_PUBLIC_BASE_URL || "Not set"} />
+                        <InfoRow label="Site URL" value={siteUrl || "Not set"} />
                     </div>
                 </div>
 

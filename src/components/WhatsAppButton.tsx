@@ -6,9 +6,9 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { buildPlatformWhatsAppUrl } from "@/lib/platform-contact";
 
-const WHATSAPP_NUMBER = "15557839521";
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=Hi%2C%20I%20have%20a%20question%20about%20Workers%20United`;
+const WHATSAPP_URL = buildPlatformWhatsAppUrl(undefined, "Hi, I have a question about Workers United");
 
 export default function WhatsAppButton() {
     const pathname = usePathname();

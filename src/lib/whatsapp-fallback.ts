@@ -1,5 +1,8 @@
 import {
     detectExplicitWhatsAppLanguagePreference,
+    looksLikeWhatsAppDocumentQuestion,
+    looksLikeWhatsAppPriceQuestion,
+    looksLikeWhatsAppStatusQuestion,
     looksLikeWarmGreetingWhatsAppMessage,
     type WhatsAppLanguageHistoryEntry,
     resolveWhatsAppLanguageCode,
@@ -27,6 +30,128 @@ function resolveFallbackLanguage(
     historyMessages: WhatsAppLanguageHistoryEntry[] = []
 ): WhatsAppFallbackLanguage {
     return resolveWhatsAppLanguageCode(message, preferredLanguage, historyMessages) as WhatsAppFallbackLanguage;
+}
+
+function getFallbackStatusLabel(
+    status: string | null | undefined,
+    language: WhatsAppFallbackLanguage
+): string {
+    const normalized = (status || "").trim().toUpperCase();
+    const humanized = normalized.toLowerCase().replace(/_/g, " ").trim();
+
+    switch (normalized) {
+        case "REGISTERED":
+        case "NEW":
+            return language === "sr"
+                ? "profil je započet"
+                : language === "fr"
+                    ? "profil démarré"
+                    : language === "pt"
+                        ? "perfil iniciado"
+                        : language === "hi"
+                            ? "प्रोफाइल शुरू हो चुका है"
+                            : language === "ar"
+                                ? "تم بدء الملف"
+                                : "profile started";
+        case "PROFILE_COMPLETE":
+            return language === "sr"
+                ? "profil je kompletan"
+                : language === "fr"
+                    ? "profil complet"
+                    : language === "pt"
+                        ? "perfil completo"
+                        : language === "hi"
+                            ? "प्रोफाइल पूरा है"
+                            : language === "ar"
+                                ? "الملف مكتمل"
+                                : "profile complete";
+        case "VERIFIED":
+            return language === "sr"
+                ? "profil je verifikovan"
+                : language === "fr"
+                    ? "profil vérifié"
+                    : language === "pt"
+                        ? "perfil verificado"
+                        : language === "hi"
+                            ? "प्रोफाइल verify हो चुका है"
+                            : language === "ar"
+                                ? "تم التحقق من الملف"
+                                : "profile verified";
+        case "PENDING_APPROVAL":
+            return language === "sr"
+                ? "profil je u admin proveri"
+                : language === "fr"
+                    ? "profil en validation admin"
+                    : language === "pt"
+                        ? "perfil em revisão administrativa"
+                        : language === "hi"
+                            ? "प्रोफाइल admin review में है"
+                            : language === "ar"
+                                ? "الملف قيد مراجعة الإدارة"
+                                : "profile in admin review";
+        case "APPROVED":
+            return language === "sr"
+                ? "profil je odobren"
+                : language === "fr"
+                    ? "profil approuvé"
+                    : language === "pt"
+                        ? "perfil aprovado"
+                        : language === "hi"
+                            ? "प्रोफाइल approved है"
+                            : language === "ar"
+                                ? "تمت الموافقة على الملف"
+                                : "profile approved";
+        case "IN_QUEUE":
+            return language === "sr"
+                ? "aktivan u redu čekanja"
+                : language === "fr"
+                    ? "actif dans la file d’attente"
+                    : language === "pt"
+                        ? "ativo na fila"
+                        : language === "hi"
+                            ? "queue में सक्रिय"
+                            : language === "ar"
+                                ? "نشط في قائمة الانتظار"
+                                : "active in queue";
+        case "REJECTED":
+            return language === "sr"
+                ? "profil zahteva ispravke"
+                : language === "fr"
+                    ? "profil nécessite des corrections"
+                    : language === "pt"
+                        ? "perfil precisa de correções"
+                        : language === "hi"
+                            ? "प्रोफाइल में सुधार चाहिए"
+                            : language === "ar"
+                                ? "الملف يحتاج إلى تصحيحات"
+                                : "profile needs corrections";
+        default:
+            return humanized || "status unavailable";
+    }
+}
+
+function getFallbackQueueInfo(
+    queuePosition: number | null | undefined,
+    language: WhatsAppFallbackLanguage
+): string {
+    if (!queuePosition) {
+        return "";
+    }
+
+    switch (language) {
+        case "sr":
+            return ` Pozicija u redu: #${queuePosition}.`;
+        case "fr":
+            return ` Position dans la file: #${queuePosition}.`;
+        case "pt":
+            return ` Posição na fila: #${queuePosition}.`;
+        case "hi":
+            return ` Queue position: #${queuePosition}.`;
+        case "ar":
+            return ` الترتيب في القائمة: #${queuePosition}.`;
+        default:
+            return ` Queue position: #${queuePosition}.`;
+    }
 }
 
 export async function getWhatsAppFallbackResponse(
@@ -69,9 +194,9 @@ export async function getWhatsAppFallbackResponse(
     const greeting = greetings[fallbackLang] || greetings.en;
     const startMessage = startMessages[fallbackLang] || startMessages.en;
     const isWarmGreeting = looksLikeWarmGreetingWhatsAppMessage(message);
-    const asksAboutPrice = msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("payment") || msg.includes("cena") || msg.includes("cijena") || msg.includes("koliko") || msg.includes("शुल्क") || msg.includes("سعر");
-    const asksAboutStatus = msg.includes("status") || msg.includes("profile") || msg.includes("stanje") || msg.includes("profil") || msg.includes("स्थिति") || msg.includes("حالة");
-    const asksAboutDocuments = msg.includes("document") || msg.includes("passport") || msg.includes("dokument") || msg.includes("pasos") || msg.includes("पासपोर्ट") || msg.includes("جواز");
+    const asksAboutPrice = looksLikeWhatsAppPriceQuestion(msg);
+    const asksAboutStatus = looksLikeWhatsAppStatusQuestion(msg);
+    const asksAboutDocuments = looksLikeWhatsAppDocumentQuestion(msg);
 
     if (explicitLanguagePreference && !asksAboutPrice && !asksAboutStatus && !asksAboutDocuments) {
         if (!workerRecord) {
@@ -150,8 +275,8 @@ export async function getWhatsAppFallbackResponse(
     }
 
     if (asksAboutStatus) {
-        const statusInfo = workerRecord.status === "REGISTERED" ? "registered ✅" : workerRecord.status;
-        const queueInfo = workerRecord.queue_position ? ` Queue position: #${workerRecord.queue_position}.` : "";
+        const statusInfo = getFallbackStatusLabel(workerRecord.status, fallbackLang);
+        const queueInfo = getFallbackQueueInfo(workerRecord.queue_position, fallbackLang);
         if (fallbackLang === "sr") return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${website}/profile/worker.`;
         if (fallbackLang === "fr") return `Bonjour ${name} ! Votre statut est : ${statusInfo}.${queueInfo} Vous pouvez voir tous les détails sur ${website}/profile/worker.`;
         if (fallbackLang === "pt") return `Olá ${name}! Seu status é: ${statusInfo}.${queueInfo} Você pode ver todos os detalhes em ${website}/profile/worker.`;
