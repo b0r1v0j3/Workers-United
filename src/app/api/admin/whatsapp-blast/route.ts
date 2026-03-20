@@ -77,6 +77,7 @@ export async function GET() {
     ]);
 
     return NextResponse.json({
+        payment_ready_with_phone: targets.length,
         unpaid_with_phone: targets.length,
         paid: paidQuery.count || 0,
         stripe_link: process.env.STRIPE_JOB_FINDER_PAYMENT_LINK || "https://buy.stripe.com/fZueVcdG1bglfgr1nc0ZW00",

@@ -4,6 +4,12 @@ import { logServerActivity } from "@/lib/activityLoggerServer";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import { sendAnnouncement, sendStatusUpdate } from "@/lib/whatsapp";
+import {
+    resolveEntryFeeEligibilityForWorker,
+    WORKER_ENTRY_FEE_READINESS_COLUMNS,
+    type EntryFeeEligibilityDocumentState,
+    type EntryFeeEligibilityWorkerRecord,
+} from "@/lib/payment-eligibility";
 
 type AdminDbClient = SupabaseClient<Database>;
 
@@ -11,20 +17,21 @@ const STRIPE_PAYMENT_LINK =
     process.env.STRIPE_JOB_FINDER_PAYMENT_LINK ||
     "https://buy.stripe.com/fZueVcdG1bglfgr1nc0ZW00";
 
-interface WhatsAppBlastWorkerRow extends WorkerRecordSnapshot {
+interface WhatsAppBlastWorkerRow extends WorkerRecordSnapshot, EntryFeeEligibilityWorkerRecord {
     id: string;
     profile_id: string | null;
     agency_id: string | null;
-    submitted_email: string | null;
-    phone: string | null;
     status: string | null;
-    entry_fee_paid: boolean | null;
 }
 
 interface WhatsAppBlastProfileRow {
     id: string;
     full_name: string | null;
     email: string | null;
+}
+
+interface WhatsAppBlastDocumentRow extends EntryFeeEligibilityDocumentState {
+    user_id: string | null;
 }
 
 export interface WorkerWhatsAppBlastTarget {
@@ -56,7 +63,7 @@ function personalizeBlastCopy(template: string, target: WorkerWhatsAppBlastTarge
 }
 
 function getDefaultBlastCopy(target: WorkerWhatsAppBlastTarget) {
-    return `Hi ${target.firstName || "there"}! Your profile is ready. Activate Job Finder for $9 and we'll match you with employers in Europe. 90-day money-back guarantee. Pay: ${STRIPE_PAYMENT_LINK}`;
+    return `Hi ${target.firstName || "there"}! Your profile has been approved and Job Finder is now unlocked. Activate it for $9 and we'll match you with employers in Europe. 90-day money-back guarantee. Pay: ${STRIPE_PAYMENT_LINK}`;
 }
 
 async function logWhatsAppBlastActivity(params: {
@@ -92,9 +99,9 @@ async function logWhatsAppBlastActivity(params: {
 }
 
 export async function loadWorkerWhatsAppBlastTargets(admin: AdminDbClient): Promise<WorkerWhatsAppBlastTarget[]> {
-    const { data: workerRows, error: workerError } = await admin
+    const { data: workerRowsRaw, error: workerError } = await admin
         .from("worker_onboarding")
-        .select("id, profile_id, agency_id, submitted_email, phone, status, entry_fee_paid, updated_at, queue_joined_at, job_search_active, nationality, current_country, preferred_job")
+        .select(`${WORKER_ENTRY_FEE_READINESS_COLUMNS}, profile_id, agency_id` as "*")
         .eq("entry_fee_paid", false)
         .not("phone", "is", null)
         .gt("phone", "");
@@ -104,9 +111,13 @@ export async function loadWorkerWhatsAppBlastTargets(admin: AdminDbClient): Prom
     }
 
     const workerGroups = new Map<string, WhatsAppBlastWorkerRow[]>();
-    for (const workerRecord of (workerRows || []) as WhatsAppBlastWorkerRow[]) {
+    const workerRows = (workerRowsRaw || []) as unknown as WhatsAppBlastWorkerRow[];
+    for (const workerRecord of workerRows) {
         const normalizedPhone = normalizeWorkerPhone(workerRecord.phone);
         const dedupeKey = workerRecord.profile_id || normalizedPhone || workerRecord.id;
+        if (!dedupeKey) {
+            continue;
+        }
         const group = workerGroups.get(dedupeKey) || [];
         group.push(workerRecord);
         workerGroups.set(dedupeKey, group);
@@ -121,18 +132,37 @@ export async function loadWorkerWhatsAppBlastTargets(admin: AdminDbClient): Prom
         .filter((value): value is string => typeof value === "string" && value.length > 0);
 
     const profileMap = new Map<string, WhatsAppBlastProfileRow>();
+    const documentMap = new Map<string, EntryFeeEligibilityDocumentState[]>();
     if (profileIds.length > 0) {
-        const { data: profiles, error: profileError } = await admin
-            .from("profiles")
-            .select("id, full_name, email")
-            .in("id", profileIds);
+        const [{ data: profiles, error: profileError }, { data: documents, error: documentError }] = await Promise.all([
+            admin
+                .from("profiles")
+                .select("id, full_name, email")
+                .in("id", profileIds),
+            admin
+                .from("worker_documents")
+                .select("user_id, document_type")
+                .in("user_id", profileIds),
+        ]);
 
         if (profileError) {
             throw profileError;
         }
+        if (documentError) {
+            throw documentError;
+        }
 
         for (const profileRecord of (profiles || []) as WhatsAppBlastProfileRow[]) {
             profileMap.set(profileRecord.id, profileRecord);
+        }
+
+        for (const documentRecord of (documents || []) as WhatsAppBlastDocumentRow[]) {
+            if (!documentRecord.user_id) {
+                continue;
+            }
+            const bucket = documentMap.get(documentRecord.user_id) || [];
+            bucket.push({ document_type: documentRecord.document_type });
+            documentMap.set(documentRecord.user_id, bucket);
         }
     }
 
@@ -156,14 +186,27 @@ export async function loadWorkerWhatsAppBlastTargets(admin: AdminDbClient): Prom
             return [];
         }
 
-        const fullName = profile?.full_name?.trim() || "";
+        const entryFeeResolution = resolveEntryFeeEligibilityForWorker({
+            profile: profile ? { full_name: profile.full_name } : null,
+            worker: workerRecord,
+            documents: workerRecord.profile_id ? (documentMap.get(workerRecord.profile_id) || []) : [],
+            fullNameFallback: workerRecord.submitted_full_name,
+        });
+
+        if (!entryFeeResolution.unlockState.allowed) {
+            return [];
+        }
+
+        const fullName = profile?.full_name?.trim()
+            || workerRecord.submitted_full_name?.trim()
+            || "";
         const firstName = fullName.split(" ")[0]?.trim() || "there";
 
         return [{
-            workerId: workerRecord.id,
+            workerId: workerRecord.id || normalizedPhone,
             profileId: workerRecord.profile_id,
             phone: normalizedPhone,
-            status: workerRecord.status,
+            status: workerRecord.status ?? null,
             fullName,
             firstName,
         }];
@@ -177,7 +220,7 @@ export async function sendWorkerWhatsAppBlast(params: {
     customMessage?: string | null;
     dryRun?: boolean;
 }) : Promise<WorkerWhatsAppBlastResult> {
-    const title = params.title?.trim() || "Activate Job Finder";
+    const title = params.title?.trim() || "Job Finder Is Unlocked";
     const customMessage = params.customMessage?.trim() || null;
     const dryRun = params.dryRun === true;
     const targets = await loadWorkerWhatsAppBlastTargets(params.admin);
@@ -221,7 +264,7 @@ export async function sendWorkerWhatsAppBlast(params: {
                 const fallbackResult = await sendStatusUpdate(
                     target.phone,
                     target.firstName,
-                    `Activate Job Finder for $9 — 90-day money-back guarantee. Pay here: ${STRIPE_PAYMENT_LINK}`,
+                    `Your profile has been approved. Activate Job Finder for $9 — 90-day money-back guarantee. Pay here: ${STRIPE_PAYMENT_LINK}`,
                     target.profileId || undefined
                 );
 
