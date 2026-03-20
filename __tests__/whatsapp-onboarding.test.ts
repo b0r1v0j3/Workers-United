@@ -124,6 +124,31 @@ describe("handleWhatsAppOnboarding", () => {
         expect(store.state).toBeNull();
     });
 
+    it("uses configured public links in onboarding fallback replies", async () => {
+        const { client } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "birth_city",
+            collected_data: { full_name: "Ali Worker" },
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "cancel",
+            null,
+            "en",
+            [],
+            {
+                signupUrl: "https://portal.example/signup",
+                workerProfileUrl: "https://portal.example/profile/worker",
+            }
+        );
+
+        expect(reply).toContain("https://portal.example/profile/worker");
+    });
+
     it("switches onboarding language mid-flow instead of consuming the request as field data", async () => {
         const { client, store } = createOnboardingAdmin({
             phone_number: "+381600000000",

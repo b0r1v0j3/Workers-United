@@ -40,6 +40,36 @@ describe("whatsapp-reply-guardrails", () => {
         expect(getMediaAttachmentResponse("English")).toContain("I received the attachment");
     });
 
+    it("uses configured support email and public URLs in guardrail copy", () => {
+        const platform = {
+            websiteUrl: "https://portal.example",
+            supportEmail: "ops@example.com",
+        };
+
+        expect(getMediaAttachmentResponse("English", platform)).toContain("ops@example.com");
+
+        const escalation = applyWhatsAppReplyGuardrails({
+            responseText: "I forwarded this to the tech team and they will reply here.",
+            language: "English",
+            workerRecord: {
+                entry_fee_paid: true,
+                admin_approved: true,
+                status: "IN_QUEUE",
+            },
+            platform,
+        });
+
+        const payment = applyWhatsAppReplyGuardrails({
+            responseText: "I can send the payment link now.",
+            language: "English",
+            workerRecord: null,
+            platform,
+        });
+
+        expect(escalation.text).toContain("ops@example.com");
+        expect(payment.text).toContain("https://portal.example/signup");
+    });
+
     it("replaces escalation promises with deterministic support copy", () => {
         const result = applyWhatsAppReplyGuardrails({
             responseText: "I forwarded this to the tech team and they will reply here.",
