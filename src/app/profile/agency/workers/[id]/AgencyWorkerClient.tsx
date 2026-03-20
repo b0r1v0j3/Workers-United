@@ -818,7 +818,7 @@ export default function AgencyWorkerClient({
                                     ? "This worker is already approved for payment."
                                     : initialWorker.completion === 100
                                         ? "This profile is ready for your approval."
-                                        : "Approval stays locked until the worker reaches 100% completion."}
+                                        : "Approval stays locked until the worker profile and required documents are complete."}
                             </div>
                             <div className="mt-4 flex flex-col gap-3">
                                 <button
