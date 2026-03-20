@@ -12,6 +12,8 @@ export interface WhatsAppHistoryMessage {
     content: string | null;
     created_at?: string | null;
     status?: string | null;
+    message_type?: string | null;
+    template_name?: string | null;
 }
 
 export interface WhatsAppBrainMemoryEntry {
@@ -52,13 +54,18 @@ export async function loadWhatsAppConversationHistory(
         const scanLimit = Math.max(limit * 3, limit + 12);
         const { data } = await admin
             .from("whatsapp_messages")
-            .select("direction, content, created_at, status")
+            .select("direction, content, created_at, status, message_type, template_name")
             .eq("phone_number", normalizedPhone)
             .order("created_at", { ascending: false })
             .limit(scanLimit);
 
         return (data || [])
-            .filter((message) => !(message.direction === "outbound" && message.status === "failed"))
+            .filter((message) => {
+                const failedOutbound = message.direction === "outbound" && message.status === "failed";
+                const outboundTemplate = message.direction === "outbound"
+                    && (message.message_type === "template" || !!message.template_name);
+                return !(failedOutbound || outboundTemplate);
+            })
             .reverse()
             .slice(-limit);
     } catch {

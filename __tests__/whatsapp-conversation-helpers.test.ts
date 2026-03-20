@@ -54,6 +54,14 @@ function createReadAdmin() {
                                                     },
                                                     {
                                                         direction: "outbound",
+                                                        content: "Template nudge",
+                                                        created_at: "2026-03-19T10:01:30.000Z",
+                                                        status: "sent",
+                                                        message_type: "template",
+                                                        template_name: "profile_incomplete",
+                                                    },
+                                                    {
+                                                        direction: "outbound",
                                                         content: "Reply 1",
                                                         created_at: "2026-03-19T10:01:00.000Z",
                                                         status: "sent",
@@ -121,7 +129,7 @@ describe("whatsapp-conversation-helpers", () => {
         ], 5)).toBe("User: Hi\nAssistant: Hello there");
     });
 
-    it("loads whatsapp history in chronological order and excludes failed outbound turns", async () => {
+    it("loads whatsapp history in chronological order and excludes failed or template outbound turns", async () => {
         const history = await loadWhatsAppConversationHistory(createReadAdmin() as never, "+381600000000", 2);
 
         expect(history).toEqual([
@@ -130,12 +138,16 @@ describe("whatsapp-conversation-helpers", () => {
                 content: "Hello",
                 created_at: "2026-03-19T10:00:00.000Z",
                 status: "delivered",
+                message_type: undefined,
+                template_name: undefined,
             },
             {
                 direction: "outbound",
                 content: "Reply 1",
                 created_at: "2026-03-19T10:01:00.000Z",
                 status: "sent",
+                message_type: undefined,
+                template_name: undefined,
             },
         ]);
     });

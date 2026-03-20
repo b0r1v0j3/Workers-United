@@ -98,6 +98,12 @@ interface SupportAccessSnapshot {
     reason: string | null;
 }
 
+function isLinkedWhatsAppWorker(
+    workerRecord: Pick<WhatsAppWorkerRecord, "profile_id"> | null | undefined
+): workerRecord is Pick<WhatsAppWorkerRecord, "profile_id"> & { profile_id: string } {
+    return typeof workerRecord?.profile_id === "string" && workerRecord.profile_id.trim().length > 0;
+}
+
 async function logDeterministicWhatsAppReply(params: {
     userId: string | null;
     phone: string;
@@ -208,6 +214,7 @@ export async function POST(request: NextRequest) {
 
         const supabase = createAdminClient();
         const attachmentReplySent = new Set<string>();
+        let hadProcessingError = false;
 
         for (const entry of entries) {
             const changes = Array.isArray(entry?.changes) ? entry.changes : [];
@@ -219,7 +226,12 @@ export async function POST(request: NextRequest) {
                 }
 
                 // ─── Handle delivery status updates (keep locally) ──────────────
-                await persistWhatsAppDeliveryStatuses(supabase, value.statuses);
+                try {
+                    await persistWhatsAppDeliveryStatuses(supabase, value.statuses);
+                } catch (statusError) {
+                    hadProcessingError = true;
+                    console.error("[WhatsApp Webhook] Failed to persist delivery statuses:", statusError);
+                }
 
                 // ─── Handle incoming messages ───────────────────────────────────
                 if (!value.messages || value.messages.length === 0) {
@@ -231,15 +243,15 @@ export async function POST(request: NextRequest) {
                     const messageType = message.type;
                     const wamid = message.id;
                     const content = extractWhatsAppMessageContent(message);
+                    const normalizedPhone = normalizeWhatsAppPhone(phoneNumber);
+
+                    try {
 
                 // ─── Deduplication: skip if this wamid was already processed ──
                 if (await isDuplicateWhatsAppInboundMessage(supabase, wamid)) {
                     console.log(`[Webhook] Duplicate wamid ${wamid} — skipping`);
                     continue;
                 }
-
-                // Normalize phone for DB lookup (add + prefix)
-                const normalizedPhone = normalizeWhatsAppPhone(phoneNumber);
 
                 const workerRecordSelect = `
                     id, profile_id, status, queue_position, preferred_job, 
@@ -258,17 +270,18 @@ export async function POST(request: NextRequest) {
                     normalizedPhone,
                     workerSelect: workerRecordSelect,
                 });
+                const linkedWorkerRecord = isLinkedWhatsAppWorker(workerRecord) ? workerRecord : null;
                 const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
                 const employerLead = await resolveEmployerWhatsAppLead({
                     admin: supabase,
                     normalizedPhone,
                     content,
                     isAdmin,
-                    hasRegisteredWorker: !!workerRecord,
+                    hasRegisteredWorker: !!linkedWorkerRecord,
                 });
                 const employerRecord = employerLead.employerRecord;
                 const isEmployer = employerLead.isEmployer;
-                const activityUserId = workerRecord?.profile_id || employerRecord?.profile_id || null;
+                const activityUserId = linkedWorkerRecord?.profile_id || employerRecord?.profile_id || null;
 
                 // ─── Log inbound message ────────────────────────────────
                 await recordInboundWhatsAppMessage(supabase, {
@@ -288,8 +301,8 @@ export async function POST(request: NextRequest) {
                         phone: normalizedPhone,
                         message_type: messageType,
                         content_preview: content.substring(0, 100),
-                        is_registered: !!workerRecord || !!employerRecord,
-                        role: workerRecord ? "worker" : employerRecord ? "employer" : isAdmin ? "admin" : "anonymous",
+                        is_registered: !!linkedWorkerRecord || !!employerRecord,
+                        role: linkedWorkerRecord ? "worker" : employerRecord ? "employer" : isAdmin ? "admin" : "anonymous",
                     }
                 );
 
@@ -407,7 +420,7 @@ export async function POST(request: NextRequest) {
                     supabase,
                     normalizedPhone,
                     content,
-                    workerRecord,
+                    linkedWorkerRecord,
                     quickLang
                 );
 
@@ -446,8 +459,8 @@ export async function POST(request: NextRequest) {
                                     return "";
                                 }
                             })(),
-                            workerRecord?.profile_id
-                                ? getSupportAccessState(supabase, workerRecord.profile_id, "worker")
+                            linkedWorkerRecord?.profile_id
+                                ? getSupportAccessState(supabase, linkedWorkerRecord.profile_id, "worker")
                                 : Promise.resolve(null as SupportAccessSnapshot | null),
                         ]);
 
@@ -456,7 +469,7 @@ export async function POST(request: NextRequest) {
                             model: WHATSAPP_ROUTER_MODEL,
                             message: content,
                             normalizedPhone,
-                            workerRecord,
+                            workerRecord: linkedWorkerRecord,
                             profile,
                             historyMessages,
                         });
@@ -476,7 +489,7 @@ export async function POST(request: NextRequest) {
                             }
                         );
 
-                        const deterministicUnregisteredReply = !workerRecord && !isEmployer && !isAdmin
+                        const deterministicUnregisteredReply = !linkedWorkerRecord && !isEmployer && !isAdmin
                             ? buildUnregisteredWorkerWhatsAppReply({
                                 message: content,
                                 language: routerDecision.language,
@@ -486,33 +499,35 @@ export async function POST(request: NextRequest) {
                             })
                             : null;
 
-                        const deterministicRegisteredReply = workerRecord && !isEmployer && !isAdmin
+                        const deterministicRegisteredReply = linkedWorkerRecord && !isEmployer && !isAdmin
                             ? buildRegisteredWorkerWhatsAppReply({
                                 message: content,
                                 language: routerDecision.language,
                                 intent: routerDecision.intent,
                                 historyMessages,
-                                workerStatus: workerRecord.status,
-                                entryFeePaid: workerRecord.entry_fee_paid,
-                                adminApproved: workerRecord.admin_approved,
-                                queueJoinedAt: workerRecord.queue_joined_at,
+                                workerStatus: linkedWorkerRecord.status,
+                                entryFeePaid: linkedWorkerRecord.entry_fee_paid,
+                                adminApproved: linkedWorkerRecord.admin_approved,
+                                queueJoinedAt: linkedWorkerRecord.queue_joined_at,
                                 hasSupportAccess: !!supportAccess?.allowed,
                             })
                             : null;
 
-                        const confusionAnalysis = workerRecord && supportAccess?.allowed
+                        const confusionAnalysis = linkedWorkerRecord && supportAccess?.allowed
                             ? analyzeWhatsAppConfusion(historyMessages.map((entry) => ({
                                 direction: entry.direction,
                                 content: entry.content,
                                 created_at: entry.created_at,
                                 status: entry.status,
+                                message_type: entry.message_type,
+                                template_name: entry.template_name,
                             })))
                             : null;
 
-                        if (confusionAnalysis?.triggered && workerRecord?.profile_id) {
+                        if (confusionAnalysis?.triggered && linkedWorkerRecord?.profile_id) {
                             await createWhatsAppAutoHandoff({
                                 admin: supabase,
-                                profileId: workerRecord.profile_id,
+                                profileId: linkedWorkerRecord.profile_id,
                                 normalizedPhone,
                                 latestMessage: content,
                                 language: routerDecision.language,
@@ -539,7 +554,7 @@ export async function POST(request: NextRequest) {
                                 model: WHATSAPP_RESPONSE_MODEL,
                                 message: content,
                                 normalizedPhone,
-                                workerRecord,
+                                workerRecord: linkedWorkerRecord,
                                 profile,
                                 isAdmin,
                                 businessFacts,
@@ -606,17 +621,17 @@ export async function POST(request: NextRequest) {
                 const guardrailResult = applyWhatsAppReplyGuardrails({
                     responseText: cleanResponse,
                     language: effectiveReplyLanguage,
-                    workerRecord,
+                    workerRecord: linkedWorkerRecord,
                 });
                 const replyText = guardrailResult.text || await getWhatsAppFallbackResponse(
                     content,
-                    workerRecord,
+                    linkedWorkerRecord,
                     profile,
                     effectiveReplyLanguage,
                     historyMessages
                 );
                 const finalReplyText = replyText && !replyMatchesExpectedWhatsAppLanguage(effectiveReplyLanguage, replyText)
-                    ? await getWhatsAppFallbackResponse(content, workerRecord, profile, effectiveReplyLanguage, historyMessages)
+                    ? await getWhatsAppFallbackResponse(content, linkedWorkerRecord, profile, effectiveReplyLanguage, historyMessages)
                     : replyText;
 
                     if (finalReplyText) {
@@ -662,15 +677,39 @@ export async function POST(request: NextRequest) {
                             );
                         }
                     }
+                    } catch (messageError) {
+                        hadProcessingError = true;
+                        console.error("[WhatsApp Webhook] Failed to process inbound message:", {
+                            phone: normalizedPhone,
+                            wamid,
+                            error: messageError,
+                        });
+                        await logServerActivity(
+                            "anonymous",
+                            "whatsapp_webhook_message_failed",
+                            "error",
+                            {
+                                phone: normalizedPhone,
+                                wamid,
+                                message_type: messageType,
+                                content_preview: content.substring(0, 120),
+                                error: messageError instanceof Error ? messageError.message : "unknown",
+                            },
+                            "error"
+                        );
+                    }
                 }
             }
         }
 
-        // Always return 200 to acknowledge (Meta retries on non-200)
+        if (hadProcessingError) {
+            return NextResponse.json({ status: "partial_failure" }, { status: 500 });
+        }
+
         return NextResponse.json({ status: "ok" });
     } catch (error) {
         console.error("[WhatsApp Webhook] Error:", error);
-        return NextResponse.json({ status: "error" });
+        return NextResponse.json({ status: "error" }, { status: 500 });
     }
 }
 
@@ -1108,8 +1147,9 @@ async function clearOnboardingState(supabase: any, phone: string): Promise<void>
         .eq("phone_number", phone);
 }
 
-// Save collected data into the workers table (upsert by phone)
-async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Record<string, string>): Promise<void> {
+// Save collected data only when the phone already belongs to a linked worker account.
+// Unregistered WhatsApp onboarding should not create ghost worker rows.
+async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Record<string, string>): Promise<boolean> {
     const adminClient = createAdminClient();
 
     // Parse date_of_birth DD/MM/YYYY → YYYY-MM-DD
@@ -1161,9 +1201,13 @@ async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Reco
     // Try to find existing worker record by phone
     const { data: existing } = await adminClient
         .from("workers")
-        .select("id")
+        .select("id, profile_id")
         .eq("phone", phone)
         .single();
+
+    if (!existing?.id || !existing.profile_id) {
+        return false;
+    }
 
     const record: any = {
         phone,
@@ -1197,12 +1241,12 @@ async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Reco
         record.submitted_full_name = data.full_name;
     }
 
-    if (existing?.id) {
-        await adminClient.from("workers").update(record).eq("id", existing.id);
-    } else {
-        record.created_at = new Date().toISOString();
-        await adminClient.from("workers").insert(record);
+    const { error } = await adminClient.from("workers").update(record).eq("id", existing.id);
+    if (error) {
+        throw error;
     }
+
+    return true;
 }
 
 // ─── Main onboarding handler ──────────────────────────────────────────────────
@@ -1217,7 +1261,7 @@ export async function handleWhatsAppOnboarding(
 ): Promise<string | null> {
     const state = await getOnboardingState(supabase, phone);
     const lang = state?.language || detectedLanguage || "en";
-    const isRegisteredWorker = Boolean(workerRecord?.profile_id || workerRecord?.onboarding_completed);
+    const isRegisteredWorker = Boolean(workerRecord?.profile_id);
 
     if (state && isCancelOnboarding(message)) {
         await clearOnboardingState(supabase, phone);
@@ -1227,6 +1271,14 @@ export async function handleWhatsAppOnboarding(
     if (isRegisteredWorker) {
         if (state) {
             await clearOnboardingState(supabase, phone);
+        }
+        return null;
+    }
+
+    if (state?.current_step === "done") {
+        if (shouldStartWhatsAppOnboarding(message)) {
+            await saveOnboardingState(supabase, phone, "ask_start", {}, detectedLanguage || lang);
+            return getQ("ask_start", detectedLanguage || lang);
         }
         return null;
     }
@@ -1512,18 +1564,21 @@ export async function handleWhatsAppOnboarding(
         collected.desired_countries = countries.join("|");
         collected.language = lang;
 
-        // Save to workers table
+        let savedToLinkedWorker = false;
         try {
-            await saveWorkerFromOnboarding(supabase, phone, collected);
+            savedToLinkedWorker = await saveWorkerFromOnboarding(supabase, phone, collected);
         } catch (e) {
             console.warn("[Onboarding] Could not save worker:", e);
         }
-
-        await clearOnboardingState(supabase, phone);
+        if (savedToLinkedWorker) {
+            await clearOnboardingState(supabase, phone);
+        } else {
+            await saveOnboardingState(supabase, phone, "done", collected, lang);
+        }
 
         const name = collected.full_name?.split(" ")[0] || "";
         const lk = getLangKey(lang);
-        const finalMsg: Record<LangKey, string> = {
+        const savedToWorkerMessage: Record<LangKey, string> = {
             en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder* — then we start searching for your job across Europe!\n\n👉 workersunited.eu/profile/worker\n\nWe'll also need your documents (passport photo, biometric photo, and a final school, university, or formal vocational diploma) — you can upload them on the website. If you have any questions, I'm here!`,
             sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 workersunited.eu/profile/worker\n\nTreba nam i vaša dokumentacija (fotografija pasoša, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
             hi: `धन्यवाद, ${name}! 🎉 आपका प्रोफ़ाइल सहेज लिया गया है।\n\nअंतिम चरण है वेबसाइट पर रजिस्टर करना और *Job Finder* सक्रिय करना — फिर हम पूरे यूरोप में आपके लिए नौकरी खोजना शुरू करते हैं!\n\n👉 workersunited.eu/profile/worker`,
@@ -1531,7 +1586,15 @@ export async function handleWhatsAppOnboarding(
             fr: `Merci, ${name}! 🎉 Votre profil a été sauvegardé.\n\nLa dernière étape est de vous inscrire sur le site et d'activer *Job Finder* — puis nous commençons à chercher votre emploi dans toute l'Europe!\n\n👉 workersunited.eu/profile/worker`,
             pt: `Obrigado, ${name}! 🎉 Seu perfil foi salvo.\n\nO último passo é se registrar no site e ativar o *Job Finder* — então começamos a procurar seu emprego em toda a Europa!\n\n👉 workersunited.eu/profile/worker`,
         };
-        return finalMsg[lk];
+        const draftOnlyMessage: Record<LangKey, string> = {
+            en: `Thank you, ${name}! 🎉 I saved your answers in this WhatsApp draft for now.\n\nYour real worker account still starts on the website, so please register and continue there:\n\n👉 workersunited.eu/profile/worker\n\nAfter that, upload your passport photo, biometric photo, and a final school, university, or formal vocational diploma on the website to continue.`,
+            sr: `Hvala, ${name}! 🎉 Sačuvao sam vaše odgovore ovde u WhatsApp nacrtu za sada.\n\nVaš pravi worker nalog ipak počinje na sajtu, zato se registrujte i nastavite tamo:\n\n👉 workersunited.eu/profile/worker\n\nPosle toga dodajte fotografiju pasoša, biometrijsku fotografiju i završnu školsku, univerzitetsku ili formalnu stručnu diplomu na sajtu da biste nastavili dalje.`,
+            hi: `धन्यवाद, ${name}! 🎉 मैंने आपके जवाब फिलहाल इस WhatsApp draft में सेव कर दिए हैं।\n\nलेकिन आपका असली worker account वेबसाइट पर शुरू होता है, इसलिए वहाँ register करें और वहीं आगे बढ़ें:\n\n👉 workersunited.eu/profile/worker`,
+            ar: `شكراً، ${name}! 🎉 لقد حفظت إجاباتك مؤقتاً في مسودة WhatsApp هذه.\n\nلكن حساب العامل الحقيقي يبدأ على الموقع، لذلك يرجى التسجيل والمتابعة هناك:\n\n👉 workersunited.eu/profile/worker`,
+            fr: `Merci, ${name}! 🎉 J’ai enregistré vos réponses pour l’instant dans ce brouillon WhatsApp.\n\nMais votre vrai compte travailleur commence sur le site, alors inscrivez-vous et continuez là-bas :\n\n👉 workersunited.eu/profile/worker`,
+            pt: `Obrigado, ${name}! 🎉 Salvei suas respostas por enquanto neste rascunho do WhatsApp.\n\nMas sua conta real de worker começa no site, então registre-se e continue por lá:\n\n👉 workersunited.eu/profile/worker`,
+        };
+        return savedToLinkedWorker ? savedToWorkerMessage[lk] : draftOnlyMessage[lk];
     }
 
     return null;

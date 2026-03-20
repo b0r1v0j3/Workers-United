@@ -167,6 +167,48 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(sendWhatsAppText).toHaveBeenNthCalledWith(3, "+381600000013", "Employer reply", undefined);
     });
 
+    it("keeps processing later batched messages and returns partial failure when one message crashes", async () => {
+        recordInboundWhatsAppMessage
+            .mockRejectedValueOnce(new Error("db boom"))
+            .mockResolvedValue(undefined);
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_fail", from: "381600000021", type: "text", text: { body: "hello" } },
+                                { id: "wamid_ok", from: "381600000022", type: "text", text: { body: "bonjour" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({ status: "partial_failure" });
+        expect(sendWhatsAppText).toHaveBeenCalledTimes(1);
+        expect(sendWhatsAppText).toHaveBeenCalledWith("+381600000022", "Employer reply", undefined);
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "anonymous",
+            "whatsapp_webhook_message_failed",
+            "error",
+            expect.objectContaining({
+                phone: "+381600000021",
+                wamid: "wamid_fail",
+                error: "db boom",
+            }),
+            "error"
+        );
+    });
+
     it("keeps employer error fallback in the conversation language when AI degrades", async () => {
         loadWhatsAppConversationHistory.mockResolvedValueOnce([
             { direction: "inbound", content: "Bonjour", created_at: "2026-03-19T12:00:00.000Z" },
