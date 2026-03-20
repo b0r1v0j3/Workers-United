@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const insertMessage = vi.fn();
-let recentFailures: Array<{ error_message: string | null }> = [];
+let recentFailures: Array<{ status: string | null; error_message: string | null; created_at: string | null }> = [];
 
 vi.mock("@/lib/supabase/admin", () => ({
     createAdminClient: () => ({
@@ -46,7 +46,11 @@ describe("whatsapp proactive send suppression", () => {
     });
 
     it("suppresses proactive template sends after a recent recipient-side failure", async () => {
-        recentFailures = [{ error_message: "(#131026) Message undeliverable" }];
+        recentFailures = [{
+            status: "failed",
+            error_message: "(#131026) Message undeliverable",
+            created_at: new Date().toISOString(),
+        }];
         const { sendWhatsAppTemplate } = await import("@/lib/whatsapp");
 
         const result = await sendWhatsAppTemplate({
@@ -63,6 +67,51 @@ describe("whatsapp proactive send suppression", () => {
             status: "blocked",
             template_name: "payment_confirmed",
         }));
+    });
+
+    it("does not suppress when a newer successful template send exists after an older recipient failure", async () => {
+        recentFailures = [
+            {
+                status: "delivered",
+                error_message: null,
+                created_at: new Date().toISOString(),
+            },
+            {
+                status: "failed",
+                error_message: "(#131026) Message undeliverable",
+                created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            },
+        ];
+        const { sendWhatsAppTemplate } = await import("@/lib/whatsapp");
+
+        const result = await sendWhatsAppTemplate({
+            to: "+15550000001",
+            templateName: "payment_confirmed",
+            bodyParams: ["$9", "Ali"],
+            userId: "worker-1",
+        });
+
+        expect(result.success).toBe(true);
+        expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it("does not keep suppression forever when the last recipient failure is stale", async () => {
+        recentFailures = [{
+            status: "failed",
+            error_message: "(#131026) Message undeliverable",
+            created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        }];
+        const { sendWhatsAppTemplate } = await import("@/lib/whatsapp");
+
+        const result = await sendWhatsAppTemplate({
+            to: "+15550000001",
+            templateName: "payment_confirmed",
+            bodyParams: ["$9", "Ali"],
+            userId: "worker-1",
+        });
+
+        expect(result.success).toBe(true);
+        expect(fetch).toHaveBeenCalledOnce();
     });
 
     it("still sends normally when there is no recent recipient-side failure", async () => {
