@@ -27,7 +27,7 @@ describe("worker-approval-notifications", () => {
         }
     });
 
-    it("prefers canonical worker notification emails and blocks hidden agency drafts", () => {
+    it("prefers auth email over a stale profile email and blocks hidden agency drafts", () => {
         expect(resolveWorkerApprovalNotificationRecipient({
             worker: {
                 agency_id: null,
@@ -35,12 +35,27 @@ describe("worker-approval-notifications", () => {
                 submitted_email: "worker@company.com",
                 phone: "+381641234567",
             },
-            workerProfileEmail: "worker@company.com",
-            authEmail: "fallback@company.com",
+            workerProfileEmail: "stale-profile@company.com",
+            authEmail: "worker@company.com",
             displayName: "Worker One",
         })).toEqual({
             email: "worker@company.com",
             name: "Worker One",
+        });
+
+        expect(resolveWorkerApprovalNotificationRecipient({
+            worker: {
+                agency_id: null,
+                profile_id: "profile-2",
+                submitted_email: "worker-two@company.com",
+                phone: "+381641234568",
+            },
+            workerProfileEmail: "worker-two@company.com",
+            authEmail: null,
+            displayName: "Worker Two",
+        })).toEqual({
+            email: "worker-two@company.com",
+            name: "Worker Two",
         });
 
         expect(resolveWorkerApprovalNotificationRecipient({

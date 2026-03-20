@@ -38,8 +38,8 @@ export function resolveWorkerApprovalNotificationRecipient({
         return null;
     }
 
-    const email = workerProfileEmail?.trim().toLowerCase()
-        || authEmail?.trim().toLowerCase()
+    const email = authEmail?.trim().toLowerCase()
+        || workerProfileEmail?.trim().toLowerCase()
         || null;
 
     if (!email) {
