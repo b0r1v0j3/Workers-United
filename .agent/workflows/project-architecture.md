@@ -16,7 +16,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Framework | **Next.js 16** (App Router) | TypeScript, React 19; production build now enforces TS errors again (no `ignoreBuildErrors`) |
 | Styling | **Tailwind CSS v4** + `globals.css` | PostCSS via `@tailwindcss/postcss` |
 | Font | **Montserrat** (Google Fonts) | Loaded in `src/app/layout.tsx` via `next/font` |
-| Auth | **Supabase Auth** | Email/password, Google OAuth, password reset; live auth triggers now keep `profiles` + canonical `workers`/`employers` in sync on both signup and later metadata role updates, without depending on the retired `candidates` alias, while `/login` now finishes hash-based confirm/magic-link/recovery sessions and hands post-auth redirecting to a shared resolver. A shared auth-contact sync layer now mirrors canonical worker/employer phones back into the Auth `phone` field and metadata during self-service saves, admin edits, agency-managed claimed-worker edits, and post-login self-heal passes. |
+| Auth | **Supabase Auth** | Email/password, Google OAuth, password reset; live auth triggers now keep `profiles` + canonical `workers`/`employers` in sync on both signup and later metadata role updates, without depending on the retired `candidates` alias, while `/login` now finishes hash-based confirm/magic-link/recovery sessions and hands post-auth redirecting to a shared resolver. A shared auth-contact sync layer now mirrors canonical worker/employer phones back into the Auth `phone` field and metadata during self-service saves, admin edits, agency-managed claimed-worker edits, and post-login self-heal passes, and welcome dedupe now keys off shared `pending + sent` email-queue checks plus previously sent WhatsApp `welcome_registration` template rows instead of a looser legacy marker-only check. |
 | Database | **Supabase (PostgreSQL)** | RLS policies, cron-triggered functions, in-platform messaging tables (`conversations*`); worker app-layer runtime reads/writes through `worker_onboarding` / `worker_documents`, live Supabase physically uses `workers` / `worker_documents`, `documents / matches / offers` carry only canonical `worker_id` FKs, `contract_data` worker overrides are `worker_*`, and the live public schema no longer exposes the old `candidates` / `candidate_documents` aliases |
 | Storage | **Supabase Storage** | Canonical and only active worker document bucket is `worker-docs`; runtime helpers resolve only `worker-docs`, while legacy `candidate-docs` and empty `documents` buckets are retired |
 | Payments | **Stripe** | Checkout Sessions + Webhooks; checkout now reuses/prefills Stripe Customers from canonical worker/agency payment identity data, queue/payment UX explicitly reminds workers to use the same cardholder/billing details their bank expects, and webhook failure telemetry stores issuer/Radar decline context plus billing/card country hints (`payment_intent.payment_failed`, `charge.failed`, `checkout.session.expired`, `checkout.session.completed`) back into `payments.metadata` + `user_activity` so internal ops and analytics can split bank declines from Stripe risk blocks, checkout expiry, and market-specific patterns |
@@ -97,6 +97,7 @@ Workers-United/
 │   │   │   ├── offers/        # Job offers
 │   │   │   ├── profile/       # Profile API + authenticated auth-contact sync route (`/api/profile/auth-contact`)
 │   │   │   ├── queue/         # auto-match
+│   │   │   ├── queue-user-email/ # Post-signup immediate email queue helper; now passes canonical welcome `recipientRole` and skips duplicate queueing when a `pending/sent` welcome already exists for the same user
 │   │   │   ├── signatures/    # Signature storage
 │   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow); delivery-status persistence, identity resolution, OpenAI Responses transport, history-aware language/fallback handling, and employer/admin helper flows are delegated to shared helpers, while the route now consumes all Meta `entry[]/changes[]/messages[]` layers in one POST instead of only the first change, returns `500 partial_failure` so Meta retries when one branch fails, and never creates ghost worker rows from WhatsApp onboarding alone
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
@@ -158,7 +159,8 @@ Workers-United/
 │   │   ├── notifications.ts   # Email notification helpers
 │   │   ├── admin.ts           # Admin utility functions
 │   │   ├── employers.ts       # Canonical employer integrity helpers: pick/ensure one employer per `profile_id`, block admin/internal sandbox employer provisioning, and hide test/admin employer rows from business admin views/search
-│   │   ├── auth-redirect.ts   # Shared post-auth provisioning + role-aware redirect resolver for callback/hash login finalize flows; queues automated welcome only for real deliverable contacts
+│   │   ├── auth-redirect.ts   # Shared post-auth provisioning + role-aware redirect resolver for callback/hash login finalize flows; queues welcome only for real deliverable contacts, now sharing a `pending + sent` welcome-email guard plus prior outbound `welcome_registration` template dedupe
+│   │   ├── welcome-notifications.ts # Shared welcome-email dedupe helper so signup queueing and post-auth redirect use the same `pending + sent` guard instead of racing each other
 │   │   ├── constants.ts       # Shared constants
 │   │   ├── workers.ts         # Canonical worker lookup + normalization helpers (duplicate-safe worker record selection over legacy physical worker table via `worker_onboarding`, phone normalization, storage filename sanitization)
 │   │   ├── worker-notification-eligibility.ts # Shared guard for worker direct email/WhatsApp automations; blocks hidden draft owners, internal/test addresses, and agency drafts without real worker email+phone
@@ -166,7 +168,7 @@ Workers-United/
 │   │   ├── whatsapp-blast.ts # Shared admin WhatsApp blast target loader + canonical worker dedupe + direct-notification eligibility guard + strict payment-readiness gating via `payment-eligibility` + announcement/status fallback send path + audit logging
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
-│   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging, failed-send error capture)
+│   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging, failed-send error capture); proactive template sends now short-circuit when the same number recently hit a recipient-side Meta block/undeliverable error
 │   │   ├── whatsapp-admin-commands.ts # Shared owner/admin WhatsApp memory-edit commands (`ispravi`, `zapamti`, `obrisi`, `memorija`) extracted from the webhook route
 │   │   ├── whatsapp-brain.ts  # Canonical WhatsApp facts/rules, safe-learning filter, explicit onboarding trigger, conversation-aware language resolver, and explicit language-switch detection
 │   │   ├── whatsapp-conversation-helpers.ts # Shared WhatsApp transcript formatting, history/brain-memory loading, and worker auto-handoff summary creation extracted from the webhook route; history loading now excludes both failed outbound sends and proactive/template outbound rows so prompts only see real assistant turns
@@ -313,7 +315,8 @@ User (Browser)
 |---|---|
 | `src/app/auth/callback/route.ts` | Server callback for OAuth/code-exchange auth; now also rescues non-code auth links by forwarding them to `/login?mode=confirm|recovery` instead of failing cold, and it always lets the shared post-auth provisioning/sync run before honoring any `next` redirect |
 | `src/app/api/auth/finalize/route.ts` | Finalize endpoint used after `LoginClient` restores a hash session; validates the user and returns the final role-aware workspace href |
-| `src/lib/auth-redirect.ts` | Shared post-auth provisioning/redirect engine used by both `/auth/callback` and `/api/auth/finalize` so admin/employer/agency/worker routing stays consistent, while automated welcome sends are skipped for hidden/internal/test contacts and WhatsApp welcome now dedupes through a durable auth activity marker |
+| `src/lib/auth-redirect.ts` | Shared post-auth provisioning/redirect engine used by both `/auth/callback` and `/api/auth/finalize` so admin/employer/agency/worker routing stays consistent, while automated welcome sends are skipped for hidden/internal/test contacts and share the same `pending + sent` email dedupe plus prior WhatsApp `welcome_registration` dedupe |
+| `src/lib/welcome-notifications.ts` | Shared welcome-email dedupe helper so signup and post-auth finalize both check the same `pending + sent` guard before queueing another welcome email |
 
 ### Employer Flow
 | File | Role |
