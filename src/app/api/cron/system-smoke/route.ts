@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/database.types";
 import { sendEmail } from "@/lib/mailer";
+import { normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { evaluateSmoke, SmokeRouteCheck, SmokeServiceCheck } from "@/lib/smoke-evaluator";
 
 export const dynamic = "force-dynamic";
@@ -101,7 +102,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
+    const baseUrl = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
     const supabase = createTypedAdminClient();
     const started = Date.now();
 
