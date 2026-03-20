@@ -6,6 +6,8 @@ export interface WhatsAppQualityMessage {
     content?: string | null;
     created_at?: string | null;
     status?: string | null;
+    message_type?: string | null;
+    template_name?: string | null;
 }
 
 export interface WhatsAppConversationLike {
@@ -158,8 +160,10 @@ function isInboundMessage(message: WhatsAppQualityMessage): boolean {
 }
 
 function isOutboundMessage(message: WhatsAppQualityMessage): boolean {
+    const isTemplate = message.message_type === "template" || !!message.template_name;
     return (message.direction === "outbound" || message.role === "assistant")
-        && message.status !== "failed";
+        && message.status !== "failed"
+        && !isTemplate;
 }
 
 function asObject(value: Json | Record<string, unknown> | null | undefined): Record<string, unknown> | null {

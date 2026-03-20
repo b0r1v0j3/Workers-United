@@ -1,4 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { createAdminClient } = vi.hoisted(() => ({
+    createAdminClient: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+    createAdminClient,
+}));
+
 import { handleWhatsAppOnboarding } from "@/app/api/whatsapp/webhook/route";
 
 function createOnboardingAdmin(initialState?: Record<string, unknown> | null) {
@@ -45,6 +54,10 @@ function createOnboardingAdmin(initialState?: Record<string, unknown> | null) {
 }
 
 describe("handleWhatsAppOnboarding", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     it("expires stale onboarding state and lets normal chat continue", async () => {
         const { client, store } = createOnboardingAdmin({
             phone_number: "+381600000000",
@@ -109,5 +122,49 @@ describe("handleWhatsAppOnboarding", () => {
         expect(reply).toContain("zaustavio sam popunjavanje profila");
         expect(store.cleared).toBe(1);
         expect(store.state).toBeNull();
+    });
+
+    it("keeps unregistered completions as a WhatsApp draft instead of creating a ghost worker row", async () => {
+        const { client, store } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "desired_countries",
+            collected_data: {
+                full_name: "Ali Worker",
+                nationality: "Ghanaian",
+                preferred_job: "Construction",
+            },
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const updateEq = vi.fn().mockResolvedValue({ error: null });
+        const update = vi.fn(() => ({ eq: updateEq }));
+        const single = vi.fn().mockResolvedValue({ data: null });
+        const eq = vi.fn(() => ({ single }));
+        const select = vi.fn(() => ({ eq }));
+
+        createAdminClient.mockReturnValue({
+            from(table: string) {
+                expect(table).toBe("workers");
+                return {
+                    select,
+                    update,
+                };
+            },
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "Germany, Serbia",
+            null,
+            "en"
+        );
+
+        expect(reply).toContain("saved your answers in this WhatsApp draft");
+        expect(reply).toContain("workersunited.eu/profile/worker");
+        expect(store.cleared).toBe(0);
+        expect((store.state as Record<string, unknown>)?.current_step).toBe("done");
+        expect(update).not.toHaveBeenCalled();
     });
 });

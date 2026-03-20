@@ -325,6 +325,24 @@ describe("whatsapp-brain guards", () => {
         expect(analysis.inboundBurst).toBeGreaterThanOrEqual(2);
     });
 
+    it("does not let outbound templates pretend the assistant already replied", () => {
+        const analysis = analyzeWhatsAppConfusion([
+            { direction: "inbound", content: "payment not working" },
+            {
+                direction: "outbound",
+                content: "Template reminder",
+                status: "sent",
+                message_type: "template",
+                template_name: "profile_incomplete",
+            },
+            { direction: "inbound", content: "still not working" },
+            { direction: "inbound", content: "please help me" },
+        ]);
+
+        expect(analysis.triggered).toBe(true);
+        expect(analysis.inboundBurst).toBe(3);
+    });
+
     it("filters legacy risky WhatsApp brain memory before it reaches prompts", () => {
         const filtered = filterSafeWhatsAppBrainMemory([
             {
