@@ -4,6 +4,7 @@ import {
     buildOpsMonitorReport,
     getOpsMonitorEmailReasons,
 } from "@/lib/ops-monitor";
+import { normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -134,7 +135,7 @@ export async function GET(request: Request) {
     };
 
     try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
+        const baseUrl = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
         const collectResponse = await fetch(`${baseUrl}/api/brain/collect`, {
             headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
         });

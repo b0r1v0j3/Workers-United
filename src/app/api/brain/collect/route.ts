@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import { getAdminExceptionSnapshot } from "@/lib/admin-exceptions";
+import { normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { isInternalOrTestEmail } from "@/lib/reporting";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { summarizeWhatsAppTemplateHealth } from "@/lib/whatsapp-health";
@@ -653,7 +654,7 @@ export async function GET(request: NextRequest) {
         // Platform info for context
         platform: {
             name: "Workers United",
-            url: "https://workersunited.eu",
+            url: normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL),
             entryFee: "$9",
             placementFee: "$190 (current market)",
             guarantee: "90-day money-back on entry fee",

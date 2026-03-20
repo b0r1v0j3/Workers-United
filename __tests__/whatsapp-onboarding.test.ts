@@ -335,4 +335,31 @@ describe("handleWhatsAppOnboarding", () => {
         expect((store.state as Record<string, unknown>)?.current_step).toBe("done");
         expect(update).not.toHaveBeenCalled();
     });
+
+    it("normalizes bare NEXT_PUBLIC_BASE_URL for onboarding fallback links when platform contact is missing", async () => {
+        const originalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+        const { client } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "birth_city",
+            collected_data: { full_name: "Ali Worker" },
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        try {
+            process.env.NEXT_PUBLIC_BASE_URL = "portal.example";
+
+            const reply = await handleWhatsAppOnboarding(
+                client as never,
+                "+381600000000",
+                "cancel",
+                null,
+                "en"
+            );
+
+            expect(reply).toContain("https://portal.example/profile/worker");
+        } finally {
+            process.env.NEXT_PUBLIC_BASE_URL = originalBaseUrl;
+        }
+    });
 });

@@ -51,6 +51,7 @@ import {
 import { resolveWhatsAppWorkerIdentity } from "@/lib/whatsapp-identity";
 import { callOpenAIResponseText } from "@/lib/openai-response-text";
 import {
+    buildPlatformUrl,
     buildBusinessFactsForAIFromConfig,
     getPlatformConfig,
     getPlatformContactInfoFromConfig,
@@ -1513,8 +1514,8 @@ export async function handleWhatsAppOnboarding(
     const seededLanguage = resolveWhatsAppLanguageName(message, detectedLanguage, historyMessages);
     const lang = state?.language || seededLanguage || detectedLanguage || "en";
     const isRegisteredWorker = Boolean(workerRecord?.profile_id);
-    const signupUrl = platformContact?.signupUrl || "https://workersunited.eu/signup";
-    const workerProfileUrl = platformContact?.workerProfileUrl || "https://workersunited.eu/profile/worker";
+    const signupUrl = platformContact?.signupUrl || buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/signup");
+    const workerProfileUrl = platformContact?.workerProfileUrl || buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/profile/worker");
 
     if (state && isCancelOnboarding(message)) {
         await clearOnboardingState(supabase, phone);

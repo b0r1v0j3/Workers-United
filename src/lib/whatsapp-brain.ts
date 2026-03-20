@@ -1,4 +1,6 @@
 import {
+    DEFAULT_PLATFORM_SUPPORT_EMAIL,
+    DEFAULT_PLATFORM_WEBSITE_URL,
     normalizePlatformSupportEmail,
     normalizePlatformWebsiteUrl,
 } from "@/lib/platform-config";
@@ -387,8 +389,8 @@ export function buildUnregisteredWorkerWhatsAppReply({
     language,
     intent,
     historyMessages = [],
-    website = "workersunited.eu",
-    supportEmail = "contact@workersunited.eu",
+    website = DEFAULT_PLATFORM_WEBSITE_URL,
+    supportEmail = DEFAULT_PLATFORM_SUPPORT_EMAIL,
     requiredDocuments = CANONICAL_REQUIRED_WORKER_DOCUMENTS,
     isFirstContact = false,
 }: {
@@ -582,8 +584,8 @@ export function buildRegisteredWorkerWhatsAppReply({
     adminApproved,
     queueJoinedAt,
     hasSupportAccess = false,
-    website = "workersunited.eu",
-    supportEmail = "contact@workersunited.eu",
+    website = DEFAULT_PLATFORM_WEBSITE_URL,
+    supportEmail = DEFAULT_PLATFORM_SUPPORT_EMAIL,
 }: RegisteredWorkerWhatsAppReplyOptions): string | null {
     ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     const normalized = message.trim().toLowerCase();
@@ -887,8 +889,8 @@ export function buildRegisteredWorkerWhatsAppReply({
 export function buildWhatsAppAutoHandoffReply({
     language,
     hasSupportAccess,
-    website = "workersunited.eu",
-    supportEmail = "contact@workersunited.eu",
+    website = DEFAULT_PLATFORM_WEBSITE_URL,
+    supportEmail = DEFAULT_PLATFORM_SUPPORT_EMAIL,
 }: {
     language: string;
     hasSupportAccess: boolean;
@@ -932,8 +934,8 @@ export function buildWhatsAppAutoHandoffReply({
 }
 
 export function buildCanonicalWhatsAppFacts({
-    supportEmail = "contact@workersunited.eu",
-    website = "workersunited.eu",
+    supportEmail = DEFAULT_PLATFORM_SUPPORT_EMAIL,
+    website = DEFAULT_PLATFORM_WEBSITE_URL,
 }: CanonicalWhatsAppFactsOptions = {}): string {
     ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     return [
@@ -955,8 +957,8 @@ export function buildWorkerWhatsAppRules({
     confidence,
     reason,
     isAdmin,
-    website = "workersunited.eu",
-    supportEmail = "contact@workersunited.eu",
+    website = DEFAULT_PLATFORM_WEBSITE_URL,
+    supportEmail = DEFAULT_PLATFORM_SUPPORT_EMAIL,
 }: WorkerWhatsAppRulesOptions): string {
     ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     return `IMPORTANT: You MUST reply in ${language}. Always match the language of the user's latest message.
@@ -994,7 +996,7 @@ export function buildEmployerWhatsAppRules({
     companyName = "",
     contactName = "",
     employerStatus = "",
-    website = "workersunited.eu",
+    website = DEFAULT_PLATFORM_WEBSITE_URL,
 }: EmployerWhatsAppRulesOptions): string {
     website = normalizePlatformWebsiteUrl(website);
     const employerContext = isRegistered
