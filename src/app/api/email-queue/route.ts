@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail } from "@/lib/mailer";
+import { attachEmailQueueMeta, processQueuedEmailRecord } from "@/lib/email-queue";
 
 // This endpoint is called to get pending emails
 export async function GET(request: NextRequest) {
@@ -50,6 +50,11 @@ export async function POST(request: NextRequest) {
             scheduledFor
         } = body;
 
+        const queueTemplateData = attachEmailQueueMeta(
+            { ...(templateData || {}) },
+            { attempts: 0, maxAttempts: 3 }
+        );
+
         // Insert into queue
         const { data, error } = await supabase
             .from("email_queue")
@@ -59,7 +64,7 @@ export async function POST(request: NextRequest) {
                 recipient_email: recipientEmail,
                 recipient_name: recipientName,
                 subject: subject,
-                template_data: templateData || {},
+                template_data: queueTemplateData,
                 scheduled_for: scheduledFor || new Date().toISOString()
             })
             .select()
@@ -71,20 +76,25 @@ export async function POST(request: NextRequest) {
         }
 
         // If not scheduled for later, send immediately via SMTP
-        if (!scheduledFor && templateData?.html) {
-            const result = await sendEmail(recipientEmail, subject, templateData.html);
+        if (!scheduledFor) {
+            const result = await processQueuedEmailRecord(supabase, {
+                id: data.id,
+                recipient_email: recipientEmail,
+                subject,
+                template_data: queueTemplateData,
+                scheduled_for: data.scheduled_for,
+            });
 
-            await supabase
-                .from("email_queue")
-                .update({
-                    status: result.success ? "sent" : "failed",
-                    sent_at: result.success ? new Date().toISOString() : null,
-                    ...(result.error ? { error_message: result.error } : {})
-                })
-                .eq("id", data.id);
+            return NextResponse.json({
+                success: result.sent || result.queued,
+                emailId: data.id,
+                deliveryStatus: result.status,
+                retryScheduledFor: result.retryScheduledFor || null,
+                error: result.error || null,
+            });
         }
 
-        return NextResponse.json({ success: true, emailId: data.id });
+        return NextResponse.json({ success: true, emailId: data.id, deliveryStatus: "scheduled" });
 
     } catch (error) {
         console.error("Email queue POST error:", error);

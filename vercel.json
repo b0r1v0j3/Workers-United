@@ -52,6 +52,10 @@
       "schedule": "15 * * * *"
     },
     {
+      "path": "/api/cron/process-email-queue",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/brain-monitor",
       "schedule": "0 8 * * *"
     },

@@ -342,7 +342,7 @@ export default async function AdminExceptionsPage() {
                 <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
                     <SectionHeader
                         title="WhatsApp Quality"
-                        description="Last 24 hours of deterministic replies, guardrails, language rescue, media fallback, auto-handoff behavior, and reply delivery failures."
+                        description="Last 24 hours of deterministic replies, guardrails, language rescue, media fallback, auto-handoff behavior, reply delivery failures, and message-log durability."
                         href="/admin/inbox"
                         label="Open inbox"
                     />
@@ -355,6 +355,7 @@ export default async function AdminExceptionsPage() {
                         <MiniMetric label="Media fallback" value={snapshot.whatsappQuality.mediaFallbacks} />
                         <MiniMetric label="Reply fail" value={snapshot.whatsappQuality.replyDeliveryFailures} />
                         <MiniMetric label="Retryable" value={snapshot.whatsappQuality.retryableReplyFailures} />
+                        <MiniMetric label="Log fail" value={snapshot.whatsappQuality.messageLogFailures} />
                     </div>
 
                     <div className="mt-5 space-y-4">
@@ -392,6 +393,30 @@ export default async function AdminExceptionsPage() {
                                     primaryLabel="Open inbox"
                                     secondaryHref={entry.profileId ? `/admin/workers/${entry.profileId}` : "/admin/inbox"}
                                     secondaryLabel={entry.profileId ? "Inspect worker" : "Open thread list"}
+                                />
+                            ))
+                        )}
+
+                        <SubSectionLabel label="Recent message log failures" />
+                        {snapshot.whatsappQuality.recentMessageLogFailures.length === 0 ? (
+                            <EmptyState copy="No WhatsApp message log failures were recorded in the last 24 hours." />
+                        ) : (
+                            snapshot.whatsappQuality.recentMessageLogFailures.map((entry) => (
+                                <WorkerIssueRow
+                                    key={`${entry.phone}-${entry.createdAt || "log-failure"}`}
+                                    title="WhatsApp message log failure"
+                                    subtitle={`${entry.phone} • ${formatDate(entry.createdAt)}`}
+                                    chips={[
+                                        "WhatsApp",
+                                        entry.messageType,
+                                        entry.messageStatus,
+                                        ...(entry.templateName ? [entry.templateName] : []),
+                                    ]}
+                                    details={entry.preview}
+                                    primaryHref="/internal/ops"
+                                    primaryLabel="Open ops"
+                                    secondaryHref={entry.profileId ? `/admin/workers/${entry.profileId}` : "/admin/inbox"}
+                                    secondaryLabel={entry.profileId ? "Inspect worker" : "Open inbox"}
                                 />
                             ))
                         )}

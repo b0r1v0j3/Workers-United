@@ -3,6 +3,7 @@ import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion, getEmployerCompletion, getAgencyCompletion } from "@/lib/profile-completion";
 import { getEmailTemplate, queueEmail } from "@/lib/email-templates";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { deleteUserData } from "@/lib/user-management";
@@ -12,6 +13,18 @@ import {
     PROFILE_RETENTION_CASE_EMAIL_TYPES,
 } from "@/lib/profile-retention";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import { pickCanonicalWorkerRecord } from "@/lib/workers";
+
+type ProfileReminderWorkerRow = {
+    profile_id: string | null;
+    agency_id?: string | null;
+    submitted_email?: string | null;
+    phone?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+    entry_fee_paid?: boolean | null;
+    status?: string | null;
+};
 
 // ─── Main cron handler ──────────────────────────────────────────
 // Runs daily via Vercel cron — sends profile completion reminders + auto-deletes only after long inactivity
@@ -71,7 +84,16 @@ export async function GET(request: Request) {
 
         // Build lookup maps for O(1) access
         const profileMap = new Map((allProfiles || []).map(p => [p.id, p]));
-        const workerRecordMap = new Map((allWorkerRecords || []).map(workerRow => [workerRow.profile_id, workerRow]));
+        const workerRecordGroups = new Map<string, ProfileReminderWorkerRow[]>();
+        for (const workerRow of (allWorkerRecords || []) as ProfileReminderWorkerRow[]) {
+            if (!workerRow.profile_id) continue;
+            const current = workerRecordGroups.get(workerRow.profile_id) || [];
+            current.push(workerRow);
+            workerRecordGroups.set(workerRow.profile_id, current);
+        }
+        const workerRecordMap = new Map<string, ProfileReminderWorkerRow | null>(
+            Array.from(workerRecordGroups.entries()).map(([profileId, rows]) => [profileId, pickCanonicalWorkerRecord(rows) || null])
+        );
         const employerMap = new Map((allEmployers || []).map(e => [e.profile_id, e]));
         const agencyMap = new Map((allAgencies || []).map(a => [a.profile_id, a]));
         const docsByUser = new Map<string, typeof allDocs>();
@@ -101,10 +123,10 @@ export async function GET(request: Request) {
         const recentReminders = new Set<string>(); // emails sent <24h ago
         const warningSubjects = new Set<string>();  // "email|subject" combos already sent
         for (const e of allEmails || []) {
-            if (e.status === "sent" && e.email_type === "profile_reminder" && e.created_at > oneDayAgo) {
+            if ((e.status === "pending" || e.status === "sent") && e.email_type === "profile_reminder" && e.created_at > oneDayAgo) {
                 recentReminders.add(e.recipient_email);
             }
-            if (e.status === "sent" && e.email_type === "profile_warning") {
+            if ((e.status === "pending" || e.status === "sent") && e.email_type === "profile_warning") {
                 warningSubjects.add(`${e.recipient_email}|${e.subject}`);
             }
             if (
@@ -279,7 +301,7 @@ export async function GET(request: Request) {
                     { todoList, daysLeft, recipientRole }
                 );
 
-                if (result.sent) {
+                if (isEmailDeliveryAccepted(result)) {
                     warned++;
                 } else {
                     console.error(`[Reminders] Failed to queue/send warning to ${email}:`, result.error);
@@ -303,7 +325,7 @@ export async function GET(request: Request) {
                 { todoList, recipientRole }
             );
 
-            if (result.sent) {
+            if (isEmailDeliveryAccepted(result)) {
                 sent++;
             } else {
                 console.error(`[Reminders] Failed to queue/send reminder to ${email}:`, result.error);

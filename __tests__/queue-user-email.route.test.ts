@@ -151,8 +151,6 @@ describe("POST /api/queue-user-email", () => {
     });
 
     it("returns a truthful failure payload when queueEmail reports a send failure", async () => {
-        queueEmail.mockResolvedValueOnce({ id: "email-2", sent: false, error: "smtp_failed" });
-
         const { POST } = await import("@/app/api/queue-user-email/route");
 
         const response = await POST(new NextRequest("http://localhost/api/queue-user-email", {
@@ -160,11 +158,33 @@ describe("POST /api/queue-user-email", () => {
             body: JSON.stringify({ emailType: "payment_success" }),
         }));
 
-        expect(response.status).toBe(500);
+        expect(response.status).toBe(400);
         await expect(response.json()).resolves.toMatchObject({
-            success: false,
-            queued: false,
-            error: "smtp_failed",
+            error: "Only welcome emails can be queued from this route.",
+        });
+    });
+
+    it("treats retry-queued welcome emails as accepted", async () => {
+        queueEmail.mockResolvedValueOnce({
+            id: "email-queued",
+            sent: false,
+            queued: true,
+            status: "queued_retry",
+            error: "421 temporary failure",
+        });
+
+        const { POST } = await import("@/app/api/queue-user-email/route");
+
+        const response = await POST(new NextRequest("http://localhost/api/queue-user-email", {
+            method: "POST",
+            body: JSON.stringify({ emailType: "welcome" }),
+        }));
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({
+            success: true,
+            queued: true,
+            deliveryStatus: "queued_retry",
         });
     });
 });

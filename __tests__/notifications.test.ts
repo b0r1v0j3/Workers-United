@@ -107,4 +107,32 @@ describe("notifications", () => {
 
         warnSpy.mockRestore();
     });
+
+    it("does not warn when the offer email is accepted into retry queue", async () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const supabase = {} as never;
+        queueEmailMock.mockResolvedValueOnce({
+            id: "email_3",
+            sent: false,
+            queued: true,
+            status: "queued_retry",
+            error: "421 temporary failure",
+        });
+
+        await sendOfferNotification({
+            supabase,
+            workerUserId: "worker-profile-id",
+            workerEmail: "worker@example.com",
+            workerName: "Marko Petrovic",
+            workerPhone: "+381601234567",
+            jobTitle: "Welder",
+            companyName: "Steel Works",
+            country: "Germany",
+            expiresAt: "2026-03-20T10:00:00.000Z",
+            offerId: "offer-123",
+        });
+
+        expect(warnSpy).not.toHaveBeenCalled();
+        warnSpy.mockRestore();
+    });
 });

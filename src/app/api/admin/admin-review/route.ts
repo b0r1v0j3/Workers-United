@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/database.types";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { isGodModeUser } from "@/lib/godmode";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { queueEmail } from "@/lib/email-templates";
@@ -17,7 +18,7 @@ import {
 } from "@/lib/agency-draft-documents";
 
 type EmailNotificationResult = {
-    status: "sent" | "failed" | "skipped";
+    status: "sent" | "queued" | "failed" | "skipped";
     error?: string | null;
 };
 
@@ -36,6 +37,9 @@ function getEmailNotificationResult(
 
     if (result.sent) {
         return { status: "sent", error: null };
+    }
+    if (isEmailDeliveryAccepted(result)) {
+        return { status: "queued", error: result.error || null };
     }
 
     return { status: "failed", error: result.error || "Email send failed." };

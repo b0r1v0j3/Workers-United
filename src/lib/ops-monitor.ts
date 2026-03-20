@@ -205,6 +205,7 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
     const platformWhatsAppFailures = getCount(whatsappTemplateHealth?.platformFailures);
     const replyDeliveryFailures = getCount(input.opsSnapshot.whatsappQuality.replyDeliveryFailures);
     const retryableReplyDeliveryFailures = getCount(input.opsSnapshot.whatsappQuality.retryableReplyFailures);
+    const messageLogFailures = getCount(input.opsSnapshot.whatsappQuality.messageLogFailures);
     const invalidEmailProfiles = input.opsSnapshot.invalidEmailProfiles.length;
     const paymentFailures = Math.max(
         getCount(input.paymentTelemetry?.failed),
@@ -274,6 +275,19 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
             .slice(0, 3)
             .map((entry) => `${entry.phone} • ${entry.failureCategory}${entry.retryable ? " • retryable" : ""} • ${entry.preview}`),
         links: [{ label: "Open admin inbox", href: "/admin/inbox" }],
+    } : null);
+
+    pushSignal(signals, messageLogFailures > 0 ? {
+        key: "whatsapp-message-log-failures",
+        category: "whatsapp",
+        severity: messageLogFailures >= 2 ? "high" : "medium",
+        title: "WhatsApp message log failures",
+        count: messageLogFailures,
+        summary: `${messageLogFailures} WhatsApp outbound message log failure(s) were recorded in the last 24 hours. Conversation history and AI context may be incomplete for those sends.`,
+        evidence: input.opsSnapshot.whatsappQuality.recentMessageLogFailures
+            .slice(0, 3)
+            .map((entry) => `${entry.phone} • ${entry.messageType}/${entry.messageStatus}${entry.templateName ? ` • ${entry.templateName}` : ""} • ${entry.preview}`),
+        links: [{ label: "Open internal ops", href: "/internal/ops" }],
     } : null);
 
     pushSignal(signals, manualReviewWorkers > 0 ? {
@@ -440,6 +454,7 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
     healthScore -= routeFailures.length > 0 ? 35 : 0;
     healthScore -= platformWhatsAppFailures > 0 ? Math.min(20, platformWhatsAppFailures * 6) : 0;
     healthScore -= retryableReplyDeliveryFailures > 0 ? Math.min(12, retryableReplyDeliveryFailures * 4) : 0;
+    healthScore -= messageLogFailures > 0 ? Math.min(8, messageLogFailures * 3) : 0;
     healthScore -= confusionCases.length > 0 ? Math.min(12, confusionCases.length * 4) : 0;
     healthScore -= manualReviewWorkers > 0 ? Math.min(12, manualReviewWorkers * 3) : 0;
     healthScore -= pendingAdminApprovalWorkers > 0 ? Math.min(12, pendingAdminApprovalWorkers * 3) : 0;

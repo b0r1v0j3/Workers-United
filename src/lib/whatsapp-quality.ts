@@ -68,6 +68,16 @@ export interface WhatsAppReplyDeliveryFailureSample {
     profileId: string | null;
 }
 
+export interface WhatsAppMessageLogFailureSample {
+    phone: string;
+    messageType: string;
+    messageStatus: string;
+    templateName: string | null;
+    createdAt: string | null;
+    preview: string;
+    profileId: string | null;
+}
+
 export interface WhatsAppQualitySnapshot {
     deterministicReplies: number;
     guardedReplies: number;
@@ -77,8 +87,10 @@ export interface WhatsAppQualitySnapshot {
     mediaFallbacks: number;
     replyDeliveryFailures: number;
     retryableReplyFailures: number;
+    messageLogFailures: number;
     recentAutoHandoffs: WhatsAppAutoHandoffSample[];
     recentReplyDeliveryFailures: WhatsAppReplyDeliveryFailureSample[];
+    recentMessageLogFailures: WhatsAppMessageLogFailureSample[];
 }
 
 const ISSUE_PATTERNS = [
@@ -358,6 +370,8 @@ export function buildWhatsAppQualitySnapshot(activities: WhatsAppQualityActivity
     const retryableReplyFailures = replyDeliveryFailureEntries.filter((entry) =>
         extractBoolean(entry.details, "retryable")
     ).length;
+    const messageLogFailureEntries = activities.filter((entry) => entry.action === "whatsapp_message_log_failed");
+    const messageLogFailures = messageLogFailureEntries.length;
 
     const recentAutoHandoffs = activities
         .filter((entry) => entry.action === "whatsapp_auto_handoff_created")
@@ -384,6 +398,19 @@ export function buildWhatsAppQualitySnapshot(activities: WhatsAppQualityActivity
             profileId: entry.user_id || null,
         }));
 
+    const recentMessageLogFailures = messageLogFailureEntries
+        .sort((left, right) => new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime())
+        .slice(0, 5)
+        .map((entry) => ({
+            phone: extractString(entry.details, "phone") || "unknown",
+            messageType: extractString(entry.details, "message_type") || "unknown",
+            messageStatus: extractString(entry.details, "message_status") || "unknown",
+            templateName: extractString(entry.details, "template_name"),
+            createdAt: entry.created_at,
+            preview: extractString(entry.details, "preview") || "No preview captured",
+            profileId: entry.user_id || null,
+        }));
+
     return {
         deterministicReplies,
         guardedReplies,
@@ -393,7 +420,9 @@ export function buildWhatsAppQualitySnapshot(activities: WhatsAppQualityActivity
         mediaFallbacks,
         replyDeliveryFailures,
         retryableReplyFailures,
+        messageLogFailures,
         recentAutoHandoffs,
         recentReplyDeliveryFailures,
+        recentMessageLogFailures,
     };
 }

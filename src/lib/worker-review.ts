@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { queueEmail } from "@/lib/email-templates";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { loadCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
@@ -75,7 +76,7 @@ interface WorkerApprovalGuardState {
 }
 
 type WorkerApprovalNotificationResult = {
-    status: "sent" | "failed" | "skipped";
+    status: "sent" | "queued" | "failed" | "skipped";
     error?: string | null;
 };
 
@@ -666,10 +667,12 @@ export async function applyWorkerApprovalAction({
             approvalState.notificationRecipient.name,
             buildWorkerPaymentUnlockedEmailData()
         );
-        notificationQueued = notificationResult.sent;
+        notificationQueued = isEmailDeliveryAccepted(notificationResult);
         notification = notificationResult.sent
             ? { status: "sent", error: null }
-            : { status: "failed", error: notificationResult.error || "Email send failed." };
+            : notificationQueued
+                ? { status: "queued", error: notificationResult.error || null }
+                : { status: "failed", error: notificationResult.error || "Email send failed." };
     }
 
     return {

@@ -99,7 +99,7 @@ function createAdminClientMock({
 describe("worker approval actions", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(queueEmail).mockResolvedValue({ id: "email-1", sent: true, error: null });
+        vi.mocked(queueEmail).mockResolvedValue({ id: "email-1", sent: true, queued: false, status: "sent", error: null });
         vi.mocked(getWorkerCompletion).mockReturnValue({
             completion: 100,
             missingFields: [],
@@ -234,7 +234,7 @@ describe("worker approval actions", () => {
     });
 
     it("keeps notificationQueued false when the unlock email fails", async () => {
-        vi.mocked(queueEmail).mockResolvedValueOnce({ id: "email-2", sent: false, error: "smtp_failed" });
+        vi.mocked(queueEmail).mockResolvedValueOnce({ id: "email-2", sent: false, queued: false, status: "failed", error: "smtp_failed" });
 
         const worker = {
             id: "worker-4",

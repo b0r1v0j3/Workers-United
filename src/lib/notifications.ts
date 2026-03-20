@@ -2,6 +2,7 @@
 // All offer-related emails now go through the unified template/queue system.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { queueEmail } from "@/lib/email-templates";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 
 interface OfferNotificationData {
   supabase: SupabaseClient;
@@ -47,7 +48,7 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
       data.workerPhone
     );
 
-    if (!emailResult.sent) {
+    if (!isEmailDeliveryAccepted(emailResult)) {
       console.warn("[Notifications] Offer notification queue/send failed:", {
         workerUserId: data.workerUserId,
         workerEmail: data.workerEmail,
@@ -74,7 +75,7 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
       }
     );
 
-    if (!emailResult.sent) {
+    if (!isEmailDeliveryAccepted(emailResult)) {
       console.warn("[Notifications] Offer expired notification queue/send failed:", {
         workerUserId: data.workerUserId,
         workerEmail: data.workerEmail,
