@@ -1062,7 +1062,7 @@ export async function queueEmail(
     templateData: TemplateData = {},
     scheduledFor?: Date,
     recipientPhone?: string
-): Promise<void> {
+): Promise<{ id: string | null; sent: boolean; error?: string | null }> {
     const recipientRole = getRecipientRole(templateData);
     const enrichedTemplateData = { ...templateData, recipientRole };
     const template = getEmailTemplate(emailType, { name: recipientName, ...enrichedTemplateData });
@@ -1077,11 +1077,16 @@ export async function queueEmail(
         scheduled_for: scheduledFor?.toISOString() || new Date().toISOString()
     }).select().single();
 
+    let sent = false;
+    let errorMessage: string | null = null;
+
     // Send immediately via SMTP
     if (!scheduledFor) {
         try {
             const { sendEmail } = await import("@/lib/mailer");
             const result = await sendEmail(recipientEmail, template.subject, template.html);
+            sent = result.success;
+            errorMessage = result.success ? null : (result.error || null);
             if (data?.id) {
                 await supabase.from("email_queue").update({
                     status: result.success ? "sent" : "failed",
@@ -1091,6 +1096,14 @@ export async function queueEmail(
             }
         } catch (err) {
             console.error("Direct SMTP send failed:", err);
+            errorMessage = err instanceof Error ? err.message : "Unknown SMTP error";
+            if (data?.id) {
+                await supabase.from("email_queue").update({
+                    status: "failed",
+                    sent_at: null,
+                    error_message: errorMessage,
+                }).eq("id", data.id);
+            }
         }
     }
 
@@ -1157,4 +1170,10 @@ export async function queueEmail(
             console.error(`WhatsApp send failed for ${emailType}:`, err);
         }
     }
+
+    return {
+        id: data?.id || null,
+        sent,
+        error: errorMessage,
+    };
 }

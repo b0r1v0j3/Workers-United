@@ -200,29 +200,37 @@ export async function POST(request: NextRequest) {
         }
 
         const body = JSON.parse(rawBody);
+        const entries = Array.isArray(body?.entry) ? body.entry : [];
 
-        // Meta sends webhook events wrapped in entry[].changes[].value
-        const entry = body?.entry?.[0];
-        const changes = entry?.changes?.[0];
-        const value = changes?.value;
-
-        if (!value) {
+        if (entries.length === 0) {
             return NextResponse.json({ status: "ok" });
         }
 
         const supabase = createAdminClient();
         const attachmentReplySent = new Set<string>();
 
-        // ─── Handle delivery status updates (keep locally) ──────────────
-        await persistWhatsAppDeliveryStatuses(supabase, value.statuses);
+        for (const entry of entries) {
+            const changes = Array.isArray(entry?.changes) ? entry.changes : [];
 
-        // ─── Handle incoming messages ───────────────────────────────────
-        if (value.messages && value.messages.length > 0) {
-            for (const message of value.messages) {
-                const phoneNumber = message.from;
-                const messageType = message.type;
-                const wamid = message.id;
-                const content = extractWhatsAppMessageContent(message);
+            for (const change of changes) {
+                const value = change?.value;
+                if (!value) {
+                    continue;
+                }
+
+                // ─── Handle delivery status updates (keep locally) ──────────────
+                await persistWhatsAppDeliveryStatuses(supabase, value.statuses);
+
+                // ─── Handle incoming messages ───────────────────────────────────
+                if (!value.messages || value.messages.length === 0) {
+                    continue;
+                }
+
+                for (const message of value.messages) {
+                    const phoneNumber = message.from;
+                    const messageType = message.type;
+                    const wamid = message.id;
+                    const content = extractWhatsAppMessageContent(message);
 
                 // ─── Deduplication: skip if this wamid was already processed ──
                 if (await isDuplicateWhatsAppInboundMessage(supabase, wamid)) {
@@ -250,24 +258,6 @@ export async function POST(request: NextRequest) {
                     normalizedPhone,
                     workerSelect: workerRecordSelect,
                 });
-
-                // ─── Log inbound message ────────────────────────────────
-                await recordInboundWhatsAppMessage(supabase, {
-                    userId: workerRecord?.profile_id || null,
-                    normalizedPhone,
-                    messageType,
-                    content,
-                    wamid,
-                });
-
-                // Log to activity tracking
-                await logServerActivity(
-                    workerRecord?.profile_id || "anonymous",
-                    "whatsapp_message_received",
-                    "messaging",
-                    { phone: normalizedPhone, message_type: messageType, content_preview: content.substring(0, 100), is_registered: !!workerRecord }
-                );
-                // ─── Admin Phone Detection ────────────────────────────────
                 const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
                 const employerLead = await resolveEmployerWhatsAppLead({
                     admin: supabase,
@@ -278,18 +268,49 @@ export async function POST(request: NextRequest) {
                 });
                 const employerRecord = employerLead.employerRecord;
                 const isEmployer = employerLead.isEmployer;
+                const activityUserId = workerRecord?.profile_id || employerRecord?.profile_id || null;
+
+                // ─── Log inbound message ────────────────────────────────
+                await recordInboundWhatsAppMessage(supabase, {
+                    userId: activityUserId,
+                    normalizedPhone,
+                    messageType,
+                    content,
+                    wamid,
+                });
+
+                // Log to activity tracking
+                await logServerActivity(
+                    activityUserId || "anonymous",
+                    "whatsapp_message_received",
+                    "messaging",
+                    {
+                        phone: normalizedPhone,
+                        message_type: messageType,
+                        content_preview: content.substring(0, 100),
+                        is_registered: !!workerRecord || !!employerRecord,
+                        role: workerRecord ? "worker" : employerRecord ? "employer" : isAdmin ? "admin" : "anonymous",
+                    }
+                );
 
                 // ─── Admin Commands (direct brain control via WhatsApp) ───
                 if (isAdmin) {
                     const adminClient = createAdminClient();
-                    const adminCommandHandled = await handleWhatsAppAdminCommand({
+                    const adminCommandResult = await handleWhatsAppAdminCommand({
                         admin: adminClient,
                         normalizedPhone,
                         content,
-                        profileId: workerRecord?.profile_id,
+                        profileId: activityUserId,
+                        sendReply: (text) => sendWhatsAppRouteReply({
+                            phone: normalizedPhone,
+                            text,
+                            userId: activityUserId || undefined,
+                            activityUserId,
+                            failureContext: "admin_command_reply",
+                        }),
                     });
 
-                    if (adminCommandHandled) {
+                    if (adminCommandResult.handled) {
                         continue;
                     }
                 }
@@ -305,13 +326,13 @@ export async function POST(request: NextRequest) {
                         const mediaReplySent = await sendWhatsAppRouteReply({
                             phone: normalizedPhone,
                             text: mediaFallbackReply,
-                            userId: workerRecord?.profile_id || undefined,
-                            activityUserId: workerRecord?.profile_id || null,
+                            userId: activityUserId || undefined,
+                            activityUserId,
                             failureContext: "media_fallback",
                         });
                         if (mediaReplySent) {
                             await logServerActivity(
-                                workerRecord?.profile_id || "anonymous",
+                                activityUserId || "anonymous",
                                 "whatsapp_media_fallback",
                                 "messaging",
                                 {
@@ -353,6 +374,8 @@ export async function POST(request: NextRequest) {
                             await sendWhatsAppRouteReply({
                                 phone: normalizedPhone,
                                 text: finalEmployerReply,
+                                userId: activityUserId || undefined,
+                                activityUserId,
                                 failureContext: "employer_ai_reply",
                             });
                             continue;
@@ -362,6 +385,8 @@ export async function POST(request: NextRequest) {
                             await sendWhatsAppRouteReply({
                                 phone: normalizedPhone,
                                 text: fallbackEmployer,
+                                userId: activityUserId || undefined,
+                                activityUserId,
                                 failureContext: "employer_error_fallback",
                             });
                             continue;
@@ -371,6 +396,8 @@ export async function POST(request: NextRequest) {
                     await sendWhatsAppRouteReply({
                         phone: normalizedPhone,
                         text: staticEmployer,
+                        userId: activityUserId || undefined,
+                        activityUserId,
                         failureContext: "employer_static_fallback",
                     });
                     continue;
@@ -388,8 +415,8 @@ export async function POST(request: NextRequest) {
                     await sendWhatsAppRouteReply({
                         phone: normalizedPhone,
                         text: onboardingReply,
-                        userId: workerRecord?.profile_id || undefined,
-                        activityUserId: workerRecord?.profile_id || null,
+                        userId: activityUserId || undefined,
+                        activityUserId,
                         failureContext: "onboarding_reply",
                     });
                     continue;
@@ -436,7 +463,7 @@ export async function POST(request: NextRequest) {
                         routerDecision.language = resolveWhatsAppLanguageName(content, routerDecision.language, historyMessages);
 
                         await logServerActivity(
-                            workerRecord?.profile_id || "anonymous",
+                            activityUserId || "anonymous",
                             "whatsapp_router_decision",
                             "messaging",
                             {
@@ -530,7 +557,7 @@ export async function POST(request: NextRequest) {
                     } catch (aiError) {
                         console.error("[WhatsApp] OpenAI error:", aiError);
                         await logServerActivity(
-                            workerRecord?.profile_id || "anonymous",
+                            activityUserId || "anonymous",
                             "whatsapp_openai_failed",
                             "error",
                             { phone: normalizedPhone, error: aiError instanceof Error ? aiError.message : "unknown" },
@@ -592,12 +619,12 @@ export async function POST(request: NextRequest) {
                     ? await getWhatsAppFallbackResponse(content, workerRecord, profile, effectiveReplyLanguage, historyMessages)
                     : replyText;
 
-                if (finalReplyText) {
+                    if (finalReplyText) {
                         const replyDelivered = await sendWhatsAppRouteReply({
                             phone: normalizedPhone,
                             text: finalReplyText,
-                            userId: workerRecord?.profile_id || undefined,
-                            activityUserId: workerRecord?.profile_id || null,
+                            userId: activityUserId || undefined,
+                            activityUserId,
                             failureContext: aiResponse ? "ai_reply" : "fallback_reply",
                         });
                         if (!replyDelivered) {
@@ -606,7 +633,7 @@ export async function POST(request: NextRequest) {
 
                         if (responseType === "deterministic" || responseType === "auto_handoff") {
                             await logDeterministicWhatsAppReply({
-                                userId: workerRecord?.profile_id || null,
+                                userId: activityUserId,
                                 phone: normalizedPhone,
                                 userMessage: content,
                                 botResponse: finalReplyText,
@@ -617,7 +644,7 @@ export async function POST(request: NextRequest) {
                             });
                         } else {
                             await logServerActivity(
-                                workerRecord?.profile_id || "anonymous",
+                                activityUserId || "anonymous",
                                 aiResponse ? "whatsapp_gpt_response" : "whatsapp_fallback_response",
                                 "messaging",
                                 {
@@ -634,6 +661,7 @@ export async function POST(request: NextRequest) {
                                 }
                             );
                         }
+                    }
                 }
             }
         }
@@ -957,6 +985,32 @@ function getOnboardingCancelledReply(language: string): string {
     return messages[lk];
 }
 
+function getHumanSupportFallbackReply(language: string): string {
+    const lk = getLangKey(language);
+    const messages: Record<LangKey, string> = {
+        en: "I understand you'd like to speak with a person — that option isn't available just yet, but I'm here for you and I'm getting smarter every day. My team is constantly upgrading me. What can I help you with?",
+        sr: "Razumem da želite da razgovarate sa pravom osobom — ta opcija još nije dostupna, ali ja sam tu za Vas i svakog dana sam sve bolji. Moj tim me stalno unapređuje. Kako mogu da pomognem?",
+        hi: "मैं समझता हूँ कि आप किसी real person से बात करना चाहते हैं — वह विकल्प अभी उपलब्ध नहीं है, लेकिन मैं आपकी मदद के लिए यहाँ हूँ और हर दिन बेहतर हो रहा हूँ। मेरी team मुझे लगातार upgrade कर रही है। मैं कैसे मदद कर सकता हूँ?",
+        ar: "أتفهم أنك تريد التحدث مع شخص حقيقي — هذا الخيار غير متاح بعد، لكنني هنا لمساعدتك وأصبح أفضل كل يوم. فريقي يطوّرني باستمرار. كيف يمكنني مساعدتك؟",
+        fr: "Je comprends que vous souhaitiez parler à une vraie personne — cette option n’est pas encore disponible, mais je suis là pour vous aider et je deviens meilleur chaque jour. Mon équipe m’améliore constamment. Comment puis-je vous aider ?",
+        pt: "Entendo que você queira falar com uma pessoa de verdade — essa opção ainda não está disponível, mas eu estou aqui para ajudar e fico melhor a cada dia. Minha equipe me aprimora constantemente. Como posso ajudar?",
+    };
+    return messages[lk];
+}
+
+function getAgencyRegistrationFallbackReply(language: string): string {
+    const lk = getLangKey(language);
+    const messages: Record<LangKey, string> = {
+        en: "Welcome! You can register as an agency at workersunited.eu/signup and manage all your workers' profiles through your agency dashboard. If you have any questions, I'm here to help.",
+        sr: "Dobro došli! Možete da se registrujete kao agencija na workersunited.eu/signup i upravljate profilima svih svojih radnika kroz agency dashboard. Ako imate pitanja, tu sam da pomognem.",
+        hi: "स्वागत है! आप workersunited.eu/signup पर agency के रूप में register कर सकते हैं और अपने dashboard से सभी workers के profile manage कर सकते हैं। अगर आपके कोई सवाल हों, मैं मदद के लिए यहाँ हूँ।",
+        ar: "مرحبًا بك! يمكنك التسجيل كوكالة على workersunited.eu/signup وإدارة ملفات جميع العمال من خلال لوحة الوكالة. إذا كان لديك أي سؤال فأنا هنا للمساعدة.",
+        fr: "Bienvenue ! Vous pouvez vous inscrire comme agence sur workersunited.eu/signup et gérer les profils de tous vos travailleurs depuis votre tableau de bord agence. Si vous avez des questions, je suis là pour vous aider.",
+        pt: "Bem-vindo! Você pode se registrar como agência em workersunited.eu/signup e gerenciar os perfis de todos os seus trabalhadores pelo painel da agência. Se tiver dúvidas, estou aqui para ajudar.",
+    };
+    return messages[lk];
+}
+
 // Map numbered/worded marital status answer to English value
 function parseMaritalStatus(msg: string): string {
     const l = msg.toLowerCase().trim();
@@ -1212,8 +1266,7 @@ export async function handleWhatsAppOnboarding(
         } catch (e) {
             console.error("[WhatsApp] GPT human-request fallback error:", e);
         }
-        // Fallback to English if GPT fails
-        return "I understand you'd like to speak with a person — that option isn't available just yet, but I'm here for you and I'm getting smarter every single day! My team is constantly upgrading me. 😊 What can I help you with?";
+        return getHumanSupportFallbackReply(lang);
     }
 
     // ── Intercept: Agent/agency identification ──
@@ -1239,8 +1292,7 @@ export async function handleWhatsAppOnboarding(
         } catch (e) {
             console.error("[WhatsApp] GPT agent-detection fallback error:", e);
         }
-        // Fallback to English if GPT fails
-        return "Welcome! You can register as an agency at workersunited.eu/signup and manage all your workers' profiles through your agency dashboard. If you have any questions, I'm here to help! 🤝";
+        return getAgencyRegistrationFallbackReply(lang);
     }
 
     // ── ask_start ──

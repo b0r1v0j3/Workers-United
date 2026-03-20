@@ -66,29 +66,30 @@ function createAdminClient(overrides?: {
 describe("whatsapp-admin-commands", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        sendWhatsAppText.mockResolvedValue({ success: true, messageId: "wamid_admin" });
     });
 
-    it("returns false for non-admin commands", async () => {
-        const handled = await handleWhatsAppAdminCommand({
+    it("returns unhandled result for non-admin commands", async () => {
+        const result = await handleWhatsAppAdminCommand({
             admin: createAdminClient() as never,
             normalizedPhone: "+381600000000",
             content: "hello there",
             profileId: "profile_1",
         });
 
-        expect(handled).toBe(false);
+        expect(result).toEqual({ handled: false, replySent: false });
         expect(sendWhatsAppText).not.toHaveBeenCalled();
     });
 
     it("adds a new fact for zapamti commands", async () => {
-        const handled = await handleWhatsAppAdminCommand({
+        const result = await handleWhatsAppAdminCommand({
             admin: createAdminClient() as never,
             normalizedPhone: "+381600000000",
             content: "zapamti: copy_rule | Keep replies short",
             profileId: "profile_1",
         });
 
-        expect(handled).toBe(true);
+        expect(result).toEqual({ handled: true, replySent: true });
         expect(saveBrainFactsDedup).toHaveBeenCalledWith(
             expect.anything(),
             [{ category: "copy_rule", content: "Keep replies short", confidence: 1.0 }]
@@ -101,7 +102,7 @@ describe("whatsapp-admin-commands", () => {
     });
 
     it("updates an existing fact for ispravi commands", async () => {
-        const handled = await handleWhatsAppAdminCommand({
+        const result = await handleWhatsAppAdminCommand({
             admin: createAdminClient({
                 selectData: {
                     ilikeLimit: [{ id: "brain_1", content: "Old fact" }],
@@ -112,7 +113,7 @@ describe("whatsapp-admin-commands", () => {
             profileId: "profile_1",
         });
 
-        expect(handled).toBe(true);
+        expect(result).toEqual({ handled: true, replySent: true });
         expect(saveBrainFactsDedup).not.toHaveBeenCalled();
         expect(sendWhatsAppText).toHaveBeenCalledWith(
             "+381600000000",
@@ -122,7 +123,7 @@ describe("whatsapp-admin-commands", () => {
     });
 
     it("deletes a matching fact for obrisi commands", async () => {
-        const handled = await handleWhatsAppAdminCommand({
+        const result = await handleWhatsAppAdminCommand({
             admin: createAdminClient({
                 selectData: {
                     ilikeLimit: [{ id: "brain_2", content: "Bad fact", category: "faq" }],
@@ -133,7 +134,7 @@ describe("whatsapp-admin-commands", () => {
             profileId: null,
         });
 
-        expect(handled).toBe(true);
+        expect(result).toEqual({ handled: true, replySent: true });
         expect(sendWhatsAppText).toHaveBeenCalledWith(
             "+381600000000",
             "🗑️ Obrisano:\n[faq] Bad fact",
@@ -142,7 +143,7 @@ describe("whatsapp-admin-commands", () => {
     });
 
     it("lists memory entries for memorija command", async () => {
-        const handled = await handleWhatsAppAdminCommand({
+        const result = await handleWhatsAppAdminCommand({
             admin: createAdminClient({
                 selectData: {
                     ordered: [
@@ -156,11 +157,24 @@ describe("whatsapp-admin-commands", () => {
             profileId: "profile_1",
         });
 
-        expect(handled).toBe(true);
+        expect(result).toEqual({ handled: true, replySent: true });
         expect(sendWhatsAppText).toHaveBeenCalledWith(
             "+381600000000",
             "🧠 Brain Memory (2 facts):\n\n1. [copy_rule] Reply clearly (0.9)\n2. [faq] Use dashboard links (0.8)",
             "profile_1"
         );
+    });
+
+    it("surfaces reply delivery failure in the result", async () => {
+        sendWhatsAppText.mockResolvedValueOnce({ success: false, error: "meta failed" });
+
+        const result = await handleWhatsAppAdminCommand({
+            admin: createAdminClient() as never,
+            normalizedPhone: "+381600000000",
+            content: "zapamti: faq | Keep forms complete",
+            profileId: "profile_1",
+        });
+
+        expect(result).toEqual({ handled: true, replySent: false });
     });
 });

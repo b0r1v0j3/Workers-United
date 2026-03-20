@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { queueEmail } from '@/lib/email-templates';
+import { normalizeWorkerPhone, pickCanonicalWorkerRecord } from '@/lib/workers';
 
 // Cron job to notify users about expiring documents
 // Set this to run daily via Vercel Cron or external trigger
@@ -40,6 +41,27 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
+        const profileIds = Array.from(new Set(
+            (docs || [])
+                .map((doc) => (doc as any).profiles?.id)
+                .filter((value): value is string => typeof value === "string" && value.length > 0)
+        ));
+        const { data: workerRows } = profileIds.length > 0
+            ? await supabase
+                .from("worker_onboarding")
+                .select("profile_id, phone, updated_at, entry_fee_paid")
+                .in("profile_id", profileIds)
+            : { data: [] as Array<{ profile_id: string | null; phone: string | null; updated_at?: string | null; entry_fee_paid?: boolean | null }> };
+
+        const workersByProfileId = new Map<string, Array<{ profile_id: string | null; phone: string | null; updated_at?: string | null; entry_fee_paid?: boolean | null }>>();
+        for (const workerRow of workerRows || []) {
+            if (!workerRow.profile_id) continue;
+            if (!workersByProfileId.has(workerRow.profile_id)) {
+                workersByProfileId.set(workerRow.profile_id, []);
+            }
+            workersByProfileId.get(workerRow.profile_id)?.push(workerRow);
+        }
+
         let processed = 0;
 
         // Check which users already got a document_expiring email in the last 30 days
@@ -48,6 +70,7 @@ export async function GET(request: Request) {
             .from('email_queue')
             .select('user_id')
             .eq('email_type', 'document_expiring')
+            .eq('status', 'sent')
             .gte('created_at', thirtyDaysAgo);
 
         const recentlyNotified = new Set(recentEmails?.map(e => e.user_id) || []);
@@ -66,12 +89,8 @@ export async function GET(request: Request) {
             }
 
             // Lookup phone for WhatsApp dual-send
-            const { data: workerRecord } = await supabase
-                .from("worker_onboarding")
-                .select("phone")
-                .eq("profile_id", profile.id)
-                .maybeSingle();
-            const phone = workerRecord?.phone || undefined;
+            const workerRecord = pickCanonicalWorkerRecord(workersByProfileId.get(profile.id) || []);
+            const phone = normalizeWorkerPhone(workerRecord?.phone) || undefined;
 
             // Send email via queue helper (which tries SMTP immediately)
             await queueEmail(

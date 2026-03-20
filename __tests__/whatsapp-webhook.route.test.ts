@@ -86,7 +86,7 @@ describe("POST /api/whatsapp/webhook", () => {
         loadWhatsAppConversationHistory.mockResolvedValue([]);
         loadWhatsAppBrainMemory.mockResolvedValue([]);
         generateEmployerWhatsAppReply.mockResolvedValue("Employer reply");
-        handleWhatsAppAdminCommand.mockResolvedValue(false);
+        handleWhatsAppAdminCommand.mockResolvedValue({ handled: false, replySent: false });
     });
 
     it("processes every message in a batched inbound payload instead of returning after the first one", async () => {
@@ -115,6 +115,56 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(sendWhatsAppText).toHaveBeenCalledTimes(2);
         expect(sendWhatsAppText).toHaveBeenNthCalledWith(1, "+381600000001", "Employer reply", undefined);
         expect(sendWhatsAppText).toHaveBeenNthCalledWith(2, "+381600000002", "Employer reply", undefined);
+    });
+
+    it("processes every entry and change in a Meta webhook payload", async () => {
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [
+                    {
+                        changes: [
+                            {
+                                value: {
+                                    messages: [
+                                        { id: "wamid_a1", from: "381600000011", type: "text", text: { body: "hello" } },
+                                    ],
+                                },
+                            },
+                            {
+                                value: {
+                                    messages: [
+                                        { id: "wamid_a2", from: "381600000012", type: "text", text: { body: "bonjour" } },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        changes: [
+                            {
+                                value: {
+                                    messages: [
+                                        { id: "wamid_b1", from: "381600000013", type: "text", text: { body: "ola" } },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({ status: "ok" });
+        expect(sendWhatsAppText).toHaveBeenCalledTimes(3);
+        expect(sendWhatsAppText).toHaveBeenNthCalledWith(1, "+381600000011", "Employer reply", undefined);
+        expect(sendWhatsAppText).toHaveBeenNthCalledWith(2, "+381600000012", "Employer reply", undefined);
+        expect(sendWhatsAppText).toHaveBeenNthCalledWith(3, "+381600000013", "Employer reply", undefined);
     });
 
     it("keeps employer error fallback in the conversation language when AI degrades", async () => {

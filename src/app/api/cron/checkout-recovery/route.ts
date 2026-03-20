@@ -347,12 +347,32 @@ export async function GET(request: Request) {
                 continue;
             }
 
+            const hoursSinceCheckout = (now.getTime() - pendingEntry.checkoutCreatedAt.getTime()) / (1000 * 60 * 60);
+            const recoveryStep = getRecoveryStep(hoursSinceCheckout);
+
             const profile = profileMap.get(profileId);
             const worker = pickCanonicalWorkerRecord(workersByProfileId.get(profileId) || []);
             const email = profile?.email?.trim() || "";
 
             if (!email || isInternalOrTestEmail(email) || hasKnownTypoEmailDomain(email)) {
                 invalidEmailSkipped++;
+
+                if (recoveryStep === 3) {
+                    const { error: abandonError } = await admin
+                        .from("payments")
+                        .update({
+                            status: "abandoned",
+                            deadline_at: nowIso,
+                        })
+                        .eq("id", pendingEntry.payment.id)
+                        .eq("payment_type", "entry_fee")
+                        .eq("status", "pending");
+
+                    if (!abandonError) {
+                        markedAbandoned++;
+                    }
+                }
+
                 continue;
             }
 
@@ -381,7 +401,7 @@ export async function GET(request: Request) {
                     pendingAdminReviewSkipped++;
                 }
 
-                if (getRecoveryStep((now.getTime() - pendingEntry.checkoutCreatedAt.getTime()) / (1000 * 60 * 60)) === 3) {
+                if (recoveryStep === 3) {
                     const { error: abandonError } = await admin
                         .from("payments")
                         .update({
@@ -405,9 +425,6 @@ export async function GET(request: Request) {
                 }, "warning");
                 continue;
             }
-
-            const hoursSinceCheckout = (now.getTime() - pendingEntry.checkoutCreatedAt.getTime()) / (1000 * 60 * 60);
-            const recoveryStep = getRecoveryStep(hoursSinceCheckout);
 
             if (!recoveryStep) {
                 skipped++;
@@ -460,9 +477,9 @@ export async function GET(request: Request) {
                             status: "abandoned",
                             deadline_at: nowIso,
                         })
+                        .eq("id", pendingEntry.payment.id)
                         .eq("payment_type", "entry_fee")
-                        .eq("status", "pending")
-                        .eq("profile_id", profileId);
+                        .eq("status", "pending");
 
                     if (abandonError) {
                         throw abandonError;
@@ -484,9 +501,9 @@ export async function GET(request: Request) {
                             status: "abandoned",
                             deadline_at: nowIso,
                         })
+                        .eq("id", pendingEntry.payment.id)
                         .eq("payment_type", "entry_fee")
-                        .eq("status", "pending")
-                        .eq("profile_id", profileId);
+                        .eq("status", "pending");
 
                     if (!abandonError) {
                         markedAbandoned++;

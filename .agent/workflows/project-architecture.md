@@ -23,7 +23,7 @@ description: Full project architecture reference — tech stack, folder structur
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
 | AI (Chatbot) | **GPT-5 mini + GPT-5.4 mini** | WhatsApp AI now uses a small intent router + richer response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, shared live quality/handoff heuristics from `src/lib/whatsapp-quality.ts`, canonical `workerRecord` runtime naming, deterministic worker flows for the most common status/docs/payment/support questions, honest support auto-handoff into the real inbox for repeated paid-worker confusion, deterministic human greeting handling for both plain first-contact hellos and warmer small-talk openers like `hello how are you` / `zdravo kako si danas`, plus a conversation-aware language resolver and explicit language-switch detector so short follow-ups and direct `write in Serbian/French/Hindi` requests stay in the user's chosen language across `English / Serbian / Arabic / French / Portuguese / Hindi` |
 | AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, failure runs are saved instead of blasting raw crash mail, and technical monitoring surfaces now live behind the owner-only `/internal` hub instead of the business admin shell |
-| Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu` |
+| Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu`; canonical send path is `queueEmail()` in `src/lib/email-templates.ts`, which records `sent/failed` state in `email_queue` and now returns explicit send outcome for cron/lifecycle callers |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
 | WhatsApp | **Meta Cloud API v21.0** | Template messages, AI chatbot, delivery tracking, plus health classification that separates platform-side template failures from recipient-side delivery blocks (`undeliverable`, country restriction) |
@@ -85,7 +85,7 @@ Workers-United/
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
-│   │   │   ├── cron/          # 9 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep
+│   │   │   ├── cron/          # 9 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep, reminder/expiry mailers now use the unified email queue, and checkout-recovery step-3 abandonment now targets only the specific stale pending attempt id
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
 │   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback; checkout now prebuilds Stripe Customer identity context from canonical worker data, webhook + confirm-session share payment/activation/email finalization helpers, and payment telemetry persists decline/risk plus billing/card-country hints
@@ -96,7 +96,7 @@ Workers-United/
 │   │   │   ├── profile/       # Profile API + authenticated auth-contact sync route (`/api/profile/auth-contact`)
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow); delivery-status persistence, identity resolution, OpenAI Responses transport, and history-aware language/fallback handling are now delegated to shared helpers
+│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow); delivery-status persistence, identity resolution, OpenAI Responses transport, history-aware language/fallback handling, and employer/admin helper flows are delegated to shared helpers, while the route now consumes all Meta `entry[]/changes[]/messages[]` layers in one POST instead of only the first change
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth code callback + hash-link rescue redirect + agency draft claim linking
