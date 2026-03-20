@@ -6,7 +6,7 @@ describe("whatsapp template option normalization", () => {
         const options: SendTemplateOptions = {
             to: "+381600000121",
             templateName: "profile_incomplete",
-            bodyParams: ["Codex", "almost ready", "complete your registration and join the job queue"],
+            bodyParams: ["Codex", "finish your profile", "finish your profile and required documents so we can review your case"],
             buttonParams: [{ type: "url", url: "/profile/worker/edit" }],
         };
 

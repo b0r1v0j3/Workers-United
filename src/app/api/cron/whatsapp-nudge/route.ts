@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectRecentRecipientSideBlockedPhones, sendProfileIncomplete } from "@/lib/whatsapp";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 
 // ─── WhatsApp Nudge Cron ────────────────────────────────────────────────────
 // Runs daily. Finds ALL users who haven't paid yet.
-// Sends them a WhatsApp template message encouraging them to complete signup.
+// Sends them a WhatsApp template message only while they are still incomplete and pre-review.
 // Max 1 nudge per 7 days per user — no spam.
 //
 // Auth: CRON_SECRET bearer token
 
 export const dynamic = "force-dynamic";
+
+const PROFILE_INCOMPLETE_STATUS_PARAM = "finish your profile";
+const PROFILE_INCOMPLETE_NEXT_STEP_PARAM = "finish your profile and required documents so we can review your case";
 
 interface NudgeWorkerRecord extends WorkerRecordSnapshot {
     id: string;
@@ -20,7 +24,28 @@ interface NudgeWorkerRecord extends WorkerRecordSnapshot {
     submitted_email: string | null;
     phone: string | null;
     status: string | null;
+    admin_approved: boolean | null;
     entry_fee_paid: boolean | null;
+    job_search_active: boolean | null;
+    queue_joined_at: string | null;
+}
+
+function shouldSkipProfileIncompleteNudge(workerRecord: NudgeWorkerRecord) {
+    const normalizedStatus = (workerRecord.status || "NEW").toUpperCase();
+
+    if (workerRecord.entry_fee_paid || workerRecord.job_search_active || workerRecord.queue_joined_at) {
+        return true;
+    }
+
+    if (workerRecord.admin_approved || normalizedStatus === "PENDING_APPROVAL" || normalizedStatus === "APPROVED") {
+        return true;
+    }
+
+    if (isPostEntryFeeWorkerStatus(normalizedStatus)) {
+        return true;
+    }
+
+    return false;
 }
 
 export async function GET(request: Request) {
@@ -40,7 +65,7 @@ export async function GET(request: Request) {
         // Find all worker records that still haven't paid and have a phone number
         const { data: unpaidWorkerRows } = await supabase
             .from("worker_onboarding")
-            .select("id, profile_id, agency_id, submitted_email, phone, status, entry_fee_paid, updated_at, queue_joined_at, job_search_active, nationality, current_country, preferred_job")
+            .select("id, profile_id, agency_id, submitted_email, phone, status, admin_approved, entry_fee_paid, updated_at, queue_joined_at, job_search_active, nationality, current_country, preferred_job")
             .eq("entry_fee_paid", false)
             .not("phone", "is", null);
 
@@ -106,6 +131,11 @@ export async function GET(request: Request) {
                 continue;
             }
 
+            if (shouldSkipProfileIncompleteNudge(workerRecord)) {
+                results.skipped++;
+                continue;
+            }
+
             if (alreadyNudgedPhones.has(phone)) {
                 results.skipped++;
                 continue;
@@ -137,8 +167,8 @@ export async function GET(request: Request) {
                 const sendResult = await sendProfileIncomplete(
                     phone,
                     name,
-                    "almost ready",
-                    "complete your registration and join the job queue",
+                    PROFILE_INCOMPLETE_STATUS_PARAM,
+                    PROFILE_INCOMPLETE_NEXT_STEP_PARAM,
                     workerRecord.profile_id || undefined
                 );
 
