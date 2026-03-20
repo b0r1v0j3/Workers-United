@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Eye, CheckCircle2, Send, Loader2 } from "lucide-react";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
 
 interface ReviewDoc {
     user_id: string;
@@ -15,6 +17,18 @@ interface ReviewDoc {
     storage_path: string;
     updated_at: string;
     profile?: { full_name: string; email: string };
+}
+
+type ReviewNotificationStatus = {
+    status?: "sent" | "failed" | "skipped";
+    error?: string | null;
+};
+
+function humanizeDocumentType(documentType: string) {
+    return documentType
+        .replace(/_/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export default function ReviewClient() {
@@ -94,7 +108,21 @@ export default function ReviewClient() {
                 }),
             });
             if (res.ok) {
-                toast.success(action === "approve" ? "Document approved! Email sent to user." : "Rejected with feedback. Email sent to user.");
+                const payload = await res.json().catch(() => null) as { notification?: ReviewNotificationStatus } | null;
+                const notification = payload?.notification;
+                const isSent = notification?.status === "sent";
+                const didFail = notification?.status === "failed";
+                const baseMessage = action === "approve"
+                    ? "Document approved."
+                    : "Rejected with feedback.";
+
+                if (isSent) {
+                    toast.success(`${baseMessage} Email sent to user.`);
+                } else if (didFail) {
+                    toast.warning(`${baseMessage} Email failed${notification?.error ? `: ${notification.error}` : "."}`);
+                } else {
+                    toast.success(`${baseMessage} No email was sent.`);
+                }
                 setDocs(prev => prev.filter(d => !(d.user_id === doc.user_id && d.document_type === doc.document_type)));
                 setPreviewing(null);
             } else {
@@ -141,6 +169,19 @@ export default function ReviewClient() {
                         const key = `${doc.user_id}_${doc.document_type}`;
                         const isOpen = previewing === key;
                         const isActioning = actioning === key;
+                        const docName = humanizeDocumentType(doc.document_type);
+                        const displayName = doc.profile?.full_name || "there";
+                        const approvalPreviewHref = buildAdminEmailPreviewHref("document_review_result", {
+                            name: displayName,
+                            approved: true,
+                            docType: docName,
+                        });
+                        const rejectionPreviewHref = buildAdminEmailPreviewHref("document_review_result", {
+                            name: displayName,
+                            approved: false,
+                            docType: docName,
+                            feedback: feedback[key] || "Your document does not meet requirements. Please upload a new one.",
+                        });
 
                         return (
                             <div key={key} className="bg-white border border-[#e2e8f0] rounded-xl shadow-sm overflow-hidden">
@@ -171,6 +212,14 @@ export default function ReviewClient() {
                                             <Eye className="w-4 h-4" />
                                             {isOpen ? "Hide" : "Preview"}
                                         </button>
+                                        <Link
+                                            href={approvalPreviewHref}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex items-center gap-1 px-3 py-2 rounded-lg border border-[#d6d3d1] bg-white text-[#18181b] text-sm font-medium hover:bg-[#f5f5f4] transition-colors"
+                                        >
+                                            Preview approval email
+                                        </Link>
                                         <button
                                             onClick={() => handleAction(doc, "approve")}
                                             disabled={isActioning}
@@ -209,22 +258,34 @@ export default function ReviewClient() {
                                 )}
 
                                 {/* Reject with feedback */}
-                                <div className="px-5 pb-5 flex gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Write rejection reason for user (required to reject)..."
-                                        value={feedback[key] || ""}
-                                        onChange={(e) => setFeedback(prev => ({ ...prev, [key]: e.target.value }))}
-                                        className="flex-1 bg-[#f8fbff] border border-[#e2e8f0] px-4 py-2.5 rounded-lg text-sm text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300"
-                                    />
-                                    <button
-                                        onClick={() => handleAction(doc, "reject")}
-                                        disabled={isActioning || !feedback[key]?.trim()}
-                                        className="flex items-center gap-1 px-4 py-2.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
-                                    >
-                                        {isActioning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                        Reject & Send
-                                    </button>
+                                <div className="px-5 pb-5 space-y-3">
+                                    <div className="flex justify-end">
+                                        <Link
+                                            href={rejectionPreviewHref}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1 rounded-lg border border-[#fecaca] bg-[#fff1f2] px-3 py-2 text-sm font-medium text-[#b91c1c] transition-colors hover:bg-[#ffe4e6]"
+                                        >
+                                            Preview rejection email
+                                        </Link>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Write rejection reason for user (required to reject)..."
+                                            value={feedback[key] || ""}
+                                            onChange={(e) => setFeedback(prev => ({ ...prev, [key]: e.target.value }))}
+                                            className="flex-1 bg-[#f8fbff] border border-[#e2e8f0] px-4 py-2.5 rounded-lg text-sm text-[#1e293b] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300"
+                                        />
+                                        <button
+                                            onClick={() => handleAction(doc, "reject")}
+                                            disabled={isActioning || !feedback[key]?.trim()}
+                                            className="flex items-center gap-1 px-4 py-2.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                                        >
+                                            {isActioning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                            Reject & Send
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         );
