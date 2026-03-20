@@ -15,6 +15,7 @@ const ALL_EMAIL_TYPES: EmailType[] = [
     'job_match',
     'admin_update',
     'announcement',
+    'employer_outreach',
     'profile_incomplete',
     'document_review_result',
     'profile_reminder',
@@ -188,6 +189,18 @@ describe('getEmailTemplate', () => {
         });
         expect(html).toContain('Next Step');
         expect(html).not.toContain('settings.png');
+    });
+
+    it('employer_outreach uses the shared monochrome employer campaign layout', () => {
+        const { html, subject } = getEmailTemplate('employer_outreach', {
+            name: 'Steel Concept',
+            companyName: 'Steel Concept',
+            campaignLanguage: 'en',
+        });
+        expect(subject).toContain('Steel Concept');
+        expect(html).toContain('International hiring support');
+        expect(html).toContain('Create Employer Account');
+        expect(html).not.toContain('linear-gradient(135deg,#16a34a 0%,#15803d 100%)');
     });
 
     it('employer profile_reminder uses employer-specific text', () => {

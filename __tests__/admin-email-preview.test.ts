@@ -33,6 +33,7 @@ describe("admin-email-preview", () => {
     it("accepts only supported admin preview email types", () => {
         expect(isAdminEmailPreviewType("document_review_result")).toBe(true);
         expect(isAdminEmailPreviewType("welcome")).toBe(true);
+        expect(isAdminEmailPreviewType("employer_outreach")).toBe(true);
         expect(isAdminEmailPreviewType("not_real")).toBe(false);
         expect(isAdminEmailPreviewType(null)).toBe(false);
     });

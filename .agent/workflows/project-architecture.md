@@ -81,7 +81,7 @@ Workers-United/
 │   │   │   └── email-preview/ # Internal email template sandbox; reuses the shared email-preview workspace while keeping owner-only shortcuts and query-driven payload previews separate from the business admin shell
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
-│   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
+│   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API, authenticated `send-campaign` outreach dispatch via `queueEmail()`, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
@@ -133,8 +133,8 @@ Workers-United/
 │   │   │   ├── admin.ts       # Service-role Supabase client (bypasses RLS)
 │   │   │   └── middleware.ts  # Auth middleware / proxy
 │   │   ├── mailer.ts          # sendEmail() via Nodemailer
-│   │   ├── email-templates.ts # HTML email templates + checkout recovery notification mapping; `admin_update` now honors custom CTA/link payloads so approval-unlock mail and previews can reuse the premium system template without bespoke HTML
-│   │   ├── admin-email-preview.ts # Shared admin email-preview type guards + deep-link payload serialization helpers
+│   │   ├── email-templates.ts # HTML email templates + checkout recovery notification mapping; `admin_update` now honors custom CTA/link payloads so approval-unlock mail and previews can reuse the premium system template without bespoke HTML, and `employer_outreach` now powers admin employer campaigns through the same queue + preview system
+│   │   ├── admin-email-preview.ts # Shared admin email-preview type guards + deep-link payload serialization helpers, now including employer outreach preview support
 │   │   ├── worker-approval-notifications.ts # Shared `Job Finder Is Now Unlocked` admin-update payload plus canonical recipient resolver used by worker/agency approval flows and preview shortcuts; hidden draft owners never receive the approval/unlock mail
 │   │   ├── document-ai.ts     # GPT-primary document AI helpers with Gemini fallback; passport verification is strict about the actual biodata page, passport bounds detection now trims open-passport spreads down to the single biodata/MRZ page, diploma verification has a formal-education guard, biometric-photo verification uses embassy-grade quality guardrails, and shared quarter-turn orientation helpers/ocr patches power auto-rotation for verify + admin preview flows
 │   │   ├── document-image-processing.ts # Shared document image rotate/crop + OCR metadata helpers used by verify uploads and admin preview/manual-crop flows
@@ -177,7 +177,7 @@ Workers-United/
 │   │   ├── profile-retention.ts # Shared inactivity-retention helper; derives the last meaningful profile activity across auth/profile/role/docs/signatures/admin case emails/user activity so reminders, cleanup, and admin countdowns stay aligned
 │   │   ├── sanitize.ts        # Input sanitization
 │   │   ├── user-management.ts # Shared user deletion logic; cascade cleanup deletes worker-domain rows (`worker_documents`, `workers`, matches/offers/contracts), employer-domain rows (`job_requests`, employer-owned `offers`/`matches`, related support conversations), removes document files by real `worker_documents.storage_path` before falling back to legacy user folders, also clears `payments.profile_id` + `user_activity`, and keeps canonical app-layer naming as `workerRecord`
-│   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types)
+│   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types); checked-in runtime snapshot no longer carries retired `contract_data.candidate_*` override columns
 │   │   └── imageUtils.ts      # Image processing helpers; biometric-photo normalization now preserves more original detail and avoids unnecessary downscaling/upscaling
 │   └── types/                 # TypeScript types (currently empty)
 ├── vercel.json                # Vercel config: security headers + 9 cron jobs

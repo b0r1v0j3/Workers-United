@@ -15,6 +15,7 @@ export type EmailType =
     | "job_match"
     | "admin_update"
     | "announcement"
+    | "employer_outreach"
     | "profile_incomplete"
     | "profile_reminder"
     | "profile_warning"
@@ -52,6 +53,7 @@ export interface TemplateData {
     message?: string;
     actionLink?: string;
     actionText?: string;
+    campaignLanguage?: string;
     // Profile incomplete
     missingFields?: string;
     completion?: string;
@@ -364,6 +366,54 @@ function formatDocumentNameForEmail(value: string | undefined | null) {
         .replace(/_/g, " ")
         .replace(/\s+/g, " ")
         .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getEmployerOutreachCopy(companyName: string, language: string | undefined) {
+    const rawCompanyName = (companyName || "your company").trim() || "your company";
+    const safeCompanyName = escapeHtml(rawCompanyName);
+    const isEnglish = language === "en";
+
+    if (isEnglish) {
+        return {
+            subject: `Free international hiring support for ${rawCompanyName}`,
+            heroTitle: "International hiring support without platform fees",
+            heroSubtitle: `A faster route for ${safeCompanyName} to request verified workers while we handle the legal and logistics work.`,
+            intro: "Workers United is not a job board. We coordinate worker sourcing, visa paperwork, contracts, arrival support, and ongoing case handling for employers.",
+            panelTitle: "What your company gets",
+            panelBody: "Verified worker cases, document handling, visa workflow coordination, and arrival support. Employers do not pay platform fees.",
+            checklistTitle: "Included in the service",
+            checklistItems: [
+                "Verified international worker cases prepared for review",
+                "Visa, work permit, contract, and embassy coordination handled by our team",
+                "Arrival support and onboarding coordination after approval",
+                "No platform cost for the employer",
+            ],
+            ctaTitle: "Open your employer workspace and submit your hiring request.",
+            ctaText: "Create Employer Account",
+            ctaUrl: `${BASE_URL}/signup`,
+            footer: "If hiring is a priority right now, register the company profile and we can start from there.",
+        };
+    }
+
+    return {
+        subject: `Besplatna podrška za zapošljavanje internacionalnih radnika za ${rawCompanyName}`,
+        heroTitle: "Zapošljavanje internacionalnih radnika bez platformskih troškova",
+        heroSubtitle: `Brži način da ${safeCompanyName} zatraži proverene radnike dok mi vodimo dokumentaciju, vizni proces i koordinaciju dolaska.`,
+        intro: "Workers United nije job board. Mi vodimo sourcing radnika, papirologiju za vizu, ugovore, dolazak i dalju koordinaciju sa poslodavcem.",
+        panelTitle: "Šta dobijate",
+        panelBody: "Proverene radničke slučajeve, obradu dokumentacije, koordinaciju oko vize i dozvole za rad, plus podršku pri dolasku. Poslodavac ne plaća platformsku uslugu.",
+        checklistTitle: "Usluga uključuje",
+        checklistItems: [
+            "Proverene internacionalne radnike spremne za pregled",
+            "Vize, dozvole za rad, ugovori i ambasadna koordinacija preko našeg tima",
+            "Podršku pri dolasku i onboarding koordinaciju nakon odobrenja",
+            "Bez troška za poslodavca",
+        ],
+        ctaTitle: "Otvorite employer workspace i pošaljite svoj hiring zahtev.",
+        ctaText: "Registrujte Kompaniju",
+        ctaUrl: `${BASE_URL}/signup`,
+        footer: "Ako Vam je zapošljavanje prioritet, registrujte kompaniju i odatle preuzimamo dalje korake.",
+    };
 }
 
 export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemplate {
@@ -912,6 +962,40 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             };
             }
 
+        case "employer_outreach": {
+            const companyName = data.companyName || data.name || "your company";
+            const copy = getEmployerOutreachCopy(companyName, data.campaignLanguage);
+
+            return {
+                subject: data.subject || copy.subject,
+                html: wrapModernTemplate(`
+                    ${renderIconHero("https://img.icons8.com/ios/100/000000/company.png", copy.heroTitle, copy.heroSubtitle)}
+
+                    <p style="text-align:center; color:#1D1D1F; margin:30px 0; font-size:16px;">
+                        ${copy.intro}
+                    </p>
+
+                    ${renderLightPanel(copy.panelTitle, copy.panelBody)}
+
+                    ${renderChecklistCard(copy.checklistTitle, copy.checklistItems)}
+
+                    <p style="text-align:center; color:#515154; margin:30px 0 20px; font-size:15px;">
+                        ${copy.ctaTitle}
+                    </p>
+
+                    <div style="text-align:center; margin-top:35px;">
+                        <a href="${copy.ctaUrl}" style="${buttonStyle}">
+                            ${copy.ctaText}
+                        </a>
+                    </div>
+
+                    <p style="text-align:center; color:#515154; margin:24px 0 0; font-size:14px;">
+                        ${copy.footer}
+                    </p>
+                `, "Employer Outreach", "Free hiring support for employers")
+            };
+        }
+
         case "profile_incomplete":
             return {
                 subject: "Finish your profile!",
@@ -1055,7 +1139,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 // Optionally also sends a WhatsApp template message if recipientPhone is provided
 export async function queueEmail(
     supabase: any,
-    userId: string,
+    userId: string | null,
     emailType: EmailType,
     recipientEmail: string,
     recipientName: string,
@@ -1068,7 +1152,7 @@ export async function queueEmail(
     const template = getEmailTemplate(emailType, { name: recipientName, ...enrichedTemplateData });
 
     const { data } = await supabase.from("email_queue").insert({
-        user_id: userId,
+        user_id: userId || null,
         email_type: emailType,
         recipient_email: recipientEmail,
         recipient_name: recipientName,
@@ -1108,20 +1192,21 @@ export async function queueEmail(
     }
 
     // Also send WhatsApp template if phone provided
-    if (recipientPhone && !scheduledFor) {
+    if (recipientPhone && !scheduledFor && userId) {
         try {
             const wa = await import("@/lib/whatsapp");
             const firstName = recipientName?.split(" ")[0] || "there";
+            const recipientPhoneNumber = recipientPhone as string;
 
             // Map EmailType → WhatsApp template
             switch (emailType) {
                 case "welcome":
-                    await wa.sendRoleWelcome(recipientPhone, firstName, recipientRole, userId);
+                    await wa.sendRoleWelcome(recipientPhoneNumber, firstName, recipientRole, userId);
                     break;
                 case "profile_complete":
                     if (recipientRole === "worker") {
                         await wa.sendRoleStatusUpdate(
-                            recipientPhone,
+                            recipientPhoneNumber,
                             firstName,
                             "Your profile is 100% complete and is now waiting for admin review. We will unlock Job Finder as soon as it is approved.",
                             "worker",
@@ -1130,11 +1215,11 @@ export async function queueEmail(
                     }
                     break;
                 case "payment_success":
-                    await wa.sendPaymentConfirmed(recipientPhone, firstName, templateData.amount || "$9", userId);
+                    await wa.sendPaymentConfirmed(recipientPhoneNumber, firstName, templateData.amount || "$9", userId);
                     break;
                 case "checkout_recovery":
                     await wa.sendRoleStatusUpdate(
-                        recipientPhone,
+                        recipientPhoneNumber,
                         firstName,
                         getCheckoutRecoveryStatusMessage(templateData.recoveryStep, templateData.amount || "$9"),
                         recipientRole,
@@ -1142,24 +1227,24 @@ export async function queueEmail(
                     );
                     break;
                 case "document_expiring":
-                    await wa.sendDocumentReminder(recipientPhone, firstName, templateData.documentType || "document", templateData.expirationDate || "", userId);
+                    await wa.sendDocumentReminder(recipientPhoneNumber, firstName, templateData.documentType || "document", templateData.expirationDate || "", userId);
                     break;
                 case "profile_incomplete":
-                    await wa.sendProfileIncomplete(recipientPhone, firstName, templateData.completion || "0", templateData.missingFields || "", userId);
+                    await wa.sendProfileIncomplete(recipientPhoneNumber, firstName, templateData.completion || "0", templateData.missingFields || "", userId);
                     break;
                 case "refund_approved":
-                    await wa.sendRefundProcessed(recipientPhone, firstName, templateData.amount || "$9", userId);
+                    await wa.sendRefundProcessed(recipientPhoneNumber, firstName, templateData.amount || "$9", userId);
                     break;
                 case "admin_update":
-                    await wa.sendRoleStatusUpdate(recipientPhone, firstName, templateData.message || "Profile updated", recipientRole, userId);
+                    await wa.sendRoleStatusUpdate(recipientPhoneNumber, firstName, templateData.message || "Profile updated", recipientRole, userId);
                     break;
                 case "announcement":
-                    await wa.sendRoleAnnouncement(recipientPhone, templateData.title || "Announcement", templateData.message || "", recipientRole, templateData.actionLink, userId);
+                    await wa.sendRoleAnnouncement(recipientPhoneNumber, templateData.title || "Announcement", templateData.message || "", recipientRole, templateData.actionLink, userId);
                     break;
                 case "job_offer":
                     if (enrichedTemplateData.jobTitle && enrichedTemplateData.companyName && enrichedTemplateData.country && enrichedTemplateData.offerLink) {
                         const offerId = enrichedTemplateData.offerLink.split("/").pop() || "";
-                        await wa.sendJobOffer(recipientPhone, recipientName, enrichedTemplateData.jobTitle, enrichedTemplateData.companyName, enrichedTemplateData.country, offerId, userId);
+                        await wa.sendJobOffer(recipientPhoneNumber, recipientName, enrichedTemplateData.jobTitle, enrichedTemplateData.companyName, enrichedTemplateData.country, offerId, userId);
                     }
                     break;
                 default:
