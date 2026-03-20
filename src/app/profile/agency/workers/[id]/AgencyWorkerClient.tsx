@@ -773,10 +773,10 @@ export default function AgencyWorkerClient({
                             <div className="mt-1 text-sm font-semibold text-[#18181b]">{initialWorker.paymentLabel}</div>
                             <p className="mt-2 text-sm text-[#57534e]">
                                 {pendingAdminReview
-                                    ? "The profile is complete and waiting for admin approval before Job Finder payment unlocks."
+                                    ? "The profile and required documents are complete and waiting for admin approval before Job Finder payment unlocks."
                                     : needsCompletion
                                         ? "Complete all required worker fields and documents to send this profile for admin review."
-                                        : "Use this to activate Job Finder access for this worker."}
+                                        : "Use this to start the $9 Job Finder checkout for this worker."}
                             </p>
                         </div>
                         {!readOnlyPreview && canStartEntryPayment && (
