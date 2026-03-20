@@ -4,6 +4,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CanonicalUserType } from "@/lib/domain";
+import { logServerActivity } from "@/lib/activityLoggerServer";
 import { isRecipientSideWhatsAppFailure } from "@/lib/whatsapp-health";
 
 const GRAPH_API_VERSION = "v21.0";
@@ -76,6 +77,18 @@ interface SendAttemptResult extends SendResult {
 
 const RECIPIENT_BLOCK_LOOKBACK_DAYS = 30;
 const RECIPIENT_BLOCK_SUPPRESSION_HOURS = 72;
+
+function extractErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) {
+        return error.message.trim();
+    }
+
+    if (typeof error === "string" && error.trim()) {
+        return error.trim();
+    }
+
+    return "Unknown WhatsApp error";
+}
 
 function classifyWhatsAppSendFailure(errorMessage?: string | null): {
     retryable: boolean;
@@ -428,7 +441,8 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
         });
 
         return { success: true, messageId: sendResult.messageId };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = extractErrorMessage(error);
         console.error("[WhatsApp] Send error:", error);
 
         await logMessage({
@@ -436,13 +450,13 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
             phoneNumber: to,
             direction: "outbound",
             messageType: "template",
-            content: `${buildTemplateContent(normalizedOptions)} FAILED: ${error.message}`,
+            content: `${buildTemplateContent(normalizedOptions)} FAILED: ${errorMessage}`,
             templateName: normalizedOptions.templateName,
             status: "failed",
-            errorMessage: error.message,
+            errorMessage,
         });
 
-        return { success: false, error: error.message };
+        return { success: false, error: errorMessage, ...classifyWhatsAppSendFailure(errorMessage) };
     }
 }
 
@@ -515,7 +529,8 @@ export async function sendWhatsAppText(
         });
 
         return { success: true, messageId };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = extractErrorMessage(error);
         console.error("[WhatsApp] Text send error:", error);
         await logMessage({
             userId,
@@ -524,9 +539,9 @@ export async function sendWhatsAppText(
             messageType: "text",
             content: text,
             status: "failed",
-            errorMessage: error.message,
+            errorMessage,
         });
-        return { success: false, error: error.message, ...classifyWhatsAppSendFailure(error.message) };
+        return { success: false, error: errorMessage, ...classifyWhatsAppSendFailure(errorMessage) };
     }
 }
 
@@ -544,6 +559,15 @@ interface LogMessageParams {
     errorMessage?: string;
 }
 
+function buildLogFailurePreview(content: string, maxLength = 180) {
+    const normalized = content.replace(/\s+/g, " ").trim();
+    if (normalized.length <= maxLength) {
+        return normalized;
+    }
+
+    return `${normalized.slice(0, maxLength - 3)}...`;
+}
+
 async function logMessage(params: LogMessageParams): Promise<void> {
     try {
         const supabase = createAdminClient();
@@ -559,8 +583,23 @@ async function logMessage(params: LogMessageParams): Promise<void> {
             error_message: params.errorMessage || null,
         });
     } catch (err) {
-        // Logging failure should never break message sending
         console.error("[WhatsApp] Log error:", err);
+        await logServerActivity(
+            params.userId || null,
+            "whatsapp_message_log_failed",
+            "messaging",
+            {
+                phone: params.phoneNumber,
+                direction: params.direction,
+                message_type: params.messageType,
+                template_name: params.templateName || null,
+                message_status: params.status,
+                preview: buildLogFailurePreview(params.content),
+                wamid: params.wamid || null,
+                log_error: err instanceof Error ? err.message : String(err),
+            },
+            "error"
+        );
     }
 }
 

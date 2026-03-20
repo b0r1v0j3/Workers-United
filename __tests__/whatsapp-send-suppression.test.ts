@@ -131,4 +131,29 @@ describe("whatsapp proactive send suppression", () => {
             template_name: "payment_confirmed",
         }));
     });
+
+    it("classifies thrown template send errors as retryable platform failures", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => {
+            throw new Error("network timeout");
+        }));
+        const { sendWhatsAppTemplate } = await import("@/lib/whatsapp");
+
+        const result = await sendWhatsAppTemplate({
+            to: "+15550000001",
+            templateName: "payment_confirmed",
+            bodyParams: ["$9", "Ali"],
+            userId: "worker-1",
+        });
+
+        expect(result).toMatchObject({
+            success: false,
+            retryable: true,
+            failureCategory: "platform",
+        });
+        expect(insertMessage).toHaveBeenCalledWith(expect.objectContaining({
+            status: "failed",
+            template_name: "payment_confirmed",
+            error_message: "network timeout",
+        }));
+    });
 });
