@@ -399,16 +399,16 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
 </html>
 `;
 
-function getCheckoutRecoveryStatusMessage(step: number | undefined, amount: string) {
+export function getCheckoutRecoveryStatusMessage(step: number | undefined, amount: string) {
     const safeAmount = amount || "$9";
 
     switch (step) {
         case 2:
-            return `Your ${safeAmount} Job Finder payment is still waiting. Return to your Workers United dashboard to activate job search and unlock support.`;
+            return `Your ${safeAmount} Job Finder payment is still waiting. Your profile, required documents, and admin review already unlocked this final checkout step. Return to your Workers United dashboard to finish payment, enter the active queue, and unlock support.`;
         case 3:
-            return `Your previous ${safeAmount} Job Finder checkout expired. Open your Workers United dashboard to start a fresh checkout and continue where you left off.`;
+            return `Your previous ${safeAmount} Job Finder checkout expired. Your profile, required documents, and admin review are still in place, so open your Workers United dashboard to start a fresh checkout and continue where you left off.`;
         default:
-            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Return to your Workers United dashboard to activate job search.`;
+            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Your profile, required documents, and admin review already unlocked this final payment step. Return to your Workers United dashboard to finish payment, enter the active queue, and unlock support.`;
     }
 }
 
@@ -666,15 +666,15 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             };
 
             const recoveryBodyMap: Record<1 | 2 | 3, string> = {
-                1: `You opened the ${amount} Job Finder checkout but did not finish the payment yet. Return to your dashboard and continue when you're ready.`,
-                2: `Your profile is still waiting for the ${amount} Job Finder payment. Once it is confirmed, your worker profile enters the active queue and support unlocks inside the platform.`,
-                3: `Your earlier ${amount} checkout is no longer active. Open your dashboard to start a fresh checkout and continue exactly where you left off.`,
+                1: `You opened the ${amount} Job Finder checkout but did not finish the payment yet. Your profile, required documents, and admin review already unlocked this final step, so return to your dashboard and continue when you're ready.`,
+                2: `Your profile, required documents, and admin review already unlocked the ${amount} Job Finder checkout. Once that final payment is confirmed, your worker profile enters the active queue and support unlocks inside the platform.`,
+                3: `Your earlier ${amount} checkout is no longer active. Your profile, required documents, and admin review are still in place, so open your dashboard to start a fresh checkout and continue exactly where you left off.`,
             };
 
             const recoveryNoteMap: Record<1 | 2 | 3, string> = {
                 1: "Your profile stays exactly as it is. Nothing needs to be filled again.",
                 2: "If we do not find you a job within 90 days, the entry fee is refunded.",
-                3: "Only the old checkout expired. Your profile and documents stay saved in your account.",
+                3: "Only the old checkout expired. Your profile, required documents, and approval stay saved in your account.",
             };
 
             return {
@@ -701,7 +701,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ${renderLightPanel("What You Need To Know", `
                         Only the checkout state changes here.
                         <br>
-                        Your profile, documents, and review progress stay saved in the dashboard.
+                        Your profile, required documents, and review progress stay saved in the dashboard.
                         <br>
                         Open your account whenever you are ready to continue.
                     `)}
@@ -1035,7 +1035,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                          </div>
                     </div>
 
-                    ${renderLightPanel("Why This Matters", "Your profile has to be complete before we can send the case to admin review and eventually unlock Job Finder.")}
+                    ${renderLightPanel("Why This Matters", "Your profile and required documents have to be complete before we can send the case to admin review and eventually unlock Job Finder.")}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "setup")}" style="${buttonStyle}">
@@ -1132,10 +1132,10 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </p>
                     
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 30px;">
-                        Your profile is waiting for you. You can now securely upload your documents and complete your AI verification to join the hiring queue.
+                        Your profile is waiting for you. You can now securely upload your documents and complete the missing verification steps so we can move your case back into admin review.
                     </p>
 
-                    ${renderLightPanel("Next Step", "Return to your dashboard, upload the missing documents, and we will resume your case from there.")}
+                    ${renderLightPanel("Next Step", "Return to your dashboard, upload the missing documents, and we will resume your case from there. Once everything is complete and approved, Job Finder unlocks in your dashboard.")}
                     
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "documents")}" style="${buttonStyle}">

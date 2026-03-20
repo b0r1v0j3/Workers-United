@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getEmailTemplate } from '@/lib/email-templates';
+import { getCheckoutRecoveryStatusMessage, getEmailTemplate } from '@/lib/email-templates';
 import type { EmailType } from '@/lib/email-templates';
 
 const ALL_EMAIL_TYPES: EmailType[] = [
@@ -113,6 +113,21 @@ describe('getEmailTemplate', () => {
         expect(subject).toContain('expired');
         expect(html).toContain('fresh checkout');
         expect(html).toContain('$9');
+        expect(html).toContain('required documents');
+        expect(html).toContain('admin review');
+    });
+
+    it('checkout_recovery step 2 keeps payment as the final post-approval step', () => {
+        const { html, subject } = getEmailTemplate('checkout_recovery', {
+            name: 'Nikola',
+            amount: '$9',
+            recoveryStep: 2,
+        });
+        expect(subject).toContain('still waiting');
+        expect(html).toContain('required documents');
+        expect(html).toContain('admin review');
+        expect(html).toContain('active queue and support unlocks');
+        expect(html).not.toContain('Your profile is still waiting for the $9 Job Finder payment.');
     });
 
     it('offer_expired includes queue continuity messaging', () => {
@@ -168,6 +183,21 @@ describe('getEmailTemplate', () => {
         expect(html).not.toContain('bank-card-back-side.png');
     });
 
+    it('checkout recovery WhatsApp helper keeps payment as a post-approval final step', () => {
+        const stepOneMessage = getCheckoutRecoveryStatusMessage(undefined, '$9');
+        const stepTwoMessage = getCheckoutRecoveryStatusMessage(2, '$9');
+
+        expect(stepOneMessage).toContain('required documents');
+        expect(stepOneMessage).toContain('admin review');
+        expect(stepOneMessage).toContain('enter the active queue');
+        expect(stepOneMessage).not.toContain('activate job search');
+
+        expect(stepTwoMessage).toContain('required documents');
+        expect(stepTwoMessage).toContain('admin review');
+        expect(stepTwoMessage).toContain('unlock support');
+        expect(stepTwoMessage).not.toContain('activate job search and unlock support');
+    });
+
     it('document_review_result approved email uses the monochrome approved layout', () => {
         const { html, subject } = getEmailTemplate('document_review_result', {
             name: 'Nikola',
@@ -221,6 +251,7 @@ describe('getEmailTemplate', () => {
             missingFields: 'Phone number, passport upload',
         });
         expect(html).toContain('Why This Matters');
+        expect(html).toContain('required documents');
         expect(html).not.toContain('img.icons8.com');
     });
 
@@ -229,6 +260,9 @@ describe('getEmailTemplate', () => {
             name: 'Nikola',
         });
         expect(html).toContain('Next Step');
+        expect(html).toContain('admin review');
+        expect(html).toContain('Job Finder unlocks in your dashboard');
+        expect(html).not.toContain('join the hiring queue');
         expect(html).not.toContain('img.icons8.com');
     });
 
