@@ -149,6 +149,35 @@ describe("handleWhatsAppOnboarding", () => {
         expect((store.state as Record<string, unknown>)?.collected_data).toEqual({});
     });
 
+    it("reprompts on ambiguous yes-no answers instead of coercing them to No", async () => {
+        const { client, store } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "has_spouse",
+            collected_data: {
+                full_name: "Ali Worker",
+                passport_expiry_date: "01/01/2030",
+            },
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "maybe later",
+            null,
+            "en"
+        );
+
+        expect(reply).toContain("Please reply with Yes or No");
+        expect(reply).toContain("spouse or partner");
+        expect((store.state as Record<string, unknown>)?.current_step).toBe("has_spouse");
+        expect((store.state as Record<string, unknown>)?.collected_data).toEqual({
+            full_name: "Ali Worker",
+            passport_expiry_date: "01/01/2030",
+        });
+    });
+
     it("keeps unregistered completions as a WhatsApp draft instead of creating a ghost worker row", async () => {
         const { client, store } = createOnboardingAdmin({
             phone_number: "+381600000000",

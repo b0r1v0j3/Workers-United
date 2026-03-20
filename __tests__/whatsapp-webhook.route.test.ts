@@ -6,8 +6,8 @@ const sendWhatsAppText = vi.fn();
 const logServerActivity = vi.fn();
 const saveBrainFactsDedup = vi.fn();
 const persistWhatsAppDeliveryStatuses = vi.fn();
+const attachInboundWhatsAppMessageUser = vi.fn();
 const extractWhatsAppMessageContent = vi.fn();
-const isDuplicateWhatsAppInboundMessage = vi.fn();
 const isTextLikeWhatsAppMessage = vi.fn();
 const normalizeWhatsAppPhone = vi.fn();
 const recordInboundWhatsAppMessage = vi.fn();
@@ -39,8 +39,8 @@ vi.mock("@/lib/whatsapp-status-events", () => ({
 }));
 
 vi.mock("@/lib/whatsapp-inbound-events", () => ({
+    attachInboundWhatsAppMessageUser,
     extractWhatsAppMessageContent,
-    isDuplicateWhatsAppInboundMessage,
     isTextLikeWhatsAppMessage,
     normalizeWhatsAppPhone,
     recordInboundWhatsAppMessage,
@@ -76,11 +76,15 @@ describe("POST /api/whatsapp/webhook", () => {
         createAdminClient.mockReturnValue({ admin: true });
         sendWhatsAppText.mockResolvedValue({ success: true, messageId: "wamid_out_1" });
         persistWhatsAppDeliveryStatuses.mockResolvedValue(0);
+        attachInboundWhatsAppMessageUser.mockResolvedValue(undefined);
         extractWhatsAppMessageContent.mockImplementation((message: { text?: { body?: string } }) => message.text?.body || "");
-        isDuplicateWhatsAppInboundMessage.mockResolvedValue(false);
         isTextLikeWhatsAppMessage.mockReturnValue(true);
         normalizeWhatsAppPhone.mockImplementation((phone: string) => (phone.startsWith("+") ? phone : `+${phone}`));
-        recordInboundWhatsAppMessage.mockResolvedValue(undefined);
+        recordInboundWhatsAppMessage.mockResolvedValue({
+            id: "msg_1",
+            inserted: true,
+            duplicate: false,
+        });
         resolveWhatsAppWorkerIdentity.mockResolvedValue({ workerRecord: null, profile: null });
         resolveEmployerWhatsAppLead.mockResolvedValue({ employerRecord: null, isEmployer: true, isLikelyEmployer: true });
         loadWhatsAppConversationHistory.mockResolvedValue([]);
@@ -170,7 +174,11 @@ describe("POST /api/whatsapp/webhook", () => {
     it("keeps processing later batched messages and returns partial failure when one message crashes", async () => {
         recordInboundWhatsAppMessage
             .mockRejectedValueOnce(new Error("db boom"))
-            .mockResolvedValue(undefined);
+            .mockResolvedValue({
+                id: "msg_2",
+                inserted: true,
+                duplicate: false,
+            });
 
         const { POST } = await import("@/app/api/whatsapp/webhook/route");
         const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
@@ -207,6 +215,45 @@ describe("POST /api/whatsapp/webhook", () => {
             }),
             "error"
         );
+    });
+
+    it("skips duplicate inbound wamid rows without replying twice", async () => {
+        recordInboundWhatsAppMessage
+            .mockResolvedValueOnce({
+                id: null,
+                inserted: false,
+                duplicate: true,
+            })
+            .mockResolvedValueOnce({
+                id: "msg_2",
+                inserted: true,
+                duplicate: false,
+            });
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_dup", from: "381600000031", type: "text", text: { body: "hello" } },
+                                { id: "wamid_ok", from: "381600000032", type: "text", text: { body: "bonjour" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({ status: "ok" });
+        expect(sendWhatsAppText).toHaveBeenCalledTimes(1);
+        expect(sendWhatsAppText).toHaveBeenCalledWith("+381600000032", "Employer reply", undefined);
     });
 
     it("keeps employer error fallback in the conversation language when AI degrades", async () => {
