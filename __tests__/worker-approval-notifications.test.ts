@@ -8,6 +8,8 @@ describe("worker-approval-notifications", () => {
         expect(payload.subject).toBe("Job Finder Is Now Unlocked");
         expect(payload.title).toBe("Profile Approved");
         expect(payload.message).toContain("Job Finder checkout is now unlocked");
+        expect(payload.message).toContain("complete the $9 Job Finder checkout");
+        expect(payload.message).not.toContain("activate the $9 service");
         expect(payload.actionText).toBe("Open Job Finder");
         expect(payload.actionLink).toContain("/profile/worker");
     });
