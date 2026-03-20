@@ -9,6 +9,7 @@ import { getAdminTestAgencyWorker, getAdminTestAgencyWorkerDocuments } from "@/l
 import { getAgencyOwnedWorker, getAgencySchemaState, getAgencyWorkerEmail, getAgencyWorkerName, isAgencyWorkerClaimed } from "@/lib/agencies";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import { getVerifiedWorkerDocuments, hasAllRequiredWorkerDocumentsVerified, loadWorkerApprovalGuardState } from "@/lib/worker-review";
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
@@ -19,6 +20,33 @@ export const dynamic = "force-dynamic";
 interface WorkerPageProps {
     params: Promise<{ id: string }>;
     searchParams: Promise<{ inspect?: string }>;
+}
+
+function getStrictAgencyWorkerCompletionState({
+    fullName,
+    worker,
+    documents,
+    phoneOptional = true,
+}: {
+    fullName: string;
+    worker: any;
+    documents: Array<{ document_type: string | null; status?: string | null }>;
+    phoneOptional?: boolean;
+}) {
+    const verifiedDocuments = getVerifiedWorkerDocuments(documents);
+    const completionResult = getWorkerCompletion({
+        profile: { full_name: fullName },
+        worker,
+        documents: verifiedDocuments.map((document) => ({
+            document_type: document.document_type as string,
+        })),
+    }, { phoneOptional });
+    const allDocumentsVerified = hasAllRequiredWorkerDocumentsVerified(documents);
+
+    return {
+        completion: allDocumentsVerified ? completionResult.completion : Math.min(completionResult.completion, 99),
+        missingFields: completionResult.missingFields,
+    };
 }
 
 export default async function AgencyWorkerPage({ params, searchParams }: WorkerPageProps) {
@@ -43,11 +71,12 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
         }
 
         const documents = await getAdminTestAgencyWorkerDocuments(admin, session.activePersona.id, id);
-        const completionResult = getWorkerCompletion({
-            profile: { full_name: worker.full_name || "Sandbox worker" },
+        const completionState = getStrictAgencyWorkerCompletionState({
+            fullName: worker.full_name || "Sandbox worker",
             worker,
             documents,
-        }, { phoneOptional: true });
+            phoneOptional: true,
+        });
         const documentProgress = getWorkerDocumentProgress(documents);
         const hasPaidEntryFee =
             !!worker.entry_fee_paid ||
@@ -106,8 +135,8 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                         previousVisas: worker.previous_visas || "",
                         status: worker.status || "NEW",
                         updatedAt: worker.updated_at || null,
-                        completion: completionResult.completion,
-                        missingFields: completionResult.missingFields,
+                        completion: completionState.completion,
+                        missingFields: completionState.missingFields,
                         verifiedDocuments: documentProgress.verifiedCount,
                         documents,
                         accessLabel: "Sandbox agency worker",
@@ -228,12 +257,6 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
         .eq("payment_type", "entry_fee")
         .contains("metadata", { target_worker_id: workerRecord.id, paid_by_profile_id: targetAgencyProfileId });
 
-    const completionResult = getWorkerCompletion({
-        profile: { full_name: getAgencyWorkerName(workerRecord) },
-        worker: workerRecord,
-        documents: documents || [],
-    }, { phoneOptional: true });
-
     const documentProgress = getWorkerDocumentProgress(documents || []);
     const workerPayments = [...(payments || []), ...(agencyTargetPayments || [])];
     const hasPaidEntryFee =
@@ -243,6 +266,21 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
     const latestPendingPayment = workerPayments.find((payment) => payment.payment_type === "entry_fee" && payment.status === "pending");
     const latestCompletedPayment = workerPayments.find((payment) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
     const paymentState = hasPaidEntryFee ? "paid" : latestPendingPayment ? "pending" : "not_paid";
+    const workerDisplayName = getAgencyWorkerName(workerRecord);
+    const localCompletionState = getStrictAgencyWorkerCompletionState({
+        fullName: workerDisplayName,
+        worker: workerRecord,
+        documents: documents || [],
+        phoneOptional: true,
+    });
+    const approvalGuardState = await loadWorkerApprovalGuardState({
+        adminClient: admin,
+        profileId,
+        workerId: workerRecord.id,
+        documentOwnerId,
+        phoneOptional: true,
+        fullNameFallback: workerDisplayName,
+    });
 
     return (
         <AppShell user={user} variant="dashboard">
@@ -288,10 +326,10 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                     passportExpiryDate: workerRecord.passport_expiry_date || "",
                     livesAbroad: workerRecord.lives_abroad || "",
                     previousVisas: workerRecord.previous_visas || "",
-                    status: workerRecord.status || "NEW",
+                    status: approvalGuardState?.worker.status || workerRecord.status || "NEW",
                     updatedAt: workerRecord.updated_at || null,
-                    completion: completionResult.completion,
-                    missingFields: completionResult.missingFields,
+                    completion: approvalGuardState?.completion ?? localCompletionState.completion,
+                    missingFields: approvalGuardState?.missingFields ?? localCompletionState.missingFields,
                     verifiedDocuments: documentProgress.verifiedCount,
                     documents: documents || [],
                     accessLabel: claimed
@@ -301,7 +339,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                     paymentState,
                     paymentPendingUntil: latestPendingPayment?.deadline_at || null,
                     entryFeePaidAt: latestCompletedPayment?.paid_at || null,
-                    adminApproved: !!workerRecord.admin_approved,
+                    adminApproved: !!(approvalGuardState?.worker.admin_approved ?? workerRecord.admin_approved),
                 }}
                 readOnlyPreview={userType === "admin"}
                 adminTestMode={false}

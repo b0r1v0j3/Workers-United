@@ -7,8 +7,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
 import { queueEmail } from "@/lib/email-templates";
-import { logServerActivity } from "@/lib/activityLoggerServer";
-import { getWorkerCompletion } from "@/lib/profile-completion";
 import { buildContractDataForMatch } from "@/lib/contract-data";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
@@ -23,96 +21,15 @@ import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
 import { getRestorableDocumentBackupPath } from "@/lib/document-image-processing";
-import { syncWorkerReviewStatus } from "@/lib/worker-review";
+import { applyWorkerApprovalAction, loadWorkerApprovalGuardState, syncWorkerReviewStatus } from "@/lib/worker-review";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { getAgencyWorkerEmail } from "@/lib/agencies";
 import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
-import { buildWorkerPaymentUnlockedEmailData, resolveWorkerApprovalNotificationRecipient } from "@/lib/worker-approval-notifications";
-import { canRevokeWorkerApproval } from "@/lib/worker-review";
+import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
 
 interface PageProps {
     params: Promise<{ id: string }>;
     searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}
-
-async function getWorkerAdminGuardState(
-    adminClient: ReturnType<typeof createAdminClient>,
-    input: {
-        workerId?: string | null;
-        profileId?: string | null;
-        documentOwnerId?: string | null;
-        phoneOptional?: boolean;
-        fullNameFallback?: string | null;
-    }
-) {
-    const workerRecord = input.workerId
-        ? await adminClient
-            .from("worker_onboarding")
-            .select("*, phone, entry_fee_paid, queue_joined_at, status")
-            .eq("id", input.workerId)
-            .maybeSingle()
-            .then((result) => result.data)
-        : input.profileId
-            ? await loadCanonicalWorkerRecord<any>(adminClient, input.profileId, "*, phone, entry_fee_paid, queue_joined_at, status").then((result) => result.data)
-            : null;
-
-    if (!workerRecord) {
-        return { completion: 0, hasPaidEntryFee: false };
-    }
-
-    const profileId = input.profileId || workerRecord.profile_id || null;
-    const documentOwnerId = input.documentOwnerId || resolveAgencyWorkerDocumentOwnerId(workerRecord) || profileId;
-
-    const [
-        { data: workerProfile },
-        { data: documents },
-        { data: directPayments },
-        { data: targetPayments },
-        authUserPayload,
-    ] = await Promise.all([
-        profileId
-            ? adminClient
-                .from("profiles")
-                .select("full_name, email")
-                .eq("id", profileId)
-                .maybeSingle()
-            : Promise.resolve({ data: null }),
-        documentOwnerId
-            ? adminClient
-                .from("worker_documents")
-                .select("document_type, status")
-                .eq("user_id", documentOwnerId)
-            : Promise.resolve({ data: [] }),
-        profileId
-            ? adminClient
-                .from("payments")
-                .select("payment_type, status, metadata")
-                .or(`user_id.eq.${profileId},profile_id.eq.${profileId}`)
-            : Promise.resolve({ data: [] }),
-        workerRecord.id
-            ? adminClient
-                .from("payments")
-                .select("payment_type, status, metadata")
-                .contains("metadata", { target_worker_id: workerRecord.id })
-            : Promise.resolve({ data: [] }),
-        profileId ? adminClient.auth.admin.getUserById(profileId) : Promise.resolve({ data: { user: null } }),
-    ]);
-
-    const payments = [...(directPayments || []), ...(targetPayments || [])];
-    const completion = getWorkerCompletion({
-        profile: workerProfile,
-        worker: workerRecord,
-        documents: documents || [],
-    }, {
-        phoneOptional: !!input.phoneOptional,
-        fullNameFallback: input.fullNameFallback || authUserPayload?.data?.user?.user_metadata?.full_name || workerRecord.submitted_full_name || null,
-    }).completion;
-    const hasPaidEntryFee =
-        !!workerRecord?.entry_fee_paid ||
-        isPostEntryFeeWorkerStatus(workerRecord?.status) ||
-        payments.some((payment: any) => payment.payment_type === "entry_fee" && ["completed", "paid"].includes(payment.status || ""));
-
-    return { completion, hasPaidEntryFee };
 }
 
 function getSingleSearchParam(value: string | string[] | undefined) {
@@ -194,8 +111,10 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         .eq("id", id)
         .maybeSingle();
 
-    const resolvedWorkerRecord = directWorkerRecord
-        || (await loadCanonicalWorkerRecord<any>(adminClient, id, "*").then((result) => result.data));
+    const resolvedWorkerRecord = directWorkerRecord?.profile_id
+        ? (await loadCanonicalWorkerRecord<any>(adminClient, directWorkerRecord.profile_id, "*").then((result) => result.data)) || directWorkerRecord
+        : directWorkerRecord
+            || (await loadCanonicalWorkerRecord<any>(adminClient, id, "*").then((result) => result.data));
 
     const profileId = resolvedWorkerRecord?.profile_id || (!directWorkerRecord ? id : null);
     const documentOwnerId = (resolvedWorkerRecord ? resolveAgencyWorkerDocumentOwnerId(resolvedWorkerRecord) : null) || profileId;
@@ -293,22 +212,6 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         }
     }
 
-    // Profile completion
-    const { completion: profileCompletion } = getWorkerCompletion({
-        profile: workerProfile,
-        worker: workerRecord,
-        documents: (documents || []).map((d: any) => ({ document_type: d.document_type })),
-    }, {
-        phoneOptional,
-        fullNameFallback: authUser?.user_metadata?.full_name || workerRecord?.submitted_full_name || null,
-    });
-    const documentProgress = getWorkerDocumentProgress(documents || []);
-    const verifiedDocumentsCount = documentProgress.verifiedCount;
-    const pendingDocumentsCount = documentProgress.pendingCount;
-    const rejectedDocumentsCount = documentProgress.rejectedCount;
-    const completedPaymentsCount = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || "")).length;
-    const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
-    const latestSignature = signatures?.[0] || null;
     const displayName = workerProfile?.full_name
         || workerRecord?.submitted_full_name
         || authUser?.user_metadata?.full_name
@@ -318,20 +221,35 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         submitted_email: workerRecord?.submitted_email,
         profiles: workerProfile ? [workerProfile] : null,
     }) || authUser?.email || null;
-    const workerNotificationRecipient = resolveWorkerApprovalNotificationRecipient({
-        worker: workerRecord,
-        workerProfileEmail: workerProfile?.email || null,
-        authEmail: authUser?.email || null,
-        displayName,
-    });
-    const workerNotificationEmail = workerNotificationRecipient?.email || null;
     const approvalEmailPreviewHref = buildAdminEmailPreviewHref("admin_update", {
         name: displayName,
         ...buildWorkerPaymentUnlockedEmailData(),
     });
     const workerNameFallback = workerProfile?.full_name || authUser?.user_metadata?.full_name || workerRecord?.submitted_full_name || null;
-    const workerStatus = workerRecord?.status || "NEW";
-    const approvalState = workerRecord?.admin_approved ? "Approved" : "Pending";
+    const approvalGuardState = workerRecord
+        ? await loadWorkerApprovalGuardState({
+            adminClient,
+            profileId,
+            workerId: workerRecord.id,
+            documentOwnerId,
+            phoneOptional,
+            fullNameFallback: workerNameFallback,
+        })
+        : null;
+    const profileCompletion = approvalGuardState?.completion ?? 0;
+    const workerNotificationEmail = displayEmail || "";
+    const isAdminApproved = !!(approvalGuardState?.worker.admin_approved ?? workerRecord?.admin_approved);
+    const canApproveWorker = !!approvalGuardState?.canApprove;
+    const canRevokeApproval = !!approvalGuardState?.canRevoke;
+    const documentProgress = getWorkerDocumentProgress(documents || []);
+    const verifiedDocumentsCount = documentProgress.verifiedCount;
+    const pendingDocumentsCount = documentProgress.pendingCount;
+    const rejectedDocumentsCount = documentProgress.rejectedCount;
+    const completedPaymentsCount = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || "")).length;
+    const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
+    const latestSignature = signatures?.[0] || null;
+    const workerStatus = approvalGuardState?.worker.status || workerRecord?.status || "NEW";
+    const approvalStateLabel = isAdminApproved ? "Approved" : "Pending";
     const workspaceInspectHref = isAgencyDraft && agencyRecord?.profile_id
         ? `/profile/agency/workers/${workerRecord?.id}?inspect=${agencyRecord.profile_id}`
         : profileId
@@ -442,63 +360,22 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         if (!workerRecord?.id) {
             throw new Error("Worker record not found");
         }
-        const { completion } = await getWorkerAdminGuardState(adminClient, {
-            workerId: workerRecord.id,
+
+        const approvalResult = await applyWorkerApprovalAction({
+            adminClient,
+            actorUserId: user.id,
+            action: action === "revoke" ? "revoke" : "approve",
             profileId,
+            workerId: workerRecord.id,
             documentOwnerId,
             phoneOptional,
             fullNameFallback: workerNameFallback,
         });
 
-        if (action === "approve" && completion < 100) {
-            throw new Error("Worker profile must be 100% complete before approval.");
-        }
-
-        if (action === "approve") {
-            await adminClient
-                .from("worker_onboarding")
-                .update({
-                    admin_approved: true,
-                    admin_approved_at: new Date().toISOString(),
-                    admin_approved_by: user.id,
-                    // APPROVED is explicit "ready to pay" state after admin approval
-                    status: 'APPROVED',
-                    updated_at: new Date().toISOString()
-                })
-                .eq("id", workerRecord.id);
-
-            if (workerNotificationEmail && notificationUserId) {
-                await queueEmail(
-                    adminClient,
-                    notificationUserId,
-                    "admin_update",
-                    workerNotificationEmail,
-                    workerNotificationRecipient?.name || displayName,
-                    buildWorkerPaymentUnlockedEmailData()
-                );
-            }
-        } else {
-            if (!canRevokeWorkerApproval({
-                entryFeePaid: !!workerRecord.entry_fee_paid,
-                jobSearchActive: !!workerRecord.job_search_active,
-                currentStatus: workerRecord.status,
-            })) {
-                throw new Error("Cannot revoke approval after Job Finder is active.");
-            }
-
-            await adminClient
-                .from("worker_onboarding")
-                .update({
-                    admin_approved: false,
-                    admin_approved_at: null,
-                    admin_approved_by: null,
-                    status: completion >= 100 ? 'PENDING_APPROVAL' : 'NEW',
-                    updated_at: new Date().toISOString()
-                })
-                .eq("id", workerRecord.id);
-        }
-
         revalidatePath(`/admin/workers/${id}`);
+        if (approvalResult.workerId && approvalResult.workerId !== workerRecord.id) {
+            revalidatePath(`/admin/workers/${approvalResult.workerId}`);
+        }
     }
 
     async function updateWorkerStatus(formData: FormData) {
@@ -524,19 +401,24 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         if (!workerRecord?.id) {
             throw new Error("Worker record not found");
         }
-        const { completion, hasPaidEntryFee } = await getWorkerAdminGuardState(adminClient, {
-            workerId: workerRecord.id,
+        const currentApprovalState = await loadWorkerApprovalGuardState({
+            adminClient,
             profileId,
+            workerId: workerRecord.id,
             documentOwnerId,
             phoneOptional,
             fullNameFallback: workerNameFallback,
         });
+        if (!currentApprovalState) {
+            throw new Error("Worker record not found");
+        }
+        const { completion, hasPaidEntryFee, worker: freshWorker } = currentApprovalState;
 
         if ((newStatus === "PENDING_APPROVAL" || newStatus === "APPROVED") && completion < 100) {
             throw new Error("Worker profile must be 100% complete before entering admin review or approval.");
         }
 
-        if (newStatus === "APPROVED" && !workerRecord.admin_approved) {
+        if (newStatus === "APPROVED" && !freshWorker.admin_approved) {
             throw new Error("Use the approval button to approve the worker and set admin approval flags together.");
         }
 
@@ -550,7 +432,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                 status: newStatus,
                 updated_at: new Date().toISOString()
             })
-            .eq("id", workerRecord.id);
+            .eq("id", freshWorker.id);
 
         // Send email notification
         if (userEmail && notificationUserId) {
@@ -640,7 +522,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                     title={displayName}
                     description="Admin case view for approvals, documents, payments, and matching. Use the inspect links above when you want the real worker workspace instead of the admin control surface."
                     metrics={[
-                        { label: "Status", value: toDisplayLabel(workerStatus), meta: approvalState },
+                        { label: "Status", value: toDisplayLabel(workerStatus), meta: approvalStateLabel },
                         { label: "Completion", value: `${profileCompletion}%`, meta: displayEmail || "No email" },
                         { label: "Docs", value: `${verifiedDocumentsCount}/3`, meta: pendingDocumentsCount > 0 ? `${pendingDocumentsCount} pending` : "No pending review" },
                         { label: "Paid", value: completedPaymentsCount, meta: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} pending` : "No pending payments" },
@@ -676,9 +558,9 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                     />
                     <CaseHintCard
                         title="Current case signal"
-                        copy={workerRecord?.admin_approved
+                        copy={isAdminApproved
                             ? "This worker is already admin-approved. Keep focus on queue, offers, payments, and document validity."
-                            : profileCompletion === 100
+                            : canApproveWorker
                                 ? "This worker is complete and is now waiting for your approval before payment unlocks."
                                 : "This worker still needs profile completion before approval can happen."}
                         tone="amber"
@@ -818,24 +700,24 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                         >
                             {workerRecord ? (
                                 <div className="space-y-4">
-                                    <div className={`rounded-[24px] border p-5 ${workerRecord.admin_approved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+                                    <div className={`rounded-[24px] border p-5 ${isAdminApproved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
                                         <div className="flex flex-wrap items-start justify-between gap-3">
                                             <div>
                                                 <div className="text-sm font-semibold text-[#18181b]">Approval state</div>
                                                 <div className="mt-1 text-sm text-[#57534e]">
-                                                    {workerRecord.admin_approved
+                                                    {isAdminApproved
                                                         ? "Worker is unlocked for payment and downstream queue operations."
-                                                        : profileCompletion === 100
+                                                        : canApproveWorker
                                                             ? "This worker is complete and ready for your approval."
                                                             : "Approval stays locked until the profile reaches 100% completion."}
                                                 </div>
                                             </div>
-                                            <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${workerRecord.admin_approved
+                                            <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isAdminApproved
                                                 ? "border-emerald-300 bg-emerald-100 text-emerald-700"
                                                 : "border-amber-300 bg-amber-100 text-amber-700"
                                                 }`}>
-                                                {workerRecord.admin_approved ? <Check size={14} /> : <Clock size={14} />}
-                                                {workerRecord.admin_approved ? "Approved" : "Pending approval"}
+                                                {isAdminApproved ? <Check size={14} /> : <Clock size={14} />}
+                                                {isAdminApproved ? "Approved" : "Pending approval"}
                                             </span>
                                         </div>
                                         {workerRecord.admin_approved_at ? (
@@ -844,21 +726,25 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                             </p>
                                         ) : null}
                                         <form action={approveWorker} className="mt-4">
-                                            <input type="hidden" name="action" value={workerRecord.admin_approved ? "revoke" : "approve"} />
+                                            <input type="hidden" name="action" value={isAdminApproved ? "revoke" : "approve"} />
                                             <button
                                                 type="submit"
-                                                disabled={!workerRecord.admin_approved && profileCompletion < 100}
-                                                className={`w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${workerRecord.admin_approved
+                                                disabled={isAdminApproved ? !canRevokeApproval : !canApproveWorker}
+                                                className={`w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${isAdminApproved
                                                     ? "bg-red-500 hover:bg-red-600"
                                                     : "bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
                                                     }`}
                                             >
-                                                {workerRecord.admin_approved ? "Revoke approval" : "Approve for payment"}
+                                                {isAdminApproved ? "Revoke approval" : "Approve for payment"}
                                             </button>
                                         </form>
-                                        {!workerRecord.admin_approved && profileCompletion < 100 ? (
+                                        {!isAdminApproved && !canApproveWorker ? (
                                             <p className="mt-3 text-xs font-medium text-amber-800">
                                                 This button unlocks after the worker reaches 100% completion.
+                                            </p>
+                                        ) : isAdminApproved && !canRevokeApproval ? (
+                                            <p className="mt-3 text-xs font-medium text-amber-800">
+                                                Approval can no longer be revoked after Job Finder is active.
                                             </p>
                                         ) : null}
                                         <Link
@@ -878,8 +764,8 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                     Use controlled status changes when the case actually moves to the next operational phase.
                                                 </div>
                                             </div>
-                                            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(workerRecord.status || "NEW")}`}>
-                                                {toDisplayLabel(workerRecord.status || "NEW")}
+                                            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(workerStatus)}`}>
+                                                {toDisplayLabel(workerStatus)}
                                             </span>
                                         </div>
 
@@ -891,7 +777,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                 </label>
                                                 <AdaptiveSelect
                                                     name="status"
-                                                    defaultValue={workerRecord.status || "NEW"}
+                                                    defaultValue={workerStatus}
                                                     className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
                                                     desktopSearchThreshold={999}
                                                 >
@@ -899,7 +785,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                     <option value="PROFILE_COMPLETE">Profile Complete</option>
                                                     <option value="PENDING_APPROVAL">Pending Approval</option>
                                                     <option value="VERIFIED">Verified</option>
-                                                    <option value="APPROVED" disabled={!workerRecord.admin_approved}>Approved</option>
+                                                    <option value="APPROVED" disabled={!isAdminApproved}>Approved</option>
                                                     <option value="IN_QUEUE">In Queue</option>
                                                     <option value="OFFER_PENDING">Offer Pending</option>
                                                     <option value="OFFER_ACCEPTED">Offer Accepted</option>

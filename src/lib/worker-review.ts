@@ -4,6 +4,7 @@ import { queueEmail } from "@/lib/email-templates";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { loadCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
+import { buildWorkerPaymentUnlockedEmailData, resolveWorkerApprovalNotificationRecipient } from "@/lib/worker-approval-notifications";
 
 interface WorkerReviewInput {
     completion: number;
@@ -56,6 +57,21 @@ interface SyncWorkerReviewStatusResult {
     allDocumentsVerified: boolean;
     notificationSent: boolean;
     notificationReason: WorkerReviewNotificationReason | null;
+}
+
+interface WorkerApprovalGuardState {
+    worker: ReviewWorkerRecord;
+    profileId: string | null;
+    documentOwnerId: string | null;
+    completion: number;
+    missingFields: string[];
+    allDocumentsVerified: boolean;
+    hasPaidEntryFee: boolean;
+    canApprove: boolean;
+    canRevoke: boolean;
+    displayName: string;
+    notificationUserId: string | null;
+    notificationRecipient: ReturnType<typeof resolveWorkerApprovalNotificationRecipient>;
 }
 
 interface WorkerReviewEmailQueueRecord {
@@ -115,6 +131,27 @@ export function shouldSuppressWorkerReviewNotification(existingEmail?: WorkerRev
 
 export function canApproveWorkerProfile(completion: number) {
     return completion >= 100;
+}
+
+async function loadWorkerApprovalSourceRecord(
+    adminClient: SupabaseClient<Database>,
+    workerId: string,
+    profileId: string | null
+) {
+    if (profileId) {
+        return loadCanonicalWorkerRecord<ReviewWorkerRecord>(
+            adminClient,
+            profileId,
+            WORKER_REVIEW_SELECT
+        ).then((result) => result.data);
+    }
+
+    return adminClient
+        .from("worker_onboarding")
+        .select(WORKER_REVIEW_SELECT)
+        .eq("id", workerId)
+        .maybeSingle()
+        .then((result) => result.data);
 }
 
 export function getVerifiedWorkerDocuments(documents: ReviewDocumentRow[]) {
@@ -386,9 +423,12 @@ export async function syncWorkerReviewStatus({
         phoneOptional,
         fullNameFallback,
     });
+    const effectiveCompletion = allDocumentsVerified
+        ? completionResult.completion
+        : Math.min(completionResult.completion, 99);
 
     const targetStatus = getPendingApprovalTargetStatus({
-        completion: allDocumentsVerified ? completionResult.completion : Math.min(completionResult.completion, 99),
+        completion: effectiveCompletion,
         entryFeePaid: hydratedWorkerRecord.entry_fee_paid,
         adminApproved: !!hydratedWorkerRecord.admin_approved,
         currentStatus: hydratedWorkerRecord.status,
@@ -461,12 +501,173 @@ export async function syncWorkerReviewStatus({
     }
 
     return {
-        completion: completionResult.completion,
+        completion: effectiveCompletion,
         missingFields: completionResult.missingFields,
         reviewQueued,
         targetStatus,
         allDocumentsVerified,
         notificationSent,
         notificationReason,
+    };
+}
+
+export async function loadWorkerApprovalGuardState({
+    adminClient,
+    profileId = null,
+    workerId = null,
+    documentOwnerId = null,
+    phoneOptional = false,
+    fullNameFallback = null,
+}: SyncWorkerReviewStatusOptions): Promise<WorkerApprovalGuardState | null> {
+    if (!workerId && !profileId) {
+        return null;
+    }
+
+    const syncResult = await syncWorkerReviewStatus({
+        adminClient,
+        profileId,
+        workerId,
+        documentOwnerId,
+        phoneOptional,
+        fullNameFallback,
+        notifyOnPendingApproval: false,
+    });
+
+    const worker = await loadWorkerApprovalSourceRecord(adminClient, workerId || "", profileId || null);
+    if (!worker?.id) {
+        return null;
+    }
+
+    const resolvedProfileId = profileId || worker.profile_id || null;
+    const resolvedDocumentOwnerId = documentOwnerId || resolvedProfileId;
+
+    const [{ data: profile }, authUserResult] = await Promise.all([
+        resolvedProfileId
+            ? adminClient
+                .from("profiles")
+                .select("full_name, email")
+                .eq("id", resolvedProfileId)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+        resolvedProfileId
+            ? adminClient.auth.admin.getUserById(resolvedProfileId)
+            : Promise.resolve({ data: { user: null } }),
+    ]);
+
+    const displayName = profile?.full_name?.trim()
+        || fullNameFallback?.trim()
+        || worker.submitted_full_name?.trim()
+        || authUserResult.data.user?.user_metadata?.full_name?.trim()
+        || authUserResult.data.user?.email
+        || "Worker";
+
+    const notificationRecipient = resolveWorkerApprovalNotificationRecipient({
+        worker,
+        workerProfileEmail: profile?.email || null,
+        authEmail: authUserResult.data.user?.email || null,
+        displayName,
+    });
+
+    const hasPaidEntryFee =
+        !!worker.entry_fee_paid
+        || !!worker.job_search_active
+        || POST_PAYMENT_STATUSES.has((worker.status || "NEW").toUpperCase());
+
+    return {
+        worker,
+        profileId: resolvedProfileId,
+        documentOwnerId: resolvedDocumentOwnerId,
+        completion: syncResult.completion,
+        missingFields: syncResult.missingFields,
+        allDocumentsVerified: syncResult.allDocumentsVerified,
+        hasPaidEntryFee,
+        canApprove: canApproveWorkerProfile(syncResult.completion),
+        canRevoke: canRevokeWorkerApproval({
+            entryFeePaid: !!worker.entry_fee_paid,
+            jobSearchActive: !!worker.job_search_active,
+            currentStatus: worker.status,
+        }),
+        displayName,
+        notificationUserId: resolvedProfileId || worker.id || null,
+        notificationRecipient,
+    };
+}
+
+export async function applyWorkerApprovalAction({
+    adminClient,
+    actorUserId,
+    action,
+    profileId = null,
+    workerId = null,
+    documentOwnerId = null,
+    phoneOptional = false,
+    fullNameFallback = null,
+}: SyncWorkerReviewStatusOptions & {
+    actorUserId: string;
+    action: "approve" | "revoke";
+}) {
+    const approvalState = await loadWorkerApprovalGuardState({
+        adminClient,
+        profileId,
+        workerId,
+        documentOwnerId,
+        phoneOptional,
+        fullNameFallback,
+    });
+
+    if (!approvalState?.worker?.id) {
+        throw new Error("Worker record not found");
+    }
+
+    if (action === "approve" && !approvalState.canApprove) {
+        throw new Error("Worker profile must be 100% complete before approval.");
+    }
+
+    if (action === "revoke" && !approvalState.canRevoke) {
+        throw new Error("Cannot revoke approval after Job Finder is active.");
+    }
+
+    const approved = action === "approve";
+    const nextStatus = approved
+        ? "APPROVED"
+        : approvalState.completion >= 100
+            ? "PENDING_APPROVAL"
+            : "NEW";
+    const nowIso = new Date().toISOString();
+
+    const { error: updateError } = await adminClient
+        .from("worker_onboarding")
+        .update({
+            admin_approved: approved,
+            admin_approved_at: approved ? nowIso : null,
+            admin_approved_by: approved ? actorUserId : null,
+            status: nextStatus,
+            updated_at: nowIso,
+        })
+        .eq("id", approvalState.worker.id);
+
+    if (updateError) {
+        throw new Error(updateError.message);
+    }
+
+    let notificationQueued = false;
+    if (approved && approvalState.notificationRecipient && approvalState.notificationUserId) {
+        await queueEmail(
+            adminClient,
+            approvalState.notificationUserId,
+            "admin_update",
+            approvalState.notificationRecipient.email,
+            approvalState.notificationRecipient.name,
+            buildWorkerPaymentUnlockedEmailData()
+        );
+        notificationQueued = true;
+    }
+
+    return {
+        approved,
+        status: nextStatus,
+        completion: approvalState.completion,
+        notificationQueued,
+        workerId: approvalState.worker.id,
     };
 }
