@@ -42,8 +42,8 @@ import {
 import { getWhatsAppFallbackResponse } from "@/lib/whatsapp-fallback";
 import { persistWhatsAppDeliveryStatuses } from "@/lib/whatsapp-status-events";
 import {
+    attachInboundWhatsAppMessageUser,
     extractWhatsAppMessageContent,
-    isDuplicateWhatsAppInboundMessage,
     isTextLikeWhatsAppMessage,
     normalizeWhatsAppPhone,
     recordInboundWhatsAppMessage,
@@ -247,87 +247,95 @@ export async function POST(request: NextRequest) {
                     const normalizedPhone = normalizeWhatsAppPhone(phoneNumber);
 
                     try {
+                        const inboundRecord = await recordInboundWhatsAppMessage(supabase, {
+                            userId: null,
+                            normalizedPhone,
+                            messageType,
+                            content,
+                            wamid,
+                        });
 
-                // ─── Deduplication: skip if this wamid was already processed ──
-                if (await isDuplicateWhatsAppInboundMessage(supabase, wamid)) {
-                    console.log(`[Webhook] Duplicate wamid ${wamid} — skipping`);
-                    continue;
-                }
+                        if (inboundRecord.duplicate) {
+                            console.log(`[Webhook] Duplicate wamid ${wamid} — skipping`);
+                            continue;
+                        }
 
-                const workerRecordSelect = `
-                    id, profile_id, status, queue_position, preferred_job, 
-                    desired_countries, refund_deadline, refund_eligible,
-                    entry_fee_paid, admin_approved, queue_joined_at,
-                    nationality, current_country, gender, experience_years,
-                    updated_at,
-                    phone, marital_status, onboarding_completed
-                `;
-                const { workerRecord, profile } = await resolveWhatsAppWorkerIdentity<
-                    WhatsAppWorkerRecord,
-                    { full_name?: string | null; email?: string | null; user_type?: string | null; created_at?: string | null }
-                >({
-                    admin: supabase,
-                    rawPhone: phoneNumber,
-                    normalizedPhone,
-                    workerSelect: workerRecordSelect,
-                });
-                const linkedWorkerRecord = isLinkedWhatsAppWorker(workerRecord) ? workerRecord : null;
-                const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
-                const employerLead = await resolveEmployerWhatsAppLead({
-                    admin: supabase,
-                    normalizedPhone,
-                    content,
-                    isAdmin,
-                    hasRegisteredWorker: !!linkedWorkerRecord,
-                });
-                const employerRecord = employerLead.employerRecord;
-                const isEmployer = employerLead.isEmployer;
-                const activityUserId = linkedWorkerRecord?.profile_id || employerRecord?.profile_id || null;
+                        const workerRecordSelect = `
+                            id, profile_id, status, queue_position, preferred_job, 
+                            desired_countries, refund_deadline, refund_eligible,
+                            entry_fee_paid, admin_approved, queue_joined_at,
+                            nationality, current_country, gender, experience_years,
+                            updated_at,
+                            phone, marital_status, onboarding_completed
+                        `;
+                        const { workerRecord, profile } = await resolveWhatsAppWorkerIdentity<
+                            WhatsAppWorkerRecord,
+                            { full_name?: string | null; email?: string | null; user_type?: string | null; created_at?: string | null }
+                        >({
+                            admin: supabase,
+                            rawPhone: phoneNumber,
+                            normalizedPhone,
+                            workerSelect: workerRecordSelect,
+                        });
+                        const linkedWorkerRecord = isLinkedWhatsAppWorker(workerRecord) ? workerRecord : null;
+                        const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
+                        const employerLead = await resolveEmployerWhatsAppLead({
+                            admin: supabase,
+                            normalizedPhone,
+                            content,
+                            isAdmin,
+                            hasRegisteredWorker: !!linkedWorkerRecord,
+                        });
+                        const employerRecord = employerLead.employerRecord;
+                        const isEmployer = employerLead.isEmployer;
+                        const activityUserId = linkedWorkerRecord?.profile_id || employerRecord?.profile_id || null;
 
-                // ─── Log inbound message ────────────────────────────────
-                await recordInboundWhatsAppMessage(supabase, {
-                    userId: activityUserId,
-                    normalizedPhone,
-                    messageType,
-                    content,
-                    wamid,
-                });
+                        if (activityUserId) {
+                            try {
+                                await attachInboundWhatsAppMessageUser(supabase, {
+                                    wamid,
+                                    userId: activityUserId,
+                                });
+                            } catch (attachError) {
+                                console.error("[WhatsApp Webhook] Failed to attach inbound user identity:", attachError);
+                            }
+                        }
 
-                // Log to activity tracking
-                await logServerActivity(
-                    activityUserId || "anonymous",
-                    "whatsapp_message_received",
-                    "messaging",
-                    {
-                        phone: normalizedPhone,
-                        message_type: messageType,
-                        content_preview: content.substring(0, 100),
-                        is_registered: !!linkedWorkerRecord || !!employerRecord,
-                        role: linkedWorkerRecord ? "worker" : employerRecord ? "employer" : isAdmin ? "admin" : "anonymous",
-                    }
-                );
+                        // Log to activity tracking
+                        await logServerActivity(
+                            activityUserId || "anonymous",
+                            "whatsapp_message_received",
+                            "messaging",
+                            {
+                                phone: normalizedPhone,
+                                message_type: messageType,
+                                content_preview: content.substring(0, 100),
+                                is_registered: !!linkedWorkerRecord || !!employerRecord,
+                                role: linkedWorkerRecord ? "worker" : employerRecord ? "employer" : isAdmin ? "admin" : "anonymous",
+                            }
+                        );
 
-                // ─── Admin Commands (direct brain control via WhatsApp) ───
-                if (isAdmin) {
-                    const adminClient = createAdminClient();
-                    const adminCommandResult = await handleWhatsAppAdminCommand({
-                        admin: adminClient,
-                        normalizedPhone,
-                        content,
-                        profileId: activityUserId,
-                        sendReply: (text) => sendWhatsAppRouteReply({
-                            phone: normalizedPhone,
-                            text,
-                            userId: activityUserId || undefined,
-                            activityUserId,
-                            failureContext: "admin_command_reply",
-                        }),
-                    });
+                        // ─── Admin Commands (direct brain control via WhatsApp) ───
+                        if (isAdmin) {
+                            const adminClient = createAdminClient();
+                            const adminCommandResult = await handleWhatsAppAdminCommand({
+                                admin: adminClient,
+                                normalizedPhone,
+                                content,
+                                profileId: activityUserId,
+                                sendReply: (text) => sendWhatsAppRouteReply({
+                                    phone: normalizedPhone,
+                                    text,
+                                    userId: activityUserId || undefined,
+                                    activityUserId,
+                                    failureContext: "admin_command_reply",
+                                }),
+                            });
 
-                    if (adminCommandResult.handled) {
-                        continue;
-                    }
-                }
+                            if (adminCommandResult.handled) {
+                                continue;
+                            }
+                        }
 
                 // ─── WhatsApp Onboarding Flow (before GPT) ───────────────
                 // Detect language from router or simple heuristic
@@ -1002,6 +1010,18 @@ function isNo(msg: string): boolean {
     return /^(no|ne|nope|nahi|la|non|não|nein|hindi|नहीं|لا)/.test(l);
 }
 
+function parseYesNoAnswer(msg: string): "yes" | "no" | null {
+    if (isYes(msg)) {
+        return "yes";
+    }
+
+    if (isNo(msg)) {
+        return "no";
+    }
+
+    return null;
+}
+
 function isSkip(msg: string): boolean {
     const l = msg.toLowerCase().trim();
     return /^(skip|preskoči|preskoci|pular|passer|تخطي|छोड़|skip)/.test(l);
@@ -1023,6 +1043,21 @@ function getOnboardingCancelledReply(language: string): string {
         pt: "Sem problema — parei o preenchimento do perfil pelo WhatsApp. Se quiser continuar depois, diga que quer preencher o perfil no WhatsApp ou use workersunited.eu/profile/worker.",
     };
     return messages[lk];
+}
+
+function getYesNoOnboardingReprompt(language: string, step: OnboardingStep): string {
+    const lk = getLangKey(language);
+    const prompts: Record<LangKey, string> = {
+        en: "Please reply with Yes or No so I can continue.",
+        sr: "Molim Vas odgovorite sa Da ili Ne da bih mogao da nastavim.",
+        hi: "कृपया Yes या No में जवाब दें ताकि मैं आगे बढ़ सकूँ।",
+        ar: "يرجى الرد بـ نعم أو لا حتى أتمكن من المتابعة.",
+        fr: "Veuillez répondre par Oui ou Non pour que je puisse continuer.",
+        pt: "Por favor, responda com Sim ou Não para que eu possa continuar.",
+    };
+
+    const currentQuestion = getQ(step, language);
+    return `${prompts[lk]}\n\n${currentQuestion}`;
 }
 
 function getOnboardingLanguageSwitchedReply(language: string, step: string): string {
@@ -1482,14 +1517,22 @@ export async function handleWhatsAppOnboarding(
 
     // ── lives_abroad ──
     if (step === "lives_abroad") {
-        collected.lives_abroad = isYes(message) ? "Yes" : "No";
+        const yesNoAnswer = parseYesNoAnswer(message);
+        if (!yesNoAnswer) {
+            return getYesNoOnboardingReprompt(lang, step);
+        }
+        collected.lives_abroad = yesNoAnswer === "yes" ? "Yes" : "No";
         await saveOnboardingState(supabase, phone, "previous_visas", collected, lang);
         return getQ("previous_visas", lang);
     }
 
     // ── previous_visas ──
     if (step === "previous_visas") {
-        collected.previous_visas = isYes(message) ? "Yes" : "No";
+        const yesNoAnswer = parseYesNoAnswer(message);
+        if (!yesNoAnswer) {
+            return getYesNoOnboardingReprompt(lang, step);
+        }
+        collected.previous_visas = yesNoAnswer === "yes" ? "Yes" : "No";
         await saveOnboardingState(supabase, phone, "passport_number", collected, lang);
         return getQ("passport_number", lang);
     }
@@ -1524,7 +1567,11 @@ export async function handleWhatsAppOnboarding(
 
     // ── has_spouse ──
     if (step === "has_spouse") {
-        collected.has_spouse = isYes(message) ? "Yes" : "No";
+        const yesNoAnswer = parseYesNoAnswer(message);
+        if (!yesNoAnswer) {
+            return getYesNoOnboardingReprompt(lang, step);
+        }
+        collected.has_spouse = yesNoAnswer === "yes" ? "Yes" : "No";
         if (collected.has_spouse === "Yes") {
             await saveOnboardingState(supabase, phone, "spouse_details", collected, lang);
             return getQ("spouse_details", lang);
@@ -1543,7 +1590,11 @@ export async function handleWhatsAppOnboarding(
 
     // ── has_children ──
     if (step === "has_children") {
-        collected.has_children = isYes(message) ? "Yes" : "No";
+        const yesNoAnswer = parseYesNoAnswer(message);
+        if (!yesNoAnswer) {
+            return getYesNoOnboardingReprompt(lang, step);
+        }
+        collected.has_children = yesNoAnswer === "yes" ? "Yes" : "No";
         if (collected.has_children === "Yes") {
             await saveOnboardingState(supabase, phone, "children_details", collected, lang);
             return getQ("children_details", lang);

@@ -1,42 +1,68 @@
 import { describe, expect, it } from "vitest";
 import {
+    attachInboundWhatsAppMessageUser,
     extractWhatsAppMessageContent,
-    isDuplicateWhatsAppInboundMessage,
     isTextLikeWhatsAppMessage,
     normalizeWhatsAppPhone,
     recordInboundWhatsAppMessage,
 } from "@/lib/whatsapp-inbound-events";
 
-function createInboundAdminClient(overrides?: {
-    duplicate?: boolean;
+function createInboundAdminClient(options?: {
+    insertError?: { code?: string; message?: string } | null;
 }) {
     const inserts: Record<string, string | null>[] = [];
+    const updates: Record<string, string>[] = [];
+    const filters: Array<Record<string, string | null>> = [];
 
     return {
         inserts,
+        updates,
+        filters,
         client: {
             from(table: string) {
                 expect(table).toBe("whatsapp_messages");
 
                 return {
-                    select() {
+                    insert(payload: Record<string, string | null>) {
+                        inserts.push(payload);
                         return {
-                            eq(_column: string, _value: string) {
+                            select() {
                                 return {
-                                    eq(_secondColumn: string, _secondValue: string) {
+                                    single: async () => {
+                                        if (options?.insertError) {
+                                            return {
+                                                data: null,
+                                                error: options.insertError,
+                                            };
+                                        }
+
                                         return {
-                                            maybeSingle: async () => ({
-                                                data: overrides?.duplicate ? { id: "msg_1" } : null,
-                                            }),
+                                            data: { id: "msg_1" },
+                                            error: null,
                                         };
                                     },
                                 };
                             },
                         };
                     },
-                    insert: async (payload: Record<string, string | null>) => {
-                        inserts.push(payload);
-                        return { error: null };
+                    update(payload: Record<string, string>) {
+                        updates.push(payload);
+                        return {
+                            eq(column: string, value: string) {
+                                filters.push({ [column]: value });
+                                return {
+                                    eq(secondColumn: string, secondValue: string) {
+                                        filters.push({ [secondColumn]: secondValue });
+                                        return {
+                                            is(thirdColumn: string, thirdValue: null) {
+                                                filters.push({ [thirdColumn]: thirdValue });
+                                                return Promise.resolve({ error: null });
+                                            },
+                                        };
+                                    },
+                                };
+                            },
+                        };
                     },
                 };
             },
@@ -75,14 +101,10 @@ describe("whatsapp-inbound-events", () => {
         expect(isTextLikeWhatsAppMessage("image")).toBe(false);
     });
 
-    it("checks inbound dedupe and records inbound rows", async () => {
-        const duplicateClient = createInboundAdminClient({ duplicate: true });
-        const freshClient = createInboundAdminClient({ duplicate: false });
+    it("records new inbound rows and reports successful inserts", async () => {
+        const freshClient = createInboundAdminClient();
 
-        expect(await isDuplicateWhatsAppInboundMessage(duplicateClient.client, "wamid_1")).toBe(true);
-        expect(await isDuplicateWhatsAppInboundMessage(freshClient.client, "wamid_2")).toBe(false);
-
-        await recordInboundWhatsAppMessage(freshClient.client, {
+        const result = await recordInboundWhatsAppMessage(freshClient.client, {
             userId: "profile_1",
             normalizedPhone: "+38166299444",
             messageType: "text",
@@ -90,6 +112,11 @@ describe("whatsapp-inbound-events", () => {
             wamid: "wamid_2",
         });
 
+        expect(result).toEqual({
+            id: "msg_1",
+            inserted: true,
+            duplicate: false,
+        });
         expect(freshClient.inserts).toEqual([
             {
                 user_id: "profile_1",
@@ -100,6 +127,44 @@ describe("whatsapp-inbound-events", () => {
                 wamid: "wamid_2",
                 status: "delivered",
             },
+        ]);
+    });
+
+    it("treats unique violations as duplicates instead of throwing", async () => {
+        const duplicateClient = createInboundAdminClient({
+            insertError: { code: "23505", message: "duplicate key value violates unique constraint" },
+        });
+
+        const result = await recordInboundWhatsAppMessage(duplicateClient.client, {
+            userId: null,
+            normalizedPhone: "+38166299444",
+            messageType: "text",
+            content: "Hello again",
+            wamid: "wamid_2",
+        });
+
+        expect(result).toEqual({
+            id: null,
+            inserted: false,
+            duplicate: true,
+        });
+    });
+
+    it("attaches user identity onto an already-recorded inbound row", async () => {
+        const client = createInboundAdminClient();
+
+        await attachInboundWhatsAppMessageUser(client.client, {
+            wamid: "wamid_attach",
+            userId: "profile_attach",
+        });
+
+        expect(client.updates).toEqual([
+            { user_id: "profile_attach" },
+        ]);
+        expect(client.filters).toEqual([
+            { wamid: "wamid_attach" },
+            { direction: "inbound" },
+            { user_id: null },
         ]);
     });
 });
