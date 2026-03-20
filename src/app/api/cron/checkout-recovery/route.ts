@@ -441,7 +441,7 @@ export async function GET(request: Request) {
                 const recipientName = profile?.full_name?.trim() || email.split("@")[0] || "Worker";
                 const recipientPhone = normalizeWorkerPhone(worker?.phone);
 
-                await queueEmail(
+                const emailResult = await queueEmail(
                     admin,
                     profileId,
                     "checkout_recovery",
@@ -455,6 +455,10 @@ export async function GET(request: Request) {
                     undefined,
                     recipientPhone || undefined
                 );
+
+                if (!emailResult.sent) {
+                    throw new Error(emailResult.error || "Checkout recovery email failed");
+                }
 
                 await logServerActivity(profileId, "checkout_recovery_sent", "payment", {
                     step: recoveryStep,

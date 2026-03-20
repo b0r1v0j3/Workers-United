@@ -86,6 +86,7 @@ export async function GET(request: Request) {
 
         let totalMatches = 0;
         let emailsSent = 0;
+        let emailFailures = 0;
 
         // Pre-fetch active offers for dedup (workerRecordId|jobId)
         const jobIds = openJobs.map(j => j.id);
@@ -168,7 +169,7 @@ export async function GET(request: Request) {
                     .eq("id", workerRow.id);
 
                 // E. Send notification with real offer link
-                await queueEmail(
+                const emailResult = await queueEmail(
                     supabase,
                     workerRow.profiles.id,
                     "job_match",
@@ -184,18 +185,31 @@ export async function GET(request: Request) {
                     }
                 );
 
+                if (emailResult.sent) {
+                    emailsSent++;
+                } else {
+                    emailFailures++;
+                    console.warn("[Job Match] Offer email queue/send failed:", {
+                        workerProfileId: workerRow.profiles.id,
+                        workerEmail: workerRow.profiles.email,
+                        offerId: offer.id,
+                        error: emailResult.error || "Unknown email queue failure",
+                    });
+                }
+
                 // Mark as active so we don't create duplicate offers in this run
                 activeOfferKeys.add(offerKey);
                 matchedWorkerRecordIds.add(workerRow.id);
                 totalMatches++;
-                emailsSent++;
             }
         }
 
         return NextResponse.json({
             success: true,
-            message: `Processed matching. Sent ${emailsSent} notifications.`,
-            matches: totalMatches
+            message: `Processed matching. Sent ${emailsSent} notifications.${emailFailures > 0 ? ` ${emailFailures} failed.` : ""}`,
+            matches: totalMatches,
+            emails_sent: emailsSent,
+            email_failures: emailFailures,
         });
 
     } catch (error) {

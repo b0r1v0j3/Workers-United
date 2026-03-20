@@ -149,4 +149,22 @@ describe("POST /api/queue-user-email", () => {
         });
         expect(queueEmail).not.toHaveBeenCalled();
     });
+
+    it("returns a truthful failure payload when queueEmail reports a send failure", async () => {
+        queueEmail.mockResolvedValueOnce({ id: "email-2", sent: false, error: "smtp_failed" });
+
+        const { POST } = await import("@/app/api/queue-user-email/route");
+
+        const response = await POST(new NextRequest("http://localhost/api/queue-user-email", {
+            method: "POST",
+            body: JSON.stringify({ emailType: "payment_success" }),
+        }));
+
+        expect(response.status).toBe(500);
+        await expect(response.json()).resolves.toMatchObject({
+            success: false,
+            queued: false,
+            error: "smtp_failed",
+        });
+    });
 });

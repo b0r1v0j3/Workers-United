@@ -63,6 +63,7 @@ export async function GET(request: Request) {
         }
 
         let processed = 0;
+        let failed = 0;
 
         // Check which users already got a document_expiring email in the last 30 days
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
             const phone = normalizeWorkerPhone(workerRecord?.phone) || undefined;
 
             // Send email via queue helper (which tries SMTP immediately)
-            await queueEmail(
+            const emailResult = await queueEmail(
                 supabase,
                 profile.id,
                 "document_expiring",
@@ -107,6 +108,13 @@ export async function GET(request: Request) {
                 undefined,
                 phone
             );
+
+            if (!emailResult.sent) {
+                failed++;
+                console.warn(`[Cron] Failed to queue/send document expiring notice for ${profile.email}: ${emailResult.error || "Unknown email queue failure"}`);
+                continue;
+            }
+
             // Mark as notified so we don't send for another doc of the same user in this batch
             recentlyNotified.add(profile.id);
             processed++;
@@ -115,7 +123,8 @@ export async function GET(request: Request) {
         return NextResponse.json({
             success: true,
             message: `Processed ${processed} expiring documents`,
-            processed_count: processed
+            processed_count: processed,
+            failed_count: failed,
         });
 
     } catch (err) {

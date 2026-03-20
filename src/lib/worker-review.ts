@@ -666,7 +666,7 @@ export async function applyWorkerApprovalAction({
             approvalState.notificationRecipient.name,
             buildWorkerPaymentUnlockedEmailData()
         );
-        notificationQueued = true;
+        notificationQueued = notificationResult.sent;
         notification = notificationResult.sent
             ? { status: "sent", error: null }
             : { status: "failed", error: notificationResult.error || "Email send failed." };

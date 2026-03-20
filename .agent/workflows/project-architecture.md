@@ -23,7 +23,7 @@ description: Full project architecture reference — tech stack, folder structur
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
 | AI (Chatbot) | **GPT-5 mini + GPT-5.4 mini** | WhatsApp AI now uses a small intent router + richer response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, shared live quality/handoff heuristics from `src/lib/whatsapp-quality.ts`, canonical `workerRecord` runtime naming, deterministic worker flows for the most common status/docs/payment/support questions, honest support auto-handoff into the real inbox for repeated paid-worker confusion, deterministic human greeting handling for both plain first-contact hellos and warmer small-talk openers like `hello how are you` / `zdravo kako si danas`, plus a conversation-aware language resolver and explicit language-switch detector so short follow-ups and direct `write in Serbian/French/Hindi` requests stay in the user's chosen language across `English / Serbian / Arabic / French / Portuguese / Hindi`; outbound template sends and failed outbound replies are now excluded from the AI history/confusion layer so proactive traffic cannot masquerade as a real assistant turn |
 | AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, failure runs are saved instead of blasting raw crash mail, and technical monitoring surfaces now live behind the owner-only `/internal` hub instead of the business admin shell |
-| Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu`; canonical send path is `queueEmail()` in `src/lib/email-templates.ts`, which records `sent/failed` state in `email_queue` and now returns explicit send outcome for cron/lifecycle callers |
+| Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu`; canonical send path is `queueEmail()` in `src/lib/email-templates.ts`, which records `sent/failed` state in `email_queue` and now returns explicit send outcome for cron/lifecycle callers so admin/API/cron flows can avoid claiming delivery when SMTP actually failed |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
 | WhatsApp | **Meta Cloud API v21.0** | Template messages, AI chatbot, delivery tracking, plus health classification that separates platform-side template failures from recipient-side delivery blocks (`undeliverable`, country restriction) |
@@ -87,7 +87,7 @@ Workers-United/
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
-│   │   │   ├── cron/          # 9 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep, reminder/expiry mailers now use the unified email queue, and checkout-recovery step-3 abandonment now targets only the specific stale pending attempt id
+│   │   │   ├── cron/          # 9 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep, reminder/expiry mailers now use the unified email queue, checkout-recovery step-3 abandonment now targets only the specific stale pending attempt id, and email-heavy crons no longer count/log queue failures as successful sends
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
 │   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback; checkout now prebuilds Stripe Customer identity context from canonical worker data, webhook + confirm-session share payment/activation/email finalization helpers, and payment telemetry persists decline/risk plus billing/card-country hints
@@ -97,7 +97,7 @@ Workers-United/
 │   │   │   ├── offers/        # Job offers
 │   │   │   ├── profile/       # Profile API + authenticated auth-contact sync route (`/api/profile/auth-contact`)
 │   │   │   ├── queue/         # auto-match
-│   │   │   ├── queue-user-email/ # Post-signup immediate email queue helper; now passes canonical welcome `recipientRole` and skips duplicate queueing when a `pending/sent` welcome already exists for the same user
+│   │   │   ├── queue-user-email/ # Post-signup immediate email queue helper; now passes canonical welcome `recipientRole`, skips duplicate queueing when a `pending/sent` welcome already exists for the same user, and returns a truthful failure payload when the unified queue reports `sent: false`
 │   │   │   ├── signatures/    # Signature storage
 │   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow); delivery-status persistence, identity resolution, OpenAI Responses transport, history-aware language/fallback handling, and employer/admin helper flows are delegated to shared helpers, while the route now consumes all Meta `entry[]/changes[]/messages[]` layers in one POST instead of only the first change, returns `500 partial_failure` so Meta retries when one branch fails, never creates ghost worker rows from WhatsApp onboarding alone, and active onboarding now honors explicit mid-flow language switches instead of storing them as profile answers
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
@@ -156,7 +156,7 @@ Workers-United/
 │   │   ├── admin-exceptions.ts # Shared technical exception snapshot helper (checkout drift, payment-quality classification, email hygiene, manual review, pending admin approval, queue/payment mismatch, employer demand)
 │   │   ├── ops-monitor.ts     # Deterministic ops-first daily monitor builder + compact alert email renderer (route health, WhatsApp, docs, email, payments, auth)
 │   │   ├── reporting.ts       # Reporting filters + email hygiene helpers (exclude Codex/test/internal-orphan payments, `.dev`/`.internal`/draft-worker contacts, typo correction suggestions, undeliverable error detection)
-│   │   ├── notifications.ts   # Email notification helpers
+│   │   ├── notifications.ts   # Offer notification helpers; unified queue/template callers now warning-log `sent: false` outcomes instead of silently treating them as success
 │   │   ├── admin.ts           # Admin utility functions
 │   │   ├── employers.ts       # Canonical employer integrity helpers: pick/ensure one employer per `profile_id`, block admin/internal sandbox employer provisioning, and hide test/admin employer rows from business admin views/search
 │   │   ├── auth-redirect.ts   # Shared post-auth provisioning + role-aware redirect resolver for callback/hash login finalize flows; queues welcome only for real deliverable contacts, now sharing a `pending + sent` welcome-email guard plus prior outbound `welcome_registration` template dedupe
@@ -205,12 +205,12 @@ Configured in `vercel.json`:
 |---|---|---|
 | `/api/cron/check-expiry` | Every hour | Check for expired sessions/tokens |
 | `/api/cron/profile-reminders` | Daily 9 AM UTC | Remind users with incomplete profiles, warn at `14 / 7 / 3` inactivity days-left, and auto-delete only after `90` days of real inactivity; worker sends skip hidden/internal/test contacts, agency draft workers without real direct contact data, and any paid/post-payment worker case |
-| `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months |
-| `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests |
+| `/api/cron/check-expiring-docs` | Daily 10 AM UTC | Alert when passport expires within 6 months; only marks a worker as notified after the unified queue reports a real successful send |
+| `/api/cron/match-jobs` | Every 6 hours | Auto-match workers to employer job requests; response metrics now separate `emails_sent` from `email_failures` instead of assuming every queue attempt succeeded |
 | `/api/cron/brain-monitor` | Daily 8 AM UTC | Deterministic ops-first daily sweep; stores a compact `brain_reports` snapshot every run and emails only when critical/high operational signals are present |
 | `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, but now stores only low-risk WhatsApp learnings (`common_question`, `error_fix`, `copy_rule`) after shared safety filtering |
 | `/api/cron/whatsapp-nudge` | Daily 11 AM UTC | WhatsApp nudges for users who need a profile/doc action; now reuses the shared worker direct-notification eligibility guard so agency/test/draft contacts are skipped the same way as email/reminder automation |
-| `/api/cron/checkout-recovery` | Every hour at :15 | Recover opened but unpaid `$9` Job Finder checkouts with `1h / 24h / 72h` follow-up and mark stale pending rows as `abandoned` |
+| `/api/cron/checkout-recovery` | Every hour at :15 | Recover opened but unpaid `$9` Job Finder checkouts with `1h / 24h / 72h` follow-up and mark stale pending rows as `abandoned`; activity logging now records real queue failures instead of logging `checkout_recovery_sent` on `sent: false` |
 | `/api/cron/system-smoke` | Every hour at :30 | Route + service smoke monitor (`/`, auth pages, `/api/health`) with critical alert cooldown; optional degraded services now surface as warnings instead of silent healthy |
 
 ---
