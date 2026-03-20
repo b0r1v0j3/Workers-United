@@ -31,6 +31,8 @@ describe('getEmailTemplate', () => {
             expect(result.subject.length).toBeGreaterThan(0);
             expect(result.html).toBeTruthy();
             expect(result.html).toContain('<!DOCTYPE html');
+            expect(result.html.match(/<!DOCTYPE html/g)?.length).toBe(1);
+            expect(result.html).not.toContain('img.icons8.com');
         }
     });
 
@@ -106,6 +108,25 @@ describe('getEmailTemplate', () => {
         expect(html).toContain('#7');
     });
 
+    it('job_offer and job_match stay in the monochrome system without colored gradients', () => {
+        const { html: offerHtml } = getEmailTemplate('job_offer', {
+            name: 'Nikola',
+            jobTitle: 'Warehouse Worker',
+            companyName: 'Steel Concept',
+            country: 'Serbia',
+        });
+        const { html: matchHtml } = getEmailTemplate('job_match', {
+            name: 'Nikola',
+            jobTitle: 'Warehouse Worker',
+            industry: 'Logistics',
+            location: 'Belgrade',
+            salary: '€2200',
+            offerLink: 'https://workersunited.eu/profile/worker/offers/123',
+        });
+        expect(offerHtml).not.toContain('linear-gradient(90deg, #3B82F6 0%, #10B981 100%)');
+        expect(matchHtml).not.toContain('linear-gradient(90deg, #3B82F6 0%, #10B981 100%)');
+    });
+
     it('payment_success uses the premium monochrome queue layout', () => {
         const { html } = getEmailTemplate('payment_success', {
             name: 'Nikola',
@@ -113,7 +134,8 @@ describe('getEmailTemplate', () => {
         });
         expect(html).toContain('What Happens Next');
         expect(html).toContain('Current Status');
-        expect(html).not.toContain('rocket.png');
+        expect(html).toContain('Stay connected');
+        expect(html).toContain('Facebook');
     });
 
     it('checkout_recovery uses the premium monochrome activation layout', () => {
@@ -180,7 +202,7 @@ describe('getEmailTemplate', () => {
             missingFields: 'Phone number, passport upload',
         });
         expect(html).toContain('Why This Matters');
-        expect(html).not.toContain('edit-property.png');
+        expect(html).not.toContain('img.icons8.com');
     });
 
     it('announcement_document_fix uses the updated monochrome system-fix layout', () => {
@@ -188,7 +210,15 @@ describe('getEmailTemplate', () => {
             name: 'Nikola',
         });
         expect(html).toContain('Next Step');
-        expect(html).not.toContain('settings.png');
+        expect(html).not.toContain('img.icons8.com');
+    });
+
+    it('welcome email uses numbered journey steps instead of external icons', () => {
+        const { html } = getEmailTemplate('welcome', { name: 'Marko' });
+        expect(html).toContain('Your Journey');
+        expect(html).toMatch(/>\s*1\s*</);
+        expect(html).toMatch(/>\s*2\s*</);
+        expect(html).not.toContain('img.icons8.com');
     });
 
     it('employer_outreach uses the shared monochrome employer campaign layout', () => {
