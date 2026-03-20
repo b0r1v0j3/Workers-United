@@ -36,7 +36,11 @@ function getSingleSearchParam(value: string | string[] | undefined) {
     return Array.isArray(value) ? value[0] : value;
 }
 
-function getDocumentActionBanner(action: string | undefined, error: string | undefined) {
+function getDocumentActionBanner(
+    action: string | undefined,
+    error: string | undefined,
+    notification: string | undefined
+) {
     if (error) {
         return {
             tone: "amber" as const,
@@ -55,6 +59,22 @@ function getDocumentActionBanner(action: string | undefined, error: string | und
                 icon: <Check size={18} />,
             };
         case "requested":
+            if (notification === "failed") {
+                return {
+                    tone: "amber" as const,
+                    title: "Worker re-upload requested, email failed",
+                    copy: "The current file was removed, but the replacement-request email failed to send. Check email health or resend from preview if needed.",
+                    icon: <AlertTriangle size={18} />,
+                };
+            }
+            if (notification === "skipped") {
+                return {
+                    tone: "blue" as const,
+                    title: "Worker re-upload requested",
+                    copy: "The current file was removed. No worker email was sent because this case does not currently have a direct-notification recipient.",
+                    icon: <Mail size={18} />,
+                };
+            }
             return {
                 tone: "blue" as const,
                 title: "Worker re-upload requested",
@@ -131,7 +151,8 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     const resolvedSearchParams = searchParams ? await searchParams : {};
     const documentAction = getSingleSearchParam(resolvedSearchParams.documentAction);
     const documentError = getSingleSearchParam(resolvedSearchParams.documentError);
-    const documentActionBanner = getDocumentActionBanner(documentAction, documentError);
+    const documentNotification = getSingleSearchParam(resolvedSearchParams.documentNotification);
+    const documentActionBanner = getDocumentActionBanner(documentAction, documentError, documentNotification);
     const approvalAction = getSingleSearchParam(resolvedSearchParams.approvalAction);
     const approvalNotification = getSingleSearchParam(resolvedSearchParams.approvalNotification);
     const approvalError = getSingleSearchParam(resolvedSearchParams.approvalError);

@@ -98,12 +98,21 @@ async function resolveNotificationProfile(admin: ReturnType<typeof createAdminCl
         .then((result) => result.data);
 }
 
-function redirectWithAction(request: Request, redirectTo: string | null | undefined, action: string, error?: string) {
+function redirectWithAction(
+    request: Request,
+    redirectTo: string | null | undefined,
+    action: string,
+    error?: string,
+    notification?: EmailNotificationResult
+) {
     const url = new URL(redirectTo || "/admin/workers", request.url);
     url.searchParams.set("documentAction", action);
     url.searchParams.set("ts", Date.now().toString());
     if (error) {
         url.searchParams.set("documentError", error);
+    }
+    if (notification?.status) {
+        url.searchParams.set("documentNotification", notification.status);
     }
     return NextResponse.redirect(url, { status: 303 });
 }
@@ -246,8 +255,9 @@ async function handleStructuredFormAction(
                 }, "warning");
             }
 
+            let notificationResult: Awaited<ReturnType<typeof queueEmail>> | null = null;
             if (userProfile?.email && notificationProfileId) {
-                await queueEmail(
+                notificationResult = await queueEmail(
                     admin,
                     notificationProfileId,
                     "document_review_result",
@@ -262,7 +272,13 @@ async function handleStructuredFormAction(
             }
 
             revalidatePath(redirectTo);
-            return redirectWithAction(request, redirectTo, "requested");
+            return redirectWithAction(
+                request,
+                redirectTo,
+                "requested",
+                undefined,
+                getEmailNotificationResult(notificationResult, userProfile?.email, notificationProfileId)
+            );
         }
 
         revalidatePath(redirectTo);
