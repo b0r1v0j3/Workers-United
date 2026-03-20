@@ -30,6 +30,7 @@ import {
     formatWhatsAppHistory,
     loadWhatsAppBrainMemory,
     loadWhatsAppConversationHistory,
+    maybeEscalateWhatsAppReplyDeliveryFailure,
     truncateWhatsAppPreview,
 } from "@/lib/whatsapp-conversation-helpers";
 
@@ -214,6 +215,102 @@ describe("whatsapp-conversation-helpers", () => {
                 reason: "support_loop",
                 conversation_id: "conv_1",
                 language: "English",
+            }),
+            "warning"
+        );
+    });
+
+    it("creates a support flag after repeated retryable reply delivery failures", async () => {
+        ensureSupportConversation.mockResolvedValue({
+            conversation: { id: "conv_reply_1" },
+        });
+        appendConversationMessage.mockResolvedValue({
+            message: { id: "msg_reply_1" },
+        });
+
+        const insert = vi.fn().mockResolvedValue({ data: null, error: null });
+        const recentFailureRows = [
+            {
+                action: "whatsapp_reply_delivery_failed",
+                created_at: "2026-03-20T09:05:00.000Z",
+                details: {
+                    phone: "+381600000000",
+                    retryable: true,
+                },
+            },
+            {
+                action: "whatsapp_reply_delivery_failed",
+                created_at: "2026-03-20T09:00:00.000Z",
+                details: {
+                    phone: "+381600000000",
+                    retryable: true,
+                },
+            },
+        ];
+        const recentHandoffRows: unknown[] = [];
+        const admin = {
+            from(table: string) {
+                if (table === "user_activity") {
+                    const filters: Record<string, string> = {};
+                    return {
+                        select() {
+                            const query = {
+                                eq(field: string, value: string) {
+                                    filters[field] = value;
+                                    return query;
+                                },
+                                gte() {
+                                    return query;
+                                },
+                                order() {
+                                    return query;
+                                },
+                                limit: async () => ({
+                                    data: filters.action === "whatsapp_reply_delivery_failed"
+                                        ? recentFailureRows
+                                        : recentHandoffRows,
+                                    error: null,
+                                }),
+                            };
+                            return query;
+                        },
+                    };
+                }
+                if (table === "conversation_flags") {
+                    return { insert };
+                }
+                throw new Error(`Unexpected table: ${table}`);
+            },
+        };
+
+        const conversationId = await maybeEscalateWhatsAppReplyDeliveryFailure({
+            admin: admin as never,
+            profileId: "worker_1",
+            role: "worker",
+            normalizedPhone: "+381600000000",
+            failureContext: "ai_reply",
+            failureCategory: "platform",
+            replyPreview: "Please try again in a minute.",
+        });
+
+        expect(conversationId).toBe("conv_reply_1");
+        expect(ensureSupportConversation).toHaveBeenCalledWith(admin, "worker_1", "worker");
+        expect(String(appendConversationMessage.mock.calls.at(-1)?.[4] || "")).toContain("[WhatsApp reply delivery failure]");
+        expect(insert).toHaveBeenCalledWith({
+            conversation_id: "conv_reply_1",
+            message_id: "msg_reply_1",
+            flag_type: "whatsapp_reply_delivery_failure",
+        });
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "worker_1",
+            "whatsapp_reply_delivery_handoff_created",
+            "messaging",
+            expect.objectContaining({
+                phone: "+381600000000",
+                failure_category: "platform",
+                failure_context: "ai_reply",
+                reply_failure_count: 2,
+                conversation_id: "conv_reply_1",
             }),
             "warning"
         );
