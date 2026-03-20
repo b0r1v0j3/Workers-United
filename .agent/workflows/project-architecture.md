@@ -72,7 +72,7 @@ Workers-United/
 │   │   │   ├── queue/         # Queue operations screen with shared admin hero, 90-day watch, and inspect-vs-case actions
 │   │   │   ├── jobs/          # Smart Match Hub with shared admin hero/guidance wrapper around matching client
 │   │   │   ├── announcements/ # Bulk email sender; now reuses the shared admin-announcements helper instead of a page-local recipient/send loop
-│   │   │   ├── whatsapp-blast/ # Admin proactive WhatsApp blast surface for unpaid worker nudges; now reuses the shared blast helper/eligibility guard
+│   │   │   ├── whatsapp-blast/ # Admin proactive WhatsApp blast surface for Job Finder unlock reminders; now reuses the shared blast helper, strict payment-readiness gate, and truthful ready/paid count labels
 │   │   │   ├── refunds/       # Refund management
 │   │   │   └── settings/      # Platform settings
 │   │   ├── internal/          # Owner-only technical hub kept outside the business admin flow
@@ -83,7 +83,7 @@ Workers-United/
 │   │   │   └── email-preview/ # Internal email template sandbox; reuses the shared email-preview workspace while keeping owner-only shortcuts and query-driven payload previews separate from the business admin shell
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
-│   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API, authenticated `send-campaign` outreach dispatch via `queueEmail()`, authenticated WhatsApp blast dispatch via the shared blast helper/eligibility guard, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
+│   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API, authenticated `send-campaign` outreach dispatch via `queueEmail()`, authenticated WhatsApp blast dispatch via the shared blast helper/strict payment-readiness gate, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
@@ -163,7 +163,7 @@ Workers-United/
 │   │   ├── workers.ts         # Canonical worker lookup + normalization helpers (duplicate-safe worker record selection over legacy physical worker table via `worker_onboarding`, phone normalization, storage filename sanitization)
 │   │   ├── worker-notification-eligibility.ts # Shared guard for worker direct email/WhatsApp automations; blocks hidden draft owners, internal/test addresses, and agency drafts without real worker email+phone
 │   │   ├── admin-announcements.ts # Shared admin bulk-announcement/document-fix recipient loader + deliverable-email dedupe + worker eligibility guard + queueEmail dispatch + audit logging
-│   │   ├── whatsapp-blast.ts # Shared admin WhatsApp blast target loader + canonical worker dedupe + direct-notification eligibility guard + announcement/status fallback send path + audit logging
+│   │   ├── whatsapp-blast.ts # Shared admin WhatsApp blast target loader + canonical worker dedupe + direct-notification eligibility guard + strict payment-readiness gating via `payment-eligibility` + announcement/status fallback send path + audit logging
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
 │   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging, failed-send error capture)
