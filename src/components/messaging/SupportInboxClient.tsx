@@ -62,7 +62,7 @@ const SUPPORT_COPY: Record<
         previewTitle: "Support inbox is disabled in admin preview.",
         previewDescription: "Worker preview stays read-only. Use the real admin inbox to inspect and reply to live support threads without touching the admin profile.",
         lockedTitle: "Support unlocks after Job Finder payment",
-        lockedDescription: "Pay $9, activate Job Finder, and your support inbox will open automatically.",
+        lockedDescription: "Complete your profile and required documents, wait for admin approval, and then finish the $9 Job Finder checkout. Your support inbox opens automatically after that payment.",
         primaryHref: "/profile/worker",
         primaryLabel: "Go to Worker Profile",
         secondaryHref: "/profile/worker/queue",
