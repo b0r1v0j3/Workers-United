@@ -9,6 +9,10 @@ import {
 
 function createInboundAdminClient(options?: {
     insertError?: { code?: string; message?: string } | null;
+    attachError?: { message?: string } | null;
+    attachRows?: Array<{ id: string }> | null;
+    lookupError?: { message?: string } | null;
+    lookupRow?: { id: string; user_id: string | null } | null;
 }) {
     const inserts: Record<string, string | null>[] = [];
     const updates: Record<string, string>[] = [];
@@ -47,22 +51,52 @@ function createInboundAdminClient(options?: {
                     },
                     update(payload: Record<string, string>) {
                         updates.push(payload);
-                        return {
+                        const query = {
+                            select() {
+                                return query;
+                            },
                             eq(column: string, value: string) {
                                 filters.push({ [column]: value });
+                                return query;
+                            },
+                            is(column: string, value: null) {
+                                filters.push({ [column]: value });
+                                if (options?.attachError) {
+                                    return Promise.resolve({
+                                        data: null,
+                                        error: options.attachError,
+                                    });
+                                }
+                                return Promise.resolve({
+                                    data: options?.attachRows ?? [{ id: "msg_attach" }],
+                                    error: null,
+                                });
+                            },
+                        };
+                        return query;
+                    },
+                    select() {
+                        const query = {
+                            eq(column: string, value: string) {
+                                filters.push({ [column]: value });
+                                return query;
+                            },
+                            maybeSingle: async () => {
+                                if (options?.lookupError) {
+                                    return {
+                                        data: null,
+                                        error: options.lookupError,
+                                    };
+                                }
                                 return {
-                                    eq(secondColumn: string, secondValue: string) {
-                                        filters.push({ [secondColumn]: secondValue });
-                                        return {
-                                            is(thirdColumn: string, thirdValue: null) {
-                                                filters.push({ [thirdColumn]: thirdValue });
-                                                return Promise.resolve({ error: null });
-                                            },
-                                        };
-                                    },
+                                    data: Object.prototype.hasOwnProperty.call(options || {}, "lookupRow")
+                                        ? options?.lookupRow ?? null
+                                        : { id: "msg_attach", user_id: "profile_attach" },
+                                    error: null,
                                 };
                             },
                         };
+                        return query;
                     },
                 };
             },
@@ -153,11 +187,16 @@ describe("whatsapp-inbound-events", () => {
     it("attaches user identity onto an already-recorded inbound row", async () => {
         const client = createInboundAdminClient();
 
-        await attachInboundWhatsAppMessageUser(client.client, {
+        const result = await attachInboundWhatsAppMessageUser(client.client, {
             wamid: "wamid_attach",
             userId: "profile_attach",
         });
 
+        expect(result).toEqual({
+            attached: true,
+            alreadyAttached: false,
+            messageId: "msg_attach",
+        });
         expect(client.updates).toEqual([
             { user_id: "profile_attach" },
         ]);
@@ -166,5 +205,37 @@ describe("whatsapp-inbound-events", () => {
             { direction: "inbound" },
             { user_id: null },
         ]);
+    });
+
+    it("treats already-linked inbound rows as durable success on duplicate delivery retries", async () => {
+        const client = createInboundAdminClient({
+            attachRows: [],
+            lookupRow: { id: "msg_existing", user_id: "profile_attach" },
+        });
+
+        const result = await attachInboundWhatsAppMessageUser(client.client, {
+            wamid: "wamid_attach",
+            userId: "profile_attach",
+        });
+
+        expect(result).toEqual({
+            attached: false,
+            alreadyAttached: true,
+            messageId: "msg_existing",
+        });
+    });
+
+    it("throws when the inbound row is missing instead of silently pretending attach succeeded", async () => {
+        const client = createInboundAdminClient({
+            attachRows: [],
+            lookupRow: null,
+        });
+
+        await expect(
+            attachInboundWhatsAppMessageUser(client.client, {
+                wamid: "wamid_missing",
+                userId: "profile_attach",
+            })
+        ).rejects.toThrow("was not found");
     });
 });

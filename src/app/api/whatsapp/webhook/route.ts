@@ -274,6 +274,29 @@ export async function POST(request: NextRequest) {
                     const content = extractWhatsAppMessageContent(message);
                     const normalizedPhone = normalizeWhatsAppPhone(phoneNumber);
 
+                    if (!normalizedPhone || !wamid) {
+                        hadProcessingError = true;
+                        console.error("[WhatsApp Webhook] Malformed inbound message payload:", {
+                            phone: phoneNumber || null,
+                            normalizedPhone,
+                            wamid: wamid || null,
+                            messageType: messageType || null,
+                        });
+                        await logServerActivity(
+                            "anonymous",
+                            "whatsapp_webhook_message_malformed",
+                            "error",
+                            {
+                                phone: phoneNumber || null,
+                                normalized_phone: normalizedPhone || null,
+                                wamid: wamid || null,
+                                message_type: messageType || null,
+                            },
+                            "error"
+                        );
+                        continue;
+                    }
+
                     try {
                         const inboundRecord = await recordInboundWhatsAppMessage(supabase, {
                             userId: null,
@@ -282,11 +305,7 @@ export async function POST(request: NextRequest) {
                             content,
                             wamid,
                         });
-
-                        if (inboundRecord.duplicate) {
-                            console.log(`[Webhook] Duplicate wamid ${wamid} — skipping`);
-                            continue;
-                        }
+                        const isDuplicateInboundMessage = inboundRecord.duplicate;
 
                         const workerRecordSelect = `
                             id, profile_id, status, queue_position, preferred_job, 
@@ -324,14 +343,45 @@ export async function POST(request: NextRequest) {
                                 : null;
 
                         if (activityUserId) {
+                            let attachFailed = false;
                             try {
-                                await attachInboundWhatsAppMessageUser(supabase, {
+                                const attachResult = await attachInboundWhatsAppMessageUser(supabase, {
                                     wamid,
                                     userId: activityUserId,
                                 });
+                                if (isDuplicateInboundMessage && attachResult.attached) {
+                                    console.warn("[WhatsApp Webhook] Repaired missing inbound user identity on duplicate delivery:", {
+                                        wamid,
+                                        userId: activityUserId,
+                                        phone: normalizedPhone,
+                                    });
+                                }
                             } catch (attachError) {
+                                hadProcessingError = true;
                                 console.error("[WhatsApp Webhook] Failed to attach inbound user identity:", attachError);
+                                await logServerActivity(
+                                    activityUserId || "anonymous",
+                                    "whatsapp_inbound_identity_attach_failed",
+                                    "messaging",
+                                    {
+                                        phone: normalizedPhone,
+                                        wamid,
+                                        error: attachError instanceof Error ? attachError.message : "unknown",
+                                        duplicate_delivery: isDuplicateInboundMessage,
+                                    },
+                                    "error"
+                                );
+                                attachFailed = true;
                             }
+
+                            if (attachFailed) {
+                                continue;
+                            }
+                        }
+
+                        if (isDuplicateInboundMessage) {
+                            console.log(`[Webhook] Duplicate wamid ${wamid} — skipping reply`);
+                            continue;
                         }
 
                         // Log to activity tracking
