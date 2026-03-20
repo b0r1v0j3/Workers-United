@@ -7,7 +7,7 @@ import { isGodModeUser } from "@/lib/godmode";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { checkRateLimit, standardLimiter } from "@/lib/rate-limit";
 import { AGENCY_DRAFT_DOCUMENT_OWNER_KEY, resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
-import { buildPlatformUrl } from "@/lib/platform-contact";
+import { buildPlatformUrl, normalizePlatformSupportEmail } from "@/lib/platform-contact";
 
 // ─── Request Manual Review ──────────────────────────────────────────────────
 // When AI rejects a document but user believes it's correct,
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
                 admin,
                 targetProfileId,
                 "admin_update",
-                process.env.ADMIN_EMAIL || "contact@workersunited.eu",
+                normalizePlatformSupportEmail(process.env.ADMIN_EMAIL),
                 "Admin",
                 {
                     subject: `Manual Review Needed: ${docLabel} for ${workerLabel}`,

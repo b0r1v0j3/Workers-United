@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json, Tables, TablesInsert } from "@/lib/database.types";
 import type { ContractDataForDocs } from "@/lib/pdf-generator";
+import { normalizePlatformSupportEmail } from "@/lib/platform-contact";
 
 type DBClient = SupabaseClient<Database>;
 type WorkerRecord = Tables<"worker_onboarding">;
@@ -188,7 +189,7 @@ function buildPersistedContractDataPayload(
             build.storedContractData?.signing_date || new Date()
         ),
         contact_email: asText(
-            build.storedContractData?.contact_email || "contact@workersunited.eu"
+            normalizePlatformSupportEmail(build.storedContractData?.contact_email)
         ),
         contact_phone: asText(
             build.storedContractData?.contact_phone || build.employer.contact_phone
@@ -271,7 +272,7 @@ function buildContractDocumentPayload(build: Omit<ContractBuildResult, "contract
         end_date: endDate,
         signing_date: signingDate,
         contact_email: asText(
-            build.storedContractData?.contact_email || "contact@workersunited.eu"
+            normalizePlatformSupportEmail(build.storedContractData?.contact_email)
         ),
         contact_phone: asText(
             build.storedContractData?.contact_phone || build.employer.contact_phone

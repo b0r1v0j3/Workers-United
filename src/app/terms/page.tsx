@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_PLATFORM_SUPPORT_EMAIL, DEFAULT_PLATFORM_WEBSITE_URL } from "@/lib/platform-contact";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 import Footer from "@/components/Footer";
 import {
@@ -49,7 +50,7 @@ export default async function TermsPage() {
                 <div className="space-y-12">
 
                     <TermsSection title="1. Agreement to Terms" icon={FileText} colorClass="bg-blue-50 text-blue-600">
-                        <p className="mb-4">By accessing or using <a href="https://workersunited.eu" className="text-[#0066CC] hover:underline">https://workersunited.eu</a> (&quot;the Platform&quot;), you agree to be bound by these Terms and Conditions. If you do not agree, you must not use the Platform.</p>
+                        <p className="mb-4">By accessing or using <a href={DEFAULT_PLATFORM_WEBSITE_URL} className="text-[#0066CC] hover:underline">{DEFAULT_PLATFORM_WEBSITE_URL}</a> (&quot;the Platform&quot;), you agree to be bound by these Terms and Conditions. If you do not agree, you must not use the Platform.</p>
                         <p>These Terms apply to all users of the Platform, including workers, employers, and visitors.</p>
                     </TermsSection>
 
@@ -163,7 +164,7 @@ export default async function TermsPage() {
                             <li><strong className="text-[#1D1D1F]">Entry fee ($9 USD):</strong> Fully refundable if a worker is not matched with an employer within 90 days of payment.</li>
                             <li><strong className="text-[#1D1D1F]">Placement fee:</strong> Non-refundable once the visa application process has been initiated, as costs are incurred for document preparation and government fees.</li>
                         </ul>
-                        <p className="mt-4">Refund requests should be directed to <a href="mailto:contact@workersunited.eu" className="text-[#0066CC] hover:underline">contact@workersunited.eu</a>. Approved refunds will be processed within 10 business days to the original payment method.</p>
+                        <p className="mt-4">Refund requests should be directed to <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="text-[#0066CC] hover:underline">{DEFAULT_PLATFORM_SUPPORT_EMAIL}</a>. Approved refunds will be processed within 10 business days to the original payment method.</p>
                     </TermsSection>
 
                     <TermsSection title="14. Limitation of Liability" icon={AlertTriangle} colorClass="bg-red-50 text-red-600">
@@ -196,8 +197,8 @@ export default async function TermsPage() {
                         <div className="bg-[#F5F5F7] rounded-3xl p-8">
                             <p className="font-semibold text-[#1D1D1F] text-xl mb-2">Workers United LLC</p>
                             <p className="text-[#424245] mb-6 text-lg">75 E 3rd St., Sheridan, Wyoming 82801, USA</p>
-                            <a href="mailto:contact@workersunited.eu" className="inline-flex items-center gap-2 text-[#0066CC] font-medium text-lg hover:underline">
-                                <span>contact@workersunited.eu</span>
+                            <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="inline-flex items-center gap-2 text-[#0066CC] font-medium text-lg hover:underline">
+                                <span>{DEFAULT_PLATFORM_SUPPORT_EMAIL}</span>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                             </a>
                         </div>

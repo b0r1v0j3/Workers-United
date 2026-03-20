@@ -62,9 +62,9 @@ const WHATSAPP_ONBOARDING_PATTERN = /fill.*profile.*whatsapp|complete.*profile.*
 const SERBIAN_LATIN_PATTERN = /\b(pozdrav|zdravo|cao|ćao|dobar dan|dobro vece|dobro veče|dobro jutro|hvala|molim|ocu|hoću|hocu|zelim|želim|treba mi|trebam|trazim|tražim|kako|kako da|kako radi|kako funkcionise|kako funkcioniše|sta|šta|zasto|zašto|gde|gdje|kad|imam|nemam|mogu li|moze li|može li|pomoc|pomoć|problem|sajt|nalog|broj|cekam|čekam|poruka|prijava|prijavim|registracija|posao|radnik|radnike|radim|koliko|kosta|košta|cena|cijena|dokumenti|dokumenta|dokumenata|pasos|pasoš|red cekanja|čekanja|odobren|odobreno|uplata|uplate|platim|placanje|plaćanje|koji je|sta je|šta je|da li je|mog profila|moj profil|profila|pomoc oko|pomo[cć] oko|voza[cč]|gra[dđ]evin|skladi|magacin|spanij|nemack|nemačk|srpski|engleski|jezik|jezici)\b/i;
 const EMPLOYER_LEAD_PATTERN = /\b(employer|company|business|firm|hire|hiring|recruit(ing|er)?|need workers|looking for workers|we need workers|we are hiring|poslodavac|firma|kompanija|zapo[sš]ljavamo|treba(?:ju)? nam radnici|tra[zž]imo radnike)\b/i;
 const WORKER_LEAD_PATTERN = /\b(worker|job|work abroad|looking for a job|looking for work|need a job|i want a job|radnik|posao|tra[zž]im posao|ocu posao|ho[ćc]u posao|[zž]elim posao|radim kao|imam iskustva)\b/i;
-const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|koliko|kosta|košta|cena|cijena|platim|platiti|uplata|placanje|plaćanje)\b/i;
-const DOCUMENT_HINT_PATTERN = /\b(document|documents|passport|diploma|photo|upload|verification|dokumenti|dokumenta|pasos|pasoš|diploma|slika|fotografija|upload|verifikacija)\b/i;
-const STATUS_HINT_PATTERN = /\b(status|profile|approval|approved|queue|support|profil|odobren|odobreno|red|podrska|podrška)\b/i;
+const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|prix|paiement|co[uû]t|pre[cç]o|preco|custo|pagamento|valor|koliko|kosta|košta|cena|cijena|platim|platiti|uplata|placanje|plaćanje|शुल्क|भुगतान|سعر|تكلفة|دفع)\b/i;
+const DOCUMENT_HINT_PATTERN = /\b(document|documents|docs?|documentos?|passport|passeport|passaporte|diploma|photo|biometric|biom[eé]trique|biom[ée]trica|upload|verification|dokumenti|dokumenta|pasos|pasoš|slika|fotografija|verifikacija|पासपोर्ट|दस्तावेज|جواز|مستند)\b/i;
+const STATUS_HINT_PATTERN = /\b(status|statut|profile|profil|perfil|approval|approved|review|queue|support|mon profil|meu perfil|status dos meus|stanje|odobren|odobreno|red|podrska|podrška|स्थिति|حالة|مراجعة)\b/i;
 const JOB_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|ocu posao|ho[ćc]u posao|tra[zž]im posao|looking for work|looking for a job)\b/i;
 const SPECIFIC_AVAILABILITY_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|open job|open position|what jobs|which jobs|koji poslovi|lista poslova|available workers list)\b/i;
 const PROCESS_HINT_PATTERN = /\b(how does it work|how it works|process|steps|next step|how do i start|kako radi|kako funkcioni[sš]e|kako ide|koji su koraci|sledeci korak|sledeći korak|kako da krenem)\b/i;
@@ -382,6 +382,18 @@ export function looksLikeGreetingOnlyWhatsAppMessage(message: string): boolean {
 export function looksLikeWarmGreetingWhatsAppMessage(message: string): boolean {
     const normalized = message.trim();
     return Object.values(WARM_GREETING_PATTERNS).some((patterns) => matchesAnyPattern(normalized, patterns));
+}
+
+export function looksLikeWhatsAppPriceQuestion(message: string): boolean {
+    return PRICE_HINT_PATTERN.test(message.trim().toLowerCase());
+}
+
+export function looksLikeWhatsAppDocumentQuestion(message: string): boolean {
+    return DOCUMENT_HINT_PATTERN.test(message.trim().toLowerCase());
+}
+
+export function looksLikeWhatsAppStatusQuestion(message: string): boolean {
+    return STATUS_HINT_PATTERN.test(message.trim().toLowerCase());
 }
 
 export function buildUnregisteredWorkerWhatsAppReply({

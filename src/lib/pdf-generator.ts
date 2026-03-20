@@ -1,6 +1,7 @@
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { normalizePlatformSupportEmail } from "@/lib/platform-contact";
 
 // Re-export styles registration (must be imported so fonts are registered)
 import "./pdf-templates/styles";
@@ -272,7 +273,7 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
         SIGNING_DATE_EN: formatDateEN(data.signing_date),
 
         // Contact
-        CONTACT_EMAIL: data.contact_email || "contact@workersunited.eu",
+        CONTACT_EMAIL: normalizePlatformSupportEmail(data.contact_email),
         CONTACT_PHONE: data.contact_phone || "",
 
         // Accommodation & signing location

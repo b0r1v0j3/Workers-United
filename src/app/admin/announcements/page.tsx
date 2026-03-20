@@ -6,6 +6,7 @@ import AppShell from "@/components/AppShell";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { normalizeUserType } from "@/lib/domain";
 import { loadAnnouncementTargets, sendAdminAnnouncement, type AnnouncementAudience } from "@/lib/admin-announcements";
+import { buildPlatformUrl } from "@/lib/platform-contact";
 
 async function ensureAdminUser() {
     const supabase = await createClient();
@@ -74,6 +75,7 @@ export default async function AnnouncementsPage({
     const sentCount = parseInt(params.sent || "0", 10);
     const failedCount = parseInt(params.failed || "0", 10);
     const totalCount = parseInt(params.total || "0", 10);
+    const actionLinkPlaceholder = buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/profile/worker");
 
     return (
         <AppShell user={user} variant="admin">
@@ -174,7 +176,7 @@ export default async function AnnouncementsPage({
                                 <input
                                     type="text"
                                     name="action_link"
-                                        placeholder="e.g., https://workersunited.eu/profile/worker"
+                                    placeholder={`e.g., ${actionLinkPlaceholder}`}
                                     className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
                             </div>

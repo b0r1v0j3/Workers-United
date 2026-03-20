@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { DEFAULT_PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-contact";
 import { toast } from "sonner";
 
 interface AuthErrorState {
@@ -204,8 +205,8 @@ export default function AuthCodeErrorClient({ authError }: { authError: AuthErro
                         ) : null}
                         <p className="text-[#94a3b8] text-sm font-medium">
                             Need help? Contact{" "}
-                            <a href="mailto:contact@workersunited.eu" className="text-[#2f6fed] font-semibold hover:underline">
-                                contact@workersunited.eu
+                            <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="text-[#2f6fed] font-semibold hover:underline">
+                                {DEFAULT_PLATFORM_SUPPORT_EMAIL}
                             </a>
                         </p>
                     </div>

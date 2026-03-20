@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-contact";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 import Footer from "@/components/Footer";
 import {
@@ -53,7 +54,7 @@ export default async function PrivacyPolicyPage() {
                         <div className="bg-[#F5F5F7] rounded-2xl p-6 mb-2">
                             <p className="font-semibold text-[#1D1D1F] text-lg">Workers United LLC</p>
                             <p className="text-[#424245] mb-1">75 E 3rd St., Sheridan, Wyoming 82801, USA</p>
-                            <p className="text-[#424245]">Email: <a href="mailto:contact@workersunited.eu" className="text-[#0066CC] hover:underline">contact@workersunited.eu</a></p>
+                            <p className="text-[#424245]">Email: <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="text-[#0066CC] hover:underline">{DEFAULT_PLATFORM_SUPPORT_EMAIL}</a></p>
                         </div>
                         <p className="mt-4">For any privacy-related inquiries or to exercise your rights, please contact us at the email address above.</p>
                     </PolicySection>
@@ -181,7 +182,7 @@ export default async function PrivacyPolicyPage() {
                             <li><strong className="text-[#1D1D1F]">Right to Object (Article 21):</strong> You can object to the processing of your data based on legitimate interest.</li>
                             <li><strong className="text-[#1D1D1F]">Right to Withdraw Consent:</strong> You can withdraw your consent at any time by deleting your account. This does not affect the lawfulness of processing before withdrawal.</li>
                         </ul>
-                        <p className="mt-6">To exercise any of these rights, please contact us at <a href="mailto:contact@workersunited.eu" className="text-[#0066CC] hover:underline">contact@workersunited.eu</a> or use the self-service options in your account settings.</p>
+                        <p className="mt-6">To exercise any of these rights, please contact us at <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="text-[#0066CC] hover:underline">{DEFAULT_PLATFORM_SUPPORT_EMAIL}</a> or use the self-service options in your account settings.</p>
                     </PolicySection>
 
                     <PolicySection title="9. Data Security" icon={Shield} colorClass="bg-slate-100 text-slate-600">
@@ -223,7 +224,7 @@ export default async function PrivacyPolicyPage() {
 
                     <PolicySection title="15. Right to Lodge a Complaint" icon={Flag} colorClass="bg-red-50 text-red-600">
                         <p className="mb-4">If you believe we have not handled your personal data properly, you have the right to lodge a complaint with a data protection supervisory authority. You may contact the supervisory authority in the EU member state where you reside, work, or where the alleged infringement occurred.</p>
-                        <p>You can also contact us directly at <a href="mailto:contact@workersunited.eu" className="text-[#0066CC] hover:underline">contact@workersunited.eu</a> and we will do our best to resolve your concern.</p>
+                        <p>You can also contact us directly at <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="text-[#0066CC] hover:underline">{DEFAULT_PLATFORM_SUPPORT_EMAIL}</a> and we will do our best to resolve your concern.</p>
                     </PolicySection>
 
                     {/* Contact Section */}
@@ -233,8 +234,8 @@ export default async function PrivacyPolicyPage() {
                         <div className="bg-[#F5F5F7] rounded-3xl p-8">
                             <p className="font-semibold text-[#1D1D1F] text-xl mb-2">Workers United LLC</p>
                             <p className="text-[#424245] mb-6 text-lg">75 E 3rd St., Sheridan, Wyoming 82801, USA</p>
-                            <a href="mailto:contact@workersunited.eu" className="inline-flex items-center gap-2 text-[#0066CC] font-medium text-lg hover:underline">
-                                <span>contact@workersunited.eu</span>
+                            <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="inline-flex items-center gap-2 text-[#0066CC] font-medium text-lg hover:underline">
+                                <span>{DEFAULT_PLATFORM_SUPPORT_EMAIL}</span>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                             </a>
                         </div>

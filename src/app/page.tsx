@@ -2,6 +2,12 @@ import Link from "next/link";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 import Footer from "@/components/Footer";
 import {
+  DEFAULT_PLATFORM_SUPPORT_EMAIL,
+  buildPlatformUrl,
+  buildPlatformWhatsAppUrl,
+  normalizePlatformWebsiteUrl,
+} from "@/lib/platform-contact";
+import {
   ArrowRight,
   BadgeCheck,
   BriefcaseBusiness,
@@ -14,6 +20,7 @@ import {
 } from "lucide-react";
 
 export default function Home() {
+  const siteUrl = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
   const workerProcessSteps = [
     "Create your account and complete the essentials so we can open your case properly.",
     "We search for the right employer match and stay ready for the next real opening.",
@@ -48,8 +55,8 @@ export default function Home() {
             "@context": "https://schema.org",
             "@type": "Organization",
             name: "Workers United",
-            url: "https://workersunited.eu",
-            logo: "https://workersunited.eu/logo-complete-transparent.png",
+            url: siteUrl,
+            logo: buildPlatformUrl(siteUrl, "/logo-complete-transparent.png"),
             description: "Workers United connects serious employers with reliable workers worldwide and guides both sides through the full work visa process.",
             address: {
               "@type": "PostalAddress",
@@ -61,7 +68,7 @@ export default function Home() {
             },
             contactPoint: {
               "@type": "ContactPoint",
-              email: "contact@workersunited.eu",
+              email: DEFAULT_PLATFORM_SUPPORT_EMAIL,
               contactType: "customer service",
             },
             sameAs: [
@@ -69,7 +76,7 @@ export default function Home() {
               "https://www.instagram.com/workersunited.eu",
               "https://www.linkedin.com/company/workers-united-eu",
               "https://www.tiktok.com/@workersunited.eu",
-              "https://wa.me/15557839521",
+              buildPlatformWhatsAppUrl(),
             ],
           }),
         }}

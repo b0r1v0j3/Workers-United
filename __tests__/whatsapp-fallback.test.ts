@@ -46,6 +46,15 @@ describe("whatsapp-fallback", () => {
         expect(reply).not.toContain("Job Finder costs");
     });
 
+    it("routes French prix questions to the price fallback branch", async () => {
+        const reply = await getWhatsAppFallbackResponse("Quel est le prix ?", null, {
+            full_name: "Ali Worker",
+        }, "French");
+
+        expect(reply).toContain("Job Finder coûte");
+        expect(reply).not.toContain("Create your account");
+    });
+
     it("keeps locked workers on the admin-review/payment gate", async () => {
         const reply = await getWhatsAppFallbackResponse("payment", {
             status: "PENDING_APPROVAL",
@@ -74,6 +83,21 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("Envie os documentos");
         expect(reply).toContain("Os anexos do WhatsApp");
         expect(reply).not.toContain("Upload documents at");
+    });
+
+    it("routes Portuguese passaporte questions to the documents fallback branch", async () => {
+        const reply = await getWhatsAppFallbackResponse("Preciso enviar passaporte", {
+            status: "NEW",
+            entry_fee_paid: false,
+            admin_approved: false,
+            queue_joined_at: null,
+        }, {
+            full_name: "Ali Worker",
+        }, "Portuguese");
+
+        expect(reply).toContain("Envie os documentos");
+        expect(reply).toContain("passaporte");
+        expect(reply).not.toContain("Seu status é");
     });
 
     it("returns the stricter diploma/document guidance", async () => {
@@ -152,5 +176,21 @@ describe("whatsapp-fallback", () => {
         });
 
         expect(reply).toContain("https://workersunited.example/signup");
+    });
+
+    it("keeps fallback status replies human-friendly and localized", async () => {
+        const reply = await getWhatsAppFallbackResponse("Quel est le statut ?", {
+            status: "PENDING_APPROVAL",
+            queue_position: 4,
+            entry_fee_paid: false,
+            admin_approved: false,
+            queue_joined_at: null,
+        }, {
+            full_name: "Ali Worker",
+        }, "French");
+
+        expect(reply).toContain("profil en validation admin");
+        expect(reply).toContain("Position dans la file: #4.");
+        expect(reply).not.toContain("PENDING_APPROVAL");
     });
 });

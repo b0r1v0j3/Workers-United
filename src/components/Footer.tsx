@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buildPlatformWhatsAppUrl } from "@/lib/platform-contact";
 
 export default function Footer() {
     const year = new Date().getFullYear();
@@ -20,7 +21,7 @@ export default function Footer() {
             src: "https://img.icons8.com/ios-filled/50/threads.png"
         },
         {
-            href: "https://wa.me/15557839521",
+            href: buildPlatformWhatsAppUrl(),
             label: "WhatsApp",
             src: "https://img.icons8.com/fluency/48/whatsapp.png"
         },

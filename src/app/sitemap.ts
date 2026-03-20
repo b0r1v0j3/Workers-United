@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
+import { buildPlatformUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = "https://workersunited.eu";
+    const baseUrl = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
 
     return [
         {
@@ -11,25 +12,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
             priority: 1,
         },
         {
-            url: `${baseUrl}/login`,
+            url: buildPlatformUrl(baseUrl, "/login"),
             lastModified: new Date(),
             changeFrequency: "monthly",
             priority: 0.8,
         },
         {
-            url: `${baseUrl}/signup`,
+            url: buildPlatformUrl(baseUrl, "/signup"),
             lastModified: new Date(),
             changeFrequency: "monthly",
             priority: 0.8,
         },
         {
-            url: `${baseUrl}/privacy-policy`,
+            url: buildPlatformUrl(baseUrl, "/privacy-policy"),
             lastModified: new Date(),
             changeFrequency: "monthly",
             priority: 0.3,
         },
         {
-            url: `${baseUrl}/terms`,
+            url: buildPlatformUrl(baseUrl, "/terms"),
             lastModified: new Date(),
             changeFrequency: "monthly",
             priority: 0.3,

@@ -6,6 +6,9 @@ import CookieConsent from "@/components/CookieConsent";
 import ToastProvider from "@/components/ToastProvider";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import PageTracker from "@/components/PageTracker";
+import { normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
+
+const SITE_URL = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
 
 
 const montserrat = Montserrat({
@@ -15,7 +18,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://workersunited.eu"),
+  metadataBase: new URL(SITE_URL),
   title: "Workers United – Legal International Hiring & Visa Support",
   description:
     "Workers United connects serious employers with reliable workers worldwide and guides both sides through the full work visa process – without fake promises or hidden conditions.",
@@ -35,7 +38,7 @@ export const metadata: Metadata = {
     description:
       "Transparent process. Full legal work visa guidance for international workers and companies.",
     type: "website",
-    url: "https://workersunited.eu",
+    url: SITE_URL,
     siteName: "Workers United",
     images: [
       {

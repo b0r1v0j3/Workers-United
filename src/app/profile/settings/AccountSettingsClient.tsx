@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { DEFAULT_PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-contact";
 import {
     AlertTriangle,
     Download,
@@ -225,8 +226,8 @@ export default function AccountSettingsClient() {
 
             <section className="rounded-[22px] border border-blue-200 bg-blue-50 px-5 py-4 text-sm leading-relaxed text-blue-800">
                 <strong>Your GDPR rights:</strong> You have the right to access, rectify, delete, and export your personal data at any time. For privacy-related questions, contact{" "}
-                <a href="mailto:contact@workersunited.eu" className="font-semibold underline-offset-2 hover:underline">
-                    contact@workersunited.eu
+                <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="font-semibold underline-offset-2 hover:underline">
+                    {DEFAULT_PLATFORM_SUPPORT_EMAIL}
                 </a>
                 .
             </section>
