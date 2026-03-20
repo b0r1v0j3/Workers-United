@@ -1,3 +1,8 @@
+import {
+    normalizePlatformSupportEmail,
+    normalizePlatformWebsiteUrl,
+} from "@/lib/platform-config";
+
 export interface CanonicalWhatsAppFactsOptions {
     supportEmail?: string;
     website?: string;
@@ -171,6 +176,13 @@ function normalizeBrainLearningContent(content: string): string {
 
 function matchesAnyPattern(value: string, patterns: readonly RegExp[]): boolean {
     return patterns.some((pattern) => pattern.test(value));
+}
+
+function normalizeWhatsAppPublicContact(options: CanonicalWhatsAppFactsOptions = {}) {
+    return {
+        website: normalizePlatformWebsiteUrl(options.website),
+        supportEmail: normalizePlatformSupportEmail(options.supportEmail),
+    };
 }
 
 export function detectExplicitWhatsAppLanguagePreference(message: string): WhatsAppLanguageCode | null {
@@ -389,6 +401,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
     requiredDocuments?: string;
     isFirstContact?: boolean;
 }): string | null {
+    ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     const normalized = message.trim().toLowerCase();
     const lang = resolveWhatsAppLanguageCode(message, language, historyMessages);
     const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
@@ -572,6 +585,7 @@ export function buildRegisteredWorkerWhatsAppReply({
     website = "workersunited.eu",
     supportEmail = "contact@workersunited.eu",
 }: RegisteredWorkerWhatsAppReplyOptions): string | null {
+    ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     const normalized = message.trim().toLowerCase();
     const lang = resolveWhatsAppLanguageCode(message, language, historyMessages);
     const isGreetingOnly = looksLikeGreetingOnlyWhatsAppMessage(message);
@@ -881,6 +895,7 @@ export function buildWhatsAppAutoHandoffReply({
     website?: string;
     supportEmail?: string;
 }): string {
+    ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     const lang = getLanguageCodeFromLabel(language) || detectWhatsAppLanguageCode(language);
 
     if (!hasSupportAccess) {
@@ -920,6 +935,7 @@ export function buildCanonicalWhatsAppFacts({
     supportEmail = "contact@workersunited.eu",
     website = "workersunited.eu",
 }: CanonicalWhatsAppFactsOptions = {}): string {
+    ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     return [
         "- Workers United is a full-service hiring and visa-support platform that works through guided matching.",
         "- Job Finder is a paid search service: the worker registers a profile first, then Workers United searches for a suitable match during the 90-day service period.",
@@ -942,6 +958,7 @@ export function buildWorkerWhatsAppRules({
     website = "workersunited.eu",
     supportEmail = "contact@workersunited.eu",
 }: WorkerWhatsAppRulesOptions): string {
+    ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     return `IMPORTANT: You MUST reply in ${language}. Always match the language of the user's latest message.
 
 Current routed intent: ${intent}
@@ -979,6 +996,7 @@ export function buildEmployerWhatsAppRules({
     employerStatus = "",
     website = "workersunited.eu",
 }: EmployerWhatsAppRulesOptions): string {
+    website = normalizePlatformWebsiteUrl(website);
     const employerContext = isRegistered
         ? `Registered employer: YES\nCompany: ${companyName || "(unknown)"}\nContact: ${contactName || "(unknown)"}\nStatus: ${employerStatus || "unknown"}`
         : "Registered employer: NO (new contact)";

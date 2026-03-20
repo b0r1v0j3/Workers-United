@@ -5,7 +5,7 @@ import {
     resolveWhatsAppLanguageCode,
 } from "@/lib/whatsapp-brain";
 import { isWorkerPaymentUnlocked } from "@/lib/whatsapp-reply-guardrails";
-import { getPlatformConfig } from "@/lib/platform-config";
+import { getPlatformConfig, getPlatformContactInfoFromConfig } from "@/lib/platform-config";
 
 type WhatsAppFallbackLanguage = "sr" | "hi" | "ar" | "fr" | "pt" | "en";
 
@@ -39,9 +39,10 @@ export async function getWhatsAppFallbackResponse(
     const msg = message.toLowerCase().trim();
     const name = profile?.full_name?.split(" ")[0] || "there";
     const config = await getPlatformConfig();
+    const contactInfo = getPlatformContactInfoFromConfig(config);
 
     const entryFee = config.entry_fee || "$9";
-    const website = config.website_url || "workersunited.eu";
+    const website = contactInfo.websiteUrl;
     const greetingEn = config.bot_greeting_en || "Welcome to Workers United! 🌍 We help workers through the full job-search and visa process in Europe.";
     const greetingSr = config.bot_greeting_sr || "Dobrodošli u Workers United! 🌍 Pomažemo radnicima kroz ceo proces traženja posla i vize u Evropi.";
     const fallbackLang = resolveFallbackLanguage(message, preferredLanguage, historyMessages);

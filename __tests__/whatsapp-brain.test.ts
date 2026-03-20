@@ -39,6 +39,27 @@ describe("whatsapp-brain guards", () => {
         expect(facts).toContain("Document uploads and screenshots are not processed as WhatsApp attachments yet");
     });
 
+    it("normalizes bare website values before composing WhatsApp facts and rules", () => {
+        const facts = buildCanonicalWhatsAppFacts({
+            website: "portal.example",
+            supportEmail: "ops@example.com",
+        });
+        const rules = buildWorkerWhatsAppRules({
+            language: "English",
+            intent: "general",
+            confidence: "high",
+            reason: "Greeting-only first contact",
+            isAdmin: false,
+            website: "portal.example",
+            supportEmail: "ops@example.com",
+        });
+
+        expect(facts).toContain("https://portal.example/signup");
+        expect(facts).toContain("ops@example.com");
+        expect(rules).toContain("https://portal.example/signup");
+        expect(rules).toContain("ops@example.com");
+    });
+
     it("forbids premature payment links and fake escalation promises", () => {
         const rules = buildWorkerWhatsAppRules({
             language: "English",
