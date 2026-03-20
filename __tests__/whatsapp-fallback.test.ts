@@ -4,9 +4,13 @@ const { getPlatformConfig } = vi.hoisted(() => ({
     getPlatformConfig: vi.fn(),
 }));
 
-vi.mock("@/lib/platform-config", () => ({
-    getPlatformConfig,
-}));
+vi.mock("@/lib/platform-config", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/platform-config")>("@/lib/platform-config");
+    return {
+        ...actual,
+        getPlatformConfig,
+    };
+});
 
 import { getWhatsAppFallbackResponse } from "@/lib/whatsapp-fallback";
 
@@ -133,5 +137,20 @@ describe("whatsapp-fallback", () => {
 
         expect(reply).toContain("Bienvenue");
         expect(reply).not.toContain("Welcome to Workers United");
+    });
+
+    it("normalizes bare platform website URLs before composing fallback links", async () => {
+        getPlatformConfig.mockResolvedValue({
+            entry_fee: "$9",
+            website_url: "workersunited.example",
+            bot_greeting_en: "Welcome to Workers United!",
+            bot_greeting_sr: "Dobrodošli u Workers United!",
+        });
+
+        const reply = await getWhatsAppFallbackResponse("price please", null, {
+            full_name: "Ali Worker",
+        });
+
+        expect(reply).toContain("https://workersunited.example/signup");
     });
 });
