@@ -22,7 +22,7 @@ export function buildWorkerPaymentUnlockedEmailData(): TemplateData {
     return {
         subject: "Job Finder Is Now Unlocked",
         title: "Profile Approved",
-        message: "Your profile has been approved by our team. Job Finder checkout is now unlocked in your dashboard, so you can activate the $9 service whenever you are ready.",
+        message: "Your profile has been approved by our team. Job Finder checkout is now unlocked in your dashboard, so you can complete the $9 Job Finder checkout whenever you are ready.",
         actionText: "Open Job Finder",
         actionLink: buildPlatformUrl(BASE_URL, "/profile/worker"),
     };
