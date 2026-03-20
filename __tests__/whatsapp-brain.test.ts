@@ -110,6 +110,15 @@ describe("whatsapp-brain guards", () => {
         expect(detectWhatsAppLanguageCode("كيفك")).toBe("ar");
     });
 
+    it("does not misclassify French, Portuguese, or English status questions as Serbian", () => {
+        expect(detectWhatsAppLanguageCode("Qual é o status dos meus documentos?")).toBe("pt");
+        expect(detectWhatsAppLanguageCode("Quel est le statut de mon profil?")).toBe("fr");
+        expect(detectWhatsAppLanguageCode("J’ai besoin d’aide pour mes documents")).toBe("fr");
+        expect(detectWhatsAppLanguageCode("What is my status?")).toBe("en");
+        expect(detectWhatsAppLanguageCode("passport and document")).toBe("en");
+        expect(detectWhatsAppLanguageCode("Koji je status mog profila?")).toBe("sr");
+    });
+
     it("detects explicit language-switch requests and keeps the requested language", () => {
         expect(resolveWhatsAppLanguageName("Pisi na srpskom", "English")).toBe("Serbian");
         expect(resolveWhatsAppLanguageName("Reply in French", "English")).toBe("French");
