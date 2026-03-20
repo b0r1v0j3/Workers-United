@@ -797,7 +797,7 @@ export default function AgencyWorkerClient({
                         )}
                         {!readOnlyPreview && needsCompletion && (
                             <p className="mt-4 rounded-2xl border border-[#e7e5e4] bg-[#fafaf9] px-4 py-3 text-sm text-[#57534e]">
-                                Payment stays locked until the profile reaches 100% and all 3 documents are uploaded.
+                                Payment stays locked until the profile reaches 100% and all 3 documents are verified.
                             </p>
                         )}
                         {readOnlyPreview && <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">Payments are disabled in admin preview.</p>}
