@@ -1243,15 +1243,15 @@ function isCancelOnboarding(msg: string): boolean {
     return /^(cancel|stop|exit|quit|start over|restart|reset|otkaži|otkazi|prekini|izađi|izadji|odustani|ispočetka|ispocetka|annuler|arr[êe]ter|recommencer|cancelar|parar|reiniciar|إلغاء|الغاء|توقف|ابدأ من جديد|cancel karo|band karo|ruk jao|restart karo|शुरू से|रद्द)/.test(l);
 }
 
-function getOnboardingCancelledReply(language: string, workerProfileUrl: string): string {
+function getOnboardingCancelledReply(language: string, signupUrl: string): string {
     const lk = getLangKey(language);
     const messages: Record<LangKey, string> = {
-        en: `No problem — I stopped the WhatsApp profile flow. If you want to continue later, say that you want to fill in your profile on WhatsApp, or use ${workerProfileUrl}.`,
-        sr: `Nema problema — zaustavio sam popunjavanje profila preko WhatsApp-a. Ako želite kasnije da nastavite, recite da želite da popunite profil na WhatsApp-u ili koristite ${workerProfileUrl}.`,
-        hi: `कोई बात नहीं — मैंने WhatsApp profile flow रोक दिया है। अगर बाद में जारी रखना हो, तो लिखें कि आप WhatsApp पर profile भरना चाहते हैं, या ${workerProfileUrl} खोलें।`,
-        ar: `لا مشكلة — أوقفتُ تعبئة الملف عبر WhatsApp. إذا أردت المتابعة لاحقًا، أخبرني أنك تريد ملء الملف على WhatsApp أو استخدم ${workerProfileUrl}.`,
-        fr: `Pas de problème — j’ai arrêté le remplissage du profil sur WhatsApp. Si vous voulez continuer plus tard, dites que vous voulez remplir votre profil sur WhatsApp ou utilisez ${workerProfileUrl}.`,
-        pt: `Sem problema — parei o preenchimento do perfil pelo WhatsApp. Se quiser continuar depois, diga que quer preencher o perfil no WhatsApp ou use ${workerProfileUrl}.`,
+        en: `No problem — I stopped the WhatsApp profile flow. If you want to continue later, say that you want to fill in your profile on WhatsApp, or use ${signupUrl}.`,
+        sr: `Nema problema — zaustavio sam popunjavanje profila preko WhatsApp-a. Ako želite kasnije da nastavite, recite da želite da popunite profil na WhatsApp-u ili koristite ${signupUrl}.`,
+        hi: `कोई बात नहीं — मैंने WhatsApp profile flow रोक दिया है। अगर बाद में जारी रखना हो, तो लिखें कि आप WhatsApp पर profile भरना चाहते हैं, या ${signupUrl} खोलें।`,
+        ar: `لا مشكلة — أوقفتُ تعبئة الملف عبر WhatsApp. إذا أردت المتابعة لاحقًا، أخبرني أنك تريد ملء الملف على WhatsApp أو استخدم ${signupUrl}.`,
+        fr: `Pas de problème — j’ai arrêté le remplissage du profil sur WhatsApp. Si vous voulez continuer plus tard, dites que vous voulez remplir votre profil sur WhatsApp ou utilisez ${signupUrl}.`,
+        pt: `Sem problema — parei o preenchimento do perfil pelo WhatsApp. Se quiser continuar depois, diga que quer preencher o perfil no WhatsApp ou use ${signupUrl}.`,
     };
     return messages[lk];
 }
@@ -1567,7 +1567,7 @@ export async function handleWhatsAppOnboarding(
 
     if (state && isCancelOnboarding(message)) {
         await clearOnboardingState(supabase, phone);
-        return getOnboardingCancelledReply(lang, workerProfileUrl);
+        return getOnboardingCancelledReply(lang, signupUrl);
     }
 
     if (isRegisteredWorker) {
@@ -1663,12 +1663,12 @@ export async function handleWhatsAppOnboarding(
             await clearOnboardingState(supabase, phone);
             const lk = getLangKey(lang);
             const msgs: Record<LangKey, string> = {
-                en: `No problem! You can fill in your profile at ${workerProfileUrl} whenever you're ready. I'm here if you have questions.`,
-                sr: `Nema problema! Profil možete popuniti na ${workerProfileUrl} kada budete spremni. Tu sam ako imate pitanja.`,
-                hi: `कोई बात नहीं! आप ${workerProfileUrl} पर जाकर अपना प्रोफ़ाइल भर सकते हैं। कोई सवाल हो तो बताएं।`,
-                ar: `لا بأس! يمكنك ملء ملفك الشخصي على ${workerProfileUrl} متى كنت مستعدًا.`,
-                fr: `Pas de problème! Vous pouvez remplir votre profil sur ${workerProfileUrl} quand vous êtes prêt.`,
-                pt: `Sem problema! Você pode preencher seu perfil em ${workerProfileUrl} quando estiver pronto.`,
+                en: `No problem! You can start your profile at ${signupUrl} whenever you're ready. I'm here if you have questions.`,
+                sr: `Nema problema! Profil možete započeti na ${signupUrl} kada budete spremni. Tu sam ako imate pitanja.`,
+                hi: `कोई बात नहीं! आप ${signupUrl} पर जाकर अपना profile शुरू कर सकते हैं। कोई सवाल हो तो बताएं।`,
+                ar: `لا بأس! يمكنك بدء ملفك الشخصي على ${signupUrl} متى كنت مستعدًا.`,
+                fr: `Pas de problème ! Vous pouvez commencer votre profil sur ${signupUrl} quand vous êtes prêt.`,
+                pt: `Sem problema! Você pode iniciar seu perfil em ${signupUrl} quando estiver pronto.`,
             };
             return msgs[lk];
         }
@@ -1910,20 +1910,20 @@ export async function handleWhatsAppOnboarding(
         const name = collected.full_name?.split(" ")[0] || "";
         const lk = getLangKey(lang);
         const savedToWorkerMessage: Record<LangKey, string> = {
-            en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder* — then we start searching for your job across Europe!\n\n👉 ${workerProfileUrl}\n\nWe'll also need your documents (passport photo, biometric photo, and a final school, university, or formal vocational diploma) — you can upload them on the website. If you have any questions, I'm here!`,
-            sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 ${workerProfileUrl}\n\nTreba nam i vaša dokumentacija (fotografija pasoša, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
-            hi: `धन्यवाद, ${name}! 🎉 आपका प्रोफ़ाइल सहेज लिया गया है।\n\nअंतिम चरण है वेबसाइट पर रजिस्टर करना और *Job Finder* सक्रिय करना — फिर हम पूरे यूरोप में आपके लिए नौकरी खोजना शुरू करते हैं!\n\n👉 ${workerProfileUrl}`,
-            ar: `شكراً، ${name}! 🎉 تم حفظ ملفك الشخصي.\n\nالخطوة الأخيرة هي التسجيل على الموقع وتفعيل *Job Finder* — ثم نبدأ في البحث عن وظيفة لك في جميع أنحاء أوروبا!\n\n👉 ${workerProfileUrl}`,
-            fr: `Merci, ${name}! 🎉 Votre profil a été sauvegardé.\n\nLa dernière étape est de vous inscrire sur le site et d'activer *Job Finder* — puis nous commençons à chercher votre emploi dans toute l'Europe!\n\n👉 ${workerProfileUrl}`,
-            pt: `Obrigado, ${name}! 🎉 Seu perfil foi salvo.\n\nO último passo é se registrar no site e ativar o *Job Finder* — então começamos a procurar seu emprego em toda a Europa!\n\n👉 ${workerProfileUrl}`,
+            en: `Thank you, ${name}! 🎉 Your WhatsApp answers have been saved to your worker profile.\n\nThe next step is to open your worker dashboard and activate *Job Finder* — then we start searching for your job across Europe!\n\n👉 ${workerProfileUrl}\n\nWe'll also need your documents (passport photo, biometric photo, and a final school, university, or formal vocational diploma) — you can upload them there. If you have any questions, I'm here!`,
+            sr: `Hvala, ${name}! 🎉 Vaši WhatsApp odgovori su sačuvani na vaš worker profil.\n\nSledeći korak je da otvorite worker dashboard i aktivirate *Job Finder* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 ${workerProfileUrl}\n\nTreba nam i vaša dokumentacija (fotografija pasoša, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma) — možete je dodati tamo. Ako imate pitanja, tu sam!`,
+            hi: `धन्यवाद, ${name}! 🎉 आपके WhatsApp जवाब आपके worker profile में सेव हो गए हैं।\n\nअगला step है अपना worker dashboard खोलना और *Job Finder* activate करना — फिर हम पूरे यूरोप में आपके लिए job ढूँढना शुरू करते हैं!\n\n👉 ${workerProfileUrl}\n\nहमें आपके documents भी चाहिए होंगे (passport photo, biometric photo, और final school, university, या formal vocational diploma) — आप उन्हें वहीं upload कर सकते हैं।`,
+            ar: `شكراً، ${name}! 🎉 تم حفظ إجاباتك من WhatsApp في ملف العامل الخاص بك.\n\nالخطوة التالية هي فتح لوحة العامل وتفعيل *Job Finder* — وبعدها نبدأ البحث عن وظيفة لك في أنحاء أوروبا.\n\n👉 ${workerProfileUrl}\n\nسنحتاج أيضاً إلى مستنداتك (صورة جواز السفر، الصورة البيومترية، والشهادة النهائية المدرسية أو الجامعية أو المهنية الرسمية) ويمكنك رفعها هناك.`,
+            fr: `Merci, ${name}! 🎉 Vos réponses WhatsApp ont été enregistrées dans votre profil travailleur.\n\nLa prochaine étape est d’ouvrir votre tableau de bord travailleur et d’activer *Job Finder* — ensuite nous commençons à chercher votre emploi dans toute l’Europe.\n\n👉 ${workerProfileUrl}\n\nNous aurons aussi besoin de vos documents (photo du passeport, photo biométrique et diplôme final scolaire, universitaire ou professionnel officiel) — vous pouvez les téléverser là-bas.`,
+            pt: `Obrigado, ${name}! 🎉 Suas respostas do WhatsApp foram salvas no seu perfil de worker.\n\nO próximo passo é abrir seu painel de worker e ativar o *Job Finder* — depois começamos a procurar seu emprego em toda a Europa.\n\n👉 ${workerProfileUrl}\n\nTambém vamos precisar dos seus documentos (foto do passaporte, foto biométrica e diploma final escolar, universitário ou profissional formal) — você pode enviá-los por lá.`,
         };
         const draftOnlyMessage: Record<LangKey, string> = {
-            en: `Thank you, ${name}! 🎉 I saved your answers in this WhatsApp draft for now.\n\nYour real worker account still starts on the website, so please register and continue there:\n\n👉 ${workerProfileUrl}\n\nAfter that, upload your passport photo, biometric photo, and a final school, university, or formal vocational diploma on the website to continue.`,
-            sr: `Hvala, ${name}! 🎉 Sačuvao sam vaše odgovore ovde u WhatsApp nacrtu za sada.\n\nVaš pravi worker nalog ipak počinje na sajtu, zato se registrujte i nastavite tamo:\n\n👉 ${workerProfileUrl}\n\nPosle toga dodajte fotografiju pasoša, biometrijsku fotografiju i završnu školsku, univerzitetsku ili formalnu stručnu diplomu na sajtu da biste nastavili dalje.`,
-            hi: `धन्यवाद, ${name}! 🎉 मैंने आपके जवाब फिलहाल इस WhatsApp draft में सेव कर दिए हैं।\n\nलेकिन आपका असली worker account वेबसाइट पर शुरू होता है, इसलिए वहाँ register करें और वहीं आगे बढ़ें:\n\n👉 ${workerProfileUrl}`,
-            ar: `شكراً، ${name}! 🎉 لقد حفظت إجاباتك مؤقتاً في مسودة WhatsApp هذه.\n\nلكن حساب العامل الحقيقي يبدأ على الموقع، لذلك يرجى التسجيل والمتابعة هناك:\n\n👉 ${workerProfileUrl}`,
-            fr: `Merci, ${name}! 🎉 J’ai enregistré vos réponses pour l’instant dans ce brouillon WhatsApp.\n\nMais votre vrai compte travailleur commence sur le site, alors inscrivez-vous et continuez là-bas :\n\n👉 ${workerProfileUrl}`,
-            pt: `Obrigado, ${name}! 🎉 Salvei suas respostas por enquanto neste rascunho do WhatsApp.\n\nMas sua conta real de worker começa no site, então registre-se e continue por lá:\n\n👉 ${workerProfileUrl}`,
+            en: `Thank you, ${name}! 🎉 I saved your answers in this WhatsApp draft for now.\n\nYour real worker account still starts on the website, so please register and continue there:\n\n👉 ${signupUrl}\n\nAfter that, upload your passport photo, biometric photo, and a final school, university, or formal vocational diploma on the website to continue.`,
+            sr: `Hvala, ${name}! 🎉 Sačuvao sam vaše odgovore ovde u WhatsApp nacrtu za sada.\n\nVaš pravi worker nalog ipak počinje na sajtu, zato se registrujte i nastavite tamo:\n\n👉 ${signupUrl}\n\nPosle toga dodajte fotografiju pasoša, biometrijsku fotografiju i završnu školsku, univerzitetsku ili formalnu stručnu diplomu na sajtu da biste nastavili dalje.`,
+            hi: `धन्यवाद, ${name}! 🎉 मैंने आपके जवाब फिलहाल इस WhatsApp draft में सेव कर दिए हैं।\n\nलेकिन आपका असली worker account वेबसाइट पर शुरू होता है, इसलिए वहाँ register करें और वहीं आगे बढ़ें:\n\n👉 ${signupUrl}`,
+            ar: `شكراً، ${name}! 🎉 لقد حفظت إجاباتك مؤقتاً في مسودة WhatsApp هذه.\n\nلكن حساب العامل الحقيقي يبدأ على الموقع، لذلك يرجى التسجيل والمتابعة هناك:\n\n👉 ${signupUrl}`,
+            fr: `Merci, ${name}! 🎉 J’ai enregistré vos réponses pour l’instant dans ce brouillon WhatsApp.\n\nMais votre vrai compte travailleur commence sur le site, alors inscrivez-vous et continuez là-bas :\n\n👉 ${signupUrl}`,
+            pt: `Obrigado, ${name}! 🎉 Salvei suas respostas por enquanto neste rascunho do WhatsApp.\n\nMas sua conta real de worker começa no site, então registre-se e continue por lá:\n\n👉 ${signupUrl}`,
         };
         return savedToLinkedWorker ? savedToWorkerMessage[lk] : draftOnlyMessage[lk];
     }

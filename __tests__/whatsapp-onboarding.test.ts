@@ -146,7 +146,34 @@ describe("handleWhatsAppOnboarding", () => {
             }
         );
 
-        expect(reply).toContain("https://portal.example/profile/worker");
+        expect(reply).toContain("https://portal.example/signup");
+    });
+
+    it("uses signup entry for ask-start deferral replies", async () => {
+        const { client, store } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "ask_start",
+            collected_data: {},
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "no",
+            null,
+            "en",
+            [],
+            {
+                signupUrl: "https://portal.example/signup",
+                workerProfileUrl: "https://portal.example/profile/worker",
+            }
+        );
+
+        expect(reply).toContain("https://portal.example/signup");
+        expect(reply).not.toContain("https://portal.example/profile/worker");
+        expect(store.cleared).toBe(1);
     });
 
     it("switches onboarding language mid-flow instead of consuming the request as field data", async () => {
@@ -330,10 +357,61 @@ describe("handleWhatsAppOnboarding", () => {
         );
 
         expect(reply).toContain("saved your answers in this WhatsApp draft");
-        expect(reply).toContain("workersunited.eu/profile/worker");
+        expect(reply).toContain("workersunited.eu/signup");
         expect(store.cleared).toBe(0);
         expect((store.state as Record<string, unknown>)?.current_step).toBe("done");
         expect(update).not.toHaveBeenCalled();
+    });
+
+    it("sends linked workers back to their dashboard instead of telling them to register again", async () => {
+        const { client, store } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "desired_countries",
+            collected_data: {
+                full_name: "Ali Worker",
+                nationality: "Ghanaian",
+                preferred_job: "Construction",
+            },
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const updateEq = vi.fn().mockResolvedValue({ error: null });
+        const update = vi.fn(() => ({ eq: updateEq }));
+        const single = vi.fn().mockResolvedValue({
+            data: { id: "worker_1", profile_id: "profile_1" },
+        });
+        const eq = vi.fn(() => ({ single }));
+        const select = vi.fn(() => ({ eq }));
+
+        createAdminClient.mockReturnValue({
+            from(table: string) {
+                expect(table).toBe("workers");
+                return {
+                    select,
+                    update,
+                };
+            },
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "Germany, Serbia",
+            null,
+            "en",
+            [],
+            {
+                signupUrl: "https://portal.example/signup",
+                workerProfileUrl: "https://portal.example/profile/worker",
+            }
+        );
+
+        expect(reply).toContain("saved to your worker profile");
+        expect(reply).toContain("https://portal.example/profile/worker");
+        expect(reply).not.toContain("register on our website");
+        expect(store.cleared).toBe(1);
+        expect(update).toHaveBeenCalled();
     });
 
     it("normalizes bare NEXT_PUBLIC_BASE_URL for onboarding fallback links when platform contact is missing", async () => {
@@ -357,7 +435,7 @@ describe("handleWhatsAppOnboarding", () => {
                 "en"
             );
 
-            expect(reply).toContain("https://portal.example/profile/worker");
+            expect(reply).toContain("https://portal.example/signup");
         } finally {
             process.env.NEXT_PUBLIC_BASE_URL = originalBaseUrl;
         }
