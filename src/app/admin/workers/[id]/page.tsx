@@ -126,6 +126,15 @@ function getApprovalActionBanner(
             };
         }
 
+        if (notification === "queued") {
+            return {
+                tone: "blue" as const,
+                title: "Worker approved, email queued",
+                copy: "Job Finder is unlocked. The approval email hit a retry path and is queued to be delivered automatically.",
+                icon: <Mail size={18} />,
+            };
+        }
+
         return {
             tone: "emerald" as const,
             title: "Worker approved",

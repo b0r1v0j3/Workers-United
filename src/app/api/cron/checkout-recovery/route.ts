@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { queueEmail } from "@/lib/email-templates";
 import { logServerActivity } from "@/lib/activityLoggerServer";
@@ -456,17 +457,23 @@ export async function GET(request: Request) {
                     recipientPhone || undefined
                 );
 
-                if (!emailResult.sent) {
+                if (!isEmailDeliveryAccepted(emailResult)) {
                     throw new Error(emailResult.error || "Checkout recovery email failed");
                 }
 
-                await logServerActivity(profileId, "checkout_recovery_sent", "payment", {
+                await logServerActivity(
+                    profileId,
+                    emailResult.sent ? "checkout_recovery_sent" : "checkout_recovery_queued",
+                    "payment",
+                    {
                     step: recoveryStep,
                     payment_id: pendingEntry.payment.id,
                     stripe_session_id: pendingEntry.payment.stripe_checkout_session_id,
                     hours_since_checkout: Math.floor(hoursSinceCheckout),
+                    delivery_status: emailResult.status,
                     channel: recipientPhone ? "email+whatsapp" : "email",
-                });
+                    }
+                );
 
                 remindersQueued++;
 

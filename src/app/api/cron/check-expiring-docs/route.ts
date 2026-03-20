@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { queueEmail } from '@/lib/email-templates';
+import { isEmailDeliveryAccepted } from '@/lib/email-queue';
+import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from '@/lib/reporting';
+import { canSendWorkerDirectNotifications } from '@/lib/worker-notification-eligibility';
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord } from '@/lib/workers';
+
+type ExpiringDocWorkerRow = {
+    profile_id: string | null;
+    agency_id: string | null;
+    submitted_email: string | null;
+    phone: string | null;
+    updated_at?: string | null;
+    entry_fee_paid?: boolean | null;
+};
 
 // Cron job to notify users about expiring documents
 // Set this to run daily via Vercel Cron or external trigger
@@ -49,12 +61,12 @@ export async function GET(request: Request) {
         const { data: workerRows } = profileIds.length > 0
             ? await supabase
                 .from("worker_onboarding")
-                .select("profile_id, phone, updated_at, entry_fee_paid")
+                .select("profile_id, agency_id, submitted_email, phone, updated_at, entry_fee_paid")
                 .in("profile_id", profileIds)
-            : { data: [] as Array<{ profile_id: string | null; phone: string | null; updated_at?: string | null; entry_fee_paid?: boolean | null }> };
+            : { data: [] as ExpiringDocWorkerRow[] };
 
-        const workersByProfileId = new Map<string, Array<{ profile_id: string | null; phone: string | null; updated_at?: string | null; entry_fee_paid?: boolean | null }>>();
-        for (const workerRow of workerRows || []) {
+        const workersByProfileId = new Map<string, ExpiringDocWorkerRow[]>();
+        for (const workerRow of (workerRows || []) as ExpiringDocWorkerRow[]) {
             if (!workerRow.profile_id) continue;
             if (!workersByProfileId.has(workerRow.profile_id)) {
                 workersByProfileId.set(workerRow.profile_id, []);
@@ -71,7 +83,7 @@ export async function GET(request: Request) {
             .from('email_queue')
             .select('user_id')
             .eq('email_type', 'document_expiring')
-            .eq('status', 'sent')
+            .in('status', ['pending', 'sent'])
             .gte('created_at', thirtyDaysAgo);
 
         const recentlyNotified = new Set(recentEmails?.map(e => e.user_id) || []);
@@ -84,6 +96,11 @@ export async function GET(request: Request) {
                 continue;
             }
 
+            const normalizedEmail = profile.email.trim().toLowerCase();
+            if (!normalizedEmail || isInternalOrTestEmail(normalizedEmail) || hasKnownTypoEmailDomain(normalizedEmail)) {
+                continue;
+            }
+
             // Skip if user was already notified in the last 30 days
             if (recentlyNotified.has(profile.id)) {
                 continue;
@@ -92,13 +109,27 @@ export async function GET(request: Request) {
             // Lookup phone for WhatsApp dual-send
             const workerRecord = pickCanonicalWorkerRecord(workersByProfileId.get(profile.id) || []);
             const phone = normalizeWorkerPhone(workerRecord?.phone) || undefined;
+            if (!canSendWorkerDirectNotifications({
+                email: normalizedEmail,
+                phone,
+                worker: workerRecord
+                    ? {
+                        agency_id: workerRecord.agency_id ?? null,
+                        profile_id: workerRecord.profile_id ?? null,
+                        submitted_email: workerRecord.submitted_email ?? null,
+                        phone: workerRecord.phone ?? null,
+                    }
+                    : null,
+            })) {
+                continue;
+            }
 
             // Send email via queue helper (which tries SMTP immediately)
             const emailResult = await queueEmail(
                 supabase,
                 profile.id,
                 "document_expiring",
-                profile.email,
+                normalizedEmail,
                 profile.full_name || "User",
                 {
                     documentType: (doc.document_type || "Document").toUpperCase(),
@@ -109,9 +140,9 @@ export async function GET(request: Request) {
                 phone
             );
 
-            if (!emailResult.sent) {
+            if (!isEmailDeliveryAccepted(emailResult)) {
                 failed++;
-                console.warn(`[Cron] Failed to queue/send document expiring notice for ${profile.email}: ${emailResult.error || "Unknown email queue failure"}`);
+                console.warn(`[Cron] Failed to queue/send document expiring notice for ${normalizedEmail}: ${emailResult.error || "Unknown email queue failure"}`);
                 continue;
             }
 

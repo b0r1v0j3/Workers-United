@@ -1,5 +1,6 @@
 // Email templates for Workers United
 import { normalizeUserType, type CanonicalUserType } from "@/lib/domain";
+import { attachEmailQueueMeta, processQueuedEmailRecord, type EmailQueueDeliveryResult } from "@/lib/email-queue";
 import { escapeHtml } from "@/lib/sanitize";
 
 export type EmailType =
@@ -71,6 +72,8 @@ export interface TemplateData {
     expiresAt?: string;
     queuePosition?: number;
 }
+
+export type QueueEmailResult = EmailQueueDeliveryResult;
 
 const baseStyles = `
     font-family: 'Montserrat', sans-serif;
@@ -1150,10 +1153,14 @@ export async function queueEmail(
     templateData: TemplateData = {},
     scheduledFor?: Date,
     recipientPhone?: string
-): Promise<{ id: string | null; sent: boolean; error?: string | null }> {
+): Promise<QueueEmailResult> {
     const recipientRole = getRecipientRole(templateData);
     const enrichedTemplateData = { ...templateData, recipientRole };
     const template = getEmailTemplate(emailType, { name: recipientName, ...enrichedTemplateData });
+    const queueTemplateData = attachEmailQueueMeta(
+        { ...enrichedTemplateData, html: template.html },
+        { attempts: 0, maxAttempts: 3 }
+    );
 
     const { data } = await supabase.from("email_queue").insert({
         user_id: userId || null,
@@ -1161,38 +1168,27 @@ export async function queueEmail(
         recipient_email: recipientEmail,
         recipient_name: recipientName,
         subject: template.subject,
-        template_data: { ...enrichedTemplateData, html: template.html },
+        template_data: queueTemplateData,
         scheduled_for: scheduledFor?.toISOString() || new Date().toISOString()
     }).select().single();
 
-    let sent = false;
-    let errorMessage: string | null = null;
+    let deliveryResult: QueueEmailResult = {
+        id: data?.id || null,
+        sent: false,
+        queued: Boolean(scheduledFor),
+        status: scheduledFor ? "scheduled" : "failed",
+        error: null,
+    };
 
     // Send immediately via SMTP
-    if (!scheduledFor) {
-        try {
-            const { sendEmail } = await import("@/lib/mailer");
-            const result = await sendEmail(recipientEmail, template.subject, template.html);
-            sent = result.success;
-            errorMessage = result.success ? null : (result.error || null);
-            if (data?.id) {
-                await supabase.from("email_queue").update({
-                    status: result.success ? "sent" : "failed",
-                    sent_at: result.success ? new Date().toISOString() : null,
-                    ...(result.error ? { error_message: result.error } : {})
-                }).eq("id", data.id);
-            }
-        } catch (err) {
-            console.error("Direct SMTP send failed:", err);
-            errorMessage = err instanceof Error ? err.message : "Unknown SMTP error";
-            if (data?.id) {
-                await supabase.from("email_queue").update({
-                    status: "failed",
-                    sent_at: null,
-                    error_message: errorMessage,
-                }).eq("id", data.id);
-            }
-        }
+    if (!scheduledFor && data?.id) {
+        deliveryResult = await processQueuedEmailRecord(supabase, {
+            id: data.id,
+            recipient_email: recipientEmail,
+            subject: template.subject,
+            template_data: queueTemplateData,
+            scheduled_for: data.scheduled_for,
+        });
     }
 
     // Also send WhatsApp template if phone provided
@@ -1260,9 +1256,5 @@ export async function queueEmail(
         }
     }
 
-    return {
-        id: data?.id || null,
-        sent,
-        error: errorMessage,
-    };
+    return deliveryResult;
 }

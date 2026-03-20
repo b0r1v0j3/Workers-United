@@ -53,6 +53,7 @@ const WHATSAPP_QUALITY_ACTIONS = [
     "whatsapp_openai_failed",
     "whatsapp_media_fallback",
     "whatsapp_reply_delivery_failed",
+    "whatsapp_message_log_failed",
 ] as const;
 
 const POST_ENTRY_WORKER_STATUSES = new Set([

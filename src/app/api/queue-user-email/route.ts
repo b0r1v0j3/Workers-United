@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { queueEmail } from "@/lib/email-templates";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { normalizeUserType } from "@/lib/domain";
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const { emailType } = body;
+        if (emailType !== "welcome") {
+            return NextResponse.json({ error: "Only welcome emails can be queued from this route." }, { status: 400 });
+        }
 
         const userName = user.user_metadata?.full_name || user.email?.split("@")[0] || "there";
         const userEmail = user.email || "";
@@ -39,63 +43,26 @@ export async function POST(request: NextRequest) {
             isHiddenDraftOwner: Boolean(user.user_metadata?.hidden_draft_owner),
         }));
         const hasActiveWelcomeEmail = await hasQueuedOrSentWelcomeEmail(supabase, user.id).catch(() => false);
-        let emailResult: { id: string | null; sent: boolean; error?: string | null } | null = null;
+        let emailResult: Awaited<ReturnType<typeof queueEmail>> | null = null;
 
-        // Queue the appropriate email based on type
-        switch (emailType) {
-            case "welcome":
-                if (!canNotifyWorkerDirectly) {
-                    return NextResponse.json({ success: true, skipped: true, reason: "worker_direct_notifications_disabled" });
-                }
-                if (hasActiveWelcomeEmail) {
-                    return NextResponse.json({ success: true, skipped: true, reason: "welcome_already_queued" });
-                }
-                emailResult = await queueEmail(
-                    supabase,
-                    user.id,
-                    "welcome",
-                    userEmail,
-                    userName,
-                    recipientRole && recipientRole !== "admin" ? { recipientRole } : {},
-                    undefined,
-                    phone
-                );
-                break;
-
-            case "profile_complete":
-                if (!canNotifyWorkerDirectly) {
-                    return NextResponse.json({ success: true, skipped: true, reason: "worker_direct_notifications_disabled" });
-                }
-                emailResult = await queueEmail(
-                    supabase,
-                    user.id,
-                    "profile_complete",
-                    userEmail,
-                    userName,
-                    {},
-                    undefined,
-                    phone
-                );
-                break;
-
-            case "payment_success":
-                emailResult = await queueEmail(
-                    supabase,
-                    user.id,
-                    "payment_success",
-                    userEmail,
-                    userName,
-                    { amount: "$9" },
-                    undefined,
-                    phone
-                );
-                break;
-
-            default:
-                return NextResponse.json({ error: "Invalid email type" }, { status: 400 });
+        if (!canNotifyWorkerDirectly) {
+            return NextResponse.json({ success: true, skipped: true, reason: "worker_direct_notifications_disabled" });
         }
+        if (hasActiveWelcomeEmail) {
+            return NextResponse.json({ success: true, skipped: true, reason: "welcome_already_queued" });
+        }
+        emailResult = await queueEmail(
+            supabase,
+            user.id,
+            "welcome",
+            userEmail,
+            userName,
+            recipientRole && recipientRole !== "admin" ? { recipientRole } : {},
+            undefined,
+            phone
+        );
 
-        if (emailResult && !emailResult.sent) {
+        if (emailResult && !isEmailDeliveryAccepted(emailResult)) {
             return NextResponse.json({
                 success: false,
                 queued: false,
@@ -103,7 +70,11 @@ export async function POST(request: NextRequest) {
             }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, queued: true });
+        return NextResponse.json({
+            success: true,
+            queued: true,
+            deliveryStatus: emailResult?.status || "scheduled",
+        });
 
     } catch (error) {
         console.error("Queue user email error:", error);

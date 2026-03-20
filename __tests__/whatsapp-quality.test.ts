@@ -45,4 +45,32 @@ describe("buildWhatsAppQualitySnapshot", () => {
             }),
         ]);
     });
+
+    it("captures whatsapp message log failures separately from delivery failures", () => {
+        const snapshot = buildWhatsAppQualitySnapshot([
+            {
+                action: "whatsapp_message_log_failed",
+                created_at: "2026-03-20T10:00:00.000Z",
+                user_id: "worker-9",
+                details: {
+                    phone: "+381600000009",
+                    message_type: "template",
+                    message_status: "sent",
+                    template_name: "payment_confirmed",
+                    preview: "[Template: payment_confirmed] $9, Ali",
+                },
+            },
+        ]);
+
+        expect(snapshot.messageLogFailures).toBe(1);
+        expect(snapshot.recentMessageLogFailures).toEqual([
+            expect.objectContaining({
+                phone: "+381600000009",
+                messageType: "template",
+                messageStatus: "sent",
+                templateName: "payment_confirmed",
+                profileId: "worker-9",
+            }),
+        ]);
+    });
 });

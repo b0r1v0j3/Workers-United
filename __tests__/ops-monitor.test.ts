@@ -35,8 +35,10 @@ const baseSnapshot: AdminExceptionSnapshot = {
         mediaFallbacks: 0,
         replyDeliveryFailures: 0,
         retryableReplyFailures: 0,
+        messageLogFailures: 0,
         recentAutoHandoffs: [],
         recentReplyDeliveryFailures: [],
+        recentMessageLogFailures: [],
     },
 };
 
@@ -114,6 +116,7 @@ describe("ops monitor helpers", () => {
                     mediaFallbacks: 0,
                     replyDeliveryFailures: 2,
                     retryableReplyFailures: 2,
+                    messageLogFailures: 1,
                     recentAutoHandoffs: [],
                     recentReplyDeliveryFailures: [
                         {
@@ -122,6 +125,17 @@ describe("ops monitor helpers", () => {
                             retryable: true,
                             createdAt: "2026-03-17T07:40:00.000Z",
                             preview: "Please try again in a minute.",
+                            profileId: "worker-4",
+                        },
+                    ],
+                    recentMessageLogFailures: [
+                        {
+                            phone: "+381600000199",
+                            messageType: "template",
+                            messageStatus: "sent",
+                            templateName: "payment_confirmed",
+                            createdAt: "2026-03-17T07:35:00.000Z",
+                            preview: "[Template: payment_confirmed] $9, Worker Four",
                             profileId: "worker-4",
                         },
                     ],
@@ -208,6 +222,7 @@ describe("ops monitor helpers", () => {
             "whatsapp-platform-failures",
             "whatsapp-confusion",
             "whatsapp-reply-delivery-failures",
+            "whatsapp-message-log-failures",
             "document-review-backlog",
             "rejected-documents",
             "admin-approval-backlog",
