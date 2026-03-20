@@ -10,7 +10,9 @@ export interface WhatsAppStatusEvent {
 type WhatsAppStatusAdminClient = {
     from: (table: string) => {
         update: (payload: Record<string, string>) => {
-            eq: (column: string, value: string) => Promise<unknown> | unknown;
+            eq: (column: string, value: string) => {
+                select: (columns: string) => any;
+            };
         };
     };
 };
@@ -60,12 +62,22 @@ export async function persistWhatsAppDeliveryStatuses(
             continue;
         }
 
-        await admin
+        const updateResult = await admin
             .from("whatsapp_messages")
             .update(updateData)
-            .eq("wamid", wamid);
+            .eq("wamid", wamid)
+            .select("id");
 
-        persistedCount += 1;
+        if (updateResult?.error) {
+            throw new Error(updateResult.error.message || `Failed to persist WhatsApp delivery status for ${wamid}`);
+        }
+
+        const updatedRows = Array.isArray(updateResult?.data) ? updateResult.data : [];
+        if (updatedRows.length === 0) {
+            throw new Error(`No whatsapp_messages row matched wamid ${wamid} while persisting delivery status.`);
+        }
+
+        persistedCount += updatedRows.length;
     }
 
     return persistedCount;

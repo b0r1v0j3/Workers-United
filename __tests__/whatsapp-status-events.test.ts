@@ -6,9 +6,17 @@ import {
 
 function createStatusAdminClient() {
     const updates: Array<{ payload: Record<string, string>; column: string; value: string }> = [];
+    let nextError: { message?: string | null } | null = null;
+    let nextEmpty = false;
 
     return {
         updates,
+        setNextError(errorMessage: string) {
+            nextError = { message: errorMessage };
+        },
+        setNextEmpty() {
+            nextEmpty = true;
+        },
         client: {
             from(table: string) {
                 expect(table).toBe("whatsapp_messages");
@@ -16,9 +24,22 @@ function createStatusAdminClient() {
                 return {
                     update(payload: Record<string, string>) {
                         return {
-                            eq: async (column: string, value: string) => {
-                                updates.push({ payload, column, value });
-                                return { error: null };
+                            eq(column: string, value: string) {
+                                return {
+                                    select: async (_columns: string) => {
+                                        updates.push({ payload, column, value });
+                                        if (nextError) {
+                                            const error = nextError;
+                                            nextError = null;
+                                            return { data: null, error };
+                                        }
+                                        if (nextEmpty) {
+                                            nextEmpty = false;
+                                            return { data: [], error: null };
+                                        }
+                                        return { data: [{ id: value }], error: null };
+                                    },
+                                };
                             },
                         };
                     },
@@ -70,5 +91,23 @@ describe("whatsapp-status-events", () => {
                 value: "wamid_2",
             },
         ]);
+    });
+
+    it("throws when the whatsapp_messages update fails", async () => {
+        const { client, setNextError } = createStatusAdminClient();
+        setNextError("db exploded");
+
+        await expect(
+            persistWhatsAppDeliveryStatuses(client, [{ id: "wamid_3", status: "delivered" }])
+        ).rejects.toThrow("db exploded");
+    });
+
+    it("throws when no whatsapp_messages row matches the wamid", async () => {
+        const { client, setNextEmpty } = createStatusAdminClient();
+        setNextEmpty();
+
+        await expect(
+            persistWhatsAppDeliveryStatuses(client, [{ id: "wamid_missing", status: "sent" }])
+        ).rejects.toThrow("No whatsapp_messages row matched wamid wamid_missing while persisting delivery status.");
     });
 });

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createAdminClient = vi.fn();
 const sendProfileIncomplete = vi.fn();
+const collectRecentRecipientSideBlockedPhones = vi.fn(() => new Set<string>());
 const canSendWorkerDirectNotifications = vi.fn();
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -10,6 +11,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 vi.mock("@/lib/whatsapp", () => ({
     sendProfileIncomplete,
+    collectRecentRecipientSideBlockedPhones,
 }));
 
 vi.mock("@/lib/worker-notification-eligibility", () => ({
@@ -124,6 +126,7 @@ describe("GET /api/cron/whatsapp-nudge", () => {
         const { client } = createSupabaseAdmin();
         createAdminClient.mockReturnValue(client);
         sendProfileIncomplete.mockResolvedValue({ success: true });
+        collectRecentRecipientSideBlockedPhones.mockReturnValue(new Set<string>());
         canSendWorkerDirectNotifications
             .mockReturnValueOnce(true)
             .mockReturnValueOnce(false);
@@ -138,6 +141,7 @@ describe("GET /api/cron/whatsapp-nudge", () => {
         const payload = await response.json();
 
         expect(canSendWorkerDirectNotifications).toHaveBeenCalledTimes(2);
+        expect(collectRecentRecipientSideBlockedPhones).toHaveBeenCalledTimes(1);
         expect(sendProfileIncomplete).toHaveBeenCalledTimes(1);
         expect(sendProfileIncomplete).toHaveBeenCalledWith(
             "+381600000001",
@@ -145,6 +149,32 @@ describe("GET /api/cron/whatsapp-nudge", () => {
             "almost ready",
             "complete your registration and join the job queue",
             "profile_1"
+        );
+        expect(payload).toMatchObject({
+            status: "success",
+            found: 2,
+            nudged: 1,
+            skipped: 1,
+        });
+    });
+
+    it("skips phones returned by the shared recent recipient-block helper", async () => {
+        collectRecentRecipientSideBlockedPhones.mockReturnValue(new Set(["+381600000001"]));
+        canSendWorkerDirectNotifications.mockReturnValue(true);
+
+        const { GET } = await import("@/app/api/cron/whatsapp-nudge/route");
+        const response = await GET(new Request("http://localhost/api/cron/whatsapp-nudge", {
+            headers: { authorization: "Bearer secret" },
+        }));
+        const payload = await response.json();
+
+        expect(sendProfileIncomplete).toHaveBeenCalledTimes(1);
+        expect(sendProfileIncomplete).toHaveBeenCalledWith(
+            "+381600000002",
+            "there",
+            "almost ready",
+            "complete your registration and join the job queue",
+            undefined
         );
         expect(payload).toMatchObject({
             status: "success",
