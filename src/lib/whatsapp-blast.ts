@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { logServerActivity } from "@/lib/activityLoggerServer";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import { sendAnnouncement, sendStatusUpdate } from "@/lib/whatsapp";
@@ -59,19 +60,17 @@ function getDefaultBlastCopy(target: WorkerWhatsAppBlastTarget) {
 }
 
 async function logWhatsAppBlastActivity(params: {
-    admin: AdminDbClient;
     actorUserId?: string | null;
     title: string;
     result: WorkerWhatsAppBlastResult;
     dryRun: boolean;
 }) {
     try {
-        await params.admin.from("user_activity").insert({
-            user_id: params.actorUserId || null,
-            action: params.dryRun ? "admin_whatsapp_blast_preview" : "admin_whatsapp_blast_sent",
-            category: "messaging",
-            status: params.result.failed > 0 ? "warning" : "ok",
-            details: {
+        await logServerActivity(
+            params.actorUserId || null,
+            params.dryRun ? "admin_whatsapp_blast_preview" : "admin_whatsapp_blast_sent",
+            "messaging",
+            {
                 title: params.title,
                 dry_run: params.dryRun,
                 total: params.result.total,
@@ -85,7 +84,8 @@ async function logWhatsAppBlastActivity(params: {
                     profile_id: target.profileId,
                 })),
             },
-        });
+            params.result.failed > 0 ? "warning" : "ok"
+        );
     } catch (error) {
         console.warn("[WhatsApp Blast] Failed to log activity:", error);
     }
@@ -193,7 +193,6 @@ export async function sendWorkerWhatsAppBlast(params: {
 
     if (dryRun) {
         await logWhatsAppBlastActivity({
-            admin: params.admin,
             actorUserId: params.actorUserId,
             title,
             result,
@@ -250,7 +249,6 @@ export async function sendWorkerWhatsAppBlast(params: {
     }
 
     await logWhatsAppBlastActivity({
-        admin: params.admin,
         actorUserId: params.actorUserId,
         title,
         result,

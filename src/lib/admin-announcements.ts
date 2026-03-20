@@ -6,6 +6,7 @@ import { queueEmail } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
+import { logServerActivity } from "@/lib/activityLoggerServer";
 
 type AdminDbClient = SupabaseClient<Database>;
 
@@ -81,7 +82,6 @@ function getRecipientName(fullName: string | undefined, email: string) {
 }
 
 async function logAnnouncementActivity(params: {
-    admin: AdminDbClient;
     actorUserId?: string | null;
     audience: AnnouncementAudience;
     subject: string;
@@ -89,12 +89,11 @@ async function logAnnouncementActivity(params: {
     dryRun: boolean;
 }) {
     try {
-        await params.admin.from("user_activity").insert({
-            user_id: params.actorUserId || null,
-            action: params.dryRun ? "admin_announcement_preview" : "admin_announcement_sent",
-            category: "messaging",
-            status: params.result.failed > 0 ? "warning" : "ok",
-            details: {
+        await logServerActivity(
+            params.actorUserId || null,
+            params.dryRun ? "admin_announcement_preview" : "admin_announcement_sent",
+            "messaging",
+            {
                 audience: params.audience,
                 subject: params.subject,
                 dry_run: params.dryRun,
@@ -109,7 +108,8 @@ async function logAnnouncementActivity(params: {
                     user_id: target.userId,
                 })),
             },
-        });
+            params.result.failed > 0 ? "warning" : "ok"
+        );
     } catch (error) {
         console.warn("[Admin Announcements] Failed to log activity:", error);
     }
@@ -235,7 +235,6 @@ export async function sendAdminAnnouncement(params: {
 
     if (dryRun) {
         await logAnnouncementActivity({
-            admin: params.admin,
             actorUserId: params.actorUserId,
             audience: params.audience,
             subject,
@@ -277,7 +276,6 @@ export async function sendAdminAnnouncement(params: {
     }
 
     await logAnnouncementActivity({
-        admin: params.admin,
         actorUserId: params.actorUserId,
         audience: params.audience,
         subject,

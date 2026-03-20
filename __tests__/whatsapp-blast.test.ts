@@ -5,9 +5,17 @@ const { sendAnnouncement, sendStatusUpdate } = vi.hoisted(() => ({
     sendStatusUpdate: vi.fn(),
 }));
 
+const { logServerActivity } = vi.hoisted(() => ({
+    logServerActivity: vi.fn(),
+}));
+
 vi.mock("@/lib/whatsapp", () => ({
     sendAnnouncement,
     sendStatusUpdate,
+}));
+
+vi.mock("@/lib/activityLoggerServer", () => ({
+    logServerActivity,
 }));
 
 import { loadWorkerWhatsAppBlastTargets, sendWorkerWhatsAppBlast } from "@/lib/whatsapp-blast";
@@ -15,11 +23,9 @@ import { loadWorkerWhatsAppBlastTargets, sendWorkerWhatsAppBlast } from "@/lib/w
 function createAdminClient(params?: {
     workers?: Array<Record<string, unknown>>;
     profiles?: Array<Record<string, unknown>>;
-    activityInsert?: ReturnType<typeof vi.fn>;
 }) {
     const workerRows = params?.workers || [];
     const profileRows = params?.profiles || [];
-    const activityInsert = params?.activityInsert || vi.fn().mockResolvedValue({ error: null });
 
     return {
         from(table: string) {
@@ -54,12 +60,6 @@ function createAdminClient(params?: {
                             }),
                         };
                     },
-                };
-            }
-
-            if (table === "user_activity") {
-                return {
-                    insert: activityInsert,
                 };
             }
 
@@ -144,7 +144,6 @@ describe("whatsapp-blast", () => {
             .mockResolvedValueOnce({ success: true, messageId: "msg_2" });
         sendStatusUpdate.mockResolvedValueOnce({ success: true, messageId: "msg_1" });
 
-        const activityInsert = vi.fn().mockResolvedValue({ error: null });
         const admin = createAdminClient({
             workers: [
                 {
@@ -172,7 +171,6 @@ describe("whatsapp-blast", () => {
                 { id: "profile_1", full_name: "Ali Worker", email: "ali@validmail.com" },
                 { id: "profile_2", full_name: "Mira Worker", email: "mira@validmail.com" },
             ],
-            activityInsert,
         });
 
         const result = await sendWorkerWhatsAppBlast({
@@ -199,6 +197,6 @@ describe("whatsapp-blast", () => {
             expect.stringContaining("Activate Job Finder for $9"),
             "profile_1"
         );
-        expect(activityInsert).toHaveBeenCalledOnce();
+        expect(logServerActivity).toHaveBeenCalledOnce();
     });
 });
