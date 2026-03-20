@@ -28,6 +28,7 @@ import {
 import {
     buildAiOriginalBackupPath,
     buildAutoCropOcrPatch,
+    buildPdfPreviewStoragePath,
     processDocumentImageBuffer,
     resolveDocumentRotationToApply,
     sanitizeDocumentCrop,
@@ -165,12 +166,15 @@ export async function POST(request: Request) {
         }
 
         let imageUrl = urlData.signedUrl;
+        let workingStoragePath = document.storage_path;
+        let isPdfSource = false;
         let orientationOcrPatch: Record<string, unknown> = {};
 
         // 2.5. Convert PDF to image if needed
         try {
             const fileData = await fetchImageAsBase64(imageUrl);
             if (fileData.mimeType === 'application/pdf' || document.storage_path.toLowerCase().endsWith('.pdf')) {
+                isPdfSource = true;
                 const pdfBuffer = Buffer.from(fileData.data, 'base64');
 
                 // Convert first page of PDF to JPEG using sharp
@@ -178,31 +182,35 @@ export async function POST(request: Request) {
                     .jpeg({ quality: 92 })
                     .toBuffer();
 
-                // Replace PDF with JPEG in storage
-                const jpegPath = document.storage_path.replace(/\.pdf$/i, '.jpg');
-                await storageClient.storage
+                // Preserve the canonical PDF and write the working preview to a sibling JPEG path.
+                const jpegPath = buildPdfPreviewStoragePath(document.storage_path);
+                const { error: uploadError } = await storageClient.storage
                     .from(WORKER_DOCUMENTS_BUCKET)
                     .upload(jpegPath, jpegBuffer, {
                         contentType: 'image/jpeg',
                         upsert: true
                     });
 
-                // Delete old PDF
-                await storageClient.storage.from(WORKER_DOCUMENTS_BUCKET).remove([document.storage_path]);
+                if (uploadError) {
+                    console.warn("[Verify] Failed to create a PDF preview copy:", uploadError);
+                    return NextResponse.json({ success: false, error: "Could not prepare the PDF for verification." }, { status: 500 });
+                }
 
-                // Update DB with new path
-                await storageClient.from("worker_documents")
-                    .update({ storage_path: jpegPath, updated_at: new Date().toISOString() })
-                    .eq("id", document.id);
+                workingStoragePath = jpegPath;
 
                 // Refresh URL
                 const { data: jpegUrlData } = await storageClient.storage
                     .from(WORKER_DOCUMENTS_BUCKET)
                     .createSignedUrl(jpegPath, 600);
+                if (!jpegUrlData?.signedUrl) {
+                    console.warn("[Verify] Could not sign the PDF preview copy");
+                    return NextResponse.json({ success: false, error: "Could not prepare the PDF for verification." }, { status: 500 });
+                }
                 imageUrl = jpegUrlData?.signedUrl || imageUrl;
             }
         } catch (pdfErr) {
-            console.warn("[Verify] PDF conversion failed, continuing with original:", pdfErr);
+            console.warn("[Verify] PDF conversion failed:", pdfErr);
+            return NextResponse.json({ success: false, error: "Could not prepare the PDF for verification." }, { status: 500 });
         }
 
         // 2.6. Smart auto-crop + auto-rotate: detect document boundaries and rotation
@@ -232,59 +240,67 @@ export async function POST(request: Request) {
                 && typeof (document.ocr_json as Record<string, unknown>).ai_original_storage_path === "string"
                     ? String((document.ocr_json as Record<string, unknown>).ai_original_storage_path).trim() || null
                     : null;
+            let canPersistRewrite = shouldRewriteImage;
 
             if (shouldRewriteImage) {
-                const { data: currentDoc } = await readClient
-                    .from("worker_documents")
-                    .select("storage_path")
-                    .eq("id", document.id)
-                    .single();
+                if (!isPdfSource) {
+                    const { data: currentDoc } = await readClient
+                        .from("worker_documents")
+                        .select("storage_path")
+                        .eq("id", document.id)
+                        .single();
 
-                const storagePath = currentDoc?.storage_path || document.storage_path;
-                if (!aiOriginalStoragePath) {
-                    aiOriginalStoragePath = buildAiOriginalBackupPath(storagePath);
-                    const { error: backupError } = await storageClient.storage
-                        .from(WORKER_DOCUMENTS_BUCKET)
-                        .upload(aiOriginalStoragePath, imageBuffer, {
-                            contentType: imageData.mimeType,
-                            upsert: true,
-                        });
+                    const storagePath = currentDoc?.storage_path || document.storage_path;
+                    if (!aiOriginalStoragePath) {
+                        aiOriginalStoragePath = buildAiOriginalBackupPath(storagePath);
+                        const { error: backupError } = await storageClient.storage
+                            .from(WORKER_DOCUMENTS_BUCKET)
+                            .upload(aiOriginalStoragePath, imageBuffer, {
+                                contentType: imageData.mimeType,
+                                upsert: true,
+                            });
 
-                    if (backupError) {
-                        console.warn("[Verify] Failed to preserve AI original before rewrite:", backupError);
-                        aiOriginalStoragePath = null;
+                        if (backupError) {
+                            console.warn("[Verify] Failed to preserve AI original before rewrite:", backupError);
+                            aiOriginalStoragePath = null;
+                            canPersistRewrite = false;
+                        }
                     }
                 }
 
-                const processed = await processDocumentImageBuffer(imageBuffer, imageData.mimeType, rotationToApply, crop);
-                cropApplied = processed.cropApplied;
+                if (canPersistRewrite) {
+                    const processed = await processDocumentImageBuffer(imageBuffer, imageData.mimeType, rotationToApply, crop);
+                    cropApplied = processed.cropApplied;
 
-                await storageClient.storage
-                    .from(WORKER_DOCUMENTS_BUCKET)
-                    .update(storagePath, processed.buffer, {
-                        contentType: processed.contentType,
-                        upsert: true
-                    });
+                    await storageClient.storage
+                        .from(WORKER_DOCUMENTS_BUCKET)
+                        .update(workingStoragePath, processed.buffer, {
+                            contentType: processed.contentType,
+                            upsert: true
+                        });
 
-                const { data: newUrlData } = await storageClient.storage
-                    .from(WORKER_DOCUMENTS_BUCKET)
-                    .createSignedUrl(storagePath, 600);
-                imageUrl = newUrlData?.signedUrl || imageUrl;
+                    const { data: newUrlData } = await storageClient.storage
+                        .from(WORKER_DOCUMENTS_BUCKET)
+                        .createSignedUrl(workingStoragePath, 600);
+                    imageUrl = newUrlData?.signedUrl || imageUrl;
+                }
             }
 
             orientationOcrPatch = {
                 ...buildDocumentOrientationOcrPatch({
                     detectedRotationDegrees: rotationToApply,
-                    appliedRotationDegrees: shouldRewriteImage ? rotationToApply : 0,
+                    appliedRotationDegrees: canPersistRewrite ? rotationToApply : 0,
                     confidence: orientation.confidence,
                     summary: orientation.summary,
-                    cropApplied,
+                    cropApplied: canPersistRewrite ? cropApplied : false,
                 }),
                 ...buildAutoCropOcrPatch({
-                    cropApplied,
-                    crop: cropApplied ? crop : undefined,
-                    backupStoragePath: aiOriginalStoragePath,
-                    skipReason: autoCropSkippedReason,
+                    cropApplied: canPersistRewrite ? cropApplied : false,
+                    crop: canPersistRewrite && cropApplied ? crop : undefined,
+                    backupStoragePath: isPdfSource ? null : aiOriginalStoragePath,
+                    skipReason: !canPersistRewrite && shouldRewriteImage && !isPdfSource
+                        ? "backup_preservation_failed"
+                        : autoCropSkippedReason,
                 }),
             };
         } catch (cropErr) {

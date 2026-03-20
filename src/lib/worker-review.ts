@@ -10,6 +10,7 @@ interface WorkerReviewInput {
     entryFeePaid?: boolean | null;
     adminApproved?: boolean | null;
     currentStatus?: string | null;
+    jobSearchActive?: boolean | null;
 }
 
 interface ReviewDocumentRow {
@@ -57,8 +58,12 @@ interface SyncWorkerReviewStatusResult {
     notificationReason: WorkerReviewNotificationReason | null;
 }
 
+interface WorkerReviewEmailQueueRecord {
+    status?: string | null;
+}
+
 const REQUIRED_WORKER_DOCUMENT_TYPES = ["passport", "biometric_photo", "diploma"] as const;
-const WORKER_REVIEW_SELECT = "id, profile_id, submitted_full_name, status, admin_approved, entry_fee_paid, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data";
+const WORKER_REVIEW_SELECT = "id, profile_id, submitted_full_name, status, admin_approved, entry_fee_paid, job_search_active, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data";
 const PASSPORT_REVIEW_STATUSES = ["manual_review", "verified"] as const;
 
 const POST_PAYMENT_STATUSES = new Set([
@@ -76,10 +81,11 @@ export function getPendingApprovalTargetStatus({
     entryFeePaid = false,
     adminApproved = false,
     currentStatus,
+    jobSearchActive = false,
 }: WorkerReviewInput): string | null {
     const normalizedStatus = (currentStatus || "NEW").toUpperCase();
 
-    if (entryFeePaid || POST_PAYMENT_STATUSES.has(normalizedStatus)) {
+    if (entryFeePaid || jobSearchActive || POST_PAYMENT_STATUSES.has(normalizedStatus)) {
         return null;
     }
 
@@ -92,6 +98,19 @@ export function getPendingApprovalTargetStatus({
     }
 
     return null;
+}
+
+export function canRevokeWorkerApproval({
+    entryFeePaid = false,
+    jobSearchActive = false,
+    currentStatus,
+}: Pick<WorkerReviewInput, "entryFeePaid" | "currentStatus" | "jobSearchActive">) {
+    const normalizedStatus = (currentStatus || "NEW").toUpperCase();
+    return !(entryFeePaid || jobSearchActive || POST_PAYMENT_STATUSES.has(normalizedStatus));
+}
+
+export function shouldSuppressWorkerReviewNotification(existingEmail?: WorkerReviewEmailQueueRecord | null) {
+    return existingEmail?.status === "sent";
 }
 
 export function canApproveWorkerProfile(completion: number) {
@@ -373,6 +392,7 @@ export async function syncWorkerReviewStatus({
         entryFeePaid: hydratedWorkerRecord.entry_fee_paid,
         adminApproved: !!hydratedWorkerRecord.admin_approved,
         currentStatus: hydratedWorkerRecord.status,
+        jobSearchActive: !!hydratedWorkerRecord.job_search_active,
     });
 
     if (targetStatus) {
@@ -401,13 +421,14 @@ export async function syncWorkerReviewStatus({
         } else {
             const { data: existingEmail } = await adminClient
                 .from("email_queue")
-                .select("id")
+                .select("id, status")
                 .eq("user_id", resolvedProfileId)
                 .eq("email_type", "profile_complete")
+                .eq("status", "sent")
                 .limit(1)
                 .maybeSingle();
 
-            if (existingEmail) {
+            if (shouldSuppressWorkerReviewNotification(existingEmail)) {
                 notificationReason = "already_notified";
             } else {
                 const notificationName = profile.full_name?.trim()

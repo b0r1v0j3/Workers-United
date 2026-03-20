@@ -11,6 +11,7 @@ import { normalizeUserType } from "@/lib/domain";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { buildStripeCheckoutPaymentMetadata, ensureStripeCheckoutCustomer } from "@/lib/stripe-checkout";
+import { findReusableStripeCheckoutPayment, markStripeCheckoutCreationFailed } from "@/lib/stripe-checkout-pending";
 
 function normalizeRelativePath(value: unknown): string | null {
     if (typeof value !== "string") {
@@ -44,6 +45,9 @@ function sortByNewestDeadlineFirst<T extends { deadline_at?: string | null }>(pa
 
 export async function POST(request: NextRequest) {
     let userIdForLog: string | null = null;
+    let paymentIdForCleanup: string | null = null;
+    let paymentTypeForCleanup: PaymentType | null = null;
+    let stripeCheckoutSessionCreated = false;
 
     try {
         const supabase = await createClient();
@@ -74,6 +78,7 @@ export async function POST(request: NextRequest) {
         if (!type || !["entry_fee", "confirmation_fee"].includes(type)) {
             return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
         }
+        paymentTypeForCleanup = type;
 
         const normalizedSuccessPath = normalizeRelativePath(successPath);
         const normalizedCancelPath = normalizeRelativePath(cancelPath);
@@ -490,39 +495,79 @@ export async function POST(request: NextRequest) {
         const amountCents = type === "entry_fee" ? 900 : 19000;
         const paymentDeadlineAt =
             type === "entry_fee"
-                ? new Date(checkoutStartedAt.getTime() + 72 * 60 * 60 * 1000).toISOString()
-                : offer?.expires_at || null;
-        const { data: payment, error: paymentError } = await paymentRowClient
-            .from("payments")
-            .insert({
-                user_id: paymentOwnerProfileId,
-                profile_id: paymentOwnerProfileId,
-                amount,
-                amount_cents: amountCents,
-                payment_type: type,
-                status: "pending",
-                deadline_at: paymentDeadlineAt,
-                metadata: {
-                    checkout_started_at: checkoutStartedAtIso,
-                    ...(offer ? { offer_id: offerId } : {}),
-                    ...(isAgencyPayingForWorker
-                        ? {
-                            agency_checkout: true,
-                            paid_by_profile_id: user.id,
-                            paid_by_role: "agency",
-                            target_worker_id: agencyTargetWorkerId,
-                            target_worker_name: paymentOwnerName,
-                        }
-                        : {}),
-                },
-            })
-            .select()
-            .single();
+            ? new Date(checkoutStartedAt.getTime() + 72 * 60 * 60 * 1000).toISOString()
+            : offer?.expires_at || null;
+        const reusableCheckoutPayment = await findReusableStripeCheckoutPayment({
+            admin,
+            paymentType: type,
+            paymentOwnerProfileId,
+            targetWorkerId: isAgencyPayingForWorker ? agencyTargetWorkerId : null,
+            offerId: offerId || null,
+        });
 
-        if (paymentError) {
-            console.error("Payment record error:", paymentError);
-            return NextResponse.json({ error: "Failed to create payment record" }, { status: 500 });
+        const checkoutPaymentProfileId = paymentOwnerProfileId
+            || reusableCheckoutPayment?.profile_id
+            || reusableCheckoutPayment?.user_id
+            || null;
+        let payment = reusableCheckoutPayment;
+        let paymentId = reusableCheckoutPayment?.id || null;
+
+        const paymentPayload = {
+            user_id: checkoutPaymentProfileId,
+            profile_id: checkoutPaymentProfileId,
+            amount,
+            amount_cents: amountCents,
+            payment_type: type,
+            status: "pending",
+            deadline_at: paymentDeadlineAt,
+            stripe_checkout_session_id: null,
+            metadata: {
+                checkout_started_at: checkoutStartedAtIso,
+                ...(offer ? { offer_id: offerId } : {}),
+                ...(isAgencyPayingForWorker
+                    ? {
+                        agency_checkout: true,
+                        paid_by_profile_id: user.id,
+                        paid_by_role: "agency",
+                        target_worker_id: agencyTargetWorkerId,
+                        target_worker_name: paymentOwnerName,
+                    }
+                    : {}),
+            },
+        };
+
+        if (payment) {
+            const { error: paymentRefreshError } = await paymentRowClient
+                .from("payments")
+                .update(paymentPayload)
+                .eq("id", payment.id)
+                .eq("status", "pending");
+
+            if (paymentRefreshError) {
+                console.error("Payment record refresh error:", paymentRefreshError);
+                return NextResponse.json({ error: "Failed to refresh payment record" }, { status: 500 });
+            }
+            paymentId = payment.id;
+        } else {
+            const { data: insertedPayment, error: paymentError } = await paymentRowClient
+                .from("payments")
+                .insert(paymentPayload)
+                .select()
+                .single();
+
+            if (paymentError) {
+                console.error("Payment record error:", paymentError);
+                return NextResponse.json({ error: "Failed to create payment record" }, { status: 500 });
+            }
+
+            payment = insertedPayment;
+            paymentId = insertedPayment.id;
         }
+
+        if (!paymentId) {
+            return NextResponse.json({ error: "Failed to prepare payment record" }, { status: 500 });
+        }
+        paymentIdForCleanup = paymentId;
 
         // Create Stripe checkout session
         const priceConfig = type === "entry_fee" ? PRICES.ENTRY_FEE : PRICES.CONFIRMATION_FEE;
@@ -537,13 +582,13 @@ export async function POST(request: NextRequest) {
             paymentOwnerEmail,
             workerPhone,
             workerCountry,
-            paymentOwnerProfileId,
+            paymentOwnerProfileId: checkoutPaymentProfileId,
             targetWorkerId: agencyTargetWorkerId,
             isAgencyPayingForWorker,
         });
 
         const stripeCheckoutMetadata = buildStripeCheckoutPaymentMetadata({
-            paymentId: payment.id,
+            paymentId,
             userId: user.id,
             paymentType: type,
             offerId: offerId || "",
@@ -551,7 +596,7 @@ export async function POST(request: NextRequest) {
             paymentOwnerEmail,
             workerPhone,
             workerCountry,
-            paymentOwnerProfileId,
+            paymentOwnerProfileId: checkoutPaymentProfileId,
             targetWorkerId: agencyTargetWorkerId,
             paidByProfileId: isAgencyPayingForWorker ? user.id : "",
             requesterRole,
@@ -565,7 +610,7 @@ export async function POST(request: NextRequest) {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             mode: "payment",
-            client_reference_id: payment.id,
+            client_reference_id: paymentId,
             customer: stripeCustomerId || undefined,
             customer_email: stripeCustomerId ? undefined : (paymentOwnerEmail || user.email),
             customer_creation: stripeCustomerId ? undefined : "always",
@@ -610,16 +655,17 @@ export async function POST(request: NextRequest) {
                 metadata: stripeCheckoutMetadata,
             },
         });
+        stripeCheckoutSessionCreated = true;
 
         // Update payment record with session ID
         const { error: sessionIdUpdateError } = await admin
             .from("payments")
             .update({ stripe_checkout_session_id: session.id })
-            .eq("id", payment.id);
+            .eq("id", paymentId);
 
         if (sessionIdUpdateError) {
             await logServerActivity(user.id, "checkout_session_id_update_failed", "payment", {
-                payment_id: payment.id,
+                payment_id: paymentId,
                 stripe_session_id: session.id,
                 admin_update_error: sessionIdUpdateError.message,
             }, "error");
@@ -627,7 +673,7 @@ export async function POST(request: NextRequest) {
 
         await logServerActivity(user.id, "checkout_session_created", "payment", {
             type,
-            payment_id: payment.id,
+            payment_id: paymentId,
             stripe_session_id: session.id,
             amount_cents: amountCents,
         });
@@ -637,6 +683,18 @@ export async function POST(request: NextRequest) {
             sessionId: session.id,
         });
     } catch (error: unknown) {
+        if (paymentIdForCleanup && paymentTypeForCleanup && !stripeCheckoutSessionCreated) {
+            try {
+                await markStripeCheckoutCreationFailed({
+                    admin: createAdminClient(),
+                    paymentId: paymentIdForCleanup,
+                    paymentType: paymentTypeForCleanup,
+                    error,
+                });
+            } catch (cleanupError) {
+                console.error("Failed to mark checkout payment abandoned after session creation failure:", cleanupError);
+            }
+        }
         if (userIdForLog) {
             await logServerActivity(
                 userIdForLog,

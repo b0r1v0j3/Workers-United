@@ -280,7 +280,7 @@ export async function GET(_request: Request, { params }: RouteProps) {
 
                         if (backupError) {
                             console.warn("[Admin preview] Failed to preserve AI original before normalization:", backupError);
-                            aiOriginalStoragePath = null;
+                            return;
                         }
                     }
 
@@ -400,6 +400,15 @@ export async function POST(request: Request, { params }: RouteProps) {
         if (updateError) {
             console.warn("[Admin preview] Failed to clear manual crop metadata after restore:", updateError);
             return NextResponse.json({ error: "Original image was restored, but metadata cleanup failed." }, { status: 500 });
+        }
+
+        const { error: removeError } = await admin.storage
+            .from(WORKER_DOCUMENTS_BUCKET)
+            .remove([backupStoragePath]);
+
+        if (removeError) {
+            console.warn("[Admin preview] Failed to remove restored backup object:", removeError);
+            return NextResponse.json({ error: "Original image was restored, but the saved backup could not be removed." }, { status: 500 });
         }
 
         return NextResponse.json({

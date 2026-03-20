@@ -331,6 +331,7 @@ export async function GET(request: Request) {
                 .select('user_id, action, created_at, details')
                 .in('user_id', paymentProfileIds)
                 .in('action', ['checkout_session_created', 'payment_completed', 'payment_failed', 'checkout_session_expired'])
+                .order('created_at', { ascending: false })
                 .range(0, 3999);
 
         if (paymentActivitiesError) {

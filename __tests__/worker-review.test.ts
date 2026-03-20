@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     buildWorkerPassportAutofillPatch,
+    canRevokeWorkerApproval,
     getPendingApprovalTargetStatus,
     hasAllRequiredWorkerDocumentsVerified,
     normalizePassportOcrDate,
@@ -39,6 +40,24 @@ describe("worker-review helpers", () => {
             adminApproved: false,
             currentStatus: "PENDING_APPROVAL",
         })).toBe("NEW");
+    });
+
+    it("blocks approval revocation once Job Finder is active", () => {
+        expect(canRevokeWorkerApproval({
+            entryFeePaid: true,
+            currentStatus: "APPROVED",
+        })).toBe(false);
+
+        expect(canRevokeWorkerApproval({
+            jobSearchActive: true,
+            currentStatus: "APPROVED",
+        })).toBe(false);
+
+        expect(canRevokeWorkerApproval({
+            entryFeePaid: false,
+            jobSearchActive: false,
+            currentStatus: "APPROVED",
+        })).toBe(true);
     });
 
     it("normalizes OCR passport dates from common formats", () => {

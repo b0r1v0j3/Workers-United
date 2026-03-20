@@ -479,4 +479,78 @@ describe("stripe-payment-finalization", () => {
         expect(result).toEqual({ status: "already_queued" });
         expect(queueEmail).not.toHaveBeenCalled();
     });
+
+    it("returns missing_target_profile when the worker profile is unavailable", async () => {
+        const result = await queueEntryFeePaymentSuccessEmail({
+            admin: {
+                from: vi.fn(),
+            } as never,
+            targetProfileId: null,
+            sessionCustomerEmail: "worker@example.com",
+        });
+
+        expect(result).toEqual({ status: "missing_target_profile" });
+        expect(queueEmail).not.toHaveBeenCalled();
+    });
+
+    it("returns missing_recipient when both profile and session email are missing", async () => {
+        const existingEmailMaybeSingle = vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+        });
+        const profileMaybeSingle = vi.fn().mockResolvedValue({
+            data: {
+                full_name: "Worker One",
+                email: null,
+            },
+            error: null,
+        });
+
+        loadCanonicalWorkerRecord.mockResolvedValue({
+            data: {
+                id: "worker-row-1",
+                phone: "+123456789",
+            },
+            error: null,
+        });
+
+        const admin = {
+            from: (table: string) => {
+                if (table === "email_queue") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                eq: () => ({
+                                    in: () => ({
+                                        maybeSingle: existingEmailMaybeSingle,
+                                    }),
+                                }),
+                            }),
+                        }),
+                    };
+                }
+
+                if (table === "profiles") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                maybeSingle: profileMaybeSingle,
+                            }),
+                        }),
+                    };
+                }
+
+                throw new Error(`Unexpected table: ${table}`);
+            },
+        };
+
+        const result = await queueEntryFeePaymentSuccessEmail({
+            admin: admin as never,
+            targetProfileId: "worker-profile-1",
+            sessionCustomerEmail: "",
+        });
+
+        expect(result).toEqual({ status: "missing_recipient" });
+        expect(queueEmail).not.toHaveBeenCalled();
+    });
 });

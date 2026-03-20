@@ -128,6 +128,7 @@ export interface AdminTestAgencyWorkerRow {
     full_name: string | null;
     email: string | null;
     phone: string | null;
+    admin_approved?: boolean | null;
     nationality: string | null;
     current_country: string | null;
     preferred_job: string | null;
@@ -725,6 +726,7 @@ export async function createAdminTestAgencyWorker(
             full_name: payload.full_name || "Test Worker",
             email: payload.email || null,
             phone: payload.phone || null,
+            admin_approved: payload.admin_approved ?? false,
             nationality: payload.nationality || null,
             current_country: payload.current_country || null,
             preferred_job: payload.preferred_job || null,
