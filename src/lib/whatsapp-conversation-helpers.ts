@@ -22,6 +22,33 @@ export interface WhatsAppBrainMemoryEntry {
     confidence: number;
 }
 
+function asObject(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+    }
+
+    return value as Record<string, unknown>;
+}
+
+function extractBoolean(details: unknown, key: string): boolean {
+    const objectValue = asObject(details);
+    if (!objectValue) {
+        return false;
+    }
+
+    return objectValue[key] === true;
+}
+
+function extractString(details: unknown, key: string): string | null {
+    const objectValue = asObject(details);
+    if (!objectValue) {
+        return null;
+    }
+
+    const field = objectValue[key];
+    return typeof field === "string" && field.trim() ? field.trim() : null;
+}
+
 export function truncateWhatsAppPreview(value: string, maxLength = 240): string {
     const normalized = value.replace(/\s+/g, " ").trim();
     if (normalized.length <= maxLength) {
@@ -141,6 +168,106 @@ export async function createWhatsAppAutoHandoff(params: {
             preview: truncateWhatsAppPreview(params.latestMessage),
             conversation_id: conversation.id,
             language: params.language,
+        },
+        "warning"
+    );
+
+    return conversation.id;
+}
+
+export async function maybeEscalateWhatsAppReplyDeliveryFailure(params: {
+    admin: AdminDbClient;
+    profileId: string;
+    role: "worker" | "employer" | "agency";
+    normalizedPhone: string;
+    failureContext: string;
+    failureCategory: string;
+    replyPreview: string;
+}) {
+    const retryableLookbackIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const recentHandoffLookbackIso = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+
+    const [
+        recentFailuresResult,
+        recentHandoffsResult,
+    ] = await Promise.all([
+        params.admin
+            .from("user_activity")
+            .select("action, created_at, details")
+            .eq("user_id", params.profileId)
+            .eq("action", "whatsapp_reply_delivery_failed")
+            .gte("created_at", retryableLookbackIso)
+            .order("created_at", { ascending: false })
+            .limit(10),
+        params.admin
+            .from("user_activity")
+            .select("action, created_at, details")
+            .eq("user_id", params.profileId)
+            .eq("action", "whatsapp_reply_delivery_handoff_created")
+            .gte("created_at", recentHandoffLookbackIso)
+            .order("created_at", { ascending: false })
+            .limit(5),
+    ]);
+
+    if (recentFailuresResult.error) {
+        throw recentFailuresResult.error;
+    }
+    if (recentHandoffsResult.error) {
+        throw recentHandoffsResult.error;
+    }
+
+    const recentRetryableFailures = (recentFailuresResult.data || []).filter((entry) =>
+        extractBoolean(entry.details, "retryable")
+        && extractString(entry.details, "phone") === params.normalizedPhone
+    );
+
+    if (recentRetryableFailures.length < 2) {
+        return null;
+    }
+
+    const alreadyEscalated = (recentHandoffsResult.data || []).some((entry) =>
+        extractString(entry.details, "phone") === params.normalizedPhone
+    );
+
+    if (alreadyEscalated) {
+        return null;
+    }
+
+    const { conversation } = await ensureSupportConversation(params.admin, params.profileId, params.role);
+    const summaryLines = [
+        "[WhatsApp reply delivery failure]",
+        `Phone: ${params.normalizedPhone}`,
+        `Failure category: ${params.failureCategory}`,
+        `Failure context: ${params.failureContext}`,
+        `Recent retryable failures in the last hour: ${recentRetryableFailures.length}`,
+        `Latest reply preview: ${truncateWhatsAppPreview(params.replyPreview, 500)}`,
+    ];
+
+    const { message } = await appendConversationMessage(
+        params.admin,
+        conversation,
+        params.profileId,
+        params.role,
+        summaryLines.join("\n")
+    );
+
+    await params.admin.from("conversation_flags").insert({
+        conversation_id: conversation.id,
+        message_id: message.id,
+        flag_type: "whatsapp_reply_delivery_failure",
+    });
+
+    await logServerActivity(
+        params.profileId,
+        "whatsapp_reply_delivery_handoff_created",
+        "messaging",
+        {
+            phone: params.normalizedPhone,
+            failure_category: params.failureCategory,
+            failure_context: params.failureContext,
+            reply_failure_count: recentRetryableFailures.length,
+            conversation_id: conversation.id,
+            preview: truncateWhatsAppPreview(params.replyPreview),
         },
         "warning"
     );

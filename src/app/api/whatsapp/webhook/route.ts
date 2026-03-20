@@ -25,6 +25,7 @@ import {
     createWhatsAppAutoHandoff,
     loadWhatsAppBrainMemory,
     loadWhatsAppConversationHistory,
+    maybeEscalateWhatsAppReplyDeliveryFailure,
 } from "@/lib/whatsapp-conversation-helpers";
 import { handleWhatsAppAdminCommand } from "@/lib/whatsapp-admin-commands";
 import {
@@ -132,10 +133,12 @@ async function logDeterministicWhatsAppReply(params: {
 }
 
 async function sendWhatsAppRouteReply(params: {
+    admin: ReturnType<typeof createAdminClient>;
     phone: string;
     text: string;
     userId?: string;
     activityUserId?: string | null;
+    supportRole?: "worker" | "employer" | "agency" | null;
     failureContext: string;
 }) {
     const result = await sendWhatsAppText(params.phone, params.text, params.userId);
@@ -154,6 +157,21 @@ async function sendWhatsAppRouteReply(params: {
             },
             "error"
         );
+        if (result.retryable && params.activityUserId && params.supportRole) {
+            try {
+                await maybeEscalateWhatsAppReplyDeliveryFailure({
+                    admin: params.admin,
+                    profileId: params.activityUserId,
+                    role: params.supportRole,
+                    normalizedPhone: params.phone,
+                    failureContext: params.failureContext,
+                    failureCategory: result.failureCategory || "unknown",
+                    replyPreview: params.text,
+                });
+            } catch (handoffError) {
+                console.error("[WhatsApp] Failed to escalate retryable reply delivery failure:", handoffError);
+            }
+        }
         return {
             success: false,
             retryable: !!result.retryable,
@@ -299,6 +317,11 @@ export async function POST(request: NextRequest) {
                         const employerRecord = employerLead.employerRecord;
                         const isEmployer = employerLead.isEmployer;
                         const activityUserId = linkedWorkerRecord?.profile_id || employerRecord?.profile_id || null;
+                        const supportRole = linkedWorkerRecord
+                            ? "worker"
+                            : employerRecord
+                                ? "employer"
+                                : null;
 
                         if (activityUserId) {
                             try {
@@ -335,10 +358,12 @@ export async function POST(request: NextRequest) {
                                 profileId: activityUserId,
                                 sendReply: async (text) => {
                                     const replyResult = await sendWhatsAppRouteReply({
+                                        admin: supabase,
                                         phone: normalizedPhone,
                                         text,
                                         userId: activityUserId || undefined,
                                         activityUserId,
+                                        supportRole,
                                         failureContext: "admin_command_reply",
                                     });
                                     if (!replyResult.success && replyResult.retryable) {
@@ -362,10 +387,12 @@ export async function POST(request: NextRequest) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
                         const mediaFallbackReply = getMediaAttachmentResponse(quickLang);
                         const mediaReplyResult = await sendWhatsAppRouteReply({
+                            admin: supabase,
                             phone: normalizedPhone,
                             text: mediaFallbackReply,
                             userId: activityUserId || undefined,
                             activityUserId,
+                            supportRole,
                             failureContext: "media_fallback",
                         });
                         if (!mediaReplyResult.success && mediaReplyResult.retryable) {
@@ -413,10 +440,12 @@ export async function POST(request: NextRequest) {
                             });
                             const finalEmployerReply = employerReply || getEmployerWhatsAppDefaultReply(employerLanguage);
                             const employerReplyResult = await sendWhatsAppRouteReply({
+                                admin: supabase,
                                 phone: normalizedPhone,
                                 text: finalEmployerReply,
                                 userId: activityUserId || undefined,
                                 activityUserId,
+                                supportRole,
                                 failureContext: "employer_ai_reply",
                             });
                             if (!employerReplyResult.success && employerReplyResult.retryable) {
@@ -427,10 +456,12 @@ export async function POST(request: NextRequest) {
                             console.error("[WhatsApp] Employer AI error:", empErr);
                             const fallbackEmployer = getEmployerWhatsAppErrorReply(employerLanguage);
                             const employerFallbackResult = await sendWhatsAppRouteReply({
+                                admin: supabase,
                                 phone: normalizedPhone,
                                 text: fallbackEmployer,
                                 userId: activityUserId || undefined,
                                 activityUserId,
+                                supportRole,
                                 failureContext: "employer_error_fallback",
                             });
                             if (!employerFallbackResult.success && employerFallbackResult.retryable) {
@@ -441,10 +472,12 @@ export async function POST(request: NextRequest) {
                     }
                     const staticEmployer = getEmployerWhatsAppStaticReply(employerLanguage);
                     const employerStaticResult = await sendWhatsAppRouteReply({
+                        admin: supabase,
                         phone: normalizedPhone,
                         text: staticEmployer,
                         userId: activityUserId || undefined,
                         activityUserId,
+                        supportRole,
                         failureContext: "employer_static_fallback",
                     });
                     if (!employerStaticResult.success && employerStaticResult.retryable) {
@@ -463,10 +496,12 @@ export async function POST(request: NextRequest) {
 
                 if (onboardingReply !== null) {
                     const onboardingReplyResult = await sendWhatsAppRouteReply({
+                        admin: supabase,
                         phone: normalizedPhone,
                         text: onboardingReply,
                         userId: activityUserId || undefined,
                         activityUserId,
+                        supportRole,
                         failureContext: "onboarding_reply",
                     });
                     if (!onboardingReplyResult.success && onboardingReplyResult.retryable) {
@@ -676,10 +711,12 @@ export async function POST(request: NextRequest) {
 
                     if (finalReplyText) {
                         const replyResult = await sendWhatsAppRouteReply({
+                            admin: supabase,
                             phone: normalizedPhone,
                             text: finalReplyText,
                             userId: activityUserId || undefined,
                             activityUserId,
+                            supportRole,
                             failureContext: aiResponse ? "ai_reply" : "fallback_reply",
                         });
                         if (!replyResult.success) {
