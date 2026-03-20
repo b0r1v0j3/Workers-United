@@ -73,6 +73,7 @@ export async function GET(request: Request) {
                                 workerUserId: offer.worker_onboarding.profile_id,
                                 workerEmail: workerProfile.email,
                                 workerName: workerProfile.full_name || "Worker",
+                                workerPhone: offer.worker_onboarding?.phone || undefined,
                                 jobTitle: offer.job_requests?.title || "Position",
                                 queuePosition: offer.worker_onboarding?.queue_position || 0,
                             });

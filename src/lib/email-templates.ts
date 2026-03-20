@@ -412,6 +412,15 @@ export function getCheckoutRecoveryStatusMessage(step: number | undefined, amoun
     }
 }
 
+function getOfferExpiredStatusMessage(jobTitle: string | undefined, queuePosition: number | undefined) {
+    const safeJobTitle = (jobTitle || "your previous offer").trim() || "your previous offer";
+    const safeQueuePosition = typeof queuePosition === "number" && queuePosition > 0
+        ? `#${queuePosition}`
+        : "your current spot";
+
+    return `Your offer for ${safeJobTitle} has expired. You stay active in the Workers United queue at ${safeQueuePosition}, and we will contact you as soon as the next matching offer is ready.`;
+}
+
 function formatDocumentNameForEmail(value: string | undefined | null) {
     const raw = (value || "document").trim();
     return raw
@@ -1271,6 +1280,15 @@ export async function queueEmail(
                         const offerId = enrichedTemplateData.offerLink.split("/").pop() || "";
                         sendResult = await wa.sendJobOffer(recipientPhoneNumber, recipientName, enrichedTemplateData.jobTitle, enrichedTemplateData.companyName, enrichedTemplateData.country, offerId, userId);
                     }
+                    break;
+                case "offer_expired":
+                    sendResult = await wa.sendRoleStatusUpdate(
+                        recipientPhoneNumber,
+                        firstName,
+                        getOfferExpiredStatusMessage(enrichedTemplateData.jobTitle, enrichedTemplateData.queuePosition),
+                        "worker",
+                        userId
+                    );
                     break;
                 default:
                     break;

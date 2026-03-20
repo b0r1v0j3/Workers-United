@@ -117,4 +117,43 @@ describe("queueEmail WhatsApp sidecar", () => {
             messageId: "wamid_1",
         });
     });
+
+    it("routes offer_expired through the shared worker status-update sidecar", async () => {
+        const supabase = createSupabaseMock();
+        whatsappMocks.sendRoleStatusUpdate.mockResolvedValueOnce({ success: true, messageId: "wamid_offer_1" });
+
+        const result = await queueEmail(
+            supabase as never,
+            "worker-1",
+            "offer_expired",
+            "worker@example.com",
+            "Worker One",
+            {
+                jobTitle: "Welder",
+                queuePosition: 4,
+            },
+            undefined,
+            "+381601234567"
+        );
+
+        expect(whatsappMocks.sendRoleStatusUpdate).toHaveBeenCalledWith(
+            "+381601234567",
+            "Worker",
+            expect.stringContaining("Your offer for Welder has expired."),
+            "worker",
+            "worker-1"
+        );
+        expect(whatsappMocks.sendRoleStatusUpdate).toHaveBeenCalledWith(
+            "+381601234567",
+            "Worker",
+            expect.stringContaining("#4"),
+            "worker",
+            "worker-1"
+        );
+        expect(result.whatsapp).toMatchObject({
+            attempted: true,
+            sent: true,
+            messageId: "wamid_offer_1",
+        });
+    });
 });
