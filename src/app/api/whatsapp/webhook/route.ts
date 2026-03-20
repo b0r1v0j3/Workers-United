@@ -8,7 +8,6 @@ import {
     buildUnregisteredWorkerWhatsAppReply,
     buildWhatsAppAutoHandoffReply,
     detectExplicitWhatsAppLanguagePreference,
-    detectWhatsAppLanguageCode,
     replyMatchesExpectedWhatsAppLanguage,
     resolveWhatsAppLanguageName,
     shouldStartWhatsAppOnboarding,
@@ -430,12 +429,26 @@ export async function POST(request: NextRequest) {
 
                 // ─── WhatsApp Onboarding Flow (before GPT) ───────────────
                 // Detect language from router or simple heuristic
-                const quickLang = detectWhatsAppLanguageCode(content);
-                const latestMessageLanguage = resolveWhatsAppLanguageName(content);
+                let sharedHistoryMessages: Awaited<ReturnType<typeof loadWhatsAppConversationHistory>> | null = null;
+                const ensureHistoryMessages = async () => {
+                    if (sharedHistoryMessages === null) {
+                        sharedHistoryMessages = await loadWhatsAppConversationHistory(
+                            supabase,
+                            normalizedPhone,
+                            RESPONSE_HISTORY_LIMIT
+                        );
+                    }
+                    return sharedHistoryMessages;
+                };
+                const latestMessageLanguage = resolveWhatsAppLanguageName(
+                    content,
+                    null,
+                    await ensureHistoryMessages()
+                );
 
                 if (!isTextLikeWhatsAppMessage(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
-                        const mediaFallbackReply = getMediaAttachmentResponse(quickLang);
+                        const mediaFallbackReply = getMediaAttachmentResponse(latestMessageLanguage);
                         const mediaReplyResult = await sendWhatsAppRouteReply({
                             admin: supabase,
                             phone: normalizedPhone,
@@ -469,11 +482,7 @@ export async function POST(request: NextRequest) {
                 // ─── Employer WhatsApp Flow ───────────────────────────────
                 if (isEmployer) {
                     const OPENAI_API_KEY_EMP = process.env.OPENAI_API_KEY;
-                    const employerHistory = await loadWhatsAppConversationHistory(
-                        supabase,
-                        normalizedPhone,
-                        RESPONSE_HISTORY_LIMIT
-                    );
+                    const employerHistory = await ensureHistoryMessages();
                     const employerLanguage = resolveWhatsAppLanguageName(content, null, employerHistory);
                     if (OPENAI_API_KEY_EMP) {
                         try {
@@ -541,7 +550,8 @@ export async function POST(request: NextRequest) {
                     normalizedPhone,
                     content,
                     linkedWorkerRecord,
-                    quickLang
+                    latestMessageLanguage,
+                    await ensureHistoryMessages()
                 );
 
                 if (onboardingReply !== null) {
@@ -574,7 +584,9 @@ export async function POST(request: NextRequest) {
                 if (OPENAI_API_KEY) {
                     try {
                         [historyMessages, brainMemory, businessFacts, supportAccess] = await Promise.all([
-                            loadWhatsAppConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
+                            sharedHistoryMessages
+                                ? Promise.resolve(sharedHistoryMessages)
+                                : loadWhatsAppConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
                             loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT),
                             (async () => {
                                 try {
@@ -1429,10 +1441,12 @@ export async function handleWhatsAppOnboarding(
     phone: string,
     message: string,
     workerRecord: any,
-    detectedLanguage: string
+    detectedLanguage: string,
+    historyMessages: { direction?: string | null; content?: string | null }[] = []
 ): Promise<string | null> {
     const state = await getOnboardingState(supabase, phone);
-    const lang = state?.language || detectedLanguage || "en";
+    const seededLanguage = resolveWhatsAppLanguageName(message, detectedLanguage, historyMessages);
+    const lang = state?.language || seededLanguage || detectedLanguage || "en";
     const isRegisteredWorker = Boolean(workerRecord?.profile_id);
 
     if (state && isCancelOnboarding(message)) {
@@ -1449,8 +1463,8 @@ export async function handleWhatsAppOnboarding(
 
     if (state?.current_step === "done") {
         if (shouldStartWhatsAppOnboarding(message)) {
-            await saveOnboardingState(supabase, phone, "ask_start", {}, detectedLanguage || lang);
-            return getQ("ask_start", detectedLanguage || lang);
+            await saveOnboardingState(supabase, phone, "ask_start", {}, seededLanguage || lang);
+            return getQ("ask_start", seededLanguage || lang);
         }
         return null;
     }
@@ -1458,8 +1472,8 @@ export async function handleWhatsAppOnboarding(
     // ── No state yet: only offer onboarding when the user explicitly asks to fill it on WhatsApp ──
     if (!state) {
         if (shouldStartWhatsAppOnboarding(message)) {
-            await saveOnboardingState(supabase, phone, "ask_start", {}, detectedLanguage);
-            return getQ("ask_start", detectedLanguage || "en");
+            await saveOnboardingState(supabase, phone, "ask_start", {}, seededLanguage);
+            return getQ("ask_start", seededLanguage || "en");
         }
         return null; // Let GPT handle normal questions
     }

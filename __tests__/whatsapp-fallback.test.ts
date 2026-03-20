@@ -32,6 +32,16 @@ describe("whatsapp-fallback", () => {
         expect(reply).not.toContain("Welcome to Workers United!");
     });
 
+    it("keeps French price fallback copy in French instead of collapsing to English", async () => {
+        const reply = await getWhatsAppFallbackResponse("payment", null, {
+            full_name: "Ali Worker",
+        }, "French");
+
+        expect(reply).toContain("Job Finder coûte");
+        expect(reply).toContain("validation admin");
+        expect(reply).not.toContain("Job Finder costs");
+    });
+
     it("keeps locked workers on the admin-review/payment gate", async () => {
         const reply = await getWhatsAppFallbackResponse("payment", {
             status: "PENDING_APPROVAL",
@@ -47,6 +57,21 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("https://www.workersunited.eu/profile/worker");
     });
 
+    it("keeps Portuguese document fallback copy in Portuguese instead of collapsing to English", async () => {
+        const reply = await getWhatsAppFallbackResponse("documentos", {
+            status: "NEW",
+            entry_fee_paid: false,
+            admin_approved: false,
+            queue_joined_at: null,
+        }, {
+            full_name: "Ali Worker",
+        }, "Portuguese");
+
+        expect(reply).toContain("Envie os documentos");
+        expect(reply).toContain("Os anexos do WhatsApp");
+        expect(reply).not.toContain("Upload documents at");
+    });
+
     it("returns the stricter diploma/document guidance", async () => {
         const reply = await getWhatsAppFallbackResponse("passport and document", {
             status: "NEW",
@@ -55,7 +80,7 @@ describe("whatsapp-fallback", () => {
             queue_joined_at: null,
         }, {
             full_name: "Ali Worker",
-        });
+        }, "English");
 
         expect(reply).toContain("passport");
         expect(reply).toContain("biometric photo");

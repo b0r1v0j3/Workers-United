@@ -129,6 +129,33 @@ describe("whatsapp-brain guards", () => {
         ).toBe("French");
     });
 
+    it("prefers the most recent inbound language even when an older non-English turn exists", () => {
+        expect(
+            resolveWhatsAppLanguageName(
+                "ok",
+                "English",
+                [
+                    { direction: "inbound", content: "Bonjour, ça va ?" },
+                    { direction: "outbound", content: "Bonjour ! Je suis l’assistant IA de Workers United." },
+                    { direction: "inbound", content: "okay thanks" },
+                ]
+            )
+        ).toBe("English");
+    });
+
+    it("uses the most recent inbound history language when the latest message has no text", () => {
+        expect(
+            resolveWhatsAppLanguageName(
+                "",
+                null,
+                [
+                    { direction: "inbound", content: "Tudo bem" },
+                    { direction: "outbound", content: "Olá!" },
+                ]
+            )
+        ).toBe("Portuguese");
+    });
+
     it("rejects English replies when the latest user message is Serbian", () => {
         expect(replyMatchesExpectedWhatsAppLanguage("Serbian", "Hi! Create your account at workersunited.eu/signup.")).toBe(false);
         expect(replyMatchesExpectedWhatsAppLanguage("Serbian", "Naravno. Prvi korak je da napravite nalog na workersunited.eu/signup.")).toBe(true);
