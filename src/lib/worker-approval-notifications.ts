@@ -1,7 +1,8 @@
 import type { TemplateData } from "@/lib/email-templates";
+import { buildPlatformUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { canSendWorkerDirectNotifications, isHiddenDraftWorker } from "@/lib/worker-notification-eligibility";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
+const BASE_URL = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
 
 type WorkerApprovalNotificationWorker = {
     agency_id?: string | null;
@@ -23,7 +24,7 @@ export function buildWorkerPaymentUnlockedEmailData(): TemplateData {
         title: "Profile Approved",
         message: "Your profile has been approved by our team. Job Finder checkout is now unlocked in your dashboard, so you can activate the $9 service whenever you are ready.",
         actionText: "Open Job Finder",
-        actionLink: `${BASE_URL}/profile/worker`,
+        actionLink: buildPlatformUrl(BASE_URL, "/profile/worker"),
     };
 }
 

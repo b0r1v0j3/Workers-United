@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { getEmailTemplate } from '@/lib/email-templates';
 import type { EmailType } from '@/lib/email-templates';
 
@@ -64,6 +64,25 @@ describe('getEmailTemplate', () => {
     it('profile_deletion includes signup link', () => {
         const { html } = getEmailTemplate('profile_deletion', { name: 'Ivan' });
         expect(html).toContain('workersunited.eu/signup');
+    });
+
+    it('normalizes bare NEXT_PUBLIC_BASE_URL in email links and assets', async () => {
+        const originalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+        try {
+            vi.resetModules();
+            process.env.NEXT_PUBLIC_BASE_URL = 'workersunited.example';
+            const { getEmailTemplate: getEmailTemplateWithEnv } = await import('@/lib/email-templates');
+
+            const { html } = getEmailTemplateWithEnv('profile_deletion', { name: 'Ivan' });
+
+            expect(html).toContain('https://workersunited.example/signup');
+            expect(html).toContain('https://workersunited.example/logo-wordmark.png');
+            expect(html).toContain('https://workersunited.example/privacy-policy');
+        } finally {
+            process.env.NEXT_PUBLIC_BASE_URL = originalBaseUrl;
+            vi.resetModules();
+        }
     });
 
     it('job_match includes job details', () => {

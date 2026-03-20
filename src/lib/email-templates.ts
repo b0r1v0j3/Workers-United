@@ -1,6 +1,7 @@
 // Email templates for Workers United
 import { normalizeUserType, type CanonicalUserType } from "@/lib/domain";
 import { attachEmailQueueMeta, processQueuedEmailRecord, type EmailQueueDeliveryResult } from "@/lib/email-queue";
+import { buildPlatformUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { escapeHtml } from "@/lib/sanitize";
 
 export type EmailType =
@@ -106,7 +107,11 @@ const buttonStyle = `
     text-align: center;
 `;
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
+const BASE_URL = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
+
+function buildEmailUrl(path: string) {
+    return buildPlatformUrl(BASE_URL, path);
+}
 
 type RecipientRole = Exclude<CanonicalUserType, "admin">;
 
@@ -127,21 +132,21 @@ function getRecipientRole(data: TemplateData): RecipientRole {
 function getRecipientWorkspaceUrl(role: RecipientRole, purpose: "setup" | "dashboard" | "documents" | "queue" = "dashboard") {
     switch (role) {
         case "employer":
-            return `${BASE_URL}/profile/employer`;
+            return buildEmailUrl("/profile/employer");
         case "agency":
-            return `${BASE_URL}/profile/agency`;
+            return buildEmailUrl("/profile/agency");
         case "worker":
         default:
             switch (purpose) {
                 case "setup":
-                    return `${BASE_URL}/profile/worker/edit`;
+                    return buildEmailUrl("/profile/worker/edit");
                 case "documents":
-                    return `${BASE_URL}/profile/worker/documents`;
+                    return buildEmailUrl("/profile/worker/documents");
                 case "queue":
-                    return `${BASE_URL}/profile/worker/queue`;
+                    return buildEmailUrl("/profile/worker/queue");
                 case "dashboard":
                 default:
-                    return `${BASE_URL}/profile/worker`;
+                    return buildEmailUrl("/profile/worker");
             }
     }
 }
@@ -365,7 +370,7 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
             
             <!-- Compact official wordmark header -->
             <div style="background: #FFFFFF; padding: 20px 24px; text-align: center; border-bottom: 1px solid #E5E5EA;">
-                <img src="${BASE_URL}/logo-wordmark.png" alt="Workers United" width="168" height="auto" style="display:block; margin:0 auto; width:168px; height:auto; border:0; outline:none; text-decoration:none; color:#1D1D1F; font-size:16px; font-weight:700;">
+                <img src="${buildEmailUrl("/logo-wordmark.png")}" alt="Workers United" width="168" height="auto" style="display:block; margin:0 auto; width:168px; height:auto; border:0; outline:none; text-decoration:none; color:#1D1D1F; font-size:16px; font-weight:700;">
             </div>
 
             <!-- Content Area -->
@@ -384,9 +389,9 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
             <p style="margin:0 0 8px;">&copy; ${new Date().getFullYear()} Workers United LLC</p>
             <p style="margin:0 0 20px;">75 E 3rd St., Sheridan, Wyoming 82801</p>
             <div style="margin-bottom: 20px;">
-                <a href="https://workersunited.eu/privacy-policy" style="color:#94a3b8; text-decoration:none; margin: 0 10px; font-weight: 500;">Privacy</a>
-                <a href="https://workersunited.eu/terms" style="color:#94a3b8; text-decoration:none; margin: 0 10px; font-weight: 500;">Terms</a>
-                <a href="https://workersunited.eu/profile/settings" style="color:#94a3b8; text-decoration:none; margin: 0 10px; font-weight: 500;">Preferences</a>
+                <a href="${buildEmailUrl("/privacy-policy")}" style="color:#94a3b8; text-decoration:none; margin: 0 10px; font-weight: 500;">Privacy</a>
+                <a href="${buildEmailUrl("/terms")}" style="color:#94a3b8; text-decoration:none; margin: 0 10px; font-weight: 500;">Terms</a>
+                <a href="${buildEmailUrl("/profile/settings")}" style="color:#94a3b8; text-decoration:none; margin: 0 10px; font-weight: 500;">Preferences</a>
             </div>
         </div>
     </div>
@@ -437,7 +442,7 @@ function getEmployerOutreachCopy(companyName: string, language: string | undefin
             ],
             ctaTitle: "Open your employer workspace and submit your hiring request.",
             ctaText: "Create Employer Account",
-            ctaUrl: `${BASE_URL}/signup`,
+            ctaUrl: buildEmailUrl("/signup"),
             footer: "If hiring is a priority right now, register the company profile and we can start from there.",
         };
     }
@@ -458,7 +463,7 @@ function getEmployerOutreachCopy(companyName: string, language: string | undefin
         ],
         ctaTitle: "Otvorite employer workspace i pošaljite svoj hiring zahtev.",
         ctaText: "Registrujte Kompaniju",
-        ctaUrl: `${BASE_URL}/signup`,
+        ctaUrl: buildEmailUrl("/signup"),
         footer: "Ako Vam je zapošljavanje prioritet, registrujte kompaniju i odatle preuzimamo dalje korake.",
     };
 }
@@ -602,7 +607,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ])}
                     
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="https://workersunited.eu/profile/worker" style="${buttonStyle}">
+                        <a href="${buildEmailUrl("/profile/worker")}" style="${buttonStyle}">
                             Open My Profile
                         </a>
                     </div>
@@ -702,7 +707,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     `)}
 
                     <div style="text-align:center; margin-top:40px;">
-                        <a href="${BASE_URL}/profile/worker" style="${buttonStyle}">
+                        <a href="${buildEmailUrl("/profile/worker")}" style="${buttonStyle}">
                             Open dashboard
                         </a>
                     </div>
@@ -736,7 +741,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ${renderLightPanel("Response Window", "Please review this offer and respond within 24 hours so we can keep the hiring process moving.")}
                     
                     <div style="text-align:center; margin-top:40px;">
-                        <a href="${data.offerLink || "https://workersunited.eu/profile/worker/queue"}" style="${buttonStyle}">
+                        <a href="${data.offerLink || buildEmailUrl("/profile/worker/queue")}" style="${buttonStyle}">
                             View & Accept Offer
                         </a>
                     </div>
@@ -757,7 +762,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ${renderLightPanel("Why This Matters", "If the offer expires without a response, we may need to release the slot and move the case forward without you.")}
                     
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="${data.offerLink || "https://workersunited.eu/profile/worker/queue"}" style="${buttonStyle}">
+                        <a href="${data.offerLink || buildEmailUrl("/profile/worker/queue")}" style="${buttonStyle}">
                             Respond Now
                         </a>
                     </div>
@@ -843,7 +848,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                 subject: `New Match: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
                     <div style="text-align: center;">
-                        <img src="${BASE_URL}/logo-icon.png" width="80" alt="Workers United" style="margin-bottom: 20px; border-radius: 16px;">
+                        <img src="${buildEmailUrl("/logo-icon.png")}" width="80" alt="Workers United" style="margin-bottom: 20px; border-radius: 16px;">
                         <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">New Match!</h1>
                         <p style="font-size: 16px; color: #515154; margin-top: 5px;">We found a job that fits your case.</p>
                     </div>
@@ -878,7 +883,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             {
             const title = escapeHtml(data.title || "Case Update");
             const message = escapeHtml(data.message || "There is a new update in your Workers United case.");
-            const actionLink = data.actionLink || "https://workersunited.eu/profile/worker";
+            const actionLink = data.actionLink || buildEmailUrl("/profile/worker");
             const actionText = escapeHtml(data.actionText || "Check Profile");
             return {
                 subject: data.subject || "Update from Workers United",
@@ -929,7 +934,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ])}
 
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Open My Documents</a>
+                        <a href="${buildEmailUrl("/profile/worker/documents")}" style="${buttonStyle}">Open My Documents</a>
                     </div>
                 ` : `
                     ${renderIconHero("alert", `${safeDocName} Needs Attention`, "We still need a replacement file before your case can move forward.")}
@@ -950,7 +955,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ])}
 
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Upload New Document</a>
+                        <a href="${buildEmailUrl("/profile/worker/documents")}" style="${buttonStyle}">Upload New Document</a>
                     </div>
                 `, isApproved ? "Good News" : "Action Needed", isApproved ? "Document Approved" : "Document Review")
             };
@@ -1108,7 +1113,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ])}
                     
                     <div style="text-align:center; margin-top:35px;">
-                        <a href="${BASE_URL}/signup" style="${buttonStyle}">
+                        <a href="${buildEmailUrl("/signup")}" style="${buttonStyle}">
                             ${deletionCopy.buttonText}
                         </a>
                     </div>

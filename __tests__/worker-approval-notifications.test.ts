@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildWorkerPaymentUnlockedEmailData, resolveWorkerApprovalNotificationRecipient } from "@/lib/worker-approval-notifications";
 
 describe("worker-approval-notifications", () => {
@@ -10,6 +10,21 @@ describe("worker-approval-notifications", () => {
         expect(payload.message).toContain("Job Finder checkout is now unlocked");
         expect(payload.actionText).toBe("Open Job Finder");
         expect(payload.actionLink).toContain("/profile/worker");
+    });
+
+    it("normalizes bare NEXT_PUBLIC_BASE_URL in the unlock CTA", async () => {
+        const originalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+        try {
+            vi.resetModules();
+            process.env.NEXT_PUBLIC_BASE_URL = "workersunited.example";
+            const { buildWorkerPaymentUnlockedEmailData: buildPayload } = await import("@/lib/worker-approval-notifications");
+
+            expect(buildPayload().actionLink).toBe("https://workersunited.example/profile/worker");
+        } finally {
+            process.env.NEXT_PUBLIC_BASE_URL = originalBaseUrl;
+            vi.resetModules();
+        }
     });
 
     it("prefers canonical worker notification emails and blocks hidden agency drafts", () => {
