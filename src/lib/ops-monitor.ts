@@ -203,6 +203,8 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
     const confusionCases = detectWhatsAppConfusionCases(input.whatsappConversations?.conversations);
     const whatsappTemplateHealth = input.whatsappTemplateHealth;
     const platformWhatsAppFailures = getCount(whatsappTemplateHealth?.platformFailures);
+    const replyDeliveryFailures = getCount(input.opsSnapshot.whatsappQuality.replyDeliveryFailures);
+    const retryableReplyDeliveryFailures = getCount(input.opsSnapshot.whatsappQuality.retryableReplyFailures);
     const invalidEmailProfiles = input.opsSnapshot.invalidEmailProfiles.length;
     const paymentFailures = Math.max(
         getCount(input.paymentTelemetry?.failed),
@@ -256,6 +258,21 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
             const snippets = entry.sample.join(" | ") || "Repeated inbound burst without a clear resolution";
             return `${entry.phone} • ${entry.inboundCount} inbound • burst ${entry.unansweredBurst} • ${humanizeWhatsAppHandoffReason(entry.reason)} • ${snippets}`;
         }),
+        links: [{ label: "Open admin inbox", href: "/admin/inbox" }],
+    } : null);
+
+    pushSignal(signals, replyDeliveryFailures > 0 ? {
+        key: "whatsapp-reply-delivery-failures",
+        category: "whatsapp",
+        severity: retryableReplyDeliveryFailures >= 2 ? "high" : "medium",
+        title: "WhatsApp reply delivery failures",
+        count: replyDeliveryFailures,
+        summary: retryableReplyDeliveryFailures > 0
+            ? `${replyDeliveryFailures} WhatsApp reply delivery failure(s) were logged in the last 24 hours, including ${retryableReplyDeliveryFailures} retryable platform-side failure(s).`
+            : `${replyDeliveryFailures} WhatsApp reply delivery failure(s) were logged in the last 24 hours.`,
+        evidence: input.opsSnapshot.whatsappQuality.recentReplyDeliveryFailures
+            .slice(0, 3)
+            .map((entry) => `${entry.phone} • ${entry.failureCategory}${entry.retryable ? " • retryable" : ""} • ${entry.preview}`),
         links: [{ label: "Open admin inbox", href: "/admin/inbox" }],
     } : null);
 
@@ -422,6 +439,7 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
     let healthScore = 100;
     healthScore -= routeFailures.length > 0 ? 35 : 0;
     healthScore -= platformWhatsAppFailures > 0 ? Math.min(20, platformWhatsAppFailures * 6) : 0;
+    healthScore -= retryableReplyDeliveryFailures > 0 ? Math.min(12, retryableReplyDeliveryFailures * 4) : 0;
     healthScore -= confusionCases.length > 0 ? Math.min(12, confusionCases.length * 4) : 0;
     healthScore -= manualReviewWorkers > 0 ? Math.min(12, manualReviewWorkers * 3) : 0;
     healthScore -= pendingAdminApprovalWorkers > 0 ? Math.min(12, pendingAdminApprovalWorkers * 3) : 0;

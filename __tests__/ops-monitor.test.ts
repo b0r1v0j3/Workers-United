@@ -33,7 +33,10 @@ const baseSnapshot: AdminExceptionSnapshot = {
         autoHandoffs: 0,
         openAIFailures: 0,
         mediaFallbacks: 0,
+        replyDeliveryFailures: 0,
+        retryableReplyFailures: 0,
         recentAutoHandoffs: [],
+        recentReplyDeliveryFailures: [],
     },
 };
 
@@ -102,6 +105,27 @@ describe("ops monitor helpers", () => {
                         reviewHref: "/admin/workers/worker-4",
                     },
                 ],
+                whatsappQuality: {
+                    deterministicReplies: 0,
+                    guardedReplies: 0,
+                    languageFallbacks: 0,
+                    autoHandoffs: 0,
+                    openAIFailures: 0,
+                    mediaFallbacks: 0,
+                    replyDeliveryFailures: 2,
+                    retryableReplyFailures: 2,
+                    recentAutoHandoffs: [],
+                    recentReplyDeliveryFailures: [
+                        {
+                            phone: "+381600000099",
+                            failureCategory: "platform",
+                            retryable: true,
+                            createdAt: "2026-03-17T07:40:00.000Z",
+                            preview: "Please try again in a minute.",
+                            profileId: "worker-4",
+                        },
+                    ],
+                },
                 paidButNotInQueue: [
                     {
                         profileId: "worker-5",
@@ -183,6 +207,7 @@ describe("ops monitor helpers", () => {
             "route-failures",
             "whatsapp-platform-failures",
             "whatsapp-confusion",
+            "whatsapp-reply-delivery-failures",
             "document-review-backlog",
             "rejected-documents",
             "admin-approval-backlog",
