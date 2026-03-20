@@ -66,6 +66,7 @@ Workers-United/
 │   │   │   ├── exceptions/    # Legacy route that now renders the internal ops cockpit copy; business admin no longer links here directly
 │   │   │   ├── email-health/  # Legacy route that now renders the internal email-hygiene copy; business admin no longer links here directly
 │   │   │   ├── inbox/         # Admin support inbox (support-thread list + reply workspace)
+│   │   │   ├── review/        # Manual document review queue; now surfaces truthful email-send toasts from `/api/admin/admin-review` and direct preview links for approval/rejection `document_review_result` emails
 │   │   │   ├── workers/       # Worker registry + [id] case detail; table separates inspect-workspace from admin case actions, filters out hidden agency draft document-owner auth profiles, renders real agency draft worker rows with agency source labels, worker case detail resolves by canonical `worker_onboarding.id` as well as legacy profile/auth ids so agency drafts use the right document-owner id plus agency workspace inspect links instead of leaking through fake `/profile/worker` previews, the document modal now exposes redirect-driven success/error banners plus direct preview links for the exact approval/re-upload email payload, and the approval card now exposes the exact `Job Finder unlocked` email preview
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout; hides internal/admin-owned employer rows and collapses duplicate employer records per `profile_id` via the shared employer integrity helper
 │   │   │   ├── queue/         # Queue operations screen with shared admin hero, 90-day watch, and inspect-vs-case actions
@@ -361,6 +362,7 @@ User (Browser)
 |---|---|
 | `src/app/admin/page.tsx` | Business admin dashboard with actionable stats, queue watch, recent lists, direct inspect links into real worker/employer/agency workspaces, and a prominent `Open Email Preview` CTA so admin can jump straight into the system-email sandbox without hunting through navigation |
 | `src/app/admin/email-preview/page.tsx` | Business-admin email preview page inside the normal AppShell; exposes the full template list, category/search filtering, and live payload preview without requiring the internal tools hub |
+| `src/app/admin/review/ReviewClient.tsx` | Legacy manual-review queue UI; now opens exact approval/rejection `document_review_result` previews inline and only claims “email sent” when `/api/admin/admin-review` returns a real `notification.status='sent'` outcome |
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |

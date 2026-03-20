@@ -16,6 +16,31 @@ import {
     resolveAgencyWorkerDocumentOwnerId,
 } from "@/lib/agency-draft-documents";
 
+type EmailNotificationResult = {
+    status: "sent" | "failed" | "skipped";
+    error?: string | null;
+};
+
+function getEmailNotificationResult(
+    result: Awaited<ReturnType<typeof queueEmail>> | null | undefined,
+    recipientEmail?: string | null,
+    recipientUserId?: string | null
+): EmailNotificationResult {
+    if (!recipientEmail || !recipientUserId) {
+        return { status: "skipped", error: null };
+    }
+
+    if (!result) {
+        return { status: "failed", error: "Email dispatch did not run." };
+    }
+
+    if (result.sent) {
+        return { status: "sent", error: null };
+    }
+
+    return { status: "failed", error: result.error || "Email send failed." };
+}
+
 async function resolveAdminReviewContext(admin: ReturnType<typeof createAdminClient>, userId: string) {
     const canonicalWorker = await loadCanonicalWorkerRecord<{
         id: string;
@@ -310,9 +335,10 @@ export async function POST(request: Request) {
 
             // Email the user
             const userProfile = await resolveNotificationProfile(admin, notificationProfileId);
+            let notificationResult: Awaited<ReturnType<typeof queueEmail>> | null = null;
             if (userProfile?.email && notificationProfileId) {
                 const docName = docType.replace(/_/g, " ");
-                await queueEmail(
+                notificationResult = await queueEmail(
                     admin, notificationProfileId, "document_review_result",
                     userProfile.email,
                     userProfile.full_name || "there",
@@ -323,6 +349,11 @@ export async function POST(request: Request) {
                     }
                 );
             }
+
+            return NextResponse.json({
+                ok: true,
+                notification: getEmailNotificationResult(notificationResult, userProfile?.email, notificationProfileId),
+            });
 
         } else if (action === "reject") {
             // Set to rejected with admin feedback
@@ -353,9 +384,10 @@ export async function POST(request: Request) {
 
             // Email the user with feedback
             const userProfile = await resolveNotificationProfile(admin, notificationProfileId);
+            let notificationResult: Awaited<ReturnType<typeof queueEmail>> | null = null;
             if (userProfile?.email && notificationProfileId) {
                 const docName = docType.replace(/_/g, " ");
-                await queueEmail(
+                notificationResult = await queueEmail(
                     admin, notificationProfileId, "document_review_result",
                     userProfile.email,
                     userProfile.full_name || "there",
@@ -366,6 +398,11 @@ export async function POST(request: Request) {
                     }
                 );
             }
+
+            return NextResponse.json({
+                ok: true,
+                notification: getEmailNotificationResult(notificationResult, userProfile?.email, notificationProfileId),
+            });
         }
 
         return NextResponse.json({ ok: true });
