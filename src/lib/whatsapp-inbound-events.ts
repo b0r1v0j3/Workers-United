@@ -30,6 +30,12 @@ export interface WhatsAppInboundRecordResult {
     duplicate: boolean;
 }
 
+export interface WhatsAppInboundAttachResult {
+    attached: boolean;
+    alreadyAttached: boolean;
+    messageId: string | null;
+}
+
 export function normalizeWhatsAppPhone(rawPhone: string): string {
     const digits = rawPhone.replace(/\D/g, "");
     return digits ? `+${digits}` : "";
@@ -109,15 +115,57 @@ export async function attachInboundWhatsAppMessageUser(
         wamid: string;
         userId: string;
     }
-) {
+): Promise<WhatsAppInboundAttachResult> {
     if (!params.wamid || !params.userId) {
-        return;
+        return {
+            attached: false,
+            alreadyAttached: false,
+            messageId: null,
+        };
     }
 
-    await admin
+    const { data: attachedRows, error: attachError } = await admin
         .from("whatsapp_messages")
         .update({ user_id: params.userId })
+        .select("id")
         .eq("wamid", params.wamid)
         .eq("direction", "inbound")
         .is("user_id", null);
+
+    if (attachError) {
+        throw attachError;
+    }
+
+    if (Array.isArray(attachedRows) && attachedRows.length > 0) {
+        return {
+            attached: true,
+            alreadyAttached: false,
+            messageId: attachedRows[0]?.id || null,
+        };
+    }
+
+    const { data: existingRow, error: lookupError } = await admin
+        .from("whatsapp_messages")
+        .select("id, user_id")
+        .eq("wamid", params.wamid)
+        .eq("direction", "inbound")
+        .maybeSingle();
+
+    if (lookupError) {
+        throw lookupError;
+    }
+
+    if (!existingRow?.id) {
+        throw new Error(`Inbound WhatsApp message ${params.wamid} was not found for user attach`);
+    }
+
+    if (existingRow.user_id) {
+        return {
+            attached: false,
+            alreadyAttached: true,
+            messageId: existingRow.id,
+        };
+    }
+
+    throw new Error(`Inbound WhatsApp message ${params.wamid} exists but user attach did not persist`);
 }

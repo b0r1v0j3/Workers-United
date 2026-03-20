@@ -81,7 +81,12 @@ describe("POST /api/whatsapp/webhook", () => {
         attachInboundWhatsAppMessageUser.mockResolvedValue(undefined);
         extractWhatsAppMessageContent.mockImplementation((message: { text?: { body?: string } }) => message.text?.body || "");
         isTextLikeWhatsAppMessage.mockReturnValue(true);
-        normalizeWhatsAppPhone.mockImplementation((phone: string) => (phone.startsWith("+") ? phone : `+${phone}`));
+        normalizeWhatsAppPhone.mockImplementation((phone: string | null | undefined) => {
+            if (!phone) {
+                return "";
+            }
+            return phone.startsWith("+") ? phone : `+${phone}`;
+        });
         recordInboundWhatsAppMessage.mockResolvedValue({
             id: "msg_1",
             inserted: true,
@@ -259,6 +264,142 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(sendWhatsAppText).toHaveBeenCalledWith("+381600000032", "Employer reply", undefined);
     });
 
+    it("still repairs inbound user identity on duplicate delivery retries before skipping the reply", async () => {
+        recordInboundWhatsAppMessage.mockResolvedValueOnce({
+            id: null,
+            inserted: false,
+            duplicate: true,
+        });
+        resolveWhatsAppWorkerIdentity.mockResolvedValueOnce({
+            workerRecord: {
+                id: "worker_1",
+                profile_id: "profile_1",
+                status: "NEW",
+                queue_position: null,
+                preferred_job: null,
+                desired_countries: null,
+                refund_deadline: null,
+                refund_eligible: null,
+                entry_fee_paid: false,
+                admin_approved: false,
+                queue_joined_at: null,
+                nationality: null,
+                current_country: null,
+                gender: null,
+                experience_years: null,
+                updated_at: null,
+                phone: "+381600000041",
+                marital_status: null,
+                onboarding_completed: true,
+            },
+            profile: { full_name: "Test Worker", email: "worker@example.com", user_type: "worker" },
+        });
+        resolveEmployerWhatsAppLead.mockResolvedValueOnce({
+            employerRecord: null,
+            isEmployer: false,
+            isLikelyEmployer: false,
+        });
+        attachInboundWhatsAppMessageUser.mockResolvedValueOnce({
+            attached: true,
+            alreadyAttached: false,
+            messageId: "msg_existing",
+        });
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_dup_attach", from: "381600000041", type: "text", text: { body: "hello" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({ status: "ok" });
+        expect(attachInboundWhatsAppMessageUser).toHaveBeenCalledWith({ admin: true }, {
+            wamid: "wamid_dup_attach",
+            userId: "profile_1",
+        });
+        expect(sendWhatsAppText).not.toHaveBeenCalled();
+    });
+
+    it("returns partial_failure when inbound identity attach fails after the row was recorded", async () => {
+        resolveWhatsAppWorkerIdentity.mockResolvedValueOnce({
+            workerRecord: {
+                id: "worker_1",
+                profile_id: "profile_1",
+                status: "NEW",
+                queue_position: null,
+                preferred_job: null,
+                desired_countries: null,
+                refund_deadline: null,
+                refund_eligible: null,
+                entry_fee_paid: false,
+                admin_approved: false,
+                queue_joined_at: null,
+                nationality: null,
+                current_country: null,
+                gender: null,
+                experience_years: null,
+                updated_at: null,
+                phone: "+381600000042",
+                marital_status: null,
+                onboarding_completed: true,
+            },
+            profile: { full_name: "Test Worker", email: "worker@example.com", user_type: "worker" },
+        });
+        resolveEmployerWhatsAppLead.mockResolvedValueOnce({
+            employerRecord: null,
+            isEmployer: false,
+            isLikelyEmployer: false,
+        });
+        attachInboundWhatsAppMessageUser.mockRejectedValueOnce(new Error("attach failed"));
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_attach_fail", from: "381600000042", type: "text", text: { body: "hello" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({ status: "partial_failure" });
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "profile_1",
+            "whatsapp_inbound_identity_attach_failed",
+            "messaging",
+            expect.objectContaining({
+                phone: "+381600000042",
+                wamid: "wamid_attach_fail",
+                duplicate_delivery: false,
+                error: "attach failed",
+            }),
+            "error"
+        );
+    });
+
     it("keeps employer error fallback in the conversation language when AI degrades", async () => {
         loadWhatsAppConversationHistory.mockResolvedValueOnce([
             { direction: "inbound", content: "Bonjour", created_at: "2026-03-19T12:00:00.000Z" },
@@ -323,6 +464,46 @@ describe("POST /api/whatsapp/webhook", () => {
                 phone: "+381600000099",
                 retryable: true,
                 failure_category: "platform",
+            }),
+            "error"
+        );
+    });
+
+    it("marks malformed inbound payloads as partial failures without trying to record or reply", async () => {
+        normalizeWhatsAppPhone.mockReturnValueOnce("");
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: null, from: null, type: "text", text: { body: "hello" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({ status: "partial_failure" });
+        expect(recordInboundWhatsAppMessage).not.toHaveBeenCalled();
+        expect(sendWhatsAppText).not.toHaveBeenCalled();
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "anonymous",
+            "whatsapp_webhook_message_malformed",
+            "error",
+            expect.objectContaining({
+                phone: null,
+                normalized_phone: null,
+                wamid: null,
+                message_type: "text",
             }),
             "error"
         );
