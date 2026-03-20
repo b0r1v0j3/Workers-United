@@ -781,6 +781,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 
 #### Srednji uticaj
 - [ ] **Ops monitor drill-down** — dodati admin pogled za poslednje `ops_daily_snapshot/exception` run-ove sa diff-om u odnosu na juče, tako da se isti incidenti ne love ručno iz `brain_reports` JSON-a
+- [ ] **WhatsApp language-drift drill-down** — dodati ops pregled za `whatsapp_gpt_response` fallback razloge (`expected_language`, `language_forced_to_fallback`, sample reply), tako da se false language fallback-ovi vide po jeziku pre nego što počnu da utiču na realne razgovore
 - [ ] **Workspace visual regression smoke** — Playwright ili sličan screenshot/smoke paket za worker/employer/agency shell na desktop + mobile breakpoint-ima, sa proverom aktivnog sidebar state-a, header overlap-a i prisustva primarnog CTA-a na overview ekranima
 - [ ] **Agency draft-documents smoke** — dodati kanonski E2E smoke koji pravi agency draft worker-a, uploaduje namerno pogrešan dokument, očekuje `rejected/manual_review` state umesto 500, pa zatim potvrđuje da dashboard i detail vide isti document status preko shared owner sloja
 - [ ] **User activity policy cleanup** — srediti `user_activity` insert policy ili write path tako da client-side fire-and-forget logging više ne puni browser konzolu `403` greškama tokom normalnog worker/employer/agency korišćenja
