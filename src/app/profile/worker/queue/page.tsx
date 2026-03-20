@@ -473,8 +473,8 @@ function LockedEntryFeeState({
                 </h3>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
                     {pendingAdminReview
-                        ? "Your profile is complete. An admin still needs to approve it before Job Finder payment unlocks."
-                        : "The Job Finder payment card stays locked until your worker profile reaches 100% completion."}
+                        ? "Your profile and required documents are complete. An admin still needs to approve them before Job Finder payment unlocks."
+                        : "The Job Finder payment card stays locked until your worker profile and required documents are complete."}
                 </p>
             </div>
 
@@ -492,7 +492,7 @@ function LockedEntryFeeState({
                     </p>
                     <p className="max-w-[220px] text-xs leading-relaxed text-gray-600">
                         {pendingAdminReview
-                            ? "Job Finder unlocks automatically after an admin approves this complete worker profile."
+                            ? "Job Finder unlocks automatically after an admin approves this complete worker profile and document set."
                             : "Finish your required worker details and uploaded documents to unlock Job Finder."}
                     </p>
                 </div>
@@ -502,11 +502,11 @@ function LockedEntryFeeState({
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
                     {pendingAdminReview
                         ? "Preview only. This worker is complete and still waiting for admin approval."
-                        : "Preview only. The card unlocks automatically once this worker reaches 100%."}
+                        : "Preview only. The card unlocks automatically once this worker profile and document set are complete."}
                 </div>
             ) : pendingAdminReview ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                    Profile complete. We will unlock Job Finder after the admin approval step.
+                    Profile and required documents complete. We will unlock Job Finder after the admin approval step.
                 </div>
             ) : (
                 <Link

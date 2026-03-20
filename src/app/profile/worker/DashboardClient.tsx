@@ -209,7 +209,7 @@ export default function DashboardClient({
                                         Complete Your Profile
                                     </h3>
                                     <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
-                                        Fill in all required fields to unlock Job Finder. Once your profile reaches 100% and passes admin review, you can activate the service and start receiving job matches.
+                                        Finish all required profile details and upload the required documents so we can send your case to admin review. Job Finder unlocks only after everything is complete and approved.
                                     </p>
                                 </div>
 
@@ -401,7 +401,7 @@ export default function DashboardClient({
                                         Waiting for admin review
                                     </h3>
                                     <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
-                                        Your profile is 100% complete. We&apos;ll unlock Job Finder as soon as an admin approves your case.
+                                        Your profile and required documents are complete. We&apos;ll unlock Job Finder as soon as an admin approves your case.
                                     </p>
                                 </div>
                                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
