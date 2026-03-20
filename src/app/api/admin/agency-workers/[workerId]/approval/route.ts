@@ -89,6 +89,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             completion: approvalResult.completion,
             status: approvalResult.status,
             notificationQueued: approvalResult.notificationQueued,
+            notification: approvalResult.notification,
         });
     } catch (error) {
         console.error("[AdminAgencyWorkerApproval] Error:", error);

@@ -99,6 +99,7 @@ function createAdminClientMock({
 describe("worker approval actions", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(queueEmail).mockResolvedValue({ id: "email-1", sent: true, error: null });
         vi.mocked(getWorkerCompletion).mockReturnValue({
             completion: 100,
             missingFields: [],
@@ -177,6 +178,10 @@ describe("worker approval actions", () => {
             status: "APPROVED",
             completion: 100,
             notificationQueued: true,
+            notification: {
+                status: "sent",
+                error: null,
+            },
             workerId: worker.id,
         });
         expect(updates).toHaveLength(1);

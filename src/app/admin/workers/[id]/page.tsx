@@ -73,12 +73,69 @@ function getDocumentActionBanner(action: string | undefined, error: string | und
     }
 }
 
+function getApprovalActionBanner(
+    action: string | undefined,
+    notification: string | undefined,
+    error: string | undefined
+) {
+    if (error) {
+        return {
+            tone: "amber" as const,
+            title: "Approval update needs attention",
+            copy: error,
+            icon: <AlertTriangle size={18} />,
+        };
+    }
+
+    if (action === "approved") {
+        if (notification === "failed") {
+            return {
+                tone: "amber" as const,
+                title: "Worker approved, email failed",
+                copy: "Job Finder was unlocked for the worker, but the unlock email failed to send. Check email health or resend from preview if needed.",
+                icon: <AlertTriangle size={18} />,
+            };
+        }
+
+        if (notification === "skipped") {
+            return {
+                tone: "blue" as const,
+                title: "Worker approved",
+                copy: "Job Finder is unlocked. No unlock email was sent because this case does not currently have a direct-notification recipient.",
+                icon: <Mail size={18} />,
+            };
+        }
+
+        return {
+            tone: "emerald" as const,
+            title: "Worker approved",
+            copy: "Job Finder is unlocked and the approval email was sent successfully.",
+            icon: <Check size={18} />,
+        };
+    }
+
+    if (action === "revoked") {
+        return {
+            tone: "rose" as const,
+            title: "Approval revoked",
+            copy: "Admin approval was removed and the worker returned to the correct pre-payment review state.",
+            icon: <AlertTriangle size={18} />,
+        };
+    }
+
+    return null;
+}
+
 export default async function WorkerDetailPage({ params, searchParams }: PageProps) {
     const { id } = await params;
     const resolvedSearchParams = searchParams ? await searchParams : {};
     const documentAction = getSingleSearchParam(resolvedSearchParams.documentAction);
     const documentError = getSingleSearchParam(resolvedSearchParams.documentError);
     const documentActionBanner = getDocumentActionBanner(documentAction, documentError);
+    const approvalAction = getSingleSearchParam(resolvedSearchParams.approvalAction);
+    const approvalNotification = getSingleSearchParam(resolvedSearchParams.approvalNotification);
+    const approvalError = getSingleSearchParam(resolvedSearchParams.approvalError);
+    const approvalActionBanner = getApprovalActionBanner(approvalAction, approvalNotification, approvalError);
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -342,39 +399,59 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         "use server";
         const action = formData.get("action") as string; // "approve" or "revoke"
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Unauthorized");
+        try {
+            const supabase = await createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Unauthorized");
 
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("user_type")
-            .eq("id", user.id)
-            .single();
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("user_type")
+                .eq("id", user.id)
+                .single();
 
-        if (profile?.user_type !== 'admin' && !isGodModeUser(user.email)) {
-            throw new Error("Forbidden: Admin access only");
-        }
+            if (profile?.user_type !== 'admin' && !isGodModeUser(user.email)) {
+                throw new Error("Forbidden: Admin access only");
+            }
 
-        const adminClient = createAdminClient();
-        if (!workerRecord?.id) {
-            throw new Error("Worker record not found");
-        }
+            const adminClient = createAdminClient();
+            if (!workerRecord?.id) {
+                throw new Error("Worker record not found");
+            }
 
-        const approvalResult = await applyWorkerApprovalAction({
-            adminClient,
-            actorUserId: user.id,
-            action: action === "revoke" ? "revoke" : "approve",
-            profileId,
-            workerId: workerRecord.id,
-            documentOwnerId,
-            phoneOptional,
-            fullNameFallback: workerNameFallback,
-        });
+            const approvalResult = await applyWorkerApprovalAction({
+                adminClient,
+                actorUserId: user.id,
+                action: action === "revoke" ? "revoke" : "approve",
+                profileId,
+                workerId: workerRecord.id,
+                documentOwnerId,
+                phoneOptional,
+                fullNameFallback: workerNameFallback,
+            });
 
-        revalidatePath(`/admin/workers/${id}`);
-        if (approvalResult.workerId && approvalResult.workerId !== workerRecord.id) {
-            revalidatePath(`/admin/workers/${approvalResult.workerId}`);
+            revalidatePath(`/admin/workers/${id}`);
+            if (approvalResult.workerId && approvalResult.workerId !== workerRecord.id) {
+                revalidatePath(`/admin/workers/${approvalResult.workerId}`);
+            }
+
+            const params = new URLSearchParams({
+                approvalAction: approvalResult.approved ? "approved" : "revoked",
+                ts: Date.now().toString(),
+            });
+
+            if (approvalResult.approved) {
+                params.set("approvalNotification", approvalResult.notification.status);
+            }
+
+            redirect(`/admin/workers/${id}?${params.toString()}`);
+        } catch (error) {
+            const params = new URLSearchParams({
+                approvalAction: action === "revoke" ? "revoked" : "approved",
+                approvalError: error instanceof Error ? error.message : "Approval update failed.",
+                ts: Date.now().toString(),
+            });
+            redirect(`/admin/workers/${id}?${params.toString()}`);
         }
     }
 
@@ -528,6 +605,23 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                         { label: "Paid", value: completedPaymentsCount, meta: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} pending` : "No pending payments" },
                     ]}
                 />
+                {approvalActionBanner ? (
+                    <div className={`mt-6 flex items-start gap-3 rounded-[24px] border px-5 py-4 ${approvalActionBanner.tone === "emerald"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : approvalActionBanner.tone === "blue"
+                            ? "border-blue-200 bg-blue-50 text-blue-900"
+                            : approvalActionBanner.tone === "rose"
+                                ? "border-rose-200 bg-rose-50 text-rose-900"
+                                : "border-amber-200 bg-amber-50 text-amber-900"
+                        }`}>
+                        <div className="mt-0.5">{approvalActionBanner.icon}</div>
+                        <div>
+                            <div className="text-sm font-semibold">{approvalActionBanner.title}</div>
+                            <p className="mt-1 text-sm leading-relaxed">{approvalActionBanner.copy}</p>
+                        </div>
+                    </div>
+                ) : null}
+
                 {documentActionBanner ? (
                     <div className={`mt-6 flex items-start gap-3 rounded-[24px] border px-5 py-4 ${documentActionBanner.tone === "emerald"
                         ? "border-emerald-200 bg-emerald-50 text-emerald-900"

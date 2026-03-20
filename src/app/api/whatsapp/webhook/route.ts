@@ -7,6 +7,7 @@ import {
     buildRegisteredWorkerWhatsAppReply,
     buildUnregisteredWorkerWhatsAppReply,
     buildWhatsAppAutoHandoffReply,
+    detectExplicitWhatsAppLanguagePreference,
     detectWhatsAppLanguageCode,
     replyMatchesExpectedWhatsAppLanguage,
     resolveWhatsAppLanguageName,
@@ -1024,6 +1025,21 @@ function getOnboardingCancelledReply(language: string): string {
     return messages[lk];
 }
 
+function getOnboardingLanguageSwitchedReply(language: string, step: string): string {
+    const lk = getLangKey(language);
+    const currentQuestion = getQ(step, language);
+    const intros: Record<LangKey, string> = {
+        en: "Of course — I'll continue in English.",
+        sr: "Naravno — nastaviću na srpskom.",
+        hi: "ज़रूर — मैं हिंदी में जारी रखूँगा।",
+        ar: "بالتأكيد — سأكمل بالعربية.",
+        fr: "Bien sûr — je continue en français.",
+        pt: "Claro — vou continuar em português.",
+    };
+
+    return `${intros[lk]}\n\n${currentQuestion}`;
+}
+
 function getHumanSupportFallbackReply(language: string): string {
     const lk = getLangKey(language);
     const messages: Record<LangKey, string> = {
@@ -1294,6 +1310,16 @@ export async function handleWhatsAppOnboarding(
 
     const collected = { ...state.collected_data };
     const step = state.current_step;
+    const explicitLanguagePreference = detectExplicitWhatsAppLanguagePreference(message);
+
+    if (explicitLanguagePreference) {
+        const currentLangKey = getLangKey(lang);
+        if (explicitLanguagePreference !== currentLangKey) {
+            await saveOnboardingState(supabase, phone, step, collected, explicitLanguagePreference);
+            return getOnboardingLanguageSwitchedReply(explicitLanguagePreference, step);
+        }
+    }
+
     const lowerMsg = message.toLowerCase().trim();
 
     // ── Intercept: "connect me with a person" / human agent request ──

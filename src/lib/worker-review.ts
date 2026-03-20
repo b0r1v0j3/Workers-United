@@ -74,6 +74,11 @@ interface WorkerApprovalGuardState {
     notificationRecipient: ReturnType<typeof resolveWorkerApprovalNotificationRecipient>;
 }
 
+type WorkerApprovalNotificationResult = {
+    status: "sent" | "failed" | "skipped";
+    error?: string | null;
+};
+
 interface WorkerReviewEmailQueueRecord {
     status?: string | null;
 }
@@ -651,8 +656,9 @@ export async function applyWorkerApprovalAction({
     }
 
     let notificationQueued = false;
+    let notification: WorkerApprovalNotificationResult = { status: "skipped", error: null };
     if (approved && approvalState.notificationRecipient && approvalState.notificationUserId) {
-        await queueEmail(
+        const notificationResult = await queueEmail(
             adminClient,
             approvalState.notificationUserId,
             "admin_update",
@@ -661,6 +667,9 @@ export async function applyWorkerApprovalAction({
             buildWorkerPaymentUnlockedEmailData()
         );
         notificationQueued = true;
+        notification = notificationResult.sent
+            ? { status: "sent", error: null }
+            : { status: "failed", error: notificationResult.error || "Email send failed." };
     }
 
     return {
@@ -668,6 +677,7 @@ export async function applyWorkerApprovalAction({
         status: nextStatus,
         completion: approvalState.completion,
         notificationQueued,
+        notification,
         workerId: approvalState.worker.id,
     };
 }

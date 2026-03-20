@@ -124,6 +124,31 @@ describe("handleWhatsAppOnboarding", () => {
         expect(store.state).toBeNull();
     });
 
+    it("switches onboarding language mid-flow instead of consuming the request as field data", async () => {
+        const { client, store } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "full_name",
+            collected_data: {},
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "Pisi na srpskom",
+            null,
+            "en"
+        );
+
+        expect(reply).toContain("nastaviću na srpskom");
+        expect(reply).toContain("puno ime i prezime");
+        expect(store.cleared).toBe(0);
+        expect((store.state as Record<string, unknown>)?.current_step).toBe("full_name");
+        expect((store.state as Record<string, unknown>)?.language).toBe("sr");
+        expect((store.state as Record<string, unknown>)?.collected_data).toEqual({});
+    });
+
     it("keeps unregistered completions as a WhatsApp draft instead of creating a ghost worker row", async () => {
         const { client, store } = createOnboardingAdmin({
             phone_number: "+381600000000",
