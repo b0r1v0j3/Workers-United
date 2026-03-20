@@ -8,6 +8,10 @@ const { queueEmail } = vi.hoisted(() => ({
     queueEmail: vi.fn(),
 }));
 
+const { logServerActivity } = vi.hoisted(() => ({
+    logServerActivity: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase/admin", () => ({
     getAllAuthUsers,
 }));
@@ -16,14 +20,16 @@ vi.mock("@/lib/email-templates", () => ({
     queueEmail,
 }));
 
+vi.mock("@/lib/activityLoggerServer", () => ({
+    logServerActivity,
+}));
+
 import { loadAnnouncementTargets, sendAdminAnnouncement } from "@/lib/admin-announcements";
 
 function createAdminClient(params?: {
     workerRows?: Array<Record<string, unknown>>;
-    activityInsert?: ReturnType<typeof vi.fn>;
 }) {
     const workerRows = params?.workerRows || [];
-    const activityInsert = params?.activityInsert || vi.fn().mockResolvedValue({ error: null });
 
     return {
         from(table: string) {
@@ -37,12 +43,6 @@ function createAdminClient(params?: {
                             }),
                         };
                     },
-                };
-            }
-
-            if (table === "user_activity") {
-                return {
-                    insert: activityInsert,
                 };
             }
 
@@ -185,7 +185,6 @@ describe("admin-announcements", () => {
             .mockResolvedValueOnce({ id: "email_1", sent: true, error: null })
             .mockResolvedValueOnce({ id: "email_2", sent: false, error: "smtp_failed" });
 
-        const activityInsert = vi.fn().mockResolvedValue({ error: null });
         const admin = createAdminClient({
             workerRows: [
                 {
@@ -196,7 +195,6 @@ describe("admin-announcements", () => {
                     updated_at: "2026-03-20T08:00:00.000Z",
                 },
             ],
-            activityInsert,
         });
 
         const result = await sendAdminAnnouncement({
@@ -244,6 +242,6 @@ describe("admin-announcements", () => {
                 recipientRole: "agency",
             })
         );
-        expect(activityInsert).toHaveBeenCalledOnce();
+        expect(logServerActivity).toHaveBeenCalledOnce();
     });
 });
