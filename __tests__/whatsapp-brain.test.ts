@@ -161,6 +161,13 @@ describe("whatsapp-brain guards", () => {
         expect(replyMatchesExpectedWhatsAppLanguage("Serbian", "Naravno. Prvi korak je da napravite nalog na workersunited.eu/signup.")).toBe(true);
     });
 
+    it("accepts valid French, Portuguese, and English status replies without false fallback", () => {
+        expect(replyMatchesExpectedWhatsAppLanguage("French", "Votre statut est en cours de revue admin.")).toBe(true);
+        expect(replyMatchesExpectedWhatsAppLanguage("Portuguese", "Posso ajudar com seu status, documentos, pagamento ou próximo passo.")).toBe(true);
+        expect(replyMatchesExpectedWhatsAppLanguage("English", "Your status is under admin review. Please check your dashboard.")).toBe(true);
+        expect(replyMatchesExpectedWhatsAppLanguage("French", "Your status is under admin review.")).toBe(false);
+    });
+
     it("does not treat an ordinary Serbian worker lead as an employer lead", () => {
         expect(looksLikeWorkerWhatsAppLead("Ocu posao")).toBe(true);
         expect(looksLikeEmployerWhatsAppLead("Pozdrav")).toBe(false);

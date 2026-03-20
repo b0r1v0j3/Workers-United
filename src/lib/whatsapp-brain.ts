@@ -232,6 +232,31 @@ function getLanguageName(code: WhatsAppLanguageCode): string {
     }
 }
 
+const RESPONSE_LANGUAGE_SIGNAL_PATTERNS: Record<WhatsAppLanguageCode, readonly RegExp[]> = {
+    en: [
+        /\b(?:your|please|dashboard|next step|create your account|complete your profile|how can i help|support inbox)\b/i,
+    ],
+    sr: [
+        /[\u0400-\u04FF]/,
+        /[čćžšđ]/i,
+        /\b(?:naravno|prvi korak|sledeći|sljedeći|nalog|uplata|odobren|pošaljite|otvorite|radnik|radnika|dokumenta)\b/i,
+    ],
+    ar: [
+        /[\u0600-\u06FF]/,
+    ],
+    fr: [
+        /[àâçéèêëîïôùûüœ]/i,
+        /\b(?:votre|vos|statut|documents?|pai(?:e|è)ment|tableau de bord|prochaine (?:étape|etape)|ouvrez|envoyez|compl[eé]tez|travailleur(?:s)?|employeur(?:s)?)\b/i,
+    ],
+    pt: [
+        /[ãõáàâéêíóôúç]/i,
+        /\b(?:seu|sua|seus|suas|documentos?|pagamento|painel|pr[oó]xim[oa] (?:passo|etapa)|envie|acompanhe|complete|trabalhador(?:es)?|empregador(?:es)?)\b/i,
+    ],
+    hi: [
+        /[\u0900-\u097F]/,
+    ],
+};
+
 function getLanguageCodeFromLabel(label?: string | null): WhatsAppLanguageCode | null {
     const normalized = (label || "").trim().toLowerCase();
     if (!normalized) return null;
@@ -314,7 +339,16 @@ export function replyMatchesExpectedWhatsAppLanguage(expectedLanguage: string, r
         return true;
     }
 
-    return detectWhatsAppLanguageCode(responseText) === expectedCode;
+    const normalizedResponse = responseText.trim();
+    if (!normalizedResponse) {
+        return false;
+    }
+
+    if (RESPONSE_LANGUAGE_SIGNAL_PATTERNS[expectedCode].some((pattern) => pattern.test(normalizedResponse))) {
+        return true;
+    }
+
+    return detectWhatsAppLanguageCode(normalizedResponse) === expectedCode;
 }
 
 export function looksLikeEmployerWhatsAppLead(message: string): boolean {
