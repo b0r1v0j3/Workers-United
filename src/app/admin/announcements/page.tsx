@@ -5,13 +5,14 @@ import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import { normalizeUserType } from "@/lib/domain";
-import { queueEmail } from "@/lib/email-templates";
-import { revalidatePath } from "next/cache";
+import { loadAnnouncementTargets, sendAdminAnnouncement, type AnnouncementAudience } from "@/lib/admin-announcements";
 
-export default async function AnnouncementsPage() {
+async function ensureAdminUser() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect("/login");
+    if (!user) {
+        redirect("/login");
+    }
 
     const { data: profile } = await supabase
         .from("profiles")
@@ -19,100 +20,102 @@ export default async function AnnouncementsPage() {
         .eq("id", user.id)
         .single();
 
-    const isOwner = isGodModeUser(user.email);
-    if (profile?.user_type !== 'admin' && !isOwner) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
         redirect("/profile");
     }
+
+    return user;
+}
+
+export default async function AnnouncementsPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ success?: string; sent?: string; failed?: string; total?: string }>;
+}) {
+    const user = await ensureAdminUser();
 
     async function sendAnnouncement(formData: FormData) {
         "use server";
 
-        // Re-verify admin status inside server action (action endpoints can be called directly)
-        const { createClient: createServerClient } = await import("@/lib/supabase/server");
-        const { isGodModeUser: checkGodMode } = await import("@/lib/godmode");
-        const actionSupabase = await createServerClient();
-        const { data: { user: actionUser } } = await actionSupabase.auth.getUser();
-        if (!actionUser) return;
-        const { data: actionProfile } = await actionSupabase
-            .from("profiles")
-            .select("user_type")
-            .eq("id", actionUser.id)
-            .single();
-        if (actionProfile?.user_type !== 'admin' && !checkGodMode(actionUser.email)) return;
+        const actionUser = await ensureAdminUser();
 
-        const targetAudience = formData.get("target") as string;
+        const targetAudience = ((formData.get("target") as string) || "workers") as AnnouncementAudience;
         const subject = formData.get("subject") as string;
         const message = formData.get("message") as string;
         const actionText = formData.get("action_text") as string;
         const actionLink = formData.get("action_link") as string;
 
-        if (!subject || !message) return;
-
-        const { createAdminClient: createAdmin, getAllAuthUsers: fetchAllUsers } = await import("@/lib/supabase/admin");
-        const adminClient = createAdmin();
-        const normalizedActionText = actionText?.trim() || undefined;
-        const normalizedActionLink = actionLink?.trim() || undefined;
-
-        // 1. Fetch ALL Users (paginated)
-        const allUsers = await fetchAllUsers(adminClient);
-
-        let recipients = [];
-
-        if (targetAudience === 'workers') {
-            recipients = allUsers.filter((u: any) => {
-                const role = normalizeUserType(u.user_metadata?.user_type);
-                return role === "worker" || role === null;
-            });
-        } else if (targetAudience === 'employers') {
-            recipients = allUsers.filter((u: any) => normalizeUserType(u.user_metadata?.user_type) === "employer");
-        } else if (targetAudience === 'agencies') {
-            recipients = allUsers.filter((u: any) => normalizeUserType(u.user_metadata?.user_type) === "agency");
-        } else {
-            recipients = allUsers.filter((u: any) => normalizeUserType(u.user_metadata?.user_type) !== "admin");
+        if (!subject?.trim() || !message?.trim()) {
+            redirect("/admin/announcements?success=false&sent=0&failed=0&total=0");
         }
 
-        // 2. Queue Emails with throttling to avoid Gmail SMTP rate limits
-        const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
-        let count = 0;
-        for (const recipient of recipients) {
-            if (recipient.email) {
-                const normalizedRecipientRole = normalizeUserType(recipient.user_metadata?.user_type);
-                const recipientRole = normalizedRecipientRole === "worker" || normalizedRecipientRole === "employer" || normalizedRecipientRole === "agency"
-                    ? normalizedRecipientRole
-                    : "worker";
-                await queueEmail(
-                    adminClient,
-                    recipient.id,
-                    "announcement",
-                    recipient.email,
-                    recipient.user_metadata?.full_name || "User",
-                    {
-                        title: subject,
-                        message: message,
-                        subject: subject,
-                        actionText: normalizedActionLink ? (normalizedActionText || "View Details") : undefined,
-                        actionLink: normalizedActionLink,
-                        recipientRole,
-                    }
-                );
-                count++;
-                // Throttle: 1.5s between sends to avoid Gmail SMTP rate limits
-                if (count < recipients.length) {
-                    await delay(1500);
-                }
-            }
-        }
+        const admin = createAdminClient();
+        const result = await sendAdminAnnouncement({
+            admin,
+            actorUserId: actionUser.id,
+            audience: targetAudience,
+            subject,
+            message,
+            actionText,
+            actionLink,
+        });
 
-        // Announcement emails queued
-        redirect("/admin/announcements?success=true&count=" + count);
+        redirect(`/admin/announcements?success=true&sent=${result.sent}&failed=${result.failed}&total=${result.total}`);
     }
+
+    const admin = createAdminClient();
+    const [targets, params] = await Promise.all([
+        loadAnnouncementTargets(admin, "all"),
+        searchParams,
+    ]);
+    const success = params.success;
+    const sentCount = parseInt(params.sent || "0", 10);
+    const failedCount = parseInt(params.failed || "0", 10);
+    const totalCount = parseInt(params.total || "0", 10);
 
     return (
         <AppShell user={user} variant="admin">
             <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <h1 className="text-2xl font-bold text-slate-900">Announcements</h1>
-                    <p className="text-slate-500">Send bulk email notifications to users.</p>
+                    <p className="text-slate-500">Send bulk email notifications to real platform users.</p>
+                </div>
+
+                {success === "true" && (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                        <div className="text-green-800 font-bold text-lg mb-1">Announcement queued</div>
+                        <div className="text-green-700 text-sm">
+                            <strong>{sentCount}</strong> emails sent
+                            {failedCount > 0 && <span className="text-orange-600"> · {failedCount} failed</span>}
+                            {" "}out of <strong>{totalCount}</strong> eligible recipients.
+                        </div>
+                    </div>
+                )}
+
+                {success === "false" && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+                        <div className="text-red-800 font-bold text-lg mb-1">Announcement not sent</div>
+                        <div className="text-red-700 text-sm">
+                            Subject and message are required before sending a bulk announcement.
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+                        <div className="text-3xl font-bold text-slate-900">{targets.length}</div>
+                        <div className="text-sm text-slate-500 mt-1">Eligible recipients</div>
+                    </div>
+                    <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+                        <div className="text-3xl font-bold text-slate-900">{targets.filter((target) => target.recipientRole === "worker").length}</div>
+                        <div className="text-sm text-slate-500 mt-1">Workers</div>
+                    </div>
+                    <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+                        <div className="text-3xl font-bold text-slate-900">{targets.filter((target) => target.recipientRole !== "worker").length}</div>
+                        <div className="text-sm text-slate-500 mt-1">Employers + Agencies</div>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-2xl mx-auto">
@@ -187,6 +190,11 @@ export default async function AnnouncementsPage() {
                         </div>
 
                     </form>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                    <strong>⚠️ Note:</strong> Internal/test addresses and hidden agency draft-owner accounts are skipped automatically,
+                    and worker sends now reuse the same direct-notification guard as the rest of the platform.
                 </div>
             </div>
         </AppShell>
