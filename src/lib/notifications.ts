@@ -30,7 +30,7 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
   const offerLink = `${baseUrl}/profile/worker/offers/${data.offerId}`;
 
   try {
-    await queueEmail(
+    const emailResult = await queueEmail(
       data.supabase,
       data.workerUserId,
       "job_offer",
@@ -46,6 +46,15 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
       undefined,
       data.workerPhone
     );
+
+    if (!emailResult.sent) {
+      console.warn("[Notifications] Offer notification queue/send failed:", {
+        workerUserId: data.workerUserId,
+        workerEmail: data.workerEmail,
+        offerId: data.offerId,
+        error: emailResult.error || "Unknown email queue failure",
+      });
+    }
   } catch (err) {
     console.error("Offer notification error:", err);
   }
@@ -53,7 +62,7 @@ export async function sendOfferNotification(data: OfferNotificationData): Promis
 
 export async function sendOfferExpiredNotification(data: OfferExpiredData): Promise<void> {
   try {
-    await queueEmail(
+    const emailResult = await queueEmail(
       data.supabase,
       data.workerUserId,
       "offer_expired",
@@ -64,6 +73,15 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
         queuePosition: data.queuePosition,
       }
     );
+
+    if (!emailResult.sent) {
+      console.warn("[Notifications] Offer expired notification queue/send failed:", {
+        workerUserId: data.workerUserId,
+        workerEmail: data.workerEmail,
+        jobTitle: data.jobTitle,
+        error: emailResult.error || "Unknown email queue failure",
+      });
+    }
   } catch (err) {
     console.error("Offer expired notification error:", err);
   }

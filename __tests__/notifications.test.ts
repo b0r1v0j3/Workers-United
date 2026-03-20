@@ -13,7 +13,7 @@ import { sendOfferExpiredNotification, sendOfferNotification } from "@/lib/notif
 describe("notifications", () => {
     beforeEach(() => {
         queueEmailMock.mockReset();
-        queueEmailMock.mockResolvedValue(undefined);
+        queueEmailMock.mockResolvedValue({ id: "email_1", sent: true, error: null });
     });
 
     it("queues job_offer through the unified email pipeline", async () => {
@@ -75,5 +75,36 @@ describe("notifications", () => {
                 queuePosition: 4,
             },
         );
+    });
+
+    it("warns when the unified email pipeline reports a failed offer send", async () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const supabase = {} as never;
+        queueEmailMock.mockResolvedValueOnce({ id: "email_2", sent: false, error: "smtp_failed" });
+
+        await sendOfferNotification({
+            supabase,
+            workerUserId: "worker-profile-id",
+            workerEmail: "worker@example.com",
+            workerName: "Marko Petrovic",
+            workerPhone: "+381601234567",
+            jobTitle: "Welder",
+            companyName: "Steel Works",
+            country: "Germany",
+            expiresAt: "2026-03-20T10:00:00.000Z",
+            offerId: "offer-123",
+        });
+
+        expect(warnSpy).toHaveBeenCalledWith(
+            "[Notifications] Offer notification queue/send failed:",
+            expect.objectContaining({
+                workerUserId: "worker-profile-id",
+                workerEmail: "worker@example.com",
+                offerId: "offer-123",
+                error: "smtp_failed",
+            })
+        );
+
+        warnSpy.mockRestore();
     });
 });

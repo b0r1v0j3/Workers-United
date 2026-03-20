@@ -232,4 +232,43 @@ describe("worker approval actions", () => {
             fullNameFallback: worker.submitted_full_name,
         })).rejects.toThrow("Cannot revoke approval after Job Finder is active.");
     });
+
+    it("keeps notificationQueued false when the unlock email fails", async () => {
+        vi.mocked(queueEmail).mockResolvedValueOnce({ id: "email-2", sent: false, error: "smtp_failed" });
+
+        const worker = {
+            id: "worker-4",
+            profile_id: null,
+            submitted_full_name: "Agency Worker",
+            status: "PENDING_APPROVAL",
+            admin_approved: false,
+            entry_fee_paid: false,
+            job_search_active: false,
+            phone: "+381600000003",
+        };
+        const { adminClient } = createAdminClientMock({
+            worker,
+            documents: [
+                { document_type: "passport", status: "verified" },
+                { document_type: "biometric_photo", status: "verified" },
+                { document_type: "diploma", status: "verified" },
+            ],
+        });
+
+        const result = await applyWorkerApprovalAction({
+            adminClient: adminClient as any,
+            actorUserId: "admin-1",
+            action: "approve",
+            workerId: worker.id,
+            documentOwnerId: worker.id,
+            phoneOptional: true,
+            fullNameFallback: worker.submitted_full_name,
+        });
+
+        expect(result.notificationQueued).toBe(false);
+        expect(result.notification).toEqual({
+            status: "failed",
+            error: "smtp_failed",
+        });
+    });
 });

@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
             isHiddenDraftOwner: Boolean(user.user_metadata?.hidden_draft_owner),
         }));
         const hasActiveWelcomeEmail = await hasQueuedOrSentWelcomeEmail(supabase, user.id).catch(() => false);
+        let emailResult: { id: string | null; sent: boolean; error?: string | null } | null = null;
 
         // Queue the appropriate email based on type
         switch (emailType) {
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
                 if (hasActiveWelcomeEmail) {
                     return NextResponse.json({ success: true, skipped: true, reason: "welcome_already_queued" });
                 }
-                await queueEmail(
+                emailResult = await queueEmail(
                     supabase,
                     user.id,
                     "welcome",
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
                 if (!canNotifyWorkerDirectly) {
                     return NextResponse.json({ success: true, skipped: true, reason: "worker_direct_notifications_disabled" });
                 }
-                await queueEmail(
+                emailResult = await queueEmail(
                     supabase,
                     user.id,
                     "profile_complete",
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
                 break;
 
             case "payment_success":
-                await queueEmail(
+                emailResult = await queueEmail(
                     supabase,
                     user.id,
                     "payment_success",
@@ -94,7 +95,15 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: "Invalid email type" }, { status: 400 });
         }
 
-        return NextResponse.json({ success: true });
+        if (emailResult && !emailResult.sent) {
+            return NextResponse.json({
+                success: false,
+                queued: false,
+                error: emailResult.error || "Email queue failed",
+            }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, queued: true });
 
     } catch (error) {
         console.error("Queue user email error:", error);
