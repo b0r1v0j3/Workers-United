@@ -141,7 +141,7 @@ export function getEntryFeeUnlockState(worker: EntryFeeWorkerState | null): Entr
             allowed: false,
             reason: "needs_completion",
             status: 400,
-            error: "Complete your profile to 100% before unlocking Job Finder payment",
+            error: "Complete your profile and required documents before unlocking Job Finder payment",
         };
     }
 
@@ -150,7 +150,7 @@ export function getEntryFeeUnlockState(worker: EntryFeeWorkerState | null): Entr
             allowed: false,
             reason: "pending_admin_review",
             status: 400,
-            error: "Your profile is complete and waiting for admin review before Job Finder payment unlocks",
+            error: "Your profile and required documents are complete and waiting for admin review before Job Finder payment unlocks",
         };
     }
 

@@ -252,10 +252,10 @@ export default function DashboardClient({
                                 </div>
                                 <div className="flex flex-col items-center">
                                     <h3 className="text-xl font-semibold tracking-tight text-[#18181b]">
-                                        Activate Job Finder
+                                        Open Job Finder checkout
                                     </h3>
                                     <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
-                                        Your profile is complete. Pay a one-time $9 fee to activate personalized European job matching with visa guidance, interview prep, and a 90-day money-back guarantee.
+                                        Your profile and required documents are approved. Complete the one-time $9 Job Finder checkout to activate personalized European job matching with visa guidance, interview prep, and a 90-day money-back guarantee.
                                     </p>
                                 </div>
 

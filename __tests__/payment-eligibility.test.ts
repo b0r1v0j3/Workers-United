@@ -59,6 +59,7 @@ describe("getEntryFeeEligibility", () => {
 
         expect(result.allowed).toBe(false);
         expect(result.status).toBe(400);
+        expect(result.error).toContain("required documents");
         expect(result.error).toContain("admin review");
     });
 

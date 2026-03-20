@@ -228,7 +228,7 @@ export async function getSupportAccessState(
 
     return {
         allowed: false,
-        reason: "Support unlocks after you pay $9 and activate Job Finder.",
+        reason: "Support unlocks after your profile and required documents are complete, admin approval is done, and the $9 Job Finder checkout is paid.",
         unlockRequirement: "entry_fee",
     };
 }

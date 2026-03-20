@@ -89,5 +89,7 @@ describe("getSupportAccessState", () => {
 
         expect(state.allowed).toBe(false);
         expect(state.reason).toContain("$9");
+        expect(state.reason).toContain("required documents");
+        expect(state.reason).toContain("admin approval");
     });
 });
