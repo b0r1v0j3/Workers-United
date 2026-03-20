@@ -168,7 +168,7 @@ Workers-United/
 │   │   ├── whatsapp-blast.ts # Shared admin WhatsApp blast target loader + canonical worker dedupe + direct-notification eligibility guard + strict payment-readiness gating via `payment-eligibility` + announcement/status fallback send path + audit logging
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
-│   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, logging, failed-send error capture); proactive template sends now short-circuit when the same number recently hit a recipient-side Meta block/undeliverable error
+│   │   ├── whatsapp.ts        # WhatsApp Cloud API (template sending, text sending, logging, failed-send error capture); proactive template sends now short-circuit when the same number recently hit a recipient-side Meta block/undeliverable error, and thrown/network template failures now propagate the same retryable/failure-category metadata as the rest of the send stack
 │   │   ├── whatsapp-admin-commands.ts # Shared owner/admin WhatsApp memory-edit commands (`ispravi`, `zapamti`, `obrisi`, `memorija`) extracted from the webhook route
 │   │   ├── whatsapp-brain.ts  # Canonical WhatsApp facts/rules, safe-learning filter, explicit onboarding trigger, conversation-aware language resolver, and explicit language-switch detection
 │   │   ├── whatsapp-conversation-helpers.ts # Shared WhatsApp transcript formatting, history/brain-memory loading, worker auto-handoff summary creation, and repeated retryable reply-delivery failure escalation extracted from the webhook route; history loading now excludes both failed outbound sends and proactive/template outbound rows so prompts only see real assistant turns
@@ -426,7 +426,7 @@ User (Browser)
 | `src/lib/brain-monitor.ts` | Shared Brain parsing/normalization helpers; unwraps Responses API JSON, applies safe defaults for partial issue/action/operation payloads, and keeps exception reasoning stable even when the AI omits fields |
 | `src/lib/notifications.ts` | Offer notification dispatch helpers; `sendOfferNotification()` / `sendOfferExpiredNotification()` now route through `queueEmail()` + the unified premium template system instead of bypassing the email queue with bespoke inline HTML |
 | `src/lib/docx-generator.ts` | DOCX generation from templates (docxtemplater + pizzip) |
-| `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging; failed sends now persist `error_message` into `whatsapp_messages` so delivery issues are debuggable |
+| `src/lib/whatsapp.ts` | WhatsApp Cloud API — template sending, text sending, logging; failed sends now persist `error_message` into `whatsapp_messages`, proactive template sends suppress recent recipient-side undeliverables, and thrown/network template failures now preserve `retryable + failureCategory` metadata so ops/webhook callers can classify delivery drift correctly |
 | `src/lib/constants.ts` | Shared constants (industries, countries, etc.) |
 | `src/components/messaging/ConversationThread.tsx` | Reusable conversation thread UI used by worker and admin support inboxes |
 
