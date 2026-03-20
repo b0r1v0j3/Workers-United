@@ -5,15 +5,26 @@ import { sendWhatsAppText } from "@/lib/whatsapp";
 
 type AdminClient = SupabaseClient<Database>;
 
+export interface WhatsAppAdminCommandResult {
+    handled: boolean;
+    replySent: boolean;
+}
+
 export async function handleWhatsAppAdminCommand(params: {
     admin: AdminClient;
     normalizedPhone: string;
     content: string;
     profileId?: string | null;
-}): Promise<boolean> {
+    sendReply?: (text: string) => Promise<boolean>;
+}): Promise<WhatsAppAdminCommandResult> {
     const trimContent = params.content.trim();
     const lower = trimContent.toLowerCase();
     const profileId = params.profileId || undefined;
+    const sendReply = params.sendReply
+        || (async (text: string) => {
+            const result = await sendWhatsAppText(params.normalizedPhone, text, profileId);
+            return result.success;
+        });
 
     if (lower.startsWith("ispravi:")) {
         const correction = trimContent.substring(8).trim();
@@ -30,22 +41,19 @@ export async function handleWhatsAppAdminCommand(params: {
                 await params.admin.from("brain_memory")
                     .update({ content: newFact, confidence: 1.0 })
                     .eq("id", matches[0].id);
-                await sendWhatsAppText(
-                    params.normalizedPhone,
-                    `✅ Ispravljeno!\n\nStaro: ${matches[0].content}\nNovo: ${newFact}\n\nConfidence: 1.0 (admin verified)`,
-                    profileId
+                const replySent = await sendReply(
+                    `✅ Ispravljeno!\n\nStaro: ${matches[0].content}\nNovo: ${newFact}\n\nConfidence: 1.0 (admin verified)`
                 );
+                return { handled: true, replySent };
             } else {
                 await saveBrainFactsDedup(params.admin, [
                     { category: "faq", content: newFact, confidence: 1.0 },
                 ]);
-                await sendWhatsAppText(
-                    params.normalizedPhone,
-                    `✅ Nisam našao staru činjenicu, dodao novu:\n${newFact}`,
-                    profileId
+                const replySent = await sendReply(
+                    `✅ Nisam našao staru činjenicu, dodao novu:\n${newFact}`
                 );
+                return { handled: true, replySent };
             }
-            return true;
         }
     }
 
@@ -57,12 +65,10 @@ export async function handleWhatsAppAdminCommand(params: {
         await saveBrainFactsDedup(params.admin, [
             { category, content: fact, confidence: 1.0 },
         ]);
-        await sendWhatsAppText(
-            params.normalizedPhone,
-            `🧠 Zapamćeno!\n[${category}] ${fact}\nConfidence: 1.0`,
-            profileId
+        const replySent = await sendReply(
+            `🧠 Zapamćeno!\n[${category}] ${fact}\nConfidence: 1.0`
         );
-        return true;
+        return { handled: true, replySent };
     }
 
     if (lower.startsWith("obrisi:") || lower.startsWith("obriši:")) {
@@ -74,19 +80,16 @@ export async function handleWhatsAppAdminCommand(params: {
 
         if (matches && matches.length > 0) {
             await params.admin.from("brain_memory").delete().eq("id", matches[0].id);
-            await sendWhatsAppText(
-                params.normalizedPhone,
-                `🗑️ Obrisano:\n[${matches[0].category}] ${matches[0].content}`,
-                profileId
+            const replySent = await sendReply(
+                `🗑️ Obrisano:\n[${matches[0].category}] ${matches[0].content}`
             );
+            return { handled: true, replySent };
         } else {
-            await sendWhatsAppText(
-                params.normalizedPhone,
-                `❌ Nisam našao činjenicu sa: "${search}"`,
-                profileId
+            const replySent = await sendReply(
+                `❌ Nisam našao činjenicu sa: "${search}"`
             );
+            return { handled: true, replySent };
         }
-        return true;
     }
 
     if (lower === "memorija" || lower === "memory") {
@@ -96,13 +99,11 @@ export async function handleWhatsAppAdminCommand(params: {
         const list = (allMemory || []).map((entry, index) =>
             `${index + 1}. [${entry.category}] ${entry.content} (${entry.confidence})`
         ).join("\n");
-        await sendWhatsAppText(
-            params.normalizedPhone,
-            `🧠 Brain Memory (${(allMemory || []).length} facts):\n\n${list || "(prazno)"}`,
-            profileId
+        const replySent = await sendReply(
+            `🧠 Brain Memory (${(allMemory || []).length} facts):\n\n${list || "(prazno)"}`
         );
-        return true;
+        return { handled: true, replySent };
     }
 
-    return false;
+    return { handled: false, replySent: false };
 }

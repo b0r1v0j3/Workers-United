@@ -82,6 +82,7 @@ describe("whatsapp-employer-flow", () => {
         expect(resolution.isEmployer).toBe(true);
         expect(resolution.employerRecord).toEqual({
             id: "emp_1",
+            profile_id: null,
             company_name: "Steel Concept",
             contact_name: "Milan",
             status: "APPROVED",
@@ -98,6 +99,7 @@ describe("whatsapp-employer-flow", () => {
             normalizedPhone: "+38166111222",
             employerRecord: {
                 id: "emp_1",
+                profile_id: null,
                 company_name: "Steel Concept",
                 contact_name: "Milan",
                 status: "APPROVED",

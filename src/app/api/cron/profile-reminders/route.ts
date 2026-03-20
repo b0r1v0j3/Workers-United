@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
-import { sendEmail } from "@/lib/mailer";
 import { normalizeUserType } from "@/lib/domain";
 import { getWorkerCompletion, getEmployerCompletion, getAgencyCompletion } from "@/lib/profile-completion";
-import { getEmailTemplate } from "@/lib/email-templates";
+import { getEmailTemplate, queueEmail } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { deleteUserData } from "@/lib/user-management";
@@ -61,7 +60,7 @@ export async function GET(request: Request) {
             supabase.from("employers").select("*"),
             supabase.from("agencies").select("profile_id, display_name, legal_name, contact_email, created_at, updated_at"),
             supabase.from("worker_documents").select("user_id, document_type, status, created_at, updated_at"),
-            supabase.from("email_queue").select("id, user_id, recipient_email, email_type, subject, created_at, sent_at")
+            supabase.from("email_queue").select("id, user_id, recipient_email, email_type, subject, status, created_at, sent_at")
                 .in("user_id", eligibleUserIds)
                 .in("email_type", ["profile_reminder", "profile_warning", ...PROFILE_RETENTION_CASE_EMAIL_TYPES]),
             supabase.from("signatures").select("user_id, created_at").in("user_id", eligibleUserIds),
@@ -102,17 +101,19 @@ export async function GET(request: Request) {
         const recentReminders = new Set<string>(); // emails sent <24h ago
         const warningSubjects = new Set<string>();  // "email|subject" combos already sent
         for (const e of allEmails || []) {
-            if (e.email_type === "profile_reminder" && e.created_at > oneDayAgo) {
+            if (e.status === "sent" && e.email_type === "profile_reminder" && e.created_at > oneDayAgo) {
                 recentReminders.add(e.recipient_email);
             }
-            if (e.email_type === "profile_warning") {
+            if (e.status === "sent" && e.email_type === "profile_warning") {
                 warningSubjects.add(`${e.recipient_email}|${e.subject}`);
             }
             if (
-                e.user_id
+                e.status === "sent"
+                && e.sent_at
+                && e.user_id
                 && PROFILE_RETENTION_CASE_EMAIL_TYPES.includes(e.email_type as (typeof PROFILE_RETENTION_CASE_EMAIL_TYPES)[number])
             ) {
-                const activityAt = e.sent_at || e.created_at;
+                const activityAt = e.sent_at;
                 if (!activityAt) continue;
                 const previous = latestCaseEmailByUser.get(e.user_id);
                 if (!previous || new Date(activityAt).getTime() > new Date(previous).getTime()) {
@@ -227,11 +228,20 @@ export async function GET(request: Request) {
                     continue;
                 }
 
-                const { subject, html } = getEmailTemplate("profile_deletion", {
-                    name: firstName,
-                    recipientRole,
-                });
-                await sendEmail(email, subject, html);
+                const deletionResult = await queueEmail(
+                    supabase,
+                    userId,
+                    "profile_deletion",
+                    email,
+                    fullName || (recipientRole === "employer" ? "Employer" : recipientRole === "agency" ? "Agency" : "Worker"),
+                    { recipientRole }
+                );
+
+                if (!deletionResult.sent) {
+                    console.error(`[Reminders] Failed to queue/send deletion notice to ${email}:`, deletionResult.error);
+                    skipped++;
+                    continue;
+                }
 
                 try {
                     await deleteUserData(supabase, userId);
@@ -247,7 +257,7 @@ export async function GET(request: Request) {
             const isWarningDay = retentionState.isWarningDay;
 
             if (isWarningDay) {
-                const { subject: warningSubject, html } = getEmailTemplate("profile_warning", {
+                const { subject: warningSubject } = getEmailTemplate("profile_warning", {
                     name: firstName,
                     recipientRole,
                     daysLeft,
@@ -260,21 +270,19 @@ export async function GET(request: Request) {
                     continue;
                 }
 
-                const result = await sendEmail(email, warningSubject, html);
+                const result = await queueEmail(
+                    supabase,
+                    userId,
+                    "profile_warning",
+                    email,
+                    fullName || (recipientRole === "employer" ? "Employer" : recipientRole === "agency" ? "Agency" : "Worker"),
+                    { todoList, daysLeft, recipientRole }
+                );
 
-                if (result.success) {
-                    await supabase.from("email_queue").insert({
-                        user_id: userId,
-                        email_type: "profile_warning",
-                        recipient_email: email,
-                        recipient_name: fullName || (recipientRole === "employer" ? "Employer" : recipientRole === "agency" ? "Agency" : "Worker"),
-                        subject: warningSubject,
-                        template_data: { todoList, daysLeft, recipientRole },
-                        status: "sent",
-                        sent_at: new Date().toISOString(),
-                        scheduled_for: new Date().toISOString(),
-                    });
+                if (result.sent) {
                     warned++;
+                } else {
+                    console.error(`[Reminders] Failed to queue/send warning to ${email}:`, result.error);
                 }
                 continue;
             }
@@ -286,28 +294,19 @@ export async function GET(request: Request) {
                 continue;
             }
 
-            const { subject, html } = getEmailTemplate("profile_reminder", {
-                name: firstName,
-                recipientRole,
-                todoList,
-            });
-            const result = await sendEmail(email, subject, html);
+            const result = await queueEmail(
+                supabase,
+                userId,
+                "profile_reminder",
+                email,
+                fullName || (recipientRole === "employer" ? "Employer" : recipientRole === "agency" ? "Agency" : "Worker"),
+                { todoList, recipientRole }
+            );
 
-            if (result.success) {
-                await supabase.from("email_queue").insert({
-                    user_id: userId,
-                    email_type: "profile_reminder",
-                    recipient_email: email,
-                    recipient_name: fullName || (recipientRole === "employer" ? "Employer" : recipientRole === "agency" ? "Agency" : "Worker"),
-                    subject,
-                    template_data: { todoList, recipientRole },
-                    status: "sent",
-                    sent_at: new Date().toISOString(),
-                    scheduled_for: new Date().toISOString(),
-                });
+            if (result.sent) {
                 sent++;
             } else {
-                console.error(`[Reminders] Failed to send to ${email}:`, result.error);
+                console.error(`[Reminders] Failed to queue/send reminder to ${email}:`, result.error);
             }
         }
 

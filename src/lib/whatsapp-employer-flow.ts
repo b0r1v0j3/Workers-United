@@ -13,6 +13,7 @@ type AdminClient = SupabaseClient<Database>;
 
 export interface WhatsAppEmployerRecord {
     id: string;
+    profile_id: string | null;
     company_name: string | null;
     contact_name: string | null;
     status: string | null;
@@ -76,7 +77,7 @@ export async function resolveEmployerWhatsAppLead(params: {
 }): Promise<EmployerLeadResolution> {
     const rawEmployerResult = await ((params.admin
         .from("employers")
-        .select("id, company_name, contact_name, status")
+        .select("id, profile_id, company_name, contact_name, status")
         .or(`phone.eq.${params.normalizedPhone},contact_phone.eq.${params.normalizedPhone}`)
         .maybeSingle()) as unknown as Promise<{ data: Record<string, unknown> | null }>);
     const rawEmployerRecord = rawEmployerResult.data;
@@ -92,6 +93,7 @@ export async function resolveEmployerWhatsAppLead(params: {
     const employerRecord = rawEmployerRecord
         ? {
             id: String(rawEmployerRecord.id || ""),
+            profile_id: typeof rawEmployerRecord.profile_id === "string" ? rawEmployerRecord.profile_id : null,
             company_name: typeof rawEmployerRecord.company_name === "string" ? rawEmployerRecord.company_name : null,
             contact_name: typeof rawEmployerRecord.contact_name === "string" ? rawEmployerRecord.contact_name : null,
             status: typeof rawEmployerRecord.status === "string" ? rawEmployerRecord.status : null,
