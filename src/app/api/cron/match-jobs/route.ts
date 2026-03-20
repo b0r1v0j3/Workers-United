@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { queueEmail } from '@/lib/email-templates';
+import { buildPlatformUrl } from '@/lib/platform-contact';
 
 // Config
 export const dynamic = 'force-dynamic';
@@ -181,7 +182,7 @@ export async function GET(request: Request) {
                         location: job.destination_country || "Europe",
                         salary: `${Number(job.salary_rsd || 0).toLocaleString('de-DE')} RSD`,
                         industry: job.industry,
-                        offerLink: `https://workersunited.eu/profile/worker/offers/${offer.id}`
+                        offerLink: buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, `/profile/worker/offers/${offer.id}`),
                     }
                 );
 

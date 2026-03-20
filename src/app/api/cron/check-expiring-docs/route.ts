@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { queueEmail } from '@/lib/email-templates';
 import { isEmailDeliveryAccepted } from '@/lib/email-queue';
+import { buildPlatformUrl } from '@/lib/platform-contact';
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from '@/lib/reporting';
 import { canSendWorkerDirectNotifications } from '@/lib/worker-notification-eligibility';
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord } from '@/lib/workers';
@@ -134,7 +135,7 @@ export async function GET(request: Request) {
                 {
                     documentType: (doc.document_type || "Document").toUpperCase(),
                     expirationDate: new Date(doc.expires_at).toLocaleDateString("en-GB"),
-                    offerLink: "https://workersunited.eu/profile/worker/documents"
+                    offerLink: buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/profile/worker/documents"),
                 },
                 undefined,
                 phone

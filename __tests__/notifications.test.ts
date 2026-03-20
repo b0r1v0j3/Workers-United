@@ -77,6 +77,43 @@ describe("notifications", () => {
         );
     });
 
+    it("normalizes bare NEXT_PUBLIC_BASE_URL when building offer links", async () => {
+        const originalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+        const supabase = {} as never;
+
+        try {
+            process.env.NEXT_PUBLIC_BASE_URL = "workersunited.example";
+
+            await sendOfferNotification({
+                supabase,
+                workerUserId: "worker-profile-id",
+                workerEmail: "worker@example.com",
+                workerName: "Marko Petrovic",
+                workerPhone: "+381601234567",
+                jobTitle: "Welder",
+                companyName: "Steel Works",
+                country: "Germany",
+                expiresAt: "2026-03-20T10:00:00.000Z",
+                offerId: "offer-123",
+            });
+
+            expect(queueEmailMock).toHaveBeenCalledWith(
+                supabase,
+                "worker-profile-id",
+                "job_offer",
+                "worker@example.com",
+                "Marko Petrovic",
+                expect.objectContaining({
+                    offerLink: "https://workersunited.example/profile/worker/offers/offer-123",
+                }),
+                undefined,
+                "+381601234567",
+            );
+        } finally {
+            process.env.NEXT_PUBLIC_BASE_URL = originalBaseUrl;
+        }
+    });
+
     it("warns when the unified email pipeline reports a failed offer send", async () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
         const supabase = {} as never;

@@ -7,6 +7,7 @@ import { isGodModeUser } from "@/lib/godmode";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { checkRateLimit, standardLimiter } from "@/lib/rate-limit";
 import { AGENCY_DRAFT_DOCUMENT_OWNER_KEY, resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
+import { buildPlatformUrl } from "@/lib/platform-contact";
 
 // ─── Request Manual Review ──────────────────────────────────────────────────
 // When AI rejects a document but user believes it's correct,
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
                     subject: `Manual Review Needed: ${docLabel} for ${workerLabel}`,
                     title: "Document Review Request",
                     message: `${requestContext}\n\nThe AI verification rejected it and a manual review is now requested.\n\nPlease review it in the admin panel.`,
-                    actionLink: `${process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu"}/admin/review`,
+                    actionLink: buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/admin/review"),
                     actionText: "Review Documents",
                 }
             );
