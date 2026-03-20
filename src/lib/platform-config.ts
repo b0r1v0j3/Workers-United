@@ -1,4 +1,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+    buildPlatformUrl,
+    DEFAULT_PLATFORM_SUPPORT_EMAIL,
+    DEFAULT_PLATFORM_WEBSITE_URL,
+    getPlatformContactInfoFromValues,
+    normalizePlatformSupportEmail,
+    normalizePlatformWebsiteUrl,
+    type PlatformContactInfo,
+} from "@/lib/platform-contact";
 
 // ─── Platform Config Cache ──────────────────────────────────────────────────
 // Reads business facts from `platform_config` table with 5-minute cache.
@@ -9,16 +18,14 @@ export interface PlatformConfig {
 }
 
 export const CANONICAL_REQUIRED_WORKER_DOCUMENTS = "passport, biometric photo, and a final school, university, or formal vocational diploma";
-export const DEFAULT_PLATFORM_WEBSITE_URL = "https://workersunited.eu";
-export const DEFAULT_PLATFORM_SUPPORT_EMAIL = "contact@workersunited.eu";
-
-export interface PlatformContactInfo {
-    websiteUrl: string;
-    signupUrl: string;
-    workerProfileUrl: string;
-    workerInboxUrl: string;
-    supportEmail: string;
-}
+export {
+    buildPlatformUrl,
+    DEFAULT_PLATFORM_SUPPORT_EMAIL,
+    DEFAULT_PLATFORM_WEBSITE_URL,
+    normalizePlatformSupportEmail,
+    normalizePlatformWebsiteUrl,
+};
+export type { PlatformContactInfo };
 
 let cachedConfig: PlatformConfig | null = null;
 let cacheTimestamp = 0;
@@ -112,32 +119,8 @@ export async function getBusinessFactsForAI(): Promise<string> {
     return buildBusinessFactsForAIFromConfig(c);
 }
 
-export function normalizePlatformWebsiteUrl(value?: string | null): string {
-    const trimmed = (value || "").trim();
-    const rawUrl = trimmed || DEFAULT_PLATFORM_WEBSITE_URL;
-    const withProtocol = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
-    return withProtocol.replace(/\/+$/, "");
-}
-
-export function normalizePlatformSupportEmail(value?: string | null): string {
-    return (value || "").trim() || DEFAULT_PLATFORM_SUPPORT_EMAIL;
-}
-
-export function buildPlatformUrl(baseUrl?: string | null, path = "/"): string {
-    const normalizedBase = normalizePlatformWebsiteUrl(baseUrl);
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return normalizedPath === "/" ? normalizedBase : `${normalizedBase}${normalizedPath}`;
-}
-
 export function getPlatformContactInfoFromConfig(config?: PlatformConfig | null): PlatformContactInfo {
-    const websiteUrl = normalizePlatformWebsiteUrl(config?.website_url);
-    return {
-        websiteUrl,
-        signupUrl: buildPlatformUrl(websiteUrl, "/signup"),
-        workerProfileUrl: buildPlatformUrl(websiteUrl, "/profile/worker"),
-        workerInboxUrl: buildPlatformUrl(websiteUrl, "/profile/worker/inbox"),
-        supportEmail: normalizePlatformSupportEmail(config?.contact_email),
-    };
+    return getPlatformContactInfoFromValues(config?.website_url, config?.contact_email);
 }
 
 export async function getPlatformContactInfo(): Promise<PlatformContactInfo> {

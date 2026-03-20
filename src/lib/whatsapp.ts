@@ -5,6 +5,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CanonicalUserType } from "@/lib/domain";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import { normalizePlatformWebsiteUrl, toPlatformUrlSuffix } from "@/lib/platform-contact";
 import { isRecipientSideWhatsAppFailure } from "@/lib/whatsapp-health";
 
 const GRAPH_API_VERSION = "v21.0";
@@ -663,7 +664,7 @@ async function logMessage(params: LogMessageParams): Promise<void> {
 
 // ─── Convenience wrappers for each template ─────────────────────────────────
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://workersunited.eu";
+const BASE_URL = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
 
 type WhatsAppRecipientRole = Exclude<CanonicalUserType, "admin">;
 
@@ -690,9 +691,7 @@ function getRoleWorkspacePath(role: WhatsAppRecipientRole, purpose: "welcome" | 
 }
 
 function toTemplateUrlSuffix(url: string) {
-    return url.startsWith("http://") || url.startsWith("https://")
-        ? url.replace(BASE_URL, "")
-        : url;
+    return toPlatformUrlSuffix(url, BASE_URL);
 }
 
 export async function sendRoleWelcome(
@@ -757,7 +756,7 @@ export async function sendOfferExpiring(phone: string, jobTitle: string, offerUr
         to: phone,
         templateName: "offer_expiring_soon",
         bodyParams: [jobTitle],
-        buttonParams: [{ type: "url", url: offerUrl.replace(BASE_URL, "") }],
+        buttonParams: [{ type: "url", url: toTemplateUrlSuffix(offerUrl) }],
         userId,
     });
 }

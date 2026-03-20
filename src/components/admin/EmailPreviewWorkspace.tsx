@@ -9,10 +9,16 @@ import {
     parseAdminEmailPreviewData,
     type EmailPreviewData,
 } from "@/lib/admin-email-preview";
+import { buildPlatformUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
 
 const DEFAULT_EMAIL_TYPE: EmailType = "welcome";
 const paymentUnlockedPreview = buildWorkerPaymentUnlockedEmailData();
+const PREVIEW_BASE_URL = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
+
+function buildPreviewUrl(path: string) {
+    return buildPlatformUrl(PREVIEW_BASE_URL, path);
+}
 
 const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
     welcome: { name: "Marko Petrović" },
@@ -24,11 +30,11 @@ const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
         companyName: "TechCorp GmbH",
         jobTitle: "Construction Worker",
         country: "Germany",
-        offerLink: "https://workersunited.eu/profile/worker/offers/123",
+        offerLink: buildPreviewUrl("/profile/worker/offers/123"),
     },
     offer_reminder: {
         name: "Marko Petrović",
-        offerLink: "https://workersunited.eu/profile/worker/offers/123",
+        offerLink: buildPreviewUrl("/profile/worker/offers/123"),
     },
     offer_expired: {
         name: "Marko Petrović",
@@ -47,7 +53,7 @@ const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
         location: "Munich, Germany",
         salary: "€2,200/month",
         industry: "Logistics",
-        offerLink: "https://workersunited.eu/profile/worker/offers/456",
+        offerLink: buildPreviewUrl("/profile/worker/offers/456"),
     },
     admin_update: {
         name: "Marko Petrović",
@@ -55,14 +61,14 @@ const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
         title: paymentUnlockedPreview.title || "Profile Approved",
         message: paymentUnlockedPreview.message || "Your profile has been approved by our team.",
         actionText: paymentUnlockedPreview.actionText || "Open Job Finder",
-        actionLink: paymentUnlockedPreview.actionLink || "https://workersunited.eu/profile/worker",
+        actionLink: paymentUnlockedPreview.actionLink || buildPreviewUrl("/profile/worker"),
     },
     announcement: {
         name: "Marko Petrović",
         subject: "New Feature: Job Matching is Live!",
         title: "Job Matching is Now Live",
         message: "We are excited to announce that our job matching system is now live. Your profile will be automatically matched with suitable employers across Europe.",
-        actionLink: "https://workersunited.eu/profile/worker",
+        actionLink: buildPreviewUrl("/profile/worker"),
         actionText: "View Your Matches",
     },
     employer_outreach: {
