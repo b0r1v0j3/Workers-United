@@ -233,14 +233,14 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     if (unlockState.reason === "pending_admin_review") {
         return {
             label: "Pending approval",
-            detail: "The profile is complete and now waiting for admin approval before Job Finder payment unlocks.",
+            detail: "The profile and required documents are complete and now waiting for admin approval before Job Finder payment unlocks.",
             tone: "blue",
         };
     }
 
     return {
         label: "Not paid yet",
-        detail: "Agency can start Job Finder by paying the $9 entry fee after admin approval.",
+        detail: "Agency can start the $9 Job Finder checkout after admin approval.",
         tone: "slate",
     };
 }
