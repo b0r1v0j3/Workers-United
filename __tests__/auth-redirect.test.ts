@@ -17,13 +17,16 @@ const logServerActivity = vi.fn();
 const isInternalOrTestEmail = vi.fn();
 const hasKnownTypoEmailDomain = vi.fn();
 
-let welcomeEmailQueued = false;
+let welcomeEmailSent = false;
+let welcomeEmailPending = false;
 let whatsappWelcomeRecorded = false;
+let welcomeWhatsAppSent = false;
 
 function buildQuery(resultFactory: () => Promise<{ data: unknown; error: null }>) {
     const query: Record<string, unknown> = {
         select: vi.fn(() => query),
         eq: vi.fn(() => query),
+        in: vi.fn(() => query),
         limit: vi.fn(() => query),
         maybeSingle: vi.fn(resultFactory),
     };
@@ -33,9 +36,19 @@ function buildQuery(resultFactory: () => Promise<{ data: unknown; error: null }>
 
 function buildAdminClient() {
     const emailQueueQuery = buildQuery(async () => ({
-        data: welcomeEmailQueued ? { id: "welcome-email" } : null,
+        data: welcomeEmailSent || welcomeEmailPending ? { id: "welcome-email" } : null,
         error: null,
     }));
+    const whatsappMessagesQuery = {
+        select: vi.fn(() => whatsappMessagesQuery),
+        eq: vi.fn(() => whatsappMessagesQuery),
+        in: vi.fn(() => whatsappMessagesQuery),
+        limit: vi.fn(() => whatsappMessagesQuery),
+        maybeSingle: vi.fn(async () => ({
+            data: welcomeWhatsAppSent ? { id: "wa-welcome" } : null,
+            error: null,
+        })),
+    };
     const userActivityQuery = {
         select: vi.fn(() => userActivityQuery),
         eq: vi.fn(() => userActivityQuery),
@@ -63,6 +76,10 @@ function buildAdminClient() {
 
             if (table === "user_activity") {
                 return userActivityQuery;
+            }
+
+            if (table === "whatsapp_messages") {
+                return whatsappMessagesQuery;
             }
 
             throw new Error(`Unexpected table ${table}`);
@@ -119,12 +136,14 @@ describe("resolvePostAuthRedirect", () => {
     beforeEach(() => {
         vi.resetModules();
         vi.clearAllMocks();
-        welcomeEmailQueued = false;
+        welcomeEmailSent = false;
+        welcomeEmailPending = false;
         whatsappWelcomeRecorded = false;
+        welcomeWhatsAppSent = false;
 
         createAdminClient.mockReturnValue(buildAdminClient());
         queueEmail.mockImplementation(async () => {
-            welcomeEmailQueued = true;
+            welcomeEmailSent = true;
             return { success: true };
         });
         sendWelcome.mockResolvedValue({ success: true });
@@ -178,5 +197,46 @@ describe("resolvePostAuthRedirect", () => {
             "user-1",
             expect.stringContaining("queue_joined_at")
         );
+    });
+
+    it("does not resend welcome email or WhatsApp when a prior welcome email/template already exists", async () => {
+        welcomeEmailSent = true;
+        welcomeWhatsAppSent = true;
+
+        const { resolvePostAuthRedirect } = await import("@/lib/auth-redirect");
+        const user = {
+            id: "user-1",
+            email: "worker@example.com",
+            user_metadata: {
+                full_name: "Worker One",
+                user_type: "worker",
+            },
+        } as unknown as User;
+
+        const href = await resolvePostAuthRedirect({ origin: "http://localhost", user });
+
+        expect(href).toBe("http://localhost/profile/worker");
+        expect(queueEmail).not.toHaveBeenCalled();
+        expect(sendWelcome).not.toHaveBeenCalled();
+    });
+
+    it("does not enqueue a duplicate welcome email when one is already pending", async () => {
+        welcomeEmailPending = true;
+
+        const { resolvePostAuthRedirect } = await import("@/lib/auth-redirect");
+        const user = {
+            id: "user-1",
+            email: "worker@example.com",
+            user_metadata: {
+                full_name: "Worker One",
+                user_type: "worker",
+            },
+        } as unknown as User;
+
+        const href = await resolvePostAuthRedirect({ origin: "http://localhost", user });
+
+        expect(href).toBe("http://localhost/profile/worker");
+        expect(queueEmail).not.toHaveBeenCalled();
+        expect(sendWelcome).toHaveBeenCalledTimes(1);
     });
 });

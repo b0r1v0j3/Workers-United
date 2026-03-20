@@ -9,6 +9,7 @@ import { syncAuthContactFields } from "@/lib/auth-contact-sync";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { ensureWorkerProfileRecord, ensureWorkerRecord, loadCanonicalWorkerRecord } from "@/lib/workers";
+import { hasQueuedOrSentWelcomeEmail } from "@/lib/welcome-notifications";
 
 const SUPPORTED_SIGNUP_TYPES = new Set(["worker", "employer", "agency"]);
 const AUTH_WELCOME_WHATSAPP_ACTION = "auth_whatsapp_welcome_sent";
@@ -34,6 +35,28 @@ async function hasRecordedAuthWhatsAppWelcome(adminClient: ReturnType<typeof cre
         .eq("user_id", userId)
         .eq("category", "auth")
         .eq("action", AUTH_WELCOME_WHATSAPP_ACTION)
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+
+    return Boolean(data);
+}
+
+async function hasSentWelcomeWhatsApp(adminClient: ReturnType<typeof createAdminClient>, userId: string) {
+    if (await hasRecordedAuthWhatsAppWelcome(adminClient, userId)) {
+        return true;
+    }
+
+    const { data, error } = await adminClient
+        .from("whatsapp_messages")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("direction", "outbound")
+        .eq("template_name", "welcome_registration")
+        .in("status", ["sent", "delivered", "read"])
         .limit(1)
         .maybeSingle();
 
@@ -95,15 +118,9 @@ export async function resolvePostAuthRedirect({
         && !isInternalOrTestEmail(normalizedUserEmail)
         && !hasKnownTypoEmailDomain(normalizedUserEmail);
 
-    const { data: existingWelcomeEmail } = canSendAutomatedWelcome
-        ? await adminClient
-            .from("email_queue")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("email_type", "welcome")
-            .limit(1)
-            .maybeSingle()
-        : { data: [] };
+    const existingWelcomeEmail = canSendAutomatedWelcome
+        ? await hasQueuedOrSentWelcomeEmail(adminClient, user.id).catch(() => false)
+        : false;
 
     if (canSendAutomatedWelcome && !existingWelcomeEmail) {
         queueEmail(
@@ -248,7 +265,7 @@ export async function resolvePostAuthRedirect({
             });
 
             const hasWelcomeWhatsApp = workerRecordCheck?.phone
-                ? await hasRecordedAuthWhatsAppWelcome(adminClient, user.id).catch(() => false)
+                ? await hasSentWelcomeWhatsApp(adminClient, user.id).catch(() => false)
                 : true;
 
             if (workerRecordCheck?.phone && canSendWorkerNotifications && !hasWelcomeWhatsApp) {

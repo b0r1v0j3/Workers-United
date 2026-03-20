@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { queueEmail } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
+import { normalizeUserType } from "@/lib/domain";
+import { hasQueuedOrSentWelcomeEmail } from "@/lib/welcome-notifications";
 
 // Called after successful signup to queue welcome email
 export async function POST(request: NextRequest) {
@@ -19,6 +21,7 @@ export async function POST(request: NextRequest) {
 
         const userName = user.user_metadata?.full_name || user.email?.split("@")[0] || "there";
         const userEmail = user.email || "";
+        const recipientRole = normalizeUserType(user.user_metadata?.user_type);
         const isWorker = user.user_metadata?.user_type === "worker";
         const canEmailThisUser = Boolean(userEmail) && !isInternalOrTestEmail(userEmail) && !hasKnownTypoEmailDomain(userEmail);
 
@@ -35,6 +38,7 @@ export async function POST(request: NextRequest) {
             worker: workerRecord,
             isHiddenDraftOwner: Boolean(user.user_metadata?.hidden_draft_owner),
         }));
+        const hasActiveWelcomeEmail = await hasQueuedOrSentWelcomeEmail(supabase, user.id).catch(() => false);
 
         // Queue the appropriate email based on type
         switch (emailType) {
@@ -42,13 +46,16 @@ export async function POST(request: NextRequest) {
                 if (!canNotifyWorkerDirectly) {
                     return NextResponse.json({ success: true, skipped: true, reason: "worker_direct_notifications_disabled" });
                 }
+                if (hasActiveWelcomeEmail) {
+                    return NextResponse.json({ success: true, skipped: true, reason: "welcome_already_queued" });
+                }
                 await queueEmail(
                     supabase,
                     user.id,
                     "welcome",
                     userEmail,
                     userName,
-                    {},
+                    recipientRole && recipientRole !== "admin" ? { recipientRole } : {},
                     undefined,
                     phone
                 );

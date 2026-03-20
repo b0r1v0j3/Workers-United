@@ -4,6 +4,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CanonicalUserType } from "@/lib/domain";
+import { isRecipientSideWhatsAppFailure } from "@/lib/whatsapp-health";
 
 const GRAPH_API_VERSION = "v21.0";
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
@@ -63,6 +64,8 @@ interface SendResult {
 interface SendAttemptResult extends SendResult {
     errorData?: any;
 }
+
+const RECIPIENT_BLOCK_LOOKBACK_DAYS = 30;
 
 // ─── Environment helpers ────────────────────────────────────────────────────
 
@@ -241,6 +244,37 @@ async function attemptTemplateSend(
     return { success: true, messageId: data.messages?.[0]?.id };
 }
 
+async function findRecentRecipientSideBlock(phoneNumber: string): Promise<string | null> {
+    try {
+        const supabase = createAdminClient();
+        const since = new Date(Date.now() - RECIPIENT_BLOCK_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+        const { data, error } = await supabase
+            .from("whatsapp_messages")
+            .select("error_message")
+            .eq("phone_number", phoneNumber)
+            .eq("direction", "outbound")
+            .eq("message_type", "template")
+            .eq("status", "failed")
+            .gte("created_at", since)
+            .order("created_at", { ascending: false })
+            .limit(10);
+
+        if (error) {
+            console.warn("[WhatsApp] Failed to inspect recent recipient-side failures:", error);
+            return null;
+        }
+
+        const recentRecipientFailure = (data || []).find((message: { error_message?: string | null }) =>
+            isRecipientSideWhatsAppFailure(message.error_message)
+        );
+
+        return recentRecipientFailure?.error_message?.trim() || null;
+    } catch (error) {
+        console.warn("[WhatsApp] Failed to inspect recent recipient-side block history:", error);
+        return null;
+    }
+}
+
 // ─── Send template message ──────────────────────────────────────────────────
 
 /**
@@ -260,6 +294,22 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
     const to = normalizePhone(normalizedOptions.to);
 
     try {
+        const recentRecipientBlock = await findRecentRecipientSideBlock(to);
+        if (recentRecipientBlock) {
+            const suppressionError = `Suppressed due to recent recipient-side WhatsApp block: ${recentRecipientBlock}`;
+            await logMessage({
+                userId: normalizedOptions.userId,
+                phoneNumber: to,
+                direction: "outbound",
+                messageType: "template",
+                content: buildTemplateContent(normalizedOptions),
+                templateName: normalizedOptions.templateName,
+                status: "blocked",
+                errorMessage: suppressionError,
+            });
+            return { success: false, error: suppressionError };
+        }
+
         let attemptedOptions = normalizedOptions;
         let sendResult = await attemptTemplateSend(config, to, normalizedOptions);
 
