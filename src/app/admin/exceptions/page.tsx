@@ -140,12 +140,14 @@ export default async function AdminExceptionsPage() {
                             + snapshot.whatsappQuality.languageFallbacks
                             + snapshot.whatsappQuality.autoHandoffs
                             + snapshot.whatsappQuality.openAIFailures
+                            + snapshot.whatsappQuality.replyDeliveryFailures
                         }
-                        meta="24h guardrails, language rescues, handoffs, and AI failures"
+                        meta="24h guardrails, language rescues, handoffs, AI failures, and delivery issues"
                         tone={
                             snapshot.whatsappQuality.languageFallbacks > 0
                             || snapshot.whatsappQuality.openAIFailures > 0
                             || snapshot.whatsappQuality.autoHandoffs > 0
+                            || snapshot.whatsappQuality.replyDeliveryFailures > 0
                                 ? "warning"
                                 : "neutral"
                         }
@@ -340,7 +342,7 @@ export default async function AdminExceptionsPage() {
                 <section className="rounded-[28px] border border-[#e6e6e1] bg-white p-6 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.3)]">
                     <SectionHeader
                         title="WhatsApp Quality"
-                        description="Last 24 hours of deterministic replies, guardrails, language rescue, media fallback, and auto-handoff behavior."
+                        description="Last 24 hours of deterministic replies, guardrails, language rescue, media fallback, auto-handoff behavior, and reply delivery failures."
                         href="/admin/inbox"
                         label="Open inbox"
                     />
@@ -351,6 +353,8 @@ export default async function AdminExceptionsPage() {
                         <MiniMetric label="Auto handoff" value={snapshot.whatsappQuality.autoHandoffs} />
                         <MiniMetric label="AI failures" value={snapshot.whatsappQuality.openAIFailures} />
                         <MiniMetric label="Media fallback" value={snapshot.whatsappQuality.mediaFallbacks} />
+                        <MiniMetric label="Reply fail" value={snapshot.whatsappQuality.replyDeliveryFailures} />
+                        <MiniMetric label="Retryable" value={snapshot.whatsappQuality.retryableReplyFailures} />
                     </div>
 
                     <div className="mt-5 space-y-4">
@@ -364,6 +368,25 @@ export default async function AdminExceptionsPage() {
                                     title={entry.reason}
                                     subtitle={`${entry.phone} • ${formatDate(entry.createdAt)}`}
                                     chips={["WhatsApp", "Auto handoff"]}
+                                    details={entry.preview}
+                                    primaryHref="/admin/inbox"
+                                    primaryLabel="Open inbox"
+                                    secondaryHref={entry.profileId ? `/admin/workers/${entry.profileId}` : "/admin/inbox"}
+                                    secondaryLabel={entry.profileId ? "Inspect worker" : "Open thread list"}
+                                />
+                            ))
+                        )}
+
+                        <SubSectionLabel label="Recent reply delivery failures" />
+                        {snapshot.whatsappQuality.recentReplyDeliveryFailures.length === 0 ? (
+                            <EmptyState copy="No WhatsApp reply delivery failures were logged in the last 24 hours." />
+                        ) : (
+                            snapshot.whatsappQuality.recentReplyDeliveryFailures.map((entry) => (
+                                <WorkerIssueRow
+                                    key={`${entry.phone}-${entry.createdAt || "reply-failure"}`}
+                                    title={entry.retryable ? "Retryable reply delivery failure" : "Reply delivery failure"}
+                                    subtitle={`${entry.phone} • ${formatDate(entry.createdAt)}`}
+                                    chips={["WhatsApp", entry.failureCategory, entry.retryable ? "Retryable" : "Non-retryable"]}
                                     details={entry.preview}
                                     primaryHref="/admin/inbox"
                                     primaryLabel="Open inbox"

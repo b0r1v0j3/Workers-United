@@ -59,6 +59,15 @@ export interface WhatsAppAutoHandoffSample {
     profileId: string | null;
 }
 
+export interface WhatsAppReplyDeliveryFailureSample {
+    phone: string;
+    failureCategory: string;
+    retryable: boolean;
+    createdAt: string | null;
+    preview: string;
+    profileId: string | null;
+}
+
 export interface WhatsAppQualitySnapshot {
     deterministicReplies: number;
     guardedReplies: number;
@@ -66,7 +75,10 @@ export interface WhatsAppQualitySnapshot {
     autoHandoffs: number;
     openAIFailures: number;
     mediaFallbacks: number;
+    replyDeliveryFailures: number;
+    retryableReplyFailures: number;
     recentAutoHandoffs: WhatsAppAutoHandoffSample[];
+    recentReplyDeliveryFailures: WhatsAppReplyDeliveryFailureSample[];
 }
 
 const ISSUE_PATTERNS = [
@@ -341,6 +353,11 @@ export function buildWhatsAppQualitySnapshot(activities: WhatsAppQualityActivity
     const autoHandoffs = activities.filter((entry) => entry.action === "whatsapp_auto_handoff_created").length;
     const openAIFailures = activities.filter((entry) => entry.action === "whatsapp_openai_failed").length;
     const mediaFallbacks = activities.filter((entry) => entry.action === "whatsapp_media_fallback").length;
+    const replyDeliveryFailureEntries = activities.filter((entry) => entry.action === "whatsapp_reply_delivery_failed");
+    const replyDeliveryFailures = replyDeliveryFailureEntries.length;
+    const retryableReplyFailures = replyDeliveryFailureEntries.filter((entry) =>
+        extractBoolean(entry.details, "retryable")
+    ).length;
 
     const recentAutoHandoffs = activities
         .filter((entry) => entry.action === "whatsapp_auto_handoff_created")
@@ -355,6 +372,18 @@ export function buildWhatsAppQualitySnapshot(activities: WhatsAppQualityActivity
             profileId: entry.user_id || null,
         }));
 
+    const recentReplyDeliveryFailures = replyDeliveryFailureEntries
+        .sort((left, right) => new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime())
+        .slice(0, 5)
+        .map((entry) => ({
+            phone: extractString(entry.details, "phone") || "unknown",
+            failureCategory: extractString(entry.details, "failure_category") || "unknown",
+            retryable: extractBoolean(entry.details, "retryable"),
+            createdAt: entry.created_at,
+            preview: extractString(entry.details, "reply_preview") || "No reply preview captured",
+            profileId: entry.user_id || null,
+        }));
+
     return {
         deterministicReplies,
         guardedReplies,
@@ -362,6 +391,9 @@ export function buildWhatsAppQualitySnapshot(activities: WhatsAppQualityActivity
         autoHandoffs,
         openAIFailures,
         mediaFallbacks,
+        replyDeliveryFailures,
+        retryableReplyFailures,
         recentAutoHandoffs,
+        recentReplyDeliveryFailures,
     };
 }
