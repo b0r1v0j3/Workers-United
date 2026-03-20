@@ -116,7 +116,7 @@ export default function DashboardClient({
                         : "Incomplete";
     const workspaceSummary = readOnlyPreview
         ? "Review the worker workspace structure without changing your admin role."
-        : "Keep your profile complete, verify documents, activate Job Finder, and follow your queue status in one workspace.";
+        : "Complete your profile, finish the required documents, unlock Job Finder checkout, and follow your queue status in one workspace.";
 
     // 90-day refund countdown (for paid workers)
     const queueJoinedDate = worker?.queue_joined_at ? new Date(worker.queue_joined_at) : null;
@@ -138,8 +138,8 @@ export default function DashboardClient({
             });
             toast.success(
                 entryFeeUnlockState.reason === "ready"
-                    ? "Profile 100% Complete! You can now activate Job Finder."
-                    : "Profile 100% Complete! Your case is now waiting for admin review before Job Finder unlocks."
+                    ? "Profile and documents complete! You can now open Job Finder checkout."
+                    : "Profile and documents complete! Your case is now waiting for admin review before Job Finder unlocks."
             );
             sessionStorage.setItem("celebrated_profile", "true");
         }

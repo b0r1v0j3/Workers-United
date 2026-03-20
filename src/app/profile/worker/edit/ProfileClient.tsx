@@ -560,7 +560,7 @@ export default function ProfilePage({
                     const completionRes = await fetch("/api/check-profile-completion", { method: "POST" });
                     const completionData = await completionRes.json();
                     if (completionData.notificationSent) {
-                        toast.success("Congratulations! Your profile is 100% complete. Check your email for next steps!", { duration: 8000 });
+                        toast.success("Congratulations! Your profile and required documents are complete. Check your email for the admin review next steps.", { duration: 8000 });
                     }
                 } catch {
                     // Non-critical — don't block the save flow
