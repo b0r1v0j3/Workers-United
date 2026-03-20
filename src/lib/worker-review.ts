@@ -4,7 +4,7 @@ import { queueEmail } from "@/lib/email-templates";
 import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
-import { loadCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
+import { loadCanonicalWorkerRecord, normalizeWorkerPhone, type WorkerRecordSnapshot } from "@/lib/workers";
 import { buildWorkerPaymentUnlockedEmailData, resolveWorkerApprovalNotificationRecipient } from "@/lib/worker-approval-notifications";
 
 interface WorkerReviewInput {
@@ -667,7 +667,9 @@ export async function applyWorkerApprovalAction({
             "admin_update",
             approvalState.notificationRecipient.email,
             approvalState.notificationRecipient.name,
-            buildWorkerPaymentUnlockedEmailData()
+            buildWorkerPaymentUnlockedEmailData(),
+            undefined,
+            normalizeWorkerPhone(approvalState.worker.phone) || undefined
         );
         notificationQueued = isEmailDeliveryAccepted(notificationResult);
         notification = notificationResult.sent
