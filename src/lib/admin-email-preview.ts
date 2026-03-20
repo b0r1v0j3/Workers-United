@@ -16,6 +16,7 @@ export const ADMIN_EMAIL_PREVIEW_TYPES = [
     "job_match",
     "admin_update",
     "announcement",
+    "employer_outreach",
     "profile_incomplete",
     "document_review_result",
     "profile_reminder",

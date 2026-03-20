@@ -65,6 +65,12 @@ const MOCK_DATA: Record<EmailType, EmailPreviewData> = {
         actionLink: "https://workersunited.eu/profile/worker",
         actionText: "View Your Matches",
     },
+    employer_outreach: {
+        name: "Steel Concept",
+        companyName: "Steel Concept",
+        subject: "Free international hiring support for Steel Concept",
+        campaignLanguage: "en",
+    },
     profile_incomplete: {
         name: "Marko Petrović",
         subject: "Action Required: Your profile is 63% complete",
@@ -107,6 +113,7 @@ const EMAIL_LABELS: Record<EmailType, string> = {
     job_match: "Job Match",
     admin_update: "Admin Update",
     announcement: "Announcement",
+    employer_outreach: "Employer Outreach",
     profile_incomplete: "Profile Incomplete",
     document_review_result: "Document Review Result",
     profile_reminder: "Profile Reminder",
@@ -145,6 +152,7 @@ const EMAIL_CATEGORY_BY_TYPE: Record<EmailType, EmailPreviewCategory> = {
     job_match: "offers",
     admin_update: "announcements",
     announcement: "announcements",
+    employer_outreach: "announcements",
     profile_incomplete: "profile",
     document_review_result: "documents",
     profile_reminder: "profile",

@@ -195,10 +195,6 @@ export type Database = {
       }
       contract_data: {
         Row: {
-          candidate_gender: string | null
-          candidate_passport_issue_date: string | null
-          candidate_passport_issuer: string | null
-          candidate_place_of_birth: string | null
           contact_email: string | null
           contact_phone: string | null
           employer_apr_number: string | null
@@ -221,10 +217,6 @@ export type Database = {
           worker_place_of_birth: string | null
         }
         Insert: {
-          candidate_gender?: string | null
-          candidate_passport_issue_date?: string | null
-          candidate_passport_issuer?: string | null
-          candidate_place_of_birth?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           employer_apr_number?: string | null
@@ -247,10 +239,6 @@ export type Database = {
           worker_place_of_birth?: string | null
         }
         Update: {
-          candidate_gender?: string | null
-          candidate_passport_issue_date?: string | null
-          candidate_passport_issuer?: string | null
-          candidate_place_of_birth?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           employer_apr_number?: string | null
