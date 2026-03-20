@@ -59,6 +59,7 @@ describe("notifications", () => {
             workerUserId: "worker-profile-id",
             workerEmail: "worker@example.com",
             workerName: "Marko Petrovic",
+            workerPhone: "+381601234567",
             jobTitle: "Welder",
             queuePosition: 4,
         });
@@ -74,6 +75,8 @@ describe("notifications", () => {
                 jobTitle: "Welder",
                 queuePosition: 4,
             },
+            undefined,
+            "+381601234567",
         );
     });
 

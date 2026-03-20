@@ -23,6 +23,7 @@ interface OfferExpiredData {
   workerUserId: string;
   workerEmail: string;
   workerName: string;
+  workerPhone?: string;
   jobTitle: string;
   queuePosition: number;
 }
@@ -72,7 +73,9 @@ export async function sendOfferExpiredNotification(data: OfferExpiredData): Prom
       {
         jobTitle: data.jobTitle,
         queuePosition: data.queuePosition,
-      }
+      },
+      undefined,
+      data.workerPhone
     );
 
     if (!isEmailDeliveryAccepted(emailResult)) {
