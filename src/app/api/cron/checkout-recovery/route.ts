@@ -471,7 +471,16 @@ export async function GET(request: Request) {
                     stripe_session_id: pendingEntry.payment.stripe_checkout_session_id,
                     hours_since_checkout: Math.floor(hoursSinceCheckout),
                     delivery_status: emailResult.status,
-                    channel: recipientPhone ? "email+whatsapp" : "email",
+                    channel: emailResult.whatsapp?.sent
+                        ? "email+whatsapp"
+                        : recipientPhone
+                            ? "email_only_whatsapp_failed"
+                            : "email",
+                    whatsapp_delivery_status: emailResult.whatsapp?.attempted
+                        ? (emailResult.whatsapp.sent ? "sent" : "failed")
+                        : "not_attempted",
+                    whatsapp_error: emailResult.whatsapp?.error || null,
+                    whatsapp_retryable: emailResult.whatsapp?.retryable ?? null,
                     }
                 );
 

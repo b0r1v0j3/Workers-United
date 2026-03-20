@@ -73,7 +73,18 @@ export interface TemplateData {
     queuePosition?: number;
 }
 
-export type QueueEmailResult = EmailQueueDeliveryResult;
+export type QueueEmailWhatsAppResult = {
+    attempted: boolean;
+    sent: boolean;
+    error?: string | null;
+    retryable?: boolean;
+    failureCategory?: string | null;
+    messageId?: string | null;
+};
+
+export type QueueEmailResult = EmailQueueDeliveryResult & {
+    whatsapp?: QueueEmailWhatsAppResult | null;
+};
 
 const baseStyles = `
     font-family: 'Montserrat', sans-serif;
@@ -1178,6 +1189,7 @@ export async function queueEmail(
         queued: Boolean(scheduledFor),
         status: scheduledFor ? "scheduled" : "failed",
         error: null,
+        whatsapp: null,
     };
 
     // Send immediately via SMTP
@@ -1193,19 +1205,27 @@ export async function queueEmail(
 
     // Also send WhatsApp template if phone provided
     if (recipientPhone && !scheduledFor && userId) {
+        let whatsappSidecarResult: QueueEmailWhatsAppResult | null = null;
         try {
             const wa = await import("@/lib/whatsapp");
             const firstName = recipientName?.split(" ")[0] || "there";
             const recipientPhoneNumber = recipientPhone as string;
+            let sendResult: {
+                success: boolean;
+                messageId?: string;
+                error?: string;
+                retryable?: boolean;
+                failureCategory?: string;
+            } | null = null;
 
             // Map EmailType → WhatsApp template
             switch (emailType) {
                 case "welcome":
-                    await wa.sendRoleWelcome(recipientPhoneNumber, firstName, recipientRole, userId);
+                    sendResult = await wa.sendRoleWelcome(recipientPhoneNumber, firstName, recipientRole, userId);
                     break;
                 case "profile_complete":
                     if (recipientRole === "worker") {
-                        await wa.sendRoleStatusUpdate(
+                        sendResult = await wa.sendRoleStatusUpdate(
                             recipientPhoneNumber,
                             firstName,
                             "Your profile is 100% complete and is now waiting for admin review. We will unlock Job Finder as soon as it is approved.",
@@ -1215,10 +1235,10 @@ export async function queueEmail(
                     }
                     break;
                 case "payment_success":
-                    await wa.sendPaymentConfirmed(recipientPhoneNumber, firstName, templateData.amount || "$9", userId);
+                    sendResult = await wa.sendPaymentConfirmed(recipientPhoneNumber, firstName, templateData.amount || "$9", userId);
                     break;
                 case "checkout_recovery":
-                    await wa.sendRoleStatusUpdate(
+                    sendResult = await wa.sendRoleStatusUpdate(
                         recipientPhoneNumber,
                         firstName,
                         getCheckoutRecoveryStatusMessage(templateData.recoveryStep, templateData.amount || "$9"),
@@ -1227,33 +1247,64 @@ export async function queueEmail(
                     );
                     break;
                 case "document_expiring":
-                    await wa.sendDocumentReminder(recipientPhoneNumber, firstName, templateData.documentType || "document", templateData.expirationDate || "", userId);
+                    sendResult = await wa.sendDocumentReminder(recipientPhoneNumber, firstName, templateData.documentType || "document", templateData.expirationDate || "", userId);
                     break;
                 case "profile_incomplete":
-                    await wa.sendProfileIncomplete(recipientPhoneNumber, firstName, templateData.completion || "0", templateData.missingFields || "", userId);
+                    sendResult = await wa.sendProfileIncomplete(recipientPhoneNumber, firstName, templateData.completion || "0", templateData.missingFields || "", userId);
                     break;
                 case "refund_approved":
-                    await wa.sendRefundProcessed(recipientPhoneNumber, firstName, templateData.amount || "$9", userId);
+                    sendResult = await wa.sendRefundProcessed(recipientPhoneNumber, firstName, templateData.amount || "$9", userId);
                     break;
                 case "admin_update":
-                    await wa.sendRoleStatusUpdate(recipientPhoneNumber, firstName, templateData.message || "Profile updated", recipientRole, userId);
+                    sendResult = await wa.sendRoleStatusUpdate(recipientPhoneNumber, firstName, templateData.message || "Profile updated", recipientRole, userId);
                     break;
                 case "announcement":
-                    await wa.sendRoleAnnouncement(recipientPhoneNumber, templateData.title || "Announcement", templateData.message || "", recipientRole, templateData.actionLink, userId);
+                    sendResult = await wa.sendRoleAnnouncement(recipientPhoneNumber, templateData.title || "Announcement", templateData.message || "", recipientRole, templateData.actionLink, userId);
                     break;
                 case "job_offer":
                     if (enrichedTemplateData.jobTitle && enrichedTemplateData.companyName && enrichedTemplateData.country && enrichedTemplateData.offerLink) {
                         const offerId = enrichedTemplateData.offerLink.split("/").pop() || "";
-                        await wa.sendJobOffer(recipientPhoneNumber, recipientName, enrichedTemplateData.jobTitle, enrichedTemplateData.companyName, enrichedTemplateData.country, offerId, userId);
+                        sendResult = await wa.sendJobOffer(recipientPhoneNumber, recipientName, enrichedTemplateData.jobTitle, enrichedTemplateData.companyName, enrichedTemplateData.country, offerId, userId);
                     }
                     break;
                 default:
                     break;
             }
+
+            if (sendResult) {
+                whatsappSidecarResult = {
+                    attempted: true,
+                    sent: sendResult.success,
+                    error: sendResult.error || null,
+                    retryable: sendResult.retryable,
+                    failureCategory: sendResult.failureCategory || null,
+                    messageId: sendResult.messageId || null,
+                };
+
+                if (!sendResult.success) {
+                    console.warn(`[QueueEmail] WhatsApp sidecar failed for ${emailType}:`, {
+                        userId,
+                        recipientPhone: recipientPhoneNumber,
+                        error: sendResult.error || null,
+                        retryable: sendResult.retryable ?? false,
+                        failureCategory: sendResult.failureCategory || null,
+                    });
+                }
+            }
         } catch (err) {
             // WhatsApp failure should never block email
             console.error(`WhatsApp send failed for ${emailType}:`, err);
+            whatsappSidecarResult = {
+                attempted: true,
+                sent: false,
+                error: err instanceof Error ? err.message : "Unknown WhatsApp sidecar error",
+                retryable: false,
+                failureCategory: "unknown",
+                messageId: null,
+            };
         }
+
+        deliveryResult.whatsapp = whatsappSidecarResult;
     }
 
     return deliveryResult;

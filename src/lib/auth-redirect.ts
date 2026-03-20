@@ -272,10 +272,20 @@ export async function resolvePostAuthRedirect({
                 try {
                     const { sendWelcome } = await import("@/lib/whatsapp");
                     const firstName = user.user_metadata?.full_name?.split(" ")[0] || "there";
-                    await sendWelcome(workerRecordCheck.phone, firstName, user.id);
-                    await recordAuthWhatsAppWelcome(adminClient, user.id).catch((error) => {
-                        console.warn("[Auth Redirect] Failed to persist WhatsApp welcome marker:", error);
-                    });
+                    const welcomeResult = await sendWelcome(workerRecordCheck.phone, firstName, user.id);
+                    if (welcomeResult.success) {
+                        await recordAuthWhatsAppWelcome(adminClient, user.id).catch((error) => {
+                            console.warn("[Auth Redirect] Failed to persist WhatsApp welcome marker:", error);
+                        });
+                    } else {
+                        console.warn("[Auth Redirect] WhatsApp welcome send failed:", {
+                            userId: user.id,
+                            phone: workerRecordCheck.phone,
+                            error: welcomeResult.error || null,
+                            retryable: welcomeResult.retryable ?? false,
+                            failureCategory: welcomeResult.failureCategory || null,
+                        });
+                    }
                 } catch {
                     /* WhatsApp welcome is best-effort */
                 }
