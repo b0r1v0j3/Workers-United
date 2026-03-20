@@ -132,11 +132,13 @@ function getRecipientWorkspaceUrl(role: RecipientRole, purpose: "setup" | "dashb
     }
 }
 
-function renderJourneyRows(rows: Array<{ icon: string; title: string; description: string }>) {
+function renderJourneyRows(rows: Array<{ title: string; description: string }>) {
     return rows.map((row, index) => `
         <tr>
             <td width="50" style="vertical-align: top; padding-bottom: ${index === rows.length - 1 ? "0" : "15px"};">
-                <img src="${row.icon}" width="32" alt="">
+                <div style="width:32px; height:32px; border-radius:9999px; background:#111111; color:#FFFFFF; font-size:13px; font-weight:700; line-height:32px; text-align:center;">
+                    ${index + 1}
+                </div>
             </td>
             <td style="padding-bottom: ${index === rows.length - 1 ? "0" : "15px"};">
                 <strong style="color: #1D1D1F;">${row.title}</strong>
@@ -221,10 +223,44 @@ function getRoleDeletionCopy(role: RecipientRole) {
     }
 }
 
-function renderIconHero(iconUrl: string, title: string, subtitle: string) {
+type HeroVariant =
+    | "welcome"
+    | "success"
+    | "alert"
+    | "offer"
+    | "money"
+    | "info"
+    | "company"
+    | "goodbye";
+
+function getHeroGlyph(variant: HeroVariant) {
+    switch (variant) {
+        case "welcome":
+            return "WU";
+        case "success":
+            return "✓";
+        case "offer":
+            return "★";
+        case "money":
+            return "$";
+        case "info":
+            return "i";
+        case "company":
+            return "▣";
+        case "goodbye":
+            return "×";
+        case "alert":
+        default:
+            return "!";
+    }
+}
+
+function renderIconHero(variant: HeroVariant, title: string, subtitle: string) {
     return `
         <div style="text-align: center;">
-            <img src="${iconUrl}" width="80" height="80" alt="" style="margin-bottom: 20px;">
+            <div style="width:80px; height:80px; margin:0 auto 20px; border-radius:9999px; border:3px solid #111111; color:#111111; font-size:${variant === "welcome" ? "24px" : "40px"}; font-weight:700; line-height:74px; text-align:center; letter-spacing:${variant === "welcome" ? "1px" : "0"};">
+                ${getHeroGlyph(variant)}
+            </div>
             <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${title}</h1>
             <p style="font-size: 16px; color: #515154; margin-top: 5px;">${subtitle}</p>
         </div>
@@ -271,23 +307,26 @@ function renderChecklistCard(title: string, items: string[]) {
     `;
 }
 
+function renderFooterSocialLinks() {
+    const links = [
+        { href: "https://www.facebook.com/profile.php?id=61585104076725", label: "Facebook" },
+        { href: "https://www.instagram.com/workersunited.eu/", label: "Instagram" },
+        { href: "https://www.threads.net/@workersunited.eu", label: "Threads" },
+        { href: "https://wa.me/15557839521", label: "WhatsApp" },
+        { href: "https://x.com/WorkersUnitedEU", label: "X" },
+        { href: "https://www.tiktok.com/@workersunited.eu", label: "TikTok" },
+        { href: "https://www.linkedin.com/company/workersunited-eu/", label: "LinkedIn" },
+    ];
+
+    return links.map((link) => `
+        <a href="${link.href}" style="display:inline-block; margin:4px 6px; padding:8px 12px; border-radius:9999px; border:1px solid #D2D2D7; color:#1D1D1F; text-decoration:none; font-size:12px; font-weight:600; letter-spacing:0.2px;">
+            ${link.label}
+        </a>
+    `).join("");
+}
+
 // Helper to wrap content in the Monochrome Apple Header design
 const wrapModernTemplate = (content: string, title: string = "Workers United", subtitle: string = ""): string => `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${title}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
-    </style>
-</head>
-<body style="margin:0; padding:0; background-color:#F5F5F7; ${baseStyles}">
-    <!-- Preheader text for inbox preview -->
-    <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${subtitle}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
-    
 <!DOCTYPE html>
 <html>
 <head>
@@ -325,13 +364,7 @@ const wrapModernTemplate = (content: string, title: string = "Workers United", s
         <div style="text-align:center; margin-top:40px; margin-bottom: 40px; color:#94a3b8; font-size:13px;">
             <p style="margin-bottom:20px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: 11px;">Stay connected</p>
             <div style="margin-bottom:30px;">
-                <a href="https://www.facebook.com/profile.php?id=61585104076725" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/facebook-new.png" width="28" height="28" alt="Facebook"></a>
-                <a href="https://www.instagram.com/workersunited.eu/" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/instagram-new.png" width="28" height="28" alt="Instagram"></a>
-                <a href="https://www.threads.net/@workersunited.eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/ios-filled/50/threads.png" width="28" height="28" alt="Threads"></a>
-                 <a href="https://wa.me/15557839521" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/whatsapp.png" width="28" height="28" alt="WhatsApp"></a>
-                <a href="https://x.com/WorkersUnitedEU" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/ios-filled/50/twitterx.png" width="28" height="28" alt="X"></a>
-                <a href="https://www.tiktok.com/@workersunited.eu" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/tiktok.png" width="28" height="28" alt="TikTok"></a>
-                <a href="https://www.linkedin.com/company/workersunited-eu/" style="text-decoration:none; margin:0 4px; opacity: 0.8;"><img src="https://img.icons8.com/fluency/48/linkedin.png" width="28" height="28" alt="LinkedIn"></a>
+                ${renderFooterSocialLinks()}
             </div>
             
             <p style="margin:0 0 8px;">&copy; ${new Date().getFullYear()} Workers United LLC</p>
@@ -433,22 +466,18 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     buttonUrl: getRecipientWorkspaceUrl("worker", "setup"),
                     rows: [
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/edit-user-male.png",
                             title: "1. Complete Profile",
                             description: "Review your worker details",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
                             title: "2. Upload Docs",
                             description: "Passport, photo, diploma",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/approval.png",
                             title: "3. Wait for Approval",
                             description: "We review the completed case",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/rocket.png",
                             title: "4. Activate Job Finder",
                             description: "Unlock the $9 search after approval",
                         },
@@ -463,22 +492,18 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     buttonUrl: getRecipientWorkspaceUrl("employer", "dashboard"),
                     rows: [
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/company.png",
                             title: "1. Finish Company Profile",
                             description: "Add the essentials about your business",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/document.png",
                             title: "2. Submit Hiring Needs",
                             description: "Tell us role, salary, and headcount",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
                             title: "3. We Match Workers",
                             description: "We search verified worker cases for you",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/passport-control.png",
                             title: "4. We Handle Legal Steps",
                             description: "Contracts, visa workflow, and arrival coordination",
                         },
@@ -493,22 +518,18 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     buttonUrl: getRecipientWorkspaceUrl("agency", "dashboard"),
                     rows: [
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/briefcase.png",
                             title: "1. Open Your Workspace",
                             description: "Use one dashboard for all worker cases",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/add-user-group-man-man.png",
                             title: "2. Add Workers",
                             description: "Create and manage worker profiles",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
                             title: "3. Upload Documents",
                             description: "Prepare each worker case for review",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/checked-user-male.png",
                             title: "4. Unlock Job Finder Per Case",
                             description: "Activate approved worker cases one by one",
                         },
@@ -519,11 +540,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: welcomeCopy.subject,
                 html: wrapModernTemplate(`
-                    <div style="text-align: center; margin-bottom: 30px;">
-                         <img src="https://img.icons8.com/ios/100/000000/conference-call.png" width="80" height="80" alt="Welcome" style="margin-bottom: 20px;">
-                        <h1 style="margin:0; color:#1D1D1F; font-size: 26px; font-weight: 700;">${welcomeCopy.title}</h1>
-                        <p style="font-size: 16px; color: #515154; margin-top: 10px;">${welcomeCopy.subtitle}</p>
-                    </div>
+                    ${renderIconHero("welcome", welcomeCopy.title, welcomeCopy.subtitle)}
 
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 25px; text-align: center;">
                         ${welcomeCopy.intro}
@@ -550,7 +567,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Profile 100% Complete — Admin Review Started",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/verified-account.png", `Congratulations, ${firstName}!`, "Your profile is now 100% complete.")}
+                    ${renderIconHero("success", `Congratulations, ${firstName}!`, "Your profile is now 100% complete.")}
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
                         Your profile and required documents are now ready for admin review. We will check everything and unlock Job Finder as soon as your case is approved.
@@ -564,23 +581,11 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         3. You can then activate the $9 service
                     `)}
 
-                    <div style="background:#F5F5F7; border-radius:12px; padding:20px; margin:20px 0; border: 1px solid #E5E5EA;">
-                        <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">While You Wait</h3>
-                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                                <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
-                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">Your profile is now in the admin review queue</td>
-                            </tr>
-                            <tr>
-                                <td width="30" style="vertical-align: top; padding-bottom: 10px;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
-                                <td style="padding-bottom: 10px; color: #1D1D1F; font-size: 14px;">We will notify you as soon as approval is complete</td>
-                            </tr>
-                            <tr>
-                                <td width="30" style="vertical-align: top;"><img src="https://img.icons8.com/ios/50/000000/checked.png" width="20"></td>
-                                <td style="color: #1D1D1F; font-size: 14px;">No payment is needed until Job Finder is officially unlocked</td>
-                            </tr>
-                        </table>
-                    </div>
+                    ${renderChecklistCard("While You Wait", [
+                        "Your profile is now in the admin review queue",
+                        "We will notify you as soon as approval is complete",
+                        "No payment is needed until Job Finder is officially unlocked",
+                    ])}
                     
                     <div style="text-align:center; margin-top:30px;">
                         <a href="https://workersunited.eu/profile/worker" style="${buttonStyle}">
@@ -596,7 +601,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "You're in the Queue!",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/checked--v1.png", "Payment Confirmed", "Your job search is now active.")}
+                    ${renderIconHero("success", "Payment Confirmed", "Your job search is now active.")}
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
                         We have received your <strong>${amount}</strong> Job Finder payment. Your worker case is now active in the queue, and our system can start matching you with employers.
@@ -656,7 +661,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: recoverySubjectMap[recoveryStep],
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", recoveryTitleMap[recoveryStep], `${firstName}, your profile is ready to continue.`)}
+                    ${renderIconHero("alert", recoveryTitleMap[recoveryStep], `${firstName}, your profile is ready to continue.`)}
 
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 20px; text-align: center;">
                         ${recoveryBodyMap[recoveryStep]}
@@ -699,11 +704,10 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: `✨ Job Offer: ${data.jobTitle}`,
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/star--v1.png", "You've been picked!", "A company wants to hire you.")}
+                    ${renderIconHero("offer", "You've been picked!", "A company wants to hire you.")}
 
                     <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center; position:relative; overflow:hidden;">
-                        <!-- Premium gradient glow at the top -->
-                        <div style="position:absolute; top:0; left:0; right:0; height:4px; background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);"></div>
+                        <div style="position:absolute; top:0; left:0; right:0; height:4px; background:#D2D2D7;"></div>
                         
                         <div style="font-size: 12px; color: #86868B; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 20px;">Official Offer</div>
                         
@@ -730,7 +734,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Offer Expiring Soon!",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Hurry up!", "Your job offer is still waiting for a response.")}
+                    ${renderIconHero("alert", "Hurry up!", "Your job offer is still waiting for a response.")}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                         Hey ${firstName}, you have a pending job offer that expires soon. Don't let this opportunity slip away!
@@ -752,7 +756,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: `Your job offer has expired — ${data.jobTitle || "Position"}`,
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Offer Expired", "The response window has closed.")}
+                    ${renderIconHero("alert", "Offer Expired", "The response window has closed.")}
 
                     <p style="color: #1D1D1F; margin-bottom: 20px; text-align: center; font-size: 16px;">
                         Hi ${firstName}, the offer for <strong>${jobTitle}</strong> has expired because it was not confirmed within 24 hours.
@@ -777,7 +781,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Refund Processed",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/us-dollar-circled--v1.png", "Refund Sent", "Your 90-day guarantee refund has been processed.")}
+                    ${renderIconHero("money", "Refund Sent", "Your 90-day guarantee refund has been processed.")}
 
                     <p style="color: #1D1D1F; margin-bottom: 25px; text-align: center; font-size: 16px;">
                         Hi ${firstName}, as per our 90-day guarantee, we have processed your refund of <strong>${amount}</strong>.
@@ -798,7 +802,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Document Alert",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Check your documents", "One of your required files is close to expiring.")}
+                    ${renderIconHero("alert", "Check your documents", "One of your required files is close to expiring.")}
 
                     <p style="color: #1D1D1F; text-align: center; margin-bottom: 30px; font-size: 16px;">
                         Your <strong>${documentType}</strong> is expiring on <strong>${expirationDate}</strong>.
@@ -831,7 +835,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     </div>
 
                     <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center; position:relative; overflow:hidden;">
-                        <div style="position:absolute; top:0; left:0; right:0; height:4px; background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);"></div>
+                        <div style="position:absolute; top:0; left:0; right:0; height:4px; background:#D2D2D7;"></div>
                         <h3 style="margin:0 0 10px; color:#FFFFFF; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">${jobTitle}</h3>
                         <div style="color: #86868B; font-size: 16px; margin-bottom: 25px;">${industry}</div>
                         
@@ -865,7 +869,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: data.subject || "Update from Workers United",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/info--v1.png", "Profile Update", "There is a new message about your case.")}
+                    ${renderIconHero("info", "Profile Update", "There is a new message about your case.")}
 
                     <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:25px; margin:30px 0;">
                         <h3 style="margin-top:0; color: #1D1D1F; font-size: 18px;">${title}</h3>
@@ -890,7 +894,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ? `Your ${docName} Has Been Approved`
                     : `Your ${docName} Needs Attention`,
                 html: wrapModernTemplate(isApproved ? `
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/checked--v1.png", `${safeDocName} Approved`, "One more required step is now complete.")}
+                    ${renderIconHero("success", `${safeDocName} Approved`, "One more required step is now complete.")}
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
                         Your <strong>${safeDocName}</strong> has been verified and approved by our team. It is now safely stored in your Workers United dashboard, and you do not need to upload this file again.
@@ -914,7 +918,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         <a href="https://workersunited.eu/profile/worker/documents" style="${buttonStyle}">Open My Documents</a>
                     </div>
                 ` : `
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", `${safeDocName} Needs Attention`, "We still need a replacement file before your case can move forward.")}
+                    ${renderIconHero("alert", `${safeDocName} Needs Attention`, "We still need a replacement file before your case can move forward.")}
 
                     <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:25px; margin:30px 0;">
                         <p style="margin:0 0 10px; color: #86868B; font-size: 12px; font-weight:700; text-transform: uppercase; letter-spacing: 1px;">Issue Found</p>
@@ -945,7 +949,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: data.subject || "Announcement",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", title, "Important information from Workers United.")}
+                    ${renderIconHero("alert", title, "Important information from Workers United.")}
 
                     <div style="background:#F5F5F7; border: 1px solid #E5E5EA; border-radius:12px; padding:24px; color: #1D1D1F; font-size: 16px; line-height: 1.7; margin: 30px 0; white-space: pre-line; text-align: center;">
                         ${message}
@@ -969,7 +973,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: data.subject || copy.subject,
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/company.png", copy.heroTitle, copy.heroSubtitle)}
+                    ${renderIconHero("company", copy.heroTitle, copy.heroSubtitle)}
 
                     <p style="text-align:center; color:#1D1D1F; margin:30px 0; font-size:16px;">
                         ${copy.intro}
@@ -1000,7 +1004,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Finish your profile!",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Almost there!", "You're missing a few things before we can move your case forward.")}
+                    ${renderIconHero("alert", "Almost there!", "You're missing a few things before we can move your case forward.")}
 
                     <div style="margin: 30px 0;">
                          <p style="color: #1D1D1F; text-align: center; margin-bottom: 20px; font-size: 16px;">
@@ -1028,7 +1032,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: reminderCopy.subject,
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", reminderCopy.title, reminderCopy.text)}
+                    ${renderIconHero("alert", reminderCopy.title, reminderCopy.text)}
 
                    <div style="background:#F5F5F7; border-radius:12px; padding:25px; margin:30px 0; border: 1px solid #E5E5EA;">
                         <strong style="display:block; margin-bottom:15px; color:#1D1D1F; font-size: 16px;">What's missing:</strong>
@@ -1055,7 +1059,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: `Inactive account cleanup in ${daysLeft} days`,
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/box-important--v1.png", "Inactive Account Warning", `If there is still no profile activity, we will clean up this incomplete account in ${daysLeft} days.`)}
+                    ${renderIconHero("alert", "Inactive Account Warning", `If there is still no profile activity, we will clean up this incomplete account in ${daysLeft} days.`)}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                         ${warningCopy.warningText} Update your profile or documents to keep the account active.
@@ -1077,7 +1081,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Inactive Account Removed",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/cancel.png", "Goodbye for now", "This incomplete inactive account has been removed.")}
+                    ${renderIconHero("goodbye", "Goodbye for now", "This incomplete inactive account has been removed.")}
 
                     <p style="text-align: center; color: #1D1D1F; margin: 30px 0; font-size: 16px;">
                          ${deletionCopy.body}
@@ -1102,7 +1106,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             return {
                 subject: "Important: Document Upload System Fixed",
                 html: wrapModernTemplate(`
-                    ${renderIconHero("https://img.icons8.com/ios/100/000000/checked--v1.png", `Hi ${firstName},`, "We've fixed the document upload issue.")}
+                    ${renderIconHero("success", `Hi ${firstName},`, "We've fixed the document upload issue.")}
 
                     <p style="font-size: 16px; color: #1D1D1F; margin-bottom: 20px;">
                         If you recently tried to upload your passport or diploma and experienced errors, we sincerely apologize. We have completely resolved this technical issue.
