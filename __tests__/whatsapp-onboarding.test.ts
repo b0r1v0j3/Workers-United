@@ -358,6 +358,8 @@ describe("handleWhatsAppOnboarding", () => {
 
         expect(reply).toContain("saved your answers in this WhatsApp draft");
         expect(reply).toContain("workersunited.eu/signup");
+        expect(reply).toContain("passes admin review");
+        expect(reply).toContain("Job Finder");
         expect(store.cleared).toBe(0);
         expect((store.state as Record<string, unknown>)?.current_step).toBe("done");
         expect(update).not.toHaveBeenCalled();
@@ -410,6 +412,9 @@ describe("handleWhatsAppOnboarding", () => {
         expect(reply).toContain("saved to your worker profile");
         expect(reply).toContain("https://portal.example/profile/worker");
         expect(reply).not.toContain("register on our website");
+        expect(reply).toContain("admin review");
+        expect(reply).not.toContain("activate *Job Finder*");
+        expect(reply).toContain("checkout unlocks");
         expect(store.cleared).toBe(1);
         expect(update).toHaveBeenCalled();
     });

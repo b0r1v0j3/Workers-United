@@ -68,6 +68,7 @@ describe("whatsapp-reply-guardrails", () => {
 
         expect(escalation.text).toContain("ops@example.com");
         expect(payment.text).toContain("https://portal.example/signup");
+        expect(payment.text).toContain("required documents");
     });
 
     it("replaces escalation promises with deterministic support copy", () => {
@@ -100,6 +101,7 @@ describe("whatsapp-reply-guardrails", () => {
         expect(result.triggered).toBe(true);
         expect(result.reason).toBe("payment");
         expect(result.text).toContain("not unlocked for your account yet");
+        expect(result.text).toContain("required documents");
         expect(result.text).toContain("never from a WhatsApp link");
     });
 

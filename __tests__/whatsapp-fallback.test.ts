@@ -33,6 +33,7 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("https://www.workersunited.eu/signup");
         expect(reply).toContain("$9");
         expect(reply).toContain("admin approval");
+        expect(reply).toContain("required documents");
         expect(reply).not.toContain("Welcome to Workers United!");
     });
 
@@ -67,6 +68,7 @@ describe("whatsapp-fallback", () => {
 
         expect(reply).toContain("not unlocked yet");
         expect(reply).toContain("admin review");
+        expect(reply).toContain("required documents");
         expect(reply).toContain("https://www.workersunited.eu/profile/worker");
     });
 

@@ -175,21 +175,21 @@ function getPaymentGuardReply(
     const { signupUrl, workerProfileUrl } = resolveGuardrailPlatformContact(platform);
     if (!workerRecord) {
         if (language === "sr") {
-            return `Da biste stigli do Job Finder uplate, prvo napravite nalog na ${signupUrl} i dovršite profil. Checkout se otključava tek kada profil bude kompletan i admin review bude završen, a uplata se pokreće iz dashboard-a, ne preko WhatsApp linka.`;
+            return `Da biste stigli do Job Finder uplate, prvo napravite nalog na ${signupUrl}, dovršite profil i završite obavezna dokumenta. Checkout se otključava tek kada sve to bude kompletno i admin review bude završen, a uplata se pokreće iz dashboard-a, ne preko WhatsApp linka.`;
         }
         if (language === "ar") {
-            return `للوصول إلى دفع Job Finder، أنشئ حسابك أولاً على ${signupUrl} وأكمل ملفك. يتم فتح الدفع فقط بعد اكتمال الملف ومراجعة الإدارة، ويبدأ الدفع من لوحة التحكم وليس عبر رابط WhatsApp.`;
+            return `للوصول إلى دفع Job Finder، أنشئ حسابك أولاً على ${signupUrl} وأكمل ملفك والمستندات المطلوبة. يتم فتح الدفع فقط بعد اكتمال ذلك ومراجعة الإدارة، ويبدأ الدفع من لوحة التحكم وليس عبر رابط WhatsApp.`;
         }
         if (language === "fr") {
-            return `Pour accéder au paiement Job Finder, créez d’abord votre compte sur ${signupUrl} et complétez votre profil. Le paiement ne se débloque qu’après profil complet et revue admin, et il démarre depuis le tableau de bord, pas via un lien WhatsApp.`;
+            return `Pour accéder au paiement Job Finder, créez d’abord votre compte sur ${signupUrl}, complétez votre profil et les documents requis. Le paiement ne se débloque qu’après cela et la revue admin, et il démarre depuis le tableau de bord, pas via un lien WhatsApp.`;
         }
         if (language === "pt") {
-            return `Para chegar ao pagamento do Job Finder, primeiro crie sua conta em ${signupUrl} e complete seu perfil. O checkout só é liberado após perfil completo e revisão administrativa, e o pagamento começa no painel, não por link no WhatsApp.`;
+            return `Para chegar ao pagamento do Job Finder, primeiro crie sua conta em ${signupUrl}, complete seu perfil e os documentos obrigatórios. O checkout só é liberado depois disso e da revisão administrativa, e o pagamento começa no painel, não por link no WhatsApp.`;
         }
         if (language === "hi") {
-            return `Job Finder payment तक पहुँचने के लिए पहले ${signupUrl} पर account बनाइए और profile पूरा कीजिए। Checkout तभी unlock होता है जब profile complete हो और admin review पूरा हो, और payment dashboard से शुरू होता है, WhatsApp link से नहीं।`;
+            return `Job Finder payment तक पहुँचने के लिए पहले ${signupUrl} पर account बनाइए, profile पूरा कीजिए और required documents पूरे कीजिए। Checkout तभी unlock होता है जब यह सब complete हो और admin review पूरा हो, और payment dashboard से शुरू होता है, WhatsApp link से नहीं।`;
         }
-        return `To reach Job Finder payment, first register at ${signupUrl} and complete your profile. Checkout unlocks only after the profile is complete and admin review is finished, and payment starts from the dashboard, not from a WhatsApp link.`;
+        return `To reach Job Finder payment, first register at ${signupUrl} and complete your profile and required documents. Checkout unlocks only after that is complete and admin review is finished, and payment starts from the dashboard, not from a WhatsApp link.`;
     }
 
     if (workerRecord.entry_fee_paid) {
