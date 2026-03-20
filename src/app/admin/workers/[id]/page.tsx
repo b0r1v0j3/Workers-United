@@ -19,15 +19,16 @@ import DocumentPreview from "@/components/admin/DocumentPreview";
 import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2 } from "lucide-react";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
-import { getWorkerDocumentProgress, WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
+import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
-import { collectDocumentStoragePathsForCleanup, getRestorableDocumentBackupPath } from "@/lib/document-image-processing";
+import { getRestorableDocumentBackupPath } from "@/lib/document-image-processing";
 import { syncWorkerReviewStatus } from "@/lib/worker-review";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { getAgencyWorkerEmail } from "@/lib/agencies";
 import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
-import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
+import { buildWorkerPaymentUnlockedEmailData, resolveWorkerApprovalNotificationRecipient } from "@/lib/worker-approval-notifications";
+import { canRevokeWorkerApproval } from "@/lib/worker-review";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -317,6 +318,13 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         submitted_email: workerRecord?.submitted_email,
         profiles: workerProfile ? [workerProfile] : null,
     }) || authUser?.email || null;
+    const workerNotificationRecipient = resolveWorkerApprovalNotificationRecipient({
+        worker: workerRecord,
+        workerProfileEmail: workerProfile?.email || null,
+        authEmail: authUser?.email || null,
+        displayName,
+    });
+    const workerNotificationEmail = workerNotificationRecipient?.email || null;
     const approvalEmailPreviewHref = buildAdminEmailPreviewHref("admin_update", {
         name: displayName,
         ...buildWorkerPaymentUnlockedEmailData(),
@@ -412,170 +420,6 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         revalidatePath(`/admin/workers/${id}`);
     }
 
-    async function deleteDocument(formData: FormData) {
-        "use server";
-        const docId = formData.get("doc_id") as string;
-
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Unauthorized");
-
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("user_type")
-            .eq("id", user.id)
-            .single();
-
-        if (profile?.user_type !== 'admin') {
-            throw new Error("Forbidden: Admin access only");
-        }
-
-        const adminClient = createAdminClient();
-        if (!workerRecord?.id) {
-            throw new Error("Worker record not found");
-        }
-
-        const { data: existingDocument, error: existingDocumentError } = await adminClient
-            .from("worker_documents")
-            .select("storage_path, ocr_json")
-            .eq("id", docId)
-            .maybeSingle();
-        if (existingDocumentError) {
-            throw new Error(existingDocumentError.message);
-        }
-
-        const storagePathsToDelete = collectDocumentStoragePathsForCleanup(
-            existingDocument?.storage_path,
-            existingDocument?.ocr_json && typeof existingDocument.ocr_json === "object"
-                ? existingDocument.ocr_json as Record<string, unknown>
-                : null
-        );
-
-        if (storagePathsToDelete.length > 0) {
-            await adminClient.storage
-                .from(WORKER_DOCUMENTS_BUCKET)
-                .remove(storagePathsToDelete);
-        }
-
-        // Delete from database
-        const { error: deleteError } = await adminClient
-            .from("worker_documents")
-            .delete()
-            .eq("id", docId);
-        if (deleteError) {
-            throw new Error(deleteError.message);
-        }
-
-        await syncWorkerReviewStatus({
-            adminClient,
-            profileId,
-            workerId: workerRecord.id,
-            documentOwnerId,
-            phoneOptional,
-            fullNameFallback: workerNameFallback,
-        });
-
-        revalidatePath(`/admin/workers/${id}`);
-        redirect(`/admin/workers/${id}?documentAction=deleted&ts=${Date.now()}`);
-    }
-
-    async function requestNewDocument(formData: FormData) {
-        "use server";
-        const docId = formData.get("doc_id") as string;
-        const docType = formData.get("doc_type") as string;
-        const reason = formData.get("reason") as string;
-        const userEmail = formData.get("user_email") as string;
-        const userName = formData.get("user_name") as string;
-        const requestedReason = reason?.trim() || buildDocumentRequestReason(docType, null, null);
-
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Unauthorized");
-
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("user_type")
-            .eq("id", user.id)
-            .single();
-
-        if (profile?.user_type !== 'admin') {
-            throw new Error("Forbidden: Admin access only");
-        }
-
-        const adminClient = createAdminClient();
-        if (!workerRecord?.id) {
-            throw new Error("Worker record not found");
-        }
-
-        const { data: existingDocument, error: existingDocumentError } = await adminClient
-            .from("worker_documents")
-            .select("storage_path, ocr_json")
-            .eq("id", docId)
-            .maybeSingle();
-        if (existingDocumentError) {
-            throw new Error(existingDocumentError.message);
-        }
-
-        const storagePathsToDelete = collectDocumentStoragePathsForCleanup(
-            existingDocument?.storage_path,
-            existingDocument?.ocr_json && typeof existingDocument.ocr_json === "object"
-                ? existingDocument.ocr_json as Record<string, unknown>
-                : null
-        );
-
-        if (storagePathsToDelete.length > 0) {
-            await adminClient.storage
-                .from(WORKER_DOCUMENTS_BUCKET)
-                .remove(storagePathsToDelete);
-        }
-
-        // Delete from database  
-        const { error: deleteError } = await adminClient
-            .from("worker_documents")
-            .delete()
-            .eq("id", docId);
-        if (deleteError) {
-            throw new Error(deleteError.message);
-        }
-
-        await syncWorkerReviewStatus({
-            adminClient,
-            profileId,
-            workerId: workerRecord.id,
-            documentOwnerId,
-            phoneOptional,
-            fullNameFallback: workerNameFallback,
-        });
-
-        if (notificationUserId) {
-            await logServerActivity(notificationUserId, "document_reupload_requested", "documents", {
-                doc_type: docType,
-                reason: requestedReason,
-                admin_id: user.id,
-            }, "warning");
-        }
-
-        if (userEmail && notificationUserId) {
-            after(async () => {
-                await queueEmail(
-                    adminClient,
-                    notificationUserId,
-                    "document_review_result",
-                    userEmail,
-                    userName || "there",
-                    {
-                        approved: false,
-                        docType: humanizeDocumentType(docType),
-                        feedback: requestedReason,
-                    }
-                );
-            });
-        }
-
-        revalidatePath(`/admin/workers/${id}`);
-        redirect(`/admin/workers/${id}?documentAction=requested&ts=${Date.now()}`);
-    }
-
     async function approveWorker(formData: FormData) {
         "use server";
         const action = formData.get("action") as string; // "approve" or "revoke"
@@ -623,17 +467,25 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                 })
                 .eq("id", workerRecord.id);
 
-            if (displayEmail && notificationUserId) {
+            if (workerNotificationEmail && notificationUserId) {
                 await queueEmail(
                     adminClient,
                     notificationUserId,
                     "admin_update",
-                    displayEmail,
-                    displayName,
+                    workerNotificationEmail,
+                    workerNotificationRecipient?.name || displayName,
                     buildWorkerPaymentUnlockedEmailData()
                 );
             }
         } else {
+            if (!canRevokeWorkerApproval({
+                entryFeePaid: !!workerRecord.entry_fee_paid,
+                jobSearchActive: !!workerRecord.job_search_active,
+                currentStatus: workerRecord.status,
+            })) {
+                throw new Error("Cannot revoke approval after Job Finder is active.");
+            }
+
             await adminClient
                 .from("worker_onboarding")
                 .update({
@@ -682,6 +534,10 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
 
         if ((newStatus === "PENDING_APPROVAL" || newStatus === "APPROVED") && completion < 100) {
             throw new Error("Worker profile must be 100% complete before entering admin review or approval.");
+        }
+
+        if (newStatus === "APPROVED" && !workerRecord.admin_approved) {
+            throw new Error("Use the approval button to approve the worker and set admin approval flags together.");
         }
 
         if (newStatus === "IN_QUEUE" && !hasPaidEntryFee) {
@@ -1028,7 +884,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                         </div>
 
                                         <form action={updateWorkerStatus} className="mt-4 space-y-4">
-                                            <input type="hidden" name="user_email" value={displayEmail || ""} />
+                                            <input type="hidden" name="user_email" value={workerNotificationEmail || ""} />
                                             <div>
                                                 <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                     Update status
@@ -1043,7 +899,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                     <option value="PROFILE_COMPLETE">Profile Complete</option>
                                                     <option value="PENDING_APPROVAL">Pending Approval</option>
                                                     <option value="VERIFIED">Verified</option>
-                                                    <option value="APPROVED">Approved</option>
+                                                    <option value="APPROVED" disabled={!workerRecord.admin_approved}>Approved</option>
                                                     <option value="IN_QUEUE">In Queue</option>
                                                     <option value="OFFER_PENDING">Offer Pending</option>
                                                     <option value="OFFER_ACCEPTED">Offer Accepted</option>

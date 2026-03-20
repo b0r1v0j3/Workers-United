@@ -116,11 +116,38 @@ export async function POST(request: NextRequest) {
                 })
             );
 
-            await queueEntryFeePaymentSuccessEmail({
+            const emailResult = await queueEntryFeePaymentSuccessEmail({
                 admin,
                 targetProfileId,
                 sessionCustomerEmail: session.customer_email,
             });
+
+            switch (emailResult.status) {
+                case "queued":
+                    await logServerActivity(activitySubjectId, "payment_success_email_queued", "payment", {
+                        recipient_email: emailResult.recipientEmail,
+                        source: "confirm-session-route",
+                    });
+                    break;
+                case "already_queued":
+                    await logServerActivity(activitySubjectId, "payment_success_email_skipped", "payment", {
+                        reason: "payment_success already queued or sent",
+                        source: "confirm-session-route",
+                    }, "warning");
+                    break;
+                case "missing_target_profile":
+                    await logServerActivity(activitySubjectId, "payment_success_email_skipped", "payment", {
+                        reason: "missing target profile",
+                        source: "confirm-session-route",
+                    }, "warning");
+                    break;
+                case "missing_recipient":
+                    await logServerActivity(activitySubjectId, "payment_success_email_skipped", "payment", {
+                        reason: "No recipient email found in session/customer/profile",
+                        source: "confirm-session-route",
+                    }, "warning");
+                    break;
+            }
 
             return NextResponse.json({
                 state: "paid",

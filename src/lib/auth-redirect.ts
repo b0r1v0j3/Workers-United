@@ -11,6 +11,7 @@ import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-elig
 import { ensureWorkerProfileRecord, ensureWorkerRecord, loadCanonicalWorkerRecord } from "@/lib/workers";
 
 const SUPPORTED_SIGNUP_TYPES = new Set(["worker", "employer", "agency"]);
+const AUTH_WELCOME_WHATSAPP_ACTION = "auth_whatsapp_welcome_sent";
 
 interface ResolvePostAuthRedirectOptions {
     origin: string;
@@ -26,6 +27,39 @@ function toAbsoluteHref(origin: string, href: string): string {
     return href.startsWith("/") ? `${origin}${href}` : `${origin}/${href}`;
 }
 
+async function hasRecordedAuthWhatsAppWelcome(adminClient: ReturnType<typeof createAdminClient>, userId: string) {
+    const { data, error } = await adminClient
+        .from("user_activity")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("category", "auth")
+        .eq("action", AUTH_WELCOME_WHATSAPP_ACTION)
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+
+    return Boolean(data);
+}
+
+async function recordAuthWhatsAppWelcome(adminClient: ReturnType<typeof createAdminClient>, userId: string) {
+    const { error } = await adminClient.from("user_activity").insert({
+        user_id: userId,
+        action: AUTH_WELCOME_WHATSAPP_ACTION,
+        category: "auth",
+        details: {
+            channel: "whatsapp",
+        },
+        status: "ok",
+    });
+
+    if (error) {
+        throw error;
+    }
+}
+
 export async function resolvePostAuthRedirect({
     origin,
     user,
@@ -33,10 +67,6 @@ export async function resolvePostAuthRedirect({
     userTypeParam = null,
     claimWorkerIdParam = null,
 }: ResolvePostAuthRedirectOptions): Promise<string> {
-    if (next) {
-        return toAbsoluteHref(origin, next);
-    }
-
     const adminClient = createAdminClient();
     let userType = user.user_metadata?.user_type;
 
@@ -72,9 +102,10 @@ export async function resolvePostAuthRedirect({
             .eq("user_id", user.id)
             .eq("email_type", "welcome")
             .limit(1)
+            .maybeSingle()
         : { data: [] };
 
-    if (canSendAutomatedWelcome && (!existingWelcomeEmail || existingWelcomeEmail.length === 0)) {
+    if (canSendAutomatedWelcome && !existingWelcomeEmail) {
         queueEmail(
             adminClient,
             user.id,
@@ -89,12 +120,12 @@ export async function resolvePostAuthRedirect({
         });
     }
 
+    let redirectHref = `${origin}/profile`;
+
     if (normalizedUserType === "admin") {
         await logServerActivity(user.id, "auth_login", "auth", { role: "admin" });
-        return `${origin}/admin`;
-    }
-
-    if (normalizedUserType === "employer") {
+        redirectHref = `${origin}/admin`;
+    } else if (normalizedUserType === "employer") {
         const employerResult = await ensureEmployerRecord(adminClient, {
             userId: user.id,
             email: user.email,
@@ -118,10 +149,8 @@ export async function resolvePostAuthRedirect({
             is_new: employerResult.employerCreated,
             employer_duplicates: employerResult.duplicates,
         });
-        return `${origin}/profile/employer`;
-    }
-
-    if (normalizedUserType === "agency") {
+        redirectHref = `${origin}/profile/employer`;
+    } else if (normalizedUserType === "agency") {
         const agencySchemaState = await getAgencySchemaState(adminClient);
         if (!agencySchemaState.ready) {
             await logServerActivity(user.id, "auth_login", "auth", { role: "agency", setup_required: true });
@@ -146,103 +175,111 @@ export async function resolvePostAuthRedirect({
             role: "agency",
             is_new: agencyResult.agencyCreated,
         });
-        return `${origin}/profile/agency`;
-    }
-
-    const claimWorkerId = claimWorkerIdParam || user.user_metadata?.claimed_worker_id || null;
-    const attemptedClaim = typeof claimWorkerId === "string" && claimWorkerId.trim().length > 0;
-    const profileResult = await ensureWorkerProfileRecord(adminClient, {
-        userId: user.id,
-        email: user.email,
-        fullName: user.user_metadata?.full_name,
-    });
-
-    if (profileResult.profileCreated) {
-        console.log(`[Auth Redirect] Created missing profile for ${user.id}`);
-    }
-
-    let claimResult: Awaited<ReturnType<typeof claimAgencyWorkerDraft>> | null = null;
-
-    if (attemptedClaim) {
-        const agencySchemaState = await getAgencySchemaState(adminClient);
-        if (agencySchemaState.ready) {
-            claimResult = await claimAgencyWorkerDraft(adminClient, {
-                workerId: claimWorkerId,
-                profileId: user.id,
-                email: user.email,
-                fullName: user.user_metadata?.full_name,
-            });
-        }
-
-        await adminClient.auth.admin.updateUserById(user.id, {
-            user_metadata: {
-                ...user.user_metadata,
-                claimed_worker_id: null,
-            },
-        });
-    }
-
-    if (!attemptedClaim) {
-        const workerRecordResult = await ensureWorkerRecord(adminClient, {
+        redirectHref = `${origin}/profile/agency`;
+    } else {
+        const claimWorkerId = claimWorkerIdParam || user.user_metadata?.claimed_worker_id || null;
+        const attemptedClaim = typeof claimWorkerId === "string" && claimWorkerId.trim().length > 0;
+        const profileResult = await ensureWorkerProfileRecord(adminClient, {
             userId: user.id,
             email: user.email,
             fullName: user.user_metadata?.full_name,
         });
 
-        if (workerRecordResult.workerCreated) {
-            console.log(`[Auth Redirect] Created missing worker record for ${user.id}`);
+        if (profileResult.profileCreated) {
+            console.log(`[Auth Redirect] Created missing profile for ${user.id}`);
         }
-    }
 
-    const { data: workerRecordCheck } = await loadCanonicalWorkerRecord(
-        adminClient,
-        user.id,
-        "id, profile_id, agency_id, submitted_email, phone, nationality, updated_at, entry_fee_paid, queue_joined_at, job_search_active, current_country, preferred_job, status"
-    );
+        let claimResult: Awaited<ReturnType<typeof claimAgencyWorkerDraft>> | null = null;
 
-    await syncAuthContactFields(adminClient, {
-        userId: user.id,
-        phone: workerRecordCheck?.phone || null,
-        fullName: user.user_metadata?.full_name || null,
-    }).catch((error) => {
-        console.warn("[Auth Redirect] Worker auth contact sync failed:", error);
-    });
+        if (attemptedClaim) {
+            const agencySchemaState = await getAgencySchemaState(adminClient);
+            if (agencySchemaState.ready) {
+                claimResult = await claimAgencyWorkerDraft(adminClient, {
+                    workerId: claimWorkerId,
+                    profileId: user.id,
+                    email: user.email,
+                    fullName: user.user_metadata?.full_name,
+                });
+            }
 
-    if (!workerRecordCheck || !workerRecordCheck.phone || !workerRecordCheck.nationality) {
-        const canSendWorkerNotifications = canSendWorkerDirectNotifications({
-            email: normalizedUserEmail,
-            phone: workerRecordCheck?.phone || undefined,
-            worker: workerRecordCheck,
-            isHiddenDraftOwner: Boolean(user.user_metadata?.hidden_draft_owner),
-        });
+            await adminClient.auth.admin.updateUserById(user.id, {
+                user_metadata: {
+                    ...user.user_metadata,
+                    claimed_worker_id: null,
+                },
+            });
+        }
 
-        if (workerRecordCheck?.phone && canSendWorkerNotifications) {
-            try {
-                const { sendWelcome } = await import("@/lib/whatsapp");
-                const firstName = user.user_metadata?.full_name?.split(" ")[0] || "there";
-                await sendWelcome(workerRecordCheck.phone, firstName, user.id);
-            } catch {
-                /* WhatsApp welcome is best-effort */
+        if (!attemptedClaim) {
+            const workerRecordResult = await ensureWorkerRecord(adminClient, {
+                userId: user.id,
+                email: user.email,
+                fullName: user.user_metadata?.full_name,
+            });
+
+            if (workerRecordResult.workerCreated) {
+                console.log(`[Auth Redirect] Created missing worker record for ${user.id}`);
             }
         }
 
-        await logServerActivity(user.id, "auth_login", "auth", {
-            role: "worker",
-            is_new: true,
-            redirect: "/profile/worker",
-            claim_result: claimResult?.reason || null,
+        const { data: workerRecordCheck } = await loadCanonicalWorkerRecord(
+            adminClient,
+            user.id,
+            "id, profile_id, agency_id, submitted_email, phone, nationality, updated_at, entry_fee_paid, queue_joined_at, job_search_active, current_country, preferred_job, status"
+        );
+
+        await syncAuthContactFields(adminClient, {
+            userId: user.id,
+            phone: workerRecordCheck?.phone || null,
+            fullName: user.user_metadata?.full_name || null,
+        }).catch((error) => {
+            console.warn("[Auth Redirect] Worker auth contact sync failed:", error);
         });
 
         const claimQuery = claimResult ? `?claim=${claimResult.reason}` : "";
-        return `${origin}/profile/worker${claimQuery}`;
+        redirectHref = `${origin}/profile/worker${claimQuery}`;
+
+        if (!workerRecordCheck || !workerRecordCheck.phone || !workerRecordCheck.nationality) {
+            const canSendWorkerNotifications = canSendWorkerDirectNotifications({
+                email: normalizedUserEmail,
+                phone: workerRecordCheck?.phone || undefined,
+                worker: workerRecordCheck,
+                isHiddenDraftOwner: Boolean(user.user_metadata?.hidden_draft_owner),
+            });
+
+            const hasWelcomeWhatsApp = workerRecordCheck?.phone
+                ? await hasRecordedAuthWhatsAppWelcome(adminClient, user.id).catch(() => false)
+                : true;
+
+            if (workerRecordCheck?.phone && canSendWorkerNotifications && !hasWelcomeWhatsApp) {
+                try {
+                    const { sendWelcome } = await import("@/lib/whatsapp");
+                    const firstName = user.user_metadata?.full_name?.split(" ")[0] || "there";
+                    await sendWelcome(workerRecordCheck.phone, firstName, user.id);
+                    await recordAuthWhatsAppWelcome(adminClient, user.id).catch((error) => {
+                        console.warn("[Auth Redirect] Failed to persist WhatsApp welcome marker:", error);
+                    });
+                } catch {
+                    /* WhatsApp welcome is best-effort */
+                }
+            }
+
+            await logServerActivity(user.id, "auth_login", "auth", {
+                role: "worker",
+                is_new: true,
+                redirect: "/profile/worker",
+                claim_result: claimResult?.reason || null,
+            });
+
+            redirectHref = `${origin}/profile/worker${claimQuery}`;
+        } else {
+            await logServerActivity(user.id, "auth_login", "auth", {
+                role: "worker",
+                is_new: false,
+                claim_result: claimResult?.reason || null,
+            });
+        }
     }
 
-    await logServerActivity(user.id, "auth_login", "auth", {
-        role: "worker",
-        is_new: false,
-        claim_result: claimResult?.reason || null,
-    });
-
-    const claimQuery = claimResult ? `?claim=${claimResult.reason}` : "";
-    return `${origin}/profile/worker${claimQuery}`;
+    return next ? toAbsoluteHref(origin, next) : redirectHref;
 }

@@ -24,6 +24,10 @@ function normalizePhone(phone?: string | null) {
     return normalized || null;
 }
 
+export function isHiddenDraftWorker(worker?: WorkerNotificationRecord | null) {
+    return !!worker?.agency_id && !worker?.profile_id;
+}
+
 export function canSendWorkerDirectNotifications({
     email,
     phone,
@@ -43,9 +47,10 @@ export function canSendWorkerDirectNotifications({
         return false;
     }
 
-    if (worker?.agency_id && !worker?.profile_id) {
-        const submittedEmail = normalizeEmail(worker.submitted_email);
-        const directPhone = normalizePhone(phone || worker.phone);
+    const hiddenDraftWorker = worker && isHiddenDraftWorker(worker) ? worker : null;
+    if (hiddenDraftWorker) {
+        const submittedEmail = normalizeEmail(hiddenDraftWorker.submitted_email);
+        const directPhone = normalizePhone(phone || hiddenDraftWorker.phone);
         return Boolean(submittedEmail && directPhone && submittedEmail === normalizedEmail);
     }
 

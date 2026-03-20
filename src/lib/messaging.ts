@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables, TablesInsert } from "@/lib/database.types";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 
 type AdminClient = SupabaseClient<Database>;
 
@@ -195,7 +196,7 @@ export async function getSupportAccessState(
         { data: workerRecord, error: workerRecordError },
         { data: completedPayment, error: paymentError },
     ] = await Promise.all([
-        loadCanonicalWorkerRecord(admin, profileId, "id, entry_fee_paid, updated_at"),
+        loadCanonicalWorkerRecord(admin, profileId, "id, entry_fee_paid, job_search_active, queue_joined_at, status, updated_at"),
         admin
             .from("payments")
             .select("id")
@@ -214,7 +215,13 @@ export async function getSupportAccessState(
         throw paymentError;
     }
 
-    const unlocked = Boolean(workerRecord?.entry_fee_paid || completedPayment?.id);
+    const unlocked = Boolean(
+        workerRecord?.entry_fee_paid
+        || workerRecord?.job_search_active
+        || workerRecord?.queue_joined_at
+        || isPostEntryFeeWorkerStatus(workerRecord?.status)
+        || completedPayment?.id
+    );
     if (unlocked) {
         return { allowed: true, reason: null, unlockRequirement: "entry_fee" };
     }

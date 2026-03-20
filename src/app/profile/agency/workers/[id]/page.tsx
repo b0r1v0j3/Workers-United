@@ -115,7 +115,7 @@ export default async function AgencyWorkerPage({ params, searchParams }: WorkerP
                         paymentState: hasPaidEntryFee ? "paid" : "not_paid",
                         paymentPendingUntil: null,
                         entryFeePaidAt: worker.queue_joined_at || null,
-                        adminApproved: completionResult.completion === 100,
+                        adminApproved: !!worker.admin_approved,
                     }}
                     readOnlyPreview={false}
                     adminTestMode

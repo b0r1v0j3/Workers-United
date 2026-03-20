@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { logServerActivity } from '@/lib/activityLoggerServer';
 import { resolvePostAuthRedirect } from '@/lib/auth-redirect';
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
@@ -24,11 +27,6 @@ export async function GET(request: Request) {
                 }, "error");
             } catch { /* don't block redirect */ }
             return NextResponse.redirect(`${origin}/auth/auth-code-error`);
-        }
-
-        // If explicit redirect, use it
-        if (next) {
-            return NextResponse.redirect(`${origin}${next}`);
         }
 
         // Get user

@@ -107,6 +107,10 @@ export function buildAiOriginalBackupPath(storagePath: string) {
     return `${directory}/_ai-originals/${fileName}`;
 }
 
+export function buildPdfPreviewStoragePath(storagePath: string) {
+    return storagePath.replace(/\.pdf$/i, ".jpg");
+}
+
 export function getRestorableDocumentBackupPath(ocrJson: Record<string, unknown>): string | null {
     const manualBackup = typeof ocrJson.manual_crop_original_storage_path === "string"
         ? ocrJson.manual_crop_original_storage_path.trim()

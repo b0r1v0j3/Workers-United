@@ -3,6 +3,7 @@ import {
     buildAiOriginalBackupPath,
     buildAutoCropOcrPatch,
     buildManualCropOcrPatch,
+    buildPdfPreviewStoragePath,
     collectDocumentStoragePathsForCleanup,
     getRestorableDocumentBackupPath,
     resolveDocumentRotationToApply,
@@ -91,6 +92,10 @@ describe("document-image-processing helpers", () => {
 
     it("builds a stable AI-original backup path beside the document", () => {
         expect(buildAiOriginalBackupPath("abc/passport/image.jpg")).toBe("abc/passport/_ai-originals/image.jpg");
+    });
+
+    it("builds a stable PDF preview path without touching the canonical PDF", () => {
+        expect(buildPdfPreviewStoragePath("worker-docs/passport-upload.pdf")).toBe("worker-docs/passport-upload.jpg");
     });
 
     it("prefers manual backup first and falls back to AI backup", () => {
