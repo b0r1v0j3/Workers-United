@@ -9,6 +9,16 @@ export interface PlatformConfig {
 }
 
 export const CANONICAL_REQUIRED_WORKER_DOCUMENTS = "passport, biometric photo, and a final school, university, or formal vocational diploma";
+export const DEFAULT_PLATFORM_WEBSITE_URL = "https://workersunited.eu";
+export const DEFAULT_PLATFORM_SUPPORT_EMAIL = "contact@workersunited.eu";
+
+export interface PlatformContactInfo {
+    websiteUrl: string;
+    signupUrl: string;
+    workerProfileUrl: string;
+    workerInboxUrl: string;
+    supportEmail: string;
+}
 
 let cachedConfig: PlatformConfig | null = null;
 let cacheTimestamp = 0;
@@ -99,9 +109,48 @@ export async function updateConfigValue(key: string, value: string, userId?: str
  */
 export async function getBusinessFactsForAI(): Promise<string> {
     const c = await getPlatformConfig();
+    return buildBusinessFactsForAIFromConfig(c);
+}
+
+export function normalizePlatformWebsiteUrl(value?: string | null): string {
+    const trimmed = (value || "").trim();
+    const rawUrl = trimmed || DEFAULT_PLATFORM_WEBSITE_URL;
+    const withProtocol = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    return withProtocol.replace(/\/+$/, "");
+}
+
+export function normalizePlatformSupportEmail(value?: string | null): string {
+    return (value || "").trim() || DEFAULT_PLATFORM_SUPPORT_EMAIL;
+}
+
+export function buildPlatformUrl(baseUrl?: string | null, path = "/"): string {
+    const normalizedBase = normalizePlatformWebsiteUrl(baseUrl);
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    return normalizedPath === "/" ? normalizedBase : `${normalizedBase}${normalizedPath}`;
+}
+
+export function getPlatformContactInfoFromConfig(config?: PlatformConfig | null): PlatformContactInfo {
+    const websiteUrl = normalizePlatformWebsiteUrl(config?.website_url);
+    return {
+        websiteUrl,
+        signupUrl: buildPlatformUrl(websiteUrl, "/signup"),
+        workerProfileUrl: buildPlatformUrl(websiteUrl, "/profile/worker"),
+        workerInboxUrl: buildPlatformUrl(websiteUrl, "/profile/worker/inbox"),
+        supportEmail: normalizePlatformSupportEmail(config?.contact_email),
+    };
+}
+
+export async function getPlatformContactInfo(): Promise<PlatformContactInfo> {
+    const config = await getPlatformConfig();
+    return getPlatformContactInfoFromConfig(config);
+}
+
+export function buildBusinessFactsForAIFromConfig(config?: PlatformConfig | null): string {
+    const c = config || {};
+    const contactInfo = getPlatformContactInfoFromConfig(c);
     return [
         `Platform: ${c.platform_name || "Workers United"}`,
-        `Website: ${c.website_url || "workersunited.eu"}`,
+        `Website: ${contactInfo.websiteUrl}`,
         `Job Finder service charge: ${c.entry_fee || "$9"} (${c.entry_fee_currency || "USD"}) — ALWAYS call this a service charge, NEVER a fee or tax`,
         `Refund policy: ${c.refund_policy_en || "90-day refund if no job offer"}`,
         `Placement fee (Serbia): ${c.placement_fee_serbia || "$190"} — paid by worker only after job is found`,
@@ -110,7 +159,7 @@ export async function getBusinessFactsForAI(): Promise<string> {
         "LANGUAGE RULE: In Serbian, always say 'naknada za uslugu' or 'servisna naknada' for the $9 cost. NEVER say 'ulazna taksa', 'taksa', or 'ulazna naknada'.",
         `Processing time: ${c.processing_time || "2-8 weeks"}`,
         `Required documents: ${CANONICAL_REQUIRED_WORKER_DOCUMENTS}`,
-        `Contact: ${c.contact_email || "contact@workersunited.eu"}`,
+        `Contact: ${contactInfo.supportEmail}`,
     ].join("\n");
 }
 
@@ -124,8 +173,8 @@ function getDefaults(): PlatformConfig {
         refund_policy_en: "If you do not receive a job offer within 90 days, your fee is fully refunded.",
         refund_policy_sr: "Ukoliko ne dobijete ponudu za posao u roku od 90 dana, vaš novac će biti vraćen.",
         placement_fee_serbia: "$190",
-        website_url: "workersunited.eu",
-        contact_email: "contact@workersunited.eu",
+        website_url: DEFAULT_PLATFORM_WEBSITE_URL,
+        contact_email: DEFAULT_PLATFORM_SUPPORT_EMAIL,
         platform_name: "Workers United",
         supported_documents: CANONICAL_REQUIRED_WORKER_DOCUMENTS,
         processing_time: "2-8 weeks depending on country",

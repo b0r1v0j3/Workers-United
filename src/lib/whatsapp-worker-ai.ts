@@ -84,6 +84,8 @@ interface GenerateWorkerReplyParams {
     historyMessages: WhatsAppConversationEntry[];
     routerDecision: WhatsAppRouterDecision;
     historyLimit?: number;
+    websiteUrl?: string;
+    supportEmail?: string;
 }
 
 const DEFAULT_ROUTER_HISTORY_LIMIT = 8;
@@ -211,13 +213,18 @@ export async function generateWorkerWhatsAppReply({
     historyMessages,
     routerDecision,
     historyLimit = DEFAULT_RESPONSE_HISTORY_LIMIT,
+    websiteUrl,
+    supportEmail,
 }: GenerateWorkerReplyParams): Promise<string> {
     const userName = profile?.full_name?.split(" ")[0] || "there";
     const workerSnapshot = buildWorkerSnapshot(workerRecord, profile);
     const memoryText = brainMemory.length > 0
         ? brainMemory.map((entry) => `- [${entry.category}] ${entry.content}`).join("\n")
         : "(No stored facts)";
-    const canonicalFacts = buildCanonicalWhatsAppFacts();
+    const canonicalFacts = buildCanonicalWhatsAppFacts({
+        website: websiteUrl,
+        supportEmail,
+    });
     const instructions = `You are the official WhatsApp assistant for Workers United.
 
 Personality:
@@ -244,6 +251,8 @@ ${buildWorkerWhatsAppRules({
         confidence: routerDecision.confidence,
         reason: routerDecision.reason,
         isAdmin,
+        website: websiteUrl,
+        supportEmail,
     })}`;
 
     return callResponseText({

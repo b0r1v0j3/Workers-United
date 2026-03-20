@@ -50,6 +50,12 @@ import {
 } from "@/lib/whatsapp-inbound-events";
 import { resolveWhatsAppWorkerIdentity } from "@/lib/whatsapp-identity";
 import { callOpenAIResponseText } from "@/lib/openai-response-text";
+import {
+    buildBusinessFactsForAIFromConfig,
+    getPlatformConfig,
+    getPlatformContactInfoFromConfig,
+    type PlatformContactInfo,
+} from "@/lib/platform-config";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
@@ -243,6 +249,20 @@ export async function POST(request: NextRequest) {
         const supabase = createAdminClient();
         const attachmentReplySent = new Set<string>();
         let hadProcessingError = false;
+        let platformMessagingConfigPromise: Promise<{ businessFacts: string; contactInfo: PlatformContactInfo }> | null = null;
+        const loadPlatformMessagingConfig = async () => {
+            if (!platformMessagingConfigPromise) {
+                platformMessagingConfigPromise = (async () => {
+                    const config = await getPlatformConfig();
+                    return {
+                        businessFacts: buildBusinessFactsForAIFromConfig(config),
+                        contactInfo: getPlatformContactInfoFromConfig(config),
+                    };
+                })();
+            }
+
+            return platformMessagingConfigPromise;
+        };
 
         for (const entry of entries) {
             const changes = Array.isArray(entry?.changes) ? entry.changes : [];
@@ -448,7 +468,8 @@ export async function POST(request: NextRequest) {
 
                 if (!isTextLikeWhatsAppMessage(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
-                        const mediaFallbackReply = getMediaAttachmentResponse(latestMessageLanguage);
+                        const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
+                        const mediaFallbackReply = getMediaAttachmentResponse(latestMessageLanguage, platformContact);
                         const mediaReplyResult = await sendWhatsAppRouteReply({
                             admin: supabase,
                             phone: normalizedPhone,
@@ -484,6 +505,7 @@ export async function POST(request: NextRequest) {
                     const OPENAI_API_KEY_EMP = process.env.OPENAI_API_KEY;
                     const employerHistory = await ensureHistoryMessages();
                     const employerLanguage = resolveWhatsAppLanguageName(content, null, employerHistory);
+                    const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
                     if (OPENAI_API_KEY_EMP) {
                         try {
                             const empBrainMemory = await loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT);
@@ -496,6 +518,8 @@ export async function POST(request: NextRequest) {
                                 historyMessages: employerHistory,
                                 brainMemory: empBrainMemory,
                                 language: employerLanguage,
+                                websiteUrl: platformContact.websiteUrl,
+                                supportEmail: platformContact.supportEmail,
                             });
                             const finalEmployerReply = employerReply || getEmployerWhatsAppDefaultReply(employerLanguage);
                             const employerReplyResult = await sendWhatsAppRouteReply({
@@ -513,7 +537,7 @@ export async function POST(request: NextRequest) {
                             continue;
                         } catch (empErr) {
                             console.error("[WhatsApp] Employer AI error:", empErr);
-                            const fallbackEmployer = getEmployerWhatsAppErrorReply(employerLanguage);
+                            const fallbackEmployer = getEmployerWhatsAppErrorReply(employerLanguage, platformContact);
                             const employerFallbackResult = await sendWhatsAppRouteReply({
                                 admin: supabase,
                                 phone: normalizedPhone,
@@ -529,7 +553,7 @@ export async function POST(request: NextRequest) {
                             continue;
                         }
                     }
-                    const staticEmployer = getEmployerWhatsAppStaticReply(employerLanguage);
+                    const staticEmployer = getEmployerWhatsAppStaticReply(employerLanguage, platformContact);
                     const employerStaticResult = await sendWhatsAppRouteReply({
                         admin: supabase,
                         phone: normalizedPhone,
@@ -545,13 +569,15 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
+                const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
                 const onboardingReply = await handleWhatsAppOnboarding(
                     supabase,
                     normalizedPhone,
                     content,
                     linkedWorkerRecord,
                     latestMessageLanguage,
-                    await ensureHistoryMessages()
+                    await ensureHistoryMessages(),
+                    platformContact
                 );
 
                 if (onboardingReply !== null) {
@@ -583,19 +609,13 @@ export async function POST(request: NextRequest) {
 
                 if (OPENAI_API_KEY) {
                     try {
+                        const platformMessagingConfig = await loadPlatformMessagingConfig();
                         [historyMessages, brainMemory, businessFacts, supportAccess] = await Promise.all([
                             sharedHistoryMessages
                                 ? Promise.resolve(sharedHistoryMessages)
                                 : loadWhatsAppConversationHistory(supabase, normalizedPhone, RESPONSE_HISTORY_LIMIT),
                             loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT),
-                            (async () => {
-                                try {
-                                    const { getBusinessFactsForAI } = await import("@/lib/platform-config");
-                                    return await getBusinessFactsForAI();
-                                } catch {
-                                    return "";
-                                }
-                            })(),
+                            Promise.resolve(platformMessagingConfig.businessFacts),
                             linkedWorkerRecord?.profile_id
                                 ? getSupportAccessState(supabase, linkedWorkerRecord.profile_id, "worker")
                                 : Promise.resolve(null as SupportAccessSnapshot | null),
@@ -632,6 +652,8 @@ export async function POST(request: NextRequest) {
                                 language: routerDecision.language,
                                 intent: routerDecision.intent,
                                 historyMessages,
+                                website: platformMessagingConfig.contactInfo.websiteUrl,
+                                supportEmail: platformMessagingConfig.contactInfo.supportEmail,
                                 isFirstContact: historyMessages.length === 0,
                             })
                             : null;
@@ -647,6 +669,8 @@ export async function POST(request: NextRequest) {
                                 adminApproved: linkedWorkerRecord.admin_approved,
                                 queueJoinedAt: linkedWorkerRecord.queue_joined_at,
                                 hasSupportAccess: !!supportAccess?.allowed,
+                                website: platformMessagingConfig.contactInfo.websiteUrl,
+                                supportEmail: platformMessagingConfig.contactInfo.supportEmail,
                             })
                             : null;
 
@@ -674,6 +698,8 @@ export async function POST(request: NextRequest) {
                             aiResponse = buildWhatsAppAutoHandoffReply({
                                 language: routerDecision.language,
                                 hasSupportAccess: true,
+                                website: platformMessagingConfig.contactInfo.websiteUrl,
+                                supportEmail: platformMessagingConfig.contactInfo.supportEmail,
                             });
                             deterministicReplyFlowKey = `auto_handoff_${confusionAnalysis.reason || "support_loop"}`;
                             responseType = "auto_handoff";
@@ -698,6 +724,8 @@ export async function POST(request: NextRequest) {
                                 brainMemory,
                                 historyMessages,
                                 routerDecision,
+                                websiteUrl: platformMessagingConfig.contactInfo.websiteUrl,
+                                supportEmail: platformMessagingConfig.contactInfo.supportEmail,
                             });
                             responseType = "gpt";
                         }
@@ -759,6 +787,7 @@ export async function POST(request: NextRequest) {
                     responseText: cleanResponse,
                     language: effectiveReplyLanguage,
                     workerRecord: linkedWorkerRecord,
+                    platform: (await loadPlatformMessagingConfig()).contactInfo,
                 });
                 const replyText = guardrailResult.text || await getWhatsAppFallbackResponse(
                     content,
@@ -1165,15 +1194,15 @@ function isCancelOnboarding(msg: string): boolean {
     return /^(cancel|stop|exit|quit|start over|restart|reset|otkaži|otkazi|prekini|izađi|izadji|odustani|ispočetka|ispocetka|annuler|arr[êe]ter|recommencer|cancelar|parar|reiniciar|إلغاء|الغاء|توقف|ابدأ من جديد|cancel karo|band karo|ruk jao|restart karo|शुरू से|रद्द)/.test(l);
 }
 
-function getOnboardingCancelledReply(language: string): string {
+function getOnboardingCancelledReply(language: string, workerProfileUrl: string): string {
     const lk = getLangKey(language);
     const messages: Record<LangKey, string> = {
-        en: "No problem — I stopped the WhatsApp profile flow. If you want to continue later, say that you want to fill in your profile on WhatsApp, or use workersunited.eu/profile/worker.",
-        sr: "Nema problema — zaustavio sam popunjavanje profila preko WhatsApp-a. Ako želite kasnije da nastavite, recite da želite da popunite profil na WhatsApp-u ili koristite workersunited.eu/profile/worker.",
-        hi: "कोई बात नहीं — मैंने WhatsApp profile flow रोक दिया है। अगर बाद में जारी रखना हो, तो लिखें कि आप WhatsApp पर profile भरना चाहते हैं, या workersunited.eu/profile/worker खोलें।",
-        ar: "لا مشكلة — أوقفتُ تعبئة الملف عبر WhatsApp. إذا أردت المتابعة لاحقًا، أخبرني أنك تريد ملء الملف على WhatsApp أو استخدم workersunited.eu/profile/worker.",
-        fr: "Pas de problème — j’ai arrêté le remplissage du profil sur WhatsApp. Si vous voulez continuer plus tard, dites que vous voulez remplir votre profil sur WhatsApp ou utilisez workersunited.eu/profile/worker.",
-        pt: "Sem problema — parei o preenchimento do perfil pelo WhatsApp. Se quiser continuar depois, diga que quer preencher o perfil no WhatsApp ou use workersunited.eu/profile/worker.",
+        en: `No problem — I stopped the WhatsApp profile flow. If you want to continue later, say that you want to fill in your profile on WhatsApp, or use ${workerProfileUrl}.`,
+        sr: `Nema problema — zaustavio sam popunjavanje profila preko WhatsApp-a. Ako želite kasnije da nastavite, recite da želite da popunite profil na WhatsApp-u ili koristite ${workerProfileUrl}.`,
+        hi: `कोई बात नहीं — मैंने WhatsApp profile flow रोक दिया है। अगर बाद में जारी रखना हो, तो लिखें कि आप WhatsApp पर profile भरना चाहते हैं, या ${workerProfileUrl} खोलें।`,
+        ar: `لا مشكلة — أوقفتُ تعبئة الملف عبر WhatsApp. إذا أردت المتابعة لاحقًا، أخبرني أنك تريد ملء الملف على WhatsApp أو استخدم ${workerProfileUrl}.`,
+        fr: `Pas de problème — j’ai arrêté le remplissage du profil sur WhatsApp. Si vous voulez continuer plus tard, dites que vous voulez remplir votre profil sur WhatsApp ou utilisez ${workerProfileUrl}.`,
+        pt: `Sem problema — parei o preenchimento do perfil pelo WhatsApp. Se quiser continuar depois, diga que quer preencher o perfil no WhatsApp ou use ${workerProfileUrl}.`,
     };
     return messages[lk];
 }
@@ -1236,15 +1265,15 @@ function getHumanSupportFallbackReply(language: string): string {
     return messages[lk];
 }
 
-function getAgencyRegistrationFallbackReply(language: string): string {
+function getAgencyRegistrationFallbackReply(language: string, signupUrl: string): string {
     const lk = getLangKey(language);
     const messages: Record<LangKey, string> = {
-        en: "Welcome! You can register as an agency at workersunited.eu/signup and manage all your workers' profiles through your agency dashboard. If you have any questions, I'm here to help.",
-        sr: "Dobro došli! Možete da se registrujete kao agencija na workersunited.eu/signup i upravljate profilima svih svojih radnika kroz agency dashboard. Ako imate pitanja, tu sam da pomognem.",
-        hi: "स्वागत है! आप workersunited.eu/signup पर agency के रूप में register कर सकते हैं और अपने dashboard से सभी workers के profile manage कर सकते हैं। अगर आपके कोई सवाल हों, मैं मदद के लिए यहाँ हूँ।",
-        ar: "مرحبًا بك! يمكنك التسجيل كوكالة على workersunited.eu/signup وإدارة ملفات جميع العمال من خلال لوحة الوكالة. إذا كان لديك أي سؤال فأنا هنا للمساعدة.",
-        fr: "Bienvenue ! Vous pouvez vous inscrire comme agence sur workersunited.eu/signup et gérer les profils de tous vos travailleurs depuis votre tableau de bord agence. Si vous avez des questions, je suis là pour vous aider.",
-        pt: "Bem-vindo! Você pode se registrar como agência em workersunited.eu/signup e gerenciar os perfis de todos os seus trabalhadores pelo painel da agência. Se tiver dúvidas, estou aqui para ajudar.",
+        en: `Welcome! You can register as an agency at ${signupUrl} and manage all your workers' profiles through your agency dashboard. If you have any questions, I'm here to help.`,
+        sr: `Dobro došli! Možete da se registrujete kao agencija na ${signupUrl} i upravljate profilima svih svojih radnika kroz agency dashboard. Ako imate pitanja, tu sam da pomognem.`,
+        hi: `स्वागत है! आप ${signupUrl} पर agency के रूप में register कर सकते हैं और अपने dashboard से सभी workers के profile manage कर सकते हैं। अगर आपके कोई सवाल हों, मैं मदद के लिए यहाँ हूँ।`,
+        ar: `مرحبًا بك! يمكنك التسجيل كوكالة على ${signupUrl} وإدارة ملفات جميع العمال من خلال لوحة الوكالة. إذا كان لديك أي سؤال فأنا هنا للمساعدة.`,
+        fr: `Bienvenue ! Vous pouvez vous inscrire comme agence sur ${signupUrl} et gérer les profils de tous vos travailleurs depuis votre tableau de bord agence. Si vous avez des questions, je suis là pour vous aider.`,
+        pt: `Bem-vindo! Você pode se registrar como agência em ${signupUrl} e gerenciar os perfis de todos os seus trabalhadores pelo painel da agência. Se tiver dúvidas, estou aqui para ajudar.`,
     };
     return messages[lk];
 }
@@ -1477,16 +1506,19 @@ export async function handleWhatsAppOnboarding(
     message: string,
     workerRecord: any,
     detectedLanguage: string,
-    historyMessages: { direction?: string | null; content?: string | null }[] = []
+    historyMessages: { direction?: string | null; content?: string | null }[] = [],
+    platformContact?: Pick<PlatformContactInfo, "signupUrl" | "workerProfileUrl">
 ): Promise<string | null> {
     const state = await getOnboardingState(supabase, phone);
     const seededLanguage = resolveWhatsAppLanguageName(message, detectedLanguage, historyMessages);
     const lang = state?.language || seededLanguage || detectedLanguage || "en";
     const isRegisteredWorker = Boolean(workerRecord?.profile_id);
+    const signupUrl = platformContact?.signupUrl || "https://workersunited.eu/signup";
+    const workerProfileUrl = platformContact?.workerProfileUrl || "https://workersunited.eu/profile/worker";
 
     if (state && isCancelOnboarding(message)) {
         await clearOnboardingState(supabase, phone);
-        return getOnboardingCancelledReply(lang);
+        return getOnboardingCancelledReply(lang, workerProfileUrl);
     }
 
     if (isRegisteredWorker) {
@@ -1563,7 +1595,7 @@ export async function handleWhatsAppOnboarding(
                 model: WHATSAPP_RESPONSE_MODEL,
                 instructions: `You are a friendly WhatsApp assistant for Workers United. The user has identified themselves as an agent/agency/recruiter who registers workers. You MUST reply in ${lang} (the user's language). Your response must:
 1. Welcome them warmly as an agency partner
-2. Explain they can register as an agency at workersunited.eu/signup
+2. Explain they can register as an agency at ${signupUrl}
 3. Tell them they can manage all their workers' profiles through the agency dashboard on the website
 4. Say it's much easier to handle multiple workers from the website dashboard
 5. Offer to help with any questions
@@ -1575,7 +1607,7 @@ export async function handleWhatsAppOnboarding(
         } catch (e) {
             console.error("[WhatsApp] GPT agent-detection fallback error:", e);
         }
-        return getAgencyRegistrationFallbackReply(lang);
+        return getAgencyRegistrationFallbackReply(lang, signupUrl);
     }
 
     // ── ask_start ──
@@ -1588,12 +1620,12 @@ export async function handleWhatsAppOnboarding(
             await clearOnboardingState(supabase, phone);
             const lk = getLangKey(lang);
             const msgs: Record<LangKey, string> = {
-                en: "No problem! You can fill in your profile at workersunited.eu/profile/worker whenever you're ready. I'm here if you have questions.",
-                sr: "Nema problema! Profil možete popuniti na workersunited.eu/profile/worker kada budete spremni. Tu sam ako imate pitanja.",
-                hi: "कोई बात नहीं! आप workersunited.eu/profile/worker पर जाकर अपना प्रोफ़ाइल भर सकते हैं। कोई सवाल हो तो बताएं।",
-                ar: "لا بأس! يمكنك ملء ملفك الشخصي على workersunited.eu/profile/worker متى كنت مستعدًا.",
-                fr: "Pas de problème! Vous pouvez remplir votre profil sur workersunited.eu/profile/worker quand vous êtes prêt.",
-                pt: "Sem problema! Você pode preencher seu perfil em workersunited.eu/profile/worker quando estiver pronto.",
+                en: `No problem! You can fill in your profile at ${workerProfileUrl} whenever you're ready. I'm here if you have questions.`,
+                sr: `Nema problema! Profil možete popuniti na ${workerProfileUrl} kada budete spremni. Tu sam ako imate pitanja.`,
+                hi: `कोई बात नहीं! आप ${workerProfileUrl} पर जाकर अपना प्रोफ़ाइल भर सकते हैं। कोई सवाल हो तो बताएं।`,
+                ar: `لا بأس! يمكنك ملء ملفك الشخصي على ${workerProfileUrl} متى كنت مستعدًا.`,
+                fr: `Pas de problème! Vous pouvez remplir votre profil sur ${workerProfileUrl} quand vous êtes prêt.`,
+                pt: `Sem problema! Você pode preencher seu perfil em ${workerProfileUrl} quando estiver pronto.`,
             };
             return msgs[lk];
         }
@@ -1835,20 +1867,20 @@ export async function handleWhatsAppOnboarding(
         const name = collected.full_name?.split(" ")[0] || "";
         const lk = getLangKey(lang);
         const savedToWorkerMessage: Record<LangKey, string> = {
-            en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder* — then we start searching for your job across Europe!\n\n👉 workersunited.eu/profile/worker\n\nWe'll also need your documents (passport photo, biometric photo, and a final school, university, or formal vocational diploma) — you can upload them on the website. If you have any questions, I'm here!`,
-            sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 workersunited.eu/profile/worker\n\nTreba nam i vaša dokumentacija (fotografija pasoša, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
-            hi: `धन्यवाद, ${name}! 🎉 आपका प्रोफ़ाइल सहेज लिया गया है।\n\nअंतिम चरण है वेबसाइट पर रजिस्टर करना और *Job Finder* सक्रिय करना — फिर हम पूरे यूरोप में आपके लिए नौकरी खोजना शुरू करते हैं!\n\n👉 workersunited.eu/profile/worker`,
-            ar: `شكراً، ${name}! 🎉 تم حفظ ملفك الشخصي.\n\nالخطوة الأخيرة هي التسجيل على الموقع وتفعيل *Job Finder* — ثم نبدأ في البحث عن وظيفة لك في جميع أنحاء أوروبا!\n\n👉 workersunited.eu/profile/worker`,
-            fr: `Merci, ${name}! 🎉 Votre profil a été sauvegardé.\n\nLa dernière étape est de vous inscrire sur le site et d'activer *Job Finder* — puis nous commençons à chercher votre emploi dans toute l'Europe!\n\n👉 workersunited.eu/profile/worker`,
-            pt: `Obrigado, ${name}! 🎉 Seu perfil foi salvo.\n\nO último passo é se registrar no site e ativar o *Job Finder* — então começamos a procurar seu emprego em toda a Europa!\n\n👉 workersunited.eu/profile/worker`,
+            en: `Thank you, ${name}! 🎉 Your profile has been saved.\n\nThe last step is to register on our website and activate *Job Finder* — then we start searching for your job across Europe!\n\n👉 ${workerProfileUrl}\n\nWe'll also need your documents (passport photo, biometric photo, and a final school, university, or formal vocational diploma) — you can upload them on the website. If you have any questions, I'm here!`,
+            sr: `Hvala, ${name}! 🎉 Vaš profil je sačuvan.\n\nPoslednji korak je da se registrujete na sajtu i aktivirate *Job Finder* — i mi počinjemo da tražimo posao za vas širom Evrope!\n\n👉 ${workerProfileUrl}\n\nTreba nam i vaša dokumentacija (fotografija pasoša, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma) — možete je dodati na sajtu. Ako imate pitanja, tu sam!`,
+            hi: `धन्यवाद, ${name}! 🎉 आपका प्रोफ़ाइल सहेज लिया गया है।\n\nअंतिम चरण है वेबसाइट पर रजिस्टर करना और *Job Finder* सक्रिय करना — फिर हम पूरे यूरोप में आपके लिए नौकरी खोजना शुरू करते हैं!\n\n👉 ${workerProfileUrl}`,
+            ar: `شكراً، ${name}! 🎉 تم حفظ ملفك الشخصي.\n\nالخطوة الأخيرة هي التسجيل على الموقع وتفعيل *Job Finder* — ثم نبدأ في البحث عن وظيفة لك في جميع أنحاء أوروبا!\n\n👉 ${workerProfileUrl}`,
+            fr: `Merci, ${name}! 🎉 Votre profil a été sauvegardé.\n\nLa dernière étape est de vous inscrire sur le site et d'activer *Job Finder* — puis nous commençons à chercher votre emploi dans toute l'Europe!\n\n👉 ${workerProfileUrl}`,
+            pt: `Obrigado, ${name}! 🎉 Seu perfil foi salvo.\n\nO último passo é se registrar no site e ativar o *Job Finder* — então começamos a procurar seu emprego em toda a Europa!\n\n👉 ${workerProfileUrl}`,
         };
         const draftOnlyMessage: Record<LangKey, string> = {
-            en: `Thank you, ${name}! 🎉 I saved your answers in this WhatsApp draft for now.\n\nYour real worker account still starts on the website, so please register and continue there:\n\n👉 workersunited.eu/profile/worker\n\nAfter that, upload your passport photo, biometric photo, and a final school, university, or formal vocational diploma on the website to continue.`,
-            sr: `Hvala, ${name}! 🎉 Sačuvao sam vaše odgovore ovde u WhatsApp nacrtu za sada.\n\nVaš pravi worker nalog ipak počinje na sajtu, zato se registrujte i nastavite tamo:\n\n👉 workersunited.eu/profile/worker\n\nPosle toga dodajte fotografiju pasoša, biometrijsku fotografiju i završnu školsku, univerzitetsku ili formalnu stručnu diplomu na sajtu da biste nastavili dalje.`,
-            hi: `धन्यवाद, ${name}! 🎉 मैंने आपके जवाब फिलहाल इस WhatsApp draft में सेव कर दिए हैं।\n\nलेकिन आपका असली worker account वेबसाइट पर शुरू होता है, इसलिए वहाँ register करें और वहीं आगे बढ़ें:\n\n👉 workersunited.eu/profile/worker`,
-            ar: `شكراً، ${name}! 🎉 لقد حفظت إجاباتك مؤقتاً في مسودة WhatsApp هذه.\n\nلكن حساب العامل الحقيقي يبدأ على الموقع، لذلك يرجى التسجيل والمتابعة هناك:\n\n👉 workersunited.eu/profile/worker`,
-            fr: `Merci, ${name}! 🎉 J’ai enregistré vos réponses pour l’instant dans ce brouillon WhatsApp.\n\nMais votre vrai compte travailleur commence sur le site, alors inscrivez-vous et continuez là-bas :\n\n👉 workersunited.eu/profile/worker`,
-            pt: `Obrigado, ${name}! 🎉 Salvei suas respostas por enquanto neste rascunho do WhatsApp.\n\nMas sua conta real de worker começa no site, então registre-se e continue por lá:\n\n👉 workersunited.eu/profile/worker`,
+            en: `Thank you, ${name}! 🎉 I saved your answers in this WhatsApp draft for now.\n\nYour real worker account still starts on the website, so please register and continue there:\n\n👉 ${workerProfileUrl}\n\nAfter that, upload your passport photo, biometric photo, and a final school, university, or formal vocational diploma on the website to continue.`,
+            sr: `Hvala, ${name}! 🎉 Sačuvao sam vaše odgovore ovde u WhatsApp nacrtu za sada.\n\nVaš pravi worker nalog ipak počinje na sajtu, zato se registrujte i nastavite tamo:\n\n👉 ${workerProfileUrl}\n\nPosle toga dodajte fotografiju pasoša, biometrijsku fotografiju i završnu školsku, univerzitetsku ili formalnu stručnu diplomu na sajtu da biste nastavili dalje.`,
+            hi: `धन्यवाद, ${name}! 🎉 मैंने आपके जवाब फिलहाल इस WhatsApp draft में सेव कर दिए हैं।\n\nलेकिन आपका असली worker account वेबसाइट पर शुरू होता है, इसलिए वहाँ register करें और वहीं आगे बढ़ें:\n\n👉 ${workerProfileUrl}`,
+            ar: `شكراً، ${name}! 🎉 لقد حفظت إجاباتك مؤقتاً في مسودة WhatsApp هذه.\n\nلكن حساب العامل الحقيقي يبدأ على الموقع، لذلك يرجى التسجيل والمتابعة هناك:\n\n👉 ${workerProfileUrl}`,
+            fr: `Merci, ${name}! 🎉 J’ai enregistré vos réponses pour l’instant dans ce brouillon WhatsApp.\n\nMais votre vrai compte travailleur commence sur le site, alors inscrivez-vous et continuez là-bas :\n\n👉 ${workerProfileUrl}`,
+            pt: `Obrigado, ${name}! 🎉 Salvei suas respostas por enquanto neste rascunho do WhatsApp.\n\nMas sua conta real de worker começa no site, então registre-se e continue por lá:\n\n👉 ${workerProfileUrl}`,
         };
         return savedToLinkedWorker ? savedToWorkerMessage[lk] : draftOnlyMessage[lk];
     }

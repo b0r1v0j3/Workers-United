@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import {
+    buildPlatformUrl,
+    normalizePlatformSupportEmail,
+    normalizePlatformWebsiteUrl,
+} from "@/lib/platform-config";
+import {
     buildCanonicalWhatsAppFacts,
     buildEmployerWhatsAppRules,
     looksLikeEmployerWhatsAppLead,
@@ -10,6 +15,20 @@ import {
 import { formatWhatsAppHistory, type WhatsAppBrainMemoryEntry, type WhatsAppHistoryMessage } from "@/lib/whatsapp-conversation-helpers";
 
 type AdminClient = SupabaseClient<Database>;
+
+interface EmployerWhatsAppPlatformContact {
+    websiteUrl?: string | null;
+    supportEmail?: string | null;
+}
+
+function resolveEmployerPlatformContact(platform?: EmployerWhatsAppPlatformContact) {
+    const websiteUrl = normalizePlatformWebsiteUrl(platform?.websiteUrl);
+    return {
+        websiteUrl,
+        signupUrl: buildPlatformUrl(websiteUrl, "/signup"),
+        supportEmail: normalizePlatformSupportEmail(platform?.supportEmail),
+    };
+}
 
 export interface WhatsAppEmployerRecord {
     id: string;
@@ -121,6 +140,8 @@ export async function generateEmployerWhatsAppReply(params: {
     historyMessages: WhatsAppHistoryMessage[];
     brainMemory: WhatsAppBrainMemoryEntry[];
     language: string;
+    websiteUrl?: string;
+    supportEmail?: string;
 }): Promise<string> {
     const isRegistered = !!params.employerRecord;
     const companyName = params.employerRecord?.company_name || "";
@@ -128,7 +149,10 @@ export async function generateEmployerWhatsAppReply(params: {
     const memoryText = params.brainMemory.length > 0
         ? params.brainMemory.map((entry) => `- [${entry.category}] ${entry.content}`).join("\n")
         : "(No stored facts)";
-    const canonicalFacts = buildCanonicalWhatsAppFacts();
+    const canonicalFacts = buildCanonicalWhatsAppFacts({
+        website: params.websiteUrl,
+        supportEmail: params.supportEmail,
+    });
     const instructions = `You are the official WhatsApp assistant for Workers United.
 
 Personality:
@@ -148,6 +172,7 @@ ${buildEmployerWhatsAppRules({
         companyName,
         contactName,
         employerStatus: params.employerRecord?.status || null,
+        website: params.websiteUrl,
     })}`;
 
     return params.callResponseText({
@@ -175,36 +200,38 @@ export function getEmployerWhatsAppDefaultReply(language: string): string {
     }
 }
 
-export function getEmployerWhatsAppErrorReply(language: string): string {
+export function getEmployerWhatsAppErrorReply(language: string, platform?: EmployerWhatsAppPlatformContact): string {
+    const { websiteUrl, supportEmail } = resolveEmployerPlatformContact(platform);
     switch (resolveWhatsAppLanguageCode(language, language)) {
         case "sr":
-            return "Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike besplatno. Pišite nam na contact@workersunited.eu ili posetite workersunited.eu.";
+            return `Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike besplatno. Pišite nam na ${supportEmail} ili posetite ${websiteUrl}.`;
         case "ar":
-            return "مرحبًا! أنا مساعد Workers United. نساعد الشركات على توظيف عمال دوليين مجانًا. راسلنا على contact@workersunited.eu أو زر workersunited.eu.";
+            return `مرحبًا! أنا مساعد Workers United. نساعد الشركات على توظيف عمال دوليين مجانًا. راسلنا على ${supportEmail} أو زر ${websiteUrl}.`;
         case "fr":
-            return "Bonjour ! Je suis l’assistant de Workers United. Nous aidons les entreprises à recruter des travailleurs internationaux gratuitement. Écrivez-nous à contact@workersunited.eu ou visitez workersunited.eu.";
+            return `Bonjour ! Je suis l’assistant de Workers United. Nous aidons les entreprises à recruter des travailleurs internationaux gratuitement. Écrivez-nous à ${supportEmail} ou visitez ${websiteUrl}.`;
         case "pt":
-            return "Olá! Eu sou o assistente da Workers United. Ajudamos empresas a contratar trabalhadores internacionais gratuitamente. Fale conosco em contact@workersunited.eu ou visite workersunited.eu.";
+            return `Olá! Eu sou o assistente da Workers United. Ajudamos empresas a contratar trabalhadores internacionais gratuitamente. Fale conosco em ${supportEmail} ou visite ${websiteUrl}.`;
         case "hi":
-            return "नमस्ते! मैं Workers United का assistant हूँ। हम कंपनियों को international workers free में hire करने में मदद करते हैं। हमें contact@workersunited.eu पर लिखिए या workersunited.eu पर जाइए।";
+            return `नमस्ते! मैं Workers United का assistant हूँ। हम कंपनियों को international workers free में hire करने में मदद करते हैं। हमें ${supportEmail} पर लिखिए या ${websiteUrl} पर जाइए।`;
         default:
-            return "Hi! I'm the Workers United assistant. We help companies hire foreign workers for free. Contact us at contact@workersunited.eu or visit workersunited.eu.";
+            return `Hi! I'm the Workers United assistant. We help companies hire foreign workers for free. Contact us at ${supportEmail} or visit ${websiteUrl}.`;
     }
 }
 
-export function getEmployerWhatsAppStaticReply(language: string): string {
+export function getEmployerWhatsAppStaticReply(language: string, platform?: EmployerWhatsAppPlatformContact): string {
+    const { signupUrl } = resolveEmployerPlatformContact(platform);
     switch (resolveWhatsAppLanguageCode(language, language)) {
         case "sr":
-            return "Zdravo! Workers United pomaže kompanijama da pronađu strane radnike — besplatno za poslodavce. Registrujte se na workersunited.eu/signup.";
+            return `Zdravo! Workers United pomaže kompanijama da pronađu strane radnike — besplatno za poslodavce. Registrujte se na ${signupUrl}.`;
         case "ar":
-            return "مرحبًا! تساعد Workers United الشركات على توظيف عمال دوليين — مجانًا لأصحاب العمل. سجّل على workersunited.eu/signup.";
+            return `مرحبًا! تساعد Workers United الشركات على توظيف عمال دوليين — مجانًا لأصحاب العمل. سجّل على ${signupUrl}.`;
         case "fr":
-            return "Bonjour ! Workers United aide les entreprises à recruter des travailleurs internationaux — gratuitement pour les employeurs. Inscrivez-vous sur workersunited.eu/signup.";
+            return `Bonjour ! Workers United aide les entreprises à recruter des travailleurs internationaux — gratuitement pour les employeurs. Inscrivez-vous sur ${signupUrl}.`;
         case "pt":
-            return "Olá! A Workers United ajuda empresas a contratar trabalhadores internacionais — grátis para empregadores. Registre-se em workersunited.eu/signup.";
+            return `Olá! A Workers United ajuda empresas a contratar trabalhadores internacionais — grátis para empregadores. Registre-se em ${signupUrl}.`;
         case "hi":
-            return "नमस्ते! Workers United कंपनियों को international workers hire करने में मदद करता है — employers के लिए free। workersunited.eu/signup पर register कीजिए।";
+            return `नमस्ते! Workers United कंपनियों को international workers hire करने में मदद करता है — employers के लिए free। ${signupUrl} पर register कीजिए।`;
         default:
-            return "Hi! Workers United helps companies hire foreign workers — free for employers. Register at workersunited.eu/signup.";
+            return `Hi! Workers United helps companies hire foreign workers — free for employers. Register at ${signupUrl}.`;
     }
 }
