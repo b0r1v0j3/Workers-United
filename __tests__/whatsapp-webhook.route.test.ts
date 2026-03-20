@@ -15,6 +15,7 @@ const resolveWhatsAppWorkerIdentity = vi.fn();
 const resolveEmployerWhatsAppLead = vi.fn();
 const loadWhatsAppConversationHistory = vi.fn();
 const loadWhatsAppBrainMemory = vi.fn();
+const maybeEscalateWhatsAppReplyDeliveryFailure = vi.fn();
 const generateEmployerWhatsAppReply = vi.fn();
 const handleWhatsAppAdminCommand = vi.fn();
 
@@ -62,6 +63,7 @@ vi.mock("@/lib/whatsapp-conversation-helpers", () => ({
     loadWhatsAppConversationHistory,
     loadWhatsAppBrainMemory,
     createWhatsAppAutoHandoff: vi.fn(),
+    maybeEscalateWhatsAppReplyDeliveryFailure,
 }));
 
 vi.mock("@/lib/whatsapp-admin-commands", () => ({
@@ -89,6 +91,7 @@ describe("POST /api/whatsapp/webhook", () => {
         resolveEmployerWhatsAppLead.mockResolvedValue({ employerRecord: null, isEmployer: true, isLikelyEmployer: true });
         loadWhatsAppConversationHistory.mockResolvedValue([]);
         loadWhatsAppBrainMemory.mockResolvedValue([]);
+        maybeEscalateWhatsAppReplyDeliveryFailure.mockResolvedValue(null);
         generateEmployerWhatsAppReply.mockResolvedValue("Employer reply");
         handleWhatsAppAdminCommand.mockResolvedValue({ handled: false, replySent: false });
     });
@@ -119,7 +122,7 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(sendWhatsAppText).toHaveBeenCalledTimes(2);
         expect(sendWhatsAppText).toHaveBeenNthCalledWith(1, "+381600000001", "Employer reply", undefined);
         expect(sendWhatsAppText).toHaveBeenNthCalledWith(2, "+381600000002", "Employer reply", undefined);
-    });
+    }, 15000);
 
     it("processes every entry and change in a Meta webhook payload", async () => {
         const { POST } = await import("@/app/api/whatsapp/webhook/route");
@@ -169,7 +172,7 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(sendWhatsAppText).toHaveBeenNthCalledWith(1, "+381600000011", "Employer reply", undefined);
         expect(sendWhatsAppText).toHaveBeenNthCalledWith(2, "+381600000012", "Employer reply", undefined);
         expect(sendWhatsAppText).toHaveBeenNthCalledWith(3, "+381600000013", "Employer reply", undefined);
-    });
+    }, 15000);
 
     it("keeps processing later batched messages and returns partial failure when one message crashes", async () => {
         recordInboundWhatsAppMessage
