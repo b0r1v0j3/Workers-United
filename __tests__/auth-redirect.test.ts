@@ -239,4 +239,23 @@ describe("resolvePostAuthRedirect", () => {
         expect(queueEmail).not.toHaveBeenCalled();
         expect(sendWelcome).toHaveBeenCalledTimes(1);
     });
+
+    it("does not record a WhatsApp welcome marker when the send fails", async () => {
+        sendWelcome.mockResolvedValue({ success: false, error: "meta rejected", retryable: false, failureCategory: "recipient" });
+
+        const { resolvePostAuthRedirect } = await import("@/lib/auth-redirect");
+        const user = {
+            id: "user-1",
+            email: "worker@example.com",
+            user_metadata: {
+                full_name: "Worker One",
+                user_type: "worker",
+            },
+        } as unknown as User;
+
+        await resolvePostAuthRedirect({ origin: "http://localhost", user });
+        await resolvePostAuthRedirect({ origin: "http://localhost", user });
+
+        expect(sendWelcome).toHaveBeenCalledTimes(2);
+    });
 });

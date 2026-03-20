@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
             success: true,
             queued: true,
             deliveryStatus: emailResult?.status || "scheduled",
+            whatsappDeliveryStatus: emailResult?.whatsapp?.attempted
+                ? (emailResult.whatsapp.sent ? "sent" : "failed")
+                : "not_attempted",
+            whatsappError: emailResult?.whatsapp?.error || null,
         });
 
     } catch (error) {

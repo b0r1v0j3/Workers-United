@@ -178,6 +178,95 @@ describe("handleWhatsAppOnboarding", () => {
         });
     });
 
+    it("does not treat done as yes for has_children", async () => {
+        const { client, store } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "has_children",
+            collected_data: {
+                full_name: "Ali Worker",
+                passport_expiry_date: "01/01/2030",
+            },
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "Done",
+            null,
+            "en"
+        );
+
+        expect(reply).toContain("Please reply with Yes or No");
+        expect(reply).toContain("children");
+        expect((store.state as Record<string, unknown>)?.current_step).toBe("has_children");
+        expect((store.state as Record<string, unknown>)?.collected_data).toEqual({
+            full_name: "Ali Worker",
+            passport_expiry_date: "01/01/2030",
+        });
+    });
+
+    it("reprompts on invalid date_of_birth instead of advancing", async () => {
+        const { client, store } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "date_of_birth",
+            collected_data: {
+                full_name: "Ali Worker",
+                marital_status: "Single",
+            },
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "32/13/1990",
+            null,
+            "en"
+        );
+
+        expect(reply).toContain("Please use the format DD/MM/YYYY");
+        expect(reply).toContain("date of birth");
+        expect((store.state as Record<string, unknown>)?.current_step).toBe("date_of_birth");
+        expect((store.state as Record<string, unknown>)?.collected_data).toEqual({
+            full_name: "Ali Worker",
+            marital_status: "Single",
+        });
+    });
+
+    it("reprompts on invalid passport_issue_date instead of advancing", async () => {
+        const { client, store } = createOnboardingAdmin({
+            phone_number: "+381600000000",
+            current_step: "passport_issue_date",
+            collected_data: {
+                full_name: "Ali Worker",
+                passport_number: "AB1234567",
+                passport_issued_by: "Police Department",
+            },
+            language: "en",
+            updated_at: new Date().toISOString(),
+        });
+
+        const reply = await handleWhatsAppOnboarding(
+            client as never,
+            "+381600000000",
+            "31/02/2020",
+            null,
+            "en"
+        );
+
+        expect(reply).toContain("Please use the format DD/MM/YYYY");
+        expect(reply).toContain("issue date");
+        expect((store.state as Record<string, unknown>)?.current_step).toBe("passport_issue_date");
+        expect((store.state as Record<string, unknown>)?.collected_data).toEqual({
+            full_name: "Ali Worker",
+            passport_number: "AB1234567",
+            passport_issued_by: "Police Department",
+        });
+    });
+
     it("keeps unregistered completions as a WhatsApp draft instead of creating a ghost worker row", async () => {
         const { client, store } = createOnboardingAdmin({
             phone_number: "+381600000000",

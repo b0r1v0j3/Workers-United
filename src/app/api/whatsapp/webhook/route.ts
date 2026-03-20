@@ -1135,7 +1135,7 @@ function getQ(step: string, language: string): string {
 
 function isYes(msg: string): boolean {
     const l = msg.toLowerCase().trim();
-    return /^(yes|da|da!|yep|sure|ok|okay|haan|ha|نعم|oui|sim|ja|ano|oo|हाँ|हां|gotovo|done|terminé|concluído|تم)/.test(l);
+    return /^(yes|da|da!|yep|sure|ok|okay|haan|ha|نعم|oui|sim|ja|ano|oo|हाँ|हां)/.test(l);
 }
 
 function isNo(msg: string): boolean {
@@ -1187,6 +1187,21 @@ function getYesNoOnboardingReprompt(language: string, step: OnboardingStep): str
         ar: "يرجى الرد بـ نعم أو لا حتى أتمكن من المتابعة.",
         fr: "Veuillez répondre par Oui ou Non pour que je puisse continuer.",
         pt: "Por favor, responda com Sim ou Não para que eu possa continuar.",
+    };
+
+    const currentQuestion = getQ(step, language);
+    return `${prompts[lk]}\n\n${currentQuestion}`;
+}
+
+function getDateOnboardingReprompt(language: string, step: OnboardingStep): string {
+    const lk = getLangKey(language);
+    const prompts: Record<LangKey, string> = {
+        en: "Please use the format DD/MM/YYYY so I can continue.",
+        sr: "Molim Vas koristite format DD/MM/YYYY da bih mogao da nastavim.",
+        hi: "कृपया DD/MM/YYYY format का उपयोग करें ताकि मैं आगे बढ़ सकूँ।",
+        ar: "يرجى استخدام التنسيق DD/MM/YYYY حتى أتمكن من المتابعة.",
+        fr: "Veuillez utiliser le format DD/MM/YYYY pour que je puisse continuer.",
+        pt: "Por favor, use o formato DD/MM/YYYY para que eu possa continuar.",
     };
 
     const currentQuestion = getQ(step, language);
@@ -1310,6 +1325,26 @@ async function getOnboardingState(supabase: any, phone: string): Promise<Onboard
     }
 
     return state;
+}
+
+function isValidOnboardingDateInput(raw: string): boolean {
+    const trimmed = raw.trim();
+    const match = trimmed.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+    if (!match) {
+        return false;
+    }
+
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) {
+        return false;
+    }
+
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return parsed.getUTCFullYear() === year
+        && parsed.getUTCMonth() === month - 1
+        && parsed.getUTCDate() === day;
 }
 
 async function saveOnboardingState(supabase: any, phone: string, step: OnboardingStep, collectedData: Record<string, string>, language: string): Promise<void> {
@@ -1589,6 +1624,9 @@ export async function handleWhatsAppOnboarding(
 
     // ── date_of_birth ──
     if (step === "date_of_birth") {
+        if (!isValidOnboardingDateInput(message)) {
+            return getDateOnboardingReprompt(lang, step);
+        }
         collected.date_of_birth = message.trim();
         await saveOnboardingState(supabase, phone, "nationality", collected, lang);
         return getQ("nationality", lang);
@@ -1688,6 +1726,9 @@ export async function handleWhatsAppOnboarding(
 
     // ── passport_issue_date ──
     if (step === "passport_issue_date") {
+        if (!isValidOnboardingDateInput(message)) {
+            return getDateOnboardingReprompt(lang, step);
+        }
         collected.passport_issue_date = message.trim();
         await saveOnboardingState(supabase, phone, "passport_expiry_date", collected, lang);
         return getQ("passport_expiry_date", lang);
@@ -1695,6 +1736,9 @@ export async function handleWhatsAppOnboarding(
 
     // ── passport_expiry_date ──
     if (step === "passport_expiry_date") {
+        if (!isValidOnboardingDateInput(message)) {
+            return getDateOnboardingReprompt(lang, step);
+        }
         collected.passport_expiry_date = message.trim();
         await saveOnboardingState(supabase, phone, "has_spouse", collected, lang);
         return getQ("has_spouse", lang);
