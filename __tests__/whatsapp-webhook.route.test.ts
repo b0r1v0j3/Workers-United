@@ -282,4 +282,46 @@ describe("POST /api/whatsapp/webhook", () => {
 
         expect(sendWhatsAppText).toHaveBeenCalledWith("+381600000003", "ERR:French", undefined);
     });
+
+    it("returns partial_failure when reply delivery fails for a retryable platform error", async () => {
+        sendWhatsAppText.mockResolvedValueOnce({
+            success: false,
+            error: "HTTP 500",
+            retryable: true,
+            failureCategory: "platform",
+        });
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_retry", from: "381600000099", type: "text", text: { body: "hello" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({ status: "partial_failure" });
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "anonymous",
+            "whatsapp_reply_delivery_failed",
+            "messaging",
+            expect.objectContaining({
+                phone: "+381600000099",
+                retryable: true,
+                failure_category: "platform",
+            }),
+            "error"
+        );
+    });
 });

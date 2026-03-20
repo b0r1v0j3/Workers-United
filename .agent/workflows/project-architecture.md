@@ -26,7 +26,7 @@ description: Full project architecture reference — tech stack, folder structur
 | Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu`; canonical send path is `queueEmail()` in `src/lib/email-templates.ts`, which records `sent/failed` state in `email_queue` and now returns explicit send outcome for cron/lifecycle callers so admin/API/cron flows can avoid claiming delivery when SMTP actually failed |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
-| WhatsApp | **Meta Cloud API v21.0** | Template messages, AI chatbot, delivery tracking, plus health classification that separates platform-side template failures from recipient-side delivery blocks (`undeliverable`, country restriction) |
+| WhatsApp | **Meta Cloud API v21.0** | Template messages, AI chatbot, delivery tracking, plus health classification that separates platform-side template failures from recipient-side delivery blocks (`undeliverable`, country restriction); proactive template suppression now keys off the latest real Meta outbound status and automatically decays after a short window instead of treating one stale recipient failure as a permanent block |
 
 ---
 

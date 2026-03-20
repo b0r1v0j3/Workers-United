@@ -149,13 +149,23 @@ async function sendWhatsAppRouteReply(params: {
                 failure_context: params.failureContext,
                 error: result.error || "unknown",
                 reply_preview: params.text.substring(0, 500),
+                retryable: !!result.retryable,
+                failure_category: result.failureCategory || "unknown",
             },
             "error"
         );
-        return false;
+        return {
+            success: false,
+            retryable: !!result.retryable,
+            failureCategory: result.failureCategory || "unknown",
+        };
     }
 
-    return true;
+    return {
+        success: true,
+        retryable: false,
+        failureCategory: null as null,
+    };
 }
 
 // ─── Meta signature verification ─────────────────────────────────────────────
@@ -323,13 +333,19 @@ export async function POST(request: NextRequest) {
                                 normalizedPhone,
                                 content,
                                 profileId: activityUserId,
-                                sendReply: (text) => sendWhatsAppRouteReply({
-                                    phone: normalizedPhone,
-                                    text,
-                                    userId: activityUserId || undefined,
-                                    activityUserId,
-                                    failureContext: "admin_command_reply",
-                                }),
+                                sendReply: async (text) => {
+                                    const replyResult = await sendWhatsAppRouteReply({
+                                        phone: normalizedPhone,
+                                        text,
+                                        userId: activityUserId || undefined,
+                                        activityUserId,
+                                        failureContext: "admin_command_reply",
+                                    });
+                                    if (!replyResult.success && replyResult.retryable) {
+                                        hadProcessingError = true;
+                                    }
+                                    return replyResult.success;
+                                },
                             });
 
                             if (adminCommandResult.handled) {
@@ -345,14 +361,17 @@ export async function POST(request: NextRequest) {
                 if (!isTextLikeWhatsAppMessage(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
                         const mediaFallbackReply = getMediaAttachmentResponse(quickLang);
-                        const mediaReplySent = await sendWhatsAppRouteReply({
+                        const mediaReplyResult = await sendWhatsAppRouteReply({
                             phone: normalizedPhone,
                             text: mediaFallbackReply,
                             userId: activityUserId || undefined,
                             activityUserId,
                             failureContext: "media_fallback",
                         });
-                        if (mediaReplySent) {
+                        if (!mediaReplyResult.success && mediaReplyResult.retryable) {
+                            hadProcessingError = true;
+                        }
+                        if (mediaReplyResult.success) {
                             await logServerActivity(
                                 activityUserId || "anonymous",
                                 "whatsapp_media_fallback",
@@ -393,35 +412,44 @@ export async function POST(request: NextRequest) {
                                 language: employerLanguage,
                             });
                             const finalEmployerReply = employerReply || getEmployerWhatsAppDefaultReply(employerLanguage);
-                            await sendWhatsAppRouteReply({
+                            const employerReplyResult = await sendWhatsAppRouteReply({
                                 phone: normalizedPhone,
                                 text: finalEmployerReply,
                                 userId: activityUserId || undefined,
                                 activityUserId,
                                 failureContext: "employer_ai_reply",
                             });
+                            if (!employerReplyResult.success && employerReplyResult.retryable) {
+                                hadProcessingError = true;
+                            }
                             continue;
                         } catch (empErr) {
                             console.error("[WhatsApp] Employer AI error:", empErr);
                             const fallbackEmployer = getEmployerWhatsAppErrorReply(employerLanguage);
-                            await sendWhatsAppRouteReply({
+                            const employerFallbackResult = await sendWhatsAppRouteReply({
                                 phone: normalizedPhone,
                                 text: fallbackEmployer,
                                 userId: activityUserId || undefined,
                                 activityUserId,
                                 failureContext: "employer_error_fallback",
                             });
+                            if (!employerFallbackResult.success && employerFallbackResult.retryable) {
+                                hadProcessingError = true;
+                            }
                             continue;
                         }
                     }
                     const staticEmployer = getEmployerWhatsAppStaticReply(employerLanguage);
-                    await sendWhatsAppRouteReply({
+                    const employerStaticResult = await sendWhatsAppRouteReply({
                         phone: normalizedPhone,
                         text: staticEmployer,
                         userId: activityUserId || undefined,
                         activityUserId,
                         failureContext: "employer_static_fallback",
                     });
+                    if (!employerStaticResult.success && employerStaticResult.retryable) {
+                        hadProcessingError = true;
+                    }
                     continue;
                 }
 
@@ -434,13 +462,16 @@ export async function POST(request: NextRequest) {
                 );
 
                 if (onboardingReply !== null) {
-                    await sendWhatsAppRouteReply({
+                    const onboardingReplyResult = await sendWhatsAppRouteReply({
                         phone: normalizedPhone,
                         text: onboardingReply,
                         userId: activityUserId || undefined,
                         activityUserId,
                         failureContext: "onboarding_reply",
                     });
+                    if (!onboardingReplyResult.success && onboardingReplyResult.retryable) {
+                        hadProcessingError = true;
+                    }
                     continue;
                 }
 
@@ -644,14 +675,17 @@ export async function POST(request: NextRequest) {
                     : replyText;
 
                     if (finalReplyText) {
-                        const replyDelivered = await sendWhatsAppRouteReply({
+                        const replyResult = await sendWhatsAppRouteReply({
                             phone: normalizedPhone,
                             text: finalReplyText,
                             userId: activityUserId || undefined,
                             activityUserId,
                             failureContext: aiResponse ? "ai_reply" : "fallback_reply",
                         });
-                        if (!replyDelivered) {
+                        if (!replyResult.success) {
+                            if (replyResult.retryable) {
+                                hadProcessingError = true;
+                            }
                             continue;
                         }
 
