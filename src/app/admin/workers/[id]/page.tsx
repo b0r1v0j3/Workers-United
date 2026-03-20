@@ -850,7 +850,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                         ? "Worker is unlocked for payment and downstream queue operations."
                                                         : canApproveWorker
                                                             ? "This worker is complete and ready for your approval."
-                                                            : "Approval stays locked until the profile reaches 100% completion."}
+                                                            : "Approval stays locked until the worker profile and required documents are complete."}
                                                 </div>
                                             </div>
                                             <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isAdminApproved
@@ -881,7 +881,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                         </form>
                                         {!isAdminApproved && !canApproveWorker ? (
                                             <p className="mt-3 text-xs font-medium text-amber-800">
-                                                This button unlocks after the worker reaches 100% completion.
+                                                This button unlocks after the worker profile and required documents are complete.
                                             </p>
                                         ) : isAdminApproved && !canRevokeApproval ? (
                                             <p className="mt-3 text-xs font-medium text-amber-800">
