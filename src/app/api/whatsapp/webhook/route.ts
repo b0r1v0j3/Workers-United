@@ -79,6 +79,8 @@ const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+3
     .map((phone) => normalizeWhatsAppPhone(phone))
     .filter(Boolean);
 
+type MetaSignatureVerificationResult = "valid" | "invalid" | "missing_secret";
+
 interface WhatsAppWorkerRecord {
     id: string;
     profile_id: string | null;
@@ -193,19 +195,60 @@ async function sendWhatsAppRouteReply(params: {
 }
 
 // ─── Meta signature verification ─────────────────────────────────────────────
-function verifyMetaSignature(rawBody: string, signature: string | null): boolean {
-    if (!APP_SECRET) {
-        console.warn("[Webhook] META_APP_SECRET not set — skipping signature verification");
-        return true; // Allow in dev, but log warning
+function shouldAllowUnsignedMetaWebhookBypass(): boolean {
+    const nodeEnv = (process.env.NODE_ENV || "").toLowerCase();
+    const vercelEnv = (process.env.VERCEL_ENV || "").toLowerCase();
+
+    if (nodeEnv === "test" || nodeEnv === "development") {
+        return true;
     }
-    if (!signature || !signature.startsWith("sha256=")) return false;
+
+    return !vercelEnv && nodeEnv !== "production";
+}
+
+function verifyMetaSignature(rawBody: string, signature: string | null): MetaSignatureVerificationResult {
+    if (!APP_SECRET) {
+        if (shouldAllowUnsignedMetaWebhookBypass()) {
+            if ((process.env.NODE_ENV || "").toLowerCase() !== "test") {
+                console.warn("[Webhook] META_APP_SECRET not set — skipping signature verification");
+            }
+            return "valid";
+        }
+
+        console.error("[Webhook] META_APP_SECRET missing in production-like env — rejecting request");
+        return "missing_secret";
+    }
+    if (!signature || !signature.startsWith("sha256=")) return "invalid";
 
     const expectedSig = "sha256=" + crypto.createHmac("sha256", APP_SECRET).update(rawBody).digest("hex");
     const provided = Buffer.from(signature, "utf8");
     const expected = Buffer.from(expectedSig, "utf8");
 
-    if (provided.length !== expected.length) return false;
-    return crypto.timingSafeEqual(provided, expected);
+    if (provided.length !== expected.length) return "invalid";
+    return crypto.timingSafeEqual(provided, expected) ? "valid" : "invalid";
+}
+
+async function maybeGenerateOnboardingInterceptReply(params: {
+    apiKey?: string | null;
+    input: string;
+    instructions: string;
+    errorLabel: string;
+}): Promise<string | null> {
+    const apiKey = (params.apiKey || "").trim();
+    if (!apiKey) {
+        return null;
+    }
+
+    try {
+        return await callOpenAIResponseText(apiKey, {
+            model: WHATSAPP_RESPONSE_MODEL,
+            instructions: params.instructions,
+            input: params.input,
+        });
+    } catch (error) {
+        console.error(`[WhatsApp] GPT ${params.errorLabel} fallback error:`, error);
+        return null;
+    }
 }
 
 // ─── GET: Webhook Verification ──────────────────────────────────────────────
@@ -235,7 +278,12 @@ export async function POST(request: NextRequest) {
         const rawBody = await request.text();
         const signature = request.headers.get("x-hub-signature-256");
 
-        if (!verifyMetaSignature(rawBody, signature)) {
+        const signatureResult = verifyMetaSignature(rawBody, signature);
+        if (signatureResult === "missing_secret") {
+            return NextResponse.json({ error: "Webhook signature not configured" }, { status: 503 });
+        }
+
+        if (signatureResult === "invalid") {
             console.error("[Webhook] Invalid Meta signature — rejecting request");
             return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
         }
@@ -1563,12 +1611,10 @@ export async function handleWhatsAppOnboarding(
     // ── Intercept: "connect me with a person" / human agent request ──
     const wantsHuman = /connect.*(person|human|agent|someone)|talk.*(person|human|real|agent)|speak.*(person|human|someone|agent)|real person|operator|customer service|live (agent|chat|person)|human (agent|support|help)|want.*(person|human)|need.*(person|human)|razgovaraj.*(osob|čovek|agent)|poveži.*(osob|čovek)|živa osoba|pravi čovek|personne|persona|kişi|ব্যক্তি|व्यक्ति|orang|người|人/i.test(lowerMsg);
     if (wantsHuman) {
-        // Use GPT to generate response in ANY language the user is writing in
-        const apiKey = process.env.OPENAI_API_KEY || "";
-        try {
-            const humanReply = await callOpenAIResponseText(apiKey, {
-                model: WHATSAPP_RESPONSE_MODEL,
-                instructions: `You are a friendly WhatsApp assistant for Workers United. The user wants to talk to a human/real person. You MUST reply in ${lang} (the user's language). Your response must:
+        const humanReply = await maybeGenerateOnboardingInterceptReply({
+            apiKey: process.env.OPENAI_API_KEY,
+            errorLabel: "human-request",
+            instructions: `You are a friendly WhatsApp assistant for Workers United. The user wants to talk to a human/real person. You MUST reply in ${lang} (the user's language). Your response must:
 1. Acknowledge their request warmly
 2. Explain that the option to talk to a human is not available right now
 3. Say that YOU are here to help and you are getting smarter every day because your team is constantly upgrading you
@@ -1576,11 +1622,10 @@ export async function handleWhatsAppOnboarding(
 5. Ask what you can help them with
 6. Keep it to 2-3 sentences, warm and friendly tone
 7. You may use one emoji if it feels natural`,
-                input: message,
-            });
-            if (humanReply) return humanReply;
-        } catch (e) {
-            console.error("[WhatsApp] GPT human-request fallback error:", e);
+            input: message,
+        });
+        if (humanReply) {
+            return humanReply;
         }
         return getHumanSupportFallbackReply(lang);
     }
@@ -1589,12 +1634,10 @@ export async function handleWhatsAppOnboarding(
     const isAgent = /i am.*(agent|agency|recruiter)|i register.*(client|worker|people)|agency.*(register|client)|recruiter|agencij|agent.*registr|registruj.*klijent|agence|agenzia|ajans|এজেন্ট|एजेंट|agen/i.test(lowerMsg);
     if (isAgent) {
         await clearOnboardingState(supabase, phone);
-        // Use GPT to generate response in ANY language the user is writing in
-        const apiKey = process.env.OPENAI_API_KEY || "";
-        try {
-            const agentReply = await callOpenAIResponseText(apiKey, {
-                model: WHATSAPP_RESPONSE_MODEL,
-                instructions: `You are a friendly WhatsApp assistant for Workers United. The user has identified themselves as an agent/agency/recruiter who registers workers. You MUST reply in ${lang} (the user's language). Your response must:
+        const agentReply = await maybeGenerateOnboardingInterceptReply({
+            apiKey: process.env.OPENAI_API_KEY,
+            errorLabel: "agent-detection",
+            instructions: `You are a friendly WhatsApp assistant for Workers United. The user has identified themselves as an agent/agency/recruiter who registers workers. You MUST reply in ${lang} (the user's language). Your response must:
 1. Welcome them warmly as an agency partner
 2. Explain they can register as an agency at ${signupUrl}
 3. Tell them they can manage all their workers' profiles through the agency dashboard on the website
@@ -1602,11 +1645,10 @@ export async function handleWhatsAppOnboarding(
 5. Offer to help with any questions
 6. Keep it to 2-3 sentences, professional but warm tone
 7. You may use one emoji if it feels natural`,
-                input: message,
-            });
-            if (agentReply) return agentReply;
-        } catch (e) {
-            console.error("[WhatsApp] GPT agent-detection fallback error:", e);
+            input: message,
+        });
+        if (agentReply) {
+            return agentReply;
         }
         return getAgencyRegistrationFallbackReply(lang, signupUrl);
     }

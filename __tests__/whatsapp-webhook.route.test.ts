@@ -18,6 +18,8 @@ const loadWhatsAppBrainMemory = vi.fn();
 const maybeEscalateWhatsAppReplyDeliveryFailure = vi.fn();
 const generateEmployerWhatsAppReply = vi.fn();
 const handleWhatsAppAdminCommand = vi.fn();
+const callOpenAIResponseText = vi.fn();
+const mutableEnv = process.env as Record<string, string | undefined>;
 
 vi.mock("@/lib/supabase/admin", () => ({
     createAdminClient,
@@ -70,6 +72,10 @@ vi.mock("@/lib/whatsapp-admin-commands", () => ({
     handleWhatsAppAdminCommand,
 }));
 
+vi.mock("@/lib/openai-response-text", () => ({
+    callOpenAIResponseText,
+}));
+
 vi.mock("@/lib/platform-config", async () => {
     const actual = await vi.importActual<typeof import("@/lib/platform-config")>("@/lib/platform-config");
 
@@ -87,6 +93,10 @@ describe("POST /api/whatsapp/webhook", () => {
     beforeEach(() => {
         vi.resetModules();
         vi.clearAllMocks();
+        mutableEnv.NODE_ENV = "test";
+        delete process.env.VERCEL_ENV;
+        delete process.env.META_APP_SECRET;
+        mutableEnv.OPENAI_API_KEY = "test-openai-key";
 
         createAdminClient.mockReturnValue({ admin: true });
         sendWhatsAppText.mockResolvedValue({ success: true, messageId: "wamid_out_1" });
@@ -112,6 +122,37 @@ describe("POST /api/whatsapp/webhook", () => {
         maybeEscalateWhatsAppReplyDeliveryFailure.mockResolvedValue(null);
         generateEmployerWhatsAppReply.mockResolvedValue("Employer reply");
         handleWhatsAppAdminCommand.mockResolvedValue({ handled: false, replySent: false });
+        callOpenAIResponseText.mockResolvedValue("AI fallback reply");
+    });
+
+    it("fails closed when META_APP_SECRET is missing in production", async () => {
+        mutableEnv.NODE_ENV = "production";
+        mutableEnv.VERCEL_ENV = "production";
+        delete process.env.META_APP_SECRET;
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_prod_missing_secret", from: "381600000000", type: "text", text: { body: "hello" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(503);
+        expect(payload).toEqual({ error: "Webhook signature not configured" });
+        expect(recordInboundWhatsAppMessage).not.toHaveBeenCalled();
+        expect(sendWhatsAppText).not.toHaveBeenCalled();
     });
 
     it("processes every message in a batched inbound payload instead of returning after the first one", async () => {
@@ -596,5 +637,43 @@ describe("POST /api/whatsapp/webhook", () => {
             }),
             { onConflict: "phone_number" }
         );
+    });
+
+    it("uses deterministic human-support onboarding fallback when OPENAI_API_KEY is missing", async () => {
+        delete process.env.OPENAI_API_KEY;
+
+        const { handleWhatsAppOnboarding } = await import("@/app/api/whatsapp/webhook/route");
+        const supabase = {
+            from: vi.fn(() => ({
+                select: () => ({
+                    eq: () => ({
+                        single: async () => ({
+                            data: {
+                                phone_number: "+381600000055",
+                                current_step: "full_name",
+                                collected_data: {},
+                                language: "English",
+                                updated_at: new Date().toISOString(),
+                            },
+                        }),
+                    }),
+                }),
+                upsert: vi.fn(),
+                delete: () => ({
+                    eq: vi.fn(),
+                }),
+            })),
+        };
+
+        const reply = await handleWhatsAppOnboarding(
+            supabase,
+            "+381600000055",
+            "I want to talk to a human",
+            null,
+            "English"
+        );
+
+        expect(reply).toContain("option isn't available just yet");
+        expect(callOpenAIResponseText).not.toHaveBeenCalled();
     });
 });
