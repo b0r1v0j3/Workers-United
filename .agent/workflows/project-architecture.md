@@ -70,7 +70,7 @@ Workers-United/
 │   │   │   ├── employers/     # Employer registry with shared admin hero/metrics layout; hides internal/admin-owned employer rows and collapses duplicate employer records per `profile_id` via the shared employer integrity helper
 │   │   │   ├── queue/         # Queue operations screen with shared admin hero, 90-day watch, and inspect-vs-case actions
 │   │   │   ├── jobs/          # Smart Match Hub with shared admin hero/guidance wrapper around matching client
-│   │   │   ├── announcements/ # Bulk email sender
+│   │   │   ├── announcements/ # Bulk email sender; now reuses the shared admin-announcements helper instead of a page-local recipient/send loop
 │   │   │   ├── whatsapp-blast/ # Admin proactive WhatsApp blast surface for unpaid worker nudges; now reuses the shared blast helper/eligibility guard
 │   │   │   ├── refunds/       # Refund management
 │   │   │   └── settings/      # Platform settings
@@ -161,6 +161,7 @@ Workers-United/
 │   │   ├── constants.ts       # Shared constants
 │   │   ├── workers.ts         # Canonical worker lookup + normalization helpers (duplicate-safe worker record selection over legacy physical worker table via `worker_onboarding`, phone normalization, storage filename sanitization)
 │   │   ├── worker-notification-eligibility.ts # Shared guard for worker direct email/WhatsApp automations; blocks hidden draft owners, internal/test addresses, and agency drafts without real worker email+phone
+│   │   ├── admin-announcements.ts # Shared admin bulk-announcement recipient loader + deliverable-email dedupe + worker eligibility guard + queueEmail dispatch + audit logging
 │   │   ├── whatsapp-blast.ts # Shared admin WhatsApp blast target loader + canonical worker dedupe + direct-notification eligibility guard + announcement/status fallback send path + audit logging
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
