@@ -103,9 +103,34 @@ describe("whatsapp log durability", () => {
                 message_type: "template",
                 message_status: "failed",
                 template_name: "payment_confirmed",
+                provider_error: "network timeout",
+                failure_category: "platform",
+                retryable: true,
                 log_error: "insert failed",
             }),
             "error"
         );
+    });
+
+    it("never turns a successful provider send into a failure even if both DB logging and fallback activity logging fail", async () => {
+        insertMessage.mockRejectedValueOnce(new Error("insert failed"));
+        logServerActivity.mockRejectedValueOnce(new Error("activity log failed"));
+        vi.stubGlobal("fetch", vi.fn(async () => ({
+            ok: true,
+            json: async () => ({
+                messaging_product: "whatsapp",
+                contacts: [{ input: "15550000001", wa_id: "15550000001" }],
+                messages: [{ id: "wamid.text.2" }],
+            }),
+        })));
+
+        const { sendWhatsAppText } = await import("@/lib/whatsapp");
+        const result = await sendWhatsAppText("+15550000001", "Still delivered", "worker-3");
+
+        expect(result).toMatchObject({
+            success: true,
+            messageId: "wamid.text.2",
+        });
+        expect(logServerActivity).toHaveBeenCalledTimes(1);
     });
 });

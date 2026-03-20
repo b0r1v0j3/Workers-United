@@ -75,6 +75,13 @@ interface SendAttemptResult extends SendResult {
     errorData?: any;
 }
 
+export interface RecentRecipientSideBlockRecord {
+    phone_number?: string | null;
+    status?: string | null;
+    error_message?: string | null;
+    created_at?: string | null;
+}
+
 const RECIPIENT_BLOCK_LOOKBACK_DAYS = 30;
 const RECIPIENT_BLOCK_SUPPRESSION_HOURS = 72;
 
@@ -317,11 +324,7 @@ async function findRecentRecipientSideBlock(phoneNumber: string): Promise<string
             return null;
         }
 
-        const relevantMessages = (data || []) as Array<{
-            status?: string | null;
-            error_message?: string | null;
-            created_at?: string | null;
-        }>;
+        const relevantMessages = (data || []) as RecentRecipientSideBlockRecord[];
 
         for (const message of relevantMessages) {
             const status = message.status?.trim().toLowerCase() || "";
@@ -334,15 +337,8 @@ async function findRecentRecipientSideBlock(phoneNumber: string): Promise<string
                 return null;
             }
 
-            if (status === "failed" && isRecipientSideWhatsAppFailure(message.error_message)) {
-                const createdAt = message.created_at ? Date.parse(message.created_at) : NaN;
-                const isFreshRecipientFailure = Number.isFinite(createdAt)
-                    ? Date.now() - createdAt <= RECIPIENT_BLOCK_SUPPRESSION_HOURS * 60 * 60 * 1000
-                    : true;
-
-                return isFreshRecipientFailure
-                    ? message.error_message?.trim() || null
-                    : null;
+            if (status === "failed" && isFreshRecipientSideWhatsAppBlock(message)) {
+                return message.error_message?.trim() || null;
             }
 
             return null;
@@ -353,6 +349,44 @@ async function findRecentRecipientSideBlock(phoneNumber: string): Promise<string
         console.warn("[WhatsApp] Failed to inspect recent recipient-side block history:", error);
         return null;
     }
+}
+
+export function isFreshRecipientSideWhatsAppBlock(
+    message: Pick<RecentRecipientSideBlockRecord, "status" | "error_message" | "created_at">,
+    nowMs = Date.now()
+) {
+    const status = message.status?.trim().toLowerCase() || "";
+    if (status !== "failed" || !isRecipientSideWhatsAppFailure(message.error_message)) {
+        return false;
+    }
+
+    const createdAt = message.created_at ? Date.parse(message.created_at) : NaN;
+    return Number.isFinite(createdAt)
+        ? nowMs - createdAt <= RECIPIENT_BLOCK_SUPPRESSION_HOURS * 60 * 60 * 1000
+        : true;
+}
+
+export function collectRecentRecipientSideBlockedPhones(
+    messages: RecentRecipientSideBlockRecord[] | null | undefined,
+    nowMs = Date.now()
+) {
+    const blockedPhones = new Set<string>();
+
+    for (const message of messages || []) {
+        if (!isFreshRecipientSideWhatsAppBlock(message, nowMs)) {
+            continue;
+        }
+
+        const normalizedPhone = typeof message.phone_number === "string"
+            ? normalizePhone(message.phone_number)
+            : null;
+
+        if (normalizedPhone) {
+            blockedPhones.add(normalizedPhone);
+        }
+    }
+
+    return blockedPhones;
 }
 
 // ─── Send template message ──────────────────────────────────────────────────
@@ -378,6 +412,7 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
         const recentRecipientBlock = await findRecentRecipientSideBlock(to);
         if (recentRecipientBlock) {
             const suppressionError = `Suppressed due to recent recipient-side WhatsApp block: ${recentRecipientBlock}`;
+            const failureMeta = classifyWhatsAppSendFailure(suppressionError);
             await logMessage({
                 userId: normalizedOptions.userId,
                 phoneNumber: to,
@@ -387,8 +422,10 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
                 templateName: normalizedOptions.templateName,
                 status: "blocked",
                 errorMessage: suppressionError,
+                retryable: failureMeta.retryable,
+                failureCategory: failureMeta.failureCategory,
             });
-            return { success: false, error: suppressionError, ...classifyWhatsAppSendFailure(suppressionError) };
+            return { success: false, error: suppressionError, ...failureMeta };
         }
 
         let attemptedOptions = normalizedOptions;
@@ -415,6 +452,7 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
 
         if (!sendResult.success) {
             console.error("[WhatsApp] Template send failed:", sendResult.error, sendResult.errorData);
+            const failureMeta = classifyWhatsAppSendFailure(sendResult.error);
             await logMessage({
                 userId: options.userId,
                 phoneNumber: to,
@@ -424,9 +462,11 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
                 templateName: attemptedOptions.templateName,
                 status: "failed",
                 errorMessage: sendResult.error,
+                retryable: failureMeta.retryable,
+                failureCategory: failureMeta.failureCategory,
             });
 
-            return { success: false, error: sendResult.error, ...classifyWhatsAppSendFailure(sendResult.error) };
+            return { success: false, error: sendResult.error, ...failureMeta };
         }
 
         await logMessage({
@@ -443,6 +483,7 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
         return { success: true, messageId: sendResult.messageId };
     } catch (error: unknown) {
         const errorMessage = extractErrorMessage(error);
+        const failureMeta = classifyWhatsAppSendFailure(errorMessage);
         console.error("[WhatsApp] Send error:", error);
 
         await logMessage({
@@ -454,9 +495,11 @@ export async function sendWhatsAppTemplate(options: SendTemplateOptions): Promis
             templateName: normalizedOptions.templateName,
             status: "failed",
             errorMessage,
+            retryable: failureMeta.retryable,
+            failureCategory: failureMeta.failureCategory,
         });
 
-        return { success: false, error: errorMessage, ...classifyWhatsAppSendFailure(errorMessage) };
+        return { success: false, error: errorMessage, ...failureMeta };
     }
 }
 
@@ -503,6 +546,7 @@ export async function sendWhatsAppText(
             const errorData = await response.json().catch(() => null);
             const errorMsg = errorData?.error?.message || `HTTP ${response.status}`;
             console.error("[WhatsApp] Text send failed:", errorMsg);
+            const failureMeta = classifyWhatsAppSendFailure(errorMsg);
             await logMessage({
                 userId,
                 phoneNumber: phone,
@@ -511,8 +555,10 @@ export async function sendWhatsAppText(
                 content: text,
                 status: "failed",
                 errorMessage: errorMsg,
+                retryable: failureMeta.retryable,
+                failureCategory: failureMeta.failureCategory,
             });
-            return { success: false, error: errorMsg, ...classifyWhatsAppSendFailure(errorMsg) };
+            return { success: false, error: errorMsg, ...failureMeta };
         }
 
         const data: WhatsAppApiResponse = await response.json();
@@ -531,6 +577,7 @@ export async function sendWhatsAppText(
         return { success: true, messageId };
     } catch (error: unknown) {
         const errorMessage = extractErrorMessage(error);
+        const failureMeta = classifyWhatsAppSendFailure(errorMessage);
         console.error("[WhatsApp] Text send error:", error);
         await logMessage({
             userId,
@@ -540,8 +587,10 @@ export async function sendWhatsAppText(
             content: text,
             status: "failed",
             errorMessage,
+            retryable: failureMeta.retryable,
+            failureCategory: failureMeta.failureCategory,
         });
-        return { success: false, error: errorMessage, ...classifyWhatsAppSendFailure(errorMessage) };
+        return { success: false, error: errorMessage, ...failureMeta };
     }
 }
 
@@ -557,6 +606,8 @@ interface LogMessageParams {
     wamid?: string;
     status: string;
     errorMessage?: string;
+    retryable?: boolean;
+    failureCategory?: WhatsAppSendFailureCategory;
 }
 
 function buildLogFailurePreview(content: string, maxLength = 180) {
@@ -584,22 +635,29 @@ async function logMessage(params: LogMessageParams): Promise<void> {
         });
     } catch (err) {
         console.error("[WhatsApp] Log error:", err);
-        await logServerActivity(
-            params.userId || null,
-            "whatsapp_message_log_failed",
-            "messaging",
-            {
-                phone: params.phoneNumber,
-                direction: params.direction,
-                message_type: params.messageType,
-                template_name: params.templateName || null,
-                message_status: params.status,
-                preview: buildLogFailurePreview(params.content),
-                wamid: params.wamid || null,
-                log_error: err instanceof Error ? err.message : String(err),
-            },
-            "error"
-        );
+        try {
+            await logServerActivity(
+                params.userId || null,
+                "whatsapp_message_log_failed",
+                "messaging",
+                {
+                    phone: params.phoneNumber,
+                    direction: params.direction,
+                    message_type: params.messageType,
+                    template_name: params.templateName || null,
+                    message_status: params.status,
+                    preview: buildLogFailurePreview(params.content),
+                    wamid: params.wamid || null,
+                    provider_error: params.errorMessage || null,
+                    failure_category: params.failureCategory || null,
+                    retryable: typeof params.retryable === "boolean" ? params.retryable : null,
+                    log_error: err instanceof Error ? err.message : String(err),
+                },
+                "error"
+            );
+        } catch (activityError) {
+            console.error("[WhatsApp] Fallback activity log error:", activityError);
+        }
     }
 }
 

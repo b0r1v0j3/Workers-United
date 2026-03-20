@@ -29,6 +29,8 @@ type ReviewWorkerRecord = WorkerRecordSnapshot & {
     profile_id?: string | null;
     agency_id?: string | null;
     submitted_email?: string | null;
+    admin_approved_at?: string | null;
+    admin_approved_by?: string | null;
     family_data?: unknown;
     passport_issued_by?: string | null;
     passport_issue_date?: string | null;
@@ -85,7 +87,7 @@ interface WorkerReviewEmailQueueRecord {
 }
 
 const REQUIRED_WORKER_DOCUMENT_TYPES = ["passport", "biometric_photo", "diploma"] as const;
-const WORKER_REVIEW_SELECT = "id, profile_id, submitted_full_name, status, admin_approved, entry_fee_paid, job_search_active, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data";
+const WORKER_REVIEW_SELECT = "id, profile_id, submitted_full_name, status, admin_approved, admin_approved_at, admin_approved_by, entry_fee_paid, job_search_active, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, passport_issued_by, passport_issue_date, passport_expiry_date, lives_abroad, previous_visas, family_data";
 const PASSPORT_REVIEW_STATUSES = ["manual_review", "verified"] as const;
 
 const POST_PAYMENT_STATUSES = new Set([

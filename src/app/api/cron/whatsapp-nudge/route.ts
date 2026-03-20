@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendProfileIncomplete } from "@/lib/whatsapp";
-import { isRecipientSideWhatsAppFailure } from "@/lib/whatsapp-health";
+import { collectRecentRecipientSideBlockedPhones, sendProfileIncomplete } from "@/lib/whatsapp";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 
@@ -80,20 +79,13 @@ export async function GET(request: Request) {
 
         const { data: recentFailedNudges } = await supabase
             .from("whatsapp_messages")
-            .select("phone_number, error_message")
+            .select("phone_number, status, error_message, created_at")
             .eq("template_name", "profile_incomplete")
             .eq("direction", "outbound")
             .eq("status", "failed")
             .gte("created_at", monthAgo.toISOString());
 
-        const blockedRecipientPhones = new Set(
-            (recentFailedNudges || [])
-                .filter((message: { error_message?: string | null }) =>
-                    isRecipientSideWhatsAppFailure(message.error_message)
-                )
-                .map((message: { phone_number: string }) => normalizeWorkerPhone(message.phone_number))
-                .filter((phone): phone is string => !!phone)
-        );
+        const blockedRecipientPhones = collectRecentRecipientSideBlockedPhones(recentFailedNudges || []);
 
         // Get profile names
         const profileIds = canonicalWorkerRows.map(workerRecord => workerRecord.profile_id).filter((value): value is string => !!value);

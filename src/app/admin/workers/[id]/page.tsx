@@ -18,7 +18,7 @@ import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2 } from "lucide-react";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
-import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import { getAllowedManualAdminWorkerStatuses, isPostEntryFeeWorkerStatus, resolveManualAdminWorkerStatusUpdate } from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
 import { getRestorableDocumentBackupPath } from "@/lib/document-image-processing";
 import { applyWorkerApprovalAction, loadWorkerApprovalGuardState, syncWorkerReviewStatus } from "@/lib/worker-review";
@@ -336,6 +336,20 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
     const latestSignature = signatures?.[0] || null;
     const workerStatus = approvalGuardState?.worker.status || workerRecord?.status || "NEW";
+    const hasPaidEntryFee = approvalGuardState?.hasPaidEntryFee ?? !!workerRecord?.entry_fee_paid;
+    const jobSearchActive = approvalGuardState?.worker.job_search_active ?? workerRecord?.job_search_active ?? false;
+    const manualStatusOptions = getAllowedManualAdminWorkerStatuses({
+        currentStatus: workerStatus,
+        entryFeePaid: hasPaidEntryFee,
+        jobSearchActive,
+        adminApproved: isAdminApproved,
+    });
+    const manualStatusOverrideLocked = manualStatusOptions.length === 0;
+    const manualStatusDefault = manualStatusOptions.includes(workerStatus as any) ? workerStatus : (manualStatusOptions[0] ?? "NEW");
+    const manualStatusLockedByLifecycle = hasPaidEntryFee || jobSearchActive || workerStatus === "REFUND_FLAGGED" || isPostEntryFeeWorkerStatus(workerStatus);
+    const manualStatusLockCopy = manualStatusLockedByLifecycle
+        ? "Manual status override is locked because queue, offer, visa, and refund states are system-managed after Job Finder activation."
+        : "Manual status override is unavailable for this case. Only unpaid pre-payment administrative states can be changed manually.";
     const approvalStateLabel = isAdminApproved ? "Approved" : "Pending";
     const workspaceInspectHref = isAgencyDraft && agencyRecord?.profile_id
         ? `/profile/agency/workers/${workerRecord?.id}?inspect=${agencyRecord.profile_id}`
@@ -520,23 +534,26 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
             throw new Error("Worker record not found");
         }
         const { completion, hasPaidEntryFee, worker: freshWorker } = currentApprovalState;
+        const manualStatusUpdate = resolveManualAdminWorkerStatusUpdate({
+            requestedStatus: newStatus,
+            currentStatus: freshWorker.status,
+            entryFeePaid: hasPaidEntryFee,
+            jobSearchActive: freshWorker.job_search_active,
+            adminApproved: freshWorker.admin_approved,
+            completion,
+        });
 
-        if ((newStatus === "PENDING_APPROVAL" || newStatus === "APPROVED") && completion < 100) {
-            throw new Error("Worker profile must be 100% complete before entering admin review or approval.");
-        }
-
-        if (newStatus === "APPROVED" && !freshWorker.admin_approved) {
-            throw new Error("Use the approval button to approve the worker and set admin approval flags together.");
-        }
-
-        if (newStatus === "IN_QUEUE" && !hasPaidEntryFee) {
-            throw new Error("Worker cannot enter queue before the $9 Job Finder fee is paid.");
+        if (!manualStatusUpdate.allowed) {
+            throw new Error(manualStatusUpdate.error);
         }
 
         await adminClient
             .from("worker_onboarding")
             .update({
-                status: newStatus,
+                status: manualStatusUpdate.nextStatus,
+                admin_approved: manualStatusUpdate.clearsApproval ? false : freshWorker.admin_approved,
+                admin_approved_at: manualStatusUpdate.clearsApproval ? null : freshWorker.admin_approved_at,
+                admin_approved_by: manualStatusUpdate.clearsApproval ? null : freshWorker.admin_approved_by,
                 updated_at: new Date().toISOString()
             })
             .eq("id", freshWorker.id);
@@ -551,8 +568,8 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                 "User",
                 {
                     title: "Status Update",
-                    message: `Your application status has been updated to: ${newStatus.toUpperCase()}.`,
-                    subject: `Application Status Updated: ${newStatus}`
+                    message: `Your application status has been updated to: ${manualStatusUpdate.nextStatus.toUpperCase()}.`,
+                    subject: `Application Status Updated: ${manualStatusUpdate.nextStatus}`
                 }
             );
         }
@@ -885,7 +902,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                             <div>
                                                 <div className="text-sm font-semibold text-[#18181b]">Worker status</div>
                                                 <div className="mt-1 text-sm text-[#57534e]">
-                                                    Use controlled status changes when the case actually moves to the next operational phase.
+                                                    Manual status changes are limited to pre-payment admin states. Queue, offer, visa, and refund states must come from their real operational flows.
                                                 </div>
                                             </div>
                                             <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(workerStatus)}`}>
@@ -893,40 +910,38 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                             </span>
                                         </div>
 
-                                        <form action={updateWorkerStatus} className="mt-4 space-y-4">
-                                            <input type="hidden" name="user_email" value={workerNotificationEmail || ""} />
-                                            <div>
-                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
-                                                    Update status
-                                                </label>
-                                                <AdaptiveSelect
-                                                    name="status"
-                                                    defaultValue={workerStatus}
-                                                    className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
-                                                    desktopSearchThreshold={999}
-                                                >
-                                                    <option value="NEW">New</option>
-                                                    <option value="PROFILE_COMPLETE">Profile Complete</option>
-                                                    <option value="PENDING_APPROVAL">Pending Approval</option>
-                                                    <option value="VERIFIED">Verified</option>
-                                                    <option value="APPROVED" disabled={!isAdminApproved}>Approved</option>
-                                                    <option value="IN_QUEUE">In Queue</option>
-                                                    <option value="OFFER_PENDING">Offer Pending</option>
-                                                    <option value="OFFER_ACCEPTED">Offer Accepted</option>
-                                                    <option value="VISA_PROCESS_STARTED">Visa Process Started</option>
-                                                    <option value="VISA_APPROVED">Visa Approved</option>
-                                                    <option value="PLACED">Placed</option>
-                                                    <option value="REJECTED">Rejected</option>
-                                                    <option value="REFUND_FLAGGED">Refund Flagged</option>
-                                                </AdaptiveSelect>
+                                        {manualStatusOverrideLocked ? (
+                                            <div className="mt-4 rounded-2xl border border-[#e9dcc2] bg-[#fff8eb] px-4 py-4 text-sm text-[#7c5c16]">
+                                                {manualStatusLockCopy}
                                             </div>
-                                            <button
-                                                type="submit"
-                                                className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
-                                            >
-                                                Save worker status
-                                            </button>
-                                        </form>
+                                        ) : (
+                                            <form action={updateWorkerStatus} className="mt-4 space-y-4">
+                                                <input type="hidden" name="user_email" value={workerNotificationEmail || ""} />
+                                                <div>
+                                                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
+                                                        Update status
+                                                    </label>
+                                                    <AdaptiveSelect
+                                                        name="status"
+                                                        defaultValue={manualStatusDefault}
+                                                        className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
+                                                        desktopSearchThreshold={999}
+                                                    >
+                                                        {manualStatusOptions.map((statusOption) => (
+                                                            <option key={statusOption} value={statusOption}>
+                                                                {toDisplayLabel(statusOption)}
+                                                            </option>
+                                                        ))}
+                                                    </AdaptiveSelect>
+                                                </div>
+                                                <button
+                                                    type="submit"
+                                                    className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
+                                                >
+                                                    Save worker status
+                                                </button>
+                                            </form>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
