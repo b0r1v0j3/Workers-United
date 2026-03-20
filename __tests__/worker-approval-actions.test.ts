@@ -22,6 +22,7 @@ vi.mock("@/lib/worker-approval-notifications", () => ({
 
 vi.mock("@/lib/workers", () => ({
     loadCanonicalWorkerRecord: vi.fn(async () => ({ data: null })),
+    normalizeWorkerPhone: vi.fn((phone: string | null | undefined) => phone || null),
 }));
 
 import { queueEmail } from "@/lib/email-templates";
@@ -198,7 +199,9 @@ describe("worker approval actions", () => {
             "Worker Example",
             expect.objectContaining({
                 title: "Job Finder Is Now Unlocked",
-            })
+            }),
+            undefined,
+            "+381600000001",
         );
     });
 
