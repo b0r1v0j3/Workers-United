@@ -508,4 +508,80 @@ describe("POST /api/whatsapp/webhook", () => {
             "error"
         );
     });
+
+    it("uses recent conversation language for media fallback replies instead of defaulting to English", async () => {
+        isTextLikeWhatsAppMessage.mockReturnValue(false);
+        extractWhatsAppMessageContent.mockReturnValue("");
+        loadWhatsAppConversationHistory.mockResolvedValue([
+            { direction: "inbound", content: "Bonjour, ça va ?" },
+            { direction: "outbound", content: "Bonjour ! Je suis l’assistant IA de Workers United." },
+        ]);
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_media", from: "33123456789", type: "image", image: { id: "img_1" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({ status: "ok" });
+        expect(sendWhatsAppText).toHaveBeenCalledWith(
+            "+33123456789",
+            expect.stringContaining("j’ai bien reçu la pièce jointe"),
+            undefined
+        );
+    }, 15000);
+
+    it("seeds onboarding in the recent conversation language for short onboarding openers", async () => {
+        const { handleWhatsAppOnboarding } = await import("@/app/api/whatsapp/webhook/route");
+        const upsert = vi.fn().mockResolvedValue({ error: null });
+        const supabase = {
+            from: vi.fn(() => ({
+                select: () => ({
+                    eq: () => ({
+                        single: async () => ({ data: null }),
+                    }),
+                }),
+                upsert,
+                delete: () => ({
+                    eq: vi.fn(),
+                }),
+            })),
+        };
+
+        const reply = await handleWhatsAppOnboarding(
+            supabase,
+            "+33123456789",
+            "register whatsapp",
+            null,
+            "English",
+            [
+                { direction: "inbound", content: "Bonjour, ça va ?" },
+                { direction: "outbound", content: "Bonjour ! Je suis l’assistant IA de Workers United." },
+            ]
+        );
+
+        expect(reply).toContain("Souhaitez-vous remplir votre profil");
+        expect(upsert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                phone_number: "+33123456789",
+                current_step: "ask_start",
+                language: "French",
+            }),
+            { onConflict: "phone_number" }
+        );
+    });
 });

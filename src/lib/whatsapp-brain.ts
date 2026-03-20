@@ -62,7 +62,7 @@ const JOB_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vac
 const SPECIFIC_AVAILABILITY_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|open job|open position|what jobs|which jobs|koji poslovi|lista poslova|available workers list)\b/i;
 const PROCESS_HINT_PATTERN = /\b(how does it work|how it works|process|steps|next step|how do i start|kako radi|kako funkcioni[sš]e|kako ide|koji su koraci|sledeci korak|sledeći korak|kako da krenem)\b/i;
 const SERBIAN_WARM_GREETING_PATTERN = /^\s*(?:(?:pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče)(?:\s+(?:kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|jel si dobro|jesi dobro|jesi li dobro|dobro si))?|(?:kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|jel si dobro|jesi dobro|jesi li dobro|dobro si))\s*[.!?]*\s*$/i;
-const FRENCH_LANGUAGE_PATTERN = /\b(bonjour|salut|bonsoir|merci|emploi|travail|profil|documents?|passeport|paiement|ça va|ca va|comment ça va|comment ca va|comment vas[\s-]*tu|comment allez[\s-]*vous)\b/i;
+const FRENCH_LANGUAGE_PATTERN = /\b(bonjour|salut|bonsoir|merci|emploi|travail|profil|passeport|paiement|ça va|ca va|comment ça va|comment ca va|comment vas[\s-]*tu|comment allez[\s-]*vous)\b/i;
 const PORTUGUESE_LANGUAGE_PATTERN = /\b(olá|ola|bom dia|boa tarde|boa noite|obrigad[oa]|emprego|trabalho|perfil|documentos?|passaporte|pagamento|tudo bem|como vai|como voce est[aá]|como você est[aá]|como estás)\b/i;
 const HINDI_LATIN_PATTERN = /\b(namaste|namaskar|kaise ho|kaisi ho|aap kaise ho|aap kaise hain|kya haal hai|sab thik|sab theek|naukri|kaam chahiye)\b/i;
 const ARABIC_LATIN_PATTERN = /\b(salam|selam|marhaba|ahlan|kifak|keefak|kifik|keefik|kayf halak|kayf halik|shlonak|shlonik)\b/i;
@@ -188,19 +188,16 @@ export function detectExplicitWhatsAppLanguagePreference(message: string): Whats
     return null;
 }
 
-function getMostRecentNonEnglishHistoryLanguageCode(
+function getMostRecentInboundHistoryLanguageCode(
     historyMessages: WhatsAppLanguageHistoryEntry[] = []
-): Exclude<WhatsAppLanguageCode, "en"> | null {
+): WhatsAppLanguageCode | null {
     for (let index = historyMessages.length - 1; index >= 0; index -= 1) {
         const entry = historyMessages[index];
         if (entry?.direction !== "inbound" || !entry.content?.trim()) {
             continue;
         }
 
-        const detected = detectWhatsAppLanguageCode(entry.content);
-        if (detected !== "en") {
-            return detected;
-        }
+        return detectWhatsAppLanguageCode(entry.content);
     }
 
     return null;
@@ -277,8 +274,14 @@ export function resolveWhatsAppLanguageCode(
         return explicitPreferenceCode;
     }
 
+    const normalizedMessage = message.trim();
     const quickCode = detectWhatsAppLanguageCode(message);
     const detectedCode = getLanguageCodeFromLabel(detectedLanguage);
+    const recentInboundHistoryCode = getMostRecentInboundHistoryLanguageCode(historyMessages);
+
+    if (!normalizedMessage) {
+        return recentInboundHistoryCode || detectedCode || "en";
+    }
 
     if (quickCode !== "en") {
         return quickCode;
@@ -289,9 +292,8 @@ export function resolveWhatsAppLanguageCode(
     }
 
     if (shouldPreferWhatsAppHistoryLanguage(message)) {
-        const historyCode = getMostRecentNonEnglishHistoryLanguageCode(historyMessages);
-        if (historyCode) {
-            return historyCode;
+        if (recentInboundHistoryCode) {
+            return recentInboundHistoryCode;
         }
     }
 

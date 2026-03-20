@@ -93,6 +93,8 @@ export async function getWhatsAppFallbackResponse(
     if (asksAboutPrice) {
         if (!workerRecord) {
             if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder košta ${entryFee}, ali uplata se ne otključava odmah. Prvo napravite profil na ${website}/signup, popunite ga do kraja i sačekajte admin odobrenje; tek tada se otvara checkout. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
+            if (fallbackLang === "fr") return `Bonjour ${name} ! Job Finder coûte ${entryFee}, mais le paiement ne s’ouvre pas immédiatement. Créez d’abord votre profil sur ${website}/signup, complétez-le entièrement et attendez la validation admin ; ce n’est qu’ensuite que le checkout s’ouvre. Si aucun emploi n’est trouvé dans les 90 jours, le montant est remboursé intégralement.`;
+            if (fallbackLang === "pt") return `Olá ${name}! O Job Finder custa ${entryFee}, mas o pagamento não é liberado imediatamente. Primeiro crie seu perfil em ${website}/signup, complete tudo e aguarde a aprovação admin; só então o checkout é liberado. Se nenhum trabalho for encontrado em 90 dias, o valor é reembolsado integralmente.`;
             if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder की कीमत ${entryFee} है, लेकिन payment तुरंत unlock नहीं होती। पहले ${website}/signup पर profile बनाइए, उसे पूरा कीजिए, और admin approval का इंतज़ार कीजिए; उसके बाद ही checkout खुलता है। अगर 90 दिनों में job न मिले तो पूरा amount refund होता है।`;
             if (fallbackLang === "ar") return `مرحباً ${name}! تكلفة Job Finder هي ${entryFee}، لكن الدفع لا يُفتح فورًا. أنشئ ملفك أولاً على ${website}/signup وأكمله بالكامل ثم انتظر موافقة الإدارة، وبعدها فقط يفتح الدفع. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
             return `Hi ${name}! Job Finder costs ${entryFee}, but payment does not unlock immediately. First create your profile at ${website}/signup, complete it fully, and wait for admin approval; only then does checkout unlock. If no job is found within 90 days, the full amount is refunded.`;
@@ -100,6 +102,8 @@ export async function getWhatsAppFallbackResponse(
 
         if (workerRecord.entry_fee_paid) {
             if (fallbackLang === "sr") return `Zdravo ${name}! Vaša Job Finder uplata je već evidentirana. Sledeći korak i status možete pratiti na ${website}/profile/worker.`;
+            if (fallbackLang === "fr") return `Bonjour ${name} ! Votre paiement Job Finder est déjà enregistré. Vous pouvez suivre le statut et la prochaine étape sur ${website}/profile/worker.`;
+            if (fallbackLang === "pt") return `Olá ${name}! Seu pagamento do Job Finder já foi registrado. Você pode acompanhar o status e o próximo passo em ${website}/profile/worker.`;
             if (fallbackLang === "hi") return `नमस्ते ${name}! आपका Job Finder payment पहले से दर्ज है। अगला step और status ${website}/profile/worker पर देखिए।`;
             if (fallbackLang === "ar") return `مرحباً ${name}! تم تسجيل دفعة Job Finder بالفعل. يمكنك متابعة الحالة والخطوة التالية على ${website}/profile/worker.`;
             return `Hi ${name}! Your Job Finder payment is already recorded. You can follow the next step and your status at ${website}/profile/worker.`;
@@ -107,12 +111,16 @@ export async function getWhatsAppFallbackResponse(
 
         if (!isWorkerPaymentUnlocked(workerRecord)) {
             if (fallbackLang === "sr") return `Zdravo ${name}! Checkout za Job Finder još nije otključan. Potrebno je da profil bude kompletan i da prođe admin review; zatim pokrećete bezbednu uplatu iz dashboard-a na ${website}/profile/worker.`;
+            if (fallbackLang === "fr") return `Bonjour ${name} ! Le checkout Job Finder n’est pas encore débloqué. Votre profil doit d’abord être complet et passer la validation admin ; ensuite vous lancez le paiement sécurisé depuis le tableau de bord sur ${website}/profile/worker.`;
+            if (fallbackLang === "pt") return `Olá ${name}! O checkout do Job Finder ainda não foi liberado. Seu perfil precisa estar completo e passar pela aprovação admin; depois disso você inicia o pagamento seguro no painel em ${website}/profile/worker.`;
             if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder checkout अभी unlock नहीं हुआ है। Profile complete होने और admin review pass होने के बाद ही ${website}/profile/worker dashboard से secure payment शुरू होती है।`;
             if (fallbackLang === "ar") return `مرحباً ${name}! لم يتم فتح Checkout الخاص بـ Job Finder بعد. يجب أن يكتمل الملف ويمر بمراجعة الإدارة أولاً، ثم تبدأ الدفع الآمن من لوحة التحكم على ${website}/profile/worker.`;
             return `Hi ${name}! Job Finder checkout is not unlocked yet. Your profile must be complete and pass admin review first; after that, you start the secure payment from the dashboard at ${website}/profile/worker.`;
         }
 
         if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder je spreman za aktivaciju. Otvorite dashboard na ${website}/profile/worker i odatle pokrenite bezbedan checkout za ${entryFee}. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
+        if (fallbackLang === "fr") return `Bonjour ${name} ! Job Finder est prêt à être activé. Ouvrez votre tableau de bord sur ${website}/profile/worker et lancez le checkout sécurisé depuis là pour ${entryFee}. Si nous ne trouvons pas d’emploi dans les 90 jours, le montant est remboursé intégralement.`;
+        if (fallbackLang === "pt") return `Olá ${name}! O Job Finder está pronto para ativação. Abra seu painel em ${website}/profile/worker e inicie o checkout seguro por lá no valor de ${entryFee}. Se não encontrarmos um trabalho em 90 dias, o valor é reembolsado integralmente.`;
         if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder अब activation के लिए ready है। ${website}/profile/worker dashboard खोलिए और वहाँ से ${entryFee} का secure checkout शुरू कीजिए। अगर 90 दिनों में job न मिले तो पूरा amount refund होता है।`;
         if (fallbackLang === "ar") return `مرحباً ${name}! أصبح Job Finder جاهزًا للتفعيل. افتح لوحة التحكم على ${website}/profile/worker وابدأ الدفع الآمن من هناك مقابل ${entryFee}. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
         return `Hi ${name}! Job Finder is ready to activate. Open your dashboard at ${website}/profile/worker and start the secure checkout there for ${entryFee}. If we do not find you a job within 90 days, the full amount is refunded.`;
@@ -144,6 +152,8 @@ export async function getWhatsAppFallbackResponse(
         const statusInfo = workerRecord.status === "REGISTERED" ? "registered ✅" : workerRecord.status;
         const queueInfo = workerRecord.queue_position ? ` Queue position: #${workerRecord.queue_position}.` : "";
         if (fallbackLang === "sr") return `Zdravo ${name}! Vaš status je: ${statusInfo}.${queueInfo} Detalje možete videti na ${website}/profile/worker.`;
+        if (fallbackLang === "fr") return `Bonjour ${name} ! Votre statut est : ${statusInfo}.${queueInfo} Vous pouvez voir tous les détails sur ${website}/profile/worker.`;
+        if (fallbackLang === "pt") return `Olá ${name}! Seu status é: ${statusInfo}.${queueInfo} Você pode ver todos os detalhes em ${website}/profile/worker.`;
         if (fallbackLang === "hi") return `नमस्ते ${name}! आपका status है: ${statusInfo}.${queueInfo} पूरी details ${website}/profile/worker पर देखिए।`;
         if (fallbackLang === "ar") return `مرحباً ${name}! حالتك: ${statusInfo}.${queueInfo} يمكنك رؤية التفاصيل على ${website}/profile/worker.`;
         return `Hi ${name}! Your status is: ${statusInfo}.${queueInfo} You can see full details at ${website}/profile/worker.`;
@@ -151,12 +161,16 @@ export async function getWhatsAppFallbackResponse(
 
     if (asksAboutDocuments) {
         if (fallbackLang === "sr") return `Zdravo ${name}! Dokumenta uploadujete na ${website}/profile/worker. Potrebni su: pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
+        if (fallbackLang === "fr") return `Bonjour ${name} ! Téléversez les documents sur ${website}/profile/worker. Nous avons besoin du passeport, d’une photo biométrique et d’un diplôme final scolaire, universitaire ou professionnel officiel. Les pièces jointes WhatsApp ne sont pas encore reliées automatiquement au profil.`;
+        if (fallbackLang === "pt") return `Olá ${name}! Envie os documentos em ${website}/profile/worker. Precisamos do passaporte, da foto biométrica e de um diploma final escolar, universitário ou profissional formal. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`;
         if (fallbackLang === "hi") return `नमस्ते ${name}! Documents ${website}/profile/worker पर upload कीजिए। ज़रूरी documents हैं passport, biometric photo, और final school, university, या formal vocational diploma। WhatsApp attachments अभी profile से automatically link नहीं होते।`;
         if (fallbackLang === "ar") return `مرحباً ${name}! يمكنك رفع المستندات على ${website}/profile/worker. المطلوب: جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
         return `Hi ${name}! Upload documents at ${website}/profile/worker. We need: passport, biometric photo, and a final school, university, or formal vocational diploma. WhatsApp attachments are not linked to the profile automatically yet.`;
     }
 
     if (fallbackLang === "sr") return `Zdravo ${name}! 👋 ${startMessage}`;
+    if (fallbackLang === "fr") return `Bonjour ${name} ! 👋 ${startMessage}`;
+    if (fallbackLang === "pt") return `Olá ${name}! 👋 ${startMessage}`;
     if (fallbackLang === "hi") return `नमस्ते ${name}! 👋 ${startMessage}`;
     if (fallbackLang === "ar") return `مرحباً ${name}! 👋 ${startMessage}`;
     return `Hi ${name}! 👋 ${startMessage}`;
