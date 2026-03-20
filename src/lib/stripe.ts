@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { buildPlatformUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 
 const secretKey = process.env.STRIPE_SECRET_KEY || "";
 
@@ -22,7 +23,12 @@ export const PRICES = {
 export type PaymentType = "entry_fee" | "confirmation_fee";
 
 function buildRedirectUrl(path: string, paymentState: "success" | "cancelled", includeSessionId: boolean): string {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = normalizePlatformWebsiteUrl(
+        process.env.NEXT_PUBLIC_BASE_URL
+        || process.env.NEXT_PUBLIC_APP_URL
+        || process.env.VERCEL_URL
+        || "http://localhost:3000"
+    );
     const url = new URL(path, baseUrl);
     url.searchParams.set("payment", paymentState);
     if (includeSessionId) {
@@ -32,40 +38,35 @@ function buildRedirectUrl(path: string, paymentState: "success" | "cancelled", i
 }
 
 export function getCheckoutSuccessUrl(type: PaymentType, offerId?: string, overridePath?: string | null): string {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const sessionParam = "session_id={CHECKOUT_SESSION_ID}";
-
     if (overridePath) {
         return buildRedirectUrl(overridePath, "success", true);
     }
 
     switch (type) {
         case "entry_fee":
-            return `${baseUrl}/profile/worker/queue?payment=success&${sessionParam}`;
+            return buildRedirectUrl("/profile/worker/queue", "success", true);
         case "confirmation_fee":
             return offerId
-                ? `${baseUrl}/profile/worker/offers/${offerId}?payment=success&${sessionParam}`
-                : `${baseUrl}/profile/worker/queue?payment=success&${sessionParam}`;
+                ? buildRedirectUrl(`/profile/worker/offers/${offerId}`, "success", true)
+                : buildRedirectUrl("/profile/worker/queue", "success", true);
         default:
-            return `${baseUrl}/profile/worker`;
+            return buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "http://localhost:3000", "/profile/worker");
     }
 }
 
 export function getCheckoutCancelUrl(type: PaymentType, offerId?: string, overridePath?: string | null): string {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
     if (overridePath) {
         return buildRedirectUrl(overridePath, "cancelled", false);
     }
 
     switch (type) {
         case "entry_fee":
-            return `${baseUrl}/profile/worker/queue?payment=cancelled`;
+            return buildRedirectUrl("/profile/worker/queue", "cancelled", false);
         case "confirmation_fee":
             return offerId
-                ? `${baseUrl}/profile/worker/offers/${offerId}?payment=cancelled`
-                : `${baseUrl}/profile/worker/queue?payment=cancelled`;
+                ? buildRedirectUrl(`/profile/worker/offers/${offerId}`, "cancelled", false)
+                : buildRedirectUrl("/profile/worker/queue", "cancelled", false);
         default:
-            return `${baseUrl}/profile/worker`;
+            return buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "http://localhost:3000", "/profile/worker");
     }
 }

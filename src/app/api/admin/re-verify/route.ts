@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { AGENCY_DRAFT_DOCUMENT_OWNER_KEY } from "@/lib/agency-draft-documents";
+import { normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 
 export const dynamic = "force-dynamic";
 
@@ -78,9 +79,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Call the existing verify-document endpoint internally
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+        const baseUrl = normalizePlatformWebsiteUrl(
+            process.env.NEXT_PUBLIC_BASE_URL
             || process.env.NEXT_PUBLIC_APP_URL
-            || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+            || process.env.VERCEL_URL
+            || "http://localhost:3000"
+        );
 
         const verifyRes = await fetch(`${baseUrl}/api/verify-document`, {
             method: "POST",

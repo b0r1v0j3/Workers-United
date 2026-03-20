@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { queueEmail } from "@/lib/email-templates";
 import { isEmailDeliveryAccepted } from "@/lib/email-queue";
+import { buildPlatformUrl } from "@/lib/platform-contact";
 
 interface OfferNotificationData {
   supabase: SupabaseClient;
@@ -27,8 +28,7 @@ interface OfferExpiredData {
 }
 
 export async function sendOfferNotification(data: OfferNotificationData): Promise<void> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const offerLink = `${baseUrl}/profile/worker/offers/${data.offerId}`;
+  const offerLink = buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, `/profile/worker/offers/${data.offerId}`);
 
   try {
     const emailResult = await queueEmail(
