@@ -183,12 +183,12 @@ export async function getWhatsAppFallbackResponse(
     };
 
     const startMessages: Record<WhatsAppFallbackLanguage, string> = {
-        sr: `Registrujte se na ${website}/signup i popunite profil. Posle registracije možete nastaviti pitanja ovde na WhatsApp-u, ali profil i dokumenta završavate kroz dashboard. Job Finder se otključava tek kada je profil kompletan i admin ga odobri.`,
-        hi: `${website}/signup पर account बनाइए और profile पूरा कीजिए। Registration के बाद आप सवाल यहाँ WhatsApp पर पूछ सकते हैं, लेकिन profile और documents dashboard में पूरे होते हैं। Job Finder तभी unlock होता है जब profile complete हो और admin approve करे।`,
-        ar: `أنشئ حسابك على ${website}/signup وأكمل ملفك الشخصي. بعد التسجيل يمكنك متابعة الأسئلة هنا على WhatsApp، لكن الملف والمستندات تُستكمل من لوحة التحكم. يتم فتح Job Finder فقط بعد اكتمال الملف وموافقة الإدارة.`,
-        fr: `Créez votre compte sur ${website}/signup et complétez votre profil. Après inscription, vous pouvez poser vos questions ici sur WhatsApp, mais le profil et les documents se terminent dans le tableau de bord. Job Finder ne s’ouvre qu’après profil complet et validation admin.`,
-        pt: `Crie sua conta em ${website}/signup e complete seu perfil. Depois do registro, você pode continuar com perguntas aqui no WhatsApp, mas o perfil e os documentos são concluídos no painel. O Job Finder só é liberado após perfil completo e aprovação administrativa.`,
-        en: `Create your account at ${website}/signup and complete your profile. After signup, you can keep asking questions here on WhatsApp, but profile completion and document uploads happen in the dashboard. Job Finder unlocks only after the profile is complete and admin approves it.`,
+        sr: `Registrujte se na ${website}/signup i popunite profil. Posle registracije možete nastaviti pitanja ovde na WhatsApp-u, ali profil i dokumenta završavate kroz dashboard. Job Finder se otključava tek kada su profil i obavezna dokumenta kompletni i admin ga odobri.`,
+        hi: `${website}/signup पर account बनाइए और profile पूरा कीजिए। Registration के बाद आप सवाल यहाँ WhatsApp पर पूछ सकते हैं, लेकिन profile और documents dashboard में पूरे होते हैं। Job Finder तभी unlock होता है जब profile और required documents complete हों और admin approve करे।`,
+        ar: `أنشئ حسابك على ${website}/signup وأكمل ملفك الشخصي. بعد التسجيل يمكنك متابعة الأسئلة هنا على WhatsApp، لكن الملف والمستندات تُستكمل من لوحة التحكم. يتم فتح Job Finder فقط بعد اكتمال الملف والمستندات المطلوبة وموافقة الإدارة.`,
+        fr: `Créez votre compte sur ${website}/signup et complétez votre profil. Après inscription, vous pouvez poser vos questions ici sur WhatsApp, mais le profil et les documents se terminent dans le tableau de bord. Job Finder ne s’ouvre qu’après profil complet, documents requis et validation admin.`,
+        pt: `Crie sua conta em ${website}/signup e complete seu perfil. Depois do registro, você pode continuar com perguntas aqui no WhatsApp, mas o perfil e os documentos são concluídos no painel. O Job Finder só é liberado após perfil completo, documentos obrigatórios e aprovação administrativa.`,
+        en: `Create your account at ${website}/signup and complete your profile. After signup, you can keep asking questions here on WhatsApp, but profile completion and document uploads happen in the dashboard. Job Finder unlocks only after the profile, required documents, and admin approval are all complete.`,
     };
 
     const greeting = greetings[fallbackLang] || greetings.en;
@@ -218,12 +218,12 @@ export async function getWhatsAppFallbackResponse(
 
     if (asksAboutPrice) {
         if (!workerRecord) {
-            if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder košta ${entryFee}, ali uplata se ne otključava odmah. Prvo napravite profil na ${website}/signup, popunite ga do kraja i sačekajte admin odobrenje; tek tada se otvara checkout. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
-            if (fallbackLang === "fr") return `Bonjour ${name} ! Job Finder coûte ${entryFee}, mais le paiement ne s’ouvre pas immédiatement. Créez d’abord votre profil sur ${website}/signup, complétez-le entièrement et attendez la validation admin ; ce n’est qu’ensuite que le checkout s’ouvre. Si aucun emploi n’est trouvé dans les 90 jours, le montant est remboursé intégralement.`;
-            if (fallbackLang === "pt") return `Olá ${name}! O Job Finder custa ${entryFee}, mas o pagamento não é liberado imediatamente. Primeiro crie seu perfil em ${website}/signup, complete tudo e aguarde a aprovação admin; só então o checkout é liberado. Se nenhum trabalho for encontrado em 90 dias, o valor é reembolsado integralmente.`;
-            if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder की कीमत ${entryFee} है, लेकिन payment तुरंत unlock नहीं होती। पहले ${website}/signup पर profile बनाइए, उसे पूरा कीजिए, और admin approval का इंतज़ार कीजिए; उसके बाद ही checkout खुलता है। अगर 90 दिनों में job न मिले तो पूरा amount refund होता है।`;
-            if (fallbackLang === "ar") return `مرحباً ${name}! تكلفة Job Finder هي ${entryFee}، لكن الدفع لا يُفتح فورًا. أنشئ ملفك أولاً على ${website}/signup وأكمله بالكامل ثم انتظر موافقة الإدارة، وبعدها فقط يفتح الدفع. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
-            return `Hi ${name}! Job Finder costs ${entryFee}, but payment does not unlock immediately. First create your profile at ${website}/signup, complete it fully, and wait for admin approval; only then does checkout unlock. If no job is found within 90 days, the full amount is refunded.`;
+            if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder košta ${entryFee}, ali uplata se ne otključava odmah. Prvo napravite profil na ${website}/signup, završite profil i obavezna dokumenta, pa sačekajte admin odobrenje; tek tada se otvara checkout. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
+            if (fallbackLang === "fr") return `Bonjour ${name} ! Job Finder coûte ${entryFee}, mais le paiement ne s’ouvre pas immédiatement. Créez d’abord votre profil sur ${website}/signup, complétez le profil et les documents requis puis attendez la validation admin ; ce n’est qu’ensuite que le checkout s’ouvre. Si aucun emploi n’est trouvé dans les 90 jours, le montant est remboursé intégralement.`;
+            if (fallbackLang === "pt") return `Olá ${name}! O Job Finder custa ${entryFee}, mas o pagamento não é liberado imediatamente. Primeiro crie seu perfil em ${website}/signup, complete o perfil e os documentos obrigatórios e aguarde a aprovação admin; só então o checkout é liberado. Se nenhum trabalho for encontrado em 90 dias, o valor é reembolsado integralmente.`;
+            if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder की कीमत ${entryFee} है, लेकिन payment तुरंत unlock नहीं होती। पहले ${website}/signup पर profile बनाइए, profile और required documents पूरे कीजिए, और admin approval का इंतज़ार कीजिए; उसके बाद ही checkout खुलता है। अगर 90 दिनों में job न मिले तो पूरा amount refund होता है।`;
+            if (fallbackLang === "ar") return `مرحباً ${name}! تكلفة Job Finder هي ${entryFee}، لكن الدفع لا يُفتح فورًا. أنشئ ملفك أولاً على ${website}/signup وأكمل الملف والمستندات المطلوبة ثم انتظر موافقة الإدارة، وبعدها فقط يفتح الدفع. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
+            return `Hi ${name}! Job Finder costs ${entryFee}, but payment does not unlock immediately. First create your profile at ${website}/signup, finish the profile and required documents, and wait for admin approval; only then does checkout unlock. If no job is found within 90 days, the full amount is refunded.`;
         }
 
         if (workerRecord.entry_fee_paid) {
@@ -236,12 +236,12 @@ export async function getWhatsAppFallbackResponse(
         }
 
         if (!isWorkerPaymentUnlocked(workerRecord)) {
-            if (fallbackLang === "sr") return `Zdravo ${name}! Checkout za Job Finder još nije otključan. Potrebno je da profil bude kompletan i da prođe admin review; zatim pokrećete bezbednu uplatu iz dashboard-a na ${website}/profile/worker.`;
-            if (fallbackLang === "fr") return `Bonjour ${name} ! Le checkout Job Finder n’est pas encore débloqué. Votre profil doit d’abord être complet et passer la validation admin ; ensuite vous lancez le paiement sécurisé depuis le tableau de bord sur ${website}/profile/worker.`;
-            if (fallbackLang === "pt") return `Olá ${name}! O checkout do Job Finder ainda não foi liberado. Seu perfil precisa estar completo e passar pela aprovação admin; depois disso você inicia o pagamento seguro no painel em ${website}/profile/worker.`;
-            if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder checkout अभी unlock नहीं हुआ है। Profile complete होने और admin review pass होने के बाद ही ${website}/profile/worker dashboard से secure payment शुरू होती है।`;
-            if (fallbackLang === "ar") return `مرحباً ${name}! لم يتم فتح Checkout الخاص بـ Job Finder بعد. يجب أن يكتمل الملف ويمر بمراجعة الإدارة أولاً، ثم تبدأ الدفع الآمن من لوحة التحكم على ${website}/profile/worker.`;
-            return `Hi ${name}! Job Finder checkout is not unlocked yet. Your profile must be complete and pass admin review first; after that, you start the secure payment from the dashboard at ${website}/profile/worker.`;
+            if (fallbackLang === "sr") return `Zdravo ${name}! Checkout za Job Finder još nije otključan. Potrebno je da profil bude kompletan, obavezna dokumenta završena i admin review odobren; zatim pokrećete bezbednu uplatu iz dashboard-a na ${website}/profile/worker.`;
+            if (fallbackLang === "fr") return `Bonjour ${name} ! Le checkout Job Finder n’est pas encore débloqué. Il faut d’abord un profil complet, les documents requis, puis la validation admin ; ensuite vous lancez le paiement sécurisé depuis le tableau de bord sur ${website}/profile/worker.`;
+            if (fallbackLang === "pt") return `Olá ${name}! O checkout do Job Finder ainda não foi liberado. Primeiro é preciso perfil completo, documentos obrigatórios concluídos e aprovação admin; depois disso você inicia o pagamento seguro no painel em ${website}/profile/worker.`;
+            if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder checkout अभी unlock नहीं हुआ है। Profile complete होना चाहिए, required documents पूरे होने चाहिए और admin review approved होना चाहिए; उसके बाद ही ${website}/profile/worker dashboard से secure payment शुरू होती है।`;
+            if (fallbackLang === "ar") return `مرحباً ${name}! لم يتم فتح Checkout الخاص بـ Job Finder بعد. يجب أن يكتمل الملف، وتكتمل المستندات المطلوبة، ويتم اعتماد مراجعة الإدارة أولاً؛ وبعدها فقط تبدأ الدفع الآمن من لوحة التحكم على ${website}/profile/worker.`;
+            return `Hi ${name}! Job Finder checkout is not unlocked yet. Your profile must be complete, the required documents finished, and admin review approved first; after that, you start the secure payment from the dashboard at ${website}/profile/worker.`;
         }
 
         if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder je spreman za aktivaciju. Otvorite dashboard na ${website}/profile/worker i odatle pokrenite bezbedan checkout za ${entryFee}. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;

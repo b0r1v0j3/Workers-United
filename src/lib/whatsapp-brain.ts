@@ -465,17 +465,17 @@ export function buildUnregisteredWorkerWhatsAppReply({
     if (wantsPrice) {
         switch (lang) {
             case "sr":
-                return `Job Finder košta $9, ali se to ne plaća odmah. Prvo napravite nalog na ${website}/signup i završite profil; checkout se otključava tek kada profil bude kompletan i admin ga odobri, a uplata se pokreće iz dashboard-a, ne preko WhatsApp-a.`;
+                return `Job Finder košta $9, ali se to ne plaća odmah. Prvo napravite nalog na ${website}/signup i završite profil i obavezna dokumenta; checkout se otključava tek kada sve to bude kompletno i admin ga odobri, a uplata se pokreće iz dashboard-a, ne preko WhatsApp-a.`;
             case "ar":
-                return `تكلفة Job Finder هي $9، لكن ذلك لا يُدفع فورًا. أنشئ حسابك أولاً على ${website}/signup وأكمل ملفك؛ يتم فتح الدفع فقط بعد اكتمال الملف وموافقة الإدارة، ويبدأ الدفع من لوحة التحكم وليس عبر WhatsApp.`;
+                return `تكلفة Job Finder هي $9، لكن ذلك لا يُدفع فورًا. أنشئ حسابك أولاً على ${website}/signup وأكمل ملفك والمستندات المطلوبة؛ يتم فتح الدفع فقط بعد اكتمال ذلك كله وموافقة الإدارة، ويبدأ الدفع من لوحة التحكم وليس عبر WhatsApp.`;
             case "fr":
-                return `Job Finder coûte $9, mais ce n’est pas à payer immédiatement. Créez d’abord votre compte sur ${website}/signup et complétez votre profil ; le paiement ne s’ouvre qu’après profil complet et validation admin, et il démarre depuis le tableau de bord, pas via WhatsApp.`;
+                return `Job Finder coûte $9, mais ce n’est pas à payer immédiatement. Créez d’abord votre compte sur ${website}/signup et complétez votre profil ainsi que les documents requis ; le paiement ne s’ouvre qu’après cela et la validation admin, et il démarre depuis le tableau de bord, pas via WhatsApp.`;
             case "pt":
-                return `O Job Finder custa $9, mas isso não é pago imediatamente. Primeiro crie sua conta em ${website}/signup e complete seu perfil; o checkout só é liberado após perfil completo e aprovação admin, e o pagamento começa no painel, não pelo WhatsApp.`;
+                return `O Job Finder custa $9, mas isso não é pago imediatamente. Primeiro crie sua conta em ${website}/signup e complete seu perfil e os documentos obrigatórios; o checkout só é liberado depois disso e da aprovação admin, e o pagamento começa no painel, não pelo WhatsApp.`;
             case "hi":
-                return `Job Finder की कीमत $9 है, लेकिन यह तुरंत pay नहीं किया जाता। पहले ${website}/signup पर account बनाइए और profile पूरा कीजिए; checkout तभी unlock होता है जब profile complete हो और admin approve करे, और payment dashboard से शुरू होता है, WhatsApp से नहीं।`;
+                return `Job Finder की कीमत $9 है, लेकिन यह तुरंत pay नहीं किया जाता। पहले ${website}/signup पर account बनाइए, profile और required documents पूरे कीजिए; checkout तभी unlock होता है जब यह सब complete हो और admin approve करे, और payment dashboard से शुरू होता है, WhatsApp से नहीं।`;
             default:
-                return `Job Finder costs $9, but that is not paid immediately. First create your account at ${website}/signup and complete your profile; checkout unlocks only after the profile is complete and admin approves it, and payment starts from the dashboard, not through WhatsApp.`;
+                return `Job Finder costs $9, but that is not paid immediately. First create your account at ${website}/signup and complete your profile and required documents; checkout unlocks only after that is complete and admin approves it, and payment starts from the dashboard, not through WhatsApp.`;
         }
     }
 
@@ -690,27 +690,27 @@ export function buildRegisteredWorkerWhatsAppReply({
             case "sr":
                 return pendingApproval
                     ? `Job Finder uplata jos nije otključana jer je vaš profil trenutno u admin review fazi. Kada admin potvrdi profil, checkout ce se pojaviti u dashboard-u na ${website}/profile/worker.`
-                    : `Job Finder uplata se otključava tek kada profil bude kompletan i admin ga odobri. Sledeci korak pratite kroz dashboard na ${website}/profile/worker, a placanje se pokrece tamo, ne preko WhatsApp-a.`;
+                    : `Job Finder uplata se otključava tek kada profil bude kompletan, obavezna dokumenta završena i admin ga odobri. Sledeci korak pratite kroz dashboard na ${website}/profile/worker, a placanje se pokrece tamo, ne preko WhatsApp-a.`;
             case "ar":
                 return pendingApproval
                     ? `دفع Job Finder لم يُفتح بعد لأن ملفك حاليًا في مراجعة الإدارة. عندما تؤكد الإدارة الملف سيظهر checkout في لوحة التحكم على ${website}/profile/worker.`
-                    : `يتم فتح دفع Job Finder فقط بعد اكتمال الملف وموافقة الإدارة. تابع الخطوة التالية عبر لوحة التحكم على ${website}/profile/worker، ويبدأ الدفع من هناك وليس عبر WhatsApp.`;
+                    : `يتم فتح دفع Job Finder فقط بعد اكتمال الملف والمستندات المطلوبة وموافقة الإدارة. تابع الخطوة التالية عبر لوحة التحكم على ${website}/profile/worker، ويبدأ الدفع من هناك وليس عبر WhatsApp.`;
             case "fr":
                 return pendingApproval
                     ? `Le paiement Job Finder n’est pas encore débloqué car votre profil est actuellement en revue admin. Une fois le profil confirmé par l’admin, le checkout apparaîtra dans le tableau de bord sur ${website}/profile/worker.`
-                    : `Le paiement Job Finder ne s’ouvre qu’après profil complet et validation admin. Suivez la prochaine étape dans le tableau de bord sur ${website}/profile/worker, et le paiement démarre là-bas, pas sur WhatsApp.`;
+                    : `Le paiement Job Finder ne s’ouvre qu’après profil complet, documents requis et validation admin. Suivez la prochaine étape dans le tableau de bord sur ${website}/profile/worker, et le paiement démarre là-bas, pas sur WhatsApp.`;
             case "pt":
                 return pendingApproval
                     ? `O pagamento do Job Finder ainda não foi liberado porque seu perfil está em revisão administrativa. Quando o admin confirmar o perfil, o checkout aparecerá no painel em ${website}/profile/worker.`
-                    : `O pagamento do Job Finder só é liberado após perfil completo e aprovação administrativa. Acompanhe o próximo passo no painel em ${website}/profile/worker; o pagamento começa lá, não pelo WhatsApp.`;
+                    : `O pagamento do Job Finder só é liberado após perfil completo, documentos obrigatórios e aprovação administrativa. Acompanhe o próximo passo no painel em ${website}/profile/worker; o pagamento começa lá, não pelo WhatsApp.`;
             case "hi":
                 return pendingApproval
                     ? `Job Finder payment अभी unlock नहीं हुआ है क्योंकि आपका profile इस समय admin review में है। जब admin profile confirm करेगा, checkout ${website}/profile/worker dashboard में दिखेगा।`
-                    : `Job Finder payment तभी unlock होता है जब profile complete हो और admin approve करे। अगला step ${website}/profile/worker dashboard में follow करें; payment वहीं से शुरू होता है, WhatsApp से नहीं।`;
+                    : `Job Finder payment तभी unlock होता है जब profile complete हो, required documents पूरे हों और admin approve करे। अगला step ${website}/profile/worker dashboard में follow करें; payment वहीं से शुरू होता है, WhatsApp से नहीं।`;
             default:
                 return pendingApproval
                     ? `Job Finder payment is not unlocked yet because your profile is currently in admin review. Once admin confirms the profile, checkout will appear in the dashboard at ${website}/profile/worker.`
-                    : `Job Finder payment unlocks only after the profile is complete and admin approves it. Please follow the next step in the dashboard at ${website}/profile/worker; payment starts there, not on WhatsApp.`;
+                    : `Job Finder payment unlocks only after the profile is complete, the required documents are finished, and admin approves it. Please follow the next step in the dashboard at ${website}/profile/worker; payment starts there, not on WhatsApp.`;
         }
     }
 
@@ -736,27 +736,27 @@ export function buildRegisteredWorkerWhatsAppReply({
             case "sr":
                 return hasSupportAccess
                     ? `Mogu da pomognem ovde, a vaš support inbox je takodje otvoren u dashboard-u na ${website}/profile/worker/inbox. Ako se isti problem ponavlja, nastavite tamo ili pošaljite screenshot i kratak opis na ${supportEmail}.`
-                    : `Mogu da pomognem osnovnim informacijama ovde, ali support inbox se otključava tek posle $9 aktivacije. Ako imate tehnički problem pre toga, pošaljite screenshot i kratak opis na ${supportEmail}.`;
+                    : `Mogu da pomognem osnovnim informacijama ovde, ali support inbox se otključava tek kada Job Finder bude dostupan u dashboard-u i kada $9 uplata bude uspešno završena. Do toga se stiže tek posle kompletnog profila, obaveznih dokumenata i admin odobrenja. Ako imate tehnički problem pre toga, pošaljite screenshot i kratak opis na ${supportEmail}.`;
             case "ar":
                 return hasSupportAccess
                     ? `يمكنني المساعدة هنا، كما أن صندوق الدعم لديك مفتوح أيضًا في لوحة التحكم على ${website}/profile/worker/inbox. إذا كانت نفس المشكلة تتكرر، واصل من هناك أو أرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`
-                    : `يمكنني المساعدة بالمعلومات الأساسية هنا، لكن صندوق الدعم يُفتح فقط بعد تفعيل $9. إذا كانت لديك مشكلة تقنية قبل ذلك فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`;
+                    : `يمكنني المساعدة بالمعلومات الأساسية هنا، لكن صندوق الدعم يُفتح فقط بعد أن يصبح Job Finder متاحًا في لوحة التحكم وبعد إتمام دفعة $9 بنجاح. ولا يتم ذلك إلا بعد اكتمال الملف والمستندات المطلوبة وموافقة الإدارة. إذا كانت لديك مشكلة تقنية قبل ذلك فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`;
             case "fr":
                 return hasSupportAccess
                     ? `Je peux aider ici, et votre boîte de support est aussi ouverte dans le tableau de bord sur ${website}/profile/worker/inbox. Si le même problème se répète, continuez là-bas ou envoyez une capture d’écran avec une courte description à ${supportEmail}.`
-                    : `Je peux aider ici avec les informations de base, mais la boîte de support ne s’ouvre qu’après l’activation à $9. Si vous avez un problème technique avant cela, envoyez une capture d’écran et une courte description à ${supportEmail}.`;
+                    : `Je peux aider ici avec les informations de base, mais la boîte de support ne s’ouvre qu’une fois Job Finder disponible dans le tableau de bord et le paiement de $9 terminé avec succès. Cela n’arrive qu’après profil complet, documents requis et validation admin. Si vous avez un problème technique avant cela, envoyez une capture d’écran et une courte description à ${supportEmail}.`;
             case "pt":
                 return hasSupportAccess
                     ? `Posso ajudar por aqui, e sua caixa de suporte também está aberta no painel em ${website}/profile/worker/inbox. Se o mesmo problema continuar, siga por lá ou envie uma captura de tela com uma breve descrição para ${supportEmail}.`
-                    : `Posso ajudar por aqui com orientações básicas, mas a caixa de suporte só libera após a ativação de $9. Se houver um problema técnico antes disso, envie uma captura de tela e uma breve descrição para ${supportEmail}.`;
+                    : `Posso ajudar por aqui com orientações básicas, mas a caixa de suporte só é liberada quando o Job Finder fica disponível no painel e o pagamento de $9 é concluído com sucesso. Isso só acontece após perfil completo, documentos obrigatórios e aprovação admin. Se houver um problema técnico antes disso, envie uma captura de tela e uma breve descrição para ${supportEmail}.`;
             case "hi":
                 return hasSupportAccess
                     ? `मैं यहाँ मदद कर सकता हूँ, और आपका support inbox भी ${website}/profile/worker/inbox dashboard में खुला है। अगर वही problem बार-बार आ रहा है, तो वहाँ जारी रखें या screenshot और short description ${supportEmail} पर भेजें।`
-                    : `मैं यहाँ basic guidance दे सकता हूँ, लेकिन support inbox $9 activation के बाद ही unlock होता है। अगर उससे पहले technical problem है, तो screenshot और short description ${supportEmail} पर भेजें।`;
+                    : `मैं यहाँ basic guidance दे सकता हूँ, लेकिन support inbox तभी unlock होता है जब Job Finder dashboard में available हो और $9 payment successfully complete हो। यह तभी होता है जब profile complete हो, required documents पूरे हों और admin approval मिल जाए। अगर उससे पहले technical problem है, तो screenshot और short description ${supportEmail} पर भेजें।`;
             default:
                 return hasSupportAccess
                     ? `I can help here, and your support inbox is also open in the dashboard at ${website}/profile/worker/inbox. If the same issue keeps repeating, continue there or send a screenshot and a short description to ${supportEmail}.`
-                    : `I can help with basic guidance here, but the support inbox unlocks only after the $9 activation. If you have a technical problem before that, send a screenshot and a short description to ${supportEmail}.`;
+                    : `I can help with basic guidance here, but the support inbox unlocks only once Job Finder is available in the dashboard and the $9 payment has been completed successfully. That happens only after the profile is complete, the required documents are finished, and admin approval is done. If you have a technical problem before that, send a screenshot and a short description to ${supportEmail}.`;
         }
     }
 
@@ -955,7 +955,7 @@ export function buildCanonicalWhatsAppFacts({
         "- Job Finder is a paid search service: the worker registers a profile first, then Workers United searches for a suitable match during the 90-day service period.",
         "- There is no live public vacancy feed to browse on demand. Openings appear over time, and suitable places can be filled quickly.",
         `- Registration starts at ${website}/signup.`,
-        "- Job Finder payment unlocks only after the worker profile is fully complete and approved by admin.",
+        "- Job Finder payment unlocks only after the worker profile is fully complete, the required documents are finished, and admin approval is done.",
         "- WhatsApp can answer questions and, when the user explicitly asks, collect some text profile details here. Document uploads and screenshots are not processed as WhatsApp attachments yet; those belong in the dashboard.",
         "- Required worker documents are passport, biometric photo, and a final school, university, or formal vocational diploma.",
         "- Employers do not pay platform fees.",
@@ -986,7 +986,7 @@ Rules:
 3a. If the user asks you to switch language, acknowledge that in one short sentence and continue fully in the requested language. Do not fall back to English after that.
 4. Never imply that there is a list of jobs ready to browse right now. Explain Job Finder as a search-and-wait service when relevant.
 5. If the user is not yet registered and asks how to start, tell them to register at ${website}/signup first. After signup they can continue either in the dashboard or here on WhatsApp.
-6. Do NOT push payment before registration, full profile completion, and admin approval. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile comes first.
+6. Do NOT push payment before registration, full profile completion, required documents, and admin approval. If an unregistered user asks about price, explain the $9 service briefly, but say registration/profile/documents come first.
 7. Do NOT share direct payment links from WhatsApp. If the worker is not payment-ready, never ask whether they want to activate/pay now. If the worker is truly payment-ready, tell them to open the dashboard and start checkout there.
 8. If the user asks to see jobs before paying, explain simply that Workers United works through guided matching rather than a live public jobs list; the service is searching and waiting for the right match.
 9. Do not lead with the guided-matching explanation unless the user asked how the process works or asked to see or confirm current openings.

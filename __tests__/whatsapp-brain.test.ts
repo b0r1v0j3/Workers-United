@@ -35,7 +35,7 @@ describe("whatsapp-brain guards", () => {
 
         expect(facts).toContain("works through guided matching");
         expect(facts).toContain("There is no live public vacancy feed");
-        expect(facts).toContain("payment unlocks only after the worker profile is fully complete and approved by admin");
+        expect(facts).toContain("payment unlocks only after the worker profile is fully complete, the required documents are finished, and admin approval is done");
         expect(facts).toContain("Document uploads and screenshots are not processed as WhatsApp attachments yet");
     });
 
@@ -301,6 +301,7 @@ describe("whatsapp-brain guards", () => {
         });
 
         expect(reply).toContain("$9");
+        expect(reply).toContain("obavezna dokumenta");
         expect(reply).toContain("ne preko WhatsApp-a");
     });
 
@@ -335,6 +336,36 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("contact@workersunited.eu");
         expect(reply).not.toContain("otvorio");
         expect(reply).not.toContain("ticket");
+    });
+
+    it("does not describe support inbox as a simple $9-only unlock", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "Treba mi pomoć",
+            language: "Serbian",
+            intent: "support",
+            workerStatus: "NEW",
+            adminApproved: false,
+            entryFeePaid: false,
+            hasSupportAccess: false,
+        });
+
+        expect(reply).toContain("obaveznih dokumenata");
+        expect(reply).toContain("admin odobrenja");
+        expect(reply).not.toContain("tek posle $9 aktivacije");
+    });
+
+    it("keeps registered worker payment gate aligned with required documents", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "How do I pay?",
+            language: "English",
+            intent: "price",
+            workerStatus: "NEW",
+            adminApproved: false,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("required documents");
+        expect(reply).toContain("admin approves it");
     });
 
     it("keeps registered-worker greetings warm instead of jumping straight into process instructions", () => {
