@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { getAllAuthUsers } from "@/lib/supabase/admin";
 import { normalizeUserType, type CanonicalUserType } from "@/lib/domain";
-import { queueEmail } from "@/lib/email-templates";
+import { queueEmail, type EmailType, type TemplateData } from "@/lib/email-templates";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
@@ -35,6 +35,8 @@ export interface AdminAnnouncementResult {
     failedDetails: Array<{ email: string; name: string; error: string }>;
     targets: AdminAnnouncementTarget[];
 }
+
+const ANNOUNCEMENT_EMAIL_THROTTLE_MS = 1500;
 
 function normalizeDeliverableEmail(email?: string | null) {
     const normalized = email?.trim().toLowerCase() || "";
@@ -113,6 +115,91 @@ async function logAnnouncementActivity(params: {
     } catch (error) {
         console.warn("[Admin Announcements] Failed to log activity:", error);
     }
+}
+
+async function logDocumentFixAnnouncementActivity(params: {
+    actorUserId?: string | null;
+    result: AdminAnnouncementResult;
+    dryRun: boolean;
+}) {
+    try {
+        await logServerActivity(
+            params.actorUserId || null,
+            params.dryRun ? "admin_document_fix_announcement_preview" : "admin_document_fix_announcement_sent",
+            "messaging",
+            {
+                audience: "workers",
+                template: "announcement_document_fix",
+                dry_run: params.dryRun,
+                total: params.result.total,
+                sent: params.result.sent,
+                failed: params.result.failed,
+                failed_details: params.result.failedDetails.slice(0, 20),
+                target_preview: params.result.targets.slice(0, 20).map((target) => ({
+                    email: target.email,
+                    name: target.name,
+                    recipient_role: target.recipientRole,
+                    user_id: target.userId,
+                })),
+            },
+            params.result.failed > 0 ? "warning" : "ok"
+        );
+    } catch (error) {
+        console.warn("[Document Fix Announcement] Failed to log activity:", error);
+    }
+}
+
+async function waitForAnnouncementThrottle() {
+    await new Promise((resolve) => setTimeout(resolve, ANNOUNCEMENT_EMAIL_THROTTLE_MS));
+}
+
+async function sendAudienceTemplateEmail(params: {
+    admin: AdminDbClient;
+    targets: AdminAnnouncementTarget[];
+    emailType: EmailType;
+    buildTemplateData: (target: AdminAnnouncementTarget) => TemplateData;
+    fallbackError: string;
+    dryRun: boolean;
+}) {
+    const result: AdminAnnouncementResult = {
+        total: params.targets.length,
+        sent: 0,
+        failed: 0,
+        failedDetails: [],
+        targets: params.targets,
+    };
+
+    if (params.dryRun) {
+        return result;
+    }
+
+    for (const [index, target] of params.targets.entries()) {
+        const emailResult = await queueEmail(
+            params.admin,
+            target.userId,
+            params.emailType,
+            target.email,
+            target.name,
+            params.buildTemplateData(target)
+        );
+
+        if (emailResult.sent) {
+            result.sent += 1;
+        } else {
+            result.failed += 1;
+            result.failedDetails.push({
+                email: target.email,
+                name: target.name,
+                error: emailResult.error || params.fallbackError,
+            });
+        }
+
+        if (index < params.targets.length - 1) {
+            await waitForAnnouncementThrottle();
+        }
+    }
+
+    return result;
 }
 
 export async function loadAnnouncementTargets(
@@ -224,63 +311,55 @@ export async function sendAdminAnnouncement(params: {
     const actionText = actionLink ? (params.actionText?.trim() || "View Details") : undefined;
     const dryRun = params.dryRun === true;
     const targets = await loadAnnouncementTargets(params.admin, params.audience);
-
-    const result: AdminAnnouncementResult = {
-        total: targets.length,
-        sent: 0,
-        failed: 0,
-        failedDetails: [],
+    const result = await sendAudienceTemplateEmail({
+        admin: params.admin,
         targets,
-    };
-
-    if (dryRun) {
-        await logAnnouncementActivity({
-            actorUserId: params.actorUserId,
-            audience: params.audience,
+        emailType: "announcement",
+        buildTemplateData: (target) => ({
+            title: subject,
+            message,
             subject,
-            result,
-            dryRun: true,
-        });
-        return result;
-    }
-
-    for (const target of targets) {
-        const emailResult = await queueEmail(
-            params.admin,
-            target.userId,
-            "announcement",
-            target.email,
-            target.name,
-            {
-                title: subject,
-                message,
-                subject,
-                actionText,
-                actionLink,
-                recipientRole: target.recipientRole,
-            }
-        );
-
-        if (emailResult.sent) {
-            result.sent += 1;
-        } else {
-            result.failed += 1;
-            result.failedDetails.push({
-                email: target.email,
-                name: target.name,
-                error: emailResult.error || "Announcement email failed",
-            });
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-    }
+            actionText,
+            actionLink,
+            recipientRole: target.recipientRole,
+        }),
+        fallbackError: "Announcement email failed",
+        dryRun,
+    });
 
     await logAnnouncementActivity({
         actorUserId: params.actorUserId,
         audience: params.audience,
         subject,
         result,
-        dryRun: false,
+        dryRun,
+    });
+
+    return result;
+}
+
+export async function sendDocumentFixAnnouncementEmails(params: {
+    admin: AdminDbClient;
+    actorUserId?: string | null;
+    dryRun?: boolean;
+}): Promise<AdminAnnouncementResult> {
+    const dryRun = params.dryRun === true;
+    const targets = await loadAnnouncementTargets(params.admin, "workers");
+    const result = await sendAudienceTemplateEmail({
+        admin: params.admin,
+        targets,
+        emailType: "announcement_document_fix",
+        buildTemplateData: (target) => ({
+            recipientRole: target.recipientRole,
+        }),
+        fallbackError: "Document-fix announcement email failed",
+        dryRun,
+    });
+
+    await logDocumentFixAnnouncementActivity({
+        actorUserId: params.actorUserId,
+        result,
+        dryRun,
     });
 
     return result;

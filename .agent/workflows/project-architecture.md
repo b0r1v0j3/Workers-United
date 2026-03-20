@@ -161,7 +161,7 @@ Workers-United/
 │   │   ├── constants.ts       # Shared constants
 │   │   ├── workers.ts         # Canonical worker lookup + normalization helpers (duplicate-safe worker record selection over legacy physical worker table via `worker_onboarding`, phone normalization, storage filename sanitization)
 │   │   ├── worker-notification-eligibility.ts # Shared guard for worker direct email/WhatsApp automations; blocks hidden draft owners, internal/test addresses, and agency drafts without real worker email+phone
-│   │   ├── admin-announcements.ts # Shared admin bulk-announcement recipient loader + deliverable-email dedupe + worker eligibility guard + queueEmail dispatch + audit logging
+│   │   ├── admin-announcements.ts # Shared admin bulk-announcement/document-fix recipient loader + deliverable-email dedupe + worker eligibility guard + queueEmail dispatch + audit logging
 │   │   ├── whatsapp-blast.ts # Shared admin WhatsApp blast target loader + canonical worker dedupe + direct-notification eligibility guard + announcement/status fallback send path + audit logging
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)

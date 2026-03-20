@@ -24,7 +24,7 @@ vi.mock("@/lib/activityLoggerServer", () => ({
     logServerActivity,
 }));
 
-import { loadAnnouncementTargets, sendAdminAnnouncement } from "@/lib/admin-announcements";
+import { loadAnnouncementTargets, sendAdminAnnouncement, sendDocumentFixAnnouncementEmails } from "@/lib/admin-announcements";
 
 function createAdminClient(params?: {
     workerRows?: Array<Record<string, unknown>>;
@@ -243,5 +243,67 @@ describe("admin-announcements", () => {
             })
         );
         expect(logServerActivity).toHaveBeenCalledOnce();
+    });
+
+    it("sends document-fix announcements through the shared worker audience path", async () => {
+        getAllAuthUsers.mockResolvedValue([
+            {
+                id: "worker_1",
+                email: "worker@validmail.com",
+                user_metadata: { user_type: "worker", full_name: "Ali Worker" },
+            },
+            {
+                id: "agency_1",
+                email: "agent@agency.com",
+                user_metadata: { user_type: "agency", full_name: "Agency Team" },
+            },
+        ]);
+
+        queueEmail.mockResolvedValueOnce({ id: "email_1", sent: true, error: null });
+
+        const admin = createAdminClient({
+            workerRows: [
+                {
+                    profile_id: "worker_1",
+                    agency_id: null,
+                    submitted_email: "worker@validmail.com",
+                    phone: "+15550000001",
+                    updated_at: "2026-03-20T08:00:00.000Z",
+                },
+            ],
+        });
+
+        const result = await sendDocumentFixAnnouncementEmails({
+            admin: admin as never,
+            actorUserId: "admin_user",
+        });
+
+        expect(result.total).toBe(1);
+        expect(result.sent).toBe(1);
+        expect(result.failed).toBe(0);
+        expect(queueEmail).toHaveBeenCalledOnce();
+        expect(queueEmail).toHaveBeenCalledWith(
+            expect.anything(),
+            "worker_1",
+            "announcement_document_fix",
+            "worker@validmail.com",
+            "Ali Worker",
+            expect.objectContaining({
+                recipientRole: "worker",
+            })
+        );
+        expect(logServerActivity).toHaveBeenCalledOnce();
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "admin_user",
+            "admin_document_fix_announcement_sent",
+            "messaging",
+            expect.objectContaining({
+                audience: "workers",
+                template: "announcement_document_fix",
+                total: 1,
+                sent: 1,
+            }),
+            "ok"
+        );
     });
 });
