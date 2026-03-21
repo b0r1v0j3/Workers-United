@@ -260,7 +260,7 @@ export default async function AdminExceptionsPage() {
                                         title={entry.fullName}
                                         subtitle={`${entry.email} • ${entry.completion}% complete • ${entry.verifiedDocs}/3 verified docs`}
                                         chips={[entry.workerStatus.replace(/_/g, " "), "Ready to convert"]}
-                                        details="Admin approval is done. Case is now waiting only on Job Finder activation."
+                                        details="Admin approval is done. Case is now waiting only on Job Finder checkout."
                                         primaryHref={entry.workspaceHref}
                                         primaryLabel="Inspect worker"
                                         secondaryHref={entry.caseHref}

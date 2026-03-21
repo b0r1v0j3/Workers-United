@@ -4,6 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SignaturePad } from "@/components/SignaturePad";
+import {
+    getOfferCheckoutCta,
+    OFFER_CHECKOUT_HELP_TEXT,
+    OFFER_CHECKOUT_SUMMARY_LABEL,
+    OFFER_CHECKOUT_SUMMARY_VALUE,
+} from "@/lib/offer-checkout-copy";
 import { createClient } from "@/lib/supabase/client";
 
 interface OfferClientProps {
@@ -177,11 +183,11 @@ export default function OfferClient({ offer, workerRecord, isExpired, expiresAt 
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 bg-white border-[#1877f2] text-[#1877f2]">
                                 1
                             </div>
-                            <h3 className="text-lg font-bold text-[#050505]">Confirm & Pay</h3>
+                            <h3 className="text-lg font-bold text-[#050505]">Confirm & Continue</h3>
                         </div>
 
                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                            <p className="text-blue-800 text-sm font-medium mb-2">By paying the confirmation fee, you agree to:</p>
+                            <p className="text-blue-800 text-sm font-medium mb-2">By continuing to secure checkout, you agree to:</p>
                             <ul className="text-blue-800 text-sm space-y-1">
                                 <li>• Begin the visa application process</li>
                                 <li>• Provide all required documentation</li>
@@ -190,8 +196,8 @@ export default function OfferClient({ offer, workerRecord, isExpired, expiresAt 
                         </div>
 
                         <div className="flex items-center justify-between bg-[#f0f2f5] p-4 rounded-xl mb-4">
-                            <span className="text-[#65676b] font-medium">Confirmation Fee</span>
-                            <span className="text-2xl font-bold text-[#050505]">$190</span>
+                            <span className="text-[#65676b] font-medium">{OFFER_CHECKOUT_SUMMARY_LABEL}</span>
+                            <span className="text-lg text-right font-bold text-[#050505]">{OFFER_CHECKOUT_SUMMARY_VALUE}</span>
                         </div>
 
                         <button
@@ -205,12 +211,12 @@ export default function OfferClient({ offer, workerRecord, isExpired, expiresAt 
                                     Redirecting to payment...
                                 </span>
                             ) : (
-                                "Confirm & Pay $190"
+                                getOfferCheckoutCta("page")
                             )}
                         </button>
 
                         <p className="text-xs text-[#65676b] text-center mt-3">
-                            Payment is processed securely via Stripe. After payment you&apos;ll sign to finalize.
+                            {OFFER_CHECKOUT_HELP_TEXT} After payment you&apos;ll sign to finalize.
                         </p>
                     </div>
                 )}

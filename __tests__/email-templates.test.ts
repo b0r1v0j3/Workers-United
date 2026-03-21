@@ -41,6 +41,25 @@ describe('getEmailTemplate', () => {
         expect(html).toContain('Marko');
     });
 
+    it('welcome emails use checkout wording for worker and agency flows', () => {
+        const { html: workerHtml } = getEmailTemplate('welcome', {
+            name: 'Marko',
+            recipientRole: 'worker',
+        });
+        const { html: agencyHtml } = getEmailTemplate('welcome', {
+            name: 'Agency Owner',
+            recipientRole: 'agency',
+        });
+
+        expect(workerHtml).toContain('Open Job Finder Checkout');
+        expect(workerHtml).toContain('Complete the $9 service charge after approval');
+        expect(workerHtml).not.toContain('Activate Job Finder');
+
+        expect(agencyHtml).toContain('Open Checkout Per Case');
+        expect(agencyHtml).toContain('Open approved worker checkouts one by one');
+        expect(agencyHtml).not.toContain('Unlock Job Finder Per Case');
+    });
+
     it('profile_reminder includes todo list items', () => {
         const todoList = '<li>Upload Passport</li><li>Add Phone</li>';
         const { html } = getEmailTemplate('profile_reminder', {
@@ -102,6 +121,7 @@ describe('getEmailTemplate', () => {
             amount: '$9',
         });
         expect(html).toContain('$9');
+        expect(html).toContain('Job Finder service charge received successfully');
     });
 
     it('checkout_recovery step 3 explains that a fresh checkout is needed', () => {
@@ -179,8 +199,19 @@ describe('getEmailTemplate', () => {
             recoveryStep: 2,
         });
         expect(html).toContain('What You Need To Know');
-        expect(html).toContain('Job Finder activation');
+        expect(html).toContain('Job Finder checkout');
         expect(html).not.toContain('bank-card-back-side.png');
+    });
+
+    it('profile_complete keeps checkout as the post-approval payment step', () => {
+        const { html } = getEmailTemplate('profile_complete', {
+            name: 'Nikola',
+        });
+
+        expect(html).toContain('unlock Job Finder checkout in your dashboard');
+        expect(html).toContain('Job Finder checkout unlocks after approval');
+        expect(html).toContain('complete the $9 Job Finder checkout');
+        expect(html).not.toContain('activate the $9 service');
     });
 
     it('checkout recovery WhatsApp helper keeps payment as a post-approval final step', () => {
@@ -252,6 +283,7 @@ describe('getEmailTemplate', () => {
         });
         expect(html).toContain('Why This Matters');
         expect(html).toContain('required documents');
+        expect(html).toContain('unlock Job Finder checkout');
         expect(html).not.toContain('img.icons8.com');
     });
 
@@ -261,7 +293,7 @@ describe('getEmailTemplate', () => {
         });
         expect(html).toContain('Next Step');
         expect(html).toContain('admin review');
-        expect(html).toContain('Job Finder unlocks in your dashboard');
+        expect(html).toContain('Job Finder checkout opens in your dashboard');
         expect(html).not.toContain('join the hiring queue');
         expect(html).not.toContain('img.icons8.com');
     });

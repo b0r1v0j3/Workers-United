@@ -310,7 +310,7 @@ User (Browser)
 | `src/app/profile/worker/edit/` | Single-page profile edit form; app-layer state now uses `workerRecord` naming instead of local `candidate` aliases, while save path still reuses canonical worker lookup so an existing worker no longer inserts duplicate worker rows when drift already exists |
 | `src/app/profile/worker/documents/` | Document upload (passport, diploma, photo); the client flow now uses `workerProfileId` as the canonical prop for the worker document owner and verification/request-review payloads are fully workerId-first; also supports read-only admin inspect of the target worker documents |
 | `src/app/profile/worker/queue/` | Queue status page; also supports read-only admin inspect of the target worker payment/queue state |
-| `src/app/profile/worker/offers/[id]/` | Individual job offer details |
+| `src/app/profile/worker/offers/[id]/` | Individual job offer details; shared offer-checkout copy now keeps the page generic while secure checkout reveals the current placement amount |
 
 ### Auth & Redirect Flow
 | File | Role |
@@ -400,6 +400,7 @@ User (Browser)
 | `src/lib/stripe.ts` | Stripe client init |
 | `src/lib/stripe-payment-finalization.ts` | Shared Stripe post-payment/failure helpers; centralizes canonical amount mapping, completed checkout payment upsert by `payment_id/session_id`, duplicate-insert recovery, metadata merge/update by payment/session reference (including pending-only checkout expiry updates), entry-fee worker queue activation, deduped `payment_success` email send, and canonical activity payload builders for both direct and agency-managed worker payment events |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
+| `src/lib/offer-checkout-copy.ts` | Shared worker offer-confirmation checkout copy so queue cards and offer pages use the same generic CTA/summary text instead of hardcoded placement amounts |
 | `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals, and worker inbox unlock stays open for already-activated `entry_fee_paid / job_search_active / queue_joined_at` workers |
 | `src/lib/admin-exceptions.ts` | Shared technical exception snapshot helper used by the internal ops screens and the ops-first daily monitor; centralizes invalid-email, checkout drift, manual review, pending admin approval, worker readiness, queue/payment mismatch, open-demand-without-offers signals, and now a 24h WhatsApp quality snapshot (`guarded`, `language fallback`, `deterministic`, `auto handoff`, `media fallback`, `openai failure`) for `/internal/ops` |
 | `src/lib/ops-monitor.ts` | Deterministic ops monitor builder + email renderer; turns route health, `opsSnapshot`, WhatsApp confusion/platform failures, outbound WhatsApp message-log failures, document backlog/rejections, email hygiene, payment drift, and auth drift into a compact scored report |

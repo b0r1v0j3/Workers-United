@@ -506,8 +506,8 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                             description: "We review the completed case",
                         },
                         {
-                            title: "4. Activate Job Finder",
-                            description: "Unlock the $9 search after approval",
+                            title: "4. Open Job Finder Checkout",
+                            description: "Complete the $9 service charge after approval",
                         },
                     ],
                 },
@@ -558,8 +558,8 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                             description: "Prepare each worker case for review",
                         },
                         {
-                            title: "4. Unlock Job Finder Per Case",
-                            description: "Activate approved worker cases one by one",
+                            title: "4. Open Checkout Per Case",
+                            description: "Open approved worker checkouts one by one",
                         },
                     ],
                 },
@@ -598,21 +598,21 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     ${renderIconHero("success", `Congratulations, ${firstName}!`, "Your profile is now 100% complete.")}
 
                     <p style="margin-top: 30px; color: #1D1D1F; text-align: center;">
-                        Your profile and required documents are now ready for admin review. We will check everything and unlock Job Finder as soon as your case is approved.
+                        Your profile and required documents are now ready for admin review. We will check everything and unlock Job Finder checkout in your dashboard as soon as your case is approved.
                     </p>
                     
                     ${renderDarkPanel("What Happens Next", `
                         1. Admin reviews your profile
                         <br>
-                        2. Job Finder unlocks after approval
+                        2. Job Finder checkout unlocks after approval
                         <br>
-                        3. You can then activate the $9 service
+                        3. You can then complete the $9 Job Finder checkout
                     `)}
 
                     ${renderChecklistCard("While You Wait", [
                         "Your profile is now in the admin review queue",
                         "We will notify you as soon as approval is complete",
-                        "No payment is needed until Job Finder is officially unlocked",
+                        "No payment is needed until Job Finder checkout is officially unlocked",
                     ])}
                     
                     <div style="text-align:center; margin-top:30px;">
@@ -644,7 +644,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     `)}
 
                     ${renderChecklistCard("Current Status", [
-                        `<strong>${amount}</strong> entry fee received successfully`,
+                        `<strong>${amount}</strong> Job Finder service charge received successfully`,
                         "Your Job Finder search is active",
                         "Your in-platform support inbox remains available during the queue stage",
                     ])}
@@ -663,13 +663,13 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             const amount = escapeHtml(data.amount || "$9");
 
             const recoverySubjectMap: Record<1 | 2 | 3, string> = {
-                1: "Finish activating Job Finder",
-                2: "Your Job Finder activation is still waiting",
+                1: "Finish your Job Finder checkout",
+                2: "Your Job Finder checkout is still waiting",
                 3: "Your previous Job Finder checkout expired",
             };
 
             const recoveryTitleMap: Record<1 | 2 | 3, string> = {
-                1: "Finish your Job Finder activation",
+                1: "Finish your Job Finder checkout",
                 2: "You're one step away from entering the queue",
                 3: "Open a fresh checkout and continue",
             };
@@ -697,7 +697,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
                     <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
                         <div style="font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:15px;">
-                            Job Finder activation
+                            Job Finder checkout
                         </div>
                         <div style="font-size:48px; font-weight:800; color:#FFFFFF; letter-spacing:-1.5px; margin-bottom:15px; line-height:1;">
                             ${amount}
@@ -720,7 +720,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                             Open dashboard
                         </a>
                     </div>
-                `, "Finish your activation", recoverySubjectMap[recoveryStep])
+                `, "Finish your checkout", recoverySubjectMap[recoveryStep])
             };
         }
 
@@ -1044,7 +1044,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                          </div>
                     </div>
 
-                    ${renderLightPanel("Why This Matters", "Your profile and required documents have to be complete before we can send the case to admin review and eventually unlock Job Finder.")}
+                    ${renderLightPanel("Why This Matters", "Your profile and required documents have to be complete before we can send the case to admin review and eventually unlock Job Finder checkout.")}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "setup")}" style="${buttonStyle}">
@@ -1144,7 +1144,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Your profile is waiting for you. You can now securely upload your documents and complete the missing verification steps so we can move your case back into admin review.
                     </p>
 
-                    ${renderLightPanel("Next Step", "Return to your dashboard, upload the missing documents, and we will resume your case from there. Once everything is complete and approved, Job Finder unlocks in your dashboard.")}
+                    ${renderLightPanel("Next Step", "Return to your dashboard, upload the missing documents, and we will resume your case from there. Once everything is complete and approved, Job Finder checkout opens in your dashboard.")}
                     
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "documents")}" style="${buttonStyle}">

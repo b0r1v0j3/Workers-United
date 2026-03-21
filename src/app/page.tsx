@@ -24,7 +24,7 @@ export default function Home() {
   const workerProcessSteps = [
     "Create your account, complete your profile, and upload the required documents so we can open your case properly.",
     "Once everything is complete, we review the case and unlock Job Finder checkout after admin approval.",
-    "After you activate Job Finder, we search for the right employer match and stay ready for the next real opening.",
+    "After your Job Finder checkout is complete, we search for the right employer match and stay ready for the next real opening.",
     "When we secure the job, we handle contracts, documents, and the full visa submission process.",
     "After visa approval, we coordinate your travel and prepare the final handover.",
     "We welcome you on arrival and stay with you through onboarding, legal stay, and residence extensions.",

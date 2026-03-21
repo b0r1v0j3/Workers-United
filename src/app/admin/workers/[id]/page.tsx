@@ -348,7 +348,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     const manualStatusDefault = manualStatusOptions.includes(workerStatus as any) ? workerStatus : (manualStatusOptions[0] ?? "NEW");
     const manualStatusLockedByLifecycle = hasPaidEntryFee || jobSearchActive || workerStatus === "REFUND_FLAGGED" || isPostEntryFeeWorkerStatus(workerStatus);
     const manualStatusLockCopy = manualStatusLockedByLifecycle
-        ? "Manual status override is locked because queue, offer, visa, and refund states are system-managed after Job Finder activation."
+        ? "Manual status override is locked because queue, offer, visa, and refund states are system-managed after Job Finder checkout starts."
         : "Manual status override is unavailable for this case. Only unpaid pre-payment administrative states can be changed manually.";
     const approvalStateLabel = isAdminApproved ? "Approved" : "Pending";
     const workspaceInspectHref = isAgencyDraft && agencyRecord?.profile_id

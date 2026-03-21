@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminTestSession, getAdminTestWorkspaceHref } from "@/lib/admin-test-mode";
 import { getAdminTestWorkerWorkspace } from "@/lib/admin-test-data";
+import { getOfferCheckoutCta } from "@/lib/offer-checkout-copy";
 import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
@@ -308,7 +309,7 @@ export default async function QueuePage({
                                         Start Searching for Jobs
                                     </h3>
                                     <p className="text-gray-500 text-sm mt-2 leading-relaxed max-w-md mx-auto">
-                                        Pay a one-time $9 fee to join our active worker queue. We&apos;ll find you a job in Europe.
+                                        Complete the $9 Job Finder service charge to enter our active worker queue. We&apos;ll start matching your profile with real employer demand in Europe.
                                     </p>
                                 </div>
                                 {isAdminPreview ? (
@@ -473,8 +474,8 @@ function LockedEntryFeeState({
                 </h3>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
                     {pendingAdminReview
-                        ? "Your profile and required documents are complete. An admin still needs to approve them before Job Finder payment unlocks."
-                        : "The Job Finder payment card stays locked until your worker profile and required documents are complete."}
+                        ? "Your profile and required documents are complete. An admin still needs to approve them before Job Finder checkout unlocks."
+                        : "The Job Finder checkout stays locked until your worker profile and required documents are complete, and admin approval unlocks it."}
                 </p>
             </div>
 
@@ -488,12 +489,12 @@ function LockedEntryFeeState({
                         {pendingAdminReview ? "Pending review" : `${profileCompletion}% complete`}
                     </div>
                     <p className="text-lg font-semibold tracking-tight text-gray-900">
-                        {pendingAdminReview ? "Admin review required" : "Complete profile to unlock"}
+                        {pendingAdminReview ? "Admin review required" : "Complete profile to unlock checkout"}
                     </p>
                     <p className="max-w-[220px] text-xs leading-relaxed text-gray-600">
                         {pendingAdminReview
-                            ? "Job Finder unlocks automatically after an admin approves this complete worker profile and document set."
-                            : "Finish your required worker details and uploaded documents to unlock Job Finder."}
+                            ? "Job Finder checkout opens automatically after an admin approves this complete worker profile and document set."
+                            : "Finish your required worker details and uploaded documents so admin review can unlock Job Finder checkout."}
                     </p>
                 </div>
             </div>
@@ -502,11 +503,11 @@ function LockedEntryFeeState({
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
                     {pendingAdminReview
                         ? "Preview only. This worker is complete and still waiting for admin approval."
-                        : "Preview only. The card unlocks automatically once this worker profile and document set are complete."}
+                        : "Preview only. Job Finder checkout opens once this worker profile and document set are complete and approved."}
                 </div>
             ) : pendingAdminReview ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                    Profile and required documents complete. We will unlock Job Finder after the admin approval step.
+                    Profile and required documents complete. We will unlock Job Finder checkout after the admin approval step.
                 </div>
             ) : (
                 <Link
@@ -520,7 +521,7 @@ function LockedEntryFeeState({
 
             <div className="mx-auto flex max-w-sm items-start justify-center gap-1.5 px-1 text-center text-[11px] font-medium leading-relaxed text-gray-500 sm:items-center sm:text-xs">
                 <Shield size={14} className="mt-0.5 shrink-0 text-gray-400 sm:mt-0" />
-                <span className="min-w-0">{helperText || (pendingAdminReview ? "The profile is already complete and waiting for admin approval." : `${missingCopy}. The payment card unlocks as soon as the profile hits 100%.`)}</span>
+                <span className="min-w-0">{helperText || (pendingAdminReview ? "The profile is already complete and waiting for admin approval." : `${missingCopy}. Job Finder checkout unlocks only after the profile, required documents, and admin approval are complete.`)}</span>
             </div>
         </div>
     );
@@ -630,7 +631,7 @@ function OfferCard({ offer, readOnlyPreview = false }: {
                     href={`/profile/worker/offers/${offer.id}`}
                     className="block text-center bg-[#1877f2] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#166fe5] transition-colors shadow-sm w-full"
                 >
-                    Confirm Offer - Pay $190
+                    {getOfferCheckoutCta("card")}
                 </Link>
             )}
         </div>
