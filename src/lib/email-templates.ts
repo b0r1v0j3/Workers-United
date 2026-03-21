@@ -630,7 +630,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                             description: "We search verified worker cases for you",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/passport-control.png",
+                            icon: "https://img.icons8.com/ios/50/000000/visa.png",
                             title: "4. We Handle Legal Steps",
                             description: "Contracts, visa workflow, and arrival coordination",
                         },
@@ -1026,7 +1026,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                             description: "Keeping required documents current helps us avoid delays when your case reaches a live employer.",
                         },
                         {
-                            icon: "https://img.icons8.com/ios/50/000000/passport-control.png",
+                            icon: "https://img.icons8.com/ios/50/000000/visa.png",
                             title: "Stay Ready For Visa Processing",
                             description: "Updated files keep your case usable for the next visa-processing step.",
                         },
