@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const authGetUser = vi.fn();
 const profileMaybeSingle = vi.fn();
 const documentMaybeSingle = vi.fn();
+const documentUpdateWhereEq = vi.fn();
 const documentUpdateEq = vi.fn();
 const targetProfileMaybeSingle = vi.fn();
 const logServerActivity = vi.fn();
@@ -41,9 +42,16 @@ vi.mock("@/lib/supabase/admin", () => ({
                             }),
                         }),
                     }),
-                    update: () => ({
-                        eq: documentUpdateEq,
-                    }),
+                    update: () => {
+                        const chain = {
+                            eq: documentUpdateWhereEq.mockImplementation(() => ({
+                                select: vi.fn(() => ({
+                                    maybeSingle: documentUpdateEq,
+                                })),
+                            })),
+                        };
+                        return chain;
+                    },
                 };
             }
 
@@ -115,6 +123,7 @@ describe("POST /api/documents/request-review", () => {
             error: null,
         });
         documentUpdateEq.mockResolvedValue({
+            data: { id: "doc-1" },
             error: null,
         });
         targetProfileMaybeSingle.mockResolvedValue({
@@ -153,7 +162,7 @@ describe("POST /api/documents/request-review", () => {
             adminAlertStatus: "failed",
             adminAlertError: "email_queue insert failed",
         });
-        expect(documentUpdateEq).toHaveBeenCalledWith("id", "doc-1");
+        expect(documentUpdateWhereEq).toHaveBeenCalledWith("id", "doc-1");
     });
 
     it("keeps document success but surfaces thrown admin alert errors", async () => {
@@ -178,5 +187,29 @@ describe("POST /api/documents/request-review", () => {
             adminAlertError: "smtp exploded",
         });
         expect(logServerActivity).toHaveBeenCalledOnce();
+    });
+
+    it("fails closed when the manual_review update matches zero rows", async () => {
+        documentUpdateEq.mockResolvedValueOnce({
+            data: null,
+            error: null,
+        });
+
+        const { POST } = await import("@/app/api/documents/request-review/route");
+        const response = await POST(new Request("http://localhost/api/documents/request-review", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                docType: "passport",
+            }),
+        }));
+        const payload = await response.json();
+
+        expect(response.status).toBe(404);
+        expect(payload).toEqual({ error: "Document not found" });
+        expect(logServerActivity).not.toHaveBeenCalled();
+        expect(queueEmail).not.toHaveBeenCalled();
     });
 });
