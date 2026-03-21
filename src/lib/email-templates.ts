@@ -495,11 +495,11 @@ export function getCheckoutRecoveryStatusMessage(step: number | undefined, amoun
 
     switch (step) {
         case 2:
-            return `Your ${safeAmount} Job Finder payment is still waiting. Your profile, required documents, and admin review already unlocked this final checkout step. Return to your Workers United dashboard to finish payment, enter the active queue, and open your support inbox there.`;
+            return `Your ${safeAmount} Job Finder payment is still waiting. Your profile, required documents, and admin review already unlocked this final checkout step. Return to your Workers United dashboard to finish payment and enter the active queue.`;
         case 3:
             return `Your previous ${safeAmount} Job Finder checkout expired. Your profile, required documents, and admin review are still in place, so open your Workers United dashboard to start a fresh checkout and continue where you left off.`;
         default:
-            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Your profile, required documents, and admin review already unlocked this final payment step. Return to your Workers United dashboard to finish payment, enter the active queue, and open your support inbox there.`;
+            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Your profile, required documents, and admin review already unlocked this final payment step. Return to your Workers United dashboard to finish payment and enter the active queue.`;
     }
 }
 

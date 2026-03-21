@@ -225,12 +225,12 @@ describe('getEmailTemplate', () => {
         expect(stepOneMessage).toContain('required documents');
         expect(stepOneMessage).toContain('admin review');
         expect(stepOneMessage).toContain('enter the active queue');
-        expect(stepOneMessage).toContain('open your support inbox there');
+        expect(stepOneMessage).not.toContain('support inbox');
         expect(stepOneMessage).not.toContain('activate job search');
 
         expect(stepTwoMessage).toContain('required documents');
         expect(stepTwoMessage).toContain('admin review');
-        expect(stepTwoMessage).toContain('open your support inbox there');
+        expect(stepTwoMessage).not.toContain('support inbox');
         expect(stepTwoMessage).not.toContain('activate job search and unlock support');
     });
 
