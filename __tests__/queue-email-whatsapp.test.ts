@@ -162,6 +162,46 @@ describe("queueEmail WhatsApp sidecar", () => {
         });
     });
 
+    it("keeps checkout_recovery status-update sidecar focused on checkout completion instead of support unlock", async () => {
+        const supabase = createSupabaseMock();
+        whatsappMocks.sendRoleStatusUpdate.mockResolvedValueOnce({ success: true, messageId: "wamid_recovery_1" });
+
+        const result = await queueEmail(
+            supabase as never,
+            "worker-1",
+            "checkout_recovery",
+            "worker@example.com",
+            "Worker One",
+            {
+                recoveryStep: 2,
+                amount: "$9",
+                recipientRole: "worker",
+            },
+            undefined,
+            "+381601234567"
+        );
+
+        expect(whatsappMocks.sendRoleStatusUpdate).toHaveBeenCalledWith(
+            "+381601234567",
+            "Worker",
+            expect.stringContaining("finish payment and enter the active queue"),
+            "worker",
+            "worker-1"
+        );
+        expect(whatsappMocks.sendRoleStatusUpdate).toHaveBeenCalledWith(
+            "+381601234567",
+            "Worker",
+            expect.not.stringContaining("support inbox"),
+            "worker",
+            "worker-1"
+        );
+        expect(result.whatsapp).toMatchObject({
+            attempted: true,
+            sent: true,
+            messageId: "wamid_recovery_1",
+        });
+    });
+
     it("fails closed and skips the WhatsApp sidecar when email_queue insert fails", async () => {
         const supabase = createSupabaseMock({ insertError: "duplicate key value violates unique constraint" });
 
