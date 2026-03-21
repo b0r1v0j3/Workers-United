@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { hasValidCronBearerToken } from '@/lib/cron-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { queueEmail } from '@/lib/email-templates';
+import { isEmailDeliveryAccepted } from '@/lib/email-queue';
 import { buildPlatformUrl } from '@/lib/platform-contact';
 
 // Config
@@ -23,12 +24,17 @@ export async function GET(request: Request) {
         // BUG-002 fix: Distributed lock — skip if last job_match email was sent < 5 min ago
         // This prevents duplicate emails from concurrent Vercel cron retries
         const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const { data: recentRun } = await supabase
+        const { data: recentRun, error: recentRunError } = await supabase
             .from("email_queue")
             .select("id")
             .eq("email_type", "job_match")
             .gte("created_at", fiveMinAgo)
             .limit(1);
+
+        if (recentRunError) {
+            console.error("[Job Match] Error checking recent run lock:", recentRunError);
+            return NextResponse.json({ error: recentRunError.message }, { status: 500 });
+        }
 
         if (recentRun && recentRun.length > 0) {
             return NextResponse.json({
@@ -88,15 +94,22 @@ export async function GET(request: Request) {
 
         let totalMatches = 0;
         let emailsSent = 0;
+        let emailsQueued = 0;
         let emailFailures = 0;
+        let matchFailures = 0;
 
         // Pre-fetch active offers for dedup (workerRecordId|jobId)
         const jobIds = openJobs.map(j => j.id);
-        const { data: activeOffers } = await supabase
+        const { data: activeOffers, error: activeOffersError } = await supabase
             .from("offers")
             .select("worker_id, job_request_id, status")
             .in("job_request_id", jobIds)
             .in("status", ["pending", "accepted"]);
+
+        if (activeOffersError) {
+            console.error("[Job Match] Error fetching active offers:", activeOffersError);
+            return NextResponse.json({ error: activeOffersError.message }, { status: 500 });
+        }
 
         const activeOfferKeys = new Set<string>();
         const matchedWorkerRecordIds = new Set<string>();
@@ -165,10 +178,34 @@ export async function GET(request: Request) {
                     continue;
                 }
 
-                await supabase
+                const { error: workerStatusError } = await supabase
                     .from("worker_onboarding")
                     .update({ status: "OFFER_PENDING" })
                     .eq("id", workerRow.id);
+
+                if (workerStatusError) {
+                    matchFailures++;
+                    console.error("[Job Match] Failed to mark worker as OFFER_PENDING; rolling back offer:", {
+                        workerId: workerRow.id,
+                        offerId: offer.id,
+                        error: workerStatusError.message,
+                    });
+
+                    const { error: rollbackError } = await supabase
+                        .from("offers")
+                        .delete()
+                        .eq("id", offer.id);
+
+                    if (rollbackError) {
+                        console.error("[Job Match] Failed to roll back offer after worker status update failure:", {
+                            workerId: workerRow.id,
+                            offerId: offer.id,
+                            error: rollbackError.message,
+                        });
+                    }
+
+                    continue;
+                }
 
                 // E. Send notification with real offer link
                 const emailResult = await queueEmail(
@@ -189,6 +226,8 @@ export async function GET(request: Request) {
 
                 if (emailResult.sent) {
                     emailsSent++;
+                } else if (isEmailDeliveryAccepted(emailResult)) {
+                    emailsQueued++;
                 } else {
                     emailFailures++;
                     console.warn("[Job Match] Offer email queue/send failed:", {
@@ -208,10 +247,12 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
             success: true,
-            message: `Processed matching. Sent ${emailsSent} notifications.${emailFailures > 0 ? ` ${emailFailures} failed.` : ""}`,
+            message: `Processed matching. Sent ${emailsSent} notifications${emailsQueued > 0 ? ` and queued ${emailsQueued} for retry` : ""}.${emailFailures > 0 ? ` ${emailFailures} email notifications failed.` : ""}${matchFailures > 0 ? ` ${matchFailures} matches were rolled back.` : ""}`,
             matches: totalMatches,
             emails_sent: emailsSent,
+            emails_queued: emailsQueued,
             email_failures: emailFailures,
+            match_failures: matchFailures,
         });
 
     } catch (error) {
