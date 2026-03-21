@@ -157,7 +157,8 @@ describe('getEmailTemplate', () => {
         });
         expect(subject).toContain('Warehouse Worker');
         expect(html).toContain('Offer Expired');
-        expect(html).toContain('queue position');
+        expect(html).toContain('You Stay In The Queue');
+        expect(html).toContain('Current Queue Position');
         expect(html).toContain('#7');
     });
 
@@ -186,7 +187,8 @@ describe('getEmailTemplate', () => {
             amount: '$9',
         });
         expect(html).toContain('What Happens Next');
-        expect(html).toContain('Current Status');
+        expect(html).toContain('Queue Matching Is Active');
+        expect(html).toContain('Support Stays Open');
         expect(html).toContain('Stay connected');
         expect(html).toContain('facebook-new.png');
     });
@@ -197,7 +199,8 @@ describe('getEmailTemplate', () => {
             amount: '$9',
             recoveryStep: 2,
         });
-        expect(html).toContain('What You Need To Know');
+        expect(html).toContain('What Stays In Place');
+        expect(html).toContain('Your Profile Stays Saved');
         expect(html).toContain('Job Finder checkout');
         expect(html).not.toContain('bank-card-back-side.png');
     });
@@ -208,8 +211,8 @@ describe('getEmailTemplate', () => {
         });
 
         expect(html).toContain('unlock Job Finder checkout in your dashboard');
-        expect(html).toContain('Job Finder checkout unlocks after approval');
-        expect(html).toContain('complete the $9 Job Finder checkout');
+        expect(html).toContain('Checkout Unlocks After Approval');
+        expect(html).toContain('The $9 Job Finder checkout appears in your dashboard only after approval.');
         expect(html).not.toContain('activate the $9 service');
     });
 
@@ -237,7 +240,7 @@ describe('getEmailTemplate', () => {
         expect(subject).toBe('Your Biometric Photo Has Been Approved');
         expect(html).toContain('Biometric Photo Approved');
         expect(html).toContain('What Happens Next');
-        expect(html).toContain('Current Status');
+        expect(html).toContain('This Document Is Verified');
         expect(html).not.toContain('#d1fae5');
         expect(html).not.toContain('Continue Registration');
         expect(html).not.toContain('checked.png');
@@ -280,8 +283,9 @@ describe('getEmailTemplate', () => {
             name: 'Nikola',
             missingFields: 'Phone number, passport upload',
         });
-        expect(html).toContain('Why This Matters');
-        expect(html).toContain('required documents');
+        expect(html).toContain('What Needs To Happen');
+        expect(html).toContain('Admin Review Comes Next');
+        expect(html).toContain('Upload Every Required Document');
         expect(html).toContain('unlock Job Finder checkout');
         expect(html).toContain('box-important--v1.png');
     });
@@ -290,7 +294,8 @@ describe('getEmailTemplate', () => {
         const { html } = getEmailTemplate('announcement_document_fix', {
             name: 'Nikola',
         });
-        expect(html).toContain('Next Step');
+        expect(html).toContain('What Happens Next');
+        expect(html).toContain('Checkout Opens After Approval');
         expect(html).toContain('admin review');
         expect(html).toContain('Job Finder checkout opens in your dashboard');
         expect(html).not.toContain('join the hiring queue');
