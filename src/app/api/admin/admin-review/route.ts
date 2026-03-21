@@ -187,8 +187,9 @@ async function handleStructuredFormAction(
             });
         }
 
+        let notificationResult: Awaited<ReturnType<typeof queueEmail>> | null = null;
         if ((status === "verified" || status === "rejected") && userProfile?.email && notificationProfileId) {
-            await queueEmail(
+            notificationResult = await queueEmail(
                 admin,
                 notificationProfileId,
                 "document_review_result",
@@ -203,7 +204,13 @@ async function handleStructuredFormAction(
         }
 
         revalidatePath(redirectTo);
-        return redirectWithAction(request, redirectTo, "updated");
+        return redirectWithAction(
+            request,
+            redirectTo,
+            "updated",
+            undefined,
+            getEmailNotificationResult(notificationResult, userProfile?.email, notificationProfileId)
+        );
     }
 
     if (mode === "request_new_document" || mode === "delete_document") {
