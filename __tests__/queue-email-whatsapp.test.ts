@@ -187,4 +187,66 @@ describe("queueEmail WhatsApp sidecar", () => {
         expect(sendEmail).not.toHaveBeenCalled();
         expect(whatsappMocks.sendRoleWelcome).not.toHaveBeenCalled();
     });
+
+    it("skips the WhatsApp sidecar when email delivery fails terminally", async () => {
+        const supabase = createSupabaseMock();
+        sendEmail.mockResolvedValueOnce({
+            success: false,
+            error: "smtp hard failure",
+        });
+
+        const result = await queueEmail(
+            supabase as never,
+            "worker-1",
+            "welcome",
+            "worker@example.com",
+            "Worker One",
+            { recipientRole: "worker" },
+            undefined,
+            "+381601234567"
+        );
+
+        expect(result).toMatchObject({
+            id: "email-1",
+            sent: false,
+            queued: false,
+            status: "failed",
+            error: "smtp hard failure",
+            whatsapp: null,
+        });
+        expect(whatsappMocks.sendRoleWelcome).not.toHaveBeenCalled();
+    });
+
+    it("still allows the WhatsApp sidecar when email is accepted for retry", async () => {
+        const supabase = createSupabaseMock();
+        sendEmail.mockResolvedValueOnce({
+            success: false,
+            error: "421 temporary failure",
+        });
+
+        const result = await queueEmail(
+            supabase as never,
+            "worker-1",
+            "welcome",
+            "worker@example.com",
+            "Worker One",
+            { recipientRole: "worker" },
+            undefined,
+            "+381601234567"
+        );
+
+        expect(result).toMatchObject({
+            id: "email-1",
+            sent: false,
+            queued: true,
+            status: "queued_retry",
+            error: "421 temporary failure",
+        });
+        expect(result.whatsapp).toMatchObject({
+            attempted: true,
+            sent: true,
+            messageId: "wamid_1",
+        });
+        expect(whatsappMocks.sendRoleWelcome).toHaveBeenCalledOnce();
+    });
 });

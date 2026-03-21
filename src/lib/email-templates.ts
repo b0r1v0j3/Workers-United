@@ -1,6 +1,6 @@
 // Email templates for Workers United
 import { normalizeUserType, type CanonicalUserType } from "@/lib/domain";
-import { attachEmailQueueMeta, processQueuedEmailRecord, type EmailQueueDeliveryResult } from "@/lib/email-queue";
+import { attachEmailQueueMeta, isEmailDeliveryAccepted, processQueuedEmailRecord, type EmailQueueDeliveryResult } from "@/lib/email-queue";
 import { buildPlatformUrl, buildPlatformWhatsAppUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { escapeHtml } from "@/lib/sanitize";
 
@@ -1233,10 +1233,11 @@ export async function queueEmail(
             template_data: queueTemplateData,
             scheduled_for: data.scheduled_for,
         });
+        deliveryResult.whatsapp = deliveryResult.whatsapp ?? null;
     }
 
     // Also send WhatsApp template if phone provided
-    if (recipientPhone && !scheduledFor && userId && deliveryResult.id) {
+    if (recipientPhone && !scheduledFor && userId && deliveryResult.id && isEmailDeliveryAccepted(deliveryResult)) {
         let whatsappSidecarResult: QueueEmailWhatsAppResult | null = null;
         try {
             const wa = await import("@/lib/whatsapp");
