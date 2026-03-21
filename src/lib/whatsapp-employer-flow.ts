@@ -186,7 +186,7 @@ ${buildEmployerWhatsAppRules({
 export function getEmployerWhatsAppDefaultReply(language: string): string {
     switch (resolveWhatsAppLanguageCode(language, language)) {
         case "sr":
-            return "Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike — besplatno za poslodavce. Kako mogu da Vam pomognem?";
+            return "Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu radnike — besplatno za poslodavce. Kako mogu da Vam pomognem?";
         case "ar":
             return "مرحبًا! أنا مساعد Workers United على WhatsApp. نساعد الشركات في توظيف عمال دوليين — مجانًا تمامًا لأصحاب العمل. كيف يمكنني مساعدتك؟";
         case "fr":
@@ -196,7 +196,7 @@ export function getEmployerWhatsAppDefaultReply(language: string): string {
         case "hi":
             return "नमस्ते! मैं Workers United का WhatsApp assistant हूँ। हम कंपनियों को international workers hire करने में मदद करते हैं — employers के लिए पूरी तरह free। मैं आपकी कैसे मदद कर सकता हूँ?";
         default:
-            return "Hi! I'm the Workers United WhatsApp assistant. We help companies hire foreign workers — completely free for employers. How can I help you?";
+            return "Hi! I'm the Workers United WhatsApp assistant. We help companies hire international workers — completely free for employers. How can I help you?";
     }
 }
 
@@ -204,7 +204,7 @@ export function getEmployerWhatsAppErrorReply(language: string, platform?: Emplo
     const { websiteUrl, supportEmail } = resolveEmployerPlatformContact(platform);
     switch (resolveWhatsAppLanguageCode(language, language)) {
         case "sr":
-            return `Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu strane radnike besplatno. Pišite nam na ${supportEmail} ili posetite ${websiteUrl}.`;
+            return `Zdravo! Ja sam WhatsApp asistent Workers United. Pomažemo kompanijama da pronađu radnike besplatno. Pišite nam na ${supportEmail} ili posetite ${websiteUrl}.`;
         case "ar":
             return `مرحبًا! أنا مساعد Workers United. نساعد الشركات على توظيف عمال دوليين مجانًا. راسلنا على ${supportEmail} أو زر ${websiteUrl}.`;
         case "fr":
@@ -214,7 +214,7 @@ export function getEmployerWhatsAppErrorReply(language: string, platform?: Emplo
         case "hi":
             return `नमस्ते! मैं Workers United का assistant हूँ। हम कंपनियों को international workers free में hire करने में मदद करते हैं। हमें ${supportEmail} पर लिखिए या ${websiteUrl} पर जाइए।`;
         default:
-            return `Hi! I'm the Workers United assistant. We help companies hire foreign workers for free. Contact us at ${supportEmail} or visit ${websiteUrl}.`;
+            return `Hi! I'm the Workers United assistant. We help companies hire international workers for free. Contact us at ${supportEmail} or visit ${websiteUrl}.`;
     }
 }
 
@@ -222,7 +222,7 @@ export function getEmployerWhatsAppStaticReply(language: string, platform?: Empl
     const { signupUrl } = resolveEmployerPlatformContact(platform);
     switch (resolveWhatsAppLanguageCode(language, language)) {
         case "sr":
-            return `Zdravo! Workers United pomaže kompanijama da pronađu strane radnike — besplatno za poslodavce. Registrujte se na ${signupUrl}.`;
+            return `Zdravo! Workers United pomaže kompanijama da pronađu radnike — besplatno za poslodavce. Registrujte se na ${signupUrl}.`;
         case "ar":
             return `مرحبًا! تساعد Workers United الشركات على توظيف عمال دوليين — مجانًا لأصحاب العمل. سجّل على ${signupUrl}.`;
         case "fr":
@@ -232,6 +232,6 @@ export function getEmployerWhatsAppStaticReply(language: string, platform?: Empl
         case "hi":
             return `नमस्ते! Workers United कंपनियों को international workers hire करने में मदद करता है — employers के लिए free। ${signupUrl} पर register कीजिए।`;
         default:
-            return `Hi! Workers United helps companies hire foreign workers — free for employers. Register at ${signupUrl}.`;
+            return `Hi! Workers United helps companies hire international workers — free for employers. Register at ${signupUrl}.`;
     }
 }

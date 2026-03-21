@@ -320,6 +320,22 @@ describe("whatsapp-brain guards", () => {
         expect(reply).not.toContain("payment link");
     });
 
+    it("keeps advanced paid worker status replies specific instead of flattening them to generic payment copy", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "What is my status?",
+            language: "English",
+            intent: "status",
+            workerStatus: "OFFER_PENDING",
+            adminApproved: true,
+            entryFeePaid: true,
+            queueJoinedAt: "2026-03-20T10:00:00.000Z",
+        });
+
+        expect(reply).toContain("offer stage");
+        expect(reply).not.toContain("payment is recorded");
+        expect(reply).not.toContain("next active flow");
+    });
+
     it("answers registered worker support requests without inventing a handoff", () => {
         const reply = buildRegisteredWorkerWhatsAppReply({
             message: "Imam problem sa uplatom",
@@ -368,6 +384,20 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("admin approves it");
     });
 
+    it("describes the registered worker process with dashboard checkout wording", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "How does the process work?",
+            language: "English",
+            intent: "job_intent",
+            workerStatus: "PENDING_APPROVAL",
+            adminApproved: false,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("Job Finder checkout unlocks in the dashboard");
+        expect(reply).not.toContain("Job Finder activation");
+    });
+
     it("keeps registered-worker greetings warm instead of jumping straight into process instructions", () => {
         const reply = buildRegisteredWorkerWhatsAppReply({
             message: "Zdravo kako si danas",
@@ -381,6 +411,20 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("Ja sam Workers United AI asistent");
         expect(reply).toContain("šta želite da proverimo");
         expect(reply).not.toContain("Prvi korak");
+    });
+
+    it("describes the worker journey as checkout unlock instead of Job Finder activation", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "How does it work?",
+            language: "English",
+            intent: "job_intent",
+            workerStatus: "NEW",
+            adminApproved: false,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("checkout unlocks");
+        expect(reply).not.toContain("Job Finder activation");
     });
 
     it("confirms the requested language for registered workers before continuing", () => {

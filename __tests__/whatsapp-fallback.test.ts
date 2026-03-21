@@ -195,4 +195,19 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("Position dans la file: #4.");
         expect(reply).not.toContain("PENDING_APPROVAL");
     });
+
+    it("localizes advanced paid worker statuses instead of exposing raw enums", async () => {
+        const reply = await getWhatsAppFallbackResponse("Quel est le statut ?", {
+            status: "VISA_PROCESS_STARTED",
+            queue_position: null,
+            entry_fee_paid: true,
+            admin_approved: true,
+            queue_joined_at: "2026-03-20T10:00:00.000Z",
+        }, {
+            full_name: "Ali Worker",
+        }, "French");
+
+        expect(reply).toContain("procédure de visa en cours");
+        expect(reply).not.toContain("VISA_PROCESS_STARTED");
+    });
 });
