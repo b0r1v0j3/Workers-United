@@ -139,7 +139,7 @@ export default function DashboardClient({
             toast.success(
                 entryFeeUnlockState.reason === "ready"
                     ? "Profile and documents complete! You can now open Job Finder checkout."
-                    : "Profile and documents complete! Your case is now waiting for admin review before Job Finder unlocks."
+                    : "Profile and documents complete! Your case is now waiting for admin review before Job Finder checkout opens."
             );
             sessionStorage.setItem("celebrated_profile", "true");
         }
@@ -209,7 +209,7 @@ export default function DashboardClient({
                                         Complete Your Profile
                                     </h3>
                                     <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
-                                        Finish all required profile details and upload the required documents so we can send your case to admin review. Job Finder unlocks only after everything is complete and approved.
+                                        Finish all required profile details and upload the required documents so we can send your case to admin review. Job Finder checkout opens only after everything is complete and approved.
                                     </p>
                                 </div>
 

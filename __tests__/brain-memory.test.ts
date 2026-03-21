@@ -48,6 +48,7 @@ describe("brain-memory helpers", () => {
         ]);
 
         expect(prepared.some((fact) => fact.content.toLowerCase().includes("employers never pay platform fees"))).toBe(true);
+        expect(prepared.some((fact) => fact.content.includes("admin approval unlock checkout"))).toBe(true);
         expect(prepared.some((fact) => fact.content.includes("Placement fee in Serbia is $190 (current market); employer fee is always free."))).toBe(false);
         expect(prepared.some((fact) => fact.content.includes("Workers must upload documents before paying the $9 entry fee."))).toBe(true);
     });
