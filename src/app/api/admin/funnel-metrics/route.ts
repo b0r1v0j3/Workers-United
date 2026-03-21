@@ -247,12 +247,13 @@ export async function GET(request: Request) {
         const verifiedDocs = workerDocs.filter(d => d.status === 'verified');
         const distinctVerified = new Set(verifiedDocs.map(d => d.user_id)).size;
 
-        // 5. Job Matched — distinct recipients of 'job_match' emails
+        // 5. Job Matched — distinct recipients of delivered 'job_match' emails
         const jobMatches = requireRows(
             await supabase
                 .from('email_queue')
                 .select('recipient_email')
-                .eq('email_type', 'job_match'),
+                .eq('email_type', 'job_match')
+                .eq('status', 'sent'),
             'Failed to load job match emails for funnel metrics'
         );
         const distinctMatched = new Set(jobMatches.map(m => m.recipient_email)).size;
