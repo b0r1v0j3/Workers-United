@@ -151,13 +151,15 @@ function getRecipientWorkspaceUrl(role: RecipientRole, purpose: "setup" | "dashb
     }
 }
 
-function renderJourneyRows(rows: Array<{ title: string; description: string }>) {
+function renderJourneyRows(rows: Array<{ icon?: string; title: string; description: string }>) {
     return rows.map((row, index) => `
         <tr>
             <td width="50" style="vertical-align: top; padding-bottom: ${index === rows.length - 1 ? "0" : "15px"};">
-                <div style="width:32px; height:32px; border-radius:9999px; background:#111111; color:#FFFFFF; font-size:13px; font-weight:700; line-height:32px; text-align:center;">
-                    ${index + 1}
-                </div>
+                ${row.icon
+                    ? `<img src="${row.icon}" width="32" height="32" alt="" style="display:block;">`
+                    : `<div style="width:32px; height:32px; border-radius:9999px; background:#111111; color:#FFFFFF; font-size:13px; font-weight:700; line-height:32px; text-align:center;">
+                        ${index + 1}
+                    </div>`}
             </td>
             <td style="padding-bottom: ${index === rows.length - 1 ? "0" : "15px"};">
                 <strong style="color: #1D1D1F;">${row.title}</strong>
@@ -252,34 +254,32 @@ type HeroVariant =
     | "company"
     | "goodbye";
 
-function getHeroGlyph(variant: HeroVariant) {
+function getHeroIconUrl(variant: HeroVariant) {
     switch (variant) {
         case "welcome":
-            return "WU";
+            return "https://img.icons8.com/ios/100/000000/conference-call.png";
         case "success":
-            return "✓";
+            return "https://img.icons8.com/ios/100/000000/checked--v1.png";
         case "offer":
-            return "★";
+            return "https://img.icons8.com/ios/100/000000/star--v1.png";
         case "money":
-            return "$";
+            return "https://img.icons8.com/ios/100/000000/us-dollar-circled--v1.png";
         case "info":
-            return "i";
+            return "https://img.icons8.com/ios/100/000000/info--v1.png";
         case "company":
-            return "▣";
+            return "https://img.icons8.com/ios/100/000000/company.png";
         case "goodbye":
-            return "×";
+            return "https://img.icons8.com/ios/100/000000/cancel.png";
         case "alert":
         default:
-            return "!";
+            return "https://img.icons8.com/ios/100/000000/box-important--v1.png";
     }
 }
 
 function renderIconHero(variant: HeroVariant, title: string, subtitle: string) {
     return `
         <div style="text-align: center;">
-            <div style="width:80px; height:80px; margin:0 auto 20px; border-radius:9999px; border:3px solid #111111; color:#111111; font-size:${variant === "welcome" ? "24px" : "40px"}; font-weight:700; line-height:74px; text-align:center; letter-spacing:${variant === "welcome" ? "1px" : "0"};">
-                ${getHeroGlyph(variant)}
-            </div>
+            <img src="${getHeroIconUrl(variant)}" width="80" height="80" alt="" style="display:block; margin:0 auto 20px;">
             <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${title}</h1>
             <p style="font-size: 16px; color: #515154; margin-top: 5px;">${subtitle}</p>
         </div>
@@ -328,18 +328,18 @@ function renderChecklistCard(title: string, items: string[]) {
 
 function renderFooterSocialLinks() {
     const links = [
-        { href: "https://www.facebook.com/profile.php?id=61585104076725", label: "Facebook" },
-        { href: "https://www.instagram.com/workersunited.eu/", label: "Instagram" },
-        { href: "https://www.threads.net/@workersunited.eu", label: "Threads" },
-        { href: buildPlatformWhatsAppUrl(), label: "WhatsApp" },
-        { href: "https://x.com/WorkersUnitedEU", label: "X" },
-        { href: "https://www.tiktok.com/@workersunited.eu", label: "TikTok" },
-        { href: "https://www.linkedin.com/company/workersunited-eu/", label: "LinkedIn" },
+        { href: "https://www.facebook.com/profile.php?id=61585104076725", label: "Facebook", icon: "https://img.icons8.com/fluency/48/facebook-new.png" },
+        { href: "https://www.instagram.com/workersunited.eu/", label: "Instagram", icon: "https://img.icons8.com/fluency/48/instagram-new.png" },
+        { href: "https://www.threads.net/@workersunited.eu", label: "Threads", icon: "https://img.icons8.com/ios-filled/50/threads.png" },
+        { href: buildPlatformWhatsAppUrl(), label: "WhatsApp", icon: "https://img.icons8.com/fluency/48/whatsapp.png" },
+        { href: "https://x.com/WorkersUnitedEU", label: "X", icon: "https://img.icons8.com/ios-filled/50/twitterx.png" },
+        { href: "https://www.tiktok.com/@workersunited.eu", label: "TikTok", icon: "https://img.icons8.com/fluency/48/tiktok.png" },
+        { href: "https://www.linkedin.com/company/workersunited-eu/", label: "LinkedIn", icon: "https://img.icons8.com/fluency/48/linkedin.png" },
     ];
 
     return links.map((link) => `
-        <a href="${link.href}" style="display:inline-block; margin:4px 6px; padding:8px 12px; border-radius:9999px; border:1px solid #D2D2D7; color:#1D1D1F; text-decoration:none; font-size:12px; font-weight:600; letter-spacing:0.2px;">
-            ${link.label}
+        <a href="${link.href}" style="display:inline-block; margin:0 4px; text-decoration:none; opacity:0.8;">
+            <img src="${link.icon}" width="28" height="28" alt="${link.label}" style="display:block;">
         </a>
     `).join("");
 }
@@ -494,18 +494,22 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     buttonUrl: getRecipientWorkspaceUrl("worker", "setup"),
                     rows: [
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/edit-user-male.png",
                             title: "1. Complete Profile",
                             description: "Review your worker details",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
                             title: "2. Upload Docs",
                             description: "Passport, photo, diploma",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/approval.png",
                             title: "3. Wait for Approval",
                             description: "We review the completed case",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/rocket.png",
                             title: "4. Open Job Finder Checkout",
                             description: "Complete the $9 service charge after approval",
                         },
@@ -520,18 +524,22 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     buttonUrl: getRecipientWorkspaceUrl("employer", "dashboard"),
                     rows: [
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/company.png",
                             title: "1. Finish Company Profile",
                             description: "Add the essentials about your business",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/document.png",
                             title: "2. Submit Hiring Needs",
                             description: "Tell us role, salary, and headcount",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
                             title: "3. We Match Workers",
                             description: "We search verified worker cases for you",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/passport-control.png",
                             title: "4. We Handle Legal Steps",
                             description: "Contracts, visa workflow, and arrival coordination",
                         },
@@ -546,18 +554,22 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                     buttonUrl: getRecipientWorkspaceUrl("agency", "dashboard"),
                     rows: [
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/briefcase.png",
                             title: "1. Open Your Workspace",
                             description: "Use one dashboard for all worker cases",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/add-user-group-man-man.png",
                             title: "2. Add Workers",
                             description: "Create and manage worker profiles",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
                             title: "3. Upload Documents",
                             description: "Prepare each worker case for review",
                         },
                         {
+                            icon: "https://img.icons8.com/ios/50/000000/checked-user-male.png",
                             title: "4. Open Checkout Per Case",
                             description: "Open approved worker checkouts one by one",
                         },

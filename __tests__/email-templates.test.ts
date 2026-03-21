@@ -32,7 +32,6 @@ describe('getEmailTemplate', () => {
             expect(result.html).toBeTruthy();
             expect(result.html).toContain('<!DOCTYPE html');
             expect(result.html.match(/<!DOCTYPE html/g)?.length).toBe(1);
-            expect(result.html).not.toContain('img.icons8.com');
         }
     });
 
@@ -189,7 +188,7 @@ describe('getEmailTemplate', () => {
         expect(html).toContain('What Happens Next');
         expect(html).toContain('Current Status');
         expect(html).toContain('Stay connected');
-        expect(html).toContain('Facebook');
+        expect(html).toContain('facebook-new.png');
     });
 
     it('checkout_recovery uses the premium monochrome activation layout', () => {
@@ -284,7 +283,7 @@ describe('getEmailTemplate', () => {
         expect(html).toContain('Why This Matters');
         expect(html).toContain('required documents');
         expect(html).toContain('unlock Job Finder checkout');
-        expect(html).not.toContain('img.icons8.com');
+        expect(html).toContain('box-important--v1.png');
     });
 
     it('announcement_document_fix uses the updated monochrome system-fix layout', () => {
@@ -295,15 +294,17 @@ describe('getEmailTemplate', () => {
         expect(html).toContain('admin review');
         expect(html).toContain('Job Finder checkout opens in your dashboard');
         expect(html).not.toContain('join the hiring queue');
-        expect(html).not.toContain('img.icons8.com');
+        expect(html).toContain('checked--v1.png');
     });
 
-    it('welcome email uses numbered journey steps instead of external icons', () => {
+    it('welcome email restores the earlier Icons8 journey and footer iconography', () => {
         const { html } = getEmailTemplate('welcome', { name: 'Marko' });
         expect(html).toContain('Your Journey');
-        expect(html).toMatch(/>\s*1\s*</);
-        expect(html).toMatch(/>\s*2\s*</);
-        expect(html).not.toContain('img.icons8.com');
+        expect(html).toContain('conference-call.png');
+        expect(html).toContain('edit-user-male.png');
+        expect(html).toContain('upload-to-cloud.png');
+        expect(html).toContain('facebook-new.png');
+        expect(html).toContain('whatsapp.png');
     });
 
     it('employer_outreach uses the shared monochrome employer campaign layout', () => {

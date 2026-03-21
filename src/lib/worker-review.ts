@@ -81,6 +81,10 @@ interface WorkerApprovalGuardState {
 type WorkerApprovalNotificationResult = {
     status: "sent" | "queued" | "failed" | "skipped";
     error?: string | null;
+    whatsapp?: {
+        status: "sent" | "failed" | "skipped";
+        error?: string | null;
+    } | null;
 };
 
 interface WorkerReviewEmailQueueRecord {
@@ -674,7 +678,14 @@ export async function applyWorkerApprovalAction({
     }
 
     let notificationQueued = false;
-    let notification: WorkerApprovalNotificationResult = { status: "skipped", error: null };
+    let notification: WorkerApprovalNotificationResult = {
+        status: "skipped",
+        error: null,
+        whatsapp: {
+            status: "skipped",
+            error: null,
+        },
+    };
     if (approved && approvalState.notificationRecipient && approvalState.notificationUserId) {
         const notificationResult = await queueEmail(
             adminClient,
@@ -687,11 +698,25 @@ export async function applyWorkerApprovalAction({
             normalizeWorkerPhone(approvalState.worker.phone) || undefined
         );
         notificationQueued = isEmailDeliveryAccepted(notificationResult);
+        const whatsappNotification = !notificationResult.whatsapp?.attempted
+            ? {
+                status: "skipped" as const,
+                error: null,
+            }
+            : notificationResult.whatsapp.sent
+                ? {
+                    status: "sent" as const,
+                    error: null,
+                }
+                : {
+                    status: "failed" as const,
+                    error: notificationResult.whatsapp.error || "WhatsApp send failed.",
+                };
         notification = notificationResult.sent
-            ? { status: "sent", error: null }
+            ? { status: "sent", error: null, whatsapp: whatsappNotification }
             : notificationQueued
-                ? { status: "queued", error: notificationResult.error || null }
-                : { status: "failed", error: notificationResult.error || "Email send failed." };
+                ? { status: "queued", error: notificationResult.error || null, whatsapp: whatsappNotification }
+                : { status: "failed", error: notificationResult.error || "Email send failed.", whatsapp: whatsappNotification };
     }
 
     return {

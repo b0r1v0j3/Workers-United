@@ -1,4 +1,5 @@
 export type AdminWorkerNotificationStatus = "sent" | "queued" | "failed" | "skipped";
+export type AdminWorkerNotificationChannelStatus = "sent" | "failed" | "skipped";
 
 export type AdminWorkerBannerTone = "emerald" | "blue" | "amber" | "rose";
 export type AdminWorkerBannerIcon = "check" | "mail" | "alert" | "trash";
@@ -14,6 +15,11 @@ type DeliveryResultLike = {
     sent?: boolean;
     queued?: boolean;
     error?: string | null;
+    whatsapp?: {
+        attempted?: boolean;
+        sent?: boolean;
+        error?: string | null;
+    } | null;
 } | null | undefined;
 
 export function buildManualWorkerStatusEmailData(statusLabel: string) {
@@ -29,11 +35,24 @@ export function buildManualWorkerStatusEmailData(statusLabel: string) {
 export function resolveAdminWorkerNotificationStatus(result: DeliveryResultLike): {
     status: Exclude<AdminWorkerNotificationStatus, "skipped">;
     error: string | null;
+    whatsappStatus: AdminWorkerNotificationChannelStatus;
+    whatsappError: string | null;
 } {
+    const whatsappStatus = !result?.whatsapp?.attempted
+        ? "skipped"
+        : result.whatsapp.sent
+            ? "sent"
+            : "failed";
+    const whatsappError = whatsappStatus === "failed"
+        ? result?.whatsapp?.error || "WhatsApp send failed."
+        : null;
+
     if (result?.sent) {
         return {
             status: "sent",
             error: null,
+            whatsappStatus,
+            whatsappError,
         };
     }
 
@@ -41,12 +60,16 @@ export function resolveAdminWorkerNotificationStatus(result: DeliveryResultLike)
         return {
             status: "queued",
             error: result.error || null,
+            whatsappStatus,
+            whatsappError,
         };
     }
 
     return {
         status: "failed",
         error: result?.error || "Email send failed.",
+        whatsappStatus,
+        whatsappError,
     };
 }
 
@@ -142,7 +165,8 @@ export function getDocumentActionBannerData(
 export function getApprovalActionBannerData(
     action: string | undefined,
     notification: string | undefined,
-    error: string | undefined
+    error: string | undefined,
+    whatsappStatus?: string | undefined,
 ): AdminWorkerBannerData | null {
     if (error) {
         return {
@@ -173,11 +197,28 @@ export function getApprovalActionBannerData(
         }
 
         if (notification === "queued") {
+            if (whatsappStatus === "failed") {
+                return {
+                    tone: "amber",
+                    title: "Worker approved, WhatsApp failed",
+                    copy: "Job Finder is unlocked and the approval email is queued for automatic delivery, but the WhatsApp update failed. Check WhatsApp health if this worker depends on that channel.",
+                    icon: "alert",
+                };
+            }
             return {
                 tone: "blue",
                 title: "Worker approved, email queued",
                 copy: "Job Finder is unlocked. The approval email hit a retry path and is queued to be delivered automatically.",
                 icon: "mail",
+            };
+        }
+
+        if (whatsappStatus === "failed") {
+            return {
+                tone: "amber",
+                title: "Worker approved, WhatsApp failed",
+                copy: "Job Finder is unlocked and the approval email was sent successfully, but the WhatsApp update failed. Check WhatsApp health if this worker depends on that channel.",
+                icon: "alert",
             };
         }
 
@@ -204,7 +245,8 @@ export function getApprovalActionBannerData(
 export function getStatusActionBannerData(
     action: string | undefined,
     notification: string | undefined,
-    error: string | undefined
+    error: string | undefined,
+    whatsappStatus?: string | undefined,
 ): AdminWorkerBannerData | null {
     if (error) {
         return {
@@ -238,11 +280,28 @@ export function getStatusActionBannerData(
     }
 
     if (notification === "queued") {
+        if (whatsappStatus === "failed") {
+            return {
+                tone: "amber",
+                title: "Worker status saved, WhatsApp failed",
+                copy: "The worker status was saved and the notification email is queued for automatic delivery, but the WhatsApp update failed. Check WhatsApp health if this worker depends on that channel.",
+                icon: "alert",
+            };
+        }
         return {
             tone: "blue",
             title: "Worker status saved, email queued",
             copy: "The worker status was saved and the notification email hit a retry path, so it is queued for automatic delivery.",
             icon: "mail",
+        };
+    }
+
+    if (whatsappStatus === "failed") {
+        return {
+            tone: "amber",
+            title: "Worker status saved, WhatsApp failed",
+            copy: "The worker status was saved and the notification email was sent successfully, but the WhatsApp update failed. Check WhatsApp health if this worker depends on that channel.",
+            icon: "alert",
         };
     }
 
