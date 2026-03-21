@@ -328,12 +328,12 @@ export async function getWhatsAppFallbackResponse(
             return `Hi ${name}! Job Finder checkout is not unlocked yet. Your profile must be complete, the required documents finished, and admin review approved first; after that, you start the secure payment from the dashboard at ${website}/profile/worker.`;
         }
 
-        if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder je spreman za aktivaciju. Otvorite dashboard na ${website}/profile/worker i odatle pokrenite bezbedan checkout za ${entryFee}. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
-        if (fallbackLang === "fr") return `Bonjour ${name} ! Job Finder est prêt à être activé. Ouvrez votre tableau de bord sur ${website}/profile/worker et lancez le checkout sécurisé depuis là pour ${entryFee}. Si nous ne trouvons pas d’emploi dans les 90 jours, le montant est remboursé intégralement.`;
-        if (fallbackLang === "pt") return `Olá ${name}! O Job Finder está pronto para ativação. Abra seu painel em ${website}/profile/worker e inicie o checkout seguro por lá no valor de ${entryFee}. Se não encontrarmos um trabalho em 90 dias, o valor é reembolsado integralmente.`;
-        if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder अब activation के लिए ready है। ${website}/profile/worker dashboard खोलिए और वहाँ से ${entryFee} का secure checkout शुरू कीजिए। अगर 90 दिनों में job न मिले तो पूरा amount refund होता है।`;
-        if (fallbackLang === "ar") return `مرحباً ${name}! أصبح Job Finder جاهزًا للتفعيل. افتح لوحة التحكم على ${website}/profile/worker وابدأ الدفع الآمن من هناك مقابل ${entryFee}. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
-        return `Hi ${name}! Job Finder is ready to activate. Open your dashboard at ${website}/profile/worker and start the secure checkout there for ${entryFee}. If we do not find you a job within 90 days, the full amount is refunded.`;
+        if (fallbackLang === "sr") return `Zdravo ${name}! Job Finder checkout je sada otključan u vašem dashboard-u. Otvorite ${website}/profile/worker i odatle pokrenite bezbedan checkout za ${entryFee}. Ako ne pronađemo posao u roku od 90 dana, iznos se vraća u potpunosti.`;
+        if (fallbackLang === "fr") return `Bonjour ${name} ! Le checkout Job Finder est maintenant débloqué dans votre tableau de bord. Ouvrez ${website}/profile/worker et lancez le checkout sécurisé depuis là pour ${entryFee}. Si nous ne trouvons pas d’emploi dans les 90 jours, le montant est remboursé intégralement.`;
+        if (fallbackLang === "pt") return `Olá ${name}! O checkout do Job Finder agora está liberado no seu painel. Abra ${website}/profile/worker e inicie o checkout seguro por lá no valor de ${entryFee}. Se não encontrarmos um trabalho em 90 dias, o valor é reembolsado integralmente.`;
+        if (fallbackLang === "hi") return `नमस्ते ${name}! Job Finder checkout अब आपके dashboard में unlock हो गया है। ${website}/profile/worker खोलिए और वहाँ से ${entryFee} का secure checkout शुरू कीजिए। अगर 90 दिनों में job न मिले तो पूरा amount refund होता है।`;
+        if (fallbackLang === "ar") return `مرحباً ${name}! أصبح Checkout الخاص بـ Job Finder مفتوحًا الآن في لوحة التحكم الخاصة بك. افتح ${website}/profile/worker وابدأ الدفع الآمن من هناك مقابل ${entryFee}. إذا لم نجد وظيفة خلال 90 يومًا فسيتم رد المبلغ بالكامل.`;
+        return `Hi ${name}! Job Finder checkout is now unlocked in your dashboard. Open ${website}/profile/worker and start the secure checkout there for ${entryFee}. If we do not find you a job within 90 days, the full amount is refunded.`;
     }
 
     if (!workerRecord && isWarmGreeting) {

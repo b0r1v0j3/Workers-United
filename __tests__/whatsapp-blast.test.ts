@@ -255,7 +255,7 @@ describe("whatsapp-blast", () => {
             admin: admin as never,
             actorUserId: "admin_1",
             title: "Job Finder Is Unlocked",
-            customMessage: "Hi {name}, pay here {link}",
+            customMessage: "Hi {name}, open your dashboard here {link}",
         });
 
         expect(result.total).toBe(2);
@@ -266,16 +266,17 @@ describe("whatsapp-blast", () => {
             1,
             "+15550000001",
             "Job Finder Is Unlocked",
-            expect.stringContaining("Hi Ali, pay here"),
+            "Hi Ali, open your dashboard here https://workersunited.eu/profile/worker/queue",
             "/profile/worker/queue",
             "profile_1"
         );
         expect(sendStatusUpdate).toHaveBeenCalledWith(
             "+15550000001",
             "Ali",
-            expect.stringContaining("Complete the $9 Job Finder checkout"),
+            "Your profile has been approved. Open your dashboard to complete the $9 Job Finder checkout — 90-day money-back guarantee: https://workersunited.eu/profile/worker/queue",
             "profile_1"
         );
         expect(logServerActivity).toHaveBeenCalledOnce();
+        expect(result.workerQueueUrl).toBe("https://workersunited.eu/profile/worker/queue");
     });
 });
