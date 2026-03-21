@@ -9,6 +9,12 @@ import { sendOfferNotification, sendOfferExpiredNotification } from "@/lib/notif
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 60 second timeout for edge functions
 
+function assertNoDbError(error: { message: string } | null | undefined, context: string) {
+    if (error) {
+        throw new Error(`${context}: ${error.message}`);
+    }
+}
+
 export async function GET(request: Request) {
     // Verify cron secret
     const authHeader = request.headers.get("authorization");
@@ -46,27 +52,30 @@ export async function GET(request: Request) {
             for (const offer of expiredOffers) {
                 try {
                     // Mark offer as expired
-                    await supabase
+                    const { error: expireOfferError } = await supabase
                         .from("offers")
                         .update({ status: "expired" })
                         .eq("id", offer.id);
+                    assertNoDbError(expireOfferError, `Failed to mark offer ${offer.id} as expired`);
 
                     // Return worker to queue
-                    await supabase
+                    const { error: queueWorkerError } = await supabase
                         .from("worker_onboarding")
                         .update({ status: "IN_QUEUE" })
                         .eq("id", offer.worker_id);
+                    assertNoDbError(queueWorkerError, `Failed to return worker ${offer.worker_id} to queue`);
 
                     results.expiredOffers++;
 
                     // Send expiry notification
                     try {
                         // Fetch profile to get email and name
-                        const { data: workerProfile } = await supabase
+                        const { data: workerProfile, error: workerProfileError } = await supabase
                             .from("profiles")
                             .select("email, full_name")
                             .eq("id", offer.worker_onboarding?.profile_id)
                             .single();
+                        assertNoDbError(workerProfileError, `Failed to load worker profile for expired offer ${offer.id}`);
 
                         if (workerProfile?.email && offer.worker_onboarding?.profile_id) {
                             await sendOfferExpiredNotification({
@@ -114,17 +123,19 @@ export async function GET(request: Request) {
             for (const workerRecord of refundWorkers) {
                 try {
                     // Flag worker for refund
-                    await supabase
+                    const { error: flagRefundError } = await supabase
                         .from("worker_onboarding")
                         .update({ status: "REFUND_FLAGGED" })
                         .eq("id", workerRecord.id);
+                    assertNoDbError(flagRefundError, `Failed to flag worker ${workerRecord.id} for refund`);
 
                     // Flag the payment
                     if (workerRecord.entry_payment_id) {
-                        await supabase
+                        const { error: flagPaymentError } = await supabase
                             .from("payments")
                             .update({ status: "flagged_for_refund" })
                             .eq("id", workerRecord.entry_payment_id);
+                        assertNoDbError(flagPaymentError, `Failed to flag payment ${workerRecord.entry_payment_id} for refund`);
                     }
 
                     results.refundsFlagged++;
@@ -158,18 +169,19 @@ async function shiftOfferToNextWorker(
     }
 ): Promise<string | null> {
     // Check if job request is still open
-    const { data: jobRequest } = await supabase
+    const { data: jobRequest, error: jobRequestError } = await supabase
         .from("job_requests")
         .select("*")
         .eq("id", expiredOffer.job_request_id)
-        .single();
+        .maybeSingle();
+    assertNoDbError(jobRequestError, `Failed to load job request ${expiredOffer.job_request_id} during offer shift`);
 
     if (!jobRequest || jobRequest.status === "filled" || jobRequest.status === "closed") {
         return null;
     }
 
     // Find next eligible worker
-    const { data: nextWorkerRecord } = await supabase
+    const { data: nextWorkerRecord, error: nextWorkerError } = await supabase
         .from("worker_onboarding")
         .select("*")
         .eq("status", "IN_QUEUE")
@@ -177,19 +189,21 @@ async function shiftOfferToNextWorker(
         .gt("queue_position", expiredOffer.queue_position_at_offer)
         .order("queue_position", { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle();
+    assertNoDbError(nextWorkerError, `Failed to load next worker for shifted offer ${expiredOffer.id}`);
 
     if (!nextWorkerRecord) {
         return null;
     }
 
     // Check worker doesn't already have an offer for this job
-    const { data: existingOffer } = await supabase
+    const { data: existingOffer, error: existingOfferError } = await supabase
         .from("offers")
         .select("id")
         .eq("job_request_id", expiredOffer.job_request_id)
         .eq("worker_id", nextWorkerRecord.id)
-        .single();
+        .maybeSingle();
+    assertNoDbError(existingOfferError, `Failed to check existing offer for worker ${nextWorkerRecord.id}`);
 
     if (existingOffer) {
         // Recurse to find the next worker
@@ -220,17 +234,19 @@ async function shiftOfferToNextWorker(
     }
 
     // Update worker status
-    await supabase
+    const { error: workerStatusError } = await supabase
         .from("worker_onboarding")
         .update({ status: "OFFER_PENDING" })
         .eq("id", nextWorkerRecord.id);
+    assertNoDbError(workerStatusError, `Failed to mark worker ${nextWorkerRecord.id} as OFFER_PENDING`);
 
     // Get profile for notification
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("email, full_name")
         .eq("id", nextWorkerRecord.profile_id)
-        .single();
+        .maybeSingle();
+    assertNoDbError(profileError, `Failed to load profile for shifted offer worker ${nextWorkerRecord.id}`);
 
     // Send offer notification
     if (profile?.email && nextWorkerRecord.profile_id) {
