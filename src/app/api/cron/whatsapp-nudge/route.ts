@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hasValidCronBearerToken } from "@/lib/cron-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectRecentRecipientSideBlockedPhones, sendProfileIncomplete } from "@/lib/whatsapp";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
@@ -50,7 +51,7 @@ function shouldSkipProfileIncompleteNudge(workerRecord: NudgeWorkerRecord) {
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!hasValidCronBearerToken(authHeader)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { AdminExceptionSnapshot } from "@/lib/admin-exceptions";
+import { getCronAuthorizationHeader, hasValidCronBearerToken } from "@/lib/cron-auth";
 import {
     buildOpsMonitorReport,
     getOpsMonitorEmailReasons,
@@ -114,7 +115,7 @@ async function getRouteHealth(baseUrl: string) {
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!hasValidCronBearerToken(authHeader)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -136,8 +137,14 @@ export async function GET(request: Request) {
 
     try {
         const baseUrl = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
+        const cronAuthHeader = getCronAuthorizationHeader();
+
+        if (!cronAuthHeader) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const collectResponse = await fetch(`${baseUrl}/api/brain/collect`, {
-            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+            headers: { Authorization: cronAuthHeader },
         });
 
         if (!collectResponse.ok) {

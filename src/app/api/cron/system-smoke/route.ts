@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCronAuthorizationHeader, hasValidCronBearerToken } from "@/lib/cron-auth";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/database.types";
 import { sendEmail } from "@/lib/mailer";
@@ -98,17 +99,22 @@ async function shouldSendCriticalAlert(supabase: ReturnType<typeof createTypedAd
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!hasValidCronBearerToken(authHeader)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const baseUrl = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
     const supabase = createTypedAdminClient();
     const started = Date.now();
+    const cronAuthHeader = getCronAuthorizationHeader();
+
+    if (!cronAuthHeader) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     try {
         const healthRes = await fetch(`${baseUrl}/api/health`, {
-            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+            headers: { Authorization: cronAuthHeader },
             signal: AbortSignal.timeout(10000),
         });
 
