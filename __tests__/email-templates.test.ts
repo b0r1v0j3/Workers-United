@@ -201,6 +201,8 @@ describe('getEmailTemplate', () => {
         });
         expect(html).toContain('What Stays In Place');
         expect(html).toContain('Your Profile Stays Saved');
+        expect(html).toContain('Pay $9.00');
+        expect(html).toContain('Start Search');
         expect(html).toContain('Job Finder checkout');
         expect(html).not.toContain('bank-card-back-side.png');
     });
