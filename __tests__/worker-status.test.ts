@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    assertManualAdminWorkerStatusWriteSucceeded,
     canUseManualAdminWorkerStatusOverride,
     getAllowedManualAdminWorkerStatuses,
     resolveManualAdminWorkerStatusUpdate,
@@ -100,5 +101,19 @@ describe("worker status manual admin guards", () => {
             nextStatus: "REJECTED",
             clearsApproval: false,
         });
+    });
+
+    it("fails closed when the admin worker status write returns an error", () => {
+        expect(() => assertManualAdminWorkerStatusWriteSucceeded({
+            updatedWorkerId: null,
+            updateErrorMessage: "permission denied",
+        })).toThrow("Failed to update worker status: permission denied");
+    });
+
+    it("fails closed when the admin worker status write does not persist a row", () => {
+        expect(() => assertManualAdminWorkerStatusWriteSucceeded({
+            updatedWorkerId: null,
+            updateErrorMessage: null,
+        })).toThrow("Worker status update did not persist.");
     });
 });

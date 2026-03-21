@@ -18,7 +18,12 @@ import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2 } from "lucide-react";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
-import { getAllowedManualAdminWorkerStatuses, isPostEntryFeeWorkerStatus, resolveManualAdminWorkerStatusUpdate } from "@/lib/worker-status";
+import {
+    assertManualAdminWorkerStatusWriteSucceeded,
+    getAllowedManualAdminWorkerStatuses,
+    isPostEntryFeeWorkerStatus,
+    resolveManualAdminWorkerStatusUpdate,
+} from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
 import { getRestorableDocumentBackupPath } from "@/lib/document-image-processing";
 import { applyWorkerApprovalAction, loadWorkerApprovalGuardState, syncWorkerReviewStatus } from "@/lib/worker-review";
@@ -547,7 +552,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
             throw new Error(manualStatusUpdate.error);
         }
 
-        await adminClient
+        const { data: updatedWorker, error: updateError } = await adminClient
             .from("worker_onboarding")
             .update({
                 status: manualStatusUpdate.nextStatus,
@@ -556,7 +561,14 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                 admin_approved_by: manualStatusUpdate.clearsApproval ? null : freshWorker.admin_approved_by,
                 updated_at: new Date().toISOString()
             })
-            .eq("id", freshWorker.id);
+            .eq("id", freshWorker.id)
+            .select("id")
+            .maybeSingle();
+
+        assertManualAdminWorkerStatusWriteSucceeded({
+            updatedWorkerId: updatedWorker?.id,
+            updateErrorMessage: updateError?.message,
+        });
 
         // Send email notification
         if (userEmail && notificationUserId) {
