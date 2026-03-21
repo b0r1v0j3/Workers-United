@@ -175,6 +175,18 @@ describe("whatsapp-brain guards", () => {
         ).toBe("English");
     });
 
+    it("does not let short English status/payment/docs/support questions inherit the previous conversation language", () => {
+        const frenchHistory = [
+            { direction: "inbound", content: "Bonjour, ça va ?" },
+            { direction: "outbound", content: "Bonjour ! Je suis l’assistant IA de Workers United." },
+        ];
+
+        expect(resolveWhatsAppLanguageName("What is my status?", "English", frenchHistory)).toBe("English");
+        expect(resolveWhatsAppLanguageName("How do I pay?", "English", frenchHistory)).toBe("English");
+        expect(resolveWhatsAppLanguageName("Need documents", "English", frenchHistory)).toBe("English");
+        expect(resolveWhatsAppLanguageName("Need help", "English", frenchHistory)).toBe("English");
+    });
+
     it("uses the most recent inbound history language when the latest message has no text", () => {
         expect(
             resolveWhatsAppLanguageName(

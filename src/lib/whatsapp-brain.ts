@@ -68,6 +68,7 @@ const STATUS_HINT_PATTERN = /\b(status|statut|profile|profil|perfil|approval|app
 const JOB_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|ocu posao|ho[ćc]u posao|tra[zž]im posao|looking for work|looking for a job)\b/i;
 const SPECIFIC_AVAILABILITY_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|open job|open position|what jobs|which jobs|koji poslovi|lista poslova|available workers list)\b/i;
 const PROCESS_HINT_PATTERN = /\b(how does it work|how it works|process|steps|next step|how do i start|kako radi|kako funkcioni[sš]e|kako ide|koji su koraci|sledeci korak|sledeći korak|kako da krenem)\b/i;
+const SUPPORT_HINT_PATTERN = /\b(help|support|human|agent|bug|error|problem|issue|not working|operator|tehni[cč]ki|podr[sš]ka|pomo[cć]|aide|ajuda|assist[eê]ncia|suporte|atendimento|مساعدة|دعم|مشكلة)\b/i;
 const SERBIAN_WARM_GREETING_PATTERN = /^\s*(?:(?:pozdrav|zdravo|cao|ćao|dobar dan|dobro jutro|dobro vece|dobro veče)(?:\s+(?:kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|jel si dobro|jesi dobro|jesi li dobro|dobro si))?|(?:kako si(?: danas)?|kako ste(?: danas)?|sta ima|šta ima|kako ide|jel si dobro|jesi dobro|jesi li dobro|dobro si))\s*[.!?]*\s*$/i;
 const FRENCH_LANGUAGE_PATTERN = /\b(bonjour|salut|bonsoir|merci|emploi|travail|profil|passeport|paiement|statut|quel est|quelle est|mon profil|mes documents|besoin d['’]aide|j['’]ai besoin|ça va|ca va|comment ça va|comment ca va|comment vas[\s-]*tu|comment allez[\s-]*vous)\b/i;
 const PORTUGUESE_LANGUAGE_PATTERN = /\b(olá|ola|bom dia|boa tarde|boa noite|obrigad[oa]|emprego|trabalho|perfil|documentos?|passaporte|pagamento|status dos meus|meu perfil|meus documentos|preciso de ajuda|qual [ée]|tudo bem|como vai|como voce est[aá]|como você est[aá]|como estás)\b/i;
@@ -224,7 +225,15 @@ function shouldPreferWhatsAppHistoryLanguage(message: string): boolean {
     }
 
     const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
-    return wordCount <= 4
+    const looksLikeStructuredShortQuestion =
+        PRICE_HINT_PATTERN.test(trimmed)
+        || DOCUMENT_HINT_PATTERN.test(trimmed)
+        || STATUS_HINT_PATTERN.test(trimmed)
+        || JOB_HINT_PATTERN.test(trimmed)
+        || PROCESS_HINT_PATTERN.test(trimmed)
+        || SUPPORT_HINT_PATTERN.test(trimmed);
+
+    return (wordCount <= 4 && !looksLikeStructuredShortQuestion)
         || looksLikeGreetingOnlyWhatsAppMessage(trimmed)
         || looksLikeWarmGreetingWhatsAppMessage(trimmed);
 }

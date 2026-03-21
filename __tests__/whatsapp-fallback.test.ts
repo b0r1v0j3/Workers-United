@@ -180,6 +180,23 @@ describe("whatsapp-fallback", () => {
         expect(reply).not.toContain("Welcome to Workers United");
     });
 
+    it("does not force French fallback copy onto short English status questions", async () => {
+        const reply = await getWhatsAppFallbackResponse("What is my status?", {
+            status: "PENDING_APPROVAL",
+            queue_position: 4,
+            entry_fee_paid: false,
+            admin_approved: false,
+            queue_joined_at: null,
+        }, {
+            full_name: "Ali Worker",
+        }, "English", [
+            { direction: "inbound", content: "Bonjour, ça va ?" },
+        ]);
+
+        expect(reply).toContain("Your status is:");
+        expect(reply).not.toContain("Votre statut est");
+    });
+
     it("normalizes bare platform website URLs before composing fallback links", async () => {
         getPlatformConfig.mockResolvedValue({
             entry_fee: "$9",
