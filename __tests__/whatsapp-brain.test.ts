@@ -142,6 +142,12 @@ describe("whatsapp-brain guards", () => {
         expect(detectWhatsAppLanguageCode("Koji je status mog profila?")).toBe("sr");
     });
 
+    it("keeps generic English problem wording in English instead of misclassifying it as Serbian", () => {
+        expect(detectWhatsAppLanguageCode("I have a technical problem")).toBe("en");
+        expect(detectWhatsAppLanguageCode("There is a payment problem")).toBe("en");
+        expect(detectWhatsAppLanguageCode("I have a problem with documents")).toBe("en");
+    });
+
     it("detects explicit language-switch requests and keeps the requested language", () => {
         expect(resolveWhatsAppLanguageName("Pisi na srpskom", "English")).toBe("Serbian");
         expect(resolveWhatsAppLanguageName("Reply in French", "English")).toBe("French");
@@ -402,6 +408,33 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("contact@workersunited.eu");
         expect(reply).not.toContain("otvorio");
         expect(reply).not.toContain("ticket");
+    });
+
+    it("keeps English support replies English when the user message contains generic problem wording", () => {
+        const supportReply = buildRegisteredWorkerWhatsAppReply({
+            message: "I have a technical problem",
+            language: "English",
+            intent: "support",
+            workerStatus: "APPROVED",
+            adminApproved: true,
+            entryFeePaid: true,
+            queueJoinedAt: "2026-03-18T10:00:00.000Z",
+            hasSupportAccess: true,
+        });
+        const paymentReply = buildRegisteredWorkerWhatsAppReply({
+            message: "There is a payment problem",
+            language: "English",
+            intent: "support",
+            workerStatus: "APPROVED",
+            adminApproved: true,
+            entryFeePaid: true,
+            queueJoinedAt: "2026-03-18T10:00:00.000Z",
+            hasSupportAccess: true,
+        });
+
+        expect(replyMatchesExpectedWhatsAppLanguage("English", supportReply ?? "")).toBe(true);
+        expect(replyMatchesExpectedWhatsAppLanguage("English", paymentReply ?? "")).toBe(true);
+        expect(supportReply).toContain("support inbox");
     });
 
     it("does not describe support inbox as a simple $9-only unlock", () => {
