@@ -22,12 +22,12 @@ import {
 export default function Home() {
   const siteUrl = normalizePlatformWebsiteUrl(process.env.NEXT_PUBLIC_BASE_URL);
   const workerProcessSteps = [
-    "Create your account and complete the essentials so we can open your case properly.",
-    "We search for the right employer match and stay ready for the next real opening.",
+    "Create your account, complete your profile, and upload the required documents so we can open your case properly.",
+    "Once everything is complete, we review the case and unlock Job Finder checkout after admin approval.",
+    "After you activate Job Finder, we search for the right employer match and stay ready for the next real opening.",
     "When we secure the job, we handle contracts, documents, and the full visa submission process.",
     "After visa approval, we coordinate your travel and prepare the final handover.",
-    "We welcome you on arrival and take you directly to the employer.",
-    "We stay with you through onboarding, legal stay, and residence extensions.",
+    "We welcome you on arrival and stay with you through onboarding, legal stay, and residence extensions.",
   ];
   const employerProcessSteps = [
     "Create your company account and tell us exactly what kind of workers you need.",
@@ -41,7 +41,7 @@ export default function Home() {
     "Create your agency account and open one workspace for all of your workers.",
     "Add each worker, complete profiles, and upload documents in one place.",
     "We review every case and show what is still missing before it can move forward.",
-    "Once a worker is approved, Job Finder can be activated for that specific case.",
+    "Once a worker is approved, the Job Finder checkout can be opened for that specific case.",
     "When we secure the match, we handle contracts, visa paperwork, and legal coordination.",
     "We support arrival, handover, and the follow-up process after the worker starts.",
   ];
@@ -94,7 +94,7 @@ export default function Home() {
                 </h1>
                 <div className="relative mt-5 h-[340px] w-full md:hidden">
                   <article className="absolute left-0 top-0 w-[78%] rotate-[-5deg] rounded-3xl border border-[#e2d8cd] bg-[#fff7ee] p-4 shadow-[0_22px_35px_-28px_rgba(15,23,42,0.18)]">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Worker_Profile.md</p>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Worker case readiness</p>
                     <h3 className="text-base font-semibold text-[#111827]">Identity + readiness</h3>
                     <ul className="mt-2 space-y-1.5 text-xs text-[#4b5563]">
                       <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> Passport verified</li>
@@ -104,13 +104,13 @@ export default function Home() {
                   </article>
 
                   <article className="absolute right-0 top-[110px] z-10 w-[78%] rotate-[4deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-4 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4b5563]">Employer_Request.doc</p>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4b5563]">Employer requirements</p>
                     <h3 className="text-base font-semibold text-[#111827]">Role requirements</h3>
                     <p className="mt-2 text-xs leading-relaxed text-[#4b5563]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
                   </article>
 
                   <article className="absolute bottom-0 left-[11%] z-20 w-[78%] rotate-[-2deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-4 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa_File.pdf</p>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa process handover</p>
                     <h3 className="text-base font-semibold text-[#111827]">Operational handover</h3>
                     <p className="mt-2 text-xs leading-relaxed text-[#475569]">
                       Once confirmed, we handle the document workflow to move from match to legal arrival.
@@ -155,7 +155,7 @@ export default function Home() {
 
               <div className="relative hidden h-[480px] animate-in fade-in slide-in-from-right-5 duration-700 md:block">
                 <article className="absolute left-0 top-0 w-[82%] rotate-[-5deg] rounded-3xl border border-[#e2d8cd] bg-[#fff7ee] p-6 shadow-[0_22px_35px_-28px_rgba(15,23,42,0.18)]">
-                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Worker_Profile.md</p>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Worker case readiness</p>
                   <h3 className="text-xl font-semibold text-[#111827]">Identity + readiness</h3>
                   <ul className="mt-3 space-y-2 text-sm text-[#4b5563]">
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> Passport verified</li>
@@ -165,13 +165,13 @@ export default function Home() {
                 </article>
 
                 <article className="absolute right-0 top-[160px] z-10 w-[82%] rotate-[4deg] rounded-3xl border border-[#d8eadf] bg-[#f5fbf6] p-6 shadow-[0_20px_35px_-28px_rgba(15,23,42,0.16)]">
-                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4b5563]">Employer_Request.doc</p>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4b5563]">Employer requirements</p>
                   <h3 className="text-xl font-semibold text-[#111827]">Role requirements</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[#4b5563]">Position count, salary, schedule, and legal conditions aligned before matching.</p>
                 </article>
 
                 <article className="absolute bottom-0 left-[9%] z-20 w-[82%] rotate-[-2deg] rounded-3xl border border-[#bdd4f4] bg-[#e7f0ff] p-6 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.18)]">
-                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa_File.pdf</p>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Visa process handover</p>
                   <h3 className="text-xl font-semibold text-[#111827]">Operational handover</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[#475569]">
                     Once confirmed, we handle the document workflow to move from match to legal arrival.
@@ -259,7 +259,7 @@ export default function Home() {
                 </div>
                 <h2 className="text-2xl font-semibold text-[#171717] md:text-3xl">Simple pricing with a clear refund promise</h2>
                 <p className="mt-3 text-sm leading-relaxed text-[#52525b] md:text-base">
-                  Job Finder can be activated for an approved worker case with a one-time <strong>$9 fee</strong>.
+                  Job Finder checkout opens for an approved worker case with a one-time <strong>$9 service charge</strong>.
                   Employers use Workers United <strong>free of charge</strong>. If we do not find a job within <strong>90 days</strong>, the <strong>$9 is fully refunded</strong>.
                 </p>
                 <div className="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
