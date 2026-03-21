@@ -29,6 +29,15 @@ describe("worker-workspace-state", () => {
         })).toBe("post_payment_case_active");
     });
 
+    it("treats offer-pending drift without an active offer as case-active instead of queue activation", () => {
+        expect(getWorkerQueueStage({
+            activeOfferCount: 0,
+            hasPaidEntryFee: true,
+            inQueue: false,
+            workerStatus: "OFFER_PENDING",
+        })).toBe("post_payment_case_active");
+    });
+
     it("treats refund-flagged paid workers as case-active instead of queue activation", () => {
         expect(getWorkerQueueStage({
             activeOfferCount: 0,

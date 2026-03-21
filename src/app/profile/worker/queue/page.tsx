@@ -10,6 +10,7 @@ import { getOfferCheckoutCta } from "@/lib/offer-checkout-copy";
 import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import { getWorkerQueueStage } from "@/lib/worker-workspace-state";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
 
@@ -61,7 +62,15 @@ export default async function QueuePage({
             isPostEntryFeeWorkerStatus(workerRecord.status);
         const hasPendingOffer = false;
         const statusDriftWithoutOffer = workerRecord.status === "OFFER_PENDING" && !hasPendingOffer;
-        const paymentAcceptedNoOffer = hasPaidEntryFee && !hasPendingOffer;
+        const sandboxQueueStage = getWorkerQueueStage({
+            activeOfferCount: 0,
+            hasPaidEntryFee,
+            inQueue: workerRecord.status === "IN_QUEUE",
+            queueJoinedAt: workerRecord.queue_joined_at || null,
+            workerStatus: workerRecord.status,
+        });
+        const sandboxQueueActive =
+            sandboxQueueStage === "in_queue" || sandboxQueueStage === "post_payment_case_active";
         const queueJoinedSource = workerRecord.queue_joined_at || null;
         const queueJoinedDate = queueJoinedSource ? new Date(queueJoinedSource) : null;
         const nowMs = new Date().getTime();
@@ -112,7 +121,9 @@ export default async function QueuePage({
                                 helperText="Sandbox worker now follows the same locked-until-100% rule as a real worker account."
                             />
                         )
-                        ) : paymentAcceptedNoOffer ? (
+                        ) : sandboxQueueStage === "payment_pending_activation" ? (
+                            <QueueActivationPendingState sandbox />
+                        ) : sandboxQueueActive ? (
                             <div className="py-2">
                                 <div className="text-center">
                                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
@@ -249,7 +260,14 @@ export default async function QueuePage({
 
     const hasPendingOffer = (pendingOffers?.length || 0) > 0;
     const statusDriftWithoutOffer = workerRecord.status === "OFFER_PENDING" && !hasPendingOffer;
-    const paymentAcceptedNoOffer = hasPaidEntryFee && !hasPendingOffer;
+    const queueStage = getWorkerQueueStage({
+        activeOfferCount: pendingOffers?.length || 0,
+        hasPaidEntryFee,
+        inQueue: workerRecord.status === "IN_QUEUE",
+        queueJoinedAt: workerRecord.queue_joined_at || null,
+        workerStatus: workerRecord.status,
+    });
+    const queueActive = queueStage === "in_queue" || queueStage === "post_payment_case_active";
     const queueJoinedSource = workerRecord.queue_joined_at || completedEntryPayment?.paid_at || null;
     const queueJoinedDate = queueJoinedSource
         ? new Date(queueJoinedSource)
@@ -336,7 +354,9 @@ export default async function QueuePage({
                                 readOnlyPreview={isAdminPreview}
                             />
                         )
-                    ) : paymentAcceptedNoOffer ? (
+                    ) : queueStage === "payment_pending_activation" ? (
+                        <QueueActivationPendingState readOnlyPreview={isAdminPreview} />
+                    ) : queueActive ? (
                         // Paid and waiting for a real offer
                         <div className="py-2">
                             <div className="text-center">
@@ -444,6 +464,50 @@ function PaymentAttemptGuidance({ sandbox = false }: { sandbox?: boolean }) {
                     </ul>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function QueueActivationPendingState({
+    sandbox = false,
+    readOnlyPreview = false,
+}: {
+    sandbox?: boolean;
+    readOnlyPreview?: boolean;
+}) {
+    return (
+        <div className="py-2">
+            <div className="text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2">
+                        <path d="M12 6v6l4 2" />
+                        <circle cx="12" cy="12" r="9" />
+                    </svg>
+                </div>
+                <h2 className="mb-2 text-xl font-semibold text-[#050505]">
+                    {sandbox ? "Sandbox payment recorded" : "Payment confirmed"}
+                </h2>
+                <p className="mx-auto max-w-2xl text-[#65676b]">
+                    {sandbox
+                        ? "Your worker sandbox is marked as paid, but this test state is still in the queue-activation step. The active 90-day matching window starts only after queue access is fully enabled."
+                        : "Your $9 payment is confirmed. We are still finalizing your queue activation. As soon as it finishes, your active 90-day matching window will appear here automatically."}
+                </p>
+            </div>
+
+            <div className="mt-6 rounded-xl border border-[#b3d4fc] bg-[#e7f3ff] p-4 text-sm text-[#1877f2]">
+                <p>
+                    <strong>{sandbox ? "Sandbox next step:" : "What happens next:"}</strong>{" "}
+                    {sandbox
+                        ? "use this state to inspect the just-paid activation-pending experience before the queue window begins."
+                        : "we finish syncing your queue access. No extra action is needed from you right now."}
+                </p>
+            </div>
+
+            {readOnlyPreview && (
+                <p className="mt-3 text-center text-xs text-blue-700">
+                    Read-only admin preview. Queue activation is not complete yet for this worker.
+                </p>
+            )}
         </div>
     );
 }
