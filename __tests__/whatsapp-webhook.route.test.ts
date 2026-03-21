@@ -45,6 +45,12 @@ vi.mock("@/lib/whatsapp-inbound-events", () => ({
     attachInboundWhatsAppMessageUser,
     extractWhatsAppMessageContent,
     isTextLikeWhatsAppMessage,
+    looksLikeAutomatedWhatsAppAutoReply: vi.fn((messageType: string, content: string) => {
+        if (messageType !== "text" && messageType !== "button" && messageType !== "interactive") {
+            return false;
+        }
+        return /thank you for contacting.*how we can help|thank you for your message.*unavailable right now/i.test(content);
+    }),
     normalizeWhatsAppPhone,
     recordInboundWhatsAppMessage,
 }));
@@ -66,6 +72,7 @@ vi.mock("@/lib/whatsapp-conversation-helpers", () => ({
     loadWhatsAppBrainMemory,
     createWhatsAppAutoHandoff: vi.fn(),
     maybeEscalateWhatsAppReplyDeliveryFailure,
+    formatWhatsAppHistory: vi.fn(() => "(No recent history)"),
 }));
 
 vi.mock("@/lib/whatsapp-admin-commands", () => ({
@@ -598,6 +605,106 @@ describe("POST /api/whatsapp/webhook", () => {
             undefined
         );
     }, 15000);
+
+    it("suppresses obvious inbound autoresponder texts instead of replying to them", async () => {
+        resolveEmployerWhatsAppLead.mockResolvedValueOnce({
+            employerRecord: null,
+            isEmployer: false,
+            isLikelyEmployer: false,
+        });
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                {
+                                    id: "wamid_autoreply",
+                                    from: "923462806092",
+                                    type: "text",
+                                    text: { body: "Thank you for your message. We're unavailable right now, but will respond as soon as possible." },
+                                },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({ status: "ok" });
+        expect(sendWhatsAppText).not.toHaveBeenCalled();
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "anonymous",
+            "whatsapp_inbound_autoreply_suppressed",
+            "messaging",
+            expect.objectContaining({
+                phone: "+923462806092",
+                content_preview: expect.stringContaining("Thank you for your message"),
+            }),
+            "warning"
+        );
+    });
+
+    it("keeps explicit language-switch replies in Serbian through the full webhook route", async () => {
+        createAdminClient.mockReturnValueOnce({
+            from: vi.fn(() => ({
+                select: () => ({
+                    eq: () => ({
+                        single: async () => ({ data: null }),
+                    }),
+                }),
+                delete: () => ({
+                    eq: vi.fn(),
+                }),
+                upsert: vi.fn(),
+            })),
+        });
+        resolveEmployerWhatsAppLead.mockResolvedValueOnce({
+            employerRecord: null,
+            isEmployer: false,
+            isLikelyEmployer: false,
+        });
+        callOpenAIResponseText.mockResolvedValueOnce(JSON.stringify({
+            intent: "general",
+            language: "English",
+            confidence: 0.92,
+            reason: "generic first contact",
+        }));
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_sr_switch", from: "38166033333", type: "text", text: { body: "Pisi na srpskom" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({ status: "ok" });
+        expect(sendWhatsAppText).toHaveBeenCalledWith(
+            "+38166033333",
+            expect.stringMatching(/nastaviću na srpskom/i),
+            undefined
+        );
+    });
 
     it("seeds onboarding in the recent conversation language for short onboarding openers", async () => {
         const { handleWhatsAppOnboarding } = await import("@/app/api/whatsapp/webhook/route");
