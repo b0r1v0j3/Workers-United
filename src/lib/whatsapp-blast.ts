@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import { buildPlatformUrl } from "@/lib/platform-contact";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import { sendAnnouncement, sendStatusUpdate } from "@/lib/whatsapp";
@@ -13,9 +14,11 @@ import {
 
 type AdminDbClient = SupabaseClient<Database>;
 
-const STRIPE_PAYMENT_LINK =
-    process.env.STRIPE_JOB_FINDER_PAYMENT_LINK ||
-    "https://buy.stripe.com/fZueVcdG1bglfgr1nc0ZW00";
+const WORKER_JOB_FINDER_QUEUE_PATH = "/profile/worker/queue";
+const WORKER_JOB_FINDER_QUEUE_URL = buildPlatformUrl(
+    process.env.NEXT_PUBLIC_BASE_URL,
+    WORKER_JOB_FINDER_QUEUE_PATH
+);
 
 interface WhatsAppBlastWorkerRow extends WorkerRecordSnapshot, EntryFeeEligibilityWorkerRecord {
     id: string;
@@ -49,7 +52,7 @@ export interface WorkerWhatsAppBlastResult {
     failed: number;
     failedDetails: Array<{ phone: string; name: string; error: string }>;
     targets: WorkerWhatsAppBlastTarget[];
-    stripeLink: string;
+    workerQueueUrl: string;
 }
 
 function isSandboxPhone(phone: string | null | undefined) {
@@ -59,11 +62,11 @@ function isSandboxPhone(phone: string | null | undefined) {
 function personalizeBlastCopy(template: string, target: WorkerWhatsAppBlastTarget) {
     return template
         .replace(/\{name\}/g, target.firstName || "there")
-        .replace(/\{link\}/g, STRIPE_PAYMENT_LINK);
+        .replace(/\{link\}/g, WORKER_JOB_FINDER_QUEUE_URL);
 }
 
 function getDefaultBlastCopy(target: WorkerWhatsAppBlastTarget) {
-    return `Hi ${target.firstName || "there"}! Your profile has been approved and Job Finder checkout is now unlocked. Complete the $9 Job Finder checkout and we'll match you with employers in Europe. 90-day money-back guarantee. Pay: ${STRIPE_PAYMENT_LINK}`;
+    return `Hi ${target.firstName || "there"}! Your profile has been approved and Job Finder checkout is now unlocked in your dashboard. Open your dashboard to complete the $9 Job Finder checkout and we'll match you with employers in Europe. 90-day money-back guarantee. Dashboard: ${WORKER_JOB_FINDER_QUEUE_URL}`;
 }
 
 async function logWhatsAppBlastActivity(params: {
@@ -231,7 +234,7 @@ export async function sendWorkerWhatsAppBlast(params: {
         failed: 0,
         failedDetails: [],
         targets,
-        stripeLink: STRIPE_PAYMENT_LINK,
+        workerQueueUrl: WORKER_JOB_FINDER_QUEUE_URL,
     };
 
     if (dryRun) {
@@ -254,7 +257,7 @@ export async function sendWorkerWhatsAppBlast(params: {
                 target.phone,
                 title,
                 messageBody,
-                "/profile/worker/queue",
+                WORKER_JOB_FINDER_QUEUE_PATH,
                 target.profileId || undefined
             );
 
@@ -264,7 +267,7 @@ export async function sendWorkerWhatsAppBlast(params: {
                 const fallbackResult = await sendStatusUpdate(
                     target.phone,
                     target.firstName,
-                    `Your profile has been approved. Complete the $9 Job Finder checkout — 90-day money-back guarantee. Pay here: ${STRIPE_PAYMENT_LINK}`,
+                    `Your profile has been approved. Open your dashboard to complete the $9 Job Finder checkout — 90-day money-back guarantee: ${WORKER_JOB_FINDER_QUEUE_URL}`,
                     target.profileId || undefined
                 );
 

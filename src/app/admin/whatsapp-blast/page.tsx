@@ -6,11 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 import { normalizeUserType } from "@/lib/domain";
+import { buildPlatformUrl } from "@/lib/platform-contact";
 import { loadWorkerWhatsAppBlastTargets, sendWorkerWhatsAppBlast } from "@/lib/whatsapp-blast";
 
-const STRIPE_PAYMENT_LINK =
-    process.env.STRIPE_JOB_FINDER_PAYMENT_LINK ||
-    "https://buy.stripe.com/fZueVcdG1bglfgr1nc0ZW00";
+const WORKER_QUEUE_URL = buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/profile/worker/queue");
 
 async function ensureAdminUser() {
     const supabase = await createClient();
@@ -76,7 +75,7 @@ export default async function WhatsAppBlastPage({
     const justSent = params.sent !== undefined;
     const isPreview = params.preview === "true";
 
-    const defaultMessage = `Hi {name}! Your profile has been approved and Job Finder is now unlocked. Activate it for $9 and we'll match you with employers in Europe. 90-day money-back guarantee. Pay: ${STRIPE_PAYMENT_LINK}`;
+    const defaultMessage = `Hi {name}! Your profile has been approved and Job Finder checkout is now unlocked in your dashboard. Open your dashboard to complete the $9 Job Finder checkout and we'll match you with employers in Europe. 90-day money-back guarantee. Dashboard: {link}`;
 
     return (
         <AppShell user={user} variant="admin">
@@ -154,14 +153,14 @@ export default async function WhatsAppBlastPage({
                             />
                             <p className="text-xs text-slate-400 mt-1">
                                 Use <code className="bg-slate-100 px-1 rounded">{"{name}"}</code> for first name,{" "}
-                                <code className="bg-slate-100 px-1 rounded">{"{link}"}</code> for payment link.
+                                <code className="bg-slate-100 px-1 rounded">{"{link}"}</code> for the worker queue link.
                             </p>
                         </div>
 
                         <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600">
-                            <div className="font-semibold text-slate-700 mb-1">💳 Stripe Payment Link</div>
-                            <a href={STRIPE_PAYMENT_LINK} target="_blank" className="text-green-600 hover:underline break-all">
-                                {STRIPE_PAYMENT_LINK}
+                            <div className="font-semibold text-slate-700 mb-1">🔗 Worker Queue Link</div>
+                            <a href={WORKER_QUEUE_URL} target="_blank" className="text-green-600 hover:underline break-all">
+                                {WORKER_QUEUE_URL}
                             </a>
                         </div>
 

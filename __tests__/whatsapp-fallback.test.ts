@@ -72,6 +72,21 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("https://www.workersunited.eu/profile/worker");
     });
 
+    it("keeps payment-ready fallback on unlocked dashboard checkout wording", async () => {
+        const reply = await getWhatsAppFallbackResponse("payment", {
+            status: "APPROVED",
+            entry_fee_paid: false,
+            admin_approved: true,
+            queue_joined_at: null,
+        }, {
+            full_name: "Ali Worker",
+        }, "English");
+
+        expect(reply).toContain("Job Finder checkout is now unlocked in your dashboard");
+        expect(reply).toContain("https://www.workersunited.eu/profile/worker");
+        expect(reply).not.toContain("ready to activate");
+    });
+
     it("keeps Portuguese document fallback copy in Portuguese instead of collapsing to English", async () => {
         const reply = await getWhatsAppFallbackResponse("documentos", {
             status: "NEW",

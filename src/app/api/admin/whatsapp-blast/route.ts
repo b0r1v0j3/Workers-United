@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { normalizeUserType } from "@/lib/domain";
+import { buildPlatformUrl } from "@/lib/platform-contact";
 import { loadWorkerWhatsAppBlastTargets, sendWorkerWhatsAppBlast } from "@/lib/whatsapp-blast";
 
 async function requireAdminAccess() {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
                 name: target.fullName || "Unknown",
                 status: target.status,
             })),
-            stripe_link: result.stripeLink,
+            worker_queue_url: result.workerQueueUrl,
         });
     }
 
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
         sent: result.sent,
         failed: result.failed,
         failed_details: result.failedDetails,
-        stripe_link: result.stripeLink,
+        worker_queue_url: result.workerQueueUrl,
     });
 }
 
@@ -80,6 +81,6 @@ export async function GET() {
         payment_ready_with_phone: targets.length,
         unpaid_with_phone: targets.length,
         paid: paidQuery.count || 0,
-        stripe_link: process.env.STRIPE_JOB_FINDER_PAYMENT_LINK || "https://buy.stripe.com/fZueVcdG1bglfgr1nc0ZW00",
+        worker_queue_url: buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/profile/worker/queue"),
     });
 }
