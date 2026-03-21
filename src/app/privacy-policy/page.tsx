@@ -138,7 +138,7 @@ export default async function PrivacyPolicyPage() {
                             <li><strong className="text-[#1D1D1F] font-medium">Visa application processing:</strong> Preparing and submitting work visa applications on your behalf</li>
                             <li><strong className="text-[#1D1D1F] font-medium">Document verification:</strong> Using AI (Google Gemini) to verify the authenticity and quality of uploaded documents</li>
                             <li><strong className="text-[#1D1D1F] font-medium">Worker-employer matching:</strong> Matching verified worker profiles with employer job requirements</li>
-                            <li><strong className="text-[#1D1D1F] font-medium">Payment processing:</strong> Processing entry fees and placement fees through Stripe</li>
+                            <li><strong className="text-[#1D1D1F] font-medium">Payment processing:</strong> Processing Job Finder service charges and placement fees through Stripe</li>
                             <li><strong className="text-[#1D1D1F] font-medium">Communication:</strong> Sending service-related notifications, profile reminders, and responding to inquiries</li>
                             <li><strong className="text-[#1D1D1F] font-medium">Platform improvement:</strong> Analysing usage patterns to improve our services</li>
                         </ul>
