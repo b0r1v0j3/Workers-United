@@ -33,7 +33,7 @@ async function ensureAdminUser() {
 export default async function AnnouncementsPage({
     searchParams,
 }: {
-    searchParams: Promise<{ success?: string; sent?: string; failed?: string; total?: string }>;
+    searchParams: Promise<{ success?: string; sent?: string; queued?: string; failed?: string; total?: string }>;
 }) {
     const user = await ensureAdminUser();
 
@@ -63,7 +63,7 @@ export default async function AnnouncementsPage({
             actionLink,
         });
 
-        redirect(`/admin/announcements?success=true&sent=${result.sent}&failed=${result.failed}&total=${result.total}`);
+        redirect(`/admin/announcements?success=true&sent=${result.sent}&queued=${result.queued}&failed=${result.failed}&total=${result.total}`);
     }
 
     const admin = createAdminClient();
@@ -73,6 +73,7 @@ export default async function AnnouncementsPage({
     ]);
     const success = params.success;
     const sentCount = parseInt(params.sent || "0", 10);
+    const queuedCount = parseInt(params.queued || "0", 10);
     const failedCount = parseInt(params.failed || "0", 10);
     const totalCount = parseInt(params.total || "0", 10);
     const actionLinkPlaceholder = buildPlatformUrl(process.env.NEXT_PUBLIC_BASE_URL, "/profile/worker");
@@ -90,6 +91,7 @@ export default async function AnnouncementsPage({
                         <div className="text-green-800 font-bold text-lg mb-1">Announcement queued</div>
                         <div className="text-green-700 text-sm">
                             <strong>{sentCount}</strong> emails sent
+                            {queuedCount > 0 && <span className="text-amber-700"> · {queuedCount} accepted for retry</span>}
                             {failedCount > 0 && <span className="text-orange-600"> · {failedCount} failed</span>}
                             {" "}out of <strong>{totalCount}</strong> eligible recipients.
                         </div>
