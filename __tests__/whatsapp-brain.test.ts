@@ -167,6 +167,30 @@ describe("whatsapp-brain guards", () => {
         ).toBe("French");
     });
 
+    it("keeps an explicit language-switch from history for short ambiguous follow-ups", () => {
+        expect(
+            resolveWhatsAppLanguageName(
+                "ok",
+                "English",
+                [
+                    { direction: "inbound", content: "Reply in French" },
+                    { direction: "outbound", content: "Bien sûr — je continue en français." },
+                ]
+            )
+        ).toBe("French");
+
+        expect(
+            resolveWhatsAppLanguageName(
+                "ok",
+                "English",
+                [
+                    { direction: "inbound", content: "Pisi na srpskom" },
+                    { direction: "outbound", content: "Naravno — nastaviću na srpskom." },
+                ]
+            )
+        ).toBe("Serbian");
+    });
+
     it("prefers the most recent inbound language even when an older non-English turn exists", () => {
         expect(
             resolveWhatsAppLanguageName(
