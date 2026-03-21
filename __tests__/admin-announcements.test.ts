@@ -167,6 +167,29 @@ describe("admin-announcements", () => {
         ]);
     });
 
+    it("fails closed when auth pagination fails before audience resolution", async () => {
+        getAllAuthUsers.mockRejectedValueOnce(new Error("auth pagination failed"));
+
+        await expect(loadAnnouncementTargets(createAdminClient() as never, "workers")).rejects.toThrow("auth pagination failed");
+        expect(queueEmail).not.toHaveBeenCalled();
+        expect(logServerActivity).not.toHaveBeenCalled();
+    });
+
+    it("does not send or log announcements when auth pagination fails", async () => {
+        getAllAuthUsers.mockRejectedValueOnce(new Error("auth pagination failed"));
+
+        await expect(sendAdminAnnouncement({
+            admin: createAdminClient() as never,
+            actorUserId: "admin_user",
+            audience: "workers",
+            subject: "Important update",
+            message: "Please review your case.",
+        })).rejects.toThrow("auth pagination failed");
+
+        expect(queueEmail).not.toHaveBeenCalled();
+        expect(logServerActivity).not.toHaveBeenCalled();
+    });
+
     it("sends announcement emails through queueEmail and records audit data", async () => {
         getAllAuthUsers.mockResolvedValue([
             {
