@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { queueEmail } from "@/lib/email-templates";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { normalizeUserType } from "@/lib/domain";
 import { isGodModeUser } from "@/lib/godmode";
 
@@ -127,6 +128,7 @@ export async function POST(req: NextRequest) {
     }
 
     let sent = 0;
+    let queued = 0;
     let failed = 0;
     const errors: string[] = [];
 
@@ -172,6 +174,8 @@ export async function POST(req: NextRequest) {
         errors.push(`${recipientName}: ${updateError.message}`);
       } else if (result.sent) {
         sent++;
+      } else if (isEmailDeliveryAccepted(result)) {
+        queued++;
       } else {
         failed++;
         errors.push(`${recipientName}: ${result.error || "Campaign email failed"}`);
@@ -180,7 +184,7 @@ export async function POST(req: NextRequest) {
       await new Promise((resolve) => setTimeout(resolve, SEND_DELAY_MS));
     }
 
-    return NextResponse.json({ sent, failed, errors: errors.slice(0, 10) });
+    return NextResponse.json({ sent, queued, failed, errors: errors.slice(0, 10) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });
