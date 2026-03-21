@@ -3,6 +3,7 @@ import type { Database } from "@/lib/database.types";
 import { getAllAuthUsers } from "@/lib/supabase/admin";
 import { normalizeUserType, type CanonicalUserType } from "@/lib/domain";
 import { queueEmail, type EmailType, type TemplateData } from "@/lib/email-templates";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
 import { pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
@@ -31,6 +32,7 @@ export interface AdminAnnouncementTarget {
 export interface AdminAnnouncementResult {
     total: number;
     sent: number;
+    queued: number;
     failed: number;
     failedDetails: Array<{ email: string; name: string; error: string }>;
     targets: AdminAnnouncementTarget[];
@@ -101,6 +103,7 @@ async function logAnnouncementActivity(params: {
                 dry_run: params.dryRun,
                 total: params.result.total,
                 sent: params.result.sent,
+                queued: params.result.queued,
                 failed: params.result.failed,
                 failed_details: params.result.failedDetails.slice(0, 20),
                 target_preview: params.result.targets.slice(0, 20).map((target) => ({
@@ -110,7 +113,7 @@ async function logAnnouncementActivity(params: {
                     user_id: target.userId,
                 })),
             },
-            params.result.failed > 0 ? "warning" : "ok"
+            params.result.failed > 0 || params.result.queued > 0 ? "warning" : "ok"
         );
     } catch (error) {
         console.warn("[Admin Announcements] Failed to log activity:", error);
@@ -133,6 +136,7 @@ async function logDocumentFixAnnouncementActivity(params: {
                 dry_run: params.dryRun,
                 total: params.result.total,
                 sent: params.result.sent,
+                queued: params.result.queued,
                 failed: params.result.failed,
                 failed_details: params.result.failedDetails.slice(0, 20),
                 target_preview: params.result.targets.slice(0, 20).map((target) => ({
@@ -142,7 +146,7 @@ async function logDocumentFixAnnouncementActivity(params: {
                     user_id: target.userId,
                 })),
             },
-            params.result.failed > 0 ? "warning" : "ok"
+            params.result.failed > 0 || params.result.queued > 0 ? "warning" : "ok"
         );
     } catch (error) {
         console.warn("[Document Fix Announcement] Failed to log activity:", error);
@@ -164,6 +168,7 @@ async function sendAudienceTemplateEmail(params: {
     const result: AdminAnnouncementResult = {
         total: params.targets.length,
         sent: 0,
+        queued: 0,
         failed: 0,
         failedDetails: [],
         targets: params.targets,
@@ -185,6 +190,8 @@ async function sendAudienceTemplateEmail(params: {
 
         if (emailResult.sent) {
             result.sent += 1;
+        } else if (isEmailDeliveryAccepted(emailResult)) {
+            result.queued += 1;
         } else {
             result.failed += 1;
             result.failedDetails.push({

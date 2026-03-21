@@ -61,9 +61,10 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             sentCount: result.sent,
+            queuedCount: result.queued,
             totalWorkers: result.total,
             errors: errors.length > 0 ? errors : undefined,
-            message: `Successfully sent ${result.sent}/${result.total} document-fix announcement emails.`
+            message: `Successfully sent ${result.sent}/${result.total} document-fix announcement emails${result.queued > 0 ? ` and queued ${result.queued} for retry` : ""}.`
         });
 
     } catch (error: any) {

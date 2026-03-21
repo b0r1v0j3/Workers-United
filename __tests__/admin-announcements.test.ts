@@ -280,6 +280,7 @@ describe("admin-announcements", () => {
 
         expect(result.total).toBe(1);
         expect(result.sent).toBe(1);
+        expect(result.queued).toBe(0);
         expect(result.failed).toBe(0);
         expect(queueEmail).toHaveBeenCalledOnce();
         expect(queueEmail).toHaveBeenCalledWith(
@@ -302,8 +303,64 @@ describe("admin-announcements", () => {
                 template: "announcement_document_fix",
                 total: 1,
                 sent: 1,
+                queued: 0,
             }),
             "ok"
+        );
+    });
+
+    it("treats queued-retry announcement emails as accepted instead of failed", async () => {
+        getAllAuthUsers.mockResolvedValue([
+            {
+                id: "worker_1",
+                email: "worker@validmail.com",
+                user_metadata: { user_type: "worker", full_name: "Ali Worker" },
+            },
+        ]);
+
+        queueEmail.mockResolvedValueOnce({
+            id: "email_1",
+            sent: false,
+            queued: true,
+            status: "queued_retry",
+            error: "421 Temporary failure",
+        });
+
+        const admin = createAdminClient({
+            workerRows: [
+                {
+                    profile_id: "worker_1",
+                    agency_id: null,
+                    submitted_email: "worker@validmail.com",
+                    phone: "+15550000001",
+                    updated_at: "2026-03-20T08:00:00.000Z",
+                },
+            ],
+        });
+
+        const result = await sendAdminAnnouncement({
+            admin: admin as never,
+            actorUserId: "admin_user",
+            audience: "workers",
+            subject: "Important update",
+            message: "Please review your case.",
+        });
+
+        expect(result.total).toBe(1);
+        expect(result.sent).toBe(0);
+        expect(result.queued).toBe(1);
+        expect(result.failed).toBe(0);
+        expect(result.failedDetails).toEqual([]);
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "admin_user",
+            "admin_announcement_sent",
+            "messaging",
+            expect.objectContaining({
+                sent: 0,
+                queued: 1,
+                failed: 0,
+            }),
+            "warning"
         );
     });
 });
