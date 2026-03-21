@@ -93,7 +93,7 @@ export async function GET(request: Request) {
             .from('email_queue')
             .select('user_id')
             .eq('email_type', 'document_expiring')
-            .in('status', ['pending', 'sent'])
+            .eq('status', 'sent')
             .gte('created_at', thirtyDaysAgo);
 
         if (recentEmailsError) {
