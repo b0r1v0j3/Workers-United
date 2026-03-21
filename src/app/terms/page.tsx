@@ -161,7 +161,7 @@ export default async function TermsPage() {
                     <TermsSection title="13. Refund Policy" icon={RefreshCcw} colorClass="bg-emerald-50 text-emerald-600">
                         <p className="mb-4">Our refund policy is as follows:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
-                            <li><strong className="text-[#1D1D1F]">Entry fee ($9 USD):</strong> Fully refundable if a worker is not matched with an employer within 90 days of payment.</li>
+                            <li><strong className="text-[#1D1D1F]">Job Finder service charge ($9 USD):</strong> Fully refundable if a worker is not matched with an employer within 90 days of payment.</li>
                             <li><strong className="text-[#1D1D1F]">Placement fee:</strong> Non-refundable once the visa application process has been initiated, as costs are incurred for document preparation and government fees.</li>
                         </ul>
                         <p className="mt-4">Refund requests should be directed to <a href={`mailto:${DEFAULT_PLATFORM_SUPPORT_EMAIL}`} className="text-[#0066CC] hover:underline">{DEFAULT_PLATFORM_SUPPORT_EMAIL}</a>. Approved refunds will be processed within 10 business days to the original payment method.</p>
