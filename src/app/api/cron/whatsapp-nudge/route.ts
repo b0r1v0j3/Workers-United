@@ -99,12 +99,21 @@ export async function GET(request: Request) {
         results.found = canonicalWorkerRows.length;
 
         // Get phones that received a nudge in the last 7 days (avoid spam)
-        const { data: recentNudges } = await supabase
+        const { data: recentNudges, error: recentNudgesError } = await supabase
             .from("whatsapp_messages")
             .select("phone_number")
             .eq("template_name", "profile_incomplete")
             .in("status", ["sent", "delivered", "read"])
             .gte("created_at", weekAgo.toISOString());
+
+        if (recentNudgesError) {
+            console.error("[Nudge] Failed to load recent WhatsApp nudge history:", recentNudgesError);
+            return NextResponse.json({
+                status: "error",
+                error: "Failed to load recent WhatsApp nudge history",
+                ...results,
+            }, { status: 500 });
+        }
 
         const alreadyNudgedPhones = new Set(
             (recentNudges || [])
@@ -112,7 +121,7 @@ export async function GET(request: Request) {
                 .filter((phone): phone is string => !!phone)
         );
 
-        const { data: recentFailedNudges } = await supabase
+        const { data: recentFailedNudges, error: recentFailedNudgesError } = await supabase
             .from("whatsapp_messages")
             .select("phone_number, status, error_message, created_at")
             .eq("template_name", "profile_incomplete")
@@ -120,14 +129,32 @@ export async function GET(request: Request) {
             .eq("status", "failed")
             .gte("created_at", monthAgo.toISOString());
 
+        if (recentFailedNudgesError) {
+            console.error("[Nudge] Failed to load recent failed WhatsApp nudges:", recentFailedNudgesError);
+            return NextResponse.json({
+                status: "error",
+                error: "Failed to load recent failed WhatsApp nudges",
+                ...results,
+            }, { status: 500 });
+        }
+
         const blockedRecipientPhones = collectRecentRecipientSideBlockedPhones(recentFailedNudges || []);
 
         // Get profile names
         const profileIds = canonicalWorkerRows.map(workerRecord => workerRecord.profile_id).filter((value): value is string => !!value);
-        const { data: profiles } = await supabase
+        const { data: profiles, error: profilesError } = await supabase
             .from("profiles")
             .select("id, full_name, email")
             .in("id", profileIds);
+
+        if (profilesError) {
+            console.error("[Nudge] Failed to load profile context for WhatsApp nudges:", profilesError);
+            return NextResponse.json({
+                status: "error",
+                error: "Failed to load WhatsApp nudge profile context",
+                ...results,
+            }, { status: 500 });
+        }
 
         const profileMap = new Map(
             (profiles || []).map(p => [p.id, p])
