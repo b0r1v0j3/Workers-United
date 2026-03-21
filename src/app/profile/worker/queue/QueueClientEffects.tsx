@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { Loader2, Gem } from "lucide-react";
+import { getQueuePaymentReturnMode } from "@/lib/queue-payment-return";
 
 export default function QueueClientEffects() {
     const searchParams = useSearchParams();
@@ -13,13 +14,14 @@ export default function QueueClientEffects() {
     useEffect(() => {
         const payment = searchParams.get("payment");
         const sessionId = searchParams.get("session_id");
+        const returnMode = getQueuePaymentReturnMode(payment, sessionId);
 
         let cancelled = false;
 
         const handleSuccess = async () => {
-            if (payment !== "success") return;
+            if (returnMode === "ignore" || returnMode === "sandbox_success" || returnMode === "cancelled") return;
 
-            if (sessionId) {
+            if (returnMode === "confirm_session" && sessionId) {
                 try {
                     const res = await fetch("/api/stripe/confirm-session", {
                         method: "POST",
@@ -44,8 +46,7 @@ export default function QueueClientEffects() {
                     }
                 }
             } else {
-                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-                toast.success("Payment successful! We are activating your queue status.");
+                toast.warning("Payment return detected, but final verification is still pending.");
             }
 
             // Clean URL without reload
@@ -54,13 +55,13 @@ export default function QueueClientEffects() {
 
         void handleSuccess();
 
-        if (payment === "sandbox_success") {
+        if (returnMode === "sandbox_success") {
             confetti({ particleCount: 120, spread: 75, origin: { y: 0.6 } });
             toast.success("Sandbox payment completed. Queue state is now active.");
             window.history.replaceState({}, "", "/profile/worker/queue");
         }
 
-        if (payment === "cancelled") {
+        if (returnMode === "cancelled") {
             toast.info("Payment cancelled. You can try again when you're ready.");
             window.history.replaceState({}, "", "/profile/worker/queue");
         }
