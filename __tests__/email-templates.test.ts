@@ -304,6 +304,23 @@ describe('getEmailTemplate', () => {
         expect(html).toContain('checked--v1.png');
     });
 
+    it('document_expiring and employer welcome use valid visa-step icon URLs', () => {
+        const { html: documentHtml } = getEmailTemplate('document_expiring', {
+            name: 'Nikola',
+            documentType: 'passport',
+            expirationDate: '15/08/2026',
+        });
+        const { html: employerWelcomeHtml } = getEmailTemplate('welcome', {
+            name: 'Steel Concept',
+            recipientRole: 'employer',
+        });
+
+        expect(documentHtml).toContain('visa.png');
+        expect(documentHtml).not.toContain('passport-control.png');
+        expect(employerWelcomeHtml).toContain('visa.png');
+        expect(employerWelcomeHtml).not.toContain('passport-control.png');
+    });
+
     it('welcome email restores the earlier Icons8 journey and footer iconography', () => {
         const { html } = getEmailTemplate('welcome', { name: 'Marko' });
         expect(html).toContain('Your Journey');
