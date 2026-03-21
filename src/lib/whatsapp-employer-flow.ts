@@ -94,11 +94,19 @@ export async function resolveEmployerWhatsAppLead(params: {
     isAdmin: boolean;
     hasRegisteredWorker: boolean;
 }): Promise<EmployerLeadResolution> {
-    const rawEmployerResult = await ((params.admin
+    const rawEmployerResult = await (params.admin
         .from("employers")
         .select("id, profile_id, company_name, contact_name, status")
         .or(`phone.eq.${params.normalizedPhone},contact_phone.eq.${params.normalizedPhone}`)
-        .maybeSingle()) as unknown as Promise<{ data: Record<string, unknown> | null }>);
+        .maybeSingle()) as {
+            data: Record<string, unknown> | null;
+            error?: { message?: string } | null;
+        };
+
+    if (rawEmployerResult.error) {
+        throw new Error(rawEmployerResult.error.message || "Employer WhatsApp lookup failed");
+    }
+
     const rawEmployerRecord = rawEmployerResult.data;
 
     const explicitlyLooksLikeEmployer = looksLikeEmployerWhatsAppLead(params.content);
