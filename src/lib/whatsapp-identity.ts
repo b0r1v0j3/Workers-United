@@ -29,11 +29,13 @@ export async function resolveWhatsAppWorkerIdentity<
         .order("updated_at", { ascending: false })
         .limit(25);
 
+    const matchedWorkerRows = (matchedWorkers || []) as TWorker[];
+    const linkedDirectMatches = matchedWorkerRows.filter((worker) => !!worker?.profile_id);
     let workerRecord = pickCanonicalWorkerRecord<TWorker>(
-        (matchedWorkers || []) as TWorker[]
+        linkedDirectMatches.length > 0 ? linkedDirectMatches : matchedWorkerRows
     );
 
-    if (!workerRecord) {
+    if (!workerRecord || !workerRecord.profile_id) {
         const phoneDigits = rawPhone.replace(/\D/g, "");
         const authUsers = await getAllAuthUsers(admin);
         const matchedUser = authUsers.find((user: any) => {
