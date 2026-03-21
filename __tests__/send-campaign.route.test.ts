@@ -267,6 +267,7 @@ describe("POST /api/admin/send-campaign", () => {
         expect(response.status).toBe(200);
         expect(payload).toEqual({
             sent: 2,
+            queued: 0,
             failed: 0,
             errors: [],
         });
@@ -298,5 +299,82 @@ describe("POST /api/admin/send-campaign", () => {
             }),
         );
         expect(update).toHaveBeenCalledTimes(2);
+    });
+
+    it("counts queued-retry deliveries separately from failures", async () => {
+        createClient.mockResolvedValueOnce({
+            auth: {
+                getUser: vi.fn(async () => ({
+                    data: {
+                        user: {
+                            id: "admin-1",
+                            email: "admin@example.com",
+                            user_metadata: { user_type: "admin" },
+                        },
+                    },
+                    error: null,
+                })),
+            },
+            from: vi.fn(() => buildAuthQuery("admin")),
+        });
+
+        createAdminClient.mockReturnValueOnce({
+            from: vi.fn((table: string) => {
+                if (table === "outreach_campaigns") {
+                    return {
+                        select: vi.fn(() => ({
+                            eq: vi.fn(() => ({
+                                eq: vi.fn(async () => ({
+                                    data: [
+                                        {
+                                            id: "campaign-row-1",
+                                            company_name: "Acme Ltd",
+                                            email: "sales@acme.com",
+                                            status: "delivered",
+                                        },
+                                    ],
+                                    error: null,
+                                })),
+                            })),
+                        })),
+                        update: vi.fn(() => ({
+                            eq: vi.fn(async () => ({ error: null })),
+                        })),
+                    };
+                }
+
+                throw new Error(`Unexpected table: ${table}`);
+            }),
+        });
+
+        queueEmail.mockResolvedValueOnce({
+            id: "email-1",
+            sent: false,
+            queued: true,
+            status: "queued_retry",
+            error: "421 Temporary failure",
+        });
+
+        const { POST } = await import("@/app/api/admin/send-campaign/route");
+
+        const request = new NextRequest("http://localhost/api/admin/send-campaign", {
+            method: "POST",
+            body: JSON.stringify({
+                campaign: "spring-2026",
+                subject: "Hello employers",
+            }),
+        });
+
+        const response = await POST(request);
+        assertResponse(response);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({
+            sent: 0,
+            queued: 1,
+            failed: 0,
+            errors: [],
+        });
     });
 });
