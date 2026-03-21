@@ -110,9 +110,81 @@ function getFallbackStatusLabel(
                         ? "ativo na fila"
                         : language === "hi"
                             ? "queue में सक्रिय"
-                            : language === "ar"
+                        : language === "ar"
                                 ? "نشط في قائمة الانتظار"
                                 : "active in queue";
+        case "OFFER_PENDING":
+            return language === "sr"
+                ? "slučaj je u fazi ponude"
+                : language === "fr"
+                    ? "dossier à l’étape de l’offre"
+                    : language === "pt"
+                        ? "caso na etapa da oferta"
+                        : language === "hi"
+                            ? "case offer stage में है"
+                            : language === "ar"
+                                ? "الحالة في مرحلة العرض"
+                                : "case in the offer stage";
+        case "OFFER_ACCEPTED":
+            return language === "sr"
+                ? "ponuda je prihvaćena"
+                : language === "fr"
+                    ? "offre acceptée"
+                    : language === "pt"
+                        ? "oferta aceita"
+                        : language === "hi"
+                            ? "offer accept हो चुकी है"
+                            : language === "ar"
+                                ? "تم قبول العرض"
+                                : "offer accepted";
+        case "VISA_PROCESS_STARTED":
+            return language === "sr"
+                ? "vizni proces je u toku"
+                : language === "fr"
+                    ? "procédure de visa en cours"
+                    : language === "pt"
+                        ? "processo de visto em andamento"
+                        : language === "hi"
+                            ? "visa process चल रहा है"
+                            : language === "ar"
+                                ? "إجراءات التأشيرة جارية"
+                                : "visa process in progress";
+        case "VISA_APPROVED":
+            return language === "sr"
+                ? "viza je odobrena"
+                : language === "fr"
+                    ? "visa approuvé"
+                    : language === "pt"
+                        ? "visto aprovado"
+                        : language === "hi"
+                            ? "visa approve हो चुका है"
+                            : language === "ar"
+                                ? "تمت الموافقة على التأشيرة"
+                                : "visa approved";
+        case "PLACED":
+            return language === "sr"
+                ? "placement je završen"
+                : language === "fr"
+                    ? "placement finalisé"
+                    : language === "pt"
+                        ? "colocação concluída"
+                        : language === "hi"
+                            ? "placement complete है"
+                            : language === "ar"
+                                ? "تم إنهاء التوظيف"
+                                : "placement completed";
+        case "REFUND_FLAGGED":
+            return language === "sr"
+                ? "refund je u proveri"
+                : language === "fr"
+                    ? "remboursement en revue"
+                    : language === "pt"
+                        ? "reembolso em revisão"
+                        : language === "hi"
+                            ? "refund review में है"
+                            : language === "ar"
+                                ? "الاسترداد قيد المراجعة"
+                                : "refund in review";
         case "REJECTED":
             return language === "sr"
                 ? "profil zahteva ispravke"
@@ -122,11 +194,23 @@ function getFallbackStatusLabel(
                         ? "perfil precisa de correções"
                         : language === "hi"
                             ? "प्रोफाइल में सुधार चाहिए"
-                            : language === "ar"
+                        : language === "ar"
                                 ? "الملف يحتاج إلى تصحيحات"
                                 : "profile needs corrections";
         default:
-            return humanized || "status unavailable";
+            return humanized
+                ? humanized
+                : language === "sr"
+                    ? "status je ažuriran"
+                    : language === "fr"
+                        ? "statut mis à jour"
+                        : language === "pt"
+                            ? "status atualizado"
+                            : language === "hi"
+                                ? "status update हुआ है"
+                                : language === "ar"
+                                    ? "تم تحديث الحالة"
+                                    : "status updated";
     }
 }
 

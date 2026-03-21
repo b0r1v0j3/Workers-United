@@ -586,6 +586,110 @@ function isRegisteredWorkerPendingApproval({
     return !entryFeePaid && !adminApproved && workerStatus === "PENDING_APPROVAL";
 }
 
+function getRegisteredWorkerAdvancedStatusReply(
+    language: WhatsAppLanguageCode,
+    workerStatus: string | null | undefined,
+    website: string
+): string | null {
+    const normalizedStatus = (workerStatus || "").trim().toUpperCase();
+
+    switch (normalizedStatus) {
+        case "IN_QUEUE":
+            switch (language) {
+                case "sr":
+                    return `Vaša Job Finder uplata je evidentirana i vaš profil je aktivan u redu čekanja. Status i naredne korake pratite kroz dashboard na ${website}/profile/worker.`;
+                case "ar":
+                    return `تم تسجيل دفعة Job Finder الخاصة بك وملفك نشط الآن في قائمة الانتظار. تابع الحالة والخطوات القادمة من لوحة التحكم على ${website}/profile/worker.`;
+                case "fr":
+                    return `Votre paiement Job Finder est enregistré et votre profil est maintenant actif dans la file d’attente. Suivez le statut et les prochaines étapes depuis le tableau de bord sur ${website}/profile/worker.`;
+                case "pt":
+                    return `Seu pagamento do Job Finder está registrado e seu perfil agora está ativo na fila. Acompanhe o status e os próximos passos no painel em ${website}/profile/worker.`;
+                case "hi":
+                    return `आपका Job Finder payment दर्ज हो चुका है और आपका profile अब queue में active है। Status और next steps ${website}/profile/worker dashboard में देखें।`;
+                default:
+                    return `Your Job Finder payment is recorded and your profile is now active in the queue. Please follow your status and next steps in the dashboard at ${website}/profile/worker.`;
+            }
+        case "OFFER_PENDING":
+        case "OFFER_ACCEPTED":
+            switch (language) {
+                case "sr":
+                    return `Vaš slučaj je trenutno u fazi ponude. Najnoviji status i sledeće korake pratite kroz dashboard na ${website}/profile/worker.`;
+                case "ar":
+                    return `حالتك الآن في مرحلة العرض. تابع أحدث حالة والخطوات التالية من لوحة التحكم على ${website}/profile/worker.`;
+                case "fr":
+                    return `Votre dossier est actuellement à l’étape de l’offre. Suivez le dernier statut et les prochaines étapes depuis le tableau de bord sur ${website}/profile/worker.`;
+                case "pt":
+                    return `Seu caso está atualmente na etapa da oferta. Acompanhe o status mais recente e os próximos passos no painel em ${website}/profile/worker.`;
+                case "hi":
+                    return `आपका case अभी offer stage में है। Latest status और next steps ${website}/profile/worker dashboard में देखें।`;
+                default:
+                    return `Your case is currently in the offer stage. Please follow the latest status and next steps in the dashboard at ${website}/profile/worker.`;
+            }
+        case "VISA_PROCESS_STARTED":
+            switch (language) {
+                case "sr":
+                    return `Vaš vizni proces je u toku. Najnovije korake i ažuriranja pratite kroz dashboard na ${website}/profile/worker.`;
+                case "ar":
+                    return `عملية التأشيرة الخاصة بك قيد التنفيذ الآن. تابع أحدث الخطوات والتحديثات من لوحة التحكم على ${website}/profile/worker.`;
+                case "fr":
+                    return `Votre procédure de visa est en cours. Suivez les dernières étapes et mises à jour depuis le tableau de bord sur ${website}/profile/worker.`;
+                case "pt":
+                    return `Seu processo de visto está em andamento. Acompanhe as etapas e atualizações mais recentes no painel em ${website}/profile/worker.`;
+                case "hi":
+                    return `आपका visa process चल रहा है। Latest steps और updates ${website}/profile/worker dashboard में देखें।`;
+                default:
+                    return `Your visa process is currently in progress. Please follow the latest steps and updates in the dashboard at ${website}/profile/worker.`;
+            }
+        case "VISA_APPROVED":
+            switch (language) {
+                case "sr":
+                    return `Vaša viza je odobrena. Najnovija dalja uputstva i ažuriranja pratite kroz dashboard na ${website}/profile/worker.`;
+                case "ar":
+                    return `تمت الموافقة على تأشيرتك. تابع أحدث التعليمات والتحديثات من لوحة التحكم على ${website}/profile/worker.`;
+                case "fr":
+                    return `Votre visa est approuvé. Suivez les dernières instructions et mises à jour depuis le tableau de bord sur ${website}/profile/worker.`;
+                case "pt":
+                    return `Seu visto foi aprovado. Acompanhe as instruções e atualizações mais recentes no painel em ${website}/profile/worker.`;
+                case "hi":
+                    return `आपका visa approve हो चुका है। Latest instructions और updates ${website}/profile/worker dashboard में देखें।`;
+                default:
+                    return `Your visa has been approved. Please follow the latest instructions and updates in the dashboard at ${website}/profile/worker.`;
+            }
+        case "PLACED":
+            switch (language) {
+                case "sr":
+                    return `Vaš slučaj je prešao u završenu placement fazu. Najnovija ažuriranja pratite kroz dashboard na ${website}/profile/worker.`;
+                case "ar":
+                    return `انتقلت حالتك إلى مرحلة الإحالة المكتملة. تابع أحدث التحديثات من لوحة التحكم على ${website}/profile/worker.`;
+                case "fr":
+                    return `Votre dossier est passé à l’étape de placement finalisé. Suivez les dernières mises à jour depuis le tableau de bord sur ${website}/profile/worker.`;
+                case "pt":
+                    return `Seu caso entrou na etapa de colocação concluída. Acompanhe as atualizações mais recentes no painel em ${website}/profile/worker.`;
+                case "hi":
+                    return `आपका case completed placement stage में पहुँच चुका है। Latest updates ${website}/profile/worker dashboard में देखें।`;
+                default:
+                    return `Your case has reached the completed placement stage. Please follow the latest updates in the dashboard at ${website}/profile/worker.`;
+            }
+        case "REFUND_FLAGGED":
+            switch (language) {
+                case "sr":
+                    return `Vaš slučaj je trenutno u refund proveri. Najnoviji status i naredne korake pratite kroz dashboard na ${website}/profile/worker.`;
+                case "ar":
+                    return `حالتك الآن قيد مراجعة الاسترداد. تابع أحدث حالة والخطوات التالية من لوحة التحكم على ${website}/profile/worker.`;
+                case "fr":
+                    return `Votre dossier est actuellement en revue de remboursement. Suivez le dernier statut et les prochaines étapes depuis le tableau de bord sur ${website}/profile/worker.`;
+                case "pt":
+                    return `Seu caso está atualmente em revisão de reembolso. Acompanhe o status mais recente e os próximos passos no painel em ${website}/profile/worker.`;
+                case "hi":
+                    return `आपका case इस समय refund review में है। Latest status और next steps ${website}/profile/worker dashboard में देखें।`;
+                default:
+                    return `Your case is currently in refund review. Please follow the latest status and next steps in the dashboard at ${website}/profile/worker.`;
+            }
+        default:
+            return null;
+    }
+}
+
 export function buildRegisteredWorkerWhatsAppReply({
     message,
     language,
@@ -615,7 +719,7 @@ export function buildRegisteredWorkerWhatsAppReply({
 
     const paymentReady = isRegisteredWorkerPaymentReady({ workerStatus, entryFeePaid, adminApproved });
     const pendingApproval = isRegisteredWorkerPendingApproval({ workerStatus, entryFeePaid, adminApproved });
-    const inQueue = !!entryFeePaid && !!queueJoinedAt;
+    const advancedStatusReply = getRegisteredWorkerAdvancedStatusReply(lang, workerStatus, website);
 
     if (explicitLanguagePreference && !wantsPrice && !wantsDocuments && !wantsStatus && !wantsSupport && !asksSpecificAvailability && !wantsJobHelp) {
         switch (lang) {
@@ -761,11 +865,12 @@ export function buildRegisteredWorkerWhatsAppReply({
     }
 
     if (wantsStatus) {
+        if (advancedStatusReply) {
+            return advancedStatusReply;
+        }
+
         switch (lang) {
             case "sr":
-                if (inQueue) {
-                    return `Vaša Job Finder uplata je evidentirana i vaš slučaj je već u aktivnom sledecem toku. Status i naredne korake pratite kroz dashboard na ${website}/profile/worker.`;
-                }
                 if (entryFeePaid) {
                     return `Vaša Job Finder uplata je evidentirana. Sledeci korak i trenutni status pratite kroz dashboard na ${website}/profile/worker.`;
                 }
@@ -777,9 +882,6 @@ export function buildRegisteredWorkerWhatsAppReply({
                 }
                 return `Trenutni sledeci korak je da kroz dashboard na ${website}/profile/worker završite profil i obavezna dokumenta, pa zatim pratite admin review status tamo.`;
             case "ar":
-                if (inQueue) {
-                    return `تم تسجيل دفعة Job Finder الخاصة بك وحالتك بالفعل في المسار التالي النشط. تابع الحالة والخطوات القادمة من لوحة التحكم على ${website}/profile/worker.`;
-                }
                 if (entryFeePaid) {
                     return `تم تسجيل دفعة Job Finder الخاصة بك. تابع الخطوة التالية والحالة الحالية من لوحة التحكم على ${website}/profile/worker.`;
                 }
@@ -791,9 +893,6 @@ export function buildRegisteredWorkerWhatsAppReply({
                 }
                 return `الخطوة التالية الحالية هي إكمال الملف والمستندات المطلوبة من خلال لوحة التحكم على ${website}/profile/worker، ثم متابعة حالة مراجعة الإدارة هناك.`;
             case "fr":
-                if (inQueue) {
-                    return `Votre paiement Job Finder est enregistré et votre dossier est déjà dans l’étape active suivante. Suivez le statut et les prochaines étapes depuis le tableau de bord sur ${website}/profile/worker.`;
-                }
                 if (entryFeePaid) {
                     return `Votre paiement Job Finder est enregistré. Suivez la prochaine étape et le statut actuel dans le tableau de bord sur ${website}/profile/worker.`;
                 }
@@ -805,9 +904,6 @@ export function buildRegisteredWorkerWhatsAppReply({
                 }
                 return `La prochaine étape actuelle est de terminer le profil et les documents requis via le tableau de bord sur ${website}/profile/worker, puis de suivre la revue admin là-bas.`;
             case "pt":
-                if (inQueue) {
-                    return `Seu pagamento do Job Finder está registrado e seu caso já entrou no próximo fluxo ativo. Acompanhe o status e os próximos passos no painel em ${website}/profile/worker.`;
-                }
                 if (entryFeePaid) {
                     return `Seu pagamento do Job Finder está registrado. Acompanhe o próximo passo e o status atual no painel em ${website}/profile/worker.`;
                 }
@@ -819,9 +915,6 @@ export function buildRegisteredWorkerWhatsAppReply({
                 }
                 return `O próximo passo agora é concluir o perfil e os documentos obrigatórios pelo painel em ${website}/profile/worker e depois acompanhar a revisão administrativa por lá.`;
             case "hi":
-                if (inQueue) {
-                    return `आपका Job Finder payment दर्ज हो चुका है और आपका case अगले active flow में है। Status और next steps ${website}/profile/worker dashboard में देखें।`;
-                }
                 if (entryFeePaid) {
                     return `आपका Job Finder payment दर्ज हो चुका है। अगला step और current status ${website}/profile/worker dashboard में देखें।`;
                 }
@@ -833,9 +926,6 @@ export function buildRegisteredWorkerWhatsAppReply({
                 }
                 return `अभी अगला step ${website}/profile/worker dashboard में profile और required documents पूरा करना है, और फिर admin review status वहीं follow करना है।`;
             default:
-                if (inQueue) {
-                    return `Your Job Finder payment is recorded and your case is already in the next active flow. Please follow your status and next steps in the dashboard at ${website}/profile/worker.`;
-                }
                 if (entryFeePaid) {
                     return `Your Job Finder payment is recorded. Please follow your current status and next step in the dashboard at ${website}/profile/worker.`;
                 }
@@ -870,27 +960,27 @@ export function buildRegisteredWorkerWhatsAppReply({
         switch (lang) {
             case "sr":
                 return asksHowItWorks
-                    ? `Workers United radi kroz vođeni matching proces: profil, dokumenta, admin approval, pa tek onda Job Finder aktivacija i dalje pracenje kroz dashboard. Ako želite, mogu odmah da pomognem oko statusa, dokumenata ili uplate.`
+                    ? `Workers United radi kroz vođeni matching proces: profil, dokumenta, admin approval, pa tek onda Job Finder checkout u dashboard-u i dalje pracenje statusa tamo. Ako želite, mogu odmah da pomognem oko statusa, dokumenata ili uplate.`
                     : `Mogu da pomognem oko sledeceg koraka. Ako želite, napišite da li vas zanima status, dokumenta, uplata ili kako proces dalje funkcioniše.`;
             case "ar":
                 return asksHowItWorks
-                    ? `يعمل Workers United من خلال مطابقة موجهة: الملف، ثم المستندات، ثم موافقة الإدارة، وبعدها فقط تفعيل Job Finder ومتابعة الخطوات من خلال لوحة التحكم. إذا أردت يمكنني الآن المساعدة بخصوص الحالة أو المستندات أو الدفع.`
+                    ? `يعمل Workers United من خلال مطابقة موجهة: الملف، ثم المستندات، ثم موافقة الإدارة، وبعدها فقط يفتح Checkout الخاص بـ Job Finder داخل لوحة التحكم مع متابعة الخطوات هناك. إذا أردت يمكنني الآن المساعدة بخصوص الحالة أو المستندات أو الدفع.`
                     : `يمكنني مساعدتك بخصوص الخطوة التالية. إذا أردت، أخبرني هل تريد معرفة الحالة أو المستندات أو الدفع أو كيف تستمر العملية.`;
             case "fr":
                 return asksHowItWorks
-                    ? `Workers United fonctionne avec un processus d’appariement guidé : profil, documents, validation admin, puis activation de Job Finder et suivi des étapes dans le tableau de bord. Si vous voulez, je peux aider tout de suite sur le statut, les documents ou le paiement.`
+                    ? `Workers United fonctionne avec un processus d’appariement guidé : profil, documents, validation admin, puis déblocage du checkout Job Finder dans le tableau de bord avec suivi des étapes là-bas. Si vous voulez, je peux aider tout de suite sur le statut, les documents ou le paiement.`
                     : `Je peux vous aider pour la prochaine étape. Si vous voulez, dites-moi si vous avez besoin du statut, des documents, du paiement, ou du fonctionnement du processus.`;
             case "pt":
                 return asksHowItWorks
-                    ? `A Workers United trabalha com um processo guiado de matching: perfil, documentos, aprovação administrativa, e só depois ativação do Job Finder e acompanhamento dos próximos passos no painel. Se quiser, posso ajudar agora com status, documentos ou pagamento.`
+                    ? `A Workers United trabalha com um processo guiado de matching: perfil, documentos, aprovação administrativa, e só depois liberação do checkout do Job Finder no painel com acompanhamento dos próximos passos por lá. Se quiser, posso ajudar agora com status, documentos ou pagamento.`
                     : `Posso ajudar com o próximo passo. Se quiser, me diga se você precisa de ajuda com status, documentos, pagamento ou como o processo funciona.`;
             case "hi":
                 return asksHowItWorks
-                    ? `Workers United guided matching process के साथ काम करता है: profile, documents, admin approval, और उसके बाद Job Finder activation और dashboard follow-up। अगर चाहें तो मैं अभी status, documents या payment में मदद कर सकता हूँ।`
+                    ? `Workers United guided matching process के साथ काम करता है: profile, documents, admin approval, और उसके बाद dashboard में Job Finder checkout unlock होता है और next steps वहीं follow होते हैं। अगर चाहें तो मैं अभी status, documents या payment में मदद कर सकता हूँ।`
                     : `मैं अगले step में मदद कर सकता हूँ। अगर चाहें तो बताइए कि आपको status, documents, payment या process समझने में मदद चाहिए।`;
             default:
                 return asksHowItWorks
-                    ? `Workers United works through a guided matching process: profile, documents, admin approval, and only then Job Finder activation with next steps tracked in the dashboard. If you want, I can help right away with status, documents, or payment.`
+                    ? `Workers United works through a guided matching process: profile, documents, admin approval, and only then Job Finder checkout unlocks in the dashboard with the next steps tracked there. If you want, I can help right away with status, documents, or payment.`
                     : `I can help with the next step. If you want, tell me whether you need help with status, documents, payment, or how the process works.`;
         }
     }

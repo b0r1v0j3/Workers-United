@@ -133,6 +133,14 @@ describe("whatsapp-employer-flow", () => {
         expect(getEmployerWhatsAppStaticReply("Hindi")).toContain("workersunited.eu/signup");
     });
 
+    it("keeps employer fallback copy on international-workers wording", () => {
+        expect(getEmployerWhatsAppDefaultReply("en")).toContain("international workers");
+        expect(getEmployerWhatsAppDefaultReply("en")).not.toContain("foreign workers");
+        expect(getEmployerWhatsAppErrorReply("en")).toContain("international workers");
+        expect(getEmployerWhatsAppStaticReply("en")).toContain("international workers");
+        expect(getEmployerWhatsAppDefaultReply("sr")).not.toContain("strane radnike");
+    });
+
     it("uses configured contact info in employer fallback copy", () => {
         const platform = {
             websiteUrl: "https://portal.example",
