@@ -19,6 +19,7 @@ import {
     Users,
 } from "lucide-react";
 import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
+import { getWorkerQueueStage } from "@/lib/worker-workspace-state";
 import { PayToJoinButton } from "./queue/QueueClientEffects";
 
 interface WorkerProfile {
@@ -46,6 +47,7 @@ interface WorkerRecord {
     queue_joined_at?: string | null;
     entry_fee_paid?: boolean | null;
     admin_approved?: boolean | null;
+    status?: string | null;
 }
 
 interface WorkerDocument {
@@ -100,13 +102,23 @@ export default function DashboardClient({
     const canStartPayment = !readOnlyPreview && !hasPaidEntryFee && !inQueue && entryFeeUnlockState.allowed;
     const profileIncomplete = !readOnlyPreview && !hasPaidEntryFee && !inQueue && profileCompletion < 100;
     const approvalPending = !readOnlyPreview && !hasPaidEntryFee && !inQueue && entryFeeUnlockState.reason === "pending_admin_review";
-    const paymentPendingActivation = hasPaidEntryFee && !inQueue;
+    const queueStage = getWorkerQueueStage({
+        activeOfferCount,
+        hasPaidEntryFee,
+        inQueue,
+        queueJoinedAt: worker?.queue_joined_at,
+        workerStatus: worker?.status,
+    });
+    const paymentPendingActivation = queueStage === "payment_pending_activation";
+    const postPaymentCaseActive = queueStage === "post_payment_case_active";
     const workspaceStatus = readOnlyPreview
         ? "Preview"
         : activeOfferCount > 0
             ? "Offer Ready"
             : inQueue
                 ? "In Queue"
+                : postPaymentCaseActive
+                    ? "Case active"
                 : hasPaidEntryFee
                     ? "Paid"
                     : approvalPending
@@ -298,7 +310,7 @@ export default function DashboardClient({
                         )}
 
                         {/* ─── In Queue or Payment Pending: Show Refund Countdown ─── */}
-                        {(inQueue || paymentPendingActivation) && activeOfferCount === 0 && (
+                        {(inQueue || paymentPendingActivation || postPaymentCaseActive) && activeOfferCount === 0 && (
                             <div className="py-2">
                                 <div className="text-center">
                                     <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -307,11 +319,17 @@ export default function DashboardClient({
                                         </svg>
                                     </div>
                                     <h3 className="text-xl font-semibold tracking-tight text-[#18181b] mb-2">
-                                        {paymentPendingActivation ? "Payment Received" : "You're in the Queue"}
+                                        {paymentPendingActivation
+                                            ? "Payment Received"
+                                            : postPaymentCaseActive
+                                                ? "Payment Confirmed"
+                                                : "You're in the Queue"}
                                     </h3>
                                     <p className="text-sm leading-relaxed text-[#52525b] max-w-2xl mx-auto">
                                         {paymentPendingActivation
                                             ? "Your payment is confirmed. We are activating your queue status now."
+                                            : postPaymentCaseActive
+                                                ? "Your Job Finder payment is confirmed. Open Queue to review your latest case status and next step."
                                             : "We are actively matching your profile with employers. You will receive an offer within 90 days, or your payment is refunded in full."}
                                     </p>
                                 </div>
