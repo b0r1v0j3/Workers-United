@@ -98,4 +98,63 @@ describe("GET /api/cron/check-expiring-docs", () => {
         });
         expect(queueEmail).not.toHaveBeenCalled();
     });
+
+    it("fails closed when the worker reminder context preload fails", async () => {
+        createAdminClient.mockReturnValue({
+            from: (table: string) => {
+                if (table === "worker_documents") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                gt: () => ({
+                                    lte: vi.fn(async () => ({
+                                        data: [
+                                            {
+                                                id: "doc-1",
+                                                document_type: "passport",
+                                                expires_at: "2026-12-31T00:00:00.000Z",
+                                                profiles: {
+                                                    id: "profile-1",
+                                                    email: "worker@example.com",
+                                                    full_name: "Worker One",
+                                                },
+                                            },
+                                        ],
+                                        error: null,
+                                    })),
+                                }),
+                            }),
+                        }),
+                    };
+                }
+
+                if (table === "worker_onboarding") {
+                    return {
+                        select: () => ({
+                            in: vi.fn(async () => ({
+                                data: null,
+                                error: { message: "worker_onboarding unavailable" },
+                            })),
+                        }),
+                    };
+                }
+
+                throw new Error(`Unexpected table: ${table}`);
+            },
+        });
+
+        const { GET } = await import("@/app/api/cron/check-expiring-docs/route");
+        const response = await GET(new Request("http://localhost/api/cron/check-expiring-docs", {
+            headers: {
+                authorization: "Bearer test",
+            },
+        }));
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({
+            error: "Failed to load worker reminder context",
+        });
+        expect(queueEmail).not.toHaveBeenCalled();
+    });
 });

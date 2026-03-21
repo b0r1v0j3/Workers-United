@@ -60,12 +60,20 @@ export async function GET(request: Request) {
                 .map((doc) => (doc as any).profiles?.id)
                 .filter((value): value is string => typeof value === "string" && value.length > 0)
         ));
-        const { data: workerRows } = profileIds.length > 0
+        const { data: workerRows, error: workerRowsError } = profileIds.length > 0
             ? await supabase
                 .from("worker_onboarding")
                 .select("profile_id, agency_id, submitted_email, phone, updated_at, entry_fee_paid")
                 .in("profile_id", profileIds)
-            : { data: [] as ExpiringDocWorkerRow[] };
+            : { data: [] as ExpiringDocWorkerRow[], error: null };
+
+        if (workerRowsError) {
+            console.error("[Cron] Failed to load worker reminder context:", workerRowsError);
+            return NextResponse.json(
+                { error: "Failed to load worker reminder context" },
+                { status: 500 }
+            );
+        }
 
         const workersByProfileId = new Map<string, ExpiringDocWorkerRow[]>();
         for (const workerRow of (workerRows || []) as ExpiringDocWorkerRow[]) {
