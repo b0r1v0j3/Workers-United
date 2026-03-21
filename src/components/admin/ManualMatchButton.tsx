@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getManualMatchFailureFeedback } from "@/lib/manual-match-feedback";
 
 interface Job {
     id: string;
@@ -18,7 +19,7 @@ export default function ManualMatchButton({ workerRecordId }: { workerRecordId: 
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(false);
     const [matching, setMatching] = useState(false);
-    const [result, setResult] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+    const [result, setResult] = useState<{ type: "success" | "error"; msg: string; detail?: string | null } | null>(null);
 
     useEffect(() => {
         if (open && jobs.length === 0) {
@@ -44,7 +45,12 @@ export default function ManualMatchButton({ workerRecordId }: { workerRecordId: 
             });
             const data = await res.json();
             if (!res.ok) {
-                setResult({ type: "error", msg: data.error || "Failed to match" });
+                const feedback = getManualMatchFailureFeedback(data, "Failed to match.");
+                setResult({
+                    type: "error",
+                    msg: feedback.message,
+                    detail: feedback.detail,
+                });
             } else {
                 setResult({ type: "success", msg: data.message || "Matched!" });
                 // Remove from available jobs
@@ -74,7 +80,12 @@ export default function ManualMatchButton({ workerRecordId }: { workerRecordId: 
                     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                     : "border-red-200 bg-red-50 text-red-700"
                     }`}>
-                    {result.msg}
+                    <div>{result.msg}</div>
+                    {result.detail ? (
+                        <div className="mt-1 text-xs leading-relaxed text-red-700/90">
+                            {result.detail}
+                        </div>
+                    ) : null}
                 </div>
             )}
 

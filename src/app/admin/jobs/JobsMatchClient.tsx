@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { ChevronRight, Briefcase, Globe, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { getManualMatchFailureFeedback } from "@/lib/manual-match-feedback";
 
 export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: any[] }) {
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -65,7 +66,8 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                 toast.success("Match created successfully!");
                 setTimeout(() => window.location.reload(), 1000);
             } else {
-                toast.error(data.error || "Failed to create match.");
+                const feedback = getManualMatchFailureFeedback(data, "Failed to create match.");
+                toast.error(feedback.message, feedback.detail ? { description: feedback.detail } : undefined);
             }
         } catch (e) {
             console.error(e);
