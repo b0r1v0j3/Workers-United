@@ -64,6 +64,7 @@ const EMPLOYER_LEAD_PATTERN = /\b(employer|company|business|firm|hire|hiring|rec
 const WORKER_LEAD_PATTERN = /\b(worker|job|work abroad|looking for a job|looking for work|need a job|i want a job|radnik|posao|tra[zž]im posao|ocu posao|ho[ćc]u posao|[zž]elim posao|radim kao|imam iskustva)\b/i;
 const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|prix|paiement|co[uû]t|pre[cç]o|preco|custo|pagamento|valor|koliko|kosta|košta|cena|cijena|platim|platiti|uplata|placanje|plaćanje|शुल्क|भुगतान|سعر|تكلفة|دفع)\b/i;
 const DOCUMENT_HINT_PATTERN = /\b(document|documents|docs?|documentos?|passport|passeport|passaporte|diploma|photo|biometric|biom[eé]trique|biom[ée]trica|upload|verification|dokumenti|dokumenta|pasos|pasoš|slika|fotografija|verifikacija|पासपोर्ट|दस्तावेज|جواز|مستند)\b/i;
+const MISSING_DIPLOMA_HINT_PATTERN = /(?:\b(?:i do not|i don't|i dont|i have not|i haven't|i havent|i have no|without)\b[^\n]{0,24}\b(?:diploma|degree|certificate)\b)|(?:\b(?:nemam|bez)\b[^\n]{0,20}\b(?:diplom[au]?|svedocanstv[ao]?|svjedocanstv[ao]?|sertifikat)\b)|(?:\bje n['’]ai pas\b[^\n]{0,20}\b(?:dipl[oô]me|certificat)\b)|(?:\b(?:n[aã]o tenho|sem)\b[^\n]{0,20}\b(?:diploma|certificado)\b)|(?:\b(?:mere paas|mere pas|main|mai)\b[^\n]{0,20}\b(?:diploma|degree)\b[^\n]{0,12}\b(?:nahin|nahi)\b)|(?:(?:لا أملك|ليس لدي|بدون)[^\n]{0,20}(?:شهادة|دبلوم))/i;
 const STATUS_HINT_PATTERN = /\b(status|statut|profile|profil|perfil|approval|approved|review|queue|support|mon profil|meu perfil|status dos meus|stanje|odobren|odobreno|red|podrska|podrška|स्थिति|حالة|مراجعة)\b/i;
 const JOB_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|ocu posao|ho[ćc]u posao|tra[zž]im posao|looking for work|looking for a job)\b/i;
 const SPECIFIC_AVAILABILITY_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|open job|open position|what jobs|which jobs|koji poslovi|lista poslova|available workers list)\b/i;
@@ -456,6 +457,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
     const explicitLanguagePreference = detectExplicitWhatsAppLanguagePreference(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
+    const lacksRequiredDiploma = MISSING_DIPLOMA_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || intent === "support" || STATUS_HINT_PATTERN.test(normalized);
     const asksSpecificAvailability = SPECIFIC_AVAILABILITY_HINT_PATTERN.test(normalized);
     const asksHowItWorks = PROCESS_HINT_PATTERN.test(normalized);
@@ -510,6 +512,10 @@ export function buildUnregisteredWorkerWhatsAppReply({
             default:
                 return `Job Finder costs $9, but that is not paid immediately. First create your account at ${website}/signup and complete your profile and required documents; checkout unlocks only after that is complete and admin approves it, and payment starts from the dashboard, not through WhatsApp.`;
         }
+    }
+
+    if (lacksRequiredDiploma) {
+        return getMissingDiplomaReply(lang, website, supportEmail, false);
     }
 
     if (wantsDocuments) {
@@ -617,6 +623,40 @@ function isRegisteredWorkerPendingApproval({
     adminApproved?: boolean | null;
 }) {
     return !entryFeePaid && !adminApproved && workerStatus === "PENDING_APPROVAL";
+}
+
+function getMissingDiplomaReply(
+    language: WhatsAppLanguageCode,
+    website: string,
+    supportEmail: string,
+    registered: boolean
+): string {
+    switch (language) {
+        case "sr":
+            return registered
+                ? `Jedno od obaveznih worker dokumenata je završna školska, univerzitetska ili formalna stručna diploma. Ako trenutno nemate nijednu završnu diplomu ili formalni stručni dokaz, vaš slučaj još ne može da prođe fazu obaveznih dokumenata. Ako ipak imate odgovarajući dokument, uploadujte ga kroz dashboard na ${website}/profile/worker; ako niste sigurni da li vaš dokument važi, pošaljite kratak opis na ${supportEmail}.`
+                : `Jedno od obaveznih worker dokumenata je završna školska, univerzitetska ili formalna stručna diploma. Ako trenutno nemate nijednu završnu diplomu ili formalni stručni dokaz, worker slučaj još nije spreman za nastavak. Ako ipak imate odgovarajući dokument, napravite nalog na ${website}/signup i uploadujte ga kroz dashboard; ako niste sigurni da li vaš dokument važi, pošaljite kratak opis na ${supportEmail}.`;
+        case "ar":
+            return registered
+                ? `أحد مستندات العامل المطلوبة هو شهادة نهائية مدرسية أو جامعية أو مهنية رسمية. إذا لم تكن لديك حاليًا أي شهادة نهائية أو مؤهل مهني رسمي، فلن تتمكن حالتك بعد من اجتياز مرحلة المستندات المطلوبة. وإذا كانت لديك وثيقة مناسبة، فارفعها من لوحة التحكم على ${website}/profile/worker؛ وإذا لم تكن متأكدًا مما إذا كانت الوثيقة مقبولة، فأرسل وصفًا قصيرًا إلى ${supportEmail}.`
+                : `أحد مستندات العامل المطلوبة هو شهادة نهائية مدرسية أو جامعية أو مهنية رسمية. إذا لم تكن لديك حاليًا أي شهادة نهائية أو مؤهل مهني رسمي، فحالة العامل ليست جاهزة بعد للمتابعة. وإذا كانت لديك وثيقة مناسبة، فأنشئ حسابك على ${website}/signup وارفعها من لوحة التحكم؛ وإذا لم تكن متأكدًا مما إذا كانت الوثيقة مقبولة، فأرسل وصفًا قصيرًا إلى ${supportEmail}.`;
+        case "fr":
+            return registered
+                ? `L’un des documents worker requis est un diplôme final scolaire, universitaire ou professionnel formel. Si vous n’avez actuellement aucun diplôme final ni certificat professionnel formel, votre dossier ne peut pas encore passer l’étape des documents requis. Si vous avez bien un document admissible, téléversez-le dans le tableau de bord sur ${website}/profile/worker ; si vous n’êtes pas sûr que votre document convienne, envoyez une courte explication à ${supportEmail}.`
+                : `L’un des documents worker requis est un diplôme final scolaire, universitaire ou professionnel formel. Si vous n’avez actuellement aucun diplôme final ni certificat professionnel formel, votre dossier worker n’est pas encore prêt à avancer. Si vous avez bien un document admissible, créez votre compte sur ${website}/signup puis téléversez-le dans le tableau de bord ; si vous n’êtes pas sûr que votre document convienne, envoyez une courte explication à ${supportEmail}.`;
+        case "pt":
+            return registered
+                ? `Um dos documentos obrigatórios do worker é um diploma final escolar, universitário ou profissional formal. Se você não tem atualmente nenhum diploma final nem certificado profissional formal, seu caso ainda não pode passar pela etapa de documentos obrigatórios. Se você tiver um documento válido, envie-o pelo painel em ${website}/profile/worker; se não tiver certeza se o documento serve, envie uma breve explicação para ${supportEmail}.`
+                : `Um dos documentos obrigatórios do worker é um diploma final escolar, universitário ou profissional formal. Se você não tem atualmente nenhum diploma final nem certificado profissional formal, o caso do worker ainda não está pronto para avançar. Se você tiver um documento válido, crie sua conta em ${website}/signup e envie-o pelo painel; se não tiver certeza se o documento serve, envie uma breve explicação para ${supportEmail}.`;
+        case "hi":
+            return registered
+                ? `Required worker documents में से एक final school, university, या formal vocational diploma है। अगर आपके पास अभी कोई final diploma या formal vocational certificate नहीं है, तो आपका case अभी required-document stage पार नहीं कर सकता। अगर आपके पास योग्य document है, तो उसे ${website}/profile/worker dashboard में upload कीजिए; और अगर sure नहीं हैं कि document valid है या नहीं, तो short explanation ${supportEmail} पर भेजिए।`
+                : `Required worker documents में से एक final school, university, या formal vocational diploma है। अगर आपके पास अभी कोई final diploma या formal vocational certificate नहीं है, तो worker case अभी आगे बढ़ने के लिए ready नहीं है। अगर आपके पास योग्य document है, तो ${website}/signup पर account बनाकर dashboard में upload कीजिए; और अगर sure नहीं हैं कि document valid है या नहीं, तो short explanation ${supportEmail} पर भेजिए।`;
+        default:
+            return registered
+                ? `One of the required worker documents is a final school, university, or formal vocational diploma. If you do not currently have any final diploma or formal vocational certificate, your case cannot pass the required-document stage yet. If you do have a qualifying document, upload it in the dashboard at ${website}/profile/worker; if you are unsure whether your document qualifies, send a short explanation to ${supportEmail}.`
+                : `One of the required worker documents is a final school, university, or formal vocational diploma. If you do not currently have any final diploma or formal vocational certificate, your worker case is not ready to move forward yet. If you do have a qualifying document, create your account at ${website}/signup and upload it in the dashboard; if you are unsure whether your document qualifies, send a short explanation to ${supportEmail}.`;
+    }
 }
 
 function getRegisteredWorkerAdvancedStatusReply(
@@ -744,6 +784,7 @@ export function buildRegisteredWorkerWhatsAppReply({
     const explicitLanguagePreference = detectExplicitWhatsAppLanguagePreference(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
+    const lacksRequiredDiploma = MISSING_DIPLOMA_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || STATUS_HINT_PATTERN.test(normalized);
     const wantsSupport = !wantsStatus && (
         intent === "support"
@@ -852,6 +893,10 @@ export function buildRegisteredWorkerWhatsAppReply({
                     ? `Job Finder payment is not unlocked yet because your profile is currently in admin review. Once admin confirms the profile, checkout will appear in the dashboard at ${website}/profile/worker.`
                     : `Job Finder payment unlocks only after the profile is complete, the required documents are finished, and admin approves it. Please follow the next step in the dashboard at ${website}/profile/worker; payment starts there, not on WhatsApp.`;
         }
+    }
+
+    if (lacksRequiredDiploma) {
+        return getMissingDiplomaReply(lang, website, supportEmail, true);
     }
 
     if (wantsDocuments) {

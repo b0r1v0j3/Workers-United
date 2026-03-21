@@ -332,6 +332,19 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("ne preko WhatsApp-a");
     });
 
+    it("answers missing-diploma questions without collapsing into generic signup copy", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "I have not any diploma",
+            language: "English",
+            intent: "documents",
+        });
+
+        expect(reply).toContain("formal vocational diploma");
+        expect(reply).toContain("not ready to move forward yet");
+        expect(reply).toContain("contact@workersunited.eu");
+        expect(reply).not.toContain("WhatsApp attachments are not linked");
+    });
+
     it("answers registered worker payment status deterministically once approval is done", () => {
         const reply = buildRegisteredWorkerWhatsAppReply({
             message: "Kako da platim?",
@@ -465,6 +478,22 @@ describe("whatsapp-brain guards", () => {
 
         expect(reply).toContain("required documents");
         expect(reply).toContain("admin approves it");
+    });
+
+    it("answers registered missing-diploma questions with a truthful document-stage blocker", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "I do not have a diploma",
+            language: "English",
+            intent: "documents",
+            workerStatus: "NEW",
+            adminApproved: false,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("cannot pass the required-document stage yet");
+        expect(reply).toContain("/profile/worker");
+        expect(reply).toContain("contact@workersunited.eu");
+        expect(reply).not.toContain("WhatsApp attachments are not linked");
     });
 
     it("describes the registered worker process with dashboard checkout wording", () => {
