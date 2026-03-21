@@ -198,6 +198,13 @@ describe("whatsapp-brain guards", () => {
         expect(replyMatchesExpectedWhatsAppLanguage("French", "Your status is under admin review.")).toBe(false);
     });
 
+    it("accepts short valid non-English yes-no replies without false language fallback", () => {
+        expect(replyMatchesExpectedWhatsAppLanguage("French", "Oui.")).toBe(true);
+        expect(replyMatchesExpectedWhatsAppLanguage("Portuguese", "Sim.")).toBe(true);
+        expect(replyMatchesExpectedWhatsAppLanguage("Serbian", "Da.")).toBe(true);
+        expect(replyMatchesExpectedWhatsAppLanguage("French", "Yes.")).toBe(false);
+    });
+
     it("does not treat an ordinary Serbian worker lead as an employer lead", () => {
         expect(looksLikeWorkerWhatsAppLead("Ocu posao")).toBe(true);
         expect(looksLikeEmployerWhatsAppLead("Pozdrav")).toBe(false);
