@@ -267,12 +267,12 @@ export async function getWhatsAppFallbackResponse(
     };
 
     const startMessages: Record<WhatsAppFallbackLanguage, string> = {
-        sr: `Registrujte se na ${website}/signup i popunite profil. Posle registracije možete nastaviti pitanja ovde na WhatsApp-u, ali profil i dokumenta završavate kroz dashboard. Job Finder se otključava tek kada su profil i obavezna dokumenta kompletni i admin ga odobri.`,
-        hi: `${website}/signup पर account बनाइए और profile पूरा कीजिए। Registration के बाद आप सवाल यहाँ WhatsApp पर पूछ सकते हैं, लेकिन profile और documents dashboard में पूरे होते हैं। Job Finder तभी unlock होता है जब profile और required documents complete हों और admin approve करे।`,
-        ar: `أنشئ حسابك على ${website}/signup وأكمل ملفك الشخصي. بعد التسجيل يمكنك متابعة الأسئلة هنا على WhatsApp، لكن الملف والمستندات تُستكمل من لوحة التحكم. يتم فتح Job Finder فقط بعد اكتمال الملف والمستندات المطلوبة وموافقة الإدارة.`,
-        fr: `Créez votre compte sur ${website}/signup et complétez votre profil. Après inscription, vous pouvez poser vos questions ici sur WhatsApp, mais le profil et les documents se terminent dans le tableau de bord. Job Finder ne s’ouvre qu’après profil complet, documents requis et validation admin.`,
-        pt: `Crie sua conta em ${website}/signup e complete seu perfil. Depois do registro, você pode continuar com perguntas aqui no WhatsApp, mas o perfil e os documentos são concluídos no painel. O Job Finder só é liberado após perfil completo, documentos obrigatórios e aprovação administrativa.`,
-        en: `Create your account at ${website}/signup and complete your profile. After signup, you can keep asking questions here on WhatsApp, but profile completion and document uploads happen in the dashboard. Job Finder unlocks only after the profile, required documents, and admin approval are all complete.`,
+        sr: `Registrujte se na ${website}/signup i popunite profil. Posle registracije možete nastaviti pitanja ovde na WhatsApp-u, ali profil i dokumenta završavate kroz dashboard. Job Finder checkout u dashboard-u se otključava tek kada su profil i obavezna dokumenta kompletni i admin ga odobri.`,
+        hi: `${website}/signup पर account बनाइए और profile पूरा कीजिए। Registration के बाद आप सवाल यहाँ WhatsApp पर पूछ सकते हैं, लेकिन profile और documents dashboard में पूरे होते हैं। Job Finder checkout तभी unlock होता है जब profile और required documents complete हों और admin approve करे।`,
+        ar: `أنشئ حسابك على ${website}/signup وأكمل ملفك الشخصي. بعد التسجيل يمكنك متابعة الأسئلة هنا على WhatsApp، لكن الملف والمستندات تُستكمل من لوحة التحكم. لا يفتح Checkout الخاص بـ Job Finder إلا بعد اكتمال الملف والمستندات المطلوبة وموافقة الإدارة.`,
+        fr: `Créez votre compte sur ${website}/signup et complétez votre profil. Après inscription, vous pouvez poser vos questions ici sur WhatsApp, mais le profil et les documents se terminent dans le tableau de bord. Le checkout Job Finder ne s’ouvre qu’après profil complet, documents requis et validation admin.`,
+        pt: `Crie sua conta em ${website}/signup e complete seu perfil. Depois do registro, você pode continuar com perguntas aqui no WhatsApp, mas o perfil e os documentos são concluídos no painel. O checkout do Job Finder só é liberado após perfil completo, documentos obrigatórios e aprovação administrativa.`,
+        en: `Create your account at ${website}/signup and complete your profile. After signup, you can keep asking questions here on WhatsApp, but profile completion and document uploads happen in the dashboard. Job Finder checkout opens only after the profile, required documents, and admin approval are all complete.`,
     };
 
     const greeting = greetings[fallbackLang] || greetings.en;

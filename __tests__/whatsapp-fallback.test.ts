@@ -210,4 +210,13 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("procédure de visa en cours");
         expect(reply).not.toContain("VISA_PROCESS_STARTED");
     });
+
+    it("keeps generic signup fallback on checkout wording instead of vague unlock wording", async () => {
+        const reply = await getWhatsAppFallbackResponse("help", null, {
+            full_name: "Ali Worker",
+        }, "English");
+
+        expect(reply).toContain("Job Finder checkout opens only after");
+        expect(reply).not.toContain("Job Finder unlocks only after");
+    });
 });

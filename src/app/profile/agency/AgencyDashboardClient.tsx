@@ -155,7 +155,7 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
     });
 
     if (normalizedRefundStatus === "completed") {
-        return { label: "Refunded", detail: "The $9 Job Finder fee has already been refunded.", tone: "red" };
+        return { label: "Refunded", detail: "The $9 Job Finder service charge has already been refunded.", tone: "red" };
     }
 
     if (
@@ -240,7 +240,7 @@ function resolveWorkerPhase(worker: DashboardWorker): WorkerPhase {
 
     return {
         label: "Not paid yet",
-        detail: "Agency can start the $9 Job Finder checkout after admin approval.",
+        detail: "Agency can open the $9 Job Finder checkout for this approved worker now.",
         tone: "slate",
     };
 }
@@ -551,7 +551,7 @@ export default function AgencyDashboardClient({
                         <div>
                             <p className="text-sm font-semibold text-[#111827]">90-day refund guarantee</p>
                             <p className="mt-1 text-sm leading-relaxed text-[#6b7280]">
-                                If we do not find a job for a worker within 90 days, the $9 Job Finder fee is refunded in full.
+                                If we do not find a job for a worker within 90 days, the $9 Job Finder service charge is refunded in full.
                             </p>
                         </div>
                     </div>

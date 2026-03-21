@@ -208,7 +208,7 @@ export default async function AdminQueuePage() {
                                                 </div>
                                                 <h3 className="mb-1 text-lg font-bold text-slate-800">Queue is Empty</h3>
                                                 <p className="max-w-[320px] text-sm text-slate-500">
-                                                    Workers will appear here once they complete the profile, verify documents, and pay the Job Finder fee.
+                                                    Workers will appear here once they complete the profile, verify documents, receive admin approval, and complete the Job Finder checkout.
                                                 </p>
                                             </div>
                                         </td>

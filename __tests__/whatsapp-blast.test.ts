@@ -273,7 +273,7 @@ describe("whatsapp-blast", () => {
         expect(sendStatusUpdate).toHaveBeenCalledWith(
             "+15550000001",
             "Ali",
-            expect.stringContaining("Activate Job Finder for $9"),
+            expect.stringContaining("Complete the $9 Job Finder checkout"),
             "profile_1"
         );
         expect(logServerActivity).toHaveBeenCalledOnce();

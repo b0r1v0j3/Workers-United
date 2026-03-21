@@ -63,7 +63,7 @@ function personalizeBlastCopy(template: string, target: WorkerWhatsAppBlastTarge
 }
 
 function getDefaultBlastCopy(target: WorkerWhatsAppBlastTarget) {
-    return `Hi ${target.firstName || "there"}! Your profile has been approved and Job Finder is now unlocked. Activate it for $9 and we'll match you with employers in Europe. 90-day money-back guarantee. Pay: ${STRIPE_PAYMENT_LINK}`;
+    return `Hi ${target.firstName || "there"}! Your profile has been approved and Job Finder checkout is now unlocked. Complete the $9 Job Finder checkout and we'll match you with employers in Europe. 90-day money-back guarantee. Pay: ${STRIPE_PAYMENT_LINK}`;
 }
 
 async function logWhatsAppBlastActivity(params: {
@@ -264,7 +264,7 @@ export async function sendWorkerWhatsAppBlast(params: {
                 const fallbackResult = await sendStatusUpdate(
                     target.phone,
                     target.firstName,
-                    `Your profile has been approved. Activate Job Finder for $9 — 90-day money-back guarantee. Pay here: ${STRIPE_PAYMENT_LINK}`,
+                    `Your profile has been approved. Complete the $9 Job Finder checkout — 90-day money-back guarantee. Pay here: ${STRIPE_PAYMENT_LINK}`,
                     target.profileId || undefined
                 );
 
