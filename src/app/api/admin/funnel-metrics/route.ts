@@ -29,6 +29,17 @@ interface PaymentActivityRow {
     details: unknown;
 }
 
+function requireRows<T>(
+    result: { data: T[] | null; error: { message: string } | null | undefined },
+    context: string
+) {
+    if (result.error) {
+        throw new Error(`${context}: ${result.error.message}`);
+    }
+
+    return result.data || [];
+}
+
 function asObject(value: unknown): Record<string, unknown> | null {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
         return null;
@@ -177,21 +188,30 @@ export async function GET(request: Request) {
 
         // 2. Completed Profiles (100% completion using same fields as worker/page.tsx)
         // Fetch all profiles and worker onboarding rows to calculate per-user completion
-        const { data: allProfiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, email');
+        const allProfiles = requireRows(
+            await supabase
+                .from('profiles')
+                .select('id, full_name, email'),
+            'Failed to load worker profiles for funnel metrics'
+        );
 
-        const { data: allWorkerRecords } = await supabase
-            .from('worker_onboarding')
-            .select('profile_id, status, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas');
+        const allWorkerRecords = requireRows(
+            await supabase
+                .from('worker_onboarding')
+                .select('profile_id, status, phone, nationality, current_country, preferred_job, gender, date_of_birth, birth_country, birth_city, citizenship, marital_status, passport_number, lives_abroad, previous_visas'),
+            'Failed to load worker onboarding rows for funnel metrics'
+        );
 
-        const { data: allDocs } = await supabase
-            .from('worker_documents')
-            .select('user_id, document_type, status');
+        const allDocs = requireRows(
+            await supabase
+                .from('worker_documents')
+                .select('user_id, document_type, status'),
+            'Failed to load worker documents for funnel metrics'
+        );
 
-        const profileMap = new Map(allProfiles?.map(p => [p.id, p]) || []);
+        const profileMap = new Map(allProfiles.map(p => [p.id, p]));
         const workerGroups = new Map<string, any[]>();
-        for (const workerRow of allWorkerRecords || []) {
+        for (const workerRow of allWorkerRecords) {
             if (!workerRow?.profile_id) continue;
             const current = workerGroups.get(workerRow.profile_id) || [];
             current.push(workerRow);
@@ -208,7 +228,7 @@ export async function GET(request: Request) {
         for (const wu of workerUsers) {
             const p = profileMap.get(wu.id);
             const worker = workerMap.get(wu.id);
-            const docs = (allDocs?.filter(d => d.user_id === wu.id) || []) as { document_type: string }[];
+            const docs = allDocs.filter(d => d.user_id === wu.id) as { document_type: string }[];
 
             const result = getWorkerCompletion({
                 profile: p || null,
@@ -220,7 +240,7 @@ export async function GET(request: Request) {
 
         // 3. Uploaded Documents — distinct WORKER users with at least one doc
         const workerIds = new Set(workerUsers.map((u: any) => u.id));
-        const workerDocs = allDocs?.filter(d => workerIds.has(d.user_id)) || [];
+        const workerDocs = allDocs.filter(d => workerIds.has(d.user_id));
         const distinctUploaded = new Set(workerDocs.map(d => d.user_id)).size;
 
         // 4. Verified — distinct WORKER users with verified docs (status = 'verified')
@@ -228,31 +248,34 @@ export async function GET(request: Request) {
         const distinctVerified = new Set(verifiedDocs.map(d => d.user_id)).size;
 
         // 5. Job Matched — distinct recipients of 'job_match' emails
-        const { data: jobMatches, error: matchError } = await supabase
-            .from('email_queue')
-            .select('recipient_email')
-            .eq('email_type', 'job_match');
-
-        if (matchError) {
-            console.error("[Funnel] Match error:", matchError);
-        }
-        const distinctMatched = jobMatches
-            ? new Set(jobMatches.map(m => m.recipient_email)).size
-            : 0;
+        const jobMatches = requireRows(
+            await supabase
+                .from('email_queue')
+                .select('recipient_email')
+                .eq('email_type', 'job_match'),
+            'Failed to load job match emails for funnel metrics'
+        );
+        const distinctMatched = new Set(jobMatches.map(m => m.recipient_email)).size;
 
         // 6. Supply vs Demand (IN_QUEUE workers vs open job positions)
-        const { data: queueWorkerRows } = await supabase.from('worker_onboarding').select('preferred_job').eq('status', 'IN_QUEUE');
-        const { data: openJobs } = await supabase.from('job_requests').select('industry, positions_count, positions_filled').in('status', ['open', 'matching']);
+        const queueWorkerRows = requireRows(
+            await supabase.from('worker_onboarding').select('preferred_job').eq('status', 'IN_QUEUE'),
+            'Failed to load queue workers for funnel metrics'
+        );
+        const openJobs = requireRows(
+            await supabase.from('job_requests').select('industry, positions_count, positions_filled').in('status', ['open', 'matching']),
+            'Failed to load open job requests for funnel metrics'
+        );
 
         const sdMap = new Map<string, { industry: string, supply: number, demand: number }>();
 
-        queueWorkerRows?.forEach(workerRow => {
+        queueWorkerRows.forEach(workerRow => {
             const ind = workerRow.preferred_job || 'Unspecified';
             if (!sdMap.has(ind)) sdMap.set(ind, { industry: ind, supply: 0, demand: 0 });
             sdMap.get(ind)!.supply += 1;
         });
 
-        openJobs?.forEach(j => {
+        openJobs.forEach(j => {
             const ind = j.industry || 'Unspecified';
             if (!sdMap.has(ind)) sdMap.set(ind, { industry: ind, supply: 0, demand: 0 });
             sdMap.get(ind)!.demand += Math.max(0, (j.positions_count || 0) - (j.positions_filled || 0));
@@ -290,8 +313,11 @@ export async function GET(request: Request) {
         });
 
         // Populate employer signups (need to fetch employers)
-        const { data: allEmployers } = await supabase.from('employers').select('created_at');
-        allEmployers?.forEach((e: any) => {
+        const allEmployers = requireRows(
+            await supabase.from('employers').select('created_at'),
+            'Failed to load employers for funnel metrics'
+        );
+        allEmployers.forEach((e: any) => {
             const dateKey = new Date(e.created_at).toISOString().split('T')[0];
             if (timeSeriesMap.has(dateKey)) {
                 timeSeriesMap.get(dateKey)!.employers += 1;
@@ -299,10 +325,12 @@ export async function GET(request: Request) {
         });
 
         // Populate revenue (need to fetch payments)
-        const { data: allPayments } = await supabase
-            .from('payments')
-            .select('id, profile_id, status, payment_type, stripe_checkout_session_id, paid_at, deadline_at, metadata, amount, amount_cents');
-        const typedPayments = (allPayments || []) as PaymentRow[];
+        const typedPayments = requireRows(
+            await supabase
+                .from('payments')
+                .select('id, profile_id, status, payment_type, stripe_checkout_session_id, paid_at, deadline_at, metadata, amount, amount_cents'),
+            'Failed to load payments for funnel metrics'
+        ) as PaymentRow[];
         typedPayments
             .filter((payment) => ['paid', 'completed'].includes(payment.status || ''))
             .forEach((p) => {
@@ -324,22 +352,21 @@ export async function GET(request: Request) {
 
         const entryFeePayments = typedPayments.filter((payment) => payment.payment_type === 'entry_fee' && !!payment.profile_id);
         const paymentProfileIds = [...new Set(entryFeePayments.map((payment) => payment.profile_id).filter(Boolean))] as string[];
-        const { data: paymentActivities, error: paymentActivitiesError } = paymentProfileIds.length === 0
-            ? { data: [] as PaymentActivityRow[], error: null }
-            : await supabase
-                .from('user_activity')
-                .select('user_id, action, created_at, details')
-                .in('user_id', paymentProfileIds)
-                .in('action', ['checkout_session_created', 'payment_completed', 'payment_failed', 'checkout_session_expired'])
-                .order('created_at', { ascending: false })
-                .range(0, 3999);
-
-        if (paymentActivitiesError) {
-            console.error('[Funnel] Payment activity error:', paymentActivitiesError);
-        }
+        const paymentActivities = paymentProfileIds.length === 0
+            ? [] as PaymentActivityRow[]
+            : requireRows(
+                await supabase
+                    .from('user_activity')
+                    .select('user_id, action, created_at, details')
+                    .in('user_id', paymentProfileIds)
+                    .in('action', ['checkout_session_created', 'payment_completed', 'payment_failed', 'checkout_session_expired'])
+                    .order('created_at', { ascending: false })
+                    .range(0, 3999),
+                'Failed to load payment activity for funnel metrics'
+            );
 
         const activitiesByProfile = new Map<string, PaymentActivityRow[]>();
-        for (const activity of (paymentActivities || []) as PaymentActivityRow[]) {
+        for (const activity of paymentActivities as PaymentActivityRow[]) {
             if (!activity.user_id) {
                 continue;
             }
