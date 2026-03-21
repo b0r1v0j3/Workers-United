@@ -502,7 +502,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        await admin.from("admin_audit_log").insert({
+        const { error: auditError } = await admin.from("admin_audit_log").insert({
             admin_id: user.id,
             action: "edit",
             table_name: table,
@@ -512,7 +512,18 @@ export async function POST(request: NextRequest) {
             new_value: String(normalizedValue ?? ""),
         });
 
-        return NextResponse.json({ success: true, field, value: normalizedValue });
+        if (auditError) {
+            console.warn("[Edit Data] Audit log insert failed:", auditError);
+            return NextResponse.json({
+                success: true,
+                auditLogged: false,
+                warning: "Data was updated, but the admin audit log entry failed to save.",
+                field,
+                value: normalizedValue,
+            });
+        }
+
+        return NextResponse.json({ success: true, auditLogged: true, field, value: normalizedValue });
     } catch (error) {
         console.error("[Edit Data] System error:", error);
         return NextResponse.json(

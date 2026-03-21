@@ -57,10 +57,34 @@ function getDocumentActionBanner(
 
     switch (action) {
         case "updated":
+            if (notification === "failed") {
+                return {
+                    tone: "amber" as const,
+                    title: "Document decision saved, email failed",
+                    copy: "The admin decision was saved, but the worker notification email failed to send. Check email health or resend from preview if needed.",
+                    icon: <AlertTriangle size={18} />,
+                };
+            }
+            if (notification === "skipped") {
+                return {
+                    tone: "blue" as const,
+                    title: "Document decision saved",
+                    copy: "The admin decision was saved. No worker email was sent because this case does not currently have a direct-notification recipient.",
+                    icon: <Mail size={18} />,
+                };
+            }
+            if (notification === "queued") {
+                return {
+                    tone: "blue" as const,
+                    title: "Document decision saved, email queued",
+                    copy: "The admin decision was saved and the worker notification email hit a retry path, so it is queued for automatic delivery.",
+                    icon: <Mail size={18} />,
+                };
+            }
             return {
                 tone: "emerald" as const,
                 title: "Document decision saved",
-                copy: "The latest admin document decision was saved and the case view has been refreshed.",
+                copy: "The latest admin document decision was saved, the worker notification email was sent successfully, and the case view has been refreshed.",
                 icon: <Check size={18} />,
             };
         case "requested":
