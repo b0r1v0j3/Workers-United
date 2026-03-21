@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    getApprovalActionBannerData,
     buildManualWorkerStatusEmailData,
     getDocumentActionBannerData,
     getStatusActionBannerData,
@@ -24,6 +25,8 @@ describe("admin worker notification helpers", () => {
         })).toEqual({
             status: "queued",
             error: "421 temporary failure",
+            whatsappStatus: "skipped",
+            whatsappError: null,
         });
     });
 
@@ -35,6 +38,26 @@ describe("admin worker notification helpers", () => {
         })).toEqual({
             status: "failed",
             error: "smtp failed",
+            whatsappStatus: "skipped",
+            whatsappError: null,
+        });
+    });
+
+    it("preserves WhatsApp sidecar failure alongside email success", () => {
+        expect(resolveAdminWorkerNotificationStatus({
+            sent: true,
+            queued: false,
+            error: null,
+            whatsapp: {
+                attempted: true,
+                sent: false,
+                error: "recipient blocked",
+            },
+        })).toEqual({
+            status: "sent",
+            error: null,
+            whatsappStatus: "failed",
+            whatsappError: "recipient blocked",
         });
     });
 
@@ -53,6 +76,15 @@ describe("admin worker notification helpers", () => {
             title: "Worker status saved, email queued",
             copy: expect.stringContaining("queued for automatic delivery"),
             icon: "mail",
+        });
+    });
+
+    it("returns a partial-failure approval banner when WhatsApp fails after email success", () => {
+        expect(getApprovalActionBannerData("approved", "sent", undefined, "failed")).toMatchObject({
+            tone: "amber",
+            title: "Worker approved, WhatsApp failed",
+            copy: expect.stringContaining("approval email was sent successfully"),
+            icon: "alert",
         });
     });
 });

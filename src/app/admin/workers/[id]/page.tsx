@@ -7,7 +7,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
 import { queueEmail } from "@/lib/email-templates";
-import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { buildContractDataForMatch } from "@/lib/contract-data";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
@@ -82,12 +81,14 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     const documentActionBanner = toBannerUi(getDocumentActionBannerData(documentAction, documentError, documentNotification));
     const approvalAction = getSingleSearchParam(resolvedSearchParams.approvalAction);
     const approvalNotification = getSingleSearchParam(resolvedSearchParams.approvalNotification);
+    const approvalWhatsApp = getSingleSearchParam(resolvedSearchParams.approvalWhatsApp);
     const approvalError = getSingleSearchParam(resolvedSearchParams.approvalError);
-    const approvalActionBanner = toBannerUi(getApprovalActionBannerData(approvalAction, approvalNotification, approvalError));
+    const approvalActionBanner = toBannerUi(getApprovalActionBannerData(approvalAction, approvalNotification, approvalError, approvalWhatsApp));
     const statusAction = getSingleSearchParam(resolvedSearchParams.statusAction);
     const statusNotification = getSingleSearchParam(resolvedSearchParams.statusNotification);
+    const statusWhatsApp = getSingleSearchParam(resolvedSearchParams.statusWhatsApp);
     const statusError = getSingleSearchParam(resolvedSearchParams.statusError);
-    const statusActionBanner = toBannerUi(getStatusActionBannerData(statusAction, statusNotification, statusError));
+    const statusActionBanner = toBannerUi(getStatusActionBannerData(statusAction, statusNotification, statusError, statusWhatsApp));
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -408,6 +409,9 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
 
             if (approvalResult.approved) {
                 params.set("approvalNotification", approvalResult.notification.status);
+                if (approvalResult.notification.whatsapp?.status === "failed") {
+                    params.set("approvalWhatsApp", "failed");
+                }
             }
 
             redirect(`/admin/workers/${id}?${params.toString()}`);
@@ -488,6 +492,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
             });
 
             let notificationStatus: "sent" | "queued" | "failed" | "skipped" = "skipped";
+            let notificationWhatsAppStatus: "failed" | "skipped" = "skipped";
             const notificationRecipient = currentApprovalState.notificationRecipient;
             if (notificationRecipient && currentApprovalState.notificationUserId) {
                 const notificationResult = await queueEmail(
@@ -500,11 +505,9 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                     undefined,
                     normalizeWorkerPhone(freshWorker.phone) || undefined
                 );
-                notificationStatus = notificationResult.sent
-                    ? "sent"
-                    : isEmailDeliveryAccepted(notificationResult)
-                        ? "queued"
-                        : resolveAdminWorkerNotificationStatus(notificationResult).status;
+                const notificationSummary = resolveAdminWorkerNotificationStatus(notificationResult);
+                notificationStatus = notificationSummary.status;
+                notificationWhatsAppStatus = notificationSummary.whatsappStatus === "failed" ? "failed" : "skipped";
             }
 
             revalidatePath(`/admin/workers/${id}`);
@@ -514,6 +517,9 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                 statusNotification: notificationStatus,
                 ts: Date.now().toString(),
             });
+            if (notificationWhatsAppStatus === "failed") {
+                params.set("statusWhatsApp", "failed");
+            }
             redirect(`/admin/workers/${id}?${params.toString()}`);
         } catch (error) {
             const params = new URLSearchParams({

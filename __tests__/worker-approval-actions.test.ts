@@ -282,6 +282,67 @@ describe("worker approval actions", () => {
         expect(result.notification).toEqual({
             status: "failed",
             error: "smtp_failed",
+            whatsapp: {
+                status: "skipped",
+                error: null,
+            },
+        });
+    });
+
+    it("preserves WhatsApp partial failure when the unlock email succeeds", async () => {
+        vi.mocked(queueEmail).mockResolvedValueOnce({
+            id: "email-3",
+            sent: true,
+            queued: false,
+            status: "sent",
+            error: null,
+            whatsapp: {
+                attempted: true,
+                sent: false,
+                error: "recipient blocked",
+                retryable: false,
+                failureCategory: "recipient",
+                messageId: null,
+            },
+        });
+
+        const worker = {
+            id: "worker-6",
+            profile_id: null,
+            submitted_full_name: "Agency Worker",
+            status: "PENDING_APPROVAL",
+            admin_approved: false,
+            entry_fee_paid: false,
+            job_search_active: false,
+            phone: "+381600000005",
+        };
+        const { adminClient } = createAdminClientMock({
+            worker,
+            documents: [
+                { document_type: "passport", status: "verified" },
+                { document_type: "biometric_photo", status: "verified" },
+                { document_type: "diploma", status: "verified" },
+            ],
+        });
+
+        const result = await applyWorkerApprovalAction({
+            adminClient: adminClient as any,
+            actorUserId: "admin-1",
+            action: "approve",
+            workerId: worker.id,
+            documentOwnerId: worker.id,
+            phoneOptional: true,
+            fullNameFallback: worker.submitted_full_name,
+        });
+
+        expect(result.notificationQueued).toBe(true);
+        expect(result.notification).toEqual({
+            status: "sent",
+            error: null,
+            whatsapp: {
+                status: "failed",
+                error: "recipient blocked",
+            },
         });
     });
 
