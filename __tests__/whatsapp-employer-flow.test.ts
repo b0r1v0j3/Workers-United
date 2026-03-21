@@ -8,7 +8,7 @@ import {
     resolveEmployerWhatsAppLead,
 } from "@/lib/whatsapp-employer-flow";
 
-function createAdminClient(employerRecord: Record<string, unknown> | null) {
+function createAdminClient(employerRecord: Record<string, unknown> | null, error?: string | null) {
     return {
         from(table: string) {
             if (table !== "employers") {
@@ -22,6 +22,7 @@ function createAdminClient(employerRecord: Record<string, unknown> | null) {
                             return {
                                 maybeSingle: async () => ({
                                     data: employerRecord,
+                                    error: error ? { message: error } : null,
                                 }),
                             };
                         },
@@ -87,6 +88,16 @@ describe("whatsapp-employer-flow", () => {
             contact_name: "Milan",
             status: "APPROVED",
         });
+    });
+
+    it("does not swallow employer lookup errors as a fake no-match result", async () => {
+        await expect(resolveEmployerWhatsAppLead({
+            admin: createAdminClient(null, "duplicate rows found") as never,
+            normalizedPhone: "+38166111222",
+            content: "hello",
+            isAdmin: false,
+            hasRegisteredWorker: false,
+        })).rejects.toThrow("duplicate rows found");
     });
 
     it("builds employer AI prompts through injected response caller", async () => {
