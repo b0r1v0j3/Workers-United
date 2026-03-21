@@ -162,4 +162,23 @@ describe("GET /api/cron/profile-reminders", () => {
         expect(queueEmail).not.toHaveBeenCalled();
         expect(deleteUserData).not.toHaveBeenCalled();
     });
+
+    it("fails closed when auth pagination fails", async () => {
+        const { createAdminClient } = await import("@/lib/supabase/admin");
+        vi.mocked(createAdminClient).mockReturnValue(createAdminClientMock() as any);
+        getAllAuthUsers.mockRejectedValueOnce(new Error("auth pagination failed"));
+
+        const { GET } = await import("@/app/api/cron/profile-reminders/route");
+        const response = await GET(new Request("http://localhost/api/cron/profile-reminders", {
+            headers: { authorization: "Bearer cron-secret" },
+        }));
+
+        expect(response.status).toBe(500);
+        await expect(response.json()).resolves.toEqual({
+            error: "Internal error",
+            details: "auth pagination failed",
+        });
+        expect(queueEmail).not.toHaveBeenCalled();
+        expect(deleteUserData).not.toHaveBeenCalled();
+    });
 });

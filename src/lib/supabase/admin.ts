@@ -66,7 +66,7 @@ export async function getAllAuthUsers(
         });
         if (error) {
             console.error("[getAllAuthUsers] Error fetching page", page, error);
-            break;
+            throw error;
         }
         const users = data?.users || [];
         allUsers.push(...users);
