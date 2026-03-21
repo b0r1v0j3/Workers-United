@@ -706,6 +706,59 @@ describe("POST /api/whatsapp/webhook", () => {
         );
     });
 
+    it("keeps explicit language-switch history in Serbian for short fallback follow-ups", async () => {
+        mutableEnv.OPENAI_API_KEY = "";
+        createAdminClient.mockReturnValueOnce({
+            from: vi.fn(() => ({
+                select: () => ({
+                    eq: () => ({
+                        single: async () => ({ data: null }),
+                    }),
+                }),
+                delete: () => ({
+                    eq: vi.fn(),
+                }),
+                upsert: vi.fn(),
+            })),
+        });
+        resolveEmployerWhatsAppLead.mockResolvedValueOnce({
+            employerRecord: null,
+            isEmployer: false,
+            isLikelyEmployer: false,
+        });
+        loadWhatsAppConversationHistory.mockResolvedValueOnce([
+            { direction: "inbound", content: "Pisi na srpskom" },
+            { direction: "outbound", content: "Naravno — nastaviću na srpskom." },
+        ]);
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                { id: "wamid_sr_followup", from: "38166033333", type: "text", text: { body: "ok" } },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({ status: "ok" });
+        expect(sendWhatsAppText).toHaveBeenCalledWith(
+            "+38166033333",
+            expect.stringContaining("Dobrodošli u Workers United"),
+            undefined
+        );
+    });
+
     it("seeds onboarding in the recent conversation language for short onboarding openers", async () => {
         const { handleWhatsAppOnboarding } = await import("@/app/api/whatsapp/webhook/route");
         const upsert = vi.fn().mockResolvedValue({ error: null });

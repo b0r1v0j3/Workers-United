@@ -213,7 +213,8 @@ function getMostRecentInboundHistoryLanguageCode(
             continue;
         }
 
-        return detectWhatsAppLanguageCode(entry.content);
+        return detectExplicitWhatsAppLanguagePreference(entry.content)
+            || detectWhatsAppLanguageCode(entry.content);
     }
 
     return null;

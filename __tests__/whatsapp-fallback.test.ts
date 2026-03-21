@@ -151,6 +151,19 @@ describe("whatsapp-fallback", () => {
         expect(reply).not.toContain("Create your account");
     });
 
+    it("keeps explicit language-switch history for short ambiguous fallback replies", async () => {
+        const reply = await getWhatsAppFallbackResponse("ok", null, {
+            full_name: "Ali Worker",
+        }, "English", [
+            { direction: "inbound", content: "Pisi na srpskom" },
+            { direction: "outbound", content: "Naravno — nastaviću na srpskom." },
+        ]);
+
+        expect(reply).toContain("Dobrodošli u Workers United");
+        expect(reply).toContain("Registrujte se");
+        expect(reply).not.toContain("Welcome to Workers United");
+    });
+
     it("keeps transliterated Hindi warm greetings in Hindi fallback copy", async () => {
         const reply = await getWhatsAppFallbackResponse("kaise ho", null, {
             full_name: "Ali Worker",
