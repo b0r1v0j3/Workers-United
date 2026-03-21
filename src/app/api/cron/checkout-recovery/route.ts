@@ -169,6 +169,43 @@ function wasRecoveryStepAlreadyQueued(emails: EmailQueueRow[], paymentId: string
     );
 }
 
+export async function tryMarkPendingEntryFeePaymentAbandoned(
+    admin: ReturnType<typeof createTypedAdminClient>,
+    paymentId: string,
+    deadlineAt: string
+) {
+    const { data, error } = await admin
+        .from("payments")
+        .update({
+            status: "abandoned",
+            deadline_at: deadlineAt,
+        })
+        .eq("id", paymentId)
+        .eq("payment_type", "entry_fee")
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+
+    if (error) {
+        return {
+            abandoned: false,
+            error: error.message,
+        };
+    }
+
+    if (!data?.id) {
+        return {
+            abandoned: false,
+            error: "Pending entry-fee payment was not updated.",
+        };
+    }
+
+    return {
+        abandoned: true,
+        error: null,
+    };
+}
+
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
     if (!hasValidCronBearerToken(authHeader)) {
@@ -360,18 +397,15 @@ export async function GET(request: Request) {
                 invalidEmailSkipped++;
 
                 if (recoveryStep === 3) {
-                    const { error: abandonError } = await admin
-                        .from("payments")
-                        .update({
-                            status: "abandoned",
-                            deadline_at: nowIso,
-                        })
-                        .eq("id", pendingEntry.payment.id)
-                        .eq("payment_type", "entry_fee")
-                        .eq("status", "pending");
+                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(admin, pendingEntry.payment.id, nowIso);
 
-                    if (!abandonError) {
+                    if (abandonResult.abandoned) {
                         markedAbandoned++;
+                    } else {
+                        console.warn("[Checkout Recovery] Failed to mark invalid-email payment abandoned:", {
+                            paymentId: pendingEntry.payment.id,
+                            error: abandonResult.error,
+                        });
                     }
                 }
 
@@ -404,18 +438,16 @@ export async function GET(request: Request) {
                 }
 
                 if (recoveryStep === 3) {
-                    const { error: abandonError } = await admin
-                        .from("payments")
-                        .update({
-                            status: "abandoned",
-                            deadline_at: nowIso,
-                        })
-                        .eq("id", pendingEntry.payment.id)
-                        .eq("payment_type", "entry_fee")
-                        .eq("status", "pending");
+                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(admin, pendingEntry.payment.id, nowIso);
 
-                    if (!abandonError) {
+                    if (abandonResult.abandoned) {
                         markedAbandoned++;
+                    } else {
+                        console.warn("[Checkout Recovery] Failed to mark ineligible payment abandoned:", {
+                            paymentId: pendingEntry.payment.id,
+                            reason: unlockState.reason,
+                            error: abandonResult.error,
+                        });
                     }
                 }
 
@@ -492,18 +524,10 @@ export async function GET(request: Request) {
                 if (recoveryStep === 3) {
                     step3++;
 
-                    const { error: abandonError } = await admin
-                        .from("payments")
-                        .update({
-                            status: "abandoned",
-                            deadline_at: nowIso,
-                        })
-                        .eq("id", pendingEntry.payment.id)
-                        .eq("payment_type", "entry_fee")
-                        .eq("status", "pending");
+                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(admin, pendingEntry.payment.id, nowIso);
 
-                    if (abandonError) {
-                        throw abandonError;
+                    if (!abandonResult.abandoned) {
+                        throw new Error(abandonResult.error || "Failed to mark checkout as abandoned");
                     }
 
                     markedAbandoned++;
@@ -516,18 +540,15 @@ export async function GET(request: Request) {
             } catch (sendError) {
                 failed++;
                 if (recoveryStep === 3) {
-                    const { error: abandonError } = await admin
-                        .from("payments")
-                        .update({
-                            status: "abandoned",
-                            deadline_at: nowIso,
-                        })
-                        .eq("id", pendingEntry.payment.id)
-                        .eq("payment_type", "entry_fee")
-                        .eq("status", "pending");
+                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(admin, pendingEntry.payment.id, nowIso);
 
-                    if (!abandonError) {
+                    if (abandonResult.abandoned) {
                         markedAbandoned++;
+                    } else {
+                        console.warn("[Checkout Recovery] Failed to mark failed step-3 payment abandoned:", {
+                            paymentId: pendingEntry.payment.id,
+                            error: abandonResult.error,
+                        });
                     }
                 }
 

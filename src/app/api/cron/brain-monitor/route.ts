@@ -182,15 +182,9 @@ export async function GET(request: Request) {
         results.highSignals = opsReport.metrics.highSignals;
 
         const emailReasons = getOpsMonitorEmailReasons(opsReport);
-        if (emailReasons.length > 0 && OPS_MONITOR_EMAILS_ENABLED) {
-            results.emailSkipped = true;
-            results.emailReason = "Ops monitor emails are disabled; exception snapshot saved to brain_reports only";
-        } else {
-            results.emailSkipped = true;
-            results.emailReason = emailReasons.length > 0
-                ? "Ops monitor emails are disabled; exception snapshot saved to brain_reports only"
-                : "No critical or high-priority ops signals — saved to brain_reports only";
-        }
+        const emailSkipReason = emailReasons.length > 0
+            ? "Ops monitor emails are disabled; exception snapshot saved to brain_reports only"
+            : "No critical or high-priority ops signals — saved to brain_reports only";
 
         const reportPayload = {
             report_type: emailReasons.length > 0 ? "ops_daily_exception" : "ops_daily_snapshot",
@@ -214,10 +208,12 @@ export async function GET(request: Request) {
         });
 
         if (saveReportError) {
-            console.error("[Ops Monitor] Failed to save report:", saveReportError.message);
-        } else {
-            results.reportSaved = true;
+            throw new Error(`Failed to save ops report: ${saveReportError.message}`);
         }
+
+        results.reportSaved = true;
+        results.emailSkipped = true;
+        results.emailReason = emailSkipReason;
 
         const duration = ((Date.now() - startedAt) / 1000).toFixed(1);
         return NextResponse.json({
