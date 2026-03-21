@@ -93,10 +93,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
         });
     } catch (error) {
         console.error("[AdminAgencyWorkerApproval] Error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Internal server error";
         return NextResponse.json({
-            error: error instanceof Error ? error.message : "Internal server error",
+            error: errorMessage,
         }, {
-            status: error instanceof Error && /100% complete|Cannot revoke approval/.test(error.message) ? 400 : 500,
+            status: /100% complete|Cannot revoke approval/.test(errorMessage)
+                ? 400
+                : /not found/i.test(errorMessage)
+                    ? 404
+                    : 500,
         });
     }
 }

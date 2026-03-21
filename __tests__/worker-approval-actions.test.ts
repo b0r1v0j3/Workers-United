@@ -32,11 +32,17 @@ import { applyWorkerApprovalAction, loadWorkerApprovalGuardState } from "@/lib/w
 function createAdminClientMock({
     worker,
     documents,
+    updateResult,
 }: {
     worker: Record<string, any>;
     documents: Array<{ document_type: string | null; status?: string | null }>;
+    updateResult?: { data: { id: string } | null; error: { message: string } | null };
 }) {
     const updates: Array<Record<string, any>> = [];
+    const workerUpdateMaybeSingle = vi.fn().mockResolvedValue(updateResult ?? {
+        data: { id: worker.id },
+        error: null,
+    });
 
     const workerDocumentsQuery = () => {
         const chain: any = {
@@ -68,7 +74,11 @@ function createAdminClientMock({
                     update: (payload: Record<string, any>) => {
                         updates.push(payload);
                         return {
-                            eq: async () => ({ error: null }),
+                            eq: () => ({
+                                select: () => ({
+                                    maybeSingle: () => workerUpdateMaybeSingle(),
+                                }),
+                            }),
                         };
                     },
                 };
@@ -94,7 +104,7 @@ function createAdminClientMock({
         },
     };
 
-    return { adminClient, updates };
+    return { adminClient, updates, workerUpdateMaybeSingle };
 }
 
 describe("worker approval actions", () => {
@@ -273,5 +283,42 @@ describe("worker approval actions", () => {
             status: "failed",
             error: "smtp_failed",
         });
+    });
+
+    it("fails closed when the approval update matches no worker row", async () => {
+        const worker = {
+            id: "worker-5",
+            profile_id: null,
+            submitted_full_name: "Agency Worker",
+            status: "PENDING_APPROVAL",
+            admin_approved: false,
+            entry_fee_paid: false,
+            job_search_active: false,
+            phone: "+381600000004",
+        };
+        const { adminClient } = createAdminClientMock({
+            worker,
+            documents: [
+                { document_type: "passport", status: "verified" },
+                { document_type: "biometric_photo", status: "verified" },
+                { document_type: "diploma", status: "verified" },
+            ],
+            updateResult: {
+                data: null,
+                error: null,
+            },
+        });
+
+        await expect(applyWorkerApprovalAction({
+            adminClient: adminClient as any,
+            actorUserId: "admin-1",
+            action: "approve",
+            workerId: worker.id,
+            documentOwnerId: worker.id,
+            phoneOptional: true,
+            fullNameFallback: worker.submitted_full_name,
+        })).rejects.toThrow("Worker record not found while updating approval.");
+
+        expect(queueEmail).not.toHaveBeenCalled();
     });
 });

@@ -652,7 +652,7 @@ export async function applyWorkerApprovalAction({
             : "NEW";
     const nowIso = new Date().toISOString();
 
-    const { error: updateError } = await adminClient
+    const { data: updatedWorker, error: updateError } = await adminClient
         .from("worker_onboarding")
         .update({
             admin_approved: approved,
@@ -661,10 +661,16 @@ export async function applyWorkerApprovalAction({
             status: nextStatus,
             updated_at: nowIso,
         })
-        .eq("id", approvalState.worker.id);
+        .eq("id", approvalState.worker.id)
+        .select("id")
+        .maybeSingle();
 
     if (updateError) {
         throw new Error(updateError.message);
+    }
+
+    if (!updatedWorker?.id) {
+        throw new Error("Worker record not found while updating approval.");
     }
 
     let notificationQueued = false;
