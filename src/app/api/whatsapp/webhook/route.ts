@@ -45,6 +45,7 @@ import {
     attachInboundWhatsAppMessageUser,
     extractWhatsAppMessageContent,
     isTextLikeWhatsAppMessage,
+    looksLikeAutomatedWhatsAppAutoReply,
     normalizeWhatsAppPhone,
     recordInboundWhatsAppMessage,
 } from "@/lib/whatsapp-inbound-events";
@@ -449,6 +450,23 @@ export async function POST(request: NextRequest) {
 
                         if (isDuplicateInboundMessage) {
                             console.log(`[Webhook] Duplicate wamid ${wamid} — skipping reply`);
+                            continue;
+                        }
+
+                        if (looksLikeAutomatedWhatsAppAutoReply(messageType, content)) {
+                            await logServerActivity(
+                                activityUserId || "anonymous",
+                                "whatsapp_inbound_autoreply_suppressed",
+                                "messaging",
+                                {
+                                    phone: normalizedPhone,
+                                    message_type: messageType,
+                                    content_preview: content.substring(0, 160),
+                                    role: linkedWorkerRecord ? "worker" : employerRecord ? "employer" : isAdmin ? "admin" : "anonymous",
+                                },
+                                "warning"
+                            );
+                            console.log(`[Webhook] Suppressed likely inbound auto-reply from ${normalizedPhone}`);
                             continue;
                         }
 

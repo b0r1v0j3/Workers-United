@@ -19,6 +19,22 @@ export interface WhatsAppInboundMessage {
 }
 
 const TEXT_LIKE_MESSAGE_TYPES = new Set(["text", "button", "interactive"]);
+const STRONG_AUTOREPLY_PATTERNS: readonly RegExp[] = [
+    /\bthank you for contacting\b.*\b(?:let us know how we can help|how we can help you)\b/i,
+    /\bthank you for your message\b.*\b(?:unavailable right now|respond as soon as possible|get back to you)\b/i,
+    /\bthis is an automated (?:message|reply|response)\b/i,
+    /\bout of office\b/i,
+];
+const AUTOREPLY_GRATITUDE_PATTERNS: readonly RegExp[] = [
+    /\bthank you for contacting\b/i,
+    /\bthank you for your message\b/i,
+];
+const AUTOREPLY_DELAY_PATTERNS: readonly RegExp[] = [
+    /\b(?:we(?:'re| are)|i(?:'m| am)) unavailable right now\b/i,
+    /\b(?:will|can) respond as soon as possible\b/i,
+    /\b(?:we(?:'ll| will)|i(?:'ll| will)) get back to you\b/i,
+    /\b(?:we(?:'ll| will)|i(?:'ll| will)) respond shortly\b/i,
+];
 
 interface PostgresLikeError {
     code?: string;
@@ -63,6 +79,26 @@ export function extractWhatsAppMessageContent(message: WhatsAppInboundMessage): 
     }
 
     return `[${messageType} message]`;
+}
+
+export function looksLikeAutomatedWhatsAppAutoReply(messageType: string, content: string): boolean {
+    if (!TEXT_LIKE_MESSAGE_TYPES.has(messageType)) {
+        return false;
+    }
+
+    const normalized = content.trim();
+    if (!normalized) {
+        return false;
+    }
+
+    if (STRONG_AUTOREPLY_PATTERNS.some((pattern) => pattern.test(normalized))) {
+        return true;
+    }
+
+    const hasGratitude = AUTOREPLY_GRATITUDE_PATTERNS.some((pattern) => pattern.test(normalized));
+    const hasDelaySignal = AUTOREPLY_DELAY_PATTERNS.some((pattern) => pattern.test(normalized));
+
+    return hasGratitude && hasDelaySignal;
 }
 
 export async function recordInboundWhatsAppMessage(
