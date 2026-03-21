@@ -344,17 +344,74 @@ function renderChecklistCard(title: string, items: string[]) {
     `;
 }
 
-function renderAmountHighlightCard(title: string, amount: string, note: string) {
+function formatCheckoutCardAmount(amount: string) {
+    const trimmed = amount.trim();
+    if (/^\$\d+$/.test(trimmed)) {
+        return `Pay ${trimmed}.00`;
+    }
+
+    return `Pay ${trimmed}`;
+}
+
+function renderAmountHighlightCard(title: string, amount: string, note: string, cardholderName: string) {
+    const safeName = escapeHtml((cardholderName || "Worker").substring(0, 22).toUpperCase());
+    const safeTitle = escapeHtml(title);
+    const amountLabel = escapeHtml(formatCheckoutCardAmount(amount));
+    const safeNote = escapeHtml(note);
+
     return `
-        <div style="background:#F5F5F7; border-radius:16px; padding:30px; margin:32px 0; border:1px solid #E5E5EA; text-align:center;">
-            <div style="font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:12px;">
-                ${escapeHtml(title)}
+        <div style="margin:32px 0;">
+            <div style="background:#111111; border-radius:22px; padding:22px; border:1px solid #333333; color:#FFFFFF; overflow:hidden;">
+                <div style="font-size:0; line-height:0;">
+                    <div style="display:inline-block; vertical-align:top; width:50%;">
+                        <div style="display:inline-block; width:40px; height:28px; border-radius:7px; background:linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); position:relative;">
+                            <div style="position:absolute; top:13px; left:0; right:0; height:1px; background:rgba(0,0,0,0.18);"></div>
+                            <div style="position:absolute; top:0; bottom:0; left:19px; width:1px; background:rgba(0,0,0,0.14);"></div>
+                        </div>
+                    </div>
+                    <div style="display:inline-block; vertical-align:top; width:50%; text-align:right;">
+                        <span style="display:inline-block; font-size:10px; font-weight:700; letter-spacing:0.28em; text-transform:uppercase; color:rgba(255,255,255,0.56);">
+                            Priority
+                        </span>
+                    </div>
+                </div>
+
+                <div style="margin-top:22px; font-size:0; line-height:0;">
+                    <div style="display:inline-block; vertical-align:middle; width:72%;">
+                        <div style="font-size:12px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.56); margin-bottom:8px;">
+                            ${safeTitle}
+                        </div>
+                        <div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:28px; line-height:1.1; font-weight:700; letter-spacing:-0.02em; color:#FFFFFF;">
+                            ${amountLabel}
+                        </div>
+                    </div>
+                    <div style="display:inline-block; vertical-align:middle; width:28%; text-align:right;">
+                        <span style="display:inline-block; border-radius:9999px; background:rgba(255,255,255,0.1); padding:7px 10px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.92);">
+                            Start Search
+                        </span>
+                    </div>
+                </div>
+
+                <div style="margin-top:22px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.12); font-size:0; line-height:0;">
+                    <div style="display:inline-block; vertical-align:bottom; width:70%;">
+                        <div style="font-size:8px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:5px;">
+                            Cardholder Name
+                        </div>
+                        <div style="font-size:12px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.82); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            ${safeName}
+                        </div>
+                    </div>
+                    <div style="display:inline-block; vertical-align:bottom; width:30%; text-align:right;">
+                        <span style="display:inline-block; width:20px; height:20px; border-radius:9999px; background:#F87171;"></span>
+                        <span style="display:inline-block; width:20px; height:20px; border-radius:9999px; background:#FBBF24; margin-left:-6px;"></span>
+                    </div>
+                </div>
             </div>
-            <div style="font-size:44px; font-weight:800; color:#111111; letter-spacing:-1px; margin-bottom:12px; line-height:1;">
-                ${amount}
-            </div>
-            <div style="font-size:15px; color:#515154; line-height:1.7;">
-                ${note}
+
+            <div style="background:#F5F5F7; border-radius:16px; padding:18px 20px; margin-top:14px; border:1px solid #E5E5EA; text-align:center;">
+                <div style="font-size:14px; color:#515154; line-height:1.7;">
+                    ${safeNote}
+                </div>
             </div>
         </div>
     `;
@@ -755,7 +812,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         ${recoveryBodyMap[recoveryStep]}
                     </p>
 
-                    ${renderAmountHighlightCard("Job Finder Checkout", amount, recoveryNoteMap[recoveryStep])}
+                    ${renderAmountHighlightCard("Job Finder Checkout", amount, recoveryNoteMap[recoveryStep], name)}
 
                     ${renderJourneyCard("What Stays In Place", [
                         {
