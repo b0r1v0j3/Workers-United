@@ -15,6 +15,15 @@ function assertNoDbError(error: { message: string } | null | undefined, context:
     }
 }
 
+function assertUpdatedRow(
+    row: { id: string } | null | undefined,
+    context: string
+) {
+    if (!row?.id) {
+        throw new Error(`${context}: no rows updated`);
+    }
+}
+
 export async function GET(request: Request) {
     // Verify cron secret
     const authHeader = request.headers.get("authorization");
@@ -52,18 +61,24 @@ export async function GET(request: Request) {
             for (const offer of expiredOffers) {
                 try {
                     // Mark offer as expired
-                    const { error: expireOfferError } = await supabase
+                    const { data: expiredOfferRow, error: expireOfferError } = await supabase
                         .from("offers")
                         .update({ status: "expired" })
-                        .eq("id", offer.id);
+                        .eq("id", offer.id)
+                        .select("id")
+                        .maybeSingle();
                     assertNoDbError(expireOfferError, `Failed to mark offer ${offer.id} as expired`);
+                    assertUpdatedRow(expiredOfferRow, `Failed to mark offer ${offer.id} as expired`);
 
                     // Return worker to queue
-                    const { error: queueWorkerError } = await supabase
+                    const { data: queuedWorkerRow, error: queueWorkerError } = await supabase
                         .from("worker_onboarding")
                         .update({ status: "IN_QUEUE" })
-                        .eq("id", offer.worker_id);
+                        .eq("id", offer.worker_id)
+                        .select("id")
+                        .maybeSingle();
                     assertNoDbError(queueWorkerError, `Failed to return worker ${offer.worker_id} to queue`);
+                    assertUpdatedRow(queuedWorkerRow, `Failed to return worker ${offer.worker_id} to queue`);
 
                     results.expiredOffers++;
 
@@ -123,19 +138,25 @@ export async function GET(request: Request) {
             for (const workerRecord of refundWorkers) {
                 try {
                     // Flag worker for refund
-                    const { error: flagRefundError } = await supabase
+                    const { data: refundedWorkerRow, error: flagRefundError } = await supabase
                         .from("worker_onboarding")
                         .update({ status: "REFUND_FLAGGED" })
-                        .eq("id", workerRecord.id);
+                        .eq("id", workerRecord.id)
+                        .select("id")
+                        .maybeSingle();
                     assertNoDbError(flagRefundError, `Failed to flag worker ${workerRecord.id} for refund`);
+                    assertUpdatedRow(refundedWorkerRow, `Failed to flag worker ${workerRecord.id} for refund`);
 
                     // Flag the payment
                     if (workerRecord.entry_payment_id) {
-                        const { error: flagPaymentError } = await supabase
+                        const { data: refundedPaymentRow, error: flagPaymentError } = await supabase
                             .from("payments")
                             .update({ status: "flagged_for_refund" })
-                            .eq("id", workerRecord.entry_payment_id);
+                            .eq("id", workerRecord.entry_payment_id)
+                            .select("id")
+                            .maybeSingle();
                         assertNoDbError(flagPaymentError, `Failed to flag payment ${workerRecord.entry_payment_id} for refund`);
+                        assertUpdatedRow(refundedPaymentRow, `Failed to flag payment ${workerRecord.entry_payment_id} for refund`);
                     }
 
                     results.refundsFlagged++;
@@ -234,11 +255,29 @@ async function shiftOfferToNextWorker(
     }
 
     // Update worker status
-    const { error: workerStatusError } = await supabase
-        .from("worker_onboarding")
-        .update({ status: "OFFER_PENDING" })
-        .eq("id", nextWorkerRecord.id);
-    assertNoDbError(workerStatusError, `Failed to mark worker ${nextWorkerRecord.id} as OFFER_PENDING`);
+    try {
+        const { data: workerStatusRow, error: workerStatusError } = await supabase
+            .from("worker_onboarding")
+            .update({ status: "OFFER_PENDING" })
+            .eq("id", nextWorkerRecord.id)
+            .select("id")
+            .maybeSingle();
+        assertNoDbError(workerStatusError, `Failed to mark worker ${nextWorkerRecord.id} as OFFER_PENDING`);
+        assertUpdatedRow(workerStatusRow, `Failed to mark worker ${nextWorkerRecord.id} as OFFER_PENDING`);
+    } catch (workerStatusFailure) {
+        const { error: rollbackError } = await supabase
+            .from("offers")
+            .delete()
+            .eq("id", newOffer.id);
+
+        if (rollbackError) {
+            throw new Error(
+                `${String(workerStatusFailure)}; failed to roll back shifted offer ${newOffer.id}: ${rollbackError.message}`
+            );
+        }
+
+        throw workerStatusFailure;
+    }
 
     // Get profile for notification
     const { data: profile, error: profileError } = await supabase
