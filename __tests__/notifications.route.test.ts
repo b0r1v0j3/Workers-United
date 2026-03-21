@@ -60,6 +60,7 @@ describe("/api/notifications", () => {
                 {
                     id: "email-1",
                     email_type: "payment_success",
+                    subject: "Payment received — thank you!",
                     status: "sent",
                     created_at: "2026-03-21T10:00:00.000Z",
                     read_at: null,
@@ -117,6 +118,95 @@ describe("/api/notifications", () => {
             ],
             unreadCount: 1,
         });
+    });
+
+    it("uses stored subjects instead of stale hardcoded titles", async () => {
+        selectLimit.mockResolvedValueOnce({
+            data: [
+                {
+                    id: "email-1",
+                    email_type: "profile_complete",
+                    subject: "Profile 100% Complete — Admin Review Started",
+                    status: "sent",
+                    created_at: "2026-03-21T10:00:00.000Z",
+                    read_at: null,
+                },
+                {
+                    id: "email-2",
+                    email_type: "admin_update",
+                    subject: "Job Finder Checkout Is Now Unlocked",
+                    status: "sent",
+                    created_at: "2026-03-21T09:00:00.000Z",
+                    read_at: "2026-03-21T09:10:00.000Z",
+                },
+            ],
+            error: null,
+        });
+
+        const { GET } = await import("@/app/api/notifications/route");
+        const response = await GET();
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.notifications).toEqual([
+            expect.objectContaining({
+                id: "email-1",
+                type: "profile_complete",
+                title: "Profile 100% Complete — Admin Review Started",
+                icon: "✅",
+                read: false,
+            }),
+            expect.objectContaining({
+                id: "email-2",
+                type: "admin_update",
+                title: "Job Finder Checkout Is Now Unlocked",
+                icon: "📢",
+                read: true,
+            }),
+        ]);
+        expect(payload.unreadCount).toBe(1);
+    });
+
+    it("keeps explicit icons for newer notification types", async () => {
+        selectLimit.mockResolvedValueOnce({
+            data: [
+                {
+                    id: "email-1",
+                    email_type: "checkout_recovery",
+                    subject: "Your previous Job Finder checkout expired",
+                    status: "sent",
+                    created_at: "2026-03-21T10:00:00.000Z",
+                    read_at: null,
+                },
+                {
+                    id: "email-2",
+                    email_type: "document_review_result",
+                    subject: "Document review update",
+                    status: "sent",
+                    created_at: "2026-03-21T09:00:00.000Z",
+                    read_at: null,
+                },
+            ],
+            error: null,
+        });
+
+        const { GET } = await import("@/app/api/notifications/route");
+        const response = await GET();
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.notifications).toEqual([
+            expect.objectContaining({
+                type: "checkout_recovery",
+                title: "Your previous Job Finder checkout expired",
+                icon: "💳",
+            }),
+            expect.objectContaining({
+                type: "document_review_result",
+                title: "Document review update",
+                icon: "📄",
+            }),
+        ]);
     });
 
     it("marks only sent notifications as read when markAll is used", async () => {

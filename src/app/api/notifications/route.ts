@@ -14,7 +14,7 @@ export async function GET() {
         // Get last 20 emails sent to this user as notifications
         const { data: notifications, error } = await supabase
             .from("email_queue")
-            .select("id, email_type, status, created_at, read_at")
+            .select("id, email_type, subject, status, created_at, read_at")
             .eq("user_id", user.id)
             .eq("status", "sent")
             .order("created_at", { ascending: false })
@@ -28,7 +28,7 @@ export async function GET() {
         const items = (notifications || []).map((n) => ({
             id: n.id,
             type: n.email_type,
-            title: getNotificationTitle(n.email_type),
+            title: n.subject?.trim() || getNotificationTitle(n.email_type),
             icon: getNotificationIcon(n.email_type),
             time: n.created_at,
             read: !!n.read_at,
@@ -117,9 +117,12 @@ function getNotificationIcon(type: string): string {
         offer_expired: "⌛",
         refund_approved: "💸",
         document_expiring: "📄",
+        document_review_result: "📄",
         job_match: "🎯",
         admin_update: "📢",
         announcement: "📣",
+        announcement_document_fix: "📣",
+        checkout_recovery: "💳",
         profile_reminder: "📝",
         profile_warning: "⚠️",
         profile_deletion: "🗑️",
