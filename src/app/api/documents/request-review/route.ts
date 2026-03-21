@@ -138,17 +138,23 @@ export async function POST(request: Request) {
         }
 
         // Update document status to manual_review
-        const { error } = await admin
+        const { data: updatedDocument, error } = await admin
             .from("worker_documents")
             .update({
                 status: "manual_review",
                 updated_at: new Date().toISOString(),
             })
-            .eq("id", document.id);
+            .eq("id", document.id)
+            .select("id")
+            .maybeSingle();
 
         if (error) {
             console.error("[RequestReview] DB error:", error);
             return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+        }
+
+        if (!updatedDocument?.id) {
+            return NextResponse.json({ error: "Document not found" }, { status: 404 });
         }
 
         await logServerActivity(targetProfileId, "document_manual_review_requested", "documents", {
