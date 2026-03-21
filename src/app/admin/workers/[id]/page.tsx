@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isGodModeUser } from "@/lib/godmode";
 import { queueEmail } from "@/lib/email-templates";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { buildContractDataForMatch } from "@/lib/contract-data";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import ManualMatchButton from "@/components/admin/ManualMatchButton";
@@ -16,7 +17,7 @@ import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import DocumentPreview from "@/components/admin/DocumentPreview";
 import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2 } from "lucide-react";
-import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { loadCanonicalWorkerRecord, normalizeWorkerPhone } from "@/lib/workers";
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import {
     assertManualAdminWorkerStatusWriteSucceeded,
@@ -31,6 +32,14 @@ import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents
 import { getAgencyWorkerEmail } from "@/lib/agencies";
 import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
 import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
+import {
+    buildManualWorkerStatusEmailData,
+    getApprovalActionBannerData,
+    getDocumentActionBannerData,
+    getStatusActionBannerData,
+    type AdminWorkerBannerData,
+    resolveAdminWorkerNotificationStatus,
+} from "@/lib/admin-worker-notifications";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -41,147 +50,27 @@ function getSingleSearchParam(value: string | string[] | undefined) {
     return Array.isArray(value) ? value[0] : value;
 }
 
-function getDocumentActionBanner(
-    action: string | undefined,
-    error: string | undefined,
-    notification: string | undefined
-) {
-    if (error) {
-        return {
-            tone: "amber" as const,
-            title: "Document action needs attention",
-            copy: error,
-            icon: <AlertTriangle size={18} />,
-        };
-    }
-
-    switch (action) {
-        case "updated":
-            if (notification === "failed") {
-                return {
-                    tone: "amber" as const,
-                    title: "Document decision saved, email failed",
-                    copy: "The admin decision was saved, but the worker notification email failed to send. Check email health or resend from preview if needed.",
-                    icon: <AlertTriangle size={18} />,
-                };
-            }
-            if (notification === "skipped") {
-                return {
-                    tone: "blue" as const,
-                    title: "Document decision saved",
-                    copy: "The admin decision was saved. No worker email was sent because this case does not currently have a direct-notification recipient.",
-                    icon: <Mail size={18} />,
-                };
-            }
-            if (notification === "queued") {
-                return {
-                    tone: "blue" as const,
-                    title: "Document decision saved, email queued",
-                    copy: "The admin decision was saved and the worker notification email hit a retry path, so it is queued for automatic delivery.",
-                    icon: <Mail size={18} />,
-                };
-            }
-            return {
-                tone: "emerald" as const,
-                title: "Document decision saved",
-                copy: "The latest admin document decision was saved, the worker notification email was sent successfully, and the case view has been refreshed.",
-                icon: <Check size={18} />,
-            };
-        case "requested":
-            if (notification === "failed") {
-                return {
-                    tone: "amber" as const,
-                    title: "Worker re-upload requested, email failed",
-                    copy: "The current file was removed, but the replacement-request email failed to send. Check email health or resend from preview if needed.",
-                    icon: <AlertTriangle size={18} />,
-                };
-            }
-            if (notification === "skipped") {
-                return {
-                    tone: "blue" as const,
-                    title: "Worker re-upload requested",
-                    copy: "The current file was removed. No worker email was sent because this case does not currently have a direct-notification recipient.",
-                    icon: <Mail size={18} />,
-                };
-            }
-            return {
-                tone: "blue" as const,
-                title: "Worker re-upload requested",
-                copy: "The current file was removed and the worker notification email was queued with your replacement guidance.",
-                icon: <Mail size={18} />,
-            };
-        case "deleted":
-            return {
-                tone: "rose" as const,
-                title: "Document deleted",
-                copy: "The current file and any stored crop backups were removed without notifying the worker.",
-                icon: <Trash2 size={18} />,
-            };
+function renderBannerIcon(icon: AdminWorkerBannerData["icon"]) {
+    switch (icon) {
+        case "check":
+            return <Check size={18} />;
+        case "mail":
+            return <Mail size={18} />;
+        case "trash":
+            return <Trash2 size={18} />;
+        case "alert":
         default:
-            return null;
+            return <AlertTriangle size={18} />;
     }
 }
 
-function getApprovalActionBanner(
-    action: string | undefined,
-    notification: string | undefined,
-    error: string | undefined
-) {
-    if (error) {
-        return {
-            tone: "amber" as const,
-            title: "Approval update needs attention",
-            copy: error,
-            icon: <AlertTriangle size={18} />,
-        };
-    }
-
-    if (action === "approved") {
-        if (notification === "failed") {
-            return {
-                tone: "amber" as const,
-                title: "Worker approved, email failed",
-                copy: "Job Finder was unlocked for the worker, but the unlock email failed to send. Check email health or resend from preview if needed.",
-                icon: <AlertTriangle size={18} />,
-            };
+function toBannerUi(banner: AdminWorkerBannerData | null) {
+    return banner
+        ? {
+            ...banner,
+            icon: renderBannerIcon(banner.icon),
         }
-
-        if (notification === "skipped") {
-            return {
-                tone: "blue" as const,
-                title: "Worker approved",
-                copy: "Job Finder is unlocked. No unlock email was sent because this case does not currently have a direct-notification recipient.",
-                icon: <Mail size={18} />,
-            };
-        }
-
-        if (notification === "queued") {
-            return {
-                tone: "blue" as const,
-                title: "Worker approved, email queued",
-                copy: "Job Finder is unlocked. The approval email hit a retry path and is queued to be delivered automatically.",
-                icon: <Mail size={18} />,
-            };
-        }
-
-        return {
-            tone: "emerald" as const,
-            title: "Worker approved",
-            copy: "Job Finder is unlocked and the approval email was sent successfully.",
-            icon: <Check size={18} />,
-        };
-    }
-
-    if (action === "revoked") {
-        return {
-            tone: "rose" as const,
-            title: "Approval revoked",
-            copy: "Admin approval was removed and the worker returned to the correct pre-payment review state.",
-            icon: <AlertTriangle size={18} />,
-        };
-    }
-
-    return null;
+        : null;
 }
 
 export default async function WorkerDetailPage({ params, searchParams }: PageProps) {
@@ -190,11 +79,15 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     const documentAction = getSingleSearchParam(resolvedSearchParams.documentAction);
     const documentError = getSingleSearchParam(resolvedSearchParams.documentError);
     const documentNotification = getSingleSearchParam(resolvedSearchParams.documentNotification);
-    const documentActionBanner = getDocumentActionBanner(documentAction, documentError, documentNotification);
+    const documentActionBanner = toBannerUi(getDocumentActionBannerData(documentAction, documentError, documentNotification));
     const approvalAction = getSingleSearchParam(resolvedSearchParams.approvalAction);
     const approvalNotification = getSingleSearchParam(resolvedSearchParams.approvalNotification);
     const approvalError = getSingleSearchParam(resolvedSearchParams.approvalError);
-    const approvalActionBanner = getApprovalActionBanner(approvalAction, approvalNotification, approvalError);
+    const approvalActionBanner = toBannerUi(getApprovalActionBannerData(approvalAction, approvalNotification, approvalError));
+    const statusAction = getSingleSearchParam(resolvedSearchParams.statusAction);
+    const statusNotification = getSingleSearchParam(resolvedSearchParams.statusNotification);
+    const statusError = getSingleSearchParam(resolvedSearchParams.statusError);
+    const statusActionBanner = toBannerUi(getStatusActionBannerData(statusAction, statusNotification, statusError));
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -353,7 +246,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         })
         : null;
     const profileCompletion = approvalGuardState?.completion ?? 0;
-    const workerNotificationEmail = displayEmail || "";
+    const canSendApprovalNotification = !!(approvalGuardState?.notificationRecipient && approvalGuardState?.notificationUserId);
     const isAdminApproved = !!(approvalGuardState?.worker.admin_approved ?? workerRecord?.admin_approved);
     const canApproveWorker = !!approvalGuardState?.canApprove;
     const canRevokeApproval = !!approvalGuardState?.canRevoke;
@@ -531,86 +424,105 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     async function updateWorkerStatus(formData: FormData) {
         "use server";
         const newStatus = formData.get("status") as string;
-        const userEmail = formData.get("user_email") as string;
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Unauthorized");
+        try {
+            const supabase = await createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Unauthorized");
 
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("user_type")
-            .eq("id", user.id)
-            .single();
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("user_type")
+                .eq("id", user.id)
+                .single();
 
-        if (profile?.user_type !== 'admin') {
-            throw new Error("Forbidden: Admin access only");
-        }
+            if (profile?.user_type !== 'admin') {
+                throw new Error("Forbidden: Admin access only");
+            }
 
-        const adminClient = createAdminClient();
-        if (!workerRecord?.id) {
-            throw new Error("Worker record not found");
-        }
-        const currentApprovalState = await loadWorkerApprovalGuardState({
-            adminClient,
-            profileId,
-            workerId: workerRecord.id,
-            documentOwnerId,
-            phoneOptional,
-            fullNameFallback: workerNameFallback,
-        });
-        if (!currentApprovalState) {
-            throw new Error("Worker record not found");
-        }
-        const { completion, hasPaidEntryFee, worker: freshWorker } = currentApprovalState;
-        const manualStatusUpdate = resolveManualAdminWorkerStatusUpdate({
-            requestedStatus: newStatus,
-            currentStatus: freshWorker.status,
-            entryFeePaid: hasPaidEntryFee,
-            jobSearchActive: freshWorker.job_search_active,
-            adminApproved: freshWorker.admin_approved,
-            completion,
-        });
-
-        if (!manualStatusUpdate.allowed) {
-            throw new Error(manualStatusUpdate.error);
-        }
-
-        const { data: updatedWorker, error: updateError } = await adminClient
-            .from("worker_onboarding")
-            .update({
-                status: manualStatusUpdate.nextStatus,
-                admin_approved: manualStatusUpdate.clearsApproval ? false : freshWorker.admin_approved,
-                admin_approved_at: manualStatusUpdate.clearsApproval ? null : freshWorker.admin_approved_at,
-                admin_approved_by: manualStatusUpdate.clearsApproval ? null : freshWorker.admin_approved_by,
-                updated_at: new Date().toISOString()
-            })
-            .eq("id", freshWorker.id)
-            .select("id")
-            .maybeSingle();
-
-        assertManualAdminWorkerStatusWriteSucceeded({
-            updatedWorkerId: updatedWorker?.id,
-            updateErrorMessage: updateError?.message,
-        });
-
-        // Send email notification
-        if (userEmail && notificationUserId) {
-            await queueEmail(
+            const adminClient = createAdminClient();
+            if (!workerRecord?.id) {
+                throw new Error("Worker record not found");
+            }
+            const currentApprovalState = await loadWorkerApprovalGuardState({
                 adminClient,
-                notificationUserId,
-                "admin_update",
-                userEmail,
-                "User",
-                {
-                    title: "Status Update",
-                    message: `Your application status has been updated to: ${manualStatusUpdate.nextStatus.toUpperCase()}.`,
-                    subject: `Application Status Updated: ${manualStatusUpdate.nextStatus}`
-                }
-            );
-        }
+                profileId,
+                workerId: workerRecord.id,
+                documentOwnerId,
+                phoneOptional,
+                fullNameFallback: workerNameFallback,
+            });
+            if (!currentApprovalState) {
+                throw new Error("Worker record not found");
+            }
+            const { completion, hasPaidEntryFee, worker: freshWorker } = currentApprovalState;
+            const manualStatusUpdate = resolveManualAdminWorkerStatusUpdate({
+                requestedStatus: newStatus,
+                currentStatus: freshWorker.status,
+                entryFeePaid: hasPaidEntryFee,
+                jobSearchActive: freshWorker.job_search_active,
+                adminApproved: freshWorker.admin_approved,
+                completion,
+            });
 
-        revalidatePath(`/admin/workers/${id}`);
+            if (!manualStatusUpdate.allowed) {
+                throw new Error(manualStatusUpdate.error);
+            }
+
+            const { data: updatedWorker, error: updateError } = await adminClient
+                .from("worker_onboarding")
+                .update({
+                    status: manualStatusUpdate.nextStatus,
+                    admin_approved: manualStatusUpdate.clearsApproval ? false : freshWorker.admin_approved,
+                    admin_approved_at: manualStatusUpdate.clearsApproval ? null : freshWorker.admin_approved_at,
+                    admin_approved_by: manualStatusUpdate.clearsApproval ? null : freshWorker.admin_approved_by,
+                    updated_at: new Date().toISOString()
+                })
+                .eq("id", freshWorker.id)
+                .select("id")
+                .maybeSingle();
+
+            assertManualAdminWorkerStatusWriteSucceeded({
+                updatedWorkerId: updatedWorker?.id,
+                updateErrorMessage: updateError?.message,
+            });
+
+            let notificationStatus: "sent" | "queued" | "failed" | "skipped" = "skipped";
+            const notificationRecipient = currentApprovalState.notificationRecipient;
+            if (notificationRecipient && currentApprovalState.notificationUserId) {
+                const notificationResult = await queueEmail(
+                    adminClient,
+                    currentApprovalState.notificationUserId,
+                    "admin_update",
+                    notificationRecipient.email,
+                    notificationRecipient.name,
+                    buildManualWorkerStatusEmailData(toDisplayLabel(manualStatusUpdate.nextStatus)),
+                    undefined,
+                    normalizeWorkerPhone(freshWorker.phone) || undefined
+                );
+                notificationStatus = notificationResult.sent
+                    ? "sent"
+                    : isEmailDeliveryAccepted(notificationResult)
+                        ? "queued"
+                        : resolveAdminWorkerNotificationStatus(notificationResult).status;
+            }
+
+            revalidatePath(`/admin/workers/${id}`);
+
+            const params = new URLSearchParams({
+                statusAction: "updated",
+                statusNotification: notificationStatus,
+                ts: Date.now().toString(),
+            });
+            redirect(`/admin/workers/${id}?${params.toString()}`);
+        } catch (error) {
+            const params = new URLSearchParams({
+                statusAction: "updated",
+                statusError: error instanceof Error ? error.message : "Worker status update failed.",
+                ts: Date.now().toString(),
+            });
+            redirect(`/admin/workers/${id}?${params.toString()}`);
+        }
     }
 
     const getStatusColor = (status: string) => {
@@ -718,6 +630,23 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                         <div>
                             <div className="text-sm font-semibold">{documentActionBanner.title}</div>
                             <p className="mt-1 text-sm leading-relaxed">{documentActionBanner.copy}</p>
+                        </div>
+                    </div>
+                ) : null}
+
+                {statusActionBanner ? (
+                    <div className={`mt-6 flex items-start gap-3 rounded-[24px] border px-5 py-4 ${statusActionBanner.tone === "emerald"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : statusActionBanner.tone === "blue"
+                            ? "border-blue-200 bg-blue-50 text-blue-900"
+                            : statusActionBanner.tone === "rose"
+                                ? "border-rose-200 bg-rose-50 text-rose-900"
+                                : "border-amber-200 bg-amber-50 text-amber-900"
+                        }`}>
+                        <div className="mt-0.5">{statusActionBanner.icon}</div>
+                        <div>
+                            <div className="text-sm font-semibold">{statusActionBanner.title}</div>
+                            <p className="mt-1 text-sm leading-relaxed">{statusActionBanner.copy}</p>
                         </div>
                     </div>
                 ) : null}
@@ -924,13 +853,19 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                 Approval can no longer be revoked after Job Finder is active.
                                             </p>
                                         ) : null}
-                                        <Link
-                                            href={approvalEmailPreviewHref}
-                                            className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-[#2563eb] transition hover:text-[#1d4ed8]"
-                                        >
-                                            <Mail size={14} />
-                                            Preview unlock email
-                                        </Link>
+                                        {canSendApprovalNotification ? (
+                                            <Link
+                                                href={approvalEmailPreviewHref}
+                                                className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-[#2563eb] transition hover:text-[#1d4ed8]"
+                                            >
+                                                <Mail size={14} />
+                                                Preview unlock email
+                                            </Link>
+                                        ) : (
+                                            <p className="mt-3 text-xs font-medium text-[#57534e]">
+                                                No direct worker notification recipient is available for this case yet, so approval unlocks Job Finder without sending an unlock email.
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5">
@@ -952,7 +887,6 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                             </div>
                                         ) : (
                                             <form action={updateWorkerStatus} className="mt-4 space-y-4">
-                                                <input type="hidden" name="user_email" value={workerNotificationEmail || ""} />
                                                 <div>
                                                     <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                         Update status
