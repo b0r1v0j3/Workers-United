@@ -147,6 +147,14 @@ export async function POST(request: NextRequest) {
                         source: "confirm-session-route",
                     }, "warning");
                     break;
+                case "queue_failed":
+                    await logServerActivity(activitySubjectId, "payment_success_email_skipped", "payment", {
+                        reason: "Payment success email could not be queued",
+                        recipient_email: emailResult.recipientEmail,
+                        error: emailResult.error,
+                        source: "confirm-session-route",
+                    }, "warning");
+                    break;
             }
 
             return NextResponse.json({

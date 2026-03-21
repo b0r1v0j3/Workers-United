@@ -27,6 +27,13 @@ vi.mock("@/lib/email-templates", () => ({
 describe("stripe-payment-finalization", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        queueEmail.mockResolvedValue({
+            id: "email-1",
+            sent: true,
+            queued: false,
+            status: "sent",
+            error: null,
+        });
     });
 
     it("returns canonical Stripe amounts for entry and confirmation fees", () => {
@@ -442,6 +449,77 @@ describe("stripe-payment-finalization", () => {
             undefined,
             "+123456789"
         );
+    });
+
+    it("returns queue_failed when the payment success notification is not accepted", async () => {
+        const existingEmailMaybeSingle = vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+        });
+        const profileMaybeSingle = vi.fn().mockResolvedValue({
+            data: {
+                full_name: "Worker One",
+                email: "worker@example.com",
+            },
+            error: null,
+        });
+
+        loadCanonicalWorkerRecord.mockResolvedValue({
+            data: {
+                id: "worker-row-1",
+                phone: "+123456789",
+            },
+            error: null,
+        });
+        queueEmail.mockResolvedValueOnce({
+            id: null,
+            sent: false,
+            queued: false,
+            status: "failed",
+            error: "email_queue insert failed",
+        });
+
+        const admin = {
+            from: (table: string) => {
+                if (table === "email_queue") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                eq: () => ({
+                                    in: () => ({
+                                        maybeSingle: existingEmailMaybeSingle,
+                                    }),
+                                }),
+                            }),
+                        }),
+                    };
+                }
+
+                if (table === "profiles") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                maybeSingle: profileMaybeSingle,
+                            }),
+                        }),
+                    };
+                }
+
+                throw new Error(`Unexpected table: ${table}`);
+            },
+        };
+
+        const result = await queueEntryFeePaymentSuccessEmail({
+            admin: admin as never,
+            targetProfileId: "worker-profile-1",
+            sessionCustomerEmail: "fallback@example.com",
+        });
+
+        expect(result).toEqual({
+            status: "queue_failed",
+            recipientEmail: "worker@example.com",
+            error: "email_queue insert failed",
+        });
     });
 
     it("returns already_queued when payment success email already exists", async () => {
