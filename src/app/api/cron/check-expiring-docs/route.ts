@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hasValidCronBearerToken } from '@/lib/cron-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { queueEmail } from '@/lib/email-templates';
 import { isEmailDeliveryAccepted } from '@/lib/email-queue';
@@ -21,7 +22,7 @@ type ExpiringDocWorkerRow = {
 export async function GET(request: Request) {
     // Verify cron secret to prevent unauthorized access
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!hasValidCronBearerToken(authHeader)) {
         console.warn("[Cron] Unauthorized access attempt.");
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

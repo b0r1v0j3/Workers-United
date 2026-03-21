@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hasValidCronBearerToken } from "@/lib/cron-auth";
 import { attachEmailQueueMeta, processQueuedEmailRecord } from "@/lib/email-queue";
 
 // This endpoint is called to get pending emails
 export async function GET(request: NextRequest) {
     try {
         const authHeader = request.headers.get("authorization");
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        if (!hasValidCronBearerToken(authHeader)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const authHeader = request.headers.get("authorization");
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        if (!hasValidCronBearerToken(authHeader)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
     try {
         const authHeader = request.headers.get("authorization");
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        if (!hasValidCronBearerToken(authHeader)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

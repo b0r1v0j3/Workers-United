@@ -1,5 +1,6 @@
 
 import { NextResponse } from 'next/server';
+import { hasValidCronBearerToken } from '@/lib/cron-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { queueEmail } from '@/lib/email-templates';
 import { buildPlatformUrl } from '@/lib/platform-contact';
@@ -11,7 +12,7 @@ export const maxDuration = 60; // Allow 60s for job matching
 export async function GET(request: Request) {
     // Verify cron secret to prevent unauthorized access
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!hasValidCronBearerToken(authHeader)) {
         console.warn("[Job Match] Unauthorized access attempt.");
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

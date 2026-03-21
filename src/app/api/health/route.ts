@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import nodemailer from "nodemailer";
+import { hasValidCronBearerToken } from "@/lib/cron-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { summarizeWhatsAppTemplateHealth } from "@/lib/whatsapp-health";
 
@@ -158,7 +159,7 @@ async function checkWhatsApp(adminClient: ReturnType<typeof createAdminClient>):
 
 export async function GET(request: NextRequest) {
     const detailedAuthHeader = request.headers.get("authorization");
-    const canViewDetails = detailedAuthHeader === `Bearer ${process.env.CRON_SECRET}`;
+    const canViewDetails = hasValidCronBearerToken(detailedAuthHeader);
     const adminClient = createAdminClient();
 
     const checks: HealthChecks = {
