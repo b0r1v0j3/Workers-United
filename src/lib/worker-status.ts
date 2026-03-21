@@ -47,6 +47,21 @@ type ManualAdminWorkerStatusUpdateResult =
         error: string;
     };
 
+export function assertManualAdminWorkerStatusWriteSucceeded(params: {
+    updatedWorkerId?: string | null | undefined;
+    updateErrorMessage?: string | null | undefined;
+}) {
+    if (params.updateErrorMessage) {
+        throw new Error(`Failed to update worker status: ${params.updateErrorMessage}`);
+    }
+
+    if (!params.updatedWorkerId) {
+        throw new Error("Worker status update did not persist.");
+    }
+
+    return params.updatedWorkerId;
+}
+
 export function isPostEntryFeeWorkerStatus(status: string | null | undefined): boolean {
     if (!status) {
         return false;
