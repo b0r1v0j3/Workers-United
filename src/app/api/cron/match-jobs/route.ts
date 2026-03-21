@@ -178,17 +178,20 @@ export async function GET(request: Request) {
                     continue;
                 }
 
-                const { error: workerStatusError } = await supabase
+                const { data: updatedWorkerRows, error: workerStatusError } = await supabase
                     .from("worker_onboarding")
                     .update({ status: "OFFER_PENDING" })
-                    .eq("id", workerRow.id);
+                    .eq("id", workerRow.id)
+                    .select("id");
 
-                if (workerStatusError) {
+                const workerStatusUpdated = Array.isArray(updatedWorkerRows) && updatedWorkerRows.length > 0;
+
+                if (workerStatusError || !workerStatusUpdated) {
                     matchFailures++;
                     console.error("[Job Match] Failed to mark worker as OFFER_PENDING; rolling back offer:", {
                         workerId: workerRow.id,
                         offerId: offer.id,
-                        error: workerStatusError.message,
+                        error: workerStatusError?.message || "worker_onboarding update matched no rows",
                     });
 
                     const { error: rollbackError } = await supabase

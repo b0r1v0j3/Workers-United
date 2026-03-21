@@ -18,6 +18,7 @@ vi.mock("@/lib/email-templates", () => ({
 
 function createMatchJobsSupabase(params?: {
     workerStatusUpdateError?: string | null;
+    workerStatusUpdatedRows?: { id: string }[] | null;
     queueLockError?: string | null;
     activeOffersError?: string | null;
 }) {
@@ -100,10 +101,15 @@ function createMatchJobsSupabase(params?: {
                         }),
                     }),
                     update: (payload: Record<string, unknown>) => ({
-                        eq: vi.fn(async () => ({
-                            error: payload.status === "OFFER_PENDING" && params?.workerStatusUpdateError
-                                ? { message: params.workerStatusUpdateError }
-                                : null,
+                        eq: vi.fn(() => ({
+                            select: vi.fn(async () => ({
+                                data: payload.status === "OFFER_PENDING"
+                                    ? (params?.workerStatusUpdatedRows ?? [{ id: workerRow.id }])
+                                    : [{ id: workerRow.id }],
+                                error: payload.status === "OFFER_PENDING" && params?.workerStatusUpdateError
+                                    ? { message: params.workerStatusUpdateError }
+                                    : null,
+                            })),
                         })),
                     }),
                 };
@@ -165,6 +171,31 @@ describe("GET /api/cron/match-jobs", () => {
     it("rolls back a new offer when the worker status update fails", async () => {
         const supabase = createMatchJobsSupabase({
             workerStatusUpdateError: "row locked",
+        });
+        createAdminClient.mockReturnValue(supabase);
+
+        const { GET } = await import("@/app/api/cron/match-jobs/route");
+        const response = await GET(new Request("http://localhost/api/cron/match-jobs", {
+            headers: { authorization: "Bearer test" },
+        }));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toMatchObject({
+            success: true,
+            matches: 0,
+            emails_sent: 0,
+            emails_queued: 0,
+            email_failures: 0,
+            match_failures: 1,
+        });
+        expect(supabase.deletedOfferIds).toEqual(["offer-1"]);
+        expect(queueEmail).not.toHaveBeenCalled();
+    });
+
+    it("rolls back a new offer when the worker status update matches no rows", async () => {
+        const supabase = createMatchJobsSupabase({
+            workerStatusUpdatedRows: [],
         });
         createAdminClient.mockReturnValue(supabase);
 
