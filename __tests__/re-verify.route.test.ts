@@ -5,6 +5,8 @@ const authGetUser = vi.fn();
 const profileSingle = vi.fn();
 const documentSingle = vi.fn();
 const documentUpdateEq = vi.fn();
+const documentUpdateSelect = vi.fn();
+const documentUpdateMaybeSingle = vi.fn();
 const draftWorkerMaybeSingle = vi.fn();
 const fetchMock = vi.fn();
 
@@ -95,13 +97,26 @@ describe("POST /api/admin/re-verify", () => {
         draftWorkerMaybeSingle.mockResolvedValue({
             data: null,
         });
+        documentUpdateEq.mockImplementation(() => ({
+            select: documentUpdateSelect,
+        }));
+        documentUpdateSelect.mockImplementation(() => ({
+            maybeSingle: documentUpdateMaybeSingle,
+        }));
+        documentUpdateMaybeSingle.mockResolvedValue({
+            data: {
+                id: "doc-1",
+            },
+            error: null,
+        });
     });
 
     it("fails closed before calling verify-document when setting verifying status fails", async () => {
-        documentUpdateEq.mockResolvedValueOnce({
+        documentUpdateMaybeSingle.mockResolvedValueOnce({
             error: {
                 message: "write blocked",
             },
+            data: null,
         });
 
         const { POST } = await import("@/app/api/admin/re-verify/route");
@@ -118,13 +133,39 @@ describe("POST /api/admin/re-verify", () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it("fails closed before calling verify-document when verifying reset matches no document", async () => {
+        documentUpdateMaybeSingle.mockResolvedValueOnce({
+            data: null,
+            error: null,
+        });
+
+        const { POST } = await import("@/app/api/admin/re-verify/route");
+
+        const response = await POST(new NextRequest("http://localhost/api/admin/re-verify", {
+            method: "POST",
+            body: JSON.stringify({ documentId: "doc-1" }),
+        }));
+
+        expect(response.status).toBe(500);
+        await expect(response.json()).resolves.toMatchObject({
+            error: "Failed to reset document for re-verification: document not found",
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it("surfaces status_reset_failed when verify failure cannot restore pending status", async () => {
-        documentUpdateEq
-            .mockResolvedValueOnce({ error: null })
+        documentUpdateMaybeSingle
+            .mockResolvedValueOnce({
+                data: {
+                    id: "doc-1",
+                },
+                error: null,
+            })
             .mockResolvedValueOnce({
                 error: {
                     message: "reset blocked",
                 },
+                data: null,
             });
         fetchMock.mockResolvedValueOnce({
             ok: false,
@@ -145,6 +186,41 @@ describe("POST /api/admin/re-verify", () => {
             error: "vision timeout",
             status_reset_failed: true,
             status_reset_error: "reset blocked",
+        });
+        expect(fetchMock).toHaveBeenCalledOnce();
+    });
+
+    it("surfaces status_reset_failed when rollback reset matches no document", async () => {
+        documentUpdateMaybeSingle
+            .mockResolvedValueOnce({
+                data: {
+                    id: "doc-1",
+                },
+                error: null,
+            })
+            .mockResolvedValueOnce({
+                data: null,
+                error: null,
+            });
+        fetchMock.mockResolvedValueOnce({
+            ok: false,
+            json: async () => ({
+                error: "vision timeout",
+            }),
+        });
+
+        const { POST } = await import("@/app/api/admin/re-verify/route");
+
+        const response = await POST(new NextRequest("http://localhost/api/admin/re-verify", {
+            method: "POST",
+            body: JSON.stringify({ documentId: "doc-1" }),
+        }));
+
+        expect(response.status).toBe(500);
+        await expect(response.json()).resolves.toMatchObject({
+            error: "vision timeout",
+            status_reset_failed: true,
+            status_reset_error: "document not found",
         });
         expect(fetchMock).toHaveBeenCalledOnce();
     });
