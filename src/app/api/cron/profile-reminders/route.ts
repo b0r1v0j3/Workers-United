@@ -60,14 +60,14 @@ export async function GET(request: Request) {
 
         // ─── BATCH FETCH ALL DATA ─────────────────────────────────────────
         const [
-            { data: allProfiles },
-            { data: allWorkerRecords },
-            { data: allEmployers },
-            { data: allAgencies },
-            { data: allDocs },
-            { data: allEmails },
-            { data: allSignatures },
-            { data: allActivity },
+            { data: allProfiles, error: profilesError },
+            { data: allWorkerRecords, error: workerRecordsError },
+            { data: allEmployers, error: employersError },
+            { data: allAgencies, error: agenciesError },
+            { data: allDocs, error: docsError },
+            { data: allEmails, error: emailsError },
+            { data: allSignatures, error: signaturesError },
+            { data: allActivity, error: activityError },
         ] = await Promise.all([
             supabase.from("profiles").select("id, full_name, created_at"),
             supabase.from("worker_onboarding").select("*"),
@@ -82,6 +82,26 @@ export async function GET(request: Request) {
                 .in("user_id", eligibleUserIds)
                 .in("category", [...PROFILE_RETENTION_ACTIVITY_CATEGORIES]),
         ]);
+
+        const batchErrors = [
+            { label: "profiles", error: profilesError },
+            { label: "worker_onboarding", error: workerRecordsError },
+            { label: "employers", error: employersError },
+            { label: "agencies", error: agenciesError },
+            { label: "worker_documents", error: docsError },
+            { label: "email_queue", error: emailsError },
+            { label: "signatures", error: signaturesError },
+            { label: "user_activity", error: activityError },
+        ];
+        const firstBatchError = batchErrors.find((entry) => entry.error);
+
+        if (firstBatchError?.error) {
+            console.error("[Reminders] Batch preload failed:", {
+                table: firstBatchError.label,
+                error: firstBatchError.error,
+            });
+            throw new Error(`Failed to load profile reminder batch context: ${firstBatchError.label}`);
+        }
 
         // Build lookup maps for O(1) access
         const profileMap = new Map((allProfiles || []).map(p => [p.id, p]));
