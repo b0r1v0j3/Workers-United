@@ -158,6 +158,9 @@ export async function POST(request: Request) {
             requested_by_agency: requestedByAgency,
         });
 
+        let adminAlertStatus: "sent" | "queued" | "failed" | null = null;
+        let adminAlertError: string | null = null;
+
         // Notify admin via email
         try {
             const { data: targetProfile } = await admin
@@ -173,7 +176,7 @@ export async function POST(request: Request) {
                 ? `${requesterLabel}${agencyName ? ` (${agencyName})` : ""} requested manual review on behalf of ${workerLabel}.`
                 : `${workerLabel} is requesting manual review for their ${docLabel}.`;
 
-            await queueEmail(
+            const adminAlertResult = await queueEmail(
                 admin,
                 targetProfileId,
                 "admin_update",
@@ -187,9 +190,35 @@ export async function POST(request: Request) {
                     actionText: "Review Documents",
                 }
             );
-        } catch { /* email is best-effort */ }
+            adminAlertStatus = adminAlertResult.sent
+                ? "sent"
+                : adminAlertResult.queued
+                    ? "queued"
+                    : "failed";
+            adminAlertError = adminAlertResult.error || null;
 
-        return NextResponse.json({ ok: true });
+            if (adminAlertStatus === "failed") {
+                console.error("[RequestReview] Admin alert queue failed:", {
+                    targetProfileId,
+                    docType: normalizedDocType,
+                    error: adminAlertError,
+                });
+            }
+        } catch (error) {
+            adminAlertStatus = "failed";
+            adminAlertError = error instanceof Error ? error.message : "Unknown admin alert failure";
+            console.error("[RequestReview] Admin alert send failed:", {
+                targetProfileId,
+                docType: normalizedDocType,
+                error: adminAlertError,
+            });
+        }
+
+        return NextResponse.json({
+            ok: true,
+            adminAlertStatus,
+            adminAlertError,
+        });
     } catch (err) {
         console.error("[RequestReview] Error:", err);
         return NextResponse.json({ error: "Internal error" }, { status: 500 });

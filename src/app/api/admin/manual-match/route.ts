@@ -5,6 +5,67 @@ import { isGodModeUser } from "@/lib/godmode";
 
 export const dynamic = "force-dynamic";
 
+type RollbackResult = { error?: { message?: string | null } | null } | void | null;
+
+async function captureRollbackError(
+    label: string,
+    operation: () => PromiseLike<RollbackResult> | RollbackResult
+) {
+    try {
+        const result = await operation();
+        const errorMessage = result && "error" in result ? result.error?.message : null;
+        return errorMessage ? `${label}: ${errorMessage}` : null;
+    } catch (error) {
+        return `${label}: ${error instanceof Error ? error.message : "Unknown rollback failure"}`;
+    }
+}
+
+export async function rollbackManualMatchArtifacts(params: {
+    admin: ReturnType<typeof createAdminClient>;
+    workerId: string;
+    previousWorkerStatus?: string | null;
+    createdOfferId?: string | null;
+    createdMatchId?: string | null;
+    restoreWorkerStatus?: boolean;
+}) {
+    const cleanupErrors: string[] = [];
+
+    if (params.restoreWorkerStatus) {
+        const restoreStatusError = await captureRollbackError("restore_worker_status", () =>
+            params.admin
+                .from("worker_onboarding")
+                .update({ status: params.previousWorkerStatus || null })
+                .eq("id", params.workerId)
+        );
+
+        if (restoreStatusError) {
+            cleanupErrors.push(restoreStatusError);
+        }
+    }
+
+    if (params.createdOfferId) {
+        const offerDeleteError = await captureRollbackError("delete_offer", () =>
+            params.admin.from("offers").delete().eq("id", params.createdOfferId as string)
+        );
+
+        if (offerDeleteError) {
+            cleanupErrors.push(offerDeleteError);
+        }
+    }
+
+    if (params.createdMatchId) {
+        const matchDeleteError = await captureRollbackError("delete_match", () =>
+            params.admin.from("matches").delete().eq("id", params.createdMatchId as string)
+        );
+
+        if (matchDeleteError) {
+            cleanupErrors.push(matchDeleteError);
+        }
+    }
+
+    return cleanupErrors;
+}
+
 // POST: Create a manual match between a worker and a job
 export async function POST(request: NextRequest) {
     try {
@@ -120,10 +181,21 @@ export async function POST(request: NextRequest) {
 
         if (offerErr) {
             console.error("[Manual Match] Error creating offer:", offerErr);
-            if (createdMatchId) {
-                await admin.from("matches").delete().eq("id", createdMatchId);
-            }
-            return NextResponse.json({ error: "Failed to create offer" }, { status: 500 });
+            const cleanupErrors = await rollbackManualMatchArtifacts({
+                admin,
+                workerId: targetWorkerRecordId,
+                createdMatchId,
+            });
+            return NextResponse.json(
+                cleanupErrors.length > 0
+                    ? {
+                        error: "Failed to create offer. Cleanup may be incomplete.",
+                        rollbackFailed: true,
+                        cleanupErrors,
+                    }
+                    : { error: "Failed to create offer" },
+                { status: 500 }
+            );
         }
         createdOfferId = offer.id;
 
@@ -135,13 +207,22 @@ export async function POST(request: NextRequest) {
 
         if (workerStatusError) {
             console.error("[Manual Match] Error updating worker status:", workerStatusError);
-            if (createdOfferId) {
-                await admin.from("offers").delete().eq("id", createdOfferId);
-            }
-            if (createdMatchId) {
-                await admin.from("matches").delete().eq("id", createdMatchId);
-            }
-            return NextResponse.json({ error: "Failed to update worker status" }, { status: 500 });
+            const cleanupErrors = await rollbackManualMatchArtifacts({
+                admin,
+                workerId: targetWorkerRecordId,
+                createdOfferId,
+                createdMatchId,
+            });
+            return NextResponse.json(
+                cleanupErrors.length > 0
+                    ? {
+                        error: "Failed to update worker status. Cleanup may be incomplete.",
+                        rollbackFailed: true,
+                        cleanupErrors,
+                    }
+                    : { error: "Failed to update worker status" },
+                { status: 500 }
+            );
         }
 
         const { error: positionsError } = await admin.rpc("increment_positions_filled", {
@@ -150,14 +231,24 @@ export async function POST(request: NextRequest) {
 
         if (positionsError) {
             console.error("[Manual Match] Error incrementing positions:", positionsError);
-            await admin.from("worker_onboarding").update({ status: workerRecord.status }).eq("id", targetWorkerRecordId);
-            if (createdOfferId) {
-                await admin.from("offers").delete().eq("id", createdOfferId);
-            }
-            if (createdMatchId) {
-                await admin.from("matches").delete().eq("id", createdMatchId);
-            }
-            return NextResponse.json({ error: "Failed to reserve the job position" }, { status: 500 });
+            const cleanupErrors = await rollbackManualMatchArtifacts({
+                admin,
+                workerId: targetWorkerRecordId,
+                previousWorkerStatus: workerRecord.status,
+                createdOfferId,
+                createdMatchId,
+                restoreWorkerStatus: true,
+            });
+            return NextResponse.json(
+                cleanupErrors.length > 0
+                    ? {
+                        error: "Failed to reserve the job position. Cleanup may be incomplete.",
+                        rollbackFailed: true,
+                        cleanupErrors,
+                    }
+                    : { error: "Failed to reserve the job position" },
+                { status: 500 }
+            );
         }
 
         return NextResponse.json({
