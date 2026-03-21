@@ -75,10 +75,16 @@ function createSupabaseAdmin({
         },
     ] satisfies MockProfileRow[],
     workerRowsError = null,
+    recentNudgesError = null,
+    recentFailedNudgesError = null,
+    profilesError = null,
 }: {
     workerRows?: MockWorkerRow[];
     profileRows?: MockProfileRow[];
     workerRowsError?: { message: string } | null;
+    recentNudgesError?: { message: string } | null;
+    recentFailedNudgesError?: { message: string } | null;
+    profilesError?: { message: string } | null;
 } = {}) {
     const insert = vi.fn().mockResolvedValue({ error: null });
 
@@ -113,17 +119,26 @@ function createSupabaseAdmin({
                                             return {
                                                 eq() {
                                                     return {
-                                                        gte: async () => ({ data: [] }),
+                                                        gte: async () => ({
+                                                            data: recentFailedNudgesError ? null : [],
+                                                            error: recentFailedNudgesError,
+                                                        }),
                                                     };
                                                 },
                                             };
                                         },
                                         in() {
                                             return {
-                                                gte: async () => ({ data: [] }),
+                                                gte: async () => ({
+                                                    data: recentNudgesError ? null : [],
+                                                    error: recentNudgesError,
+                                                }),
                                             };
                                         },
-                                        gte: async () => ({ data: [] }),
+                                        gte: async () => ({
+                                            data: recentNudgesError ? null : [],
+                                            error: recentNudgesError,
+                                        }),
                                     };
                                 },
                             };
@@ -136,7 +151,8 @@ function createSupabaseAdmin({
                         select() {
                             return {
                                 in: async () => ({
-                                    data: profileRows,
+                                    data: profilesError ? null : profileRows,
+                                    error: profilesError,
                                 }),
                             };
                         },
@@ -306,6 +322,81 @@ describe("GET /api/cron/whatsapp-nudge", () => {
             status: "error",
             error: "Failed to load unpaid worker nudge candidates",
             found: 0,
+            nudged: 0,
+            skipped: 0,
+            errors: 0,
+        });
+        expect(sendProfileIncomplete).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when recent nudge history preload fails", async () => {
+        const { client } = createSupabaseAdmin({
+            recentNudgesError: { message: "whatsapp_messages unavailable" },
+        });
+
+        createAdminClient.mockReturnValue(client);
+
+        const { GET } = await import("@/app/api/cron/whatsapp-nudge/route");
+        const response = await GET(new Request("http://localhost/api/cron/whatsapp-nudge", {
+            headers: { authorization: "Bearer secret" },
+        }));
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({
+            status: "error",
+            error: "Failed to load recent WhatsApp nudge history",
+            found: 2,
+            nudged: 0,
+            skipped: 0,
+            errors: 0,
+        });
+        expect(sendProfileIncomplete).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when recent failed nudge history preload fails", async () => {
+        const { client } = createSupabaseAdmin({
+            recentFailedNudgesError: { message: "failed history unavailable" },
+        });
+
+        createAdminClient.mockReturnValue(client);
+
+        const { GET } = await import("@/app/api/cron/whatsapp-nudge/route");
+        const response = await GET(new Request("http://localhost/api/cron/whatsapp-nudge", {
+            headers: { authorization: "Bearer secret" },
+        }));
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({
+            status: "error",
+            error: "Failed to load recent failed WhatsApp nudges",
+            found: 2,
+            nudged: 0,
+            skipped: 0,
+            errors: 0,
+        });
+        expect(sendProfileIncomplete).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when profile context preload fails", async () => {
+        const { client } = createSupabaseAdmin({
+            profilesError: { message: "profiles unavailable" },
+        });
+
+        createAdminClient.mockReturnValue(client);
+
+        const { GET } = await import("@/app/api/cron/whatsapp-nudge/route");
+        const response = await GET(new Request("http://localhost/api/cron/whatsapp-nudge", {
+            headers: { authorization: "Bearer secret" },
+        }));
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({
+            status: "error",
+            error: "Failed to load WhatsApp nudge profile context",
+            found: 2,
             nudged: 0,
             skipped: 0,
             errors: 0,
