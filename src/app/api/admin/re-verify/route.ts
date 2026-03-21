@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Reset status to "verifying" so the worker sees it's being processed
-        await admin
+        const { error: verifyingError } = await admin
             .from("worker_documents")
             .update({
                 status: "verifying",
@@ -58,6 +58,13 @@ export async function POST(request: NextRequest) {
                 updated_at: new Date().toISOString(),
             })
             .eq("id", documentId);
+
+        if (verifyingError) {
+            return NextResponse.json(
+                { error: `Failed to reset document for re-verification: ${verifyingError.message}` },
+                { status: 500 }
+            );
+        }
 
         if (!doc.storage_path) {
             return NextResponse.json({ error: "Document has no storage path" }, { status: 400 });
@@ -103,7 +110,7 @@ export async function POST(request: NextRequest) {
 
         if (!verifyRes.ok) {
             // Reset status back to pending on failure
-            await admin
+            const { error: resetError } = await admin
                 .from("worker_documents")
                 .update({
                     status: "pending",
@@ -111,6 +118,17 @@ export async function POST(request: NextRequest) {
                     updated_at: new Date().toISOString(),
                 })
                 .eq("id", documentId);
+
+            if (resetError) {
+                return NextResponse.json(
+                    {
+                        error: verifyData.error || "Verification failed",
+                        status_reset_failed: true,
+                        status_reset_error: resetError.message,
+                    },
+                    { status: 500 }
+                );
+            }
 
             return NextResponse.json(
                 { error: verifyData.error || "Verification failed" },
