@@ -336,6 +336,35 @@ describe("whatsapp-brain guards", () => {
         expect(reply).not.toContain("next active flow");
     });
 
+    it("prefers status replies over generic support keywords in follow-up status questions", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "What is my status again?",
+            language: "English",
+            intent: "general",
+            workerStatus: "PENDING_APPROVAL",
+            adminApproved: false,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("admin review");
+        expect(reply).not.toContain("support inbox");
+        expect(reply).not.toContain("screenshot");
+    });
+
+    it("does not misroute short review follow-ups into the support branch", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "still in review?",
+            language: "English",
+            intent: "general",
+            workerStatus: "PENDING_APPROVAL",
+            adminApproved: false,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("admin review");
+        expect(reply).not.toContain("support inbox");
+    });
+
     it("answers registered worker support requests without inventing a handoff", () => {
         const reply = buildRegisteredWorkerWhatsAppReply({
             message: "Imam problem sa uplatom",
