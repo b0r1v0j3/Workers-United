@@ -74,9 +74,11 @@ function createSupabaseAdmin({
             email: "worker@example.com",
         },
     ] satisfies MockProfileRow[],
+    workerRowsError = null,
 }: {
     workerRows?: MockWorkerRow[];
     profileRows?: MockProfileRow[];
+    workerRowsError?: { message: string } | null;
 } = {}) {
     const insert = vi.fn().mockResolvedValue({ error: null });
 
@@ -91,7 +93,8 @@ function createSupabaseAdmin({
                                 eq() {
                                     return {
                                         not: async () => ({
-                                            data: workerRows,
+                                            data: workerRowsError ? null : workerRows,
+                                            error: workerRowsError,
                                         }),
                                     };
                                 },
@@ -282,5 +285,31 @@ describe("GET /api/cron/whatsapp-nudge", () => {
             nudged: 0,
             skipped: 2,
         });
+    });
+
+    it("fails closed when unpaid worker candidate preload fails", async () => {
+        const { client } = createSupabaseAdmin({
+            workerRows: [],
+            workerRowsError: { message: "worker_onboarding unavailable" },
+        });
+
+        createAdminClient.mockReturnValue(client);
+
+        const { GET } = await import("@/app/api/cron/whatsapp-nudge/route");
+        const response = await GET(new Request("http://localhost/api/cron/whatsapp-nudge", {
+            headers: { authorization: "Bearer secret" },
+        }));
+        const payload = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(payload).toEqual({
+            status: "error",
+            error: "Failed to load unpaid worker nudge candidates",
+            found: 0,
+            nudged: 0,
+            skipped: 0,
+            errors: 0,
+        });
+        expect(sendProfileIncomplete).not.toHaveBeenCalled();
     });
 });

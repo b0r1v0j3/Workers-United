@@ -64,11 +64,20 @@ export async function GET(request: Request) {
 
     try {
         // Find all worker records that still haven't paid and have a phone number
-        const { data: unpaidWorkerRows } = await supabase
+        const { data: unpaidWorkerRows, error: unpaidWorkerRowsError } = await supabase
             .from("worker_onboarding")
             .select("id, profile_id, agency_id, submitted_email, phone, status, admin_approved, entry_fee_paid, updated_at, queue_joined_at, job_search_active, nationality, current_country, preferred_job")
             .eq("entry_fee_paid", false)
             .not("phone", "is", null);
+
+        if (unpaidWorkerRowsError) {
+            console.error("[Nudge] Failed to load unpaid worker nudge candidates:", unpaidWorkerRowsError);
+            return NextResponse.json({
+                status: "error",
+                error: "Failed to load unpaid worker nudge candidates",
+                ...results,
+            }, { status: 500 });
+        }
 
         if (!unpaidWorkerRows || unpaidWorkerRows.length === 0) {
             return NextResponse.json({ status: "no_workers_to_nudge", ...results });
