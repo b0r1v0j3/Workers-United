@@ -138,7 +138,7 @@ export function buildBusinessFactsForAIFromConfig(config?: PlatformConfig | null
         `Refund policy: ${c.refund_policy_en || "90-day refund if no job offer"}`,
         `Placement fee (Serbia): ${c.placement_fee_serbia || "$190"} — paid by worker only after job is found`,
         `Employer fee: ${c.employer_fee || "Free — always free for employers"}`,
-        "Pricing rule: workers pay the $9 service charge to activate Job Finder and any placement fee after a job is found; employers never pay platform fees.",
+        "Pricing rule: workers pay the $9 Job Finder service charge only after their profile, required documents, and admin approval unlock checkout, and any placement fee only after a job is found; employers never pay platform fees.",
         "LANGUAGE RULE: In Serbian, always say 'naknada za uslugu' or 'servisna naknada' for the $9 cost. NEVER say 'ulazna taksa', 'taksa', or 'ulazna naknada'.",
         `Processing time: ${c.processing_time || "2-8 weeks"}`,
         `Required documents: ${CANONICAL_REQUIRED_WORKER_DOCUMENTS}`,
