@@ -23,8 +23,9 @@ vi.mock("@/lib/whatsapp", () => whatsappMocks);
 
 import { queueEmail } from "@/lib/email-templates";
 
-function createSupabaseMock() {
+function createSupabaseMock(params?: { insertError?: string }) {
     const updates: Array<Record<string, unknown>> = [];
+    const insertError = params?.insertError;
 
     return {
         updates,
@@ -37,11 +38,15 @@ function createSupabaseMock() {
                         select() {
                             return {
                                 single: async () => ({
-                                    data: {
-                                        id: "email-1",
-                                        scheduled_for: payload.scheduled_for,
-                                    },
-                                    error: null,
+                                    data: insertError
+                                        ? null
+                                        : {
+                                            id: "email-1",
+                                            scheduled_for: payload.scheduled_for,
+                                        },
+                                    error: insertError
+                                        ? { message: insertError }
+                                        : null,
                                 }),
                             };
                         },
@@ -155,5 +160,31 @@ describe("queueEmail WhatsApp sidecar", () => {
             sent: true,
             messageId: "wamid_offer_1",
         });
+    });
+
+    it("fails closed and skips the WhatsApp sidecar when email_queue insert fails", async () => {
+        const supabase = createSupabaseMock({ insertError: "duplicate key value violates unique constraint" });
+
+        const result = await queueEmail(
+            supabase as never,
+            "worker-1",
+            "welcome",
+            "worker@example.com",
+            "Worker One",
+            { recipientRole: "worker" },
+            undefined,
+            "+381601234567"
+        );
+
+        expect(result).toMatchObject({
+            id: null,
+            sent: false,
+            queued: false,
+            status: "failed",
+            error: "duplicate key value violates unique constraint",
+            whatsapp: null,
+        });
+        expect(sendEmail).not.toHaveBeenCalled();
+        expect(whatsappMocks.sendRoleWelcome).not.toHaveBeenCalled();
     });
 });

@@ -12,6 +12,7 @@ import { attachEmailQueueMeta, processPendingEmailQueue, processQueuedEmailRecor
 
 function createEmailQueueSupabase(params?: {
     pendingRows?: Array<Record<string, unknown>>;
+    updateErrorMessage?: string;
 }) {
     const updates: Array<Record<string, unknown>> = [];
     const pendingRows = params?.pendingRows || [];
@@ -27,7 +28,11 @@ function createEmailQueueSupabase(params?: {
                 update(payload: Record<string, unknown>) {
                     updates.push(payload);
                     return {
-                        eq: vi.fn(async () => ({ error: null })),
+                        eq: vi.fn(async () => ({
+                            error: params?.updateErrorMessage
+                                ? { message: params.updateErrorMessage }
+                                : null,
+                        })),
                     };
                 },
                 select() {
@@ -139,5 +144,20 @@ describe("email queue retry processing", () => {
             retried: 1,
             failed: 0,
         });
+    });
+
+    it("throws when the sent-state persistence update fails", async () => {
+        sendEmail.mockResolvedValueOnce({ success: true });
+        const supabase = createEmailQueueSupabase({
+            updateErrorMessage: "row update rejected",
+        });
+
+        await expect(processQueuedEmailRecord(supabase as never, {
+            id: "email-3",
+            recipient_email: "worker@example.com",
+            subject: "Hello",
+            template_data: attachEmailQueueMeta({ html: "<p>Hello</p>" }, { attempts: 0, maxAttempts: 3 }),
+            scheduled_for: new Date().toISOString(),
+        })).rejects.toThrow("Failed to mark email as sent: row update rejected");
     });
 });

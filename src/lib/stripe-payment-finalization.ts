@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { queueEmail } from "@/lib/email-templates";
+import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { resolveWorkerStatusAfterEntryFee } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 
@@ -79,6 +80,7 @@ interface StripeCheckoutExpiredActivityPayloadOptions {
 
 type PaymentSuccessEmailResult =
     | { status: "queued"; recipientEmail: string }
+    | { status: "queue_failed"; recipientEmail: string; error: string | null }
     | { status: "already_queued" }
     | { status: "missing_target_profile" }
     | { status: "missing_recipient" };
@@ -445,16 +447,32 @@ export async function queueEntryFeePaymentSuccessEmail({
         return { status: "missing_recipient" };
     }
 
-    await queueEmail(
-        admin,
-        targetProfileId,
-        "payment_success",
-        recipientEmail,
-        profile?.full_name || "Worker",
-        { amount: "$9" },
-        undefined,
-        workerRecord?.phone || undefined
-    );
+    try {
+        const notificationResult = await queueEmail(
+            admin,
+            targetProfileId,
+            "payment_success",
+            recipientEmail,
+            profile?.full_name || "Worker",
+            { amount: "$9" },
+            undefined,
+            workerRecord?.phone || undefined
+        );
+
+        if (!isEmailDeliveryAccepted(notificationResult)) {
+            return {
+                status: "queue_failed",
+                recipientEmail,
+                error: notificationResult.error || "Failed to queue payment success email",
+            };
+        }
+    } catch (error) {
+        return {
+            status: "queue_failed",
+            recipientEmail,
+            error: error instanceof Error ? error.message : "Failed to queue payment success email",
+        };
+    }
 
     return {
         status: "queued",

@@ -1187,7 +1187,7 @@ export async function queueEmail(
         { attempts: 0, maxAttempts: 3 }
     );
 
-    const { data } = await supabase.from("email_queue").insert({
+    const { data, error } = await supabase.from("email_queue").insert({
         user_id: userId || null,
         email_type: emailType,
         recipient_email: recipientEmail,
@@ -1197,8 +1197,26 @@ export async function queueEmail(
         scheduled_for: scheduledFor?.toISOString() || new Date().toISOString()
     }).select().single();
 
+    if (error || !data?.id) {
+        const queueError = error?.message || "Email queue insert returned no row";
+        console.error(`[QueueEmail] Failed to persist ${emailType} email_queue row`, {
+            userId,
+            recipientEmail,
+            error: queueError,
+        });
+
+        return {
+            id: null,
+            sent: false,
+            queued: false,
+            status: "failed",
+            error: queueError,
+            whatsapp: null,
+        };
+    }
+
     let deliveryResult: QueueEmailResult = {
-        id: data?.id || null,
+        id: data.id,
         sent: false,
         queued: Boolean(scheduledFor),
         status: scheduledFor ? "scheduled" : "failed",
@@ -1207,7 +1225,7 @@ export async function queueEmail(
     };
 
     // Send immediately via SMTP
-    if (!scheduledFor && data?.id) {
+    if (!scheduledFor) {
         deliveryResult = await processQueuedEmailRecord(supabase, {
             id: data.id,
             recipient_email: recipientEmail,
@@ -1218,7 +1236,7 @@ export async function queueEmail(
     }
 
     // Also send WhatsApp template if phone provided
-    if (recipientPhone && !scheduledFor && userId) {
+    if (recipientPhone && !scheduledFor && userId && deliveryResult.id) {
         let whatsappSidecarResult: QueueEmailWhatsAppResult | null = null;
         try {
             const wa = await import("@/lib/whatsapp");

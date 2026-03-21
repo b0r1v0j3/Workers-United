@@ -14,13 +14,18 @@ export async function GET(request: NextRequest) {
         const supabase = createAdminClient();
 
         // Get pending emails scheduled for now or earlier
-        const { data: emails } = await supabase
+        const { data: emails, error } = await supabase
             .from("email_queue")
             .select("*")
             .eq("status", "pending")
             .lte("scheduled_for", new Date().toISOString())
             .order("scheduled_for", { ascending: true })
             .limit(500);
+
+        if (error) {
+            console.error("Email queue GET query error:", error);
+            return NextResponse.json({ error: "Failed to load email queue" }, { status: 500 });
+        }
 
         return NextResponse.json({ emails: emails || [] });
 
@@ -124,10 +129,15 @@ export async function PATCH(request: NextRequest) {
             updateData.error_message = errorMessage;
         }
 
-        await supabase
+        const { error } = await supabase
             .from("email_queue")
             .update(updateData)
             .eq("id", emailId);
+
+        if (error) {
+            console.error("Email queue PATCH update error:", error);
+            return NextResponse.json({ error: "Failed to update email queue row" }, { status: 500 });
+        }
 
         return NextResponse.json({ success: true });
 

@@ -50,7 +50,8 @@ interface SyncWorkerReviewStatusOptions {
 type WorkerReviewNotificationReason =
     | "already_notified"
     | "worker_direct_notifications_disabled"
-    | "missing_profile_email";
+    | "missing_profile_email"
+    | "notification_queue_failed";
 
 interface SyncWorkerReviewStatusResult {
     completion: number;
@@ -492,17 +493,25 @@ export async function syncWorkerReviewStatus({
                 if (!canNotifyWorkerDirectly) {
                     notificationReason = "worker_direct_notifications_disabled";
                 } else {
-                    await queueEmail(
-                        adminClient,
-                        resolvedProfileId,
-                        "profile_complete",
-                        profile.email,
-                        notificationName,
-                        {},
-                        undefined,
-                        hydratedWorkerRecord.phone || undefined
-                    );
-                    notificationSent = true;
+                    try {
+                        const notificationResult = await queueEmail(
+                            adminClient,
+                            resolvedProfileId,
+                            "profile_complete",
+                            profile.email,
+                            notificationName,
+                            {},
+                            undefined,
+                            hydratedWorkerRecord.phone || undefined
+                        );
+                        notificationSent = isEmailDeliveryAccepted(notificationResult);
+                        if (!notificationSent) {
+                            notificationReason = "notification_queue_failed";
+                        }
+                    } catch (error) {
+                        console.error("[WorkerReview] Failed to queue pending-approval notification:", error);
+                        notificationReason = "notification_queue_failed";
+                    }
                 }
             }
         }

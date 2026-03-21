@@ -106,6 +106,22 @@ export function isEmailDeliveryAccepted(result: Pick<EmailQueueDeliveryResult, "
     return !!result && (result.sent || result.queued);
 }
 
+async function updateEmailQueueRecord(
+    supabase: any,
+    emailId: string,
+    payload: Record<string, unknown>,
+    context: string
+) {
+    const { error } = await supabase
+        .from("email_queue")
+        .update(payload)
+        .eq("id", emailId);
+
+    if (error) {
+        throw new Error(`${context}: ${error.message}`);
+    }
+}
+
 export async function processQueuedEmailRecord(
     supabase: any,
     record: EmailQueueRecord
@@ -129,15 +145,17 @@ export async function processQueuedEmailRecord(
             lastError: "Missing HTML template data",
             retryScheduledFor: null,
         });
-        await supabase
-            .from("email_queue")
-            .update({
+        await updateEmailQueueRecord(
+            supabase,
+            record.id,
+            {
                 status: "failed",
                 sent_at: null,
                 error_message: "Missing HTML template data",
                 template_data: nextTemplateData,
-            })
-            .eq("id", record.id);
+            },
+            "Failed to mark email as failed for missing HTML template data"
+        );
 
         return {
             id: record.id,
@@ -158,15 +176,17 @@ export async function processQueuedEmailRecord(
             lastError: null,
             retryScheduledFor: null,
         });
-        await supabase
-            .from("email_queue")
-            .update({
+        await updateEmailQueueRecord(
+            supabase,
+            record.id,
+            {
                 status: "sent",
                 sent_at: nowIso,
                 error_message: null,
                 template_data: nextTemplateData,
-            })
-            .eq("id", record.id);
+            },
+            "Failed to mark email as sent"
+        );
 
         return {
             id: record.id,
@@ -190,16 +210,18 @@ export async function processQueuedEmailRecord(
             lastError: errorMessage,
             retryScheduledFor,
         });
-        await supabase
-            .from("email_queue")
-            .update({
+        await updateEmailQueueRecord(
+            supabase,
+            record.id,
+            {
                 status: "pending",
                 sent_at: null,
                 error_message: errorMessage,
                 scheduled_for: retryScheduledFor,
                 template_data: nextTemplateData,
-            })
-            .eq("id", record.id);
+            },
+            "Failed to requeue retryable email"
+        );
 
         return {
             id: record.id,
@@ -218,15 +240,17 @@ export async function processQueuedEmailRecord(
         lastError: errorMessage,
         retryScheduledFor: null,
     });
-    await supabase
-        .from("email_queue")
-        .update({
+    await updateEmailQueueRecord(
+        supabase,
+        record.id,
+        {
             status: "failed",
             sent_at: null,
             error_message: errorMessage,
             template_data: nextTemplateData,
-        })
-        .eq("id", record.id);
+        },
+        "Failed to mark email as failed"
+    );
 
     return {
         id: record.id,

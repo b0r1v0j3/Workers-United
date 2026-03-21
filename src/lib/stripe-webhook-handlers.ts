@@ -242,6 +242,12 @@ export async function handleStripeCheckoutSessionCompletedEvent(
                         await logServerActivity(userId, "payment_success_email_skipped", "payment", {
                             reason: "No recipient email found in session/customer/profile",
                         }, "warning");
+                    } else if (emailResult.status === "queue_failed") {
+                        await logServerActivity(activitySubjectId, "payment_success_email_skipped", "payment", {
+                            reason: "Payment success email could not be queued",
+                            recipient_email: emailResult.recipientEmail,
+                            error: emailResult.error,
+                        }, "warning");
                     }
                 } catch (emailErr) {
                     console.error("Failed to send payment confirmation email:", emailErr);

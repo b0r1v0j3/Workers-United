@@ -148,4 +148,33 @@ describe("POST /api/stripe/confirm-session", () => {
             "warning"
         );
     });
+
+    it("logs when the payment success email cannot be queued", async () => {
+        queueEntryFeePaymentSuccessEmail.mockResolvedValue({
+            status: "queue_failed",
+            recipientEmail: "worker@example.com",
+            error: "email_queue insert failed",
+        });
+
+        const { POST } = await import("@/app/api/stripe/confirm-session/route");
+        const request = new NextRequest("http://localhost/api/stripe/confirm-session", {
+            method: "POST",
+            body: JSON.stringify({ sessionId: "cs_test_123" }),
+        });
+
+        await POST(request);
+
+        expect(logServerActivity).toHaveBeenCalledWith(
+            "profile-1",
+            "payment_success_email_skipped",
+            "payment",
+            expect.objectContaining({
+                reason: "Payment success email could not be queued",
+                recipient_email: "worker@example.com",
+                error: "email_queue insert failed",
+                source: "confirm-session-route",
+            }),
+            "warning"
+        );
+    });
 });
