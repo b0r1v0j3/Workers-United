@@ -85,10 +85,10 @@ export default async function QueuePage({
                                 <div className="relative z-10 flex flex-col items-center justify-center gap-6 py-8 text-center">
                                     <div className="flex flex-col items-center">
                                         <h3 className="text-xl font-semibold tracking-tight text-gray-900">
-                                            Start Searching for Jobs
+                                            Simulate Job Finder checkout
                                         </h3>
                                         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
-                                            Sandbox payment marks Job Finder as active instantly, without opening Stripe or creating live payment rows.
+                                            Sandbox payment marks Job Finder checkout as completed instantly, without opening Stripe or creating live payment rows.
                                         </p>
                                     </div>
                                     <PayToJoinButton
@@ -306,7 +306,7 @@ export default async function QueuePage({
                             <div className="relative z-10 flex flex-col items-center justify-center gap-6 text-center py-8">
                                 <div className="flex flex-col items-center">
                                     <h3 className="font-semibold text-gray-900 text-xl tracking-tight">
-                                        Start Searching for Jobs
+                                        Complete Job Finder checkout
                                     </h3>
                                     <p className="text-gray-500 text-sm mt-2 leading-relaxed max-w-md mx-auto">
                                         Complete the $9 Job Finder service charge to enter our active worker queue. We&apos;ll start matching your profile with real employer demand in Europe.

@@ -28,7 +28,7 @@ const BLOCKED_BRAIN_FACT_CATEGORIES = new Set([
 
 const CANONICAL_PRICING_FACT: BrainFactInput = {
     category: "pricing",
-    content: "Workers pay the $9 entry fee to start job search and pay the placement fee after a job is found. Employers never pay platform fees.",
+    content: "Workers pay the $9 Job Finder service charge only after their profile, required documents, and admin approval unlock checkout; any placement fee is paid only after a job is found. Employers never pay platform fees.",
     confidence: 1,
 };
 

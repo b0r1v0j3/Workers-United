@@ -61,7 +61,7 @@ export default async function TermsPage() {
                             <li>We are <strong className="text-[#1D1D1F]">not</strong> a job board — we provide a full-service visa and placement solution</li>
                             <li>Workers and employers do not interact directly until the visa is approved</li>
                             <li>Our services for employers are free of charge</li>
-                            <li>We do not guarantee employment outcomes, but we do offer a 90-day refund on the entry fee if no match is found</li>
+                            <li>We do not guarantee employment outcomes, but we do offer a 90-day refund on the $9 Job Finder service charge if no match is found</li>
                         </ul>
                     </TermsSection>
 
@@ -80,11 +80,11 @@ export default async function TermsPage() {
                     <TermsSection title="4. Fees and Payments" icon={DollarSign} colorClass="bg-emerald-50 text-emerald-600">
                         <p className="font-semibold text-[#1D1D1F] mb-2">The following fees apply:</p>
                         <ul className="list-disc pl-5 space-y-2 marker:text-[#86868B]">
-                            <li><strong className="text-[#1D1D1F]">Entry fee:</strong> $9 USD — paid by the worker to enter the matching queue</li>
+                            <li><strong className="text-[#1D1D1F]">Job Finder service charge:</strong> $9 USD — paid by the worker only after profile completion, required documents, and admin approval unlock checkout</li>
                             <li><strong className="text-[#1D1D1F]">Placement fee:</strong> Varies by country — paid by the worker only when a position is matched. The exact amount will be displayed before payment.</li>
                             <li><strong className="text-[#1D1D1F]">Employer fees:</strong> None — our services are free for employers</li>
                         </ul>
-                        <p className="mt-4"><strong className="text-[#1D1D1F]">Refund policy:</strong> If a worker is not matched with an employer within 90 days of paying the entry fee, the $9 entry fee will be refunded in full. Placement fees are non-refundable once the visa process has begun.</p>
+                        <p className="mt-4"><strong className="text-[#1D1D1F]">Refund policy:</strong> If a worker is not matched with an employer within 90 days of paying the $9 Job Finder service charge, the $9 service charge will be refunded in full. Placement fees are non-refundable once the visa process has begun.</p>
                         <p className="mt-2 text-[#86868B]">All payments are processed securely by Stripe. We do not store your payment card details.</p>
                     </TermsSection>
 
