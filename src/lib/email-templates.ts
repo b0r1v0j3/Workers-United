@@ -495,11 +495,11 @@ export function getCheckoutRecoveryStatusMessage(step: number | undefined, amoun
 
     switch (step) {
         case 2:
-            return `Your ${safeAmount} Job Finder payment is still waiting. Your profile, required documents, and admin review already unlocked this final checkout step. Return to your Workers United dashboard to finish payment, enter the active queue, and unlock support.`;
+            return `Your ${safeAmount} Job Finder payment is still waiting. Your profile, required documents, and admin review already unlocked this final checkout step. Return to your Workers United dashboard to finish payment, enter the active queue, and open your support inbox there.`;
         case 3:
             return `Your previous ${safeAmount} Job Finder checkout expired. Your profile, required documents, and admin review are still in place, so open your Workers United dashboard to start a fresh checkout and continue where you left off.`;
         default:
-            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Your profile, required documents, and admin review already unlocked this final payment step. Return to your Workers United dashboard to finish payment, enter the active queue, and unlock support.`;
+            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Your profile, required documents, and admin review already unlocked this final payment step. Return to your Workers United dashboard to finish payment, enter the active queue, and open your support inbox there.`;
     }
 }
 
@@ -1545,7 +1545,7 @@ export async function queueEmail(
                         sendResult = await wa.sendRoleStatusUpdate(
                             recipientPhoneNumber,
                             firstName,
-                            "Your profile is 100% complete and is now waiting for admin review. We will unlock Job Finder as soon as it is approved.",
+                            "Your profile is 100% complete and is now waiting for admin review. We will unlock Job Finder checkout in your dashboard as soon as your case is approved.",
                             "worker",
                             userId
                         );
