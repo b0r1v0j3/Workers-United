@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Reset status to "verifying" so the worker sees it's being processed
-        const { error: verifyingError } = await admin
+        const { data: verifyingDoc, error: verifyingError } = await admin
             .from("worker_documents")
             .update({
                 status: "verifying",
@@ -57,11 +57,13 @@ export async function POST(request: NextRequest) {
                 verified_at: null,
                 updated_at: new Date().toISOString(),
             })
-            .eq("id", documentId);
+            .eq("id", documentId)
+            .select("id")
+            .maybeSingle();
 
-        if (verifyingError) {
+        if (verifyingError || !verifyingDoc) {
             return NextResponse.json(
-                { error: `Failed to reset document for re-verification: ${verifyingError.message}` },
+                { error: `Failed to reset document for re-verification: ${verifyingError?.message || "document not found"}` },
                 { status: 500 }
             );
         }
@@ -110,21 +112,23 @@ export async function POST(request: NextRequest) {
 
         if (!verifyRes.ok) {
             // Reset status back to pending on failure
-            const { error: resetError } = await admin
+            const { data: resetDoc, error: resetError } = await admin
                 .from("worker_documents")
                 .update({
                     status: "pending",
                     reject_reason: `Re-verification failed: ${verifyData.error || "Unknown error"}`,
                     updated_at: new Date().toISOString(),
                 })
-                .eq("id", documentId);
+                .eq("id", documentId)
+                .select("id")
+                .maybeSingle();
 
-            if (resetError) {
+            if (resetError || !resetDoc) {
                 return NextResponse.json(
                     {
                         error: verifyData.error || "Verification failed",
                         status_reset_failed: true,
-                        status_reset_error: resetError.message,
+                        status_reset_error: resetError?.message || "document not found",
                     },
                     { status: 500 }
                 );
