@@ -271,6 +271,25 @@ const RESPONSE_LANGUAGE_SIGNAL_PATTERNS: Record<WhatsAppLanguageCode, readonly R
     ],
 };
 
+const SHORT_RESPONSE_LANGUAGE_SIGNALS: Record<WhatsAppLanguageCode, readonly string[]> = {
+    en: ["yes", "no", "sure", "absolutely"],
+    sr: ["da", "ne", "naravno", "moze", "može"],
+    ar: ["نعم", "لا"],
+    fr: ["oui", "non", "bien sur", "bien sûr", "daccord", "d'accord"],
+    pt: ["sim", "nao", "não", "claro"],
+    hi: ["हाँ", "हां", "नहीं"],
+};
+
+function normalizeShortLanguageReply(text: string) {
+    return text
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[.!?,;:()[\]{}"'`´’‘]/g, "")
+        .replace(/\s+/g, " ");
+}
+
 function getLanguageCodeFromLabel(label?: string | null): WhatsAppLanguageCode | null {
     const normalized = (label || "").trim().toLowerCase();
     if (!normalized) return null;
@@ -359,6 +378,11 @@ export function replyMatchesExpectedWhatsAppLanguage(expectedLanguage: string, r
     }
 
     if (RESPONSE_LANGUAGE_SIGNAL_PATTERNS[expectedCode].some((pattern) => pattern.test(normalizedResponse))) {
+        return true;
+    }
+
+    const normalizedShortReply = normalizeShortLanguageReply(normalizedResponse);
+    if (SHORT_RESPONSE_LANGUAGE_SIGNALS[expectedCode].includes(normalizedShortReply)) {
         return true;
     }
 
