@@ -28,6 +28,8 @@ describe("whatsapp-brain guards", () => {
     it("starts onboarding only for explicit WhatsApp profile requests", () => {
         expect(shouldStartWhatsAppOnboarding("I want to complete my profile on WhatsApp")).toBe(true);
         expect(shouldStartWhatsAppOnboarding("Can I register on WhatsApp?")).toBe(true);
+        expect(shouldStartWhatsAppOnboarding("Je veux remplir mon profil sur WhatsApp")).toBe(true);
+        expect(shouldStartWhatsAppOnboarding("मैं व्हाट्सएप पर प्रोफाइल भरना चाहता हूँ")).toBe(true);
     });
 
     it("keeps canonical facts aligned with the real Job Finder model", () => {
