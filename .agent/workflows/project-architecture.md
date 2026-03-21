@@ -369,7 +369,8 @@ User (Browser)
 |---|---|
 | `src/app/admin/page.tsx` | Business admin dashboard with actionable stats, queue watch, recent lists, direct inspect links into real worker/employer/agency workspaces, and a prominent `Open Email Preview` CTA so admin can jump straight into the system-email sandbox without hunting through navigation |
 | `src/app/admin/email-preview/page.tsx` | Business-admin email preview page inside the normal AppShell; exposes the full template list, category/search filtering, and live payload preview without requiring the internal tools hub |
-| `src/app/admin/review/ReviewClient.tsx` | Legacy manual-review queue UI; now opens exact approval/rejection `document_review_result` previews inline and only claims “email sent” when `/api/admin/admin-review` returns a real `notification.status='sent'` outcome |
+| `src/app/admin/review/ReviewClient.tsx` | Legacy manual-review queue UI; now opens exact approval/rejection `document_review_result` previews inline and uses the shared admin-review notification helper so `sent / queued / failed / skipped` toast copy stays truthful instead of collapsing queued mail into “No email was sent.” |
+| `src/lib/admin-review-notifications.ts` | Shared admin-review toast helper; maps `/api/admin/admin-review` delivery outcomes into truthful admin-safe `sent / queued / failed / skipped` toast copy so ReviewClient does not duplicate or drift from the route contract |
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
 | `src/app/admin/inbox/page.tsx` | Admin support inbox page |
 | `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |

@@ -8,6 +8,10 @@ import { toast } from "sonner";
 import { Eye, CheckCircle2, Send, Loader2 } from "lucide-react";
 import { WORKER_DOCUMENTS_BUCKET } from "@/lib/worker-documents";
 import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
+import {
+    getAdminReviewNotificationToast,
+    type ReviewNotificationStatus,
+} from "@/lib/admin-review-notifications";
 
 interface ReviewDoc {
     user_id: string;
@@ -18,11 +22,6 @@ interface ReviewDoc {
     updated_at: string;
     profile?: { full_name: string; email: string };
 }
-
-type ReviewNotificationStatus = {
-    status?: "sent" | "failed" | "skipped";
-    error?: string | null;
-};
 
 function humanizeDocumentType(documentType: string) {
     return documentType
@@ -109,19 +108,12 @@ export default function ReviewClient() {
             });
             if (res.ok) {
                 const payload = await res.json().catch(() => null) as { notification?: ReviewNotificationStatus } | null;
-                const notification = payload?.notification;
-                const isSent = notification?.status === "sent";
-                const didFail = notification?.status === "failed";
-                const baseMessage = action === "approve"
-                    ? "Document approved."
-                    : "Rejected with feedback.";
+                const notificationToast = getAdminReviewNotificationToast(action, payload?.notification);
 
-                if (isSent) {
-                    toast.success(`${baseMessage} Email sent to user.`);
-                } else if (didFail) {
-                    toast.warning(`${baseMessage} Email failed${notification?.error ? `: ${notification.error}` : "."}`);
+                if (notificationToast.variant === "warning") {
+                    toast.warning(notificationToast.message);
                 } else {
-                    toast.success(`${baseMessage} No email was sent.`);
+                    toast.success(notificationToast.message);
                 }
                 setDocs(prev => prev.filter(d => !(d.user_id === doc.user_id && d.document_type === doc.document_type)));
                 setPreviewing(null);
