@@ -81,12 +81,20 @@ export async function GET(request: Request) {
 
         // Check which users already got a document_expiring email in the last 30 days
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        const { data: recentEmails } = await supabase
+        const { data: recentEmails, error: recentEmailsError } = await supabase
             .from('email_queue')
             .select('user_id')
             .eq('email_type', 'document_expiring')
             .in('status', ['pending', 'sent'])
             .gte('created_at', thirtyDaysAgo);
+
+        if (recentEmailsError) {
+            console.error("[Cron] Failed to load recent document reminder history:", recentEmailsError);
+            return NextResponse.json(
+                { error: "Failed to load recent document reminder history" },
+                { status: 500 }
+            );
+        }
 
         const recentlyNotified = new Set(recentEmails?.map(e => e.user_id) || []);
 
