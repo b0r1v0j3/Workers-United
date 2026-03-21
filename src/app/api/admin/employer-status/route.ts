@@ -36,13 +36,19 @@ export async function PATCH(request: NextRequest) {
 
         const adminClient = createAdminClient();
 
-        const { error } = await adminClient
+        const { data: updatedEmployer, error } = await adminClient
             .from("employers")
             .update({ status, updated_at: new Date().toISOString() })
-            .eq("id", employerId);
+            .eq("id", employerId)
+            .select("id")
+            .maybeSingle();
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        if (!updatedEmployer?.id) {
+            return NextResponse.json({ error: "Employer not found" }, { status: 404 });
         }
 
         return NextResponse.json({ success: true, status });

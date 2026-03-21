@@ -31,12 +31,24 @@ export async function rollbackManualMatchArtifacts(params: {
     const cleanupErrors: string[] = [];
 
     if (params.restoreWorkerStatus) {
-        const restoreStatusError = await captureRollbackError("restore_worker_status", () =>
-            params.admin
+        const restoreStatusError = await captureRollbackError("restore_worker_status", async () => {
+            const { data, error } = await params.admin
                 .from("worker_onboarding")
                 .update({ status: params.previousWorkerStatus || null })
                 .eq("id", params.workerId)
-        );
+                .select("id")
+                .maybeSingle();
+
+            if (error) {
+                return { error };
+            }
+
+            if (!data?.id) {
+                return { error: { message: "worker row missing during rollback" } };
+            }
+
+            return null;
+        });
 
         if (restoreStatusError) {
             cleanupErrors.push(restoreStatusError);
@@ -200,28 +212,40 @@ export async function POST(request: NextRequest) {
         createdOfferId = offer.id;
 
         // Update worker status
-        const { error: workerStatusError } = await admin
+        const { data: updatedWorkerStatus, error: workerStatusError } = await admin
             .from("worker_onboarding")
             .update({ status: "OFFER_ACCEPTED" })
-            .eq("id", targetWorkerRecordId);
+            .eq("id", targetWorkerRecordId)
+            .select("id")
+            .maybeSingle();
 
-        if (workerStatusError) {
-            console.error("[Manual Match] Error updating worker status:", workerStatusError);
+        if (workerStatusError || !updatedWorkerStatus?.id) {
+            console.error(
+                "[Manual Match] Error updating worker status:",
+                workerStatusError || { message: "worker row missing during status update" }
+            );
             const cleanupErrors = await rollbackManualMatchArtifacts({
                 admin,
                 workerId: targetWorkerRecordId,
                 createdOfferId,
                 createdMatchId,
             });
+            const workerMissingDuringStatusUpdate = !workerStatusError && !updatedWorkerStatus?.id;
             return NextResponse.json(
                 cleanupErrors.length > 0
                     ? {
-                        error: "Failed to update worker status. Cleanup may be incomplete.",
+                        error: workerMissingDuringStatusUpdate
+                            ? "Worker not found while updating status. Cleanup may be incomplete."
+                            : "Failed to update worker status. Cleanup may be incomplete.",
                         rollbackFailed: true,
                         cleanupErrors,
                     }
-                    : { error: "Failed to update worker status" },
-                { status: 500 }
+                    : {
+                        error: workerMissingDuringStatusUpdate
+                            ? "Worker not found"
+                            : "Failed to update worker status",
+                    },
+                { status: workerMissingDuringStatusUpdate ? 404 : 500 }
             );
         }
 

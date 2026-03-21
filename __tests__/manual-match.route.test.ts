@@ -8,7 +8,7 @@ const jobSingle = vi.fn();
 const duplicateOfferLimit = vi.fn();
 const matchInsertSingle = vi.fn();
 const offerInsertSingle = vi.fn();
-const workerUpdateEq = vi.fn();
+const workerUpdateMaybeSingle = vi.fn();
 const offerDeleteEq = vi.fn();
 const matchDeleteEq = vi.fn();
 const incrementPositionsFilled = vi.fn();
@@ -45,7 +45,11 @@ vi.mock("@/lib/supabase/admin", () => ({
                         }),
                     }),
                     update: (payload: Record<string, unknown>) => ({
-                        eq: (column: string, value: string) => workerUpdateEq(payload, column, value),
+                        eq: (column: string, value: string) => ({
+                            select: () => ({
+                                maybeSingle: () => workerUpdateMaybeSingle(payload, column, value),
+                            }),
+                        }),
                     }),
                 };
             }
@@ -163,7 +167,10 @@ describe("POST /api/admin/manual-match", () => {
             data: { id: "offer-1" },
             error: null,
         });
-        workerUpdateEq.mockResolvedValue({ error: null });
+        workerUpdateMaybeSingle.mockResolvedValue({
+            data: { id: "worker-1" },
+            error: null,
+        });
         offerDeleteEq.mockResolvedValue({ error: null });
         matchDeleteEq.mockResolvedValue({ error: null });
         incrementPositionsFilled.mockResolvedValue({ error: null });
@@ -194,7 +201,8 @@ describe("POST /api/admin/manual-match", () => {
     });
 
     it("returns rollbackFailed when worker status update fails and offer cleanup is incomplete", async () => {
-        workerUpdateEq.mockResolvedValueOnce({
+        workerUpdateMaybeSingle.mockResolvedValueOnce({
+            data: null,
             error: {
                 message: "status blocked",
             },
@@ -223,9 +231,13 @@ describe("POST /api/admin/manual-match", () => {
                 message: "rpc failed",
             },
         });
-        workerUpdateEq
-            .mockResolvedValueOnce({ error: null })
+        workerUpdateMaybeSingle
             .mockResolvedValueOnce({
+                data: { id: "worker-1" },
+                error: null,
+            })
+            .mockResolvedValueOnce({
+                data: null,
                 error: {
                     message: "restore blocked",
                 },
@@ -239,6 +251,23 @@ describe("POST /api/admin/manual-match", () => {
             error: "Failed to reserve the job position. Cleanup may be incomplete.",
             rollbackFailed: true,
             cleanupErrors: ["restore_worker_status: restore blocked"],
+        });
+        expect(offerDeleteEq).toHaveBeenCalledWith("id", "offer-1");
+        expect(matchDeleteEq).toHaveBeenCalledWith("id", "match-1");
+    });
+
+    it("returns 404 and rolls back when worker status update matches no row", async () => {
+        workerUpdateMaybeSingle.mockResolvedValueOnce({
+            data: null,
+            error: null,
+        });
+
+        const { POST } = await import("@/app/api/admin/manual-match/route");
+        const response = await POST(createRequest());
+
+        expect(response.status).toBe(404);
+        await expect(response.json()).resolves.toEqual({
+            error: "Worker not found",
         });
         expect(offerDeleteEq).toHaveBeenCalledWith("id", "offer-1");
         expect(matchDeleteEq).toHaveBeenCalledWith("id", "match-1");
