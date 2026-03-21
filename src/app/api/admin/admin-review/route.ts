@@ -22,6 +22,20 @@ type EmailNotificationResult = {
     error?: string | null;
 };
 
+type DocumentMutationResult = {
+    data?: { id?: string | null } | { id?: string | null }[] | null;
+    error?: { message?: string | null } | null;
+};
+
+function getMatchedDocumentId(result: DocumentMutationResult): string | null {
+    if (Array.isArray(result.data)) {
+        const firstRow = result.data[0];
+        return typeof firstRow?.id === "string" ? firstRow.id : null;
+    }
+
+    return typeof result.data?.id === "string" ? result.data.id : null;
+}
+
 function getEmailNotificationResult(
     result: Awaited<ReturnType<typeof queueEmail>> | null | undefined,
     recipientEmail?: string | null,
@@ -160,13 +174,19 @@ async function handleStructuredFormAction(
             verified_at: status === "verified" ? new Date().toISOString() : null,
         };
 
-        const { error: updateError } = await admin
+        const updateResult = await admin
             .from("worker_documents")
             .update(updatePayload)
-            .eq("id", docId);
+            .eq("id", docId)
+            .select("id")
+            .maybeSingle();
 
-        if (updateError) {
-            return redirectWithAction(request, redirectTo, "error", updateError.message);
+        if (updateResult.error) {
+            return redirectWithAction(request, redirectTo, "error", updateResult.error.message || "Failed to update document status.");
+        }
+
+        if (!getMatchedDocumentId(updateResult)) {
+            return redirectWithAction(request, redirectTo, "error", "Document not found.");
         }
 
         await syncWorkerReviewStatus({
@@ -224,6 +244,10 @@ async function handleStructuredFormAction(
             return redirectWithAction(request, redirectTo, "error", existingDocumentError.message);
         }
 
+        if (!existingDocument) {
+            return redirectWithAction(request, redirectTo, "error", "Document not found.");
+        }
+
         const storagePathsToDelete = collectDocumentStoragePathsForCleanup(
             existingDocument?.storage_path,
             existingDocument?.ocr_json && typeof existingDocument.ocr_json === "object"
@@ -237,13 +261,19 @@ async function handleStructuredFormAction(
                 .remove(storagePathsToDelete);
         }
 
-        const { error: deleteError } = await admin
+        const deleteResult = await admin
             .from("worker_documents")
             .delete()
-            .eq("id", docId);
+            .eq("id", docId)
+            .select("id")
+            .maybeSingle();
 
-        if (deleteError) {
-            return redirectWithAction(request, redirectTo, "error", deleteError.message);
+        if (deleteResult.error) {
+            return redirectWithAction(request, redirectTo, "error", deleteResult.error.message || "Failed to delete document.");
+        }
+
+        if (!getMatchedDocumentId(deleteResult)) {
+            return redirectWithAction(request, redirectTo, "error", "Document not found.");
         }
 
         await syncWorkerReviewStatus({
@@ -335,14 +365,17 @@ export async function POST(request: Request) {
 
         if (action === "approve") {
             // Set to verified
-            const { error: approveError } = await admin.from("worker_documents").update({
+            const approveResult = await admin.from("worker_documents").update({
                 status: "verified",
                 reject_reason: null,
                 verified_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
-            }).eq("user_id", reviewContext.documentOwnerId).eq("document_type", docType);
-            if (approveError) {
+            }).eq("user_id", reviewContext.documentOwnerId).eq("document_type", docType).select("id").maybeSingle();
+            if (approveResult.error) {
                 return NextResponse.json({ error: "Failed to update document status" }, { status: 500 });
+            }
+            if (!getMatchedDocumentId(approveResult)) {
+                return NextResponse.json({ error: "Document not found" }, { status: 404 });
             }
 
             await syncWorkerReviewStatus({
@@ -384,13 +417,16 @@ export async function POST(request: Request) {
 
         } else if (action === "reject") {
             // Set to rejected with admin feedback
-            const { error: rejectError } = await admin.from("worker_documents").update({
+            const rejectResult = await admin.from("worker_documents").update({
                 status: "rejected",
                 reject_reason: feedback || "Document not accepted by admin.",
                 updated_at: new Date().toISOString(),
-            }).eq("user_id", reviewContext.documentOwnerId).eq("document_type", docType);
-            if (rejectError) {
+            }).eq("user_id", reviewContext.documentOwnerId).eq("document_type", docType).select("id").maybeSingle();
+            if (rejectResult.error) {
                 return NextResponse.json({ error: "Failed to update document status" }, { status: 500 });
+            }
+            if (!getMatchedDocumentId(rejectResult)) {
+                return NextResponse.json({ error: "Document not found" }, { status: 404 });
             }
 
             await syncWorkerReviewStatus({

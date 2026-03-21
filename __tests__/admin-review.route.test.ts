@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const authGetUser = vi.fn();
 const profileSingle = vi.fn();
-const workerDocumentUpdateEq = vi.fn();
+const workerDocumentSelectMaybeSingle = vi.fn();
+const workerDocumentUpdateMaybeSingle = vi.fn();
+const workerDocumentDeleteMaybeSingle = vi.fn();
 const notificationProfileMaybeSingle = vi.fn();
+const storageRemove = vi.fn();
 const queueEmail = vi.fn();
 const loadCanonicalWorkerRecord = vi.fn();
 const syncWorkerReviewStatus = vi.fn();
@@ -32,11 +35,34 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
     createAdminClient: () => ({
+        storage: {
+            from: () => ({
+                remove: storageRemove,
+            }),
+        },
         from: (table: string) => {
             if (table === "worker_documents") {
                 return {
-                    update: () => ({
-                        eq: workerDocumentUpdateEq,
+                    select: () => ({
+                        eq: () => ({
+                            maybeSingle: workerDocumentSelectMaybeSingle,
+                        }),
+                    }),
+                    update: () => {
+                        const chain = {
+                            eq: vi.fn(() => chain),
+                            select: vi.fn(() => ({
+                                maybeSingle: workerDocumentUpdateMaybeSingle,
+                            })),
+                        };
+                        return chain;
+                    },
+                    delete: () => ({
+                        eq: vi.fn(() => ({
+                            select: vi.fn(() => ({
+                                maybeSingle: workerDocumentDeleteMaybeSingle,
+                            })),
+                        })),
                     }),
                 };
             }
@@ -80,7 +106,7 @@ vi.mock("next/cache", () => ({
     revalidatePath: vi.fn(),
 }));
 
-describe("POST /api/admin/admin-review structured actions", () => {
+describe("POST /api/admin/admin-review", () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
@@ -105,7 +131,19 @@ describe("POST /api/admin/admin-review structured actions", () => {
                 application_data: null,
             },
         });
-        workerDocumentUpdateEq.mockResolvedValue({
+        workerDocumentSelectMaybeSingle.mockResolvedValue({
+            data: {
+                storage_path: "worker-docs/profile-1/passport.jpg",
+                ocr_json: null,
+            },
+            error: null,
+        });
+        workerDocumentUpdateMaybeSingle.mockResolvedValue({
+            data: { id: "doc-1" },
+            error: null,
+        });
+        workerDocumentDeleteMaybeSingle.mockResolvedValue({
+            data: { id: "doc-1" },
             error: null,
         });
         notificationProfileMaybeSingle.mockResolvedValue({
@@ -114,6 +152,7 @@ describe("POST /api/admin/admin-review structured actions", () => {
                 email: "ali@example.com",
             },
         });
+        storageRemove.mockResolvedValue({ data: [], error: null });
         syncWorkerReviewStatus.mockResolvedValue(undefined);
         logServerActivity.mockResolvedValue(undefined);
     });
@@ -185,5 +224,103 @@ describe("POST /api/admin/admin-review structured actions", () => {
         const location = response.headers.get("location");
         expect(location).toContain("documentAction=updated");
         expect(location).toContain("documentNotification=failed");
+    });
+
+    it("fails closed for structured update_status when the target document no longer exists", async () => {
+        workerDocumentUpdateMaybeSingle.mockResolvedValueOnce({
+            data: null,
+            error: null,
+        });
+
+        const { POST } = await import("@/app/api/admin/admin-review/route");
+
+        const body = new URLSearchParams({
+            mode: "update_status",
+            worker_id: "worker-1",
+            doc_id: "doc-missing",
+            doc_type: "passport",
+            status: "verified",
+            redirect_to: "/admin/workers/worker-1",
+        });
+
+        const response = await POST(new Request("http://localhost/api/admin/admin-review", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body,
+        }));
+
+        expect(response.status).toBe(303);
+        const location = new URL(response.headers.get("location") || "http://localhost");
+        expect(location.searchParams.get("documentAction")).toBe("error");
+        expect(location.searchParams.get("documentError")).toBe("Document not found.");
+        expect(syncWorkerReviewStatus).not.toHaveBeenCalled();
+        expect(logServerActivity).not.toHaveBeenCalled();
+        expect(queueEmail).not.toHaveBeenCalled();
+    });
+
+    it("fails closed for request_new_document when the target document no longer exists", async () => {
+        workerDocumentSelectMaybeSingle.mockResolvedValueOnce({
+            data: null,
+            error: null,
+        });
+
+        const { POST } = await import("@/app/api/admin/admin-review/route");
+
+        const body = new URLSearchParams({
+            mode: "request_new_document",
+            worker_id: "worker-1",
+            doc_id: "doc-missing",
+            doc_type: "passport",
+            reason: "Need a clearer scan.",
+            redirect_to: "/admin/workers/worker-1",
+        });
+
+        const response = await POST(new Request("http://localhost/api/admin/admin-review", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body,
+        }));
+
+        expect(response.status).toBe(303);
+        const location = new URL(response.headers.get("location") || "http://localhost");
+        expect(location.searchParams.get("documentAction")).toBe("error");
+        expect(location.searchParams.get("documentError")).toBe("Document not found.");
+        expect(storageRemove).not.toHaveBeenCalled();
+        expect(syncWorkerReviewStatus).not.toHaveBeenCalled();
+        expect(logServerActivity).not.toHaveBeenCalled();
+        expect(queueEmail).not.toHaveBeenCalled();
+    });
+
+    it("returns 404 for JSON approve when no matching document row exists", async () => {
+        workerDocumentUpdateMaybeSingle.mockResolvedValueOnce({
+            data: null,
+            error: null,
+        });
+
+        const { POST } = await import("@/app/api/admin/admin-review/route");
+
+        const response = await POST(new Request("http://localhost/api/admin/admin-review", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                userId: "worker-1",
+                docType: "passport",
+                action: "approve",
+            }),
+        }));
+
+        const payload = await response.json();
+
+        expect(response.status).toBe(404);
+        expect(payload).toEqual({ error: "Document not found" });
+        expect(syncWorkerReviewStatus).not.toHaveBeenCalled();
+        expect(logServerActivity).not.toHaveBeenCalled();
+        expect(queueEmail).not.toHaveBeenCalled();
     });
 });
