@@ -91,6 +91,7 @@ function createAdminSupabase(params?: {
     workerOnboardingError?: string | null;
     workerDocumentsError?: string | null;
     jobMatchesError?: string | null;
+    jobMatchesData?: Array<Record<string, unknown>>;
     queueWorkersError?: string | null;
     openJobsError?: string | null;
     employersError?: string | null;
@@ -141,9 +142,11 @@ function createAdminSupabase(params?: {
             if (table === "email_queue") {
                 return {
                     select: () => ({
-                        eq: vi.fn(async () => ({
-                            data: [],
-                            error: params?.jobMatchesError ? { message: params.jobMatchesError } : null,
+                        eq: vi.fn(() => ({
+                            eq: vi.fn(async () => ({
+                                data: params?.jobMatchesData || [],
+                                error: params?.jobMatchesError ? { message: params.jobMatchesError } : null,
+                            })),
                         })),
                     }),
                 };
@@ -223,6 +226,24 @@ describe("GET /api/admin/funnel-metrics", () => {
             verified: 0,
             job_matched: 0,
         });
+    });
+
+    it("counts only delivered job_match emails in the job_matched metric", async () => {
+        createAdminClient.mockReturnValue(createAdminSupabase({
+            jobMatchesData: [
+                { recipient_email: "worker1@example.com" },
+                { recipient_email: "worker1@example.com" },
+                { recipient_email: "worker2@example.com" },
+            ],
+        }));
+
+        const { GET } = await import("@/app/api/admin/funnel-metrics/route");
+        const response = await GET(new Request("http://localhost/api/admin/funnel-metrics"));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.success).toBe(true);
+        expect(payload.data.job_matched).toBe(2);
     });
 
     it("fails closed when worker profile loading errors", async () => {
