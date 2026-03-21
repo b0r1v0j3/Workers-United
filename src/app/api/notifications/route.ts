@@ -16,6 +16,7 @@ export async function GET() {
             .from("email_queue")
             .select("id, email_type, status, created_at, read_at")
             .eq("user_id", user.id)
+            .eq("status", "sent")
             .order("created_at", { ascending: false })
             .limit(20);
 
@@ -60,6 +61,7 @@ export async function PATCH(request: Request) {
                 .from("email_queue")
                 .update({ read_at: new Date().toISOString() })
                 .eq("user_id", user.id)
+                .eq("status", "sent")
                 .is("read_at", null);
 
             if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -69,7 +71,8 @@ export async function PATCH(request: Request) {
                 .from("email_queue")
                 .update({ read_at: new Date().toISOString() })
                 .eq("id", id)
-                .eq("user_id", user.id);
+                .eq("user_id", user.id)
+                .eq("status", "sent");
 
             if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         } else {
