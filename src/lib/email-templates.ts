@@ -169,6 +169,22 @@ function renderJourneyRows(rows: Array<{ icon?: string; title: string; descripti
     `).join("");
 }
 
+function renderJourneyCard(
+    title: string,
+    rows: Array<{ icon?: string; title: string; description: string }>
+) {
+    return `
+        <div style="background:#F5F5F7; border-radius:16px; padding:26px; margin:32px 0; border:1px solid #E5E5EA;">
+            <h3 style="margin:0 0 20px; font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; text-align:center;">
+                ${escapeHtml(title)}
+            </h3>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${renderJourneyRows(rows)}
+            </table>
+        </div>
+    `;
+}
+
 function getRoleReminderCopy(role: RecipientRole) {
     switch (role) {
         case "employer":
@@ -288,9 +304,9 @@ function renderIconHero(variant: HeroVariant, title: string, subtitle: string) {
 
 function renderDarkPanel(title: string, bodyHtml: string) {
     return `
-        <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
-            <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">${escapeHtml(title)}</h3>
-            <div style="margin:0; font-size: 16px; color: #E5E5EA; line-height: 1.6;">
+        <div style="background:#F5F5F7; border-radius:16px; padding:30px; margin:32px 0; border:1px solid #E5E5EA; text-align:center;">
+            <h3 style="margin:0 0 15px; font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700;">${escapeHtml(title)}</h3>
+            <div style="margin:0; font-size:15px; color:#1D1D1F; line-height:1.7;">
                 ${bodyHtml}
             </div>
         </div>
@@ -299,9 +315,9 @@ function renderDarkPanel(title: string, bodyHtml: string) {
 
 function renderLightPanel(title: string, bodyHtml: string) {
     return `
-        <div style="background:#F5F5F7; border-radius:12px; padding:32px; margin:35px 0; border: 1px solid #E5E5EA; text-align:center;">
-            <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">${escapeHtml(title)}</h3>
-            <div style="margin:0; font-size: 15px; color: #1D1D1F; line-height: 1.6;">
+        <div style="background:#F5F5F7; border-radius:16px; padding:28px; margin:32px 0; border:1px solid #E5E5EA; text-align:center;">
+            <h3 style="margin:0 0 14px; font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700;">${escapeHtml(title)}</h3>
+            <div style="margin:0; font-size:15px; color:#1D1D1F; line-height:1.7;">
                 ${bodyHtml}
             </div>
         </div>
@@ -311,17 +327,35 @@ function renderLightPanel(title: string, bodyHtml: string) {
 function renderChecklistCard(title: string, items: string[]) {
     const rows = items.map((item, index) => `
         <tr>
-            <td width="24" style="vertical-align: top; padding-bottom: ${index === items.length - 1 ? "0" : "10px"}; color:#111111; font-size:15px; font-weight:700; line-height:20px;">✓</td>
+            <td width="30" style="vertical-align: top; padding-bottom: ${index === items.length - 1 ? "0" : "12px"};">
+                <img src="https://img.icons8.com/ios/50/000000/checked--v1.png" width="18" height="18" alt="" style="display:block; margin-top:1px;">
+            </td>
             <td style="padding-bottom: ${index === items.length - 1 ? "0" : "10px"}; color: #1D1D1F; font-size: 14px; text-align: left;">${item}</td>
         </tr>
     `).join("");
 
     return `
-        <div style="background:#F5F5F7; border-radius:12px; padding:20px; margin:20px 0; border: 1px solid #E5E5EA;">
-            <h3 style="margin:0 0 15px; font-size:12px; color: #86868B; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: center;">${escapeHtml(title)}</h3>
+        <div style="background:#F5F5F7; border-radius:16px; padding:22px; margin:24px 0; border:1px solid #E5E5EA;">
+            <h3 style="margin:0 0 16px; font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; text-align:center;">${escapeHtml(title)}</h3>
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 ${rows}
             </table>
+        </div>
+    `;
+}
+
+function renderAmountHighlightCard(title: string, amount: string, note: string) {
+    return `
+        <div style="background:#F5F5F7; border-radius:16px; padding:30px; margin:32px 0; border:1px solid #E5E5EA; text-align:center;">
+            <div style="font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:12px;">
+                ${escapeHtml(title)}
+            </div>
+            <div style="font-size:44px; font-weight:800; color:#111111; letter-spacing:-1px; margin-bottom:12px; line-height:1;">
+                ${amount}
+            </div>
+            <div style="font-size:15px; color:#515154; line-height:1.7;">
+                ${note}
+            </div>
         </div>
     `;
 }
@@ -613,13 +647,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Your profile and required documents are now ready for admin review. We will check everything and unlock Job Finder checkout in your dashboard as soon as your case is approved.
                     </p>
                     
-                    ${renderDarkPanel("What Happens Next", `
-                        1. Admin reviews your profile
-                        <br>
-                        2. Job Finder checkout unlocks after approval
-                        <br>
-                        3. You can then complete the $9 Job Finder checkout
-                    `)}
+                    ${renderJourneyCard("What Happens Next", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/approval.png",
+                            title: "Admin Review Starts Now",
+                            description: "We review your complete profile and required documents.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/rocket.png",
+                            title: "Checkout Unlocks After Approval",
+                            description: "The $9 Job Finder checkout appears in your dashboard only after approval.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked--v1.png",
+                            title: "You Will Hear From Us Right Away",
+                            description: "We send an update as soon as your case moves to the next real step.",
+                        },
+                    ])}
 
                     ${renderChecklistCard("While You Wait", [
                         "Your profile is now in the admin review queue",
@@ -647,18 +691,22 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         We have received your <strong>${amount}</strong> Job Finder payment. Your worker case is now active in the queue, and our system can start matching you with employers.
                     </p>
 
-                    ${renderDarkPanel("What Happens Next", `
-                        1. Your profile stays active in the worker queue
-                        <br>
-                        2. We monitor new employer demand and match opportunities
-                        <br>
-                        3. You will hear from us as soon as a real case is ready
-                    `)}
-
-                    ${renderChecklistCard("Current Status", [
-                        `<strong>${amount}</strong> Job Finder service charge received successfully`,
-                        "Your Job Finder search is active",
-                        "Your in-platform support inbox remains available during the queue stage",
+                    ${renderJourneyCard("What Happens Next", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked--v1.png",
+                            title: "Payment Confirmed",
+                            description: `${amount} Job Finder service charge received successfully.`,
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
+                            title: "Queue Matching Is Active",
+                            description: "Your worker case now stays active in the matching queue while we monitor employer demand.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/info--v1.png",
+                            title: "Support Stays Open",
+                            description: "Your in-platform support inbox remains available during the queue stage.",
+                        },
                     ])}
 
                     <div style="text-align:center; margin-top:40px;">
@@ -707,25 +755,25 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         ${recoveryBodyMap[recoveryStep]}
                     </p>
 
-                    <div style="background:#111111; border-radius:16px; padding:35px; margin:35px 0; color:white; text-align:center;">
-                        <div style="font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:15px;">
-                            Job Finder checkout
-                        </div>
-                        <div style="font-size:48px; font-weight:800; color:#FFFFFF; letter-spacing:-1.5px; margin-bottom:15px; line-height:1;">
-                            ${amount}
-                        </div>
-                        <div style="font-size:16px; color:#E5E5EA; line-height:1.6;">
-                            ${recoveryNoteMap[recoveryStep]}
-                        </div>
-                    </div>
+                    ${renderAmountHighlightCard("Job Finder Checkout", amount, recoveryNoteMap[recoveryStep])}
 
-                    ${renderLightPanel("What You Need To Know", `
-                        Only the checkout state changes here.
-                        <br>
-                        Your profile, required documents, and review progress stay saved in the dashboard.
-                        <br>
-                        Open your account whenever you are ready to continue.
-                    `)}
+                    ${renderJourneyCard("What Stays In Place", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/edit-user-male.png",
+                            title: "Your Profile Stays Saved",
+                            description: "You do not need to fill your worker details again.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
+                            title: "Required Documents Stay Attached",
+                            description: "Your uploaded documents remain in the case while you return to checkout.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/approval.png",
+                            title: "Approval Progress Stays In Place",
+                            description: "Only the checkout state changes here. Your unlocked status is still waiting in the dashboard.",
+                        },
+                    ])}
 
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${buildEmailUrl("/profile/worker")}" style="${buttonStyle}">
@@ -759,7 +807,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                     </div>
 
-                    ${renderLightPanel("Response Window", "Please review this offer and respond within 24 hours so we can keep the hiring process moving.")}
+                    ${renderJourneyCard("What To Do Next", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
+                            title: "Review The Offer Carefully",
+                            description: "Open the full case details to confirm the role, employer, and expected conditions.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/info--v1.png",
+                            title: "Respond Within 24 Hours",
+                            description: "The response window is short so we can keep the hiring process moving.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked--v1.png",
+                            title: "We Handle The Next Step",
+                            description: "Once you confirm, we move the case forward from there.",
+                        },
+                    ])}
                     
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${data.offerLink || buildEmailUrl("/profile/worker/queue")}" style="${buttonStyle}">
@@ -780,7 +844,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Hey ${firstName}, you have a pending job offer that expires soon. Don't let this opportunity slip away!
                     </p>
 
-                    ${renderLightPanel("Why This Matters", "If the offer expires without a response, we may need to release the slot and move the case forward without you.")}
+                    ${renderJourneyCard("Why You Should Reply Now", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/briefcase.png",
+                            title: "Your Offer Is Still Reserved",
+                            description: "This spot is still attached to your case for a limited time.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/info--v1.png",
+                            title: "The Window Closes Quickly",
+                            description: "If the offer expires without a response, we may need to move the case forward without you.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
+                            title: "A Fast Reply Keeps Momentum",
+                            description: "Responding now helps us keep the hiring process on track.",
+                        },
+                    ])}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${data.offerLink || buildEmailUrl("/profile/worker/queue")}" style="${buttonStyle}">
@@ -802,12 +882,25 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Hi ${firstName}, the offer for <strong>${jobTitle}</strong> has expired because it was not confirmed within 24 hours.
                     </p>
 
-                    ${renderLightPanel("What Happens Now", `
-                        The position has been offered to the next worker in the queue.
-                        <br><br>
-                        <strong>Don't worry — you stay in the queue</strong> and will hear from us when the next matching opportunity appears.
-                        ${queuePosition > 0 ? `<br><br>Your current queue position: <strong>#${queuePosition}</strong>` : ""}
-                    `)}
+                    ${renderJourneyCard("What Happens Now", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/briefcase.png",
+                            title: "This Offer Slot Was Released",
+                            description: "The position has been offered to the next worker in the queue.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
+                            title: "You Stay In The Queue",
+                            description: "You remain active and we will contact you when the next matching opportunity appears.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/info--v1.png",
+                            title: queuePosition > 0 ? `Current Queue Position: #${queuePosition}` : "Keep Your Case Ready",
+                            description: queuePosition > 0
+                                ? "Keep your profile and required documents current so you are ready for the next opportunity."
+                                : "Keep your profile and required documents current so you are ready for the next opportunity.",
+                        },
+                    ])}
 
                     <p style="margin-top: 25px; color: #86868B; font-size: 15px; text-align: center;">
                         Keep your profile and documents up to date so you are ready for the next opportunity.
@@ -827,7 +920,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Hi ${firstName}, as per our 90-day guarantee, we have processed your refund of <strong>${amount}</strong>.
                     </p>
 
-                    ${renderLightPanel("Refund Timeline", "The funds should appear back on the original payment method within 5 to 10 business days, depending on your bank.")}
+                    ${renderJourneyCard("Refund Timeline", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked--v1.png",
+                            title: "Refund Processed",
+                            description: `Your ${amount} refund has been approved under the 90-day guarantee.`,
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/info--v1.png",
+                            title: "Bank Posting Can Take A Few Days",
+                            description: "The funds should appear back on the original payment method within 5 to 10 business days.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/star--v1.png",
+                            title: "You Are Welcome Back Anytime",
+                            description: "If you decide to reopen your case later, you can start again from a fresh workspace.",
+                        },
+                    ])}
                     
                     <p style="margin-top: 25px; color: #86868B; font-size: 15px; text-align: center;">
                         We're sorry we couldn't find the perfect match this time. You are always welcome back!
@@ -848,7 +957,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Your <strong>${documentType}</strong> is expiring on <strong>${expirationDate}</strong>.
                     </p>
 
-                    ${renderLightPanel("Why Update Now", "Keeping your required documents current helps us avoid delays when your case reaches a live employer or visa-processing step.")}
+                    ${renderJourneyCard("Why Update Now", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
+                            title: "Replace The Expiring File",
+                            description: "Upload the updated version as soon as you have it ready.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
+                            title: "Keep Your Case Moving",
+                            description: "Keeping required documents current helps us avoid delays when your case reaches a live employer.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/passport-control.png",
+                            title: "Stay Ready For Visa Processing",
+                            description: "Updated files keep your case usable for the next visa-processing step.",
+                        },
+                    ])}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "documents")}" style="${buttonStyle}">
@@ -889,7 +1014,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </div>
                     </div>
 
-                    ${renderLightPanel("Next Step", "Open the case details to review the opportunity, expected conditions, and what we need from you next.")}
+                    ${renderJourneyCard("What Happens Next", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/search--v1.png",
+                            title: "Review The Match Details",
+                            description: "Open the case details to see the opportunity, conditions, and next actions.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/briefcase.png",
+                            title: "Confirm It Fits Your Case",
+                            description: "Check the role, location, and package before you respond.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked--v1.png",
+                            title: "We Move It Forward With You",
+                            description: "Once you confirm, we coordinate the next real step from our side.",
+                        },
+                    ])}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${data.offerLink}" style="${buttonStyle}">
@@ -940,13 +1081,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Your <strong>${safeDocName}</strong> has been verified and approved by our team. It is now safely stored in your Workers United dashboard, and you do not need to upload this file again.
                     </p>
 
-                    ${renderLightPanel("What Happens Next", `
-                        1. Keep any remaining required documents moving forward
-                        <br>
-                        2. Your approved document stays locked in your case
-                        <br>
-                        3. We will notify you when the full profile reaches the next step
-                    `)}
+                    ${renderJourneyCard("What Happens Next", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked--v1.png",
+                            title: "This Document Is Verified",
+                            description: `${safeDocName} now stays safely saved in your case.`,
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
+                            title: "Keep Remaining Documents Moving",
+                            description: "Complete any other required uploads so the full profile can move forward.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/info--v1.png",
+                            title: "We Notify You At The Next Step",
+                            description: "You will hear from us when the full profile reaches review or approval milestones.",
+                        },
+                    ])}
 
                     ${renderChecklistCard("Current Status", [
                         `${safeDocName} is verified and saved`,
@@ -1056,7 +1207,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                          </div>
                     </div>
 
-                    ${renderLightPanel("Why This Matters", "Your profile and required documents have to be complete before we can send the case to admin review and eventually unlock Job Finder checkout.")}
+                    ${renderJourneyCard("What Needs To Happen", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/edit-user-male.png",
+                            title: "Finish The Missing Details",
+                            description: "Add the remaining profile information so your case is complete.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
+                            title: "Upload Every Required Document",
+                            description: "Your passport, photo, and diploma all need to be attached.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/approval.png",
+                            title: "Admin Review Comes Next",
+                            description: "Once everything is complete, we can send the case to admin review and later unlock Job Finder checkout.",
+                        },
+                    ])}
                     
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "setup")}" style="${buttonStyle}">
@@ -1081,7 +1248,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         </ul>
                     </div>
 
-                    ${renderLightPanel("Keep The Case Moving", "Once the missing items are saved, your workspace can move to the next real step without starting over.")}
+                    ${renderJourneyCard("How To Keep Moving", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/edit-user-male.png",
+                            title: "Save The Missing Items",
+                            description: "Finish the details listed above inside your workspace.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
+                            title: "Keep The Workspace Current",
+                            description: "Updated information helps us move the case without creating extra delays.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked--v1.png",
+                            title: "We Resume The Next Real Step",
+                            description: "Once the missing items are saved, your workspace can continue without starting over.",
+                        },
+                    ])}
 
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${reminderCopy.buttonUrl}" style="${buttonStyle}">
@@ -1105,7 +1288,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         ${warningCopy.warningText} Update your profile or documents to keep the account active.
                     </p>
 
-                    ${renderLightPanel("Cleanup Timeline", `You still have <strong style="color:#1D1D1F;">${daysLeft} days</strong> to save activity on the account before the inactive cleanup runs.`)}
+                    ${renderJourneyCard("Cleanup Timeline", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/info--v1.png",
+                            title: `${daysLeft} Days Left`,
+                            description: "You still have time to save profile activity before the inactive cleanup runs.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/edit-user-male.png",
+                            title: "Any Real Activity Helps",
+                            description: "Updating profile fields or documents is enough to keep the account active.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/checked--v1.png",
+                            title: "The Cleanup Stops Once You Return",
+                            description: "As soon as the workspace is active again, this cleanup warning no longer applies.",
+                        },
+                    ])}
 
                     <div style="text-align:center; margin-top:35px;">
                         <a href="${warningCopy.buttonUrl}" style="${buttonStyle}">
@@ -1156,7 +1355,23 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
                         Your profile is waiting for you. You can now securely upload your documents and complete the missing verification steps so we can move your case back into admin review.
                     </p>
 
-                    ${renderLightPanel("Next Step", "Return to your dashboard, upload the missing documents, and we will resume your case from there. Once everything is complete and approved, Job Finder checkout opens in your dashboard.")}
+                    ${renderJourneyCard("What Happens Next", [
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/upload-to-cloud.png",
+                            title: "Upload The Missing Documents",
+                            description: "Return to your dashboard and resubmit the files that were blocked before.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/approval.png",
+                            title: "We Resume Admin Review",
+                            description: "Once the missing files are saved, we move your case back into the real review flow.",
+                        },
+                        {
+                            icon: "https://img.icons8.com/ios/50/000000/rocket.png",
+                            title: "Checkout Opens After Approval",
+                            description: "When everything is complete and approved, Job Finder checkout opens in your dashboard.",
+                        },
+                    ])}
                     
                     <div style="text-align:center; margin-top:40px;">
                         <a href="${getRecipientWorkspaceUrl("worker", "documents")}" style="${buttonStyle}">
