@@ -102,12 +102,11 @@ describe("whatsapp-status-events", () => {
         ).rejects.toThrow("db exploded");
     });
 
-    it("throws when no whatsapp_messages row matches the wamid", async () => {
+    it("silently skips when no whatsapp_messages row matches the wamid", async () => {
         const { client, setNextEmpty } = createStatusAdminClient();
         setNextEmpty();
 
-        await expect(
-            persistWhatsAppDeliveryStatuses(client, [{ id: "wamid_missing", status: "sent" }])
-        ).rejects.toThrow("No whatsapp_messages row matched wamid wamid_missing while persisting delivery status.");
+        const count = await persistWhatsAppDeliveryStatuses(client, [{ id: "wamid_missing", status: "sent" }]);
+        expect(count).toBe(0);
     });
 });

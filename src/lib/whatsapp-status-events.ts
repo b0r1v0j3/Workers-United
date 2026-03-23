@@ -74,7 +74,8 @@ export async function persistWhatsAppDeliveryStatuses(
 
         const updatedRows = Array.isArray(updateResult?.data) ? updateResult.data : [];
         if (updatedRows.length === 0) {
-            throw new Error(`No whatsapp_messages row matched wamid ${wamid} while persisting delivery status.`);
+            // Normal: status updates arrive for outbound messages not stored in whatsapp_messages
+            continue;
         }
 
         persistedCount += updatedRows.length;
