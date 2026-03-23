@@ -378,6 +378,7 @@ export async function POST(request: NextRequest) {
                             wamid,
                         });
                         const isDuplicateInboundMessage = inboundRecord.duplicate;
+                        console.log(`[WH-DBG] step=1_recorded phone=${normalizedPhone} dup=${isDuplicateInboundMessage}`);
 
                         const workerRecordSelect = `
                             id, profile_id, status, queue_position, preferred_job, 
@@ -397,6 +398,7 @@ export async function POST(request: NextRequest) {
                             workerSelect: workerRecordSelect,
                         });
                         const linkedWorkerRecord = isLinkedWhatsAppWorker(workerRecord) ? workerRecord : null;
+                        console.log(`[WH-DBG] step=2_identity phone=${normalizedPhone} linked=${!!linkedWorkerRecord}`);
                         const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
                         const employerLead = await resolveEmployerWhatsAppLead({
                             admin: supabase,
@@ -408,6 +410,7 @@ export async function POST(request: NextRequest) {
                         const employerRecord = employerLead.employerRecord;
                         const isEmployer = employerLead.isEmployer;
                         const activityUserId = linkedWorkerRecord?.profile_id || employerRecord?.profile_id || null;
+                        console.log(`[WH-DBG] step=3_employer phone=${normalizedPhone} emp=${isEmployer} admin=${isAdmin} uid=${!!activityUserId}`);
                         const supportRole = linkedWorkerRecord
                             ? "worker"
                             : employerRecord
@@ -535,6 +538,7 @@ export async function POST(request: NextRequest) {
                     null,
                     await ensureHistoryMessages()
                 );
+                console.log(`[WH-DBG] step=4_language phone=${normalizedPhone} lang=${latestMessageLanguage} type=${messageType}`);
 
                 if (!isTextLikeWhatsAppMessage(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
@@ -639,6 +643,7 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
+                console.log(`[WH-DBG] step=5_pre_onboarding phone=${normalizedPhone}`);
                 const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
                 const onboardingReply = await handleWhatsAppOnboarding(
                     supabase,
@@ -666,6 +671,7 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
+                console.log(`[WH-DBG] step=6_post_onboarding phone=${normalizedPhone} onboarding=${onboardingReply !== null}`);
                 // ─── Intent-routed AI Brain (OpenAI router → Claude responder) ───
                 let aiResponse: string | null = null;
                 let routerDecision: WhatsAppRouterDecision | null = null;
@@ -678,6 +684,7 @@ export async function POST(request: NextRequest) {
                 const hasRouterKey = !!OPENAI_API_KEY_ENV;
                 const hasResponseKey = !!ANTHROPIC_API_KEY;
 
+                console.log(`[WH-DBG] step=7_ai_entry phone=${normalizedPhone} router=${hasRouterKey} claude=${hasResponseKey}`);
                 if (hasRouterKey || hasResponseKey) {
                     try {
                         const platformMessagingConfig = await loadPlatformMessagingConfig();
@@ -936,13 +943,12 @@ export async function POST(request: NextRequest) {
                     }
                     } catch (messageError) {
                         hadProcessingError = true;
-                        console.error("[WhatsApp Webhook] Failed to process inbound message:", {
-                            phone: normalizedPhone,
-                            wamid,
-                            error: messageError,
-                        });
+                        const errMsg = messageError instanceof Error ? messageError.message : String(messageError);
+                        const errStack = messageError instanceof Error ? messageError.stack : "";
+                        console.error(`[WhatsApp Webhook] CRASH processing ${normalizedPhone} wamid=${wamid}: ${errMsg}`);
+                        if (errStack) console.error(`[WhatsApp Webhook] Stack: ${errStack}`);
                         await logServerActivity(
-                            "anonymous",
+                            null,
                             "whatsapp_webhook_message_failed",
                             "error",
                             {
@@ -950,7 +956,8 @@ export async function POST(request: NextRequest) {
                                 wamid,
                                 message_type: messageType,
                                 content_preview: content.substring(0, 120),
-                                error: messageError instanceof Error ? messageError.message : "unknown",
+                                error: errMsg,
+                                stack: errStack?.substring(0, 500) || null,
                             },
                             "error"
                         );
