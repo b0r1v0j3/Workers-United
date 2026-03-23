@@ -525,7 +525,7 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(response.status).toBe(500);
         expect(payload).toEqual({ status: "partial_failure" });
         expect(logServerActivity).toHaveBeenCalledWith(
-            "anonymous",
+            null,
             "whatsapp_reply_delivery_failed",
             "messaging",
             expect.objectContaining({
@@ -564,7 +564,7 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(recordInboundWhatsAppMessage).not.toHaveBeenCalled();
         expect(sendWhatsAppText).not.toHaveBeenCalled();
         expect(logServerActivity).toHaveBeenCalledWith(
-            "anonymous",
+            null,
             "whatsapp_webhook_message_malformed",
             "error",
             expect.objectContaining({
@@ -648,7 +648,7 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(payload).toEqual({ status: "ok" });
         expect(sendWhatsAppText).not.toHaveBeenCalled();
         expect(logServerActivity).toHaveBeenCalledWith(
-            "anonymous",
+            null,
             "whatsapp_inbound_autoreply_suppressed",
             "messaging",
             expect.objectContaining({
