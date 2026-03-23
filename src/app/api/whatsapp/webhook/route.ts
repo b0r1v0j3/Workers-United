@@ -545,10 +545,10 @@ export async function POST(request: NextRequest) {
                 if (!isTextLikeWhatsAppMessage(messageType)) {
                     const mediaId = extractWhatsAppMediaId(message);
 
-                    // ─── Voice/Audio → Transcribe with Claude then process as text ───
-                    if (isAudioWhatsAppMessage(messageType) && mediaId && ANTHROPIC_API_KEY) {
+                    // ─── Voice/Audio → Transcribe with OpenAI Whisper then process as text ───
+                    if (isAudioWhatsAppMessage(messageType) && mediaId && OPENAI_API_KEY_ENV) {
                         try {
-                            const transcription = await transcribeWhatsAppAudio(ANTHROPIC_API_KEY, mediaId);
+                            const transcription = await transcribeWhatsAppAudio(OPENAI_API_KEY_ENV, mediaId);
                             if (transcription.text) {
                                 // Override content with transcription and continue as text
                                 content = `[Voice message] ${transcription.text}`;
