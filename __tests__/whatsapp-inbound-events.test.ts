@@ -12,7 +12,7 @@ function createInboundAdminClient(options?: {
     attachError?: { message?: string } | null;
     attachRows?: Array<{ id: string }> | null;
     lookupError?: { message?: string } | null;
-    lookupRow?: { id: string; user_id: string | null } | null;
+    lookupRows?: Array<{ id: string; user_id: string | null }> | null;
 }) {
     const inserts: Record<string, string | null>[] = [];
     const updates: Record<string, string>[] = [];
@@ -81,7 +81,7 @@ function createInboundAdminClient(options?: {
                                 filters.push({ [column]: value });
                                 return query;
                             },
-                            maybeSingle: async () => {
+                            limit: async () => {
                                 if (options?.lookupError) {
                                     return {
                                         data: null,
@@ -89,9 +89,9 @@ function createInboundAdminClient(options?: {
                                     };
                                 }
                                 return {
-                                    data: Object.prototype.hasOwnProperty.call(options || {}, "lookupRow")
-                                        ? options?.lookupRow ?? null
-                                        : { id: "msg_attach", user_id: "profile_attach" },
+                                    data: Object.prototype.hasOwnProperty.call(options || {}, "lookupRows")
+                                        ? options?.lookupRows ?? []
+                                        : [],
                                     error: null,
                                 };
                             },
@@ -164,9 +164,9 @@ describe("whatsapp-inbound-events", () => {
         ]);
     });
 
-    it("treats unique violations as duplicates instead of throwing", async () => {
+    it("treats pre-existing inbound wamid rows as duplicates even without relying on a unique index", async () => {
         const duplicateClient = createInboundAdminClient({
-            insertError: { code: "23505", message: "duplicate key value violates unique constraint" },
+            lookupRows: [{ id: "msg_existing", user_id: null }],
         });
 
         const result = await recordInboundWhatsAppMessage(duplicateClient.client, {
@@ -178,7 +178,29 @@ describe("whatsapp-inbound-events", () => {
         });
 
         expect(result).toEqual({
-            id: null,
+            id: "msg_existing",
+            inserted: false,
+            duplicate: true,
+        });
+        expect(duplicateClient.inserts).toEqual([]);
+    });
+
+    it("treats unique violations as duplicates instead of throwing", async () => {
+        const duplicateClient = createInboundAdminClient({
+            insertError: { code: "23505", message: "duplicate key value violates unique constraint" },
+            lookupRows: [{ id: "msg_existing", user_id: null }],
+        });
+
+        const result = await recordInboundWhatsAppMessage(duplicateClient.client, {
+            userId: null,
+            normalizedPhone: "+38166299444",
+            messageType: "text",
+            content: "Hello again",
+            wamid: "wamid_2",
+        });
+
+        expect(result).toEqual({
+            id: "msg_existing",
             inserted: false,
             duplicate: true,
         });
@@ -210,7 +232,7 @@ describe("whatsapp-inbound-events", () => {
     it("treats already-linked inbound rows as durable success on duplicate delivery retries", async () => {
         const client = createInboundAdminClient({
             attachRows: [],
-            lookupRow: { id: "msg_existing", user_id: "profile_attach" },
+            lookupRows: [{ id: "msg_existing", user_id: "profile_attach" }],
         });
 
         const result = await attachInboundWhatsAppMessageUser(client.client, {
@@ -228,7 +250,7 @@ describe("whatsapp-inbound-events", () => {
     it("throws when the inbound row is missing instead of silently pretending attach succeeded", async () => {
         const client = createInboundAdminClient({
             attachRows: [],
-            lookupRow: null,
+            lookupRows: [],
         });
 
         await expect(

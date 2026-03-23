@@ -117,6 +117,17 @@ describe("whatsapp-fallback", () => {
         expect(reply).not.toContain("Seu status é");
     });
 
+    it("answers unregistered PDF format questions instead of falling back to generic signup copy", async () => {
+        const reply = await getWhatsAppFallbackResponse("What type of document format can upload, pdf are not supported!!", null, {
+            full_name: "Ali Worker",
+        }, "English");
+
+        expect(reply).toContain("passport and formal diploma can be uploaded as a clear image or PDF file");
+        expect(reply).toContain("/signup");
+        expect(reply).toContain("not as a PDF");
+        expect(reply).not.toContain("Create your account");
+    });
+
     it("returns the stricter diploma/document guidance", async () => {
         const reply = await getWhatsAppFallbackResponse("passport and document", {
             status: "NEW",
@@ -131,6 +142,21 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("biometric photo");
         expect(reply).toContain("formal vocational diploma");
         expect(reply).toContain("not linked to the profile automatically");
+    });
+
+    it("answers registered PDF format questions with exact supported upload types", async () => {
+        const reply = await getWhatsAppFallbackResponse("Can I upload PDF for passport and diploma?", {
+            status: "NEW",
+            entry_fee_paid: false,
+            admin_approved: false,
+            queue_joined_at: null,
+        }, {
+            full_name: "Ali Worker",
+        }, "English");
+
+        expect(reply).toContain("Passport and formal diploma can be uploaded as a clear image or PDF file");
+        expect(reply).toContain("/profile/worker");
+        expect(reply).toContain("not as a PDF");
     });
 
     it("keeps warm greetings human for unregistered users", async () => {

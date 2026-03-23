@@ -64,6 +64,7 @@ const EMPLOYER_LEAD_PATTERN = /\b(employer|company|business|firm|hire|hiring|rec
 const WORKER_LEAD_PATTERN = /\b(worker|job|work abroad|looking for a job|looking for work|need a job|i want a job|radnik|posao|tra[zž]im posao|ocu posao|ho[ćc]u posao|[zž]elim posao|radim kao|imam iskustva)\b/i;
 const PRICE_HINT_PATTERN = /\b(price|cost|fee|payment|pay|prix|paiement|co[uû]t|pre[cç]o|preco|custo|pagamento|valor|koliko|kosta|košta|cena|cijena|platim|platiti|uplata|placanje|plaćanje|शुल्क|भुगतान|سعر|تكلفة|دفع)\b/i;
 const DOCUMENT_HINT_PATTERN = /\b(document|documents|docs?|documentos?|passport|passeport|passaporte|diploma|photo|biometric|biom[eé]trique|biom[ée]trica|upload|verification|dokumenti|dokumenta|pasos|pasoš|slika|fotografija|verifikacija|पासपोर्ट|दस्तावेज|جواز|مستند)\b/i;
+const DOCUMENT_FORMAT_HINT_PATTERN = /\b(pdf|jpe?g|png|scan(?:ned)?|file format|file type|document format|upload format|image file)\b/i;
 const MISSING_DIPLOMA_HINT_PATTERN = /(?:\b(?:i do not|i don't|i dont|i have not|i haven't|i havent|i have no|without)\b[^\n]{0,24}\b(?:diploma|degree|certificate)\b)|(?:\b(?:nemam|bez)\b[^\n]{0,20}\b(?:diplom[au]?|svedocanstv[ao]?|svjedocanstv[ao]?|sertifikat)\b)|(?:\bje n['’]ai pas\b[^\n]{0,20}\b(?:dipl[oô]me|certificat)\b)|(?:\b(?:n[aã]o tenho|sem)\b[^\n]{0,20}\b(?:diploma|certificado)\b)|(?:\b(?:mere paas|mere pas|main|mai)\b[^\n]{0,20}\b(?:diploma|degree)\b[^\n]{0,12}\b(?:nahin|nahi)\b)|(?:(?:لا أملك|ليس لدي|بدون)[^\n]{0,20}(?:شهادة|دبلوم))/i;
 const STATUS_HINT_PATTERN = /\b(status|statut|profile|profil|perfil|approval|approved|review|queue|support|mon profil|meu perfil|status dos meus|stanje|odobren|odobreno|red|podrska|podrška|स्थिति|حالة|مراجعة)\b/i;
 const JOB_HINT_PATTERN = /\b(ima li|postoji li|any job|available job|vacancy|vacancies|job for|posao za|ocu posao|ho[ćc]u posao|tra[zž]im posao|looking for work|looking for a job)\b/i;
@@ -427,8 +428,49 @@ export function looksLikeWhatsAppDocumentQuestion(message: string): boolean {
     return DOCUMENT_HINT_PATTERN.test(message.trim().toLowerCase());
 }
 
+export function looksLikeWhatsAppDocumentFormatQuestion(message: string): boolean {
+    const normalized = message.trim().toLowerCase();
+    return DOCUMENT_FORMAT_HINT_PATTERN.test(normalized) && (DOCUMENT_HINT_PATTERN.test(normalized) || /\bupload\b/i.test(normalized));
+}
+
 export function looksLikeWhatsAppStatusQuestion(message: string): boolean {
     return STATUS_HINT_PATTERN.test(message.trim().toLowerCase());
+}
+
+function buildWorkerDocumentFormatReply(
+    lang: WhatsAppLanguageCode,
+    dashboardUrl: string,
+    supportEmail: string,
+    requiresSignup: boolean
+): string {
+    const accessLine = requiresSignup
+        ? `after signup at ${dashboardUrl}`
+        : `in your dashboard at ${dashboardUrl}`;
+
+    switch (lang) {
+        case "sr":
+            return requiresSignup
+                ? `Da — pasoš i formalna diploma mogu da se uploaduju kao jasna slika ili PDF fajl posle registracije na ${dashboardUrl}. Biometrijska fotografija treba da bude slika, ne PDF. WhatsApp prilozi se i dalje ne vezuju automatski za profil. Ako dashboard i dalje javlja grešku, pošaljite screenshot i kratak opis na ${supportEmail}.`
+                : `Da — pasoš i formalna diploma mogu da se uploaduju kao jasna slika ili PDF fajl u dashboard-u na ${dashboardUrl}. Biometrijska fotografija treba da bude slika, ne PDF. WhatsApp prilozi se i dalje ne vezuju automatski za profil. Ako upload i dalje javlja grešku, pošaljite screenshot i kratak opis na ${supportEmail}.`;
+        case "ar":
+            return requiresSignup
+                ? `نعم، يمكن رفع جواز السفر والدبلومة الرسمية كصورة واضحة أو ملف PDF بعد التسجيل على ${dashboardUrl}. أما الصورة البيومترية فيجب أن تكون ملف صورة واضحًا وليس PDF. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا. إذا استمر الخطأ في لوحة التحكم فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`
+                : `نعم، يمكن رفع جواز السفر والدبلومة الرسمية كصورة واضحة أو ملف PDF من لوحة التحكم على ${dashboardUrl}. أما الصورة البيومترية فيجب أن تكون ملف صورة واضحًا وليس PDF. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا. إذا استمر خطأ الرفع فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`;
+        case "fr":
+            return requiresSignup
+                ? `Oui, le passeport et le diplôme officiel peuvent être téléversés sous forme d’image claire ou de fichier PDF après inscription sur ${dashboardUrl}. La photo biométrique doit être un fichier image clair, pas un PDF. Les pièces jointes WhatsApp ne sont toujours pas reliées automatiquement au profil. Si le tableau de bord affiche encore une erreur, envoyez une capture d’écran avec une courte description à ${supportEmail}.`
+                : `Oui, le passeport et le diplôme officiel peuvent être téléversés sous forme d’image claire ou de fichier PDF dans votre tableau de bord sur ${dashboardUrl}. La photo biométrique doit être un fichier image clair, pas un PDF. Les pièces jointes WhatsApp ne sont toujours pas reliées automatiquement au profil. Si l’erreur de téléversement continue, envoyez une capture d’écran avec une courte description à ${supportEmail}.`;
+        case "pt":
+            return requiresSignup
+                ? `Sim, passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF após o cadastro em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil. Se o painel continuar mostrando erro, envie uma captura de tela com uma breve descrição para ${supportEmail}.`
+                : `Sim, passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF no seu painel em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil. Se o erro de envio continuar, envie uma captura de tela com uma breve descrição para ${supportEmail}.`;
+        case "hi":
+            return requiresSignup
+                ? `हाँ, passport और formal diploma ${dashboardUrl} पर signup के बाद clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी भी profile से automatically link नहीं होते। अगर dashboard में error फिर भी दिखे, तो screenshot और short description ${supportEmail} पर भेजिए।`
+                : `हाँ, passport और formal diploma ${dashboardUrl} dashboard में clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी भी profile से automatically link नहीं होते। अगर upload error फिर भी आ रहा है, तो screenshot और short description ${supportEmail} पर भेजिए।`;
+        default:
+            return `Yes. Passport and formal diploma can be uploaded as a clear image or PDF file ${accessLine}. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
+    }
 }
 
 export function buildUnregisteredWorkerWhatsAppReply({
@@ -458,6 +500,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
     const explicitLanguagePreference = detectExplicitWhatsAppLanguagePreference(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
+    const asksDocumentFormat = wantsDocuments && looksLikeWhatsAppDocumentFormatQuestion(message);
     const lacksRequiredDiploma = MISSING_DIPLOMA_HINT_PATTERN.test(normalized);
     const wantsStatus = intent === "status" || intent === "support" || STATUS_HINT_PATTERN.test(normalized);
     const asksSpecificAvailability = SPECIFIC_AVAILABILITY_HINT_PATTERN.test(normalized);
@@ -517,6 +560,10 @@ export function buildUnregisteredWorkerWhatsAppReply({
 
     if (lacksRequiredDiploma) {
         return getMissingDiplomaReply(lang, website, supportEmail, false);
+    }
+
+    if (asksDocumentFormat) {
+        return buildWorkerDocumentFormatReply(lang, `${website}/signup`, supportEmail, true);
     }
 
     if (wantsDocuments) {
@@ -785,6 +832,7 @@ export function buildRegisteredWorkerWhatsAppReply({
     const explicitLanguagePreference = detectExplicitWhatsAppLanguagePreference(message);
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
+    const asksDocumentFormat = wantsDocuments && looksLikeWhatsAppDocumentFormatQuestion(message);
     const lacksRequiredDiploma = MISSING_DIPLOMA_HINT_PATTERN.test(normalized);
     const hasSupportCue = SUPPORT_HINT_PATTERN.test(normalized);
     const wantsSupport = intent === "support" || hasSupportCue;
@@ -896,6 +944,10 @@ export function buildRegisteredWorkerWhatsAppReply({
 
     if (lacksRequiredDiploma) {
         return getMissingDiplomaReply(lang, website, supportEmail, true);
+    }
+
+    if (asksDocumentFormat) {
+        return buildWorkerDocumentFormatReply(lang, `${website}/profile/worker`, supportEmail, false);
     }
 
     if (wantsDocuments) {
@@ -1128,6 +1180,7 @@ export function buildCanonicalWhatsAppFacts({
         "- Job Finder payment unlocks only after the worker profile is fully complete, the required documents are finished, and admin approval is done.",
         "- WhatsApp can answer questions and, when the user explicitly asks, collect some text profile details here. Document uploads and screenshots are not processed as WhatsApp attachments yet; those belong in the dashboard.",
         "- Required worker documents are passport, biometric photo, and a final school, university, or formal vocational diploma.",
+        "- Passport and formal diploma uploads can be clear images or PDF files in the dashboard. The biometric photo must be a clear image file, not a PDF.",
         "- Employers do not pay platform fees.",
         `- Support email: ${supportEmail}.`,
     ].join("\n");

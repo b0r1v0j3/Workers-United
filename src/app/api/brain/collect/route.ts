@@ -592,6 +592,43 @@ export async function GET(request: NextRequest) {
                     !isInternalOrTestEmail(user.email || null)
                 );
                 const profileIds = new Set(allProfiles.map(p => p.id));
+                const signupWindowHours = 72;
+                const recentSignupWindowStartMs = now.getTime() - signupWindowHours * 60 * 60 * 1000;
+                const previousSignupWindowStartMs = recentSignupWindowStartMs - signupWindowHours * 60 * 60 * 1000;
+
+                const { data: signupActivityRows, error: signupActivityError } = await supabase
+                    .from("user_activity")
+                    .select("action, created_at, details")
+                    .in("action", ["signup_page_view", "signup_submit_attempt"])
+                    .gte("created_at", new Date(previousSignupWindowStartMs).toISOString());
+
+                if (signupActivityError) {
+                    throw signupActivityError;
+                }
+
+                const isAnonymousSignupEvent = (details: unknown) => {
+                    if (!details || typeof details !== "object" || Array.isArray(details)) {
+                        return false;
+                    }
+
+                    return (details as Record<string, unknown>).anonymous === true;
+                };
+
+                const countRowsInWindow = (
+                    rows: Array<{ created_at?: string | null }>,
+                    startMs: number,
+                    endMs = Number.POSITIVE_INFINITY
+                ) => rows.filter((row) => {
+                    const timestamp = toTimestamp(row.created_at);
+                    return timestamp >= startMs && timestamp < endMs;
+                }).length;
+
+                const latestTimestampForRows = (rows: Array<{ created_at?: string | null }>) =>
+                    rows.reduce<string | null>((latest, row) => {
+                        const currentTime = toTimestamp(row.created_at);
+                        const latestTime = toTimestamp(latest);
+                        return currentTime > latestTime ? row.created_at || latest : latest;
+                    }, null);
 
                 const unconfirmedUsers = reportableAuthUsers.filter((u: SupabaseAuthUser) => !u.email_confirmed_at);
                 const noUserType = reportableAuthUsers.filter((u: SupabaseAuthUser) => !u.user_metadata?.user_type);
@@ -610,6 +647,57 @@ export async function GET(request: NextRequest) {
                     const hasNoWorkerOnboarding = !workerRecordProfileIds.has(u.id);
                     return isRecent && isWorker && hasNoWorkerOnboarding;
                 });
+
+                const anonymousSignupEvents = (signupActivityRows || []).filter((row) =>
+                    isAnonymousSignupEvent(row.details)
+                );
+                const anonymousSignupPageViews = anonymousSignupEvents.filter((row) => row.action === "signup_page_view");
+                const anonymousSignupSubmitAttempts = anonymousSignupEvents.filter((row) => row.action === "signup_submit_attempt");
+                const recentAnonymousPageViews = countRowsInWindow(
+                    anonymousSignupPageViews,
+                    recentSignupWindowStartMs
+                );
+                const previousAnonymousPageViews = countRowsInWindow(
+                    anonymousSignupPageViews,
+                    previousSignupWindowStartMs,
+                    recentSignupWindowStartMs
+                );
+                const recentAnonymousSubmitAttempts = countRowsInWindow(
+                    anonymousSignupSubmitAttempts,
+                    recentSignupWindowStartMs
+                );
+                const previousAnonymousSubmitAttempts = countRowsInWindow(
+                    anonymousSignupSubmitAttempts,
+                    previousSignupWindowStartMs,
+                    recentSignupWindowStartMs
+                );
+                const recentNewAuthUsers = reportableAuthUsers.filter((user) => {
+                    const createdAtTs = toTimestamp(user.created_at);
+                    return createdAtTs >= recentSignupWindowStartMs;
+                });
+                const previousNewAuthUsers = reportableAuthUsers.filter((user) => {
+                    const createdAtTs = toTimestamp(user.created_at);
+                    return createdAtTs >= previousSignupWindowStartMs && createdAtTs < recentSignupWindowStartMs;
+                });
+
+                const signupTrafficTriggers: string[] = [];
+                if (
+                    previousAnonymousPageViews >= 8
+                    && recentAnonymousPageViews <= Math.max(2, Math.floor(previousAnonymousPageViews * 0.35))
+                ) {
+                    signupTrafficTriggers.push("page_views");
+                }
+                if (previousAnonymousSubmitAttempts >= 3 && recentAnonymousSubmitAttempts === 0) {
+                    signupTrafficTriggers.push("submit_attempts");
+                }
+                if (previousNewAuthUsers.length >= 2 && recentNewAuthUsers.length === 0) {
+                    signupTrafficTriggers.push("new_auth_users");
+                }
+
+                const signupFunnelStatus = signupTrafficTriggers.length >= 2 ? "WARNING" : "OK";
+                const signupFunnelSummary = signupFunnelStatus === "WARNING"
+                    ? `Anonymous signup funnel activity fell in the last ${signupWindowHours}h: ${recentAnonymousPageViews} page view(s), ${recentAnonymousSubmitAttempts} submit attempt(s), and ${recentNewAuthUsers.length} new auth user(s) vs ${previousAnonymousPageViews}/${previousAnonymousSubmitAttempts}/${previousNewAuthUsers.length} in the previous ${signupWindowHours}h.`
+                    : "Signup traffic is within the recent baseline.";
 
                 return {
                     totalAuthUsers: reportableAuthUsers.length,
@@ -641,6 +729,32 @@ export async function GET(request: NextRequest) {
                             email: u.email,
                             created_at: u.created_at,
                         })),
+                    },
+                    signupFunnel: {
+                        status: signupFunnelStatus,
+                        summary: signupFunnelSummary,
+                        triggeredSignals: signupTrafficTriggers,
+                        pageViews: {
+                            count: recentAnonymousPageViews,
+                            previousCount: previousAnonymousPageViews,
+                            windowHours: signupWindowHours,
+                            previousWindowHours: signupWindowHours,
+                            lastSeenAt: latestTimestampForRows(anonymousSignupPageViews),
+                        },
+                        submitAttempts: {
+                            count: recentAnonymousSubmitAttempts,
+                            previousCount: previousAnonymousSubmitAttempts,
+                            windowHours: signupWindowHours,
+                            previousWindowHours: signupWindowHours,
+                            lastSeenAt: latestTimestampForRows(anonymousSignupSubmitAttempts),
+                        },
+                        newAuthUsers: {
+                            count: recentNewAuthUsers.length,
+                            previousCount: previousNewAuthUsers.length,
+                            windowHours: signupWindowHours,
+                            previousWindowHours: signupWindowHours,
+                            lastSeenAt: latestTimestampForRows(reportableAuthUsers),
+                        },
                     },
                     status: unconfirmedUsers.length > 5 ? "CRITICAL"
                         : unconfirmedUsers.length > 0 ? "WARNING"
