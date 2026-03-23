@@ -34,7 +34,6 @@ export interface WhatsAppEmployerRecord {
     id: string;
     profile_id: string | null;
     company_name: string | null;
-    contact_name: string | null;
     status: string | null;
 }
 
@@ -96,8 +95,8 @@ export async function resolveEmployerWhatsAppLead(params: {
 }): Promise<EmployerLeadResolution> {
     const rawEmployerResult = await (params.admin
         .from("employers")
-        .select("id, profile_id, company_name, contact_name, status")
-        .or(`phone.eq.${params.normalizedPhone},contact_phone.eq.${params.normalizedPhone}`)
+        .select("id, profile_id, company_name, status")
+        .eq("contact_phone", params.normalizedPhone)
         .maybeSingle()) as {
             data: Record<string, unknown> | null;
             error?: { message?: string } | null;
@@ -122,7 +121,6 @@ export async function resolveEmployerWhatsAppLead(params: {
             id: String(rawEmployerRecord.id || ""),
             profile_id: typeof rawEmployerRecord.profile_id === "string" ? rawEmployerRecord.profile_id : null,
             company_name: typeof rawEmployerRecord.company_name === "string" ? rawEmployerRecord.company_name : null,
-            contact_name: typeof rawEmployerRecord.contact_name === "string" ? rawEmployerRecord.contact_name : null,
             status: typeof rawEmployerRecord.status === "string" ? rawEmployerRecord.status : null,
         }
         : null;
@@ -153,7 +151,7 @@ export async function generateEmployerWhatsAppReply(params: {
 }): Promise<string> {
     const isRegistered = !!params.employerRecord;
     const companyName = params.employerRecord?.company_name || "";
-    const contactName = params.employerRecord?.contact_name || "";
+    const contactName = "";
     const memoryText = params.brainMemory.length > 0
         ? params.brainMemory.map((entry) => `- [${entry.category}] ${entry.content}`).join("\n")
         : "(No stored facts)";
