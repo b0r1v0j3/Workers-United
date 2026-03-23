@@ -277,4 +277,49 @@ describe("ops monitor helpers", () => {
         expect(report.healthScore).toBe(100);
         expect(getOpsMonitorEmailReasons(report)).toEqual([]);
     });
+
+    it("flags a sharp signup funnel drop before auth drift becomes a hard failure", () => {
+        const report = buildOpsMonitorReport({
+            generatedAt: "2026-03-23T08:00:00.000Z",
+            opsSnapshot: baseSnapshot,
+            authHealth: {
+                status: "OK",
+                unconfirmedEmails: { count: 0 },
+                workersWithoutWorkerOnboarding: { count: 0 },
+                recentStuckSignups: { count: 0 },
+                signupFunnel: {
+                    status: "WARNING",
+                    summary: "Anonymous signup funnel activity fell in the last 72h: 2 page view(s), 0 submit attempt(s), and 0 new auth user(s) vs 18/4/3 in the previous 72h.",
+                    triggeredSignals: ["page_views", "submit_attempts", "new_auth_users"],
+                    pageViews: {
+                        count: 2,
+                        previousCount: 18,
+                        windowHours: 72,
+                        previousWindowHours: 72,
+                        lastSeenAt: "2026-03-22T12:11:23.572023Z",
+                    },
+                    submitAttempts: {
+                        count: 0,
+                        previousCount: 4,
+                        windowHours: 72,
+                        previousWindowHours: 72,
+                        lastSeenAt: "2026-03-20T05:10:40.653615Z",
+                    },
+                    newAuthUsers: {
+                        count: 0,
+                        previousCount: 3,
+                        windowHours: 72,
+                        previousWindowHours: 72,
+                        lastSeenAt: "2026-03-20T05:06:41.692213Z",
+                    },
+                },
+            },
+        });
+
+        expect(report.signals.map((signal) => signal.key)).toContain("signup-funnel-drop");
+        expect(report.sections.find((section) => section.name === "System")?.count).toBe(3);
+        expect(getOpsMonitorEmailReasons(report)).toEqual([
+            expect.stringContaining("high-priority signal"),
+        ]);
+    });
 });

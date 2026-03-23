@@ -99,6 +99,32 @@ interface AuthHealthData {
     unconfirmedEmails?: { count?: number | null };
     workersWithoutWorkerOnboarding?: { count?: number | null };
     recentStuckSignups?: { count?: number | null };
+    signupFunnel?: {
+        status?: string | null;
+        summary?: string | null;
+        triggeredSignals?: string[] | null;
+        pageViews?: {
+            count?: number | null;
+            previousCount?: number | null;
+            windowHours?: number | null;
+            previousWindowHours?: number | null;
+            lastSeenAt?: string | null;
+        } | null;
+        submitAttempts?: {
+            count?: number | null;
+            previousCount?: number | null;
+            windowHours?: number | null;
+            previousWindowHours?: number | null;
+            lastSeenAt?: string | null;
+        } | null;
+        newAuthUsers?: {
+            count?: number | null;
+            previousCount?: number | null;
+            windowHours?: number | null;
+            previousWindowHours?: number | null;
+            lastSeenAt?: string | null;
+        } | null;
+    } | null;
 }
 
 interface DocumentStats {
@@ -220,6 +246,11 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
     const authUnconfirmedCount = getCount(input.authHealth?.unconfirmedEmails?.count);
     const authMissingWorkerCount = getCount(input.authHealth?.workersWithoutWorkerOnboarding?.count);
     const authStuckSignupCount = getCount(input.authHealth?.recentStuckSignups?.count);
+    const signupFunnelHealth = input.authHealth?.signupFunnel;
+    const signupFunnelTriggeredSignals = signupFunnelHealth?.triggeredSignals || [];
+    const signupFunnelAlertCount = signupFunnelHealth?.status === "WARNING"
+        ? Math.max(1, signupFunnelTriggeredSignals.length)
+        : 0;
     const recentRejectedDocuments = getCount(input.documents?.rejected);
     const recentPendingDocuments = getCount(input.documents?.pending);
 
@@ -389,7 +420,7 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
         links: [{ label: "Open queue", href: "/admin/queue" }],
     } : null);
 
-    const authSignalCount = authUnconfirmedCount + authMissingWorkerCount + authStuckSignupCount;
+    const authSignalCount = authUnconfirmedCount + authMissingWorkerCount + authStuckSignupCount + signupFunnelAlertCount;
     pushSignal(signals, authSignalCount > 0 ? {
         key: "auth-health",
         category: "auth",
@@ -403,6 +434,30 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
             authStuckSignupCount > 0 ? `${authStuckSignupCount} recent worker signups with no worker row` : null,
         ].filter((value): value is string => Boolean(value)),
         links: [{ label: "Open admin dashboard", href: "/admin" }],
+    } : null);
+
+    pushSignal(signals, signupFunnelAlertCount > 0 ? {
+        key: "signup-funnel-drop",
+        category: "auth",
+        severity: signupFunnelTriggeredSignals.length >= 2 ? "high" : "medium",
+        title: "Signup funnel traffic dropped",
+        count: signupFunnelAlertCount,
+        summary: signupFunnelHealth?.summary || "Anonymous signup traffic is below the recent baseline.",
+        evidence: [
+            signupFunnelHealth?.pageViews
+                ? `${getCount(signupFunnelHealth.pageViews.count)} anonymous signup page view(s) in the last ${getCount(signupFunnelHealth.pageViews.windowHours)}h vs ${getCount(signupFunnelHealth.pageViews.previousCount)} in the previous ${getCount(signupFunnelHealth.pageViews.previousWindowHours)}h`
+                : null,
+            signupFunnelHealth?.submitAttempts
+                ? `${getCount(signupFunnelHealth.submitAttempts.count)} anonymous submit attempt(s) in the last ${getCount(signupFunnelHealth.submitAttempts.windowHours)}h vs ${getCount(signupFunnelHealth.submitAttempts.previousCount)} in the previous ${getCount(signupFunnelHealth.submitAttempts.previousWindowHours)}h`
+                : null,
+            signupFunnelHealth?.newAuthUsers
+                ? `${getCount(signupFunnelHealth.newAuthUsers.count)} new auth user(s) in the last ${getCount(signupFunnelHealth.newAuthUsers.windowHours)}h vs ${getCount(signupFunnelHealth.newAuthUsers.previousCount)} in the previous ${getCount(signupFunnelHealth.newAuthUsers.previousWindowHours)}h`
+                : null,
+            signupFunnelHealth?.newAuthUsers?.lastSeenAt
+                ? `Last reportable auth signup seen at ${signupFunnelHealth.newAuthUsers.lastSeenAt}`
+                : null,
+        ].filter((value): value is string => Boolean(value)),
+        links: [{ label: "Open admin analytics", href: "/admin/analytics" }],
     } : null);
 
     const sections: OpsMonitorSection[] = [

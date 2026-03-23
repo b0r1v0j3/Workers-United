@@ -113,30 +113,42 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
     // Handle multi-file select for passport/diploma (stitch 2 photos into 1)
     async function handleMultiFileSelect(type: string, files: FileList | null) {
         if (!files || files.length === 0) return;
+        const selectedFiles = Array.from(files);
 
         // Reset status
         updateStatus(type, "missing", "");
 
-        for (let i = 0; i < files.length; i++) {
-            if (files[i].size > MAX_FILE_SIZE_BYTES) {
-                logActivity("document_file_too_large", "documents", { doc_type: type, file_size: files[i].size }, "warning");
+        for (const selectedFile of selectedFiles) {
+            if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+                logActivity("document_file_too_large", "documents", { doc_type: type, file_size: selectedFile.size }, "warning");
                 updateStatus(type, "error", `File too large. Max ${MAX_FILE_SIZE_MB}MB.`);
                 return;
             }
         }
 
+        const containsPdf = selectedFiles.some((selectedFile) => selectedFile.type === "application/pdf" || selectedFile.name.toLowerCase().endsWith(".pdf"));
+        if (containsPdf && selectedFiles.length > 1) {
+            updateStatus(type, "error", "Upload one PDF file or up to 2 image files.");
+            return;
+        }
+
+        if (selectedFiles.length > 2) {
+            updateStatus(type, "error", "Upload one PDF file or up to 2 image files.");
+            return;
+        }
+
         let file: File;
-        if (files.length >= 2) {
+        if (selectedFiles.length >= 2) {
             // Stitch 2 photos into 1
             updateStatus(type, "uploaded", "Combining photos...");
             try {
-                file = await stitchImages(files[0], files[1]);
+                file = await stitchImages(selectedFiles[0], selectedFiles[1]);
             } catch (err) {
                 console.error('[Upload] Stitch failed:', err);
-                file = files[0]; // fallback to first photo
+                file = selectedFiles[0]; // fallback to first photo
             }
         } else {
-            file = files[0];
+            file = selectedFiles[0];
         }
 
         handleFileSelect(type, file);
@@ -152,7 +164,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
         }
 
         logActivity("document_upload_start", "documents", { doc_type: type, file_name: file.name, file_size: file.size });
-        updateStatus(type, "uploaded", "Compressing & Processing...", file);
+        updateStatus(type, "uploaded", file.type.startsWith('image/') ? "Optimizing image..." : "Preparing file...", file);
 
         try {
             // Client-side image processing
@@ -411,7 +423,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                             </div>
                             <div>
                                 <div className="font-semibold text-[#183b56]">Passport Photo Page *</div>
-                                <div className="text-xs text-[#64748b]">Select 1-2 photos (front & back)</div>
+                                <div className="text-xs text-[#64748b]">Upload 1 clear image or 1 PDF of the main passport photo page. If needed, you can select up to 2 images.</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -560,7 +572,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                             </div>
                             <div>
                                 <div className="font-semibold text-[#183b56]">Formal Diploma *</div>
-                                <div className="text-xs text-[#64748b]">Final school, university, or vocational diploma only</div>
+                                <div className="text-xs text-[#64748b]">Upload 1 clear image or 1 PDF of your final school, university, or vocational diploma. Short course certificates are not accepted.</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">

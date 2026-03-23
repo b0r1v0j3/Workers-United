@@ -33,9 +33,9 @@ interface AgencyWorkerDocumentsPanelProps {
 }
 
 const documentDefinitions: Array<{ key: AgencyDocType; label: string; helper: string }> = [
-    { key: "passport", label: "Passport", helper: "Upload the main passport photo page." },
+    { key: "passport", label: "Passport", helper: "Upload the main passport photo page as a clear image or PDF file." },
     { key: "biometric_photo", label: "Biometric photo", helper: "Recent passport-style photo, plain light background, centered face, and sharp quality." },
-    { key: "diploma", label: "Formal diploma", helper: "Final school, university, or vocational diploma only. Short course certificates are not accepted." },
+    { key: "diploma", label: "Formal diploma", helper: "Upload the final school, university, or vocational diploma as a clear image or PDF file. Short course certificates are not accepted." },
 ];
 
 function getDocumentLabel(docType: AgencyDocType) {

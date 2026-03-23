@@ -369,6 +369,19 @@ describe("whatsapp-brain guards", () => {
         expect(reply).not.toContain("WhatsApp attachments are not linked");
     });
 
+    it("answers unregistered PDF format questions with exact dashboard upload guidance", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "What type of document format can upload, pdf are not supported!!",
+            language: "English",
+            intent: "documents",
+        });
+
+        expect(reply).toContain("Passport and formal diploma can be uploaded as a clear image or PDF file");
+        expect(reply).toContain("The biometric photo should be uploaded as a clear image file, not as a PDF");
+        expect(reply).toContain("/signup");
+        expect(reply).toContain("contact@workersunited.eu");
+    });
+
     it("answers registered worker payment status deterministically once approval is done", () => {
         const reply = buildRegisteredWorkerWhatsAppReply({
             message: "Kako da platim?",
@@ -551,6 +564,22 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("/profile/worker");
         expect(reply).toContain("contact@workersunited.eu");
         expect(reply).not.toContain("WhatsApp attachments are not linked");
+    });
+
+    it("answers registered PDF format questions with exact supported file types", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "Can I upload PDF for passport and diploma?",
+            language: "English",
+            intent: "documents",
+            workerStatus: "NEW",
+            adminApproved: false,
+            entryFeePaid: false,
+        });
+
+        expect(reply).toContain("Passport and formal diploma can be uploaded as a clear image or PDF file");
+        expect(reply).toContain("/profile/worker");
+        expect(reply).toContain("not as a PDF");
+        expect(reply).toContain("contact@workersunited.eu");
     });
 
     it("describes the registered worker process with dashboard checkout wording", () => {

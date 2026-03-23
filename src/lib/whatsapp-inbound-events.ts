@@ -40,6 +40,11 @@ interface PostgresLikeError {
     code?: string;
 }
 
+interface ExistingInboundWhatsAppMessageRow {
+    id?: string | null;
+    user_id?: string | null;
+}
+
 export interface WhatsAppInboundRecordResult {
     id: string | null;
     inserted: boolean;
@@ -101,6 +106,28 @@ export function looksLikeAutomatedWhatsAppAutoReply(messageType: string, content
     return hasGratitude && hasDelaySignal;
 }
 
+async function findInboundWhatsAppMessageByWamid(
+    admin: any,
+    wamid: string
+): Promise<ExistingInboundWhatsAppMessageRow | null> {
+    const { data, error } = await admin
+        .from("whatsapp_messages")
+        .select("id, user_id")
+        .eq("wamid", wamid)
+        .eq("direction", "inbound")
+        .limit(1);
+
+    if (error) {
+        throw error;
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+        return null;
+    }
+
+    return data[0] || null;
+}
+
 export async function recordInboundWhatsAppMessage(
     admin: any,
     params: {
@@ -120,6 +147,15 @@ export async function recordInboundWhatsAppMessage(
         wamid: params.wamid,
         status: "delivered",
     };
+    const existingMessage = await findInboundWhatsAppMessageByWamid(admin, params.wamid);
+    if (existingMessage?.id) {
+        return {
+            id: existingMessage.id,
+            inserted: false,
+            duplicate: true,
+        };
+    }
+
     const { data, error } = await admin
         .from("whatsapp_messages")
         .insert(payload)
@@ -135,8 +171,9 @@ export async function recordInboundWhatsAppMessage(
     }
 
     if ((error as PostgresLikeError)?.code === "23505") {
+        const duplicateMessage = await findInboundWhatsAppMessageByWamid(admin, params.wamid);
         return {
-            id: null,
+            id: duplicateMessage?.id || null,
             inserted: false,
             duplicate: true,
         };
@@ -180,16 +217,7 @@ export async function attachInboundWhatsAppMessageUser(
         };
     }
 
-    const { data: existingRow, error: lookupError } = await admin
-        .from("whatsapp_messages")
-        .select("id, user_id")
-        .eq("wamid", params.wamid)
-        .eq("direction", "inbound")
-        .maybeSingle();
-
-    if (lookupError) {
-        throw lookupError;
-    }
+    const existingRow = await findInboundWhatsAppMessageByWamid(admin, params.wamid);
 
     if (!existingRow?.id) {
         throw new Error(`Inbound WhatsApp message ${params.wamid} was not found for user attach`);
