@@ -51,6 +51,7 @@ import {
 } from "@/lib/whatsapp-inbound-events";
 import { resolveWhatsAppWorkerIdentity } from "@/lib/whatsapp-identity";
 import { callOpenAIResponseText } from "@/lib/openai-response-text";
+import { callClaudeResponseText } from "@/lib/claude-response-text";
 import {
     buildPlatformUrl,
     buildBusinessFactsForAIFromConfig,
@@ -63,10 +64,10 @@ import crypto from "crypto";
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
 // Handles:
 // 1. GET  — Webhook verification (hub.challenge)
-// 2. POST — Inbound messages + delivery status updates → intent router + OpenAI response model
+// 2. POST — Inbound messages + delivery status updates → intent router + Claude response model
 //
-// Architecture: User → WhatsApp → Meta → Vercel → intent router → OpenAI response model → Vercel → WhatsApp
-// All AI processing happens directly via OpenAI API (no middleware).
+// Architecture: User → WhatsApp → Meta → Vercel → intent router (OpenAI) → Claude conversational AI → Vercel → WhatsApp
+// Intent classification uses OpenAI mini (fast/cheap). Conversational replies use Claude Sonnet (natural tone).
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "";
 const APP_SECRET = process.env.META_APP_SECRET || "";
@@ -74,7 +75,9 @@ const RESPONSE_HISTORY_LIMIT = 12;
 const BRAIN_MEMORY_LIMIT = 8;
 const ONBOARDING_STATE_TTL_MS = 24 * 60 * 60 * 1000;
 const WHATSAPP_ROUTER_MODEL = process.env.WHATSAPP_ROUTER_MODEL || "gpt-5-mini";
-const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "gpt-5.4-mini";
+const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "claude-sonnet-4-6";
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
+const OPENAI_API_KEY_ENV = process.env.OPENAI_API_KEY || "";
 const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+38166299444")
     .split(",")
     .map((phone) => normalizeWhatsAppPhone(phone))
@@ -663,18 +666,19 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
-                // ─── Intent-routed OpenAI AI Brain ───────────────────────
+                // ─── Intent-routed AI Brain (OpenAI router → Claude responder) ───
                 let aiResponse: string | null = null;
                 let routerDecision: WhatsAppRouterDecision | null = null;
                 let deterministicReplyFlowKey: string | null = null;
-                let responseType: "gpt" | "fallback" | "deterministic" | "auto_handoff" = "fallback";
+                let responseType: "claude" | "fallback" | "deterministic" | "auto_handoff" = "fallback";
                 let historyMessages: Awaited<ReturnType<typeof loadWhatsAppConversationHistory>> = [];
                 let brainMemory: Awaited<ReturnType<typeof loadWhatsAppBrainMemory>> = [];
                 let businessFacts = "";
                 let supportAccess: SupportAccessSnapshot | null = null;
-                const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+                const hasRouterKey = !!OPENAI_API_KEY_ENV;
+                const hasResponseKey = !!ANTHROPIC_API_KEY;
 
-                if (OPENAI_API_KEY) {
+                if (hasRouterKey || hasResponseKey) {
                     try {
                         const platformMessagingConfig = await loadPlatformMessagingConfig();
                         [historyMessages, brainMemory, businessFacts, supportAccess] = await Promise.all([
@@ -688,15 +692,24 @@ export async function POST(request: NextRequest) {
                                 : Promise.resolve(null as SupportAccessSnapshot | null),
                         ]);
 
-                        routerDecision = await classifyWhatsAppIntent({
-                            callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY, options),
-                            model: WHATSAPP_ROUTER_MODEL,
-                            message: content,
-                            normalizedPhone,
-                            workerRecord: linkedWorkerRecord,
-                            profile,
-                            historyMessages,
-                        });
+                        // Step 1: Intent classification (OpenAI mini — fast & cheap)
+                        const routerApiKey = OPENAI_API_KEY_ENV || ANTHROPIC_API_KEY;
+                        routerDecision = hasRouterKey
+                            ? await classifyWhatsAppIntent({
+                                callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY_ENV, options),
+                                model: WHATSAPP_ROUTER_MODEL,
+                                message: content,
+                                normalizedPhone,
+                                workerRecord: linkedWorkerRecord,
+                                profile,
+                                historyMessages,
+                            })
+                            : {
+                                intent: "general" as const,
+                                language: resolveWhatsAppLanguageName(content, null, historyMessages),
+                                confidence: "low" as const,
+                                reason: "No router API key — fallback classification",
+                            };
                         routerDecision.language = resolveWhatsAppLanguageName(content, routerDecision.language, historyMessages);
 
                         await logServerActivity(
@@ -713,34 +726,37 @@ export async function POST(request: NextRequest) {
                             }
                         );
 
-                        const deterministicUnregisteredReply = !linkedWorkerRecord && !isEmployer && !isAdmin
-                            ? buildUnregisteredWorkerWhatsAppReply({
-                                message: content,
-                                language: routerDecision.language,
-                                intent: routerDecision.intent,
-                                historyMessages,
-                                website: platformMessagingConfig.contactInfo.websiteUrl,
-                                supportEmail: platformMessagingConfig.contactInfo.supportEmail,
-                                isFirstContact: historyMessages.length === 0,
-                            })
+                        // Step 2: Generate a deterministic "reference draft" with verified facts
+                        const referenceDraft = !isEmployer && !isAdmin
+                            ? (
+                                (!linkedWorkerRecord
+                                    ? buildUnregisteredWorkerWhatsAppReply({
+                                        message: content,
+                                        language: routerDecision.language,
+                                        intent: routerDecision.intent,
+                                        historyMessages,
+                                        website: platformMessagingConfig.contactInfo.websiteUrl,
+                                        supportEmail: platformMessagingConfig.contactInfo.supportEmail,
+                                        isFirstContact: historyMessages.length === 0,
+                                    })
+                                    : buildRegisteredWorkerWhatsAppReply({
+                                        message: content,
+                                        language: routerDecision.language,
+                                        intent: routerDecision.intent,
+                                        historyMessages,
+                                        workerStatus: linkedWorkerRecord.status,
+                                        entryFeePaid: linkedWorkerRecord.entry_fee_paid,
+                                        adminApproved: linkedWorkerRecord.admin_approved,
+                                        queueJoinedAt: linkedWorkerRecord.queue_joined_at,
+                                        hasSupportAccess: !!supportAccess?.allowed,
+                                        website: platformMessagingConfig.contactInfo.websiteUrl,
+                                        supportEmail: platformMessagingConfig.contactInfo.supportEmail,
+                                    })
+                                ) || null
+                            )
                             : null;
 
-                        const deterministicRegisteredReply = linkedWorkerRecord && !isEmployer && !isAdmin
-                            ? buildRegisteredWorkerWhatsAppReply({
-                                message: content,
-                                language: routerDecision.language,
-                                intent: routerDecision.intent,
-                                historyMessages,
-                                workerStatus: linkedWorkerRecord.status,
-                                entryFeePaid: linkedWorkerRecord.entry_fee_paid,
-                                adminApproved: linkedWorkerRecord.admin_approved,
-                                queueJoinedAt: linkedWorkerRecord.queue_joined_at,
-                                hasSupportAccess: !!supportAccess?.allowed,
-                                website: platformMessagingConfig.contactInfo.websiteUrl,
-                                supportEmail: platformMessagingConfig.contactInfo.supportEmail,
-                            })
-                            : null;
-
+                        // Step 3: Check for auto-handoff (stays deterministic — safety-critical)
                         const confusionAnalysis = linkedWorkerRecord && supportAccess?.allowed
                             ? analyzeWhatsAppConfusion(historyMessages.map((entry) => ({
                                 direction: entry.direction,
@@ -753,6 +769,7 @@ export async function POST(request: NextRequest) {
                             : null;
 
                         if (confusionAnalysis?.triggered && linkedWorkerRecord?.profile_id) {
+                            // Auto-handoff stays deterministic — it triggers real system actions
                             await createWhatsAppAutoHandoff({
                                 admin: supabase,
                                 profileId: linkedWorkerRecord.profile_id,
@@ -770,17 +787,11 @@ export async function POST(request: NextRequest) {
                             });
                             deterministicReplyFlowKey = `auto_handoff_${confusionAnalysis.reason || "support_loop"}`;
                             responseType = "auto_handoff";
-                        } else if (deterministicUnregisteredReply) {
-                            aiResponse = deterministicUnregisteredReply;
-                            deterministicReplyFlowKey = `unregistered_${routerDecision.intent}`;
-                            responseType = "deterministic";
-                        } else if (deterministicRegisteredReply) {
-                            aiResponse = deterministicRegisteredReply;
-                            deterministicReplyFlowKey = `registered_${routerDecision.intent}`;
-                            responseType = "deterministic";
-                        } else {
+                        } else if (hasResponseKey) {
+                            // Step 4: Claude generates a natural, conversational reply
+                            // Reference draft (if any) is fed as factual context, not sent directly
                             aiResponse = await generateWorkerWhatsAppReply({
-                                callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY, options),
+                                callResponseText: (options) => callClaudeResponseText(ANTHROPIC_API_KEY, options),
                                 model: WHATSAPP_RESPONSE_MODEL,
                                 message: content,
                                 normalizedPhone,
@@ -793,12 +804,20 @@ export async function POST(request: NextRequest) {
                                 routerDecision,
                                 websiteUrl: platformMessagingConfig.contactInfo.websiteUrl,
                                 supportEmail: platformMessagingConfig.contactInfo.supportEmail,
+                                referenceDraft,
                             });
-                            responseType = "gpt";
+                            responseType = "claude";
+                        } else if (referenceDraft) {
+                            // Fallback: no Claude key, use deterministic reply directly
+                            aiResponse = referenceDraft;
+                            deterministicReplyFlowKey = linkedWorkerRecord
+                                ? `registered_${routerDecision.intent}`
+                                : `unregistered_${routerDecision.intent}`;
+                            responseType = "deterministic";
                         }
 
                         console.log(
-                            `[WhatsApp] 🧠 ${WHATSAPP_RESPONSE_MODEL} (${routerDecision.intent}) response:`,
+                            `[WhatsApp] 🧠 ${responseType === "claude" ? "Claude" : responseType} (${routerDecision.intent}) response:`,
                             aiResponse?.substring(0, 200)
                         );
                     } catch (aiError) {
@@ -898,14 +917,14 @@ export async function POST(request: NextRequest) {
                         } else {
                             await logServerActivity(
                                 activityUserId || "anonymous",
-                                aiResponse ? "whatsapp_gpt_response" : "whatsapp_fallback_response",
+                                aiResponse ? "whatsapp_ai_response" : "whatsapp_fallback_response",
                                 "messaging",
                                 {
                                     phone: normalizedPhone,
                                     user_message: content.substring(0, 200),
                                     bot_response: finalReplyText.substring(0, 500),
                                     response_type: aiResponse
-                                        ? (guardrailResult.triggered ? "gpt_guarded" : (finalReplyText !== replyText ? "gpt_language_fallback" : "gpt"))
+                                        ? (guardrailResult.triggered ? "claude_guarded" : (finalReplyText !== replyText ? "claude_language_fallback" : "claude"))
                                         : "fallback",
                                     model: aiResponse ? WHATSAPP_RESPONSE_MODEL : "fallback",
                                     guardrail_reason: guardrailResult.reason,
@@ -1928,20 +1947,20 @@ export async function handleWhatsAppOnboarding(
         const name = collected.full_name?.split(" ")[0] || "";
         const lk = getLangKey(lang);
         const savedToWorkerMessage: Record<LangKey, string> = {
-            en: `Thank you, ${name}! 🎉 Your WhatsApp answers have been saved to your worker profile.\n\nThe next step is to open your worker dashboard, finish any missing profile details, and upload your required documents there.\n\n👉 ${workerProfileUrl}\n\nWe need your passport photo, biometric photo, and a final school, university, or formal vocational diploma. After your profile is complete and passes admin review, *Job Finder* checkout unlocks in the dashboard. If you have any questions, I'm here!`,
-            sr: `Hvala, ${name}! 🎉 Vaši WhatsApp odgovori su sačuvani na vaš worker profil.\n\nSledeći korak je da otvorite worker dashboard, dovršite sve što nedostaje na profilu i tamo dodate obavezna dokumenta.\n\n👉 ${workerProfileUrl}\n\nPotrebni su fotografija pasoša, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. Kada profil bude kompletan i prođe admin review, *Job Finder* checkout se otključava u dashboard-u. Ako imate pitanja, tu sam!`,
-            hi: `धन्यवाद, ${name}! 🎉 आपके WhatsApp जवाब आपके worker profile में सेव हो गए हैं।\n\nअगला step है अपना worker dashboard खोलना, profile की जो भी details बाकी हैं उन्हें पूरा करना, और required documents वहीं upload करना।\n\n👉 ${workerProfileUrl}\n\nहमें passport photo, biometric photo, और final school, university, या formal vocational diploma चाहिए। Profile complete होने और admin review approved होने के बाद ही *Job Finder* checkout dashboard में unlock होता है।`,
-            ar: `شكراً، ${name}! 🎉 تم حفظ إجاباتك من WhatsApp في ملف العامل الخاص بك.\n\nالخطوة التالية هي فتح لوحة العامل، إكمال أي تفاصيل ناقصة في الملف، ورفع المستندات المطلوبة هناك.\n\n👉 ${workerProfileUrl}\n\nنحتاج إلى صورة جواز السفر، الصورة البيومترية، والشهادة النهائية المدرسية أو الجامعية أو المهنية الرسمية. بعد اكتمال الملف وموافقة الإدارة في المراجعة، يتم فتح Checkout الخاص بـ *Job Finder* داخل لوحة التحكم.`,
-            fr: `Merci, ${name}! 🎉 Vos réponses WhatsApp ont été enregistrées dans votre profil travailleur.\n\nLa prochaine étape est d’ouvrir votre tableau de bord travailleur, de compléter les informations manquantes du profil et d’y téléverser les documents requis.\n\n👉 ${workerProfileUrl}\n\nNous avons besoin de la photo du passeport, de la photo biométrique et d’un diplôme final scolaire, universitaire ou professionnel officiel. Une fois le profil complet et la validation admin accordée, le checkout *Job Finder* se débloque dans le tableau de bord.`,
-            pt: `Obrigado, ${name}! 🎉 Suas respostas do WhatsApp foram salvas no seu perfil de worker.\n\nO próximo passo é abrir seu painel de worker, completar qualquer detalhe que ainda falte no perfil e enviar por lá os documentos obrigatórios.\n\n👉 ${workerProfileUrl}\n\nPrecisamos da foto do passaporte, da foto biométrica e de um diploma final escolar, universitário ou profissional formal. Depois que o perfil estiver completo e a aprovação admin for concluída, o checkout do *Job Finder* é liberado no painel.`,
+            en: `Thank you, ${name}! 🎉 Your WhatsApp answers have been saved to your worker profile.\n\nThe next step is to open your worker dashboard, finish any missing profile details, and upload your required documents there.\n\n👉 ${workerProfileUrl}\n\nWe need your passport photo page (clear image or PDF), biometric photo (image file), and a final school, university, or formal vocational diploma (clear image or PDF). After your profile is complete and passes admin review, *Job Finder* checkout unlocks in the dashboard. If you have any questions, I'm here!`,
+            sr: `Hvala, ${name}! 🎉 Vaši WhatsApp odgovori su sačuvani na vaš worker profil.\n\nSledeći korak je da otvorite worker dashboard, dovršite sve što nedostaje na profilu i tamo dodate obavezna dokumenta.\n\n👉 ${workerProfileUrl}\n\nPotrebni su glavna stranica pasoša (jasna slika ili PDF), biometrijska fotografija (slika) i završna školska, univerzitetska ili formalna stručna diploma (jasna slika ili PDF). Kada profil bude kompletan i prođe admin review, *Job Finder* checkout se otključava u dashboard-u. Ako imate pitanja, tu sam!`,
+            hi: `धन्यवाद, ${name}! 🎉 आपके WhatsApp जवाब आपके worker profile में सेव हो गए हैं।\n\nअगला step है अपना worker dashboard खोलना, profile की जो भी details बाकी हैं उन्हें पूरा करना, और required documents वहीं upload करना।\n\n👉 ${workerProfileUrl}\n\nहमें passport photo page (clear image या PDF), biometric photo (image file), और final school, university, या formal vocational diploma (clear image या PDF) चाहिए। Profile complete होने और admin review approved होने के बाद ही *Job Finder* checkout dashboard में unlock होता है।`,
+            ar: `شكراً، ${name}! 🎉 تم حفظ إجاباتك من WhatsApp في ملف العامل الخاص بك.\n\nالخطوة التالية هي فتح لوحة العامل، إكمال أي تفاصيل ناقصة في الملف، ورفع المستندات المطلوبة هناك.\n\n👉 ${workerProfileUrl}\n\nنحتاج إلى صفحة الصورة الرئيسية من جواز السفر (صورة واضحة أو PDF)، والصورة البيومترية (ملف صورة)، والشهادة النهائية المدرسية أو الجامعية أو المهنية الرسمية (صورة واضحة أو PDF). بعد اكتمال الملف وموافقة الإدارة في المراجعة، يتم فتح Checkout الخاص بـ *Job Finder* داخل لوحة التحكم.`,
+            fr: `Merci, ${name}! 🎉 Vos réponses WhatsApp ont été enregistrées dans votre profil travailleur.\n\nLa prochaine étape est d’ouvrir votre tableau de bord travailleur, de compléter les informations manquantes du profil et d’y téléverser les documents requis.\n\n👉 ${workerProfileUrl}\n\nNous avons besoin de la page photo principale du passeport (image claire ou PDF), de la photo biométrique (fichier image) et d’un diplôme final scolaire, universitaire ou professionnel officiel (image claire ou PDF). Une fois le profil complet et la validation admin accordée, le checkout *Job Finder* se débloque dans le tableau de bord.`,
+            pt: `Obrigado, ${name}! 🎉 Suas respostas do WhatsApp foram salvas no seu perfil de worker.\n\nO próximo passo é abrir seu painel de worker, completar qualquer detalhe que ainda falte no perfil e enviar por lá os documentos obrigatórios.\n\n👉 ${workerProfileUrl}\n\nPrecisamos da página principal com foto do passaporte (imagem nítida ou PDF), da foto biométrica (arquivo de imagem) e de um diploma final escolar, universitário ou profissional formal (imagem nítida ou PDF). Depois que o perfil estiver completo e a aprovação admin for concluída, o checkout do *Job Finder* é liberado no painel.`,
         };
         const draftOnlyMessage: Record<LangKey, string> = {
-            en: `Thank you, ${name}! 🎉 I saved your answers in this WhatsApp draft for now.\n\nYour real worker account still starts on the website, so please register and continue there:\n\n👉 ${signupUrl}\n\nAfter that, complete your profile and upload your passport photo, biometric photo, and a final school, university, or formal vocational diploma. Once everything is complete and passes admin review, *Job Finder* checkout unlocks in your dashboard.`,
-            sr: `Hvala, ${name}! 🎉 Sačuvao sam vaše odgovore ovde u WhatsApp nacrtu za sada.\n\nVaš pravi worker nalog ipak počinje na sajtu, zato se registrujte i nastavite tamo:\n\n👉 ${signupUrl}\n\nPosle toga dopunite profil i dodajte fotografiju pasoša, biometrijsku fotografiju i završnu školsku, univerzitetsku ili formalnu stručnu diplomu. Kada sve bude kompletno i prođe admin review, *Job Finder* checkout se otključava u vašem dashboard-u.`,
-            hi: `धन्यवाद, ${name}! 🎉 मैंने आपके जवाब फिलहाल इस WhatsApp draft में सेव कर दिए हैं।\n\nलेकिन आपका असली worker account वेबसाइट पर शुरू होता है, इसलिए वहाँ register करें और वहीं आगे बढ़ें:\n\n👉 ${signupUrl}\n\nउसके बाद अपना profile पूरा कीजिए और passport photo, biometric photo, और final school, university, या formal vocational diploma upload कीजिए। सब कुछ complete होने और admin review pass होने के बाद ही *Job Finder* checkout dashboard में unlock होता है।`,
-            ar: `شكراً، ${name}! 🎉 لقد حفظت إجاباتك مؤقتاً في مسودة WhatsApp هذه.\n\nلكن حساب العامل الحقيقي يبدأ على الموقع، لذلك يرجى التسجيل والمتابعة هناك:\n\n👉 ${signupUrl}\n\nبعد ذلك أكمل ملفك وارفع صورة جواز السفر والصورة البيومترية والشهادة النهائية المدرسية أو الجامعية أو المهنية الرسمية. بعد اكتمال كل شيء واجتياز مراجعة الإدارة، يتم فتح Checkout الخاص بـ *Job Finder* داخل لوحة التحكم الخاصة بك.`,
-            fr: `Merci, ${name}! 🎉 J’ai enregistré vos réponses pour l’instant dans ce brouillon WhatsApp.\n\nMais votre vrai compte travailleur commence sur le site, alors inscrivez-vous et continuez là-bas :\n\n👉 ${signupUrl}\n\nEnsuite, complétez votre profil et téléversez la photo du passeport, la photo biométrique et le diplôme final scolaire, universitaire ou professionnel officiel. Une fois que tout est complet et validé par l’admin, le checkout *Job Finder* se débloque dans votre tableau de bord.`,
-            pt: `Obrigado, ${name}! 🎉 Salvei suas respostas por enquanto neste rascunho do WhatsApp.\n\nMas sua conta real de worker começa no site, então registre-se e continue por lá:\n\n👉 ${signupUrl}\n\nDepois disso, complete seu perfil e envie a foto do passaporte, a foto biométrica e o diploma final escolar, universitário ou profissional formal. Quando tudo estiver completo e passar pela revisão admin, o checkout do *Job Finder* é liberado no seu painel.`,
+            en: `Thank you, ${name}! 🎉 I saved your answers in this WhatsApp draft for now.\n\nYour real worker account still starts on the website, so please register and continue there:\n\n👉 ${signupUrl}\n\nAfter that, complete your profile and upload your passport photo page (clear image or PDF), biometric photo (image file), and a final school, university, or formal vocational diploma (clear image or PDF). Once everything is complete and passes admin review, *Job Finder* checkout unlocks in your dashboard.`,
+            sr: `Hvala, ${name}! 🎉 Sačuvao sam vaše odgovore ovde u WhatsApp nacrtu za sada.\n\nVaš pravi worker nalog ipak počinje na sajtu, zato se registrujte i nastavite tamo:\n\n👉 ${signupUrl}\n\nPosle toga dopunite profil i dodajte glavnu stranicu pasoša (jasna slika ili PDF), biometrijsku fotografiju (slika) i završnu školsku, univerzitetsku ili formalnu stručnu diplomu (jasna slika ili PDF). Kada sve bude kompletno i prođe admin review, *Job Finder* checkout se otključava u vašem dashboard-u.`,
+            hi: `धन्यवाद, ${name}! 🎉 मैंने आपके जवाब फिलहाल इस WhatsApp draft में सेव कर दिए हैं।\n\nलेकिन आपका असली worker account वेबसाइट पर शुरू होता है, इसलिए वहाँ register करें और वहीं आगे बढ़ें:\n\n👉 ${signupUrl}\n\nउसके बाद अपना profile पूरा कीजिए और passport photo page (clear image या PDF), biometric photo (image file), और final school, university, या formal vocational diploma (clear image या PDF) upload कीजिए। सब कुछ complete होने और admin review pass होने के बाद ही *Job Finder* checkout dashboard में unlock होता है।`,
+            ar: `شكراً، ${name}! 🎉 لقد حفظت إجاباتك مؤقتاً في مسودة WhatsApp هذه.\n\nلكن حساب العامل الحقيقي يبدأ على الموقع، لذلك يرجى التسجيل والمتابعة هناك:\n\n👉 ${signupUrl}\n\nبعد ذلك أكمل ملفك وارفع صفحة الصورة الرئيسية من جواز السفر (صورة واضحة أو PDF)، والصورة البيومترية (ملف صورة)، والشهادة النهائية المدرسية أو الجامعية أو المهنية الرسمية (صورة واضحة أو PDF). بعد اكتمال كل شيء واجتياز مراجعة الإدارة، يتم فتح Checkout الخاص بـ *Job Finder* داخل لوحة التحكم الخاصة بك.`,
+            fr: `Merci, ${name}! 🎉 J’ai enregistré vos réponses pour l’instant dans ce brouillon WhatsApp.\n\nMais votre vrai compte travailleur commence sur le site, alors inscrivez-vous et continuez là-bas :\n\n👉 ${signupUrl}\n\nEnsuite, complétez votre profil et téléversez la page photo principale du passeport (image claire ou PDF), la photo biométrique (fichier image) et le diplôme final scolaire, universitaire ou professionnel officiel (image claire ou PDF). Une fois que tout est complet et validé par l’admin, le checkout *Job Finder* se débloque dans votre tableau de bord.`,
+            pt: `Obrigado, ${name}! 🎉 Salvei suas respostas por enquanto neste rascunho do WhatsApp.\n\nMas sua conta real de worker começa no site, então registre-se e continue por lá:\n\n👉 ${signupUrl}\n\nDepois disso, complete seu perfil e envie a página principal com foto do passaporte (imagem nítida ou PDF), a foto biométrica (arquivo de imagem) e o diploma final escolar, universitário ou profissional formal (imagem nítida ou PDF). Quando tudo estiver completo e passar pela revisão admin, o checkout do *Job Finder* é liberado no seu painel.`,
         };
         return savedToLinkedWorker ? savedToWorkerMessage[lk] : draftOnlyMessage[lk];
     }
