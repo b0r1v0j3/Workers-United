@@ -5,8 +5,15 @@ const authGetUser = vi.fn();
 const profileSingle = vi.fn();
 const adminProfileMaybeSingle = vi.fn();
 const adminProfileUpdateEq = vi.fn();
+const adminProfileUpdateSelect = vi.fn();
+const adminProfileUpdateMaybeSingle = vi.fn();
+const adminContractMaybeSingle = vi.fn();
+const adminContractUpdateEq = vi.fn();
+const adminContractUpdateSelect = vi.fn();
+const adminContractUpdateMaybeSingle = vi.fn();
 const auditInsert = vi.fn();
 const syncAuthContactFields = vi.fn();
+const buildContractDataForMatch = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
     createClient: async () => ({
@@ -45,6 +52,19 @@ vi.mock("@/lib/supabase/admin", () => ({
                 };
             }
 
+            if (table === "contract_data") {
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            maybeSingle: adminContractMaybeSingle,
+                        }),
+                    }),
+                    update: () => ({
+                        eq: adminContractUpdateEq,
+                    }),
+                };
+            }
+
             if (table === "admin_audit_log") {
                 return {
                     insert: auditInsert,
@@ -65,7 +85,7 @@ vi.mock("@/lib/godmode", () => ({
 }));
 
 vi.mock("@/lib/contract-data", () => ({
-    buildContractDataForMatch: vi.fn(),
+    buildContractDataForMatch,
 }));
 
 describe("POST /api/admin/edit-data", () => {
@@ -90,7 +110,48 @@ describe("POST /api/admin/edit-data", () => {
                 full_name: "Old Name",
             },
         });
-        adminProfileUpdateEq.mockResolvedValue({
+        adminProfileUpdateEq.mockImplementation(() => ({
+            select: adminProfileUpdateSelect,
+        }));
+        adminProfileUpdateSelect.mockImplementation(() => ({
+            maybeSingle: adminProfileUpdateMaybeSingle,
+        }));
+        adminProfileUpdateMaybeSingle.mockResolvedValue({
+            data: {
+                id: "profile-1",
+            },
+            error: null,
+        });
+        adminContractMaybeSingle.mockResolvedValue({
+            data: {
+                id: "contract-1",
+                match_id: "match-1",
+            },
+            error: null,
+        });
+        adminContractUpdateEq.mockImplementation(() => ({
+            select: adminContractUpdateSelect,
+        }));
+        adminContractUpdateSelect.mockImplementation(() => ({
+            maybeSingle: adminContractUpdateMaybeSingle,
+        }));
+        adminContractUpdateMaybeSingle.mockResolvedValue({
+            data: {
+                id: "contract-1",
+            },
+            error: null,
+        });
+        buildContractDataForMatch.mockResolvedValue({
+            contractData: {
+                contact_email: "old@workersunited.eu",
+                start_date: "2026-03-01",
+            },
+            worker: { id: "worker-1" },
+            employer: { id: "employer-1" },
+            jobRequest: { id: "job-1" },
+            durationMonths: 12,
+        });
+        auditInsert.mockResolvedValue({
             error: null,
         });
         syncAuthContactFields.mockResolvedValue(undefined);
@@ -127,6 +188,58 @@ describe("POST /api/admin/edit-data", () => {
             userId: "profile-1",
             fullName: "New Name",
         });
+    });
+
+    it("fails closed when a generic profile edit matches no record", async () => {
+        adminProfileUpdateMaybeSingle.mockResolvedValueOnce({
+            data: null,
+            error: null,
+        });
+
+        const { POST } = await import("@/app/api/admin/edit-data/route");
+
+        const response = await POST(new NextRequest("http://localhost/api/admin/edit-data", {
+            method: "POST",
+            body: JSON.stringify({
+                table: "profiles",
+                recordId: "profile-404",
+                field: "full_name",
+                value: "New Name",
+            }),
+        }));
+
+        expect(response.status).toBe(404);
+        await expect(response.json()).resolves.toEqual({
+            error: "profiles record not found",
+        });
+        expect(syncAuthContactFields).not.toHaveBeenCalled();
+        expect(auditInsert).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when a direct contract override matches no contract row", async () => {
+        adminContractUpdateMaybeSingle.mockResolvedValueOnce({
+            data: null,
+            error: null,
+        });
+
+        const { POST } = await import("@/app/api/admin/edit-data/route");
+
+        const response = await POST(new NextRequest("http://localhost/api/admin/edit-data", {
+            method: "POST",
+            body: JSON.stringify({
+                table: "contract_data",
+                recordId: "contract-404",
+                field: "contact_email",
+                value: "new@workersunited.eu",
+            }),
+        }));
+
+        expect(response.status).toBe(404);
+        await expect(response.json()).resolves.toEqual({
+            error: "Contract record not found",
+        });
+        expect(buildContractDataForMatch).toHaveBeenCalledWith(expect.anything(), "match-1");
+        expect(auditInsert).not.toHaveBeenCalled();
     });
 
     it("returns auditLogged true when the data update and audit log both succeed", async () => {
