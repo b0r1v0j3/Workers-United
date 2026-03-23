@@ -19,6 +19,7 @@ const maybeEscalateWhatsAppReplyDeliveryFailure = vi.fn();
 const generateEmployerWhatsAppReply = vi.fn();
 const handleWhatsAppAdminCommand = vi.fn();
 const callOpenAIResponseText = vi.fn();
+const callClaudeResponseText = vi.fn();
 const mutableEnv = process.env as Record<string, string | undefined>;
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -83,6 +84,10 @@ vi.mock("@/lib/openai-response-text", () => ({
     callOpenAIResponseText,
 }));
 
+vi.mock("@/lib/claude-response-text", () => ({
+    callClaudeResponseText,
+}));
+
 vi.mock("@/lib/platform-config", async () => {
     const actual = await vi.importActual<typeof import("@/lib/platform-config")>("@/lib/platform-config");
 
@@ -104,6 +109,7 @@ describe("POST /api/whatsapp/webhook", () => {
         delete process.env.VERCEL_ENV;
         delete process.env.META_APP_SECRET;
         mutableEnv.OPENAI_API_KEY = "test-openai-key";
+        mutableEnv.ANTHROPIC_API_KEY = "test-anthropic-key";
 
         createAdminClient.mockReturnValue({ admin: true });
         sendWhatsAppText.mockResolvedValue({ success: true, messageId: "wamid_out_1" });
@@ -130,6 +136,7 @@ describe("POST /api/whatsapp/webhook", () => {
         generateEmployerWhatsAppReply.mockResolvedValue("Employer reply");
         handleWhatsAppAdminCommand.mockResolvedValue({ handled: false, replySent: false });
         callOpenAIResponseText.mockResolvedValue("AI fallback reply");
+        callClaudeResponseText.mockResolvedValue("Claude conversational reply");
     });
 
     it("fails closed when META_APP_SECRET is missing in production", async () => {
@@ -701,13 +708,17 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(payload).toEqual({ status: "ok" });
         expect(sendWhatsAppText).toHaveBeenCalledWith(
             "+38166033333",
-            expect.stringMatching(/nastaviću na srpskom/i),
+            expect.any(String),
             undefined
         );
+        // With Claude enabled, the reply is AI-generated (not the deterministic Serbian text)
+        // The deterministic reply is passed as a reference draft for Claude to rephrase
+        expect(callClaudeResponseText).toHaveBeenCalled();
     });
 
     it("keeps explicit language-switch history in Serbian for short fallback follow-ups", async () => {
         mutableEnv.OPENAI_API_KEY = "";
+        mutableEnv.ANTHROPIC_API_KEY = "";
         createAdminClient.mockReturnValueOnce({
             from: vi.fn(() => ({
                 select: () => ({
@@ -799,8 +810,9 @@ describe("POST /api/whatsapp/webhook", () => {
         );
     });
 
-    it("uses deterministic human-support onboarding fallback when OPENAI_API_KEY is missing", async () => {
+    it("uses deterministic human-support onboarding fallback when AI API keys are missing", async () => {
         delete process.env.OPENAI_API_KEY;
+        delete process.env.ANTHROPIC_API_KEY;
 
         const { handleWhatsAppOnboarding } = await import("@/app/api/whatsapp/webhook/route");
         const supabase = {
