@@ -14,7 +14,8 @@ export const maxDuration = 120;
 const REPORT_MODEL = "whatsapp-self-improve";
 
 export async function GET(request: Request) {
-    if (!hasValidCronBearerToken(request)) {
+    const authHeader = request.headers.get("authorization");
+    if (!hasValidCronBearerToken(authHeader)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

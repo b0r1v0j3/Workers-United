@@ -84,7 +84,8 @@ export async function transcribeWhatsAppAudio(
 
     // Whisper API uses multipart/form-data
     const formData = new FormData();
-    const blob = new Blob([buffer], { type: mimeType });
+    const uint8 = new Uint8Array(buffer);
+    const blob = new Blob([uint8], { type: mimeType });
     formData.append("file", blob, `voice.${extension}`);
     formData.append("model", "whisper-1");
     formData.append("response_format", "verbose_json");
