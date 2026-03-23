@@ -165,6 +165,37 @@ describe('getEmployerCompletion', () => {
         expect(result.missingFields).toHaveLength(0);
     });
 
+    it('uses the same country-neutral completion rules for Serbia and other countries', () => {
+        const germany = getEmployerCompletion({
+            employer: {
+                company_name: 'TechCorp',
+                contact_phone: '+49123456',
+                country: 'Germany',
+                industry: 'Technology',
+            },
+        });
+        const serbia = getEmployerCompletion({
+            employer: {
+                company_name: 'Gradnja Plus',
+                contact_phone: '+381601234567',
+                country: 'Serbia',
+                industry: 'Construction',
+                company_registration_number: '',
+                company_address: '',
+                city: '',
+                postal_code: '',
+                description: '',
+                business_registry_number: '',
+                founding_date: '',
+            },
+        });
+
+        expect(germany.completion).toBe(100);
+        expect(serbia.completion).toBe(100);
+        expect(serbia.totalFields).toBe(germany.totalFields);
+        expect(serbia.missingFields).toHaveLength(0);
+    });
+
     it('missing fields use human-readable labels', () => {
         const result = getEmployerCompletion({ employer: null });
         expect(result.missingFields).toContain('Company Name');

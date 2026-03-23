@@ -202,36 +202,14 @@ export function getWorkerCompletion(data: WorkerData, options: WorkerCompletionO
 export function getEmployerCompletion(data: EmployerData): ProfileCompletionResult {
     const { employer } = data;
 
-    const isSerbia = employer?.country?.trim().toLowerCase() === 'serbia';
-
-    // Base fields required for everyone
+    // Required fields are country-neutral. Extra company metadata is optional.
     const baseFields: Record<string, any> = {
         company_name: employer?.company_name,
         contact_phone: employer?.contact_phone,
         country: employer?.country,
         industry: employer?.industry,
-        // Website is optional for now in the form, but let's keep it consistent with what we ask
     };
-
-    // Serbia specific fields
-    const serbiaFields: Record<string, any> = {
-        company_registration_number: employer?.company_registration_number,
-        company_address: employer?.company_address,
-        city: employer?.city,
-        postal_code: employer?.postal_code,
-        description: employer?.description,
-        business_registry_number: employer?.business_registry_number,
-        founding_date: employer?.founding_date,
-        // Tax ID is technically stored in tax_id (PIB) but not in this helper? 
-        // Wait, the previous version didn't have tax_id in the list! 
-        // Let's check the previous version. It had: company_name, registration_number, address, phone, country, city, postal_code, industry, description, apr, founding.
-        // It did NOT have tax_id. Let's stick to what was there + new fields.
-    };
-
-    // Construct the fields object based on country
-    const fields = isSerbia
-        ? { ...baseFields, ...serbiaFields }
-        : baseFields;
+    const fields = baseFields;
 
     const totalFields = Object.keys(fields).length;
     const completedFields = Object.values(fields).filter(v => v !== null && v !== undefined && v !== '').length;
