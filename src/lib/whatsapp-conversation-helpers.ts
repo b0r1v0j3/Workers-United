@@ -2,8 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { appendConversationMessage, ensureSupportConversation } from "@/lib/messaging";
-import { filterSafeWhatsAppBrainMemory } from "@/lib/whatsapp-brain";
+import { filterSafeWhatsAppBrainMemory, type WhatsAppBrainMemoryEntry } from "@/lib/whatsapp-brain";
 import { humanizeWhatsAppHandoffReason } from "@/lib/whatsapp-quality";
+
+export type { WhatsAppBrainMemoryEntry };
 
 type AdminDbClient = SupabaseClient<Database>;
 
@@ -14,12 +16,6 @@ export interface WhatsAppHistoryMessage {
     status?: string | null;
     message_type?: string | null;
     template_name?: string | null;
-}
-
-export interface WhatsAppBrainMemoryEntry {
-    category: string;
-    content: string;
-    confidence: number;
 }
 
 function asObject(value: unknown): Record<string, unknown> | null {

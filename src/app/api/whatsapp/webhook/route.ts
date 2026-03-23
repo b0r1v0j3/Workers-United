@@ -44,11 +44,18 @@ import { persistWhatsAppDeliveryStatuses } from "@/lib/whatsapp-status-events";
 import {
     attachInboundWhatsAppMessageUser,
     extractWhatsAppMessageContent,
+    extractWhatsAppMediaId,
     isTextLikeWhatsAppMessage,
     looksLikeAutomatedWhatsAppAutoReply,
     normalizeWhatsAppPhone,
     recordInboundWhatsAppMessage,
 } from "@/lib/whatsapp-inbound-events";
+import {
+    isAudioWhatsAppMessage,
+    isImageWhatsAppMessage,
+    transcribeWhatsAppAudio,
+    analyzeWhatsAppImage,
+} from "@/lib/whatsapp-media";
 import { resolveWhatsAppWorkerIdentity } from "@/lib/whatsapp-identity";
 import { callOpenAIResponseText } from "@/lib/openai-response-text";
 import { callClaudeResponseText } from "@/lib/claude-response-text";
@@ -78,7 +85,7 @@ const WHATSAPP_ROUTER_MODEL = process.env.WHATSAPP_ROUTER_MODEL || "gpt-5-mini";
 const WHATSAPP_RESPONSE_MODEL = process.env.WHATSAPP_RESPONSE_MODEL || "claude-sonnet-4-6";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const OPENAI_API_KEY_ENV = process.env.OPENAI_API_KEY || "";
-const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "+38166299444")
+const ADMIN_PHONES = (process.env.OWNER_PHONES || process.env.OWNER_PHONE || "")
     .split(",")
     .map((phone) => normalizeWhatsAppPhone(phone))
     .filter(Boolean);
@@ -343,7 +350,7 @@ export async function POST(request: NextRequest) {
                     const phoneNumber = message.from;
                     const messageType = message.type;
                     const wamid = message.id;
-                    const content = extractWhatsAppMessageContent(message);
+                    let content = extractWhatsAppMessageContent(message);
                     const normalizedPhone = normalizeWhatsAppPhone(phoneNumber);
 
                     if (!normalizedPhone || !wamid) {
@@ -489,9 +496,8 @@ export async function POST(request: NextRequest) {
 
                         // ─── Admin Commands (direct brain control via WhatsApp) ───
                         if (isAdmin) {
-                            const adminClient = createAdminClient();
                             const adminCommandResult = await handleWhatsAppAdminCommand({
-                                admin: adminClient,
+                                admin: supabase,
                                 normalizedPhone,
                                 content,
                                 profileId: activityUserId,
@@ -537,37 +543,110 @@ export async function POST(request: NextRequest) {
                 );
 
                 if (!isTextLikeWhatsAppMessage(messageType)) {
-                    if (!attachmentReplySent.has(normalizedPhone)) {
-                        const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
-                        const mediaFallbackReply = getMediaAttachmentResponse(latestMessageLanguage, platformContact);
-                        const mediaReplyResult = await sendWhatsAppRouteReply({
-                            admin: supabase,
-                            phone: normalizedPhone,
-                            text: mediaFallbackReply,
-                            userId: activityUserId || undefined,
-                            activityUserId,
-                            supportRole,
-                            failureContext: "media_fallback",
-                        });
-                        if (!mediaReplyResult.success && mediaReplyResult.retryable) {
-                            hadProcessingError = true;
-                        }
-                        if (mediaReplyResult.success) {
-                            await logServerActivity(
-                                activityUserId || null,
-                                "whatsapp_media_fallback",
-                                "messaging",
-                                {
-                                    phone: normalizedPhone,
-                                    message_type: messageType,
-                                    bot_response: mediaFallbackReply.substring(0, 500),
-                                },
-                                "warning"
-                            );
-                            attachmentReplySent.add(normalizedPhone);
+                    const mediaId = extractWhatsAppMediaId(message);
+
+                    // ─── Voice/Audio → Transcribe with Claude then process as text ───
+                    if (isAudioWhatsAppMessage(messageType) && mediaId && ANTHROPIC_API_KEY) {
+                        try {
+                            const transcription = await transcribeWhatsAppAudio(ANTHROPIC_API_KEY, mediaId);
+                            if (transcription.text) {
+                                // Override content with transcription and continue as text
+                                content = `[Voice message] ${transcription.text}`;
+                                await logServerActivity(
+                                    activityUserId || null,
+                                    "whatsapp_voice_transcribed",
+                                    "messaging",
+                                    {
+                                        phone: normalizedPhone,
+                                        language: transcription.language,
+                                        text_length: transcription.text.length,
+                                    }
+                                );
+                                // Fall through to normal text processing below
+                            }
+                        } catch (audioError) {
+                            console.error("[WhatsApp] Voice transcription failed:", audioError instanceof Error ? audioError.message : audioError);
+                            // Fall through to generic media fallback
                         }
                     }
-                    continue;
+
+                    // ─── Image → Analyze with Claude Vision ───
+                    if (isImageWhatsAppMessage(messageType) && mediaId && ANTHROPIC_API_KEY) {
+                        try {
+                            const analysis = await analyzeWhatsAppImage(ANTHROPIC_API_KEY, mediaId);
+                            const caption = message.image?.caption || "";
+                            if (analysis.isDocument) {
+                                // Document detected — create text summary for AI processing
+                                content = `[Image: ${analysis.documentType || "document"}] ${analysis.extractedText}${caption ? `\nCaption: ${caption}` : ""}`;
+                                await logServerActivity(
+                                    activityUserId || null,
+                                    "whatsapp_document_image_detected",
+                                    "messaging",
+                                    {
+                                        phone: normalizedPhone,
+                                        document_type: analysis.documentType,
+                                        extracted_length: analysis.extractedText.length,
+                                    }
+                                );
+                                // Fall through to normal text processing
+                            } else {
+                                // Regular photo — describe and process
+                                content = `[Image] ${analysis.description}${caption ? `\nCaption: ${caption}` : ""}`;
+                                await logServerActivity(
+                                    activityUserId || null,
+                                    "whatsapp_image_analyzed",
+                                    "messaging",
+                                    {
+                                        phone: normalizedPhone,
+                                        is_document: false,
+                                        description_length: analysis.description.length,
+                                    }
+                                );
+                                // Fall through to normal text processing
+                            }
+                        } catch (imageError) {
+                            console.error("[WhatsApp] Image analysis failed:", imageError instanceof Error ? imageError.message : imageError);
+                            // Fall through to generic media fallback
+                        }
+                    }
+
+                    // If content was enriched by transcription/analysis, process as text
+                    if (content && !content.startsWith("[audio message]") && !content.startsWith("[image message]")) {
+                        // Continue to text processing below (don't skip with continue)
+                    } else {
+                        // Generic media fallback for unsupported types (video, stickers, etc.)
+                        if (!attachmentReplySent.has(normalizedPhone)) {
+                            const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
+                            const mediaFallbackReply = getMediaAttachmentResponse(latestMessageLanguage, platformContact);
+                            const mediaReplyResult = await sendWhatsAppRouteReply({
+                                admin: supabase,
+                                phone: normalizedPhone,
+                                text: mediaFallbackReply,
+                                userId: activityUserId || undefined,
+                                activityUserId,
+                                supportRole,
+                                failureContext: "media_fallback",
+                            });
+                            if (!mediaReplyResult.success && mediaReplyResult.retryable) {
+                                hadProcessingError = true;
+                            }
+                            if (mediaReplyResult.success) {
+                                await logServerActivity(
+                                    activityUserId || null,
+                                    "whatsapp_media_fallback",
+                                    "messaging",
+                                    {
+                                        phone: normalizedPhone,
+                                        message_type: messageType,
+                                        bot_response: mediaFallbackReply.substring(0, 500),
+                                    },
+                                    "warning"
+                                );
+                                attachmentReplySent.add(normalizedPhone);
+                            }
+                        }
+                        continue;
+                    }
                 }
 
                 // ─── Employer WhatsApp Flow ───────────────────────────────
@@ -689,7 +768,6 @@ export async function POST(request: NextRequest) {
                         ]);
 
                         // Step 1: Intent classification (OpenAI mini — fast & cheap)
-                        const routerApiKey = OPENAI_API_KEY_ENV || ANTHROPIC_API_KEY;
                         routerDecision = hasRouterKey
                             ? await classifyWhatsAppIntent({
                                 callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY_ENV, options),
@@ -845,10 +923,9 @@ export async function POST(request: NextRequest) {
                     // Save learnings to brain_memory in Supabase (admin only)
                     if (learnings.length > 0 && isAdmin) {
                         try {
-                            const admin = createAdminClient();
                             const learnConfidence = 0.9;
                             const learningSaveStats = await saveBrainFactsDedup(
-                                admin,
+                                supabase,
                                 learnings.map((learning) => ({
                                     category: learning.category,
                                     content: learning.content,
