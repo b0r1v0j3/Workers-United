@@ -1174,7 +1174,7 @@ export function buildCanonicalWhatsAppFacts({
     ({ website, supportEmail } = normalizeWhatsAppPublicContact({ website, supportEmail }));
     return [
         "- Workers United is a full-service hiring and visa-support platform that works through guided matching.",
-        "- Job Finder is a paid search service: the worker registers a profile first, then Workers United searches for a suitable match during the 90-day service period.",
+        "- Job Finder is a paid search service: the worker registers a profile first, then Workers United searches for a suitable employer match.",
         "- There is no live public vacancy feed to browse on demand. Openings appear over time, and suitable places can be filled quickly.",
         `- Registration starts at ${website}/signup.`,
         "- Job Finder payment unlocks only after the worker profile is fully complete, the required documents are finished, and admin approval is done.",
