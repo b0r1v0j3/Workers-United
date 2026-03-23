@@ -3,8 +3,11 @@ import {
     buildWorkerWhatsAppRules,
     resolveWhatsAppLanguageName,
 } from "@/lib/whatsapp-brain";
+import type { WhatsAppBrainMemoryEntry } from "@/lib/whatsapp-brain";
 import { formatWhatsAppHistory } from "@/lib/whatsapp-conversation-helpers";
 import { buildWorkerPaymentSnapshot } from "@/lib/whatsapp-reply-guardrails";
+
+export type { WhatsAppBrainMemoryEntry };
 
 export type WhatsAppIntent =
     | "job_intent"
@@ -13,10 +16,7 @@ export type WhatsAppIntent =
     | "support"
     | "status"
     | "general"
-    | "off_topic"
-    | "employer_inquiry"
-    | "employer_hiring"
-    | "employer_support";
+    | "off_topic";
 
 export interface WhatsAppRouterDecision {
     intent: WhatsAppIntent;
@@ -29,12 +29,6 @@ export interface WhatsAppConversationEntry {
     direction: string;
     content: string | null;
     created_at?: string | null;
-}
-
-export interface WhatsAppBrainMemoryEntry {
-    category: string;
-    content: string;
-    confidence: number;
 }
 
 export interface WhatsAppWorkerSnapshotLike {

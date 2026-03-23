@@ -16,6 +16,19 @@ export interface WhatsAppInboundMessage {
             title?: string | null;
         } | null;
     } | null;
+    audio?: {
+        id?: string | null;
+        mime_type?: string | null;
+    } | null;
+    voice?: {
+        id?: string | null;
+        mime_type?: string | null;
+    } | null;
+    image?: {
+        id?: string | null;
+        mime_type?: string | null;
+        caption?: string | null;
+    } | null;
 }
 
 const TEXT_LIKE_MESSAGE_TYPES = new Set(["text", "button", "interactive"]);
@@ -84,6 +97,26 @@ export function extractWhatsAppMessageContent(message: WhatsAppInboundMessage): 
     }
 
     return `[${messageType} message]`;
+}
+
+export function extractWhatsAppMediaId(message: WhatsAppInboundMessage): string | null {
+    const messageType = message.type || "unknown";
+
+    if (messageType === "audio" && message.audio?.id) {
+        return message.audio.id;
+    }
+    if (messageType === "voice" && message.voice?.id) {
+        return message.voice.id;
+    }
+    // WhatsApp sends voice notes as type "audio" with voice field sometimes
+    if (messageType === "audio" && message.voice?.id) {
+        return message.voice.id;
+    }
+    if (messageType === "image" && message.image?.id) {
+        return message.image.id;
+    }
+
+    return null;
 }
 
 export function looksLikeAutomatedWhatsAppAutoReply(messageType: string, content: string): boolean {

@@ -45,6 +45,7 @@ vi.mock("@/lib/whatsapp-status-events", () => ({
 vi.mock("@/lib/whatsapp-inbound-events", () => ({
     attachInboundWhatsAppMessageUser,
     extractWhatsAppMessageContent,
+    extractWhatsAppMediaId: vi.fn(() => null),
     isTextLikeWhatsAppMessage,
     looksLikeAutomatedWhatsAppAutoReply: vi.fn((messageType: string, content: string) => {
         if (messageType !== "text" && messageType !== "button" && messageType !== "interactive") {
@@ -54,6 +55,13 @@ vi.mock("@/lib/whatsapp-inbound-events", () => ({
     }),
     normalizeWhatsAppPhone,
     recordInboundWhatsAppMessage,
+}));
+
+vi.mock("@/lib/whatsapp-media", () => ({
+    isAudioWhatsAppMessage: vi.fn(() => false),
+    isImageWhatsAppMessage: vi.fn(() => false),
+    transcribeWhatsAppAudio: vi.fn(),
+    analyzeWhatsAppImage: vi.fn(),
 }));
 
 vi.mock("@/lib/whatsapp-identity", () => ({
