@@ -253,7 +253,7 @@ export function analyzeWhatsAppConfusion(messages: WhatsAppQualityMessage[]): Wh
         };
     }
 
-    const recentMessages = normalizedMessages.slice(-8);
+    const recentMessages = normalizedMessages.slice(-16);
     const inboundMessages = recentMessages.filter(isInboundMessage);
     const issueMessages = inboundMessages.filter((message) =>
         ISSUE_PATTERNS.some((pattern) => pattern.test(message.content || ""))

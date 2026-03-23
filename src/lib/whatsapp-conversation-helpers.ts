@@ -58,6 +58,22 @@ export function truncateWhatsAppPreview(value: string, maxLength = 240): string 
     return `${normalized.slice(0, maxLength - 3)}...`;
 }
 
+function formatRelativeTime(isoDate: string | null | undefined): string {
+    if (!isoDate) return "";
+    try {
+        const diff = Date.now() - new Date(isoDate).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return " (just now)";
+        if (mins < 60) return ` (${mins}m ago)`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return ` (${hours}h ago)`;
+        const days = Math.floor(hours / 24);
+        return ` (${days}d ago)`;
+    } catch {
+        return "";
+    }
+}
+
 export function formatWhatsAppHistory(
     historyMessages: WhatsAppHistoryMessage[],
     limit: number
@@ -68,7 +84,14 @@ export function formatWhatsAppHistory(
     }
 
     return trimmed
-        .map((message) => `${message.direction === "inbound" ? "User" : "Assistant"}: ${(message.content || "").trim()}`)
+        .map((message) => {
+            const role = message.direction === "inbound" ? "User" : "Assistant";
+            const content = (message.content || "").trim();
+            const isTemplate = message.message_type === "template" || !!message.template_name;
+            const label = isTemplate ? `System [${message.template_name || "template"}]` : role;
+            const time = formatRelativeTime(message.created_at);
+            return `${label}${time}: ${content}`;
+        })
         .join("\n");
 }
 
@@ -89,9 +112,7 @@ export async function loadWhatsAppConversationHistory(
         return (data || [])
             .filter((message) => {
                 const failedOutbound = message.direction === "outbound" && message.status === "failed";
-                const outboundTemplate = message.direction === "outbound"
-                    && (message.message_type === "template" || !!message.template_name);
-                return !(failedOutbound || outboundTemplate);
+                return !failedOutbound;
             })
             .reverse()
             .slice(-limit);

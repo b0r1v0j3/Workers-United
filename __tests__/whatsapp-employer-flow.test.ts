@@ -18,7 +18,7 @@ function createAdminClient(employerRecord: Record<string, unknown> | null, error
             return {
                 select() {
                     return {
-                        or() {
+                        eq() {
                             return {
                                 maybeSingle: async () => ({
                                     data: employerRecord,
@@ -85,7 +85,6 @@ describe("whatsapp-employer-flow", () => {
             id: "emp_1",
             profile_id: null,
             company_name: "Steel Concept",
-            contact_name: "Milan",
             status: "APPROVED",
         });
     });
@@ -112,7 +111,6 @@ describe("whatsapp-employer-flow", () => {
                 id: "emp_1",
                 profile_id: null,
                 company_name: "Steel Concept",
-                contact_name: "Milan",
                 status: "APPROVED",
             },
             historyMessages: [
