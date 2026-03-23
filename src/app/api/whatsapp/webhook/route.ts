@@ -245,7 +245,7 @@ async function maybeGenerateOnboardingInterceptReply(params: {
 
     try {
         return await callOpenAIResponseText(apiKey, {
-            model: WHATSAPP_RESPONSE_MODEL,
+            model: WHATSAPP_ROUTER_MODEL,
             instructions: params.instructions,
             input: params.input,
         });
@@ -585,7 +585,7 @@ export async function POST(request: NextRequest) {
                             const empBrainMemory = await loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT);
                             const employerReply = await generateEmployerWhatsAppReply({
                                 callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY_EMP, options),
-                                model: WHATSAPP_RESPONSE_MODEL,
+                                model: WHATSAPP_ROUTER_MODEL,
                                 message: content,
                                 normalizedPhone,
                                 employerRecord,
