@@ -10,6 +10,7 @@ import { syncCurrentUserAuthContact } from "@/lib/auth-contact-sync-client";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
 import { ensureEmployerRecord } from "@/lib/employers";
+import { getEmployerCompletion } from "@/lib/profile-completion";
 import {
     Building2, MapPin, Globe, Phone, Calendar, FileText, Hash, Users,
     Pencil, Briefcase, CheckCircle2, AlertCircle, Plus, Trash2, Banknote
@@ -108,31 +109,6 @@ const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white 
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]";
 const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[26px] sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_20px_50px_-40px_rgba(15,23,42,0.18)] sm:before:hidden";
 const heroSurfaceClass = "relative overflow-hidden rounded-none border-0 bg-transparent px-1 py-0 shadow-none sm:rounded-[28px] sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_30px_70px_-52px_rgba(15,23,42,0.22)]";
-const noticeSurfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[26px] sm:border sm:bg-[#f8fafc] sm:p-6 sm:shadow-[0_18px_45px_-40px_rgba(15,23,42,0.18)] sm:before:hidden";
-
-// ─── Helper: Calculate Completion ───────────────────────────────
-function calculateCompletion(form: CompanyForm) {
-    // Must match getEmployerCompletion() in profile-completion.ts
-    // Base fields required for all employers
-    const baseRequired: (keyof CompanyForm)[] = [
-        "company_name", "contact_phone", "country", "industry"
-    ];
-    // Additional fields required in the primary operating market
-    const primaryMarketExtra: (keyof CompanyForm)[] = [
-        "company_registration_number", "company_address",
-        "city", "postal_code", "description",
-        "business_registry_number", "founding_date"
-    ];
-
-    const isPrimaryMarket = form.country.toLowerCase() === 'serbia';
-    const required = isPrimaryMarket ? [...baseRequired, ...primaryMarketExtra] : baseRequired;
-
-    const filled = required.filter(key => {
-        const val = form[key];
-        return val && val.trim().length > 0;
-    }).length;
-    return Math.round((filled / required.length) * 100);
-}
 
 type TabType = "company" | "post-job" | "jobs";
 
@@ -305,14 +281,6 @@ export default function EmployerProfilePage({
             if (!companyForm.company_name.trim()) throw new Error("Company name is required");
             if (!companyForm.country.trim()) throw new Error("Country is required");
 
-            const isPrimaryMarket = companyForm.country.toLowerCase() === 'serbia';
-
-            // Primary-market validation
-            if (isPrimaryMarket) {
-                if (companyForm.company_registration_number && !/^\d{8}$/.test(companyForm.company_registration_number))
-                    throw new Error("Registration Number must be exactly 8 digits");
-            }
-
             if (companyForm.contact_phone) {
                 const clean = companyForm.contact_phone.replace(/[\s\-()]/g, '');
                 if (!/^\+\d{7,15}$/.test(clean)) throw new Error("Phone must start with + and country code");
@@ -324,18 +292,15 @@ export default function EmployerProfilePage({
                 country: companyForm.country || null,
                 website: companyForm.website || null,
                 industry: companyForm.industry || null,
-
-                // Primary-market fields (set to null when not applicable)
-                tax_id: isPrimaryMarket ? (companyForm.tax_id || null) : null,
-                company_registration_number: isPrimaryMarket ? (companyForm.company_registration_number || null) : null,
-                company_address: isPrimaryMarket ? (companyForm.company_address || null) : null,
-                city: isPrimaryMarket ? (companyForm.city || null) : null,
-                postal_code: isPrimaryMarket ? (companyForm.postal_code || null) : null,
-                company_size: isPrimaryMarket ? (companyForm.company_size || null) : null,
-                founded_year: isPrimaryMarket ? (companyForm.founded_year || null) : null,
-                business_registry_number: isPrimaryMarket ? (companyForm.business_registry_number || null) : null,
-                founding_date: isPrimaryMarket ? (companyForm.founding_date || null) : null,
-
+                tax_id: companyForm.tax_id || null,
+                company_registration_number: companyForm.company_registration_number || null,
+                company_address: companyForm.company_address || null,
+                city: companyForm.city || null,
+                postal_code: companyForm.postal_code || null,
+                company_size: companyForm.company_size || null,
+                founded_year: companyForm.founded_year || null,
+                business_registry_number: companyForm.business_registry_number || null,
+                founding_date: companyForm.founding_date || null,
                 description: companyForm.description || null,
             };
 
@@ -568,7 +533,7 @@ export default function EmployerProfilePage({
         }
     };
 
-    const completion = calculateCompletion(companyForm);
+    const completion = getEmployerCompletion({ employer: companyForm }).completion;
 
     if (loading) return (
         <div className={`${surfaceClass} flex min-h-[320px] items-center justify-center`}>
@@ -576,8 +541,6 @@ export default function EmployerProfilePage({
         </div>
     );
 
-    // Country gate: full features currently available in selected markets
-    const isPrimaryMarket = companyForm.country.toLowerCase() === 'serbia';
     const hasCountry = companyForm.country.trim().length > 0;
     const openJobsCount = jobs.filter((job) => job.status === "open").length;
     const showCompanyForm = editing || (readOnlyPreview && !employer);
@@ -585,9 +548,9 @@ export default function EmployerProfilePage({
         ? "Preview"
         : !hasCountry
             ? "Setup"
-            : isPrimaryMarket
-                ? "Live"
-                : "Expanding";
+            : completion === 100
+                ? "Complete"
+                : "In Progress";
     const workspaceSummary = readOnlyPreview
         ? "Review the employer workspace structure without changing your admin role."
         : "Keep company details, readiness, and job requests in one workspace.";
@@ -627,28 +590,6 @@ export default function EmployerProfilePage({
             </section>
 
             <section className="space-y-6">
-                        {/* Coming soon banner for markets not enabled yet */}
-                        {employer && hasCountry && !isPrimaryMarket && !editing && (
-                            <div className={`${noticeSurfaceClass} sm:border-[#dbe4f0]`}>
-                                <div className="flex items-start gap-4">
-                                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[#eef2f7]">
-                                        <Globe className="text-[#475569]" size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 className="mb-1 text-lg font-bold text-[#111827]">We&apos;re expanding to {companyForm.country} soon</h3>
-                                        <p className="text-sm leading-relaxed text-[#475569]">
-                                            Workers United is currently onboarding employers in selected markets.
-                                            We&apos;re actively expanding coverage. Your registration helps us
-                                            prioritize — we&apos;ll notify you as soon as we&apos;re ready in {companyForm.country}.
-                                        </p>
-                                        <p className="mt-3 text-xs font-medium text-[#64748b]">
-                                            Complete the profile now so your company is ready when that market goes live.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         {/* ====================== COMPANY INFO TAB ====================== */}
                         {activeTab === 'company' && (
                             <div className="space-y-6">
@@ -672,7 +613,7 @@ export default function EmployerProfilePage({
                                         <fieldset className="space-y-6" disabled={readOnlyPreview || saving}>
                                             <div>
                                                 <label className={labelClass}>Company Name <span className="text-red-500">*</span></label>
-                                                <input type="text" name="company_name" required value={companyForm.company_name} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., ABC Construction d.o.o." />
+                                                <input type="text" name="company_name" required value={companyForm.company_name} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., Northway Logistics Ltd." />
                                             </div>
 
                                             <div>
@@ -684,18 +625,14 @@ export default function EmployerProfilePage({
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                {isPrimaryMarket && (
-                                                    <div>
-                                                        <label className={labelClass}>Tax ID (PIB)</label>
-                                                        <input type="text" name="tax_id" value={companyForm.tax_id} onChange={handleCompanyChange} className={inputClass} placeholder="123456789" maxLength={9} />
-                                                    </div>
-                                                )}
-                                                {isPrimaryMarket && (
-                                                    <div>
-                                                        <label className={labelClass}>Registration Number <span className="text-red-500">*</span></label>
-                                                        <input type="text" name="company_registration_number" value={companyForm.company_registration_number} onChange={handleCompanyChange} className={inputClass} placeholder="12345678" maxLength={8} />
-                                                    </div>
-                                                )}
+                                                <div>
+                                                    <label className={labelClass}>Tax ID / VAT (Optional)</label>
+                                                    <input type="text" name="tax_id" value={companyForm.tax_id} onChange={handleCompanyChange} className={inputClass} placeholder="Company tax or VAT number" maxLength={32} />
+                                                </div>
+                                                <div>
+                                                    <label className={labelClass}>Company Registration Number (Optional)</label>
+                                                    <input type="text" name="company_registration_number" value={companyForm.company_registration_number} onChange={handleCompanyChange} className={inputClass} placeholder="Official registration number" maxLength={32} />
+                                                </div>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -706,27 +643,21 @@ export default function EmployerProfilePage({
                                                         {EUROPEAN_COUNTRIES.map(c => (<option key={c} value={c}>{getCountryDisplayLabel(c)}</option>))}
                                                     </AdaptiveSelect>
                                                 </div>
-                                                {isPrimaryMarket && (
-                                                    <div>
-                                                        <label className={labelClass}>City <span className="text-red-500">*</span></label>
-                                                        <input type="text" name="city" value={companyForm.city} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., Belgrade" />
-                                                    </div>
-                                                )}
-                                                {isPrimaryMarket && (
-                                                    <div>
-                                                        <label className={labelClass}>Postal Code <span className="text-red-500">*</span></label>
-                                                        <input type="text" name="postal_code" value={companyForm.postal_code} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., 11000" maxLength={10} />
-                                                    </div>
-                                                )}
-                                                {isPrimaryMarket && (
-                                                    <div>
-                                                        <label className={labelClass}>Company Size</label>
-                                                        <AdaptiveSelect name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass} desktopSearchThreshold={999}>
-                                                            <option value="">Select size...</option>
-                                                            {COMPANY_SIZES.map(s => (<option key={s} value={s}>{s}</option>))}
-                                                        </AdaptiveSelect>
-                                                    </div>
-                                                )}
+                                                <div>
+                                                    <label className={labelClass}>City (Optional)</label>
+                                                    <input type="text" name="city" value={companyForm.city} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., Berlin" />
+                                                </div>
+                                                <div>
+                                                    <label className={labelClass}>Postal Code (Optional)</label>
+                                                    <input type="text" name="postal_code" value={companyForm.postal_code} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., 10115" maxLength={16} />
+                                                </div>
+                                                <div>
+                                                    <label className={labelClass}>Company Size (Optional)</label>
+                                                    <AdaptiveSelect name="company_size" value={companyForm.company_size} onChange={handleCompanyChange} className={inputClass} desktopSearchThreshold={999}>
+                                                        <option value="">Select size...</option>
+                                                        {COMPANY_SIZES.map(s => (<option key={s} value={s}>{s}</option>))}
+                                                    </AdaptiveSelect>
+                                                </div>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -745,40 +676,32 @@ export default function EmployerProfilePage({
                                                     <label className={labelClass}>Website (Optional)</label>
                                                     <input type="url" name="website" value={companyForm.website} onChange={handleCompanyChange} className={inputClass} placeholder="https://yourcompany.com" />
                                                 </div>
-                                                {isPrimaryMarket && (
-                                                    <div>
-                                                        <label className={labelClass}>Founded Year</label>
-                                                        <input type="text" name="founded_year" value={companyForm.founded_year} onChange={handleCompanyChange} className={inputClass} placeholder="2010" maxLength={4} />
-                                                    </div>
-                                                )}
+                                                <div>
+                                                    <label className={labelClass}>Founded Year (Optional)</label>
+                                                    <input type="text" name="founded_year" value={companyForm.founded_year} onChange={handleCompanyChange} className={inputClass} placeholder="2010" maxLength={4} />
+                                                </div>
                                             </div>
 
-                                            {isPrimaryMarket && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div>
-                                                        <label className={labelClass}>Business Registry Number <span className="text-red-500">*</span></label>
-                                                        <input type="text" name="business_registry_number" value={companyForm.business_registry_number} onChange={handleCompanyChange} className={inputClass} placeholder="BD 12345/2020" />
-                                                    </div>
-                                                    <div>
-                                                        <label className={labelClass}>Company Founding Date <span className="text-red-500">*</span></label>
-                                                        <input type="text" name="founding_date" value={companyForm.founding_date} onChange={handleCompanyChange} className={inputClass} placeholder="e.g., 15.01.2010" />
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {isPrimaryMarket && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <label className={labelClass}>Company Address <span className="text-red-500">*</span></label>
-                                                    <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Full registered business address..." />
+                                                    <label className={labelClass}>Business Registry Number (Optional)</label>
+                                                    <input type="text" name="business_registry_number" value={companyForm.business_registry_number} onChange={handleCompanyChange} className={inputClass} placeholder="Official registry reference" />
                                                 </div>
-                                            )}
-
-                                            {isPrimaryMarket && (
                                                 <div>
-                                                    <label className={labelClass}>Company Description <span className="text-red-500">*</span></label>
-                                                    <textarea name="description" value={companyForm.description} onChange={handleCompanyChange} rows={3} className={`${inputClass} resize-none`} placeholder="Brief description of your company and activities..." />
+                                                    <label className={labelClass}>Company Founding Date (Optional)</label>
+                                                    <input type="text" name="founding_date" value={companyForm.founding_date} onChange={handleCompanyChange} className={inputClass} placeholder="DD/MM/YYYY" />
                                                 </div>
-                                            )}
+                                            </div>
+
+                                            <div>
+                                                <label className={labelClass}>Company Address (Optional)</label>
+                                                <textarea name="company_address" value={companyForm.company_address} onChange={handleCompanyChange} rows={2} className={`${inputClass} resize-none`} placeholder="Registered business address..." />
+                                            </div>
+
+                                            <div>
+                                                <label className={labelClass}>Company Description (Optional)</label>
+                                                <textarea name="description" value={companyForm.description} onChange={handleCompanyChange} rows={3} className={`${inputClass} resize-none`} placeholder="Brief description of your company and activities..." />
+                                            </div>
 
                                             <div className="flex flex-col-reverse gap-3 border-t border-[#e5e7eb] pt-4 sm:flex-row sm:justify-end">
                                                 {employer && !readOnlyPreview && (
@@ -819,19 +742,19 @@ export default function EmployerProfilePage({
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <InfoRow icon={<Building2 size={18} />} label="Company Name" value={companyForm.company_name} />
                                             <InfoRow icon={<Briefcase size={18} />} label="Industry" value={companyForm.industry} />
-                                            {isPrimaryMarket && <InfoRow icon={<Hash size={18} />} label="Tax ID" value={companyForm.tax_id} />}
-                                            {isPrimaryMarket && <InfoRow icon={<FileText size={18} />} label="Registration No." value={companyForm.company_registration_number} />}
+                                            {companyForm.tax_id && <InfoRow icon={<Hash size={18} />} label="Tax ID / VAT" value={companyForm.tax_id} />}
+                                            {companyForm.company_registration_number && <InfoRow icon={<FileText size={18} />} label="Registration No." value={companyForm.company_registration_number} />}
                                             <InfoRow icon={<Globe size={18} />} label="Country" value={companyForm.country} />
-                                            {isPrimaryMarket && <InfoRow icon={<MapPin size={18} />} label="City" value={companyForm.city} />}
-                                            {isPrimaryMarket && <InfoRow icon={<Users size={18} />} label="Company Size" value={companyForm.company_size} />}
+                                            {companyForm.city && <InfoRow icon={<MapPin size={18} />} label="City" value={companyForm.city} />}
+                                            {companyForm.company_size && <InfoRow icon={<Users size={18} />} label="Company Size" value={companyForm.company_size} />}
                                             <InfoRow icon={<Phone size={18} />} label="Phone" value={companyForm.contact_phone} />
                                             <InfoRow icon={<Globe size={18} />} label="Website" value={companyForm.website} />
-                                            {isPrimaryMarket && <InfoRow icon={<Calendar size={18} />} label="Founded" value={companyForm.founded_year} />}
-                                            {isPrimaryMarket && <InfoRow icon={<MapPin size={18} />} label="Postal Code" value={companyForm.postal_code} />}
-                                            {isPrimaryMarket && <InfoRow icon={<FileText size={18} />} label="Business Registry No." value={companyForm.business_registry_number} />}
-                                            {isPrimaryMarket && <InfoRow icon={<Calendar size={18} />} label="Founding Date" value={companyForm.founding_date} />}
-                                            {isPrimaryMarket && <InfoRow icon={<MapPin size={18} />} label="Address" value={companyForm.company_address} />}
-                                            {isPrimaryMarket && companyForm.description && <InfoRow icon={<FileText size={18} />} label="Description" value={companyForm.description} />}
+                                            {companyForm.founded_year && <InfoRow icon={<Calendar size={18} />} label="Founded" value={companyForm.founded_year} />}
+                                            {companyForm.postal_code && <InfoRow icon={<MapPin size={18} />} label="Postal Code" value={companyForm.postal_code} />}
+                                            {companyForm.business_registry_number && <InfoRow icon={<FileText size={18} />} label="Business Registry No." value={companyForm.business_registry_number} />}
+                                            {companyForm.founding_date && <InfoRow icon={<Calendar size={18} />} label="Founding Date" value={companyForm.founding_date} />}
+                                            {companyForm.company_address && <InfoRow icon={<MapPin size={18} />} label="Address" value={companyForm.company_address} />}
+                                            {companyForm.description && <InfoRow icon={<FileText size={18} />} label="Description" value={companyForm.description} />}
                                         </div>
                                     </div>
                                 )}
