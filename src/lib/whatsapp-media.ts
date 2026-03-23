@@ -1,7 +1,7 @@
 // ─── WhatsApp Media Processing ──────────────────────────────────────────────
-// Downloads media from WhatsApp Cloud API and processes it with Claude:
-// - Audio/voice messages → transcription
-// - Image messages → document detection + OCR extraction
+// Downloads media from WhatsApp Cloud API and processes it:
+// - Audio/voice messages → OpenAI Whisper transcription
+// - Image messages → Claude Vision document detection + OCR extraction
 
 const GRAPH_API_VERSION = "v21.0";
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
@@ -56,74 +56,58 @@ export async function downloadWhatsAppMedia(
 }
 
 /**
- * Transcribe a WhatsApp voice/audio message using Claude's audio understanding.
- * Claude can process audio natively — we send it as base64.
+ * Map MIME type to a file extension Whisper accepts.
+ * Whisper supports: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, webm
+ */
+function getAudioExtension(mimeType: string): string {
+    if (mimeType.includes("ogg")) return "ogg";
+    if (mimeType.includes("mp4")) return "mp4";
+    if (mimeType.includes("mpeg") || mimeType.includes("mpga")) return "mp3";
+    if (mimeType.includes("wav")) return "wav";
+    if (mimeType.includes("webm")) return "webm";
+    if (mimeType.includes("flac")) return "flac";
+    if (mimeType.includes("m4a")) return "m4a";
+    return "ogg"; // WhatsApp voice notes are ogg/opus
+}
+
+/**
+ * Transcribe a WhatsApp voice/audio message using OpenAI Whisper API.
+ * Whisper natively handles 50+ languages including Serbian, Arabic, Hindi, etc.
  */
 export async function transcribeWhatsAppAudio(
-    apiKey: string,
+    openaiApiKey: string,
     mediaId: string
 ): Promise<{ text: string; language: string }> {
     const { buffer, mimeType } = await downloadWhatsAppMedia(mediaId);
 
-    // Claude supports audio via base64 in the content block
-    const base64Audio = buffer.toString("base64");
+    const extension = getAudioExtension(mimeType);
 
-    // Map WhatsApp MIME types to Claude-supported types
-    const claudeMimeType = mapAudioMimeType(mimeType);
+    // Whisper API uses multipart/form-data
+    const formData = new FormData();
+    const blob = new Blob([buffer], { type: mimeType });
+    formData.append("file", blob, `voice.${extension}`);
+    formData.append("model", "whisper-1");
+    formData.append("response_format", "verbose_json");
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
+            Authorization: `Bearer ${openaiApiKey}`,
         },
-        body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 1024,
-            system: "You transcribe audio messages. Return ONLY a JSON object with two fields: \"text\" (the transcription) and \"language\" (ISO 639-1 code like \"sr\", \"en\", \"ar\", \"de\"). If the audio is unclear, do your best. Never refuse — always attempt transcription.",
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        {
-                            type: "document",
-                            source: {
-                                type: "base64",
-                                media_type: claudeMimeType,
-                                data: base64Audio,
-                            },
-                        },
-                        {
-                            type: "text",
-                            text: "Transcribe this audio message. Return JSON: {\"text\": \"...\", \"language\": \"xx\"}",
-                        },
-                    ],
-                },
-            ],
-        }),
+        body: formData,
     });
 
     if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`Claude audio transcription failed: ${response.status} - ${errText.substring(0, 300)}`);
+        throw new Error(`Whisper transcription failed: ${response.status} - ${errText.substring(0, 300)}`);
     }
 
     const data = await response.json();
-    const content = Array.isArray(data.content) ? data.content : [];
-    const textBlock = content.find((b: { type: string }) => b.type === "text");
-    const raw = textBlock?.text?.trim() || "";
 
-    try {
-        const parsed = JSON.parse(raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
-        return {
-            text: typeof parsed.text === "string" ? parsed.text.trim() : raw,
-            language: typeof parsed.language === "string" ? parsed.language : "en",
-        };
-    } catch {
-        // If JSON parse fails, return raw text
-        return { text: raw, language: "en" };
-    }
+    return {
+        text: typeof data.text === "string" ? data.text.trim() : "",
+        language: typeof data.language === "string" ? data.language : "en",
+    };
 }
 
 /**
@@ -217,17 +201,6 @@ Never refuse — always analyze.`,
             description: raw.substring(0, 200),
         };
     }
-}
-
-function mapAudioMimeType(mimeType: string): string {
-    // WhatsApp sends audio/ogg; codecs=opus for voice messages
-    if (mimeType.includes("ogg")) return "audio/ogg";
-    if (mimeType.includes("mp4")) return "audio/mp4";
-    if (mimeType.includes("mpeg")) return "audio/mpeg";
-    if (mimeType.includes("wav")) return "audio/wav";
-    if (mimeType.includes("webm")) return "audio/webm";
-    // Default fallback
-    return "audio/ogg";
 }
 
 // ─── Media type helpers ─────────────────────────────────────────────────────
