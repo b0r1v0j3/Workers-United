@@ -184,8 +184,8 @@ ${buildEmployerWhatsAppRules({
     return params.callResponseText({
         model: params.model,
         instructions,
-        input: `Phone: ${params.normalizedPhone}\nLatest message:\n${params.message}\n\nRecent conversation:\n${formatWhatsAppHistory(params.historyMessages, 10)}`,
-        maxOutputTokens: 2048,
+        input: `Phone: ${params.normalizedPhone}\nLatest message:\n${params.message}\n\nRecent conversation:\n${formatWhatsAppHistory(params.historyMessages, 12)}`,
+        maxOutputTokens: 1024,
     });
 }
 

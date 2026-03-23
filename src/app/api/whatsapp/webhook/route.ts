@@ -378,7 +378,6 @@ export async function POST(request: NextRequest) {
                             wamid,
                         });
                         const isDuplicateInboundMessage = inboundRecord.duplicate;
-                        console.log(`[WH-DBG] step=1_recorded phone=${normalizedPhone} dup=${isDuplicateInboundMessage}`);
 
                         const workerRecordSelect = `
                             id, profile_id, status, queue_position, preferred_job, 
@@ -398,7 +397,6 @@ export async function POST(request: NextRequest) {
                             workerSelect: workerRecordSelect,
                         });
                         const linkedWorkerRecord = isLinkedWhatsAppWorker(workerRecord) ? workerRecord : null;
-                        console.log(`[WH-DBG] step=2_identity phone=${normalizedPhone} linked=${!!linkedWorkerRecord}`);
                         const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
                         const employerLead = await resolveEmployerWhatsAppLead({
                             admin: supabase,
@@ -410,7 +408,6 @@ export async function POST(request: NextRequest) {
                         const employerRecord = employerLead.employerRecord;
                         const isEmployer = employerLead.isEmployer;
                         const activityUserId = linkedWorkerRecord?.profile_id || employerRecord?.profile_id || null;
-                        console.log(`[WH-DBG] step=3_employer phone=${normalizedPhone} emp=${isEmployer} admin=${isAdmin} uid=${!!activityUserId}`);
                         const supportRole = linkedWorkerRecord
                             ? "worker"
                             : employerRecord
@@ -538,7 +535,6 @@ export async function POST(request: NextRequest) {
                     null,
                     await ensureHistoryMessages()
                 );
-                console.log(`[WH-DBG] step=4_language phone=${normalizedPhone} lang=${latestMessageLanguage} type=${messageType}`);
 
                 if (!isTextLikeWhatsAppMessage(messageType)) {
                     if (!attachmentReplySent.has(normalizedPhone)) {
@@ -576,16 +572,15 @@ export async function POST(request: NextRequest) {
 
                 // ─── Employer WhatsApp Flow ───────────────────────────────
                 if (isEmployer) {
-                    const OPENAI_API_KEY_EMP = process.env.OPENAI_API_KEY;
                     const employerHistory = await ensureHistoryMessages();
                     const employerLanguage = resolveWhatsAppLanguageName(content, null, employerHistory);
                     const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
-                    if (OPENAI_API_KEY_EMP) {
+                    if (ANTHROPIC_API_KEY) {
                         try {
                             const empBrainMemory = await loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT);
                             const employerReply = await generateEmployerWhatsAppReply({
-                                callResponseText: (options) => callOpenAIResponseText(OPENAI_API_KEY_EMP, options),
-                                model: WHATSAPP_ROUTER_MODEL,
+                                callResponseText: (options) => callClaudeResponseText(ANTHROPIC_API_KEY, options),
+                                model: WHATSAPP_RESPONSE_MODEL,
                                 message: content,
                                 normalizedPhone,
                                 employerRecord,
@@ -642,8 +637,6 @@ export async function POST(request: NextRequest) {
                     }
                     continue;
                 }
-
-                console.log(`[WH-DBG] step=5_pre_onboarding phone=${normalizedPhone}`);
                 const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
                 const onboardingReply = await handleWhatsAppOnboarding(
                     supabase,
@@ -670,8 +663,6 @@ export async function POST(request: NextRequest) {
                     }
                     continue;
                 }
-
-                console.log(`[WH-DBG] step=6_post_onboarding phone=${normalizedPhone} onboarding=${onboardingReply !== null}`);
                 // ─── Intent-routed AI Brain (OpenAI router → Claude responder) ───
                 let aiResponse: string | null = null;
                 let routerDecision: WhatsAppRouterDecision | null = null;
@@ -683,8 +674,6 @@ export async function POST(request: NextRequest) {
                 let supportAccess: SupportAccessSnapshot | null = null;
                 const hasRouterKey = !!OPENAI_API_KEY_ENV;
                 const hasResponseKey = !!ANTHROPIC_API_KEY;
-
-                console.log(`[WH-DBG] step=7_ai_entry phone=${normalizedPhone} router=${hasRouterKey} claude=${hasResponseKey}`);
                 if (hasRouterKey || hasResponseKey) {
                     try {
                         const platformMessagingConfig = await loadPlatformMessagingConfig();

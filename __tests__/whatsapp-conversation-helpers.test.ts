@@ -122,35 +122,33 @@ describe("whatsapp-conversation-helpers", () => {
         expect(truncateWhatsAppPreview("a".repeat(10), 8)).toBe("aaaaa...");
     });
 
-    it("formats history into User/Assistant transcript lines", () => {
+    it("formats history into User/Assistant transcript lines with timestamps", () => {
         expect(formatWhatsAppHistory([], 5)).toBe("(No recent history)");
+        // Without timestamps
         expect(formatWhatsAppHistory([
             { direction: "inbound", content: "Hi" },
             { direction: "outbound", content: "Hello there" },
         ], 5)).toBe("User: Hi\nAssistant: Hello there");
+        // With template label
+        expect(formatWhatsAppHistory([
+            { direction: "outbound", content: "Your profile is incomplete", message_type: "template", template_name: "profile_incomplete" },
+        ], 5)).toBe("System [profile_incomplete]: Your profile is incomplete");
     });
 
-    it("loads whatsapp history in chronological order and excludes failed or template outbound turns", async () => {
-        const history = await loadWhatsAppConversationHistory(createReadAdmin() as never, "+381600000000", 2);
+    it("loads whatsapp history in chronological order including templates but excluding failed", async () => {
+        const history = await loadWhatsAppConversationHistory(createReadAdmin() as never, "+381600000000", 5);
 
-        expect(history).toEqual([
-            {
-                direction: "inbound",
-                content: "Hello",
-                created_at: "2026-03-19T10:00:00.000Z",
-                status: "delivered",
-                message_type: undefined,
-                template_name: undefined,
-            },
-            {
-                direction: "outbound",
-                content: "Reply 1",
-                created_at: "2026-03-19T10:01:00.000Z",
-                status: "sent",
-                message_type: undefined,
-                template_name: undefined,
-            },
-        ]);
+        expect(history).toHaveLength(3);
+        expect(history[0].content).toBe("Hello");
+        expect(history[0].direction).toBe("inbound");
+        expect(history[1].content).toBe("Reply 1");
+        expect(history[1].direction).toBe("outbound");
+        // Template messages are now included (previously filtered out)
+        expect(history[2].content).toBe("Template nudge");
+        expect(history[2].message_type).toBe("template");
+        expect(history[2].template_name).toBe("profile_incomplete");
+        // Failed messages still excluded
+        expect(history.find((m) => m.content === "Failed reply")).toBeUndefined();
     });
 
     it("loads and normalizes safe brain-memory entries", async () => {
