@@ -87,11 +87,11 @@ describe("whatsapp-worker-ai", () => {
         expect(reply).toBe("Worker reply");
         expect(callResponseText).toHaveBeenCalledWith(expect.objectContaining({
             model: "gpt-5.4-mini",
-            input: expect.stringContaining("Phone: +212600000000"),
-            instructions: expect.stringContaining("You are the official WhatsApp assistant for Workers United."),
+            input: expect.stringContaining("What is my status?"),
+            instructions: expect.stringContaining("You are the Workers United WhatsApp assistant"),
         }));
         expect(callResponseText).toHaveBeenCalledWith(expect.objectContaining({
-            instructions: expect.stringContaining("Worker snapshot:"),
+            instructions: expect.stringContaining("PENDING_APPROVAL"),
         }));
     });
 });
