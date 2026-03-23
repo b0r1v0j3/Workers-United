@@ -793,7 +793,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 
             const recoveryBodyMap: Record<1 | 2 | 3, string> = {
                 1: `You opened the ${amount} Job Finder checkout but did not finish the payment yet. Your profile, required documents, and admin review already unlocked this final step, so return to your dashboard and continue when you're ready.`,
-                2: `Your profile, required documents, and admin review already unlocked the ${amount} Job Finder checkout. Once that final payment is confirmed, your worker profile enters the active queue and support unlocks inside the platform.`,
+                2: `Your profile, required documents, and admin review already unlocked the ${amount} Job Finder checkout. Once that final payment is confirmed, your worker profile enters the active queue and your dashboard continues the next active step from there.`,
                 3: `Your earlier ${amount} checkout is no longer active. Your profile, required documents, and admin review are still in place, so open your dashboard to start a fresh checkout and continue exactly where you left off.`,
             };
 
