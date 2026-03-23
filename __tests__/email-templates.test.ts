@@ -145,7 +145,9 @@ describe('getEmailTemplate', () => {
         expect(subject).toContain('still waiting');
         expect(html).toContain('required documents');
         expect(html).toContain('admin review');
-        expect(html).toContain('active queue and support unlocks');
+        expect(html).toContain('active queue');
+        expect(html).not.toContain('support unlocks');
+        expect(html).not.toContain('support inbox');
         expect(html).not.toContain('Your profile is still waiting for the $9 Job Finder payment.');
     });
 
