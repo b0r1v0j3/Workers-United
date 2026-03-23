@@ -281,7 +281,7 @@ describe("POST /api/whatsapp/webhook", () => {
         expect(sendWhatsAppText).toHaveBeenCalledTimes(1);
         expect(sendWhatsAppText).toHaveBeenCalledWith("+381600000022", "Employer reply", undefined);
         expect(logServerActivity).toHaveBeenCalledWith(
-            "anonymous",
+            null,
             "whatsapp_webhook_message_failed",
             "error",
             expect.objectContaining({
