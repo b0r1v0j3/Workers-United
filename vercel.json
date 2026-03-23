@@ -68,6 +68,10 @@
       "schedule": "0 11 * * *"
     },
     {
+      "path": "/api/cron/whatsapp-improve",
+      "schedule": "0 4 * * *"
+    },
+    {
       "path": "/api/cron/system-smoke",
       "schedule": "30 * * * *"
     }
