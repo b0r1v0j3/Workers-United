@@ -447,6 +447,39 @@ describe("whatsapp-brain guards", () => {
         expect(reply).not.toContain("ticket");
     });
 
+    it("routes registered worker support-keyword questions to support copy even when intent stays general", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "How do I open support inbox?",
+            language: "English",
+            intent: "general",
+            workerStatus: "APPROVED",
+            adminApproved: true,
+            entryFeePaid: true,
+            queueJoinedAt: "2026-03-18T10:00:00.000Z",
+            hasSupportAccess: true,
+        });
+
+        expect(reply).toContain("support inbox");
+        expect(reply).not.toContain("payment is recorded");
+        expect(reply).not.toContain("Your Job Finder payment is already recorded");
+    });
+
+    it("keeps locked support guidance truthful when support-keyword questions stay on general intent", () => {
+        const reply = buildRegisteredWorkerWhatsAppReply({
+            message: "How do I contact support?",
+            language: "English",
+            intent: "general",
+            workerStatus: "NEW",
+            adminApproved: false,
+            entryFeePaid: false,
+            hasSupportAccess: false,
+        });
+
+        expect(reply).toContain("support inbox unlocks only once Job Finder is available");
+        expect(reply).toContain("required documents are finished");
+        expect(reply).not.toContain("current status");
+    });
+
     it("keeps English support replies English when the user message contains generic problem wording", () => {
         const supportReply = buildRegisteredWorkerWhatsAppReply({
             message: "I have a technical problem",
