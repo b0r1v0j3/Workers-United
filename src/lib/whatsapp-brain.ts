@@ -786,11 +786,9 @@ export function buildRegisteredWorkerWhatsAppReply({
     const wantsPrice = intent === "price" || PRICE_HINT_PATTERN.test(normalized);
     const wantsDocuments = intent === "documents" || DOCUMENT_HINT_PATTERN.test(normalized);
     const lacksRequiredDiploma = MISSING_DIPLOMA_HINT_PATTERN.test(normalized);
-    const wantsStatus = intent === "status" || STATUS_HINT_PATTERN.test(normalized);
-    const wantsSupport = !wantsStatus && (
-        intent === "support"
-        || /\b(help|support|human|agent|bug|error|problem|issue|not working|operator|tehni[cč]ki|podr[sš]ka|pomo[cć])\b/i.test(normalized)
-    );
+    const hasSupportCue = SUPPORT_HINT_PATTERN.test(normalized);
+    const wantsSupport = intent === "support" || hasSupportCue;
+    const wantsStatus = !wantsSupport && (intent === "status" || STATUS_HINT_PATTERN.test(normalized));
     const asksSpecificAvailability = SPECIFIC_AVAILABILITY_HINT_PATTERN.test(normalized);
     const asksHowItWorks = PROCESS_HINT_PATTERN.test(normalized);
     const wantsJobHelp = intent === "job_intent" || JOB_HINT_PATTERN.test(normalized) || looksLikeWorkerWhatsAppLead(message);
