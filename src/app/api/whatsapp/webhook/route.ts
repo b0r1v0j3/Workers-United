@@ -854,15 +854,16 @@ export async function POST(request: NextRequest) {
                     cleanResponse = aiResponse.replace(learnRegex, "").replace(/\n{3,}/g, "\n\n").trim();
 
                     // Save learnings to brain_memory in Supabase
-                    if (learnings.length > 0 && isAdmin) {
+                    if (learnings.length > 0) {
                         try {
                             const admin = createAdminClient();
+                            const learnConfidence = isAdmin ? 0.9 : 0.6;
                             const learningSaveStats = await saveBrainFactsDedup(
                                 admin,
                                 learnings.map((learning) => ({
                                     category: learning.category,
                                     content: learning.content,
-                                    confidence: 0.8,
+                                    confidence: learnConfidence,
                                 }))
                             );
                             console.log(

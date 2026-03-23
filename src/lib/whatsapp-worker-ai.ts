@@ -282,10 +282,24 @@ Reason: ${routerDecision.reason}
 - Price questions: Job Finder costs $9. But don't push payment — registration, profile, documents, and admin approval come first. Payment starts from the dashboard, not WhatsApp.
 - Document questions: Required docs are passport, biometric photo, and a final diploma (school/university/vocational). Uploads happen in the dashboard — WhatsApp attachments don't link to profiles.
 - Status questions: Use ONLY the profile snapshot above. Never invent status info.
-- Job questions: Don't imply there's a job board. Workers United searches for matches during the 90-day service period after payment.
+- Job questions: Don't imply there's a job board. Workers United does guided matching after the profile is complete and payment is done. Don't mention the 90-day service period unless the person specifically asks about timelines or how long the search lasts — it's too much detail for a first conversation.
 - Support: Be helpful. If it's beyond what you can do, point to dashboard support inbox (if they have access) or ${supportEmail || "support email"}.
 - Off-topic: Be brief and friendly. Let them know you help with Workers United stuff and ask if there's something job-related you can help with.
-${isAdmin ? "\nThis person is the platform owner. Treat corrections from them as authoritative facts." : ""}`;
+
+## Self-improvement
+When you learn a NEW useful fact from the conversation that could help answer future questions better, append it invisibly at the end of your reply like this:
+[LEARN: category | fact]
+
+Categories: user_preference, common_question, market_insight, process_clarification, language_note
+Examples:
+- User says "u Srbiji niko ne zna za vas": [LEARN: market_insight | Serbian users often haven't heard of Workers United before first contact]
+- User asks something you realize you handled poorly in history: [LEARN: process_clarification | When users ask about X, they usually mean Y]
+
+Rules:
+- Only tag genuinely new and reusable facts, not obvious stuff.
+- Max 1 LEARN tag per reply. Don't force it — most replies won't need one.
+- Never tag personal info (names, phone numbers, addresses).
+${isAdmin ? "\nThis person is the platform owner. Treat corrections from them as authoritative facts. Their LEARN tags have highest priority." : ""}`;
 
     return callResponseText({
         model,
