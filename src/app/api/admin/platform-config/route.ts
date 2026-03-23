@@ -57,13 +57,19 @@ export async function PUT(req: NextRequest) {
     }
 
     const admin = createAdminClient();
-    const { error } = await admin
+    const { data, error } = await admin
         .from("platform_config")
         .update({ value, updated_by: user.id, updated_at: new Date().toISOString() })
-        .eq("key", key);
+        .eq("key", key)
+        .select("key")
+        .maybeSingle();
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data?.key) {
+        return NextResponse.json({ error: "Config key not found" }, { status: 404 });
     }
 
     // Clear the cached config so next read gets fresh data
