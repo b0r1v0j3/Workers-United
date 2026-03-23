@@ -156,7 +156,7 @@ async function sendWhatsAppRouteReply(params: {
     const result = await sendWhatsAppText(params.phone, params.text, params.userId);
     if (!result.success) {
         await logServerActivity(
-            params.activityUserId || "anonymous",
+            params.activityUserId || null,
             "whatsapp_reply_delivery_failed",
             "messaging",
             {
@@ -355,7 +355,7 @@ export async function POST(request: NextRequest) {
                             messageType: messageType || null,
                         });
                         await logServerActivity(
-                            "anonymous",
+                            null,
                             "whatsapp_webhook_message_malformed",
                             "error",
                             {
@@ -435,7 +435,7 @@ export async function POST(request: NextRequest) {
                                 hadProcessingError = true;
                                 console.error("[WhatsApp Webhook] Failed to attach inbound user identity:", attachError);
                                 await logServerActivity(
-                                    activityUserId || "anonymous",
+                                    activityUserId || null,
                                     "whatsapp_inbound_identity_attach_failed",
                                     "messaging",
                                     {
@@ -461,7 +461,7 @@ export async function POST(request: NextRequest) {
 
                         if (looksLikeAutomatedWhatsAppAutoReply(messageType, content)) {
                             await logServerActivity(
-                                activityUserId || "anonymous",
+                                activityUserId || null,
                                 "whatsapp_inbound_autoreply_suppressed",
                                 "messaging",
                                 {
@@ -478,7 +478,7 @@ export async function POST(request: NextRequest) {
 
                         // Log to activity tracking
                         await logServerActivity(
-                            activityUserId || "anonymous",
+                            activityUserId || null,
                             "whatsapp_message_received",
                             "messaging",
                             {
@@ -558,7 +558,7 @@ export async function POST(request: NextRequest) {
                         }
                         if (mediaReplyResult.success) {
                             await logServerActivity(
-                                activityUserId || "anonymous",
+                                activityUserId || null,
                                 "whatsapp_media_fallback",
                                 "messaging",
                                 {
@@ -720,7 +720,7 @@ export async function POST(request: NextRequest) {
                         routerDecision.language = resolveWhatsAppLanguageName(content, routerDecision.language, historyMessages);
 
                         await logServerActivity(
-                            activityUserId || "anonymous",
+                            activityUserId || null,
                             "whatsapp_router_decision",
                             "messaging",
                             {
@@ -830,7 +830,7 @@ export async function POST(request: NextRequest) {
                     } catch (aiError) {
                         console.error("[WhatsApp] OpenAI error:", aiError);
                         await logServerActivity(
-                            activityUserId || "anonymous",
+                            activityUserId || null,
                             "whatsapp_openai_failed",
                             "error",
                             { phone: normalizedPhone, error: aiError instanceof Error ? aiError.message : "unknown" },
@@ -853,11 +853,11 @@ export async function POST(request: NextRequest) {
                     // Strip [LEARN: ...] tags from the message sent to WhatsApp
                     cleanResponse = aiResponse.replace(learnRegex, "").replace(/\n{3,}/g, "\n\n").trim();
 
-                    // Save learnings to brain_memory in Supabase
-                    if (learnings.length > 0) {
+                    // Save learnings to brain_memory in Supabase (admin only)
+                    if (learnings.length > 0 && isAdmin) {
                         try {
                             const admin = createAdminClient();
-                            const learnConfidence = isAdmin ? 0.9 : 0.6;
+                            const learnConfidence = 0.9;
                             const learningSaveStats = await saveBrainFactsDedup(
                                 admin,
                                 learnings.map((learning) => ({
@@ -924,7 +924,7 @@ export async function POST(request: NextRequest) {
                             });
                         } else {
                             await logServerActivity(
-                                activityUserId || "anonymous",
+                                activityUserId || null,
                                 aiResponse ? "whatsapp_ai_response" : "whatsapp_fallback_response",
                                 "messaging",
                                 {
