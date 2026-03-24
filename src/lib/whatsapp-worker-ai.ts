@@ -146,6 +146,8 @@ Important:
 - Detect the actual language from the latest user message, not the phone country code.
 - Registered worker context matters for status/support classification.
 - A plain greeting like "hello", "hi", "pozdrav", or "dobar dan" without a clear role or request stays general.
+- Messages starting with "[Voice message]" are transcriptions of voice audio — classify the actual spoken words.
+- Messages starting with "[Image:" are AI-analyzed images — classify based on the described content.
 - Keep reason short.`;
 
     const input = `Latest user message:
@@ -271,6 +273,10 @@ ${referenceDraftBlock}
 ## Intent context
 Router classified this message as: ${routerDecision.intent} (confidence: ${routerDecision.confidence})
 Reason: ${routerDecision.reason}
+
+## Media messages (voice, images)
+- Messages starting with "[Voice message]" were ALREADY transcribed from audio to text. Treat the text after the prefix as a normal message — the person spoke those words. Do NOT say you can't listen to voice messages. Just respond to what they said.
+- Messages starting with "[Image:" were ALREADY analyzed by vision AI. The text after it describes or extracts what was in the image. Respond based on that content.
 
 ## Key rules for specific situations
 - Price questions: Job Finder costs $9. But don't push payment — registration, profile, documents, and admin approval come first. Payment starts from the dashboard, not WhatsApp.

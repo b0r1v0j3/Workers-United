@@ -463,6 +463,11 @@ export async function POST(request: NextRequest) {
                             continue;
                         }
 
+                        // Reactions (emoji on messages) don't need a reply — skip silently
+                        if (messageType === "reaction") {
+                            continue;
+                        }
+
                         if (looksLikeAutomatedWhatsAppAutoReply(messageType, content)) {
                             await logServerActivity(
                                 activityUserId || null,
