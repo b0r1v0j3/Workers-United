@@ -608,7 +608,6 @@ export async function POST(request: NextRequest) {
             : `Position Confirmation for ${paymentOwnerName}`;
 
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ["card"],
             mode: "payment",
             client_reference_id: paymentId,
             customer: stripeCustomerId || undefined,
@@ -621,12 +620,7 @@ export async function POST(request: NextRequest) {
                 }
                 : undefined,
             phone_number_collection: { enabled: true },
-            billing_address_collection: "required",
-            custom_text: {
-                submit: {
-                    message: "Use the same cardholder name and billing address that your bank has on file to reduce declines.",
-                },
-            },
+            billing_address_collection: "auto",
             line_items: [
                 {
                     price_data: {
@@ -638,7 +632,7 @@ export async function POST(request: NextRequest) {
                                     : "Job Finder Service — Workers United"
                                 : "Position Confirmation — Workers United",
                             description: type === "entry_fee"
-                                ? "Personalized European job matching with visa guidance, interview prep, and 90-day money-back guarantee."
+                                ? "Personalized European job matching with visa guidance and interview prep."
                                 : `Confirm your position for: ${offer?.job_requests?.title || "Job Opportunity"}`,
                         },
                         unit_amount: priceConfig.amount,
