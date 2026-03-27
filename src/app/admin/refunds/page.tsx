@@ -4,6 +4,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
 
+type RefundWorkerRow = {
+    id: string;
+    entry_payment_id?: string | null;
+    queue_joined_at?: string | null;
+    profiles?: {
+        email?: string | null;
+        full_name?: string | null;
+    } | null;
+};
+
 export default async function AdminRefundsPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -62,8 +72,8 @@ export default async function AdminRefundsPage() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-100">
-                            {refundWorkers?.map((workerRecord: any) => {
-                                const joinedAt = new Date(workerRecord.queue_joined_at);
+                            {(refundWorkers as RefundWorkerRow[] | null)?.map((workerRecord) => {
+                                const joinedAt = new Date(workerRecord.queue_joined_at || 0);
                                 const daysWaited = Math.floor((nowMs - joinedAt.getTime()) / (1000 * 60 * 60 * 24));
 
                                 return (
@@ -87,7 +97,7 @@ export default async function AdminRefundsPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             <div className="flex gap-3">
-                                                <ProcessRefundButton workerRecordId={workerRecord.id} paymentId={workerRecord.entry_payment_id} />
+                                                <ProcessRefundButton workerRecordId={workerRecord.id} paymentId={workerRecord.entry_payment_id || undefined} />
                                                 <DenyRefundButton workerRecordId={workerRecord.id} />
                                             </div>
                                         </td>

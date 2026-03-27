@@ -6,10 +6,27 @@ import { buildAdminTestUser, getAdminTestSession, getAdminTestWorkspaceHref } fr
 import { getAdminTestWorkerWorkspace } from "@/lib/admin-test-data";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
-import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { loadCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
+
+interface WorkerDashboardPageRecord extends WorkerRecordSnapshot {
+    id: string;
+    profiles?: { full_name?: string | null } | null;
+    full_name?: string | null;
+    gender?: string | null;
+    marital_status?: string | null;
+    date_of_birth?: string | null;
+    birth_city?: string | null;
+    birth_country?: string | null;
+    citizenship?: string | null;
+    phone?: string | null;
+    passport_issued_by?: string | null;
+    passport_issue_date?: string | null;
+    passport_expiry_date?: string | null;
+    reject_reason?: string | null;
+}
 
 export default async function WorkerProfilePage({
     searchParams,
@@ -44,7 +61,6 @@ export default async function WorkerProfilePage({
             full_name: sandboxWorker?.full_name || session.activePersona.label,
             user_type: "worker",
         };
-        const verifiedDocs = sandboxDocuments.filter((document) => document.status === "verified");
         const { completion: profileCompletion, missingFields: sandboxMissingFields } = getWorkerCompletion({
             profile: sandboxProfile,
             worker: sandboxWorker,
@@ -68,7 +84,6 @@ export default async function WorkerProfilePage({
                 pendingOffers={[]}
                 profileCompletion={profileCompletion}
                 missingFields={sandboxMissingFields}
-                isReady={profileCompletion === 100 && verifiedDocs.length >= 3}
                 inQueue={sandboxWorker?.status === "IN_QUEUE"}
                 hasPaidEntryFee={hasPaidEntryFee}
                 readOnlyPreview={false}
@@ -100,7 +115,7 @@ export default async function WorkerProfilePage({
         .maybeSingle();
 
     // Fetch canonical worker record
-    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(
+    const { data: workerRecord } = await loadCanonicalWorkerRecord<WorkerDashboardPageRecord>(
         dataClient,
         targetProfileId,
         "*"
@@ -136,8 +151,6 @@ export default async function WorkerProfilePage({
         : { data: [] as Array<Record<string, unknown>> };
 
     // Calculate verified count from actual documents
-    const verifiedDocs = documents?.filter(d => d.status === 'verified') || [];
-    const verifiedCount = verifiedDocs.length;
     const hasPaidEntryFee =
         !!workerRecord?.entry_fee_paid ||
         !!completedEntryPayment?.id ||
@@ -151,7 +164,6 @@ export default async function WorkerProfilePage({
     }, {
         fullNameFallback,
     });
-    const isReady = profileCompletion === 100 && verifiedCount >= 3;
     const previewUser = inspectProfileId
         ? {
             ...user,
@@ -172,7 +184,6 @@ export default async function WorkerProfilePage({
             pendingOffers={pendingOffers || []}
             profileCompletion={profileCompletion}
             missingFields={missingFields}
-            isReady={isReady}
             inQueue={inQueue}
             hasPaidEntryFee={hasPaidEntryFee}
             readOnlyPreview={isAdminPreview}

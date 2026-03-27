@@ -11,6 +11,44 @@ import {
     sortAdminTestPersonas,
 } from "@/lib/admin-test-mode";
 
+type AdminTestQueryError = { message?: string | null } | null;
+
+type AdminTestQueryResponse<TData = unknown> = {
+    data?: TData | null;
+    error?: AdminTestQueryError;
+};
+
+type AdminTestQueryChain<TData = unknown> = PromiseLike<AdminTestQueryResponse<TData>> & {
+    select: (...args: unknown[]) => AdminTestQueryChain<TData>;
+    eq: (...args: unknown[]) => AdminTestQueryChain<TData>;
+    order: (...args: unknown[]) => AdminTestQueryChain<TData>;
+    single: () => PromiseLike<AdminTestQueryResponse<TData>>;
+    maybeSingle: () => PromiseLike<AdminTestQueryResponse<TData>>;
+    insert: (payload: unknown) => AdminTestQueryChain<TData>;
+    update: (payload: unknown) => AdminTestQueryChain<TData>;
+    upsert: (payload: unknown, options?: unknown) => AdminTestQueryChain<TData>;
+    delete: () => AdminTestQueryChain<TData>;
+};
+
+type AdminTestStorageClient = {
+    from: (bucket: string) => {
+        upload: (
+            path: string,
+            file: File,
+            options: { contentType?: string; upsert: boolean }
+        ) => PromiseLike<{ error?: AdminTestQueryError }>;
+    };
+};
+
+type AdminTestDataClient = {
+    from: (table: string) => unknown;
+    storage: AdminTestStorageClient;
+};
+
+function adminTable(admin: AdminTestDataClient, table: string) {
+    return admin.from(table) as AdminTestQueryChain;
+}
+
 export interface AdminTestWorkerProfileRow {
     persona_id: string;
     full_name: string | null;
@@ -236,12 +274,11 @@ function agencyDefaults(ownerProfile: AdminTestOwnerProfile) {
 }
 
 async function ensurePersonaRecord(
-    admin: any,
+    admin: AdminTestDataClient,
     ownerProfile: AdminTestOwnerProfile,
     role: AdminTestRole
 ): Promise<AdminTestPersonaRecord> {
-    const { data: existing, error: existingError } = await admin
-        .from("admin_test_personas")
+    const { data: existing, error: existingError } = await adminTable(admin, "admin_test_personas")
         .select("*")
         .eq("owner_profile_id", ownerProfile.id)
         .eq("role", role)
@@ -255,8 +292,7 @@ async function ensurePersonaRecord(
         return existing as AdminTestPersonaRecord;
     }
 
-    const { data: created, error: createError } = await admin
-        .from("admin_test_personas")
+    const { data: created, error: createError } = await adminTable(admin, "admin_test_personas")
         .insert({
             owner_profile_id: ownerProfile.id,
             role,
@@ -275,12 +311,11 @@ async function ensurePersonaRecord(
 }
 
 async function ensureWorkerSeed(
-    admin: any,
+    admin: AdminTestDataClient,
     ownerProfile: AdminTestOwnerProfile,
     persona: AdminTestPersonaRecord
 ): Promise<void> {
-    const { data: existing, error: existingError } = await admin
-        .from("admin_test_worker_profiles")
+    const { data: existing, error: existingError } = await adminTable(admin, "admin_test_worker_profiles")
         .select("persona_id")
         .eq("persona_id", persona.id)
         .maybeSingle();
@@ -293,8 +328,7 @@ async function ensureWorkerSeed(
         return;
     }
 
-    const { error: insertError } = await admin
-        .from("admin_test_worker_profiles")
+    const { error: insertError } = await adminTable(admin, "admin_test_worker_profiles")
         .insert({
             persona_id: persona.id,
             ...workerDefaults(ownerProfile),
@@ -306,12 +340,11 @@ async function ensureWorkerSeed(
 }
 
 async function ensureEmployerSeed(
-    admin: any,
+    admin: AdminTestDataClient,
     ownerProfile: AdminTestOwnerProfile,
     persona: AdminTestPersonaRecord
 ): Promise<void> {
-    const { data: existing, error: existingError } = await admin
-        .from("admin_test_employers")
+    const { data: existing, error: existingError } = await adminTable(admin, "admin_test_employers")
         .select("persona_id")
         .eq("persona_id", persona.id)
         .maybeSingle();
@@ -324,8 +357,7 @@ async function ensureEmployerSeed(
         return;
     }
 
-    const { error: insertError } = await admin
-        .from("admin_test_employers")
+    const { error: insertError } = await adminTable(admin, "admin_test_employers")
         .insert({
             persona_id: persona.id,
             ...employerDefaults(ownerProfile),
@@ -337,12 +369,11 @@ async function ensureEmployerSeed(
 }
 
 async function ensureAgencySeed(
-    admin: any,
+    admin: AdminTestDataClient,
     ownerProfile: AdminTestOwnerProfile,
     persona: AdminTestPersonaRecord
 ): Promise<void> {
-    const { data: existing, error: existingError } = await admin
-        .from("admin_test_agencies")
+    const { data: existing, error: existingError } = await adminTable(admin, "admin_test_agencies")
         .select("persona_id")
         .eq("persona_id", persona.id)
         .maybeSingle();
@@ -355,8 +386,7 @@ async function ensureAgencySeed(
         return;
     }
 
-    const { error: insertError } = await admin
-        .from("admin_test_agencies")
+    const { error: insertError } = await adminTable(admin, "admin_test_agencies")
         .insert({
             persona_id: persona.id,
             ...agencyDefaults(ownerProfile),
@@ -368,7 +398,7 @@ async function ensureAgencySeed(
 }
 
 export async function ensureAdminTestPersonas(
-    admin: any,
+    admin: AdminTestDataClient,
     ownerProfile: AdminTestOwnerProfile
 ): Promise<AdminTestPersonaRecord[]> {
     const personas: AdminTestPersonaRecord[] = [];
@@ -390,9 +420,8 @@ export async function ensureAdminTestPersonas(
     return sortAdminTestPersonas(personas);
 }
 
-export async function touchAdminTestPersona(admin: any, personaId: string) {
-    const { error } = await admin
-        .from("admin_test_personas")
+export async function touchAdminTestPersona(admin: AdminTestDataClient, personaId: string) {
+    const { error } = await adminTable(admin, "admin_test_personas")
         .update({
             last_used_at: nowIso(),
             updated_at: nowIso(),
@@ -404,10 +433,10 @@ export async function touchAdminTestPersona(admin: any, personaId: string) {
     }
 }
 
-export async function getAdminTestWorkerWorkspace(admin: any, personaId: string) {
+export async function getAdminTestWorkerWorkspace(admin: AdminTestDataClient, personaId: string) {
     const [{ data: worker, error: workerError }, { data: documents, error: documentsError }] = await Promise.all([
-        admin.from("admin_test_worker_profiles").select("*").eq("persona_id", personaId).maybeSingle(),
-        admin.from("admin_test_worker_documents").select("*").eq("persona_id", personaId).order("created_at", { ascending: true }),
+        adminTable(admin, "admin_test_worker_profiles").select("*").eq("persona_id", personaId).maybeSingle(),
+        adminTable(admin, "admin_test_worker_documents").select("*").eq("persona_id", personaId).order("created_at", { ascending: true }),
     ]);
 
     if (workerError) {
@@ -424,12 +453,11 @@ export async function getAdminTestWorkerWorkspace(admin: any, personaId: string)
 }
 
 export async function saveAdminTestWorkerProfile(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     updates: Partial<AdminTestWorkerProfileRow>
 ): Promise<AdminTestWorkerProfileRow> {
-    const { data, error } = await admin
-        .from("admin_test_worker_profiles")
+    const { data, error } = await adminTable(admin, "admin_test_worker_profiles")
         .update({
             ...updates,
             desired_countries: asStringArray(updates.desired_countries),
@@ -447,7 +475,7 @@ export async function saveAdminTestWorkerProfile(
 }
 
 export async function uploadAdminTestWorkerDocument(input: {
-    admin: any;
+    admin: AdminTestDataClient;
     personaId: string;
     ownerProfileId: string;
     docType: string;
@@ -470,8 +498,7 @@ export async function uploadAdminTestWorkerDocument(input: {
     }
 
     const verifiedAt = nowIso();
-    const { data, error } = await admin
-        .from("admin_test_worker_documents")
+    const { data, error } = await adminTable(admin, "admin_test_worker_documents")
         .upsert(
             {
                 persona_id: personaId,
@@ -502,15 +529,14 @@ export async function uploadAdminTestWorkerDocument(input: {
 }
 
 export async function markAdminTestWorkerEntryFeePaid(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string
 ): Promise<AdminTestWorkerProfileRow> {
     const current = await getAdminTestWorkerWorkspace(admin, personaId);
     const queueJoinedAt = current.worker?.queue_joined_at || nowIso();
     const nextStatus = resolveWorkerStatusAfterEntryFee(current.worker?.status);
 
-    const { data, error } = await admin
-        .from("admin_test_worker_profiles")
+    const { data, error } = await adminTable(admin, "admin_test_worker_profiles")
         .update({
             entry_fee_paid: true,
             job_search_active: true,
@@ -530,10 +556,10 @@ export async function markAdminTestWorkerEntryFeePaid(
     return data as AdminTestWorkerProfileRow;
 }
 
-export async function getAdminTestEmployerWorkspace(admin: any, personaId: string) {
+export async function getAdminTestEmployerWorkspace(admin: AdminTestDataClient, personaId: string) {
     const [{ data: employer, error: employerError }, { data: jobs, error: jobsError }] = await Promise.all([
-        admin.from("admin_test_employers").select("*").eq("persona_id", personaId).maybeSingle(),
-        admin.from("admin_test_job_requests").select("*").eq("persona_id", personaId).order("created_at", { ascending: false }),
+        adminTable(admin, "admin_test_employers").select("*").eq("persona_id", personaId).maybeSingle(),
+        adminTable(admin, "admin_test_job_requests").select("*").eq("persona_id", personaId).order("created_at", { ascending: false }),
     ]);
 
     if (employerError) {
@@ -550,12 +576,11 @@ export async function getAdminTestEmployerWorkspace(admin: any, personaId: strin
 }
 
 export async function saveAdminTestEmployerProfile(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     updates: Partial<AdminTestEmployerRow>
 ): Promise<AdminTestEmployerRow> {
-    const { data, error } = await admin
-        .from("admin_test_employers")
+    const { data, error } = await adminTable(admin, "admin_test_employers")
         .update({
             ...updates,
             updated_at: nowIso(),
@@ -572,12 +597,11 @@ export async function saveAdminTestEmployerProfile(
 }
 
 export async function createAdminTestEmployerJob(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     payload: Omit<Partial<AdminTestJobRequestRow>, "id" | "persona_id" | "created_at" | "updated_at">
 ): Promise<AdminTestJobRequestRow> {
-    const { data, error } = await admin
-        .from("admin_test_job_requests")
+    const { data, error } = await adminTable(admin, "admin_test_job_requests")
         .insert({
             persona_id: personaId,
             title: payload.title || "Untitled job request",
@@ -605,13 +629,12 @@ export async function createAdminTestEmployerJob(
 }
 
 export async function updateAdminTestEmployerJob(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     jobId: string,
     payload: Partial<AdminTestJobRequestRow>
 ): Promise<AdminTestJobRequestRow> {
-    const { data, error } = await admin
-        .from("admin_test_job_requests")
+    const { data, error } = await adminTable(admin, "admin_test_job_requests")
         .update({
             ...payload,
             updated_at: nowIso(),
@@ -629,12 +652,11 @@ export async function updateAdminTestEmployerJob(
 }
 
 export async function deleteAdminTestEmployerJob(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     jobId: string
 ): Promise<void> {
-    const { error } = await admin
-        .from("admin_test_job_requests")
+    const { error } = await adminTable(admin, "admin_test_job_requests")
         .delete()
         .eq("persona_id", personaId)
         .eq("id", jobId);
@@ -644,16 +666,15 @@ export async function deleteAdminTestEmployerJob(
     }
 }
 
-export async function getAdminTestAgencyWorkspace(admin: any, personaId: string) {
+export async function getAdminTestAgencyWorkspace(admin: AdminTestDataClient, personaId: string) {
     const [
         { data: agency, error: agencyError },
         { data: workers, error: workersError },
         { data: documents, error: documentsError },
     ] = await Promise.all([
-        admin.from("admin_test_agencies").select("*").eq("persona_id", personaId).maybeSingle(),
-        admin.from("admin_test_agency_workers").select("*").eq("persona_id", personaId).order("created_at", { ascending: false }),
-        admin
-            .from("admin_test_agency_worker_documents")
+        adminTable(admin, "admin_test_agencies").select("*").eq("persona_id", personaId).maybeSingle(),
+        adminTable(admin, "admin_test_agency_workers").select("*").eq("persona_id", personaId).order("created_at", { ascending: false }),
+        adminTable(admin, "admin_test_agency_worker_documents")
             .select("*")
             .eq("persona_id", personaId)
             .order("created_at", { ascending: true }),
@@ -677,12 +698,11 @@ export async function getAdminTestAgencyWorkspace(admin: any, personaId: string)
 }
 
 export async function getAdminTestAgencyWorker(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     workerId: string
 ): Promise<AdminTestAgencyWorkerRow | null> {
-    const { data, error } = await admin
-        .from("admin_test_agency_workers")
+    const { data, error } = await adminTable(admin, "admin_test_agency_workers")
         .select("*")
         .eq("persona_id", personaId)
         .eq("id", workerId)
@@ -696,12 +716,11 @@ export async function getAdminTestAgencyWorker(
 }
 
 export async function getAdminTestAgencyWorkerDocuments(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     workerId: string
 ): Promise<AdminTestAgencyWorkerDocumentRow[]> {
-    const { data, error } = await admin
-        .from("admin_test_agency_worker_documents")
+    const { data, error } = await adminTable(admin, "admin_test_agency_worker_documents")
         .select("*")
         .eq("persona_id", personaId)
         .eq("agency_worker_id", workerId)
@@ -715,12 +734,11 @@ export async function getAdminTestAgencyWorkerDocuments(
 }
 
 export async function createAdminTestAgencyWorker(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     payload: Partial<AdminTestAgencyWorkerRow>
 ): Promise<AdminTestAgencyWorkerRow> {
-    const { data, error } = await admin
-        .from("admin_test_agency_workers")
+    const { data, error } = await adminTable(admin, "admin_test_agency_workers")
         .insert({
             persona_id: personaId,
             full_name: payload.full_name || "Test Worker",
@@ -764,13 +782,12 @@ export async function createAdminTestAgencyWorker(
 }
 
 export async function updateAdminTestAgencyWorker(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     workerId: string,
     payload: Partial<AdminTestAgencyWorkerRow>
 ): Promise<AdminTestAgencyWorkerRow> {
-    const { data, error } = await admin
-        .from("admin_test_agency_workers")
+    const { data, error } = await adminTable(admin, "admin_test_agency_workers")
         .update({
             ...payload,
             desired_countries: asStringArray(payload.desired_countries),
@@ -789,12 +806,11 @@ export async function updateAdminTestAgencyWorker(
 }
 
 export async function deleteAdminTestAgencyWorker(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     workerId: string
 ): Promise<void> {
-    const { error } = await admin
-        .from("admin_test_agency_workers")
+    const { error } = await adminTable(admin, "admin_test_agency_workers")
         .delete()
         .eq("persona_id", personaId)
         .eq("id", workerId);
@@ -805,7 +821,7 @@ export async function deleteAdminTestAgencyWorker(
 }
 
 export async function markAdminTestAgencyWorkerEntryFeePaid(
-    admin: any,
+    admin: AdminTestDataClient,
     personaId: string,
     workerId: string
 ): Promise<AdminTestAgencyWorkerRow> {
@@ -815,8 +831,7 @@ export async function markAdminTestAgencyWorkerEntryFeePaid(
     }
 
     const queueJoinedAt = worker.queue_joined_at || nowIso();
-    const { data, error } = await admin
-        .from("admin_test_agency_workers")
+    const { data, error } = await adminTable(admin, "admin_test_agency_workers")
         .update({
             entry_fee_paid: true,
             job_search_active: true,
@@ -837,7 +852,7 @@ export async function markAdminTestAgencyWorkerEntryFeePaid(
 }
 
 export async function uploadAdminTestAgencyWorkerDocument(input: {
-    admin: any;
+    admin: AdminTestDataClient;
     personaId: string;
     ownerProfileId: string;
     workerId: string;
@@ -861,8 +876,7 @@ export async function uploadAdminTestAgencyWorkerDocument(input: {
     }
 
     const verifiedAt = nowIso();
-    const { data, error } = await admin
-        .from("admin_test_agency_worker_documents")
+    const { data, error } = await adminTable(admin, "admin_test_agency_worker_documents")
         .upsert(
             {
                 persona_id: personaId,

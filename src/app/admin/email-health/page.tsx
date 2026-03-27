@@ -160,9 +160,9 @@ export default async function EmailHealthPage() {
 
     const workerMap = new Map<string, WorkerRow>();
     for (const [profileId, rows] of workerGroups.entries()) {
-        const worker = pickCanonicalWorkerRecord(rows as any);
+        const worker = pickCanonicalWorkerRecord(rows);
         if (worker) {
-            workerMap.set(profileId, worker as WorkerRow);
+            workerMap.set(profileId, worker);
         }
     }
 

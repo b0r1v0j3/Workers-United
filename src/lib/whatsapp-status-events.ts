@@ -7,11 +7,22 @@ export interface WhatsAppStatusEvent {
     }> | null;
 }
 
+interface WhatsAppStatusRow {
+    id?: string | null;
+}
+
+interface WhatsAppStatusUpdateResult {
+    data?: WhatsAppStatusRow[] | null;
+    error?: {
+        message?: string | null;
+    } | null;
+}
+
 type WhatsAppStatusAdminClient = {
     from: (table: string) => {
         update: (payload: Record<string, string>) => {
             eq: (column: string, value: string) => {
-                select: (columns: string) => any;
+                select: (columns: string) => PromiseLike<WhatsAppStatusUpdateResult>;
             };
         };
     };

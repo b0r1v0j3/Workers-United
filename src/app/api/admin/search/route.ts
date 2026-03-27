@@ -190,8 +190,11 @@ export async function GET(req: Request) {
         ).slice(0, 10);
 
         return NextResponse.json({ success: true, results: uniqueResults });
-    } catch (e: any) {
-        console.error("Global search error:", e);
-        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+    } catch (error: unknown) {
+        console.error("Global search error:", error);
+        return NextResponse.json(
+            { success: false, error: error instanceof Error ? error.message : "Internal server error" },
+            { status: 500 }
+        );
     }
 }

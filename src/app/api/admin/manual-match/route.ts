@@ -7,6 +7,30 @@ export const dynamic = "force-dynamic";
 
 type RollbackResult = { error?: { message?: string | null } | null } | void | null;
 
+type RawManualMatchJobListRow = {
+    id: string;
+    title: string | null;
+    industry: string | null;
+    positions_count: number | null;
+    positions_filled: number | null;
+    destination_country: string | null;
+    salary_rsd: number | null;
+    status: string | null;
+    employer: Array<{ company_name: string | null }> | null;
+};
+
+type ManualMatchJobListRow = {
+    id: string;
+    title: string | null;
+    industry: string | null;
+    positions_count: number | null;
+    positions_filled: number | null;
+    destination_country: string | null;
+    salary_rsd: number | null;
+    status: string | null;
+    employer: { company_name: string | null } | null;
+};
+
 async function captureRollbackError(
     label: string,
     operation: () => PromiseLike<RollbackResult> | RollbackResult
@@ -327,9 +351,12 @@ export async function GET() {
         }
 
         // Filter to jobs with available positions
-        const availableJobs = (jobs || []).filter(
-            (j: any) => j.positions_filled < j.positions_count
-        );
+        const availableJobs = ((jobs || []) as RawManualMatchJobListRow[])
+            .filter((job) => (job.positions_filled || 0) < (job.positions_count || 0))
+            .map((job): ManualMatchJobListRow => ({
+                ...job,
+                employer: Array.isArray(job.employer) ? (job.employer[0] ?? null) : null,
+            }));
 
         return NextResponse.json({ jobs: availableJobs });
 

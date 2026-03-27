@@ -386,7 +386,6 @@ export async function GET(request: NextRequest) {
     });
 
     // ─── 10. System Health Indicators ───────────────────────────────────
-    const failedWhatsApp = whatsappMsgs.filter(m => m.status === "failed");
     const recentFailedWhatsApp = recentWhatsAppMsgs.filter(m => m.status === "failed");
     const whatsappTemplateHealth = summarizeWhatsAppTemplateHealth({
         totalOutboundTemplates: recentWhatsAppMsgs.filter(

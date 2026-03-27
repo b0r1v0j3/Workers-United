@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# claude code local state (root CLAUDE.md stays tracked as shared project context)
+.claude/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

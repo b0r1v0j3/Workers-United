@@ -19,6 +19,32 @@ type EmailQueueRecord = {
     scheduled_for?: string | null;
 };
 
+type EmailQueueQueryError = { message?: string | null } | null;
+
+type EmailQueueQueryResponse<TData = unknown> = {
+    data?: TData | null;
+    error?: EmailQueueQueryError;
+};
+
+type EmailQueueQueryChain<TData = unknown> = PromiseLike<EmailQueueQueryResponse<TData>> & {
+    select: (...args: unknown[]) => EmailQueueQueryChain<TData>;
+    insert: (payload: unknown) => EmailQueueQueryChain<TData>;
+    update: (payload: unknown) => EmailQueueQueryChain<TData>;
+    eq: (...args: unknown[]) => EmailQueueQueryChain<TData>;
+    lte: (...args: unknown[]) => EmailQueueQueryChain<TData>;
+    order: (...args: unknown[]) => EmailQueueQueryChain<TData>;
+    limit: (...args: unknown[]) => EmailQueueQueryChain<TData>;
+    single: () => PromiseLike<EmailQueueQueryResponse<TData>>;
+};
+
+export type EmailQueueClient = {
+    from: (table: string) => unknown;
+};
+
+export function emailQueueTable<TData = unknown>(supabase: EmailQueueClient, table: string) {
+    return supabase.from(table) as EmailQueueQueryChain<TData>;
+}
+
 export type EmailQueueDeliveryStatus = "sent" | "queued_retry" | "failed" | "scheduled";
 
 export type EmailQueueDeliveryResult = {
@@ -107,13 +133,12 @@ export function isEmailDeliveryAccepted(result: Pick<EmailQueueDeliveryResult, "
 }
 
 async function updateEmailQueueRecord(
-    supabase: any,
+    supabase: EmailQueueClient,
     emailId: string,
     payload: Record<string, unknown>,
     context: string
 ) {
-    const { error } = await supabase
-        .from("email_queue")
+    const { error } = await emailQueueTable(supabase, "email_queue")
         .update(payload)
         .eq("id", emailId);
 
@@ -123,7 +148,7 @@ async function updateEmailQueueRecord(
 }
 
 export async function processQueuedEmailRecord(
-    supabase: any,
+    supabase: EmailQueueClient,
     record: EmailQueueRecord
 ): Promise<EmailQueueDeliveryResult> {
     const nowIso = new Date().toISOString();
@@ -263,12 +288,11 @@ export async function processQueuedEmailRecord(
 }
 
 export async function processPendingEmailQueue(
-    supabase: any,
+    supabase: EmailQueueClient,
     limit = 100
 ) {
     const nowIso = new Date().toISOString();
-    const { data, error } = await supabase
-        .from("email_queue")
+    const { data, error } = await emailQueueTable<EmailQueueRecord[]>(supabase, "email_queue")
         .select("id, recipient_email, subject, template_data, scheduled_for")
         .eq("status", "pending")
         .lte("scheduled_for", nowIso)

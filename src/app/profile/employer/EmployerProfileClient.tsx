@@ -138,7 +138,6 @@ export default function EmployerProfilePage({
     const searchParams = useSearchParams();
     const supabase = createClient();
     const requestedTab = getEmployerTab(searchParams.get("tab"));
-    const inspectProfileId = readOnlyPreview ? inspectSnapshot?.profile?.id || searchParams.get("inspect") : null;
 
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -173,7 +172,6 @@ export default function EmployerProfilePage({
     const [editingJobId, setEditingJobId] = useState<string | null>(null);
     const [editJobForm, setEditJobForm] = useState({ ...emptyJob });
     const [savingJob, setSavingJob] = useState(false);
-    const [editJobError, setEditJobError] = useState<string | null>(null);
     const [confirmDeleteJobId, setConfirmDeleteJobId] = useState<string | null>(null);
 
     // ─── Fetch data ─────────────────────────────────────────────
@@ -249,19 +247,6 @@ export default function EmployerProfilePage({
     useEffect(() => {
         setActiveTab(requestedTab);
     }, [requestedTab]);
-
-    const handleTabChange = useCallback((tab: TabType) => {
-        setActiveTab(tab);
-        const params = new URLSearchParams();
-        if (tab !== "company") {
-            params.set("tab", tab);
-        }
-        if (inspectProfileId) {
-            params.set("inspect", inspectProfileId);
-        }
-        const nextPath = params.toString() ? `/profile/employer?${params.toString()}` : "/profile/employer";
-        router.replace(nextPath, { scroll: false });
-    }, [router, inspectProfileId]);
 
     // ─── Company info handlers ──────────────────────────────────
     const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -456,7 +441,7 @@ export default function EmployerProfilePage({
             contract_duration_months: String(job.contract_duration_months || "12"),
             experience_required_years: String(job.experience_required_years || "0"),
         });
-        setEditJobError(null);
+        setJobAlert(null);
     };
 
     const saveEditJob = async () => {
@@ -464,7 +449,8 @@ export default function EmployerProfilePage({
             setJobAlert({ type: "error", msg: "Admin preview is read-only." });
             return;
         }
-        setSavingJob(true); setEditJobError(null);
+        setSavingJob(true);
+        setJobAlert(null);
         try {
             if (adminTestMode) {
                 const response = await fetch(`/api/admin/test-personas/employer/jobs/${editingJobId!}`, {
@@ -504,7 +490,7 @@ export default function EmployerProfilePage({
             await fetchData();
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Failed to save";
-            setEditJobError(msg);
+            setJobAlert({ type: "error", msg });
         } finally { setSavingJob(false); }
     };
 
@@ -980,9 +966,3 @@ function JobStatusBadge({ status }: { status: string }) {
     );
 }
 
-const IndustrySelect = ({ value, onChange }: { value: string, onChange: (v: string) => void }) => (
-    <AdaptiveSelect value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} desktopSearchPlaceholder="Search industry">
-        <option value="">Select Industry</option>
-        {EMPLOYER_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
-    </AdaptiveSelect>
-);

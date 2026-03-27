@@ -4,7 +4,7 @@ import { queueEmail } from "@/lib/email-templates";
 import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { canSendWorkerDirectNotifications } from "@/lib/worker-notification-eligibility";
-import { loadCanonicalWorkerRecord, normalizeWorkerPhone, type WorkerRecordSnapshot } from "@/lib/workers";
+import { loadCanonicalWorkerRecord, normalizeWorkerPhone, type WorkerRecordQueryClient, type WorkerRecordSnapshot } from "@/lib/workers";
 import { buildWorkerPaymentUnlockedEmailData, resolveWorkerApprovalNotificationRecipient } from "@/lib/worker-approval-notifications";
 
 interface WorkerReviewInput {
@@ -153,7 +153,7 @@ async function loadWorkerApprovalSourceRecord(
 ) {
     if (profileId) {
         return loadCanonicalWorkerRecord<ReviewWorkerRecord>(
-            adminClient,
+            adminClient as unknown as WorkerRecordQueryClient,
             profileId,
             WORKER_REVIEW_SELECT
         ).then((result) => result.data);
@@ -356,7 +356,11 @@ export async function syncWorkerReviewStatus({
     notifyOnPendingApproval = false,
 }: SyncWorkerReviewStatusOptions): Promise<SyncWorkerReviewStatusResult> {
     const workerRecord = profileId
-        ? await loadCanonicalWorkerRecord<ReviewWorkerRecord>(adminClient, profileId, WORKER_REVIEW_SELECT).then((result) => result.data)
+        ? await loadCanonicalWorkerRecord<ReviewWorkerRecord>(
+            adminClient as unknown as WorkerRecordQueryClient,
+            profileId,
+            WORKER_REVIEW_SELECT
+        ).then((result) => result.data)
         : workerId
             ? await adminClient
                 .from("worker_onboarding")

@@ -15,7 +15,7 @@ export async function GET() {
         const userId = user.id;
 
         // Gather all user data
-        const exportData: Record<string, any> = {
+        const exportData: Record<string, unknown> = {
             exported_at: new Date().toISOString(),
             account: {
                 id: user.id,
@@ -122,8 +122,11 @@ export async function GET() {
             },
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Data export error:", error);
-        return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : "Internal server error" },
+            { status: 500 }
+        );
     }
 }

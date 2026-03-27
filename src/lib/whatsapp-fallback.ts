@@ -1,17 +1,20 @@
 import {
+    buildWorkerDocumentFormatReply,
+    buildWorkerDocumentsReply,
     detectExplicitWhatsAppLanguagePreference,
     looksLikeWhatsAppDocumentFormatQuestion,
     looksLikeWhatsAppDocumentQuestion,
     looksLikeWhatsAppPriceQuestion,
     looksLikeWhatsAppStatusQuestion,
     looksLikeWarmGreetingWhatsAppMessage,
+    type WhatsAppLanguageCode,
     type WhatsAppLanguageHistoryEntry,
     resolveWhatsAppLanguageCode,
 } from "@/lib/whatsapp-brain";
 import { isWorkerPaymentUnlocked } from "@/lib/whatsapp-reply-guardrails";
 import { getPlatformConfig, getPlatformContactInfoFromConfig } from "@/lib/platform-config";
 
-type WhatsAppFallbackLanguage = "sr" | "hi" | "ar" | "fr" | "pt" | "en";
+type WhatsAppFallbackLanguage = WhatsAppLanguageCode;
 
 interface WhatsAppFallbackWorkerLike {
     status?: string | null;
@@ -215,27 +218,6 @@ function getFallbackStatusLabel(
     }
 }
 
-function buildFallbackDocumentFormatReply(
-    language: WhatsAppFallbackLanguage,
-    dashboardUrl: string,
-    supportEmail: string
-): string {
-    switch (language) {
-        case "sr":
-            return `Zdravo! Pasoš i formalnu diplomu možete uploadovati kao jasnu sliku ili PDF fajl na ${dashboardUrl}. Biometrijska fotografija treba da bude slika, ne PDF. WhatsApp prilozi se i dalje ne vezuju automatski za profil. Ako upload i dalje javlja grešku, pošaljite screenshot i kratak opis na ${supportEmail}.`;
-        case "fr":
-            return `Bonjour ! Le passeport et le diplôme officiel peuvent être téléversés comme image claire ou fichier PDF sur ${dashboardUrl}. La photo biométrique doit être un fichier image clair, pas un PDF. Les pièces jointes WhatsApp ne sont toujours pas reliées automatiquement au profil. Si l’erreur continue, envoyez une capture d’écran avec une courte description à ${supportEmail}.`;
-        case "pt":
-            return `Olá! Passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil. Se o erro continuar, envie uma captura de tela com uma breve descrição para ${supportEmail}.`;
-        case "hi":
-            return `नमस्ते! Passport और formal diploma ${dashboardUrl} पर clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी profile से automatically link नहीं होते। अगर error फिर भी आ रहा है, तो screenshot और short description ${supportEmail} पर भेजिए।`;
-        case "ar":
-            return `مرحباً! يمكنك رفع جواز السفر والدبلومة الرسمية كصورة واضحة أو ملف PDF على ${dashboardUrl}. أما الصورة البيومترية فيجب أن تكون ملف صورة واضحًا وليس PDF. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا. إذا استمر الخطأ فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`;
-        default:
-            return `Hello! Passport and formal diploma can be uploaded as a clear image or PDF file at ${dashboardUrl}. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
-    }
-}
-
 function getFallbackQueueInfo(
     queuePosition: number | null | undefined,
     language: WhatsAppFallbackLanguage
@@ -362,19 +344,21 @@ export async function getWhatsAppFallbackResponse(
 
     if (!workerRecord && asksAboutDocuments) {
         if (asksAboutDocumentFormat) {
-            if (fallbackLang === "sr") return `Zdravo ${name}! Posle registracije na ${website}/signup pasoš i formalnu diplomu možete uploadovati kao jasnu sliku ili PDF fajl u dashboard-u. Biometrijska fotografija treba da bude slika, ne PDF. WhatsApp prilozi se i dalje ne vezuju automatski za profil. Ako upload i dalje javlja grešku, pošaljite screenshot i kratak opis na ${supportEmail}.`;
-            if (fallbackLang === "fr") return `Bonjour ${name} ! Après inscription sur ${website}/signup, vous pouvez téléverser le passeport et le diplôme officiel comme image claire ou fichier PDF dans le tableau de bord. La photo biométrique doit être un fichier image clair, pas un PDF. Les pièces jointes WhatsApp ne sont toujours pas reliées automatiquement au profil. Si l’erreur continue, envoyez une capture d’écran avec une courte description à ${supportEmail}.`;
-            if (fallbackLang === "pt") return `Olá ${name}! Depois do cadastro em ${website}/signup, você pode enviar passaporte e diploma formal como imagem nítida ou arquivo PDF no painel. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil. Se o erro continuar, envie uma captura de tela com uma breve descrição para ${supportEmail}.`;
-            if (fallbackLang === "hi") return `नमस्ते ${name}! ${website}/signup पर registration के बाद passport और formal diploma dashboard में clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी profile से automatically link नहीं होते। अगर error जारी रहे, तो screenshot और short description ${supportEmail} पर भेजिए।`;
-            if (fallbackLang === "ar") return `مرحباً ${name}! بعد التسجيل على ${website}/signup يمكنك رفع جواز السفر والدبلومة الرسمية كصورة واضحة أو ملف PDF داخل لوحة التحكم. أما الصورة البيومترية فيجب أن تكون ملف صورة واضحًا وليس PDF. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا. إذا استمر الخطأ فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`;
-            return `Hi ${name}! After signup at ${website}/signup, passport and formal diploma can be uploaded as a clear image or PDF file in the dashboard. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
+            const sharedReply = buildWorkerDocumentFormatReply(fallbackLang, `${website}/signup`, supportEmail, true, "fallback");
+            if (fallbackLang === "sr") return `Zdravo ${name}! ${sharedReply}`;
+            if (fallbackLang === "fr") return `Bonjour ${name} ! ${sharedReply}`;
+            if (fallbackLang === "pt") return `Olá ${name}! ${sharedReply}`;
+            if (fallbackLang === "hi") return `नमस्ते ${name}! ${sharedReply}`;
+            if (fallbackLang === "ar") return `مرحباً ${name}! ${sharedReply}`;
+            return `Hi ${name}! ${sharedReply}`;
         }
-        if (fallbackLang === "sr") return `Zdravo ${name}! Posle registracije na ${website}/signup potrebna dokumenta uploadujete kroz dashboard. Potrebni su pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
-        if (fallbackLang === "fr") return `Bonjour ${name} ! Après inscription sur ${website}/signup, vous téléversez les documents requis dans le tableau de bord. Nous avons besoin du passeport, d’une photo biométrique et d’un diplôme final scolaire, universitaire ou professionnel officiel. Les pièces jointes WhatsApp ne sont pas encore reliées automatiquement au profil.`;
-        if (fallbackLang === "pt") return `Olá ${name}! Depois do cadastro em ${website}/signup, os documentos obrigatórios são enviados pelo painel. Precisamos do passaporte, da foto biométrica e de um diploma final escolar, universitário ou profissional formal. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`;
-        if (fallbackLang === "hi") return `नमस्ते ${name}! ${website}/signup पर registration के बाद documents dashboard में upload होते हैं। ज़रूरी documents हैं passport, biometric photo, और final school, university, या formal vocational diploma। WhatsApp attachments अभी profile से automatically link नहीं होते।`;
-        if (fallbackLang === "ar") return `مرحباً ${name}! بعد التسجيل على ${website}/signup يتم رفع المستندات المطلوبة من خلال لوحة التحكم. المطلوب: جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
-        return `Hi ${name}! After signup at ${website}/signup, required documents are uploaded in the dashboard. We need: passport, biometric photo, and a final school, university, or formal vocational diploma. WhatsApp attachments are not linked to the profile automatically yet.`;
+        const sharedReply = buildWorkerDocumentsReply(fallbackLang, `${website}/signup`, true, undefined, "fallback");
+        if (fallbackLang === "sr") return `Zdravo ${name}! ${sharedReply}`;
+        if (fallbackLang === "fr") return `Bonjour ${name} ! ${sharedReply}`;
+        if (fallbackLang === "pt") return `Olá ${name}! ${sharedReply}`;
+        if (fallbackLang === "hi") return `नमस्ते ${name}! ${sharedReply}`;
+        if (fallbackLang === "ar") return `مرحباً ${name}! ${sharedReply}`;
+        return `Hi ${name}! ${sharedReply}`;
     }
 
     if (!workerRecord && isWarmGreeting) {
@@ -412,14 +396,21 @@ export async function getWhatsAppFallbackResponse(
 
     if (asksAboutDocuments) {
         if (asksAboutDocumentFormat) {
-            return buildFallbackDocumentFormatReply(fallbackLang, `${website}/profile/worker`, supportEmail);
+            const sharedReply = buildWorkerDocumentFormatReply(fallbackLang, `${website}/profile/worker`, supportEmail, false, "fallback");
+            if (fallbackLang === "sr") return `Zdravo ${name}! ${sharedReply}`;
+            if (fallbackLang === "fr") return `Bonjour ${name} ! ${sharedReply}`;
+            if (fallbackLang === "pt") return `Olá ${name}! ${sharedReply}`;
+            if (fallbackLang === "hi") return `नमस्ते ${name}! ${sharedReply}`;
+            if (fallbackLang === "ar") return `مرحباً ${name}! ${sharedReply}`;
+            return `Hi ${name}! ${sharedReply}`;
         }
-        if (fallbackLang === "sr") return `Zdravo ${name}! Dokumenta uploadujete na ${website}/profile/worker. Potrebni su: pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
-        if (fallbackLang === "fr") return `Bonjour ${name} ! Téléversez les documents sur ${website}/profile/worker. Nous avons besoin du passeport, d’une photo biométrique et d’un diplôme final scolaire, universitaire ou professionnel officiel. Les pièces jointes WhatsApp ne sont pas encore reliées automatiquement au profil.`;
-        if (fallbackLang === "pt") return `Olá ${name}! Envie os documentos em ${website}/profile/worker. Precisamos do passaporte, da foto biométrica e de um diploma final escolar, universitário ou profissional formal. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`;
-        if (fallbackLang === "hi") return `नमस्ते ${name}! Documents ${website}/profile/worker पर upload कीजिए। ज़रूरी documents हैं passport, biometric photo, और final school, university, या formal vocational diploma। WhatsApp attachments अभी profile से automatically link नहीं होते।`;
-        if (fallbackLang === "ar") return `مرحباً ${name}! يمكنك رفع المستندات على ${website}/profile/worker. المطلوب: جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
-        return `Hi ${name}! Upload documents at ${website}/profile/worker. We need: passport, biometric photo, and a final school, university, or formal vocational diploma. WhatsApp attachments are not linked to the profile automatically yet.`;
+        const sharedReply = buildWorkerDocumentsReply(fallbackLang, `${website}/profile/worker`, false, undefined, "fallback");
+        if (fallbackLang === "sr") return `Zdravo ${name}! ${sharedReply}`;
+        if (fallbackLang === "fr") return `Bonjour ${name} ! ${sharedReply}`;
+        if (fallbackLang === "pt") return `Olá ${name}! ${sharedReply}`;
+        if (fallbackLang === "hi") return `नमस्ते ${name}! ${sharedReply}`;
+        if (fallbackLang === "ar") return `مرحباً ${name}! ${sharedReply}`;
+        return `Hi ${name}! ${sharedReply}`;
     }
 
     if (fallbackLang === "sr") return `Zdravo ${name}! 👋 ${startMessage}`;

@@ -1,4 +1,5 @@
 import {
+    CANONICAL_REQUIRED_WORKER_DOCUMENTS,
     DEFAULT_PLATFORM_SUPPORT_EMAIL,
     DEFAULT_PLATFORM_WEBSITE_URL,
     normalizePlatformSupportEmail,
@@ -54,9 +55,8 @@ export interface WhatsAppLanguageHistoryEntry {
     content?: string | null;
 }
 
-const CANONICAL_REQUIRED_WORKER_DOCUMENTS = "passport, biometric photo, and a final school, university, or formal vocational diploma";
-
 export type WhatsAppLanguageCode = "en" | "sr" | "ar" | "fr" | "pt" | "hi";
+type WorkerDocumentReplyStyle = "brain" | "fallback";
 
 const WHATSAPP_ONBOARDING_PATTERN = /fill.*profile.*whatsapp|complete.*profile.*whatsapp|register.*whatsapp|whatsapp.*profile|whatsapp.*register|profile.*on whatsapp|popuni.*profil.*whatsapp|profil.*na whatsapp|registr.*preko whatsapp|registro.*whatsapp|perfil.*whatsapp|rempl(?:ir|is|issez).*(?:profil).*(?:whatsapp)|cr[eé]er.*profil.*whatsapp|inscri(?:re|ption).*(?:whatsapp)|profil.*sur whatsapp|प्रोफाइल.*व्हाट्सएप|व्हाट्सएप.*प्रोफाइल|रजिस्टर.*व्हाट्सएप|व्हाट्सएप.*रजिस्टर|भर.*प्रोफाइल.*व्हाट्सएप/i;
 const SERBIAN_LATIN_PATTERN = /\b(pozdrav|zdravo|cao|ćao|dobar dan|dobro vece|dobro veče|dobro jutro|hvala|molim|ocu|hoću|hocu|zelim|želim|treba mi|trebam|trazim|tražim|kako|kako da|kako radi|kako funkcionise|kako funkcioniše|sta|šta|zasto|zašto|gde|gdje|kad|imam|nemam|mogu li|moze li|može li|pomoc|pomoć|sajt|nalog|broj|cekam|čekam|poruka|prijava|prijavim|registracija|posao|radnik|radnike|radim|koliko|kosta|košta|cena|cijena|dokumenti|dokumenta|dokumenata|pasos|pasoš|red cekanja|čekanja|odobren|odobreno|uplata|uplate|platim|placanje|plaćanje|koji je|sta je|šta je|da li je|mog profila|moj profil|profila|pomoc oko|pomo[cć] oko|voza[cč]|gra[dđ]evin|skladi|magacin|spanij|nemack|nemačk|srpski|engleski|jezik|jezici)\b/i;
@@ -437,11 +437,36 @@ export function looksLikeWhatsAppStatusQuestion(message: string): boolean {
     return STATUS_HINT_PATTERN.test(message.trim().toLowerCase());
 }
 
-function buildWorkerDocumentFormatReply(
+function getWorkerRequiredDocumentsLabel(
+    lang: WhatsAppLanguageCode,
+    requiredDocuments?: string
+): string {
+    if (requiredDocuments && requiredDocuments !== CANONICAL_REQUIRED_WORKER_DOCUMENTS) {
+        return requiredDocuments;
+    }
+
+    switch (lang) {
+        case "sr":
+            return "pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma";
+        case "ar":
+            return "جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية";
+        case "fr":
+            return "le passeport, la photo biométrique et le diplôme final scolaire, universitaire ou professionnel officiel";
+        case "pt":
+            return "passaporte, foto biométrica e diploma final escolar, universitário ou profissional formal";
+        case "hi":
+            return "passport, biometric photo, और final school, university, या formal vocational diploma";
+        default:
+            return CANONICAL_REQUIRED_WORKER_DOCUMENTS;
+    }
+}
+
+export function buildWorkerDocumentFormatReply(
     lang: WhatsAppLanguageCode,
     dashboardUrl: string,
     supportEmail: string,
-    requiresSignup: boolean
+    requiresSignup: boolean,
+    style: WorkerDocumentReplyStyle = "brain"
 ): string {
     const accessLine = requiresSignup
         ? `after signup at ${dashboardUrl}`
@@ -465,11 +490,88 @@ function buildWorkerDocumentFormatReply(
                 ? `Sim, passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF após o cadastro em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil. Se o painel continuar mostrando erro, envie uma captura de tela com uma breve descrição para ${supportEmail}.`
                 : `Sim, passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF no seu painel em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil. Se o erro de envio continuar, envie uma captura de tela com uma breve descrição para ${supportEmail}.`;
         case "hi":
+            if (style === "fallback") {
+                return requiresSignup
+                    ? `${dashboardUrl} पर registration के बाद passport और formal diploma clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी profile से automatically link नहीं होते। अगर error जारी रहे, तो screenshot और short description ${supportEmail} पर भेजिए।`
+                    : `Passport और formal diploma ${dashboardUrl} पर clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी profile से automatically link नहीं होते। अगर error फिर भी आ रहा है, तो screenshot और short description ${supportEmail} पर भेजिए।`;
+            }
             return requiresSignup
                 ? `हाँ, passport और formal diploma ${dashboardUrl} पर signup के बाद clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी भी profile से automatically link नहीं होते। अगर dashboard में error फिर भी दिखे, तो screenshot और short description ${supportEmail} पर भेजिए।`
                 : `हाँ, passport और formal diploma ${dashboardUrl} dashboard में clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी भी profile से automatically link नहीं होते। अगर upload error फिर भी आ रहा है, तो screenshot और short description ${supportEmail} पर भेजिए।`;
         default:
+            if (style === "fallback") {
+                return requiresSignup
+                    ? `After signup at ${dashboardUrl}, passport and formal diploma can be uploaded as a clear image or PDF file in the dashboard. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`
+                    : `Passport and formal diploma can be uploaded as a clear image or PDF file at ${dashboardUrl}. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
+            }
             return `Yes. Passport and formal diploma can be uploaded as a clear image or PDF file ${accessLine}. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
+    }
+}
+
+export function buildWorkerDocumentsReply(
+    lang: WhatsAppLanguageCode,
+    dashboardUrl: string,
+    requiresSignup: boolean,
+    requiredDocuments: string = CANONICAL_REQUIRED_WORKER_DOCUMENTS,
+    style: WorkerDocumentReplyStyle = "brain"
+): string {
+    const documentsLabel = getWorkerRequiredDocumentsLabel(lang, requiredDocuments);
+
+    switch (lang) {
+        case "sr":
+            if (style === "fallback") {
+                return requiresSignup
+                    ? `Posle registracije na ${dashboardUrl} potrebna dokumenta uploadujete kroz dashboard. Potrebni su ${documentsLabel}. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`
+                    : `Dokumenta uploadujete na ${dashboardUrl}. Potrebni su: ${documentsLabel}. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
+            }
+            return requiresSignup
+                ? `Potrebna dokumenta su ${documentsLabel}. Dokumenta se uploaduju kroz dashboard na ${dashboardUrl} nakon registracije; WhatsApp prilozi se trenutno ne vezuju automatski za profil.`
+                : `Potrebna dokumenta su ${documentsLabel}. Upload i status dokumenata pratite kroz dashboard na ${dashboardUrl}; WhatsApp prilozi se ne vezuju automatski za profil.`;
+        case "ar":
+            if (style === "fallback") {
+                return requiresSignup
+                    ? `بعد التسجيل على ${dashboardUrl} يتم رفع المستندات المطلوبة من خلال لوحة التحكم. المطلوب: ${documentsLabel}. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`
+                    : `يمكنك رفع المستندات على ${dashboardUrl}. المطلوب: ${documentsLabel}. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
+            }
+            return requiresSignup
+                ? `المستندات المطلوبة هي ${documentsLabel}. يتم رفع المستندات من خلال لوحة التحكم بعد التسجيل على ${dashboardUrl}؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`
+                : `المستندات المطلوبة هي ${documentsLabel}. ارفع المستندات وتابع حالتها من لوحة التحكم على ${dashboardUrl}؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا.`;
+        case "fr":
+            if (style === "fallback") {
+                return requiresSignup
+                    ? `Après inscription sur ${dashboardUrl}, vous téléversez les documents requis dans le tableau de bord. Nous avons besoin de ${documentsLabel}. Les pièces jointes WhatsApp ne sont pas encore reliées automatiquement au profil.`
+                    : `Téléversez les documents sur ${dashboardUrl}. Nous avons besoin de ${documentsLabel}. Les pièces jointes WhatsApp ne sont pas encore reliées automatiquement au profil.`;
+            }
+            return requiresSignup
+                ? `Les documents requis sont : ${documentsLabel}. Les documents se téléversent dans le tableau de bord après inscription sur ${dashboardUrl} ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil pour le moment.`
+                : `Les documents requis sont : ${documentsLabel}. Le téléversement et le statut se suivent dans le tableau de bord sur ${dashboardUrl} ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil.`;
+        case "pt":
+            if (style === "fallback") {
+                return requiresSignup
+                    ? `Depois do cadastro em ${dashboardUrl}, os documentos obrigatórios são enviados pelo painel. Precisamos de ${documentsLabel}. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`
+                    : `Envie os documentos em ${dashboardUrl}. Precisamos de ${documentsLabel}. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`;
+            }
+            return requiresSignup
+                ? `Os documentos necessários são ${documentsLabel}. Os documentos são enviados pelo painel após o cadastro em ${dashboardUrl}; anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`
+                : `Os documentos necessários são ${documentsLabel}. O envio e o status dos documentos são acompanhados no painel em ${dashboardUrl}; anexos do WhatsApp não são vinculados automaticamente ao perfil.`;
+        case "hi":
+            if (style === "fallback") {
+                return requiresSignup
+                    ? `${dashboardUrl} पर registration के बाद documents dashboard में upload होते हैं। ज़रूरी documents हैं ${documentsLabel}। WhatsApp attachments अभी profile से automatically link नहीं होते।`
+                    : `Documents ${dashboardUrl} पर upload कीजिए। ज़रूरी documents हैं ${documentsLabel}। WhatsApp attachments अभी profile से automatically link नहीं होते।`;
+            }
+            return requiresSignup
+                ? `ज़रूरी documents हैं: ${documentsLabel}. Documents registration के बाद ${dashboardUrl} से dashboard में upload किए जाते हैं; WhatsApp attachments अभी profile से automatically link नहीं होते।`
+                : `ज़रूरी documents हैं ${documentsLabel}। Documents upload और उनका status ${dashboardUrl} dashboard में देखें; WhatsApp attachments अपने-आप profile से link नहीं होते।`;
+        default:
+            if (style === "fallback") {
+                return requiresSignup
+                    ? `After signup at ${dashboardUrl}, required documents are uploaded in the dashboard. We need: ${documentsLabel}. WhatsApp attachments are not linked to the profile automatically yet.`
+                    : `Upload documents at ${dashboardUrl}. We need: ${documentsLabel}. WhatsApp attachments are not linked to the profile automatically yet.`;
+            }
+            return requiresSignup
+                ? `The required documents are ${documentsLabel}. Documents are uploaded in the dashboard after registration at ${dashboardUrl}; WhatsApp attachments are not linked to the profile automatically yet.`
+                : `The required documents are ${documentsLabel}. Uploads and document status are tracked in the dashboard at ${dashboardUrl}; WhatsApp attachments are not linked to the profile automatically.`;
     }
 }
 
@@ -567,20 +669,7 @@ export function buildUnregisteredWorkerWhatsAppReply({
     }
 
     if (wantsDocuments) {
-        switch (lang) {
-            case "sr":
-                return `Potrebna dokumenta su ${requiredDocuments}. Dokumenta se uploaduju kroz dashboard na ${website}/signup nakon registracije; WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
-            case "ar":
-                return `المستندات المطلوبة هي ${requiredDocuments}. يتم رفع المستندات من خلال لوحة التحكم بعد التسجيل على ${website}/signup؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
-            case "fr":
-                return `Les documents requis sont : ${requiredDocuments}. Les documents se téléversent dans le tableau de bord après inscription sur ${website}/signup ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil pour le moment.`;
-            case "pt":
-                return `Os documentos necessários são ${requiredDocuments}. Os documentos são enviados pelo painel após o cadastro em ${website}/signup; anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`;
-            case "hi":
-                return `ज़रूरी documents हैं: ${requiredDocuments}. Documents registration के बाद ${website}/signup से dashboard में upload किए जाते हैं; WhatsApp attachments अभी profile से automatically link नहीं होते।`;
-            default:
-                return `The required documents are ${requiredDocuments}. Documents are uploaded in the dashboard after registration at ${website}/signup; WhatsApp attachments are not linked to the profile automatically yet.`;
-        }
+        return buildWorkerDocumentsReply(lang, `${website}/signup`, true, requiredDocuments);
     }
 
     if (wantsStatus) {
@@ -843,7 +932,8 @@ export function buildRegisteredWorkerWhatsAppReply({
 
     const paymentReady = isRegisteredWorkerPaymentReady({ workerStatus, entryFeePaid, adminApproved });
     const pendingApproval = isRegisteredWorkerPendingApproval({ workerStatus, entryFeePaid, adminApproved });
-    const advancedStatusReply = getRegisteredWorkerAdvancedStatusReply(lang, workerStatus, website);
+    const statusForReply = workerStatus || (queueJoinedAt ? "IN_QUEUE" : null);
+    const advancedStatusReply = getRegisteredWorkerAdvancedStatusReply(lang, statusForReply, website);
 
     if (explicitLanguagePreference && !wantsPrice && !wantsDocuments && !wantsStatus && !wantsSupport && !asksSpecificAvailability && !wantsJobHelp) {
         switch (lang) {
@@ -951,20 +1041,7 @@ export function buildRegisteredWorkerWhatsAppReply({
     }
 
     if (wantsDocuments) {
-        switch (lang) {
-            case "sr":
-                return `Potrebna dokumenta su pasoš, biometrijska fotografija i završna školska, univerzitetska ili formalna stručna diploma. Upload i status dokumenata pratite kroz dashboard na ${website}/profile/worker; WhatsApp prilozi se ne vezuju automatski za profil.`;
-            case "ar":
-                return `المستندات المطلوبة هي جواز السفر، الصورة البيومترية، والدبلومة النهائية المدرسية أو الجامعية أو المهنية الرسمية. ارفع المستندات وتابع حالتها من لوحة التحكم على ${website}/profile/worker؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا.`;
-            case "fr":
-                return `Les documents requis sont le passeport, la photo biométrique, et le diplôme final scolaire, universitaire ou professionnel formel. Le téléversement et le statut se suivent dans le tableau de bord sur ${website}/profile/worker ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil.`;
-            case "pt":
-                return `Os documentos necessários são passaporte, foto biométrica e diploma final escolar, universitário ou profissional formal. O envio e o status dos documentos são acompanhados no painel em ${website}/profile/worker; anexos do WhatsApp não são vinculados automaticamente ao perfil.`;
-            case "hi":
-                return `ज़रूरी documents हैं passport, biometric photo, और final school, university, या formal vocational diploma। Documents upload और उनका status ${website}/profile/worker dashboard में देखें; WhatsApp attachments अपने-आप profile से link नहीं होते।`;
-            default:
-                return `The required documents are passport, biometric photo, and a final school, university, or formal vocational diploma. Uploads and document status are tracked in the dashboard at ${website}/profile/worker; WhatsApp attachments are not linked to the profile automatically.`;
-        }
+        return buildWorkerDocumentsReply(lang, `${website}/profile/worker`, false);
     }
 
     if (wantsSupport) {
@@ -1181,6 +1258,8 @@ export function buildCanonicalWhatsAppFacts({
         "- WhatsApp can answer questions and, when the user explicitly asks, collect some text profile details here. Document uploads and screenshots are not processed as WhatsApp attachments yet; those belong in the dashboard.",
         "- Required worker documents are passport, biometric photo, and a final school, university, or formal vocational diploma.",
         "- Passport and formal diploma uploads can be clear images or PDF files in the dashboard. The biometric photo must be a clear image file, not a PDF.",
+        "- A valid passport is required for international employment and work-permit processing; national ID cards and driver's licenses are not accepted instead.",
+        "- Personal data and documents are handled securely with encrypted transport and encrypted cloud storage.",
         "- Employers do not pay platform fees.",
         `- Support email: ${supportEmail}.`,
     ].join("\n");

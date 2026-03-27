@@ -17,6 +17,23 @@ type ExpiringDocWorkerRow = {
     entry_fee_paid?: boolean | null;
 };
 
+type ExpiringDocProfileRow = {
+    id: string;
+    email: string | null;
+    full_name: string | null;
+};
+
+type ExpiringDocRow = {
+    id: string;
+    document_type: string | null;
+    expires_at: string;
+    profiles: ExpiringDocProfileRow | ExpiringDocProfileRow[] | null;
+};
+
+function getDocumentProfile(profiles: ExpiringDocRow["profiles"]) {
+    return Array.isArray(profiles) ? (profiles[0] ?? null) : profiles;
+}
+
 // Cron job to notify users about expiring documents
 // Set this to run daily via Vercel Cron or external trigger
 export async function GET(request: Request) {
@@ -55,9 +72,10 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
+        const expiringDocs = (docs || []) as ExpiringDocRow[];
         const profileIds = Array.from(new Set(
-            (docs || [])
-                .map((doc) => (doc as any).profiles?.id)
+            expiringDocs
+                .map((doc) => getDocumentProfile(doc.profiles)?.id)
                 .filter((value): value is string => typeof value === "string" && value.length > 0)
         ));
         const { data: workerRows, error: workerRowsError } = profileIds.length > 0
@@ -106,8 +124,8 @@ export async function GET(request: Request) {
 
         const recentlyNotified = new Set(recentEmails?.map(e => e.user_id) || []);
 
-        for (const doc of docs || []) {
-            const profile = (doc as any).profiles;
+        for (const doc of expiringDocs) {
+            const profile = getDocumentProfile(doc.profiles);
 
             if (!profile || !profile.email) {
                 console.warn(`[Cron] Missing profile/email for document ${doc.id}`);

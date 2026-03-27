@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         // Route to appropriate verification based on document type
         switch (documentType || document.document_type) {
             case "passport":
-                verificationResult = await verifyPassport(document, supabase);
+                verificationResult = await verifyPassport(document);
                 break;
 
             case "biometric_photo":
@@ -120,8 +120,7 @@ export async function POST(request: NextRequest) {
 
 // Passport verification with expiry check
 async function verifyPassport(
-    document: { file_url: string; worker_id: string; worker_onboarding?: { profiles?: { full_name?: string } } },
-    supabase: Awaited<ReturnType<typeof createClient>>
+    document: { file_url: string; worker_id: string; worker_onboarding?: { profiles?: { full_name?: string } } }
 ) {
     const result = await extractPassportData(document.file_url);
 

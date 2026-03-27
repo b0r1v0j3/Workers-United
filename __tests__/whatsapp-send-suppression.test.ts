@@ -171,7 +171,7 @@ describe("whatsapp proactive send suppression", () => {
         expect(result.success).toBe(true);
         expect(fetch).toHaveBeenCalledOnce();
 
-        const [_, requestInit] = vi.mocked(fetch).mock.calls[0];
+        const requestInit = vi.mocked(fetch).mock.calls[0]?.[1];
         const payload = JSON.parse(String(requestInit?.body));
         const buttonComponent = payload.template.components.find((component: { type: string }) => component.type === "button");
 
@@ -193,7 +193,7 @@ describe("whatsapp proactive send suppression", () => {
         expect(result.success).toBe(true);
         expect(fetch).toHaveBeenCalledOnce();
 
-        const [_, requestInit] = vi.mocked(fetch).mock.calls[0];
+        const requestInit = vi.mocked(fetch).mock.calls[0]?.[1];
         const payload = JSON.parse(String(requestInit?.body));
         const buttonComponent = payload.template.components.find((component: { type: string }) => component.type === "button");
 

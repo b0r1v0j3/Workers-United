@@ -4,10 +4,57 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminTestSession, getAdminTestWorkspaceHref } from "@/lib/admin-test-mode";
 import { getAdminTestWorkerWorkspace } from "@/lib/admin-test-data";
-import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { loadCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import ProfileClient from "./ProfileClient";
 
 export const dynamic = "force-dynamic";
+
+interface WorkerEditPageFamilySpouse {
+    first_name?: string | null;
+    last_name?: string | null;
+    dob?: string | null;
+    birth_country?: string | null;
+    birth_city?: string | null;
+}
+
+interface WorkerEditPageFamilyChild {
+    first_name?: string | null;
+    last_name?: string | null;
+    dob?: string | null;
+}
+
+interface WorkerEditPageFamilyData {
+    spouse?: WorkerEditPageFamilySpouse | null;
+    children?: WorkerEditPageFamilyChild[] | null;
+}
+
+interface WorkerEditPageRecord extends WorkerRecordSnapshot {
+    id: string;
+    nationality: string;
+    date_of_birth: string;
+    phone: string;
+    address: string;
+    current_country: string;
+    preferred_job: string;
+    desired_countries: string[];
+    desired_industries: string[];
+    birth_country: string;
+    birth_city: string;
+    citizenship: string;
+    original_citizenship: string;
+    maiden_name: string;
+    father_name: string;
+    mother_name: string;
+    marital_status: string;
+    gender: string;
+    family_data: WorkerEditPageFamilyData | null;
+    passport_number: string;
+    passport_issued_by: string;
+    passport_issue_date: string;
+    passport_expiry_date: string;
+    lives_abroad: string;
+    previous_visas: string;
+}
 
 export default async function ProfilePage({
     searchParams,
@@ -98,7 +145,7 @@ export default async function ProfilePage({
         .eq("id", targetProfileId)
         .maybeSingle();
 
-    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(
+    const { data: workerRecord } = await loadCanonicalWorkerRecord<WorkerEditPageRecord>(
         dataClient,
         targetProfileId,
         "*"

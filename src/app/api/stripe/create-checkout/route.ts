@@ -3,7 +3,11 @@ import { stripe, PRICES, getCheckoutSuccessUrl, getCheckoutCancelUrl, PaymentTyp
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAgencyOwnedWorker, getAgencyWorkerName } from "@/lib/agencies";
-import { resolveEntryFeeEligibilityForWorker, WORKER_ENTRY_FEE_READINESS_COLUMNS } from "@/lib/payment-eligibility";
+import {
+    resolveEntryFeeEligibilityForWorker,
+    WORKER_ENTRY_FEE_READINESS_COLUMNS,
+    type EntryFeeEligibilityWorkerRecord,
+} from "@/lib/payment-eligibility";
 import { logServerActivity } from "@/lib/activityLoggerServer";
 import { getAdminTestSession } from "@/lib/admin-test-mode";
 import { getAdminTestWorkerWorkspace, markAdminTestAgencyWorkerEntryFeePaid, markAdminTestWorkerEntryFeePaid } from "@/lib/admin-test-data";
@@ -42,6 +46,12 @@ function sortByNewestDeadlineFirst<T extends { deadline_at?: string | null }>(pa
         return rightTime - leftTime;
     });
 }
+
+type CheckoutWorkerRecord = EntryFeeEligibilityWorkerRecord & {
+    id?: string | null;
+    updated_at?: string | null;
+    status?: string | null;
+};
 
 export async function POST(request: NextRequest) {
     let userIdForLog: string | null = null;
@@ -203,21 +213,7 @@ export async function POST(request: NextRequest) {
         let paymentRowClient = admin;
         let agencyTargetWorkerId: string | null = null;
         let isAgencyPayingForWorker = false;
-        let agencyWorkerRecordForCheckout: {
-            id: string;
-            entry_fee_paid: boolean | null;
-            admin_approved: boolean | null;
-            status: string | null;
-            job_search_active: boolean | null;
-            queue_joined_at: string | null;
-            updated_at: string | null;
-            phone: string | null;
-            nationality: string | null;
-            current_country: string | null;
-            preferred_job: string | null;
-            submitted_full_name: string | null;
-            submitted_email: string | null;
-        } | null = null;
+        let agencyWorkerRecordForCheckout: CheckoutWorkerRecord | null = null;
 
         // For confirmation fee, verify offer exists and is pending
         let offer = null;
@@ -249,7 +245,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Worker record for pre-filling Stripe checkout (populated in entry_fee block)
-        let workerRecord: any = null;
+        let workerRecord: CheckoutWorkerRecord | null = null;
 
         // For entry fee, allow payment for all worker profiles
         if (type === "entry_fee") {
@@ -374,7 +370,7 @@ export async function POST(request: NextRequest) {
                 data: initialWorkerRecord,
                 error: workerRecordError,
             } = paymentOwnerProfileId
-                ? await loadCanonicalWorkerRecord(
+                ? await loadCanonicalWorkerRecord<CheckoutWorkerRecord>(
                     admin,
                     paymentOwnerProfileId,
                     WORKER_ENTRY_FEE_READINESS_COLUMNS
@@ -409,7 +405,7 @@ export async function POST(request: NextRequest) {
                 const {
                     data: repairedWorkerRecord,
                     error: repairedWorkerRecordError,
-                } = await loadCanonicalWorkerRecord(
+                } = await loadCanonicalWorkerRecord<CheckoutWorkerRecord>(
                     admin,
                     paymentOwnerProfileId,
                     WORKER_ENTRY_FEE_READINESS_COLUMNS
@@ -573,8 +569,8 @@ export async function POST(request: NextRequest) {
         const priceConfig = type === "entry_fee" ? PRICES.ENTRY_FEE : PRICES.CONFIRMATION_FEE;
 
         // Build Stripe Checkout session with pre-filled customer data for better issuer/Radar context
-        const workerPhone = (workerRecord as any)?.phone || "";
-        const workerCountry = (workerRecord as any)?.current_country || (workerRecord as any)?.nationality || "";
+        const workerPhone = workerRecord?.phone || "";
+        const workerCountry = workerRecord?.current_country || workerRecord?.nationality || "";
         const stripeCustomerId = await ensureStripeCheckoutCustomer(stripe, {
             paymentType: type,
             requesterRole,

@@ -4,6 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendDocumentFixAnnouncementEmails } from "@/lib/admin-announcements";
 import { isGodModeUser } from "@/lib/godmode";
 
+function getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : "Unknown error";
+}
+
 export async function POST(request: Request) {
     try {
         const authHeader = request.headers.get("authorization");
@@ -67,8 +71,8 @@ export async function POST(request: Request) {
             message: `Successfully sent ${result.sent}/${result.total} document-fix announcement emails${result.queued > 0 ? ` and queued ${result.queued} for retry` : ""}.`
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Error triggering announcement:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

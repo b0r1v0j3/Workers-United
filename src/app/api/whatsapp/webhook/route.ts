@@ -119,6 +119,87 @@ interface SupportAccessSnapshot {
     reason: string | null;
 }
 
+type WhatsAppOnboardingQueryError = { message?: string | null } | null;
+
+type WhatsAppOnboardingQueryResponse<TData = unknown> = {
+    data?: TData | null;
+    error?: WhatsAppOnboardingQueryError;
+};
+
+type WhatsAppOnboardingQueryChain<TData = unknown> = PromiseLike<WhatsAppOnboardingQueryResponse<TData>> & {
+    select: (...args: unknown[]) => WhatsAppOnboardingQueryChain<TData>;
+    eq: (...args: unknown[]) => WhatsAppOnboardingQueryChain<TData>;
+    single: () => PromiseLike<WhatsAppOnboardingQueryResponse<TData>>;
+    upsert: (payload: unknown, options?: unknown) => PromiseLike<WhatsAppOnboardingQueryResponse<TData>>;
+    delete: () => WhatsAppOnboardingQueryChain<TData>;
+    update: (payload: unknown) => WhatsAppOnboardingQueryChain<TData>;
+};
+
+type WhatsAppAdminClient = {
+    from: (table: string) => unknown;
+};
+
+function onboardingTable<TData = unknown>(supabase: WhatsAppAdminClient, table: string) {
+    return supabase.from(table) as WhatsAppOnboardingQueryChain<TData>;
+}
+
+type OnboardingLinkedWorkerRecord = Pick<WhatsAppWorkerRecord, "profile_id" | "onboarding_completed">;
+
+interface OnboardingExistingWorkerRow {
+    id: string;
+    profile_id: string | null;
+}
+
+interface OnboardingChild {
+    first_name: string;
+    last_name: string;
+    dob: string;
+}
+
+interface OnboardingSpouse {
+    first_name: string;
+    last_name: string;
+    dob: string;
+    birth_country: string;
+    birth_city: string;
+}
+
+interface OnboardingFamilyData {
+    spouse?: OnboardingSpouse | null;
+    children?: OnboardingChild[];
+}
+
+interface OnboardingWorkerUpdatePayload {
+    phone: string;
+    nationality: string | null;
+    date_of_birth: string | null;
+    birth_country: string | null;
+    birth_city: string | null;
+    citizenship: string | null;
+    father_name: string | null;
+    mother_name: string | null;
+    current_country: string | null;
+    address: string | null;
+    lives_abroad: string | null;
+    previous_visas: string | null;
+    passport_number: string | null;
+    passport_issued_by: string | null;
+    passport_issue_date: string | null;
+    passport_expiry_date: string | null;
+    gender: string | null;
+    marital_status: string | null;
+    preferred_job: string | null;
+    desired_countries: string[] | null;
+    family_data: OnboardingFamilyData | null;
+    source_type: "whatsapp_onboarding";
+    application_data: {
+        collected_via: "whatsapp";
+        language: string;
+    };
+    updated_at: string;
+    submitted_full_name?: string;
+}
+
 function isLinkedWhatsAppWorker(
     workerRecord: Pick<WhatsAppWorkerRecord, "profile_id"> | null | undefined
 ): workerRecord is Pick<WhatsAppWorkerRecord, "profile_id"> & { profile_id: string } {
@@ -1497,9 +1578,8 @@ function parseDesiredCountries(msg: string): string[] {
 
 // ─── Supabase helpers ─────────────────────────────────────────────────────────
 
-async function getOnboardingState(supabase: any, phone: string): Promise<OnboardingState | null> {
-    const { data } = await supabase
-        .from("whatsapp_onboarding_state")
+async function getOnboardingState(supabase: WhatsAppAdminClient, phone: string): Promise<OnboardingState | null> {
+    const { data } = await onboardingTable<OnboardingState>(supabase, "whatsapp_onboarding_state")
         .select("*")
         .eq("phone_number", phone)
         .single();
@@ -1541,9 +1621,14 @@ function isValidOnboardingDateInput(raw: string): boolean {
         && parsed.getUTCDate() === day;
 }
 
-async function saveOnboardingState(supabase: any, phone: string, step: OnboardingStep, collectedData: Record<string, string>, language: string): Promise<void> {
-    await supabase
-        .from("whatsapp_onboarding_state")
+async function saveOnboardingState(
+    supabase: WhatsAppAdminClient,
+    phone: string,
+    step: OnboardingStep,
+    collectedData: Record<string, string>,
+    language: string
+): Promise<void> {
+    await onboardingTable(supabase, "whatsapp_onboarding_state")
         .upsert({
             phone_number: phone,
             current_step: step,
@@ -1553,17 +1638,19 @@ async function saveOnboardingState(supabase: any, phone: string, step: Onboardin
         }, { onConflict: "phone_number" });
 }
 
-async function clearOnboardingState(supabase: any, phone: string): Promise<void> {
-    await supabase
-        .from("whatsapp_onboarding_state")
+async function clearOnboardingState(supabase: WhatsAppAdminClient, phone: string): Promise<void> {
+    await onboardingTable(supabase, "whatsapp_onboarding_state")
         .delete()
         .eq("phone_number", phone);
 }
 
 // Save collected data only when the phone already belongs to a linked worker account.
 // Unregistered WhatsApp onboarding should not create ghost worker rows.
-async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Record<string, string>): Promise<boolean> {
-    const adminClient = createAdminClient();
+async function saveWorkerFromOnboarding(
+    phone: string,
+    data: Record<string, string>
+): Promise<boolean> {
+    const adminClient = createAdminClient() as WhatsAppAdminClient;
 
     // Parse date_of_birth DD/MM/YYYY → YYYY-MM-DD
     function parseDate(raw: string | undefined): string | null {
@@ -1574,7 +1661,7 @@ async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Reco
     }
 
     // Parse children from multiline text
-    function parseChildren(raw: string | undefined): any[] {
+    function parseChildren(raw: string | undefined): OnboardingChild[] {
         if (!raw) return [];
         return raw.split("\n").map(line => {
             const parts = line.split(",").map(s => s.trim());
@@ -1587,7 +1674,7 @@ async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Reco
     }
 
     // Parse spouse from comma-separated text
-    function parseSpouse(raw: string | undefined): any | null {
+    function parseSpouse(raw: string | undefined): OnboardingSpouse | null {
         if (!raw) return null;
         const parts = raw.split(",").map(s => s.trim());
         return {
@@ -1599,7 +1686,7 @@ async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Reco
         };
     }
 
-    const familyData: any = {};
+    const familyData: OnboardingFamilyData = {};
     if (data.has_spouse === "Yes" && data.spouse_details) {
         familyData.spouse = parseSpouse(data.spouse_details);
     }
@@ -1612,17 +1699,17 @@ async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Reco
         : [];
 
     // Try to find existing worker record by phone
-    const { data: existing } = await adminClient
-        .from("workers")
+    const { data: existing } = await onboardingTable<OnboardingExistingWorkerRow>(adminClient, "workers")
         .select("id, profile_id")
         .eq("phone", phone)
         .single();
+    const existingWorker = (existing as OnboardingExistingWorkerRow | null) ?? null;
 
-    if (!existing?.id || !existing.profile_id) {
+    if (!existingWorker?.id || !existingWorker.profile_id) {
         return false;
     }
 
-    const record: any = {
+    const record: OnboardingWorkerUpdatePayload = {
         phone,
         nationality: data.nationality || null,
         date_of_birth: parseDate(data.date_of_birth) || null,
@@ -1654,7 +1741,9 @@ async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Reco
         record.submitted_full_name = data.full_name;
     }
 
-    const { error } = await adminClient.from("workers").update(record).eq("id", existing.id);
+    const { error } = await onboardingTable(adminClient, "workers")
+        .update(record)
+        .eq("id", existingWorker.id);
     if (error) {
         throw error;
     }
@@ -1666,10 +1755,10 @@ async function saveWorkerFromOnboarding(supabase: any, phone: string, data: Reco
 // Returns reply string, or null if not in onboarding flow (let GPT handle it).
 
 export async function handleWhatsAppOnboarding(
-    supabase: any,
+    supabase: WhatsAppAdminClient,
     phone: string,
     message: string,
-    workerRecord: any,
+    workerRecord: OnboardingLinkedWorkerRecord | null,
     detectedLanguage: string,
     historyMessages: { direction?: string | null; content?: string | null }[] = [],
     platformContact?: Pick<PlatformContactInfo, "signupUrl" | "workerProfileUrl">
@@ -2013,7 +2102,7 @@ export async function handleWhatsAppOnboarding(
 
         let savedToLinkedWorker = false;
         try {
-            savedToLinkedWorker = await saveWorkerFromOnboarding(supabase, phone, collected);
+            savedToLinkedWorker = await saveWorkerFromOnboarding(phone, collected);
         } catch (e) {
             console.warn("[Onboarding] Could not save worker:", e);
         }

@@ -23,10 +23,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        const body = await request.json();
+        const body = await request.json() as { type?: unknown; data?: Record<string, unknown> };
         const { type, data } = body;
 
-        if (!isAdminEmailPreviewType(type)) {
+        if (typeof type !== "string" || !isAdminEmailPreviewType(type)) {
             return NextResponse.json({ error: "Invalid email type" }, { status: 400 });
         }
 
@@ -35,7 +35,10 @@ export async function POST(request: Request) {
             subject: template.subject,
             html: template.html,
         });
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message || "Internal error" }, { status: 500 });
+    } catch (err: unknown) {
+        return NextResponse.json(
+            { error: err instanceof Error ? err.message : "Internal error" },
+            { status: 500 }
+        );
     }
 }

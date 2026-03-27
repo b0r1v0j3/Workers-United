@@ -38,18 +38,42 @@ const ANALYSIS_MODEL = "claude-sonnet-4-6";
 const MAX_THREADS_PER_ANALYSIS = 30;
 const MAX_MESSAGES_PER_THREAD = 20;
 
-interface DbClient {
-    from: (table: string) => any;
+interface ConversationQueryRow {
+    phone_number?: string | null;
+    direction?: string | null;
+    content?: string | null;
+    created_at?: string | null;
 }
+
+type ConversationQueryResult = PromiseLike<{
+    data?: ConversationQueryRow[] | null;
+    error?: { message?: string | null } | null;
+}>;
+
+type DbClient = {
+    from: (table: string) => unknown;
+};
 
 export async function loadRecentConversations(
     admin: DbClient,
     hoursBack: number = 48
 ): Promise<ConversationThread[]> {
     const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
+    const messagesTable = admin.from("whatsapp_messages") as {
+        select: (columns: string) => {
+            gte: (column: string, value: string) => {
+                in: (column: string, values: string[]) => {
+                    not: (column: string, operator: string, value: null) => {
+                        order: (column: string, options: { ascending: boolean }) => {
+                            limit: (count: number) => ConversationQueryResult;
+                        };
+                    };
+                };
+            };
+        };
+    };
 
-    const { data, error } = await admin
-        .from("whatsapp_messages")
+    const { data, error } = await messagesTable
         .select("phone_number, direction, content, created_at")
         .gte("created_at", since)
         .in("direction", ["inbound", "outbound"])
@@ -69,11 +93,14 @@ export async function loadRecentConversations(
     const threadMap = new Map<string, ConversationThread>();
 
     for (const row of data) {
-        const phone = row.phone_number;
-        if (!phone || !row.content) continue;
+        const phone = typeof row.phone_number === "string" ? row.phone_number : "";
+        const content = typeof row.content === "string" ? row.content : "";
+        const direction = typeof row.direction === "string" ? row.direction : "";
+        const createdAt = typeof row.created_at === "string" ? row.created_at : "";
+        if (!phone || !content) continue;
 
         // Skip template messages
-        if (typeof row.content === "string" && row.content.startsWith("[Template:")) continue;
+        if (content.startsWith("[Template:")) continue;
 
         if (!threadMap.has(phone)) {
             threadMap.set(phone, { phone, messages: [] });
@@ -82,9 +109,9 @@ export async function loadRecentConversations(
 
         if (thread.messages.length < MAX_MESSAGES_PER_THREAD) {
             thread.messages.push({
-                direction: row.direction,
-                content: row.content,
-                created_at: row.created_at,
+                direction,
+                content,
+                created_at: createdAt,
             });
         }
     }

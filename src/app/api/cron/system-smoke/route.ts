@@ -141,51 +141,60 @@ export async function GET(request: Request) {
         });
 
         if (evaluation.status === "critical") {
-            const ownerEmail = process.env.OWNER_EMAIL || "cvetkovicborivoje@gmail.com";
-            const canAlert = await shouldSendCriticalAlert(supabase);
+            const ownerEmail = process.env.OWNER_EMAIL || process.env.SMTP_USER;
 
-            if (canAlert) {
-                try {
-                    const emailResult = await sendEmail(
-                        ownerEmail,
-                        "System Smoke Check CRITICAL",
-                        `
-                        <h2>Workers United Smoke Check Alert</h2>
-                        <p><strong>Status:</strong> ${evaluation.status.toUpperCase()}</p>
-                        <p><strong>Duration:</strong> ${durationMs}ms</p>
-                        <h3>Critical Issues</h3>
-                        <ul>${evaluation.criticalIssues.map((issue) => `<li>${issue}</li>`).join("")}</ul>
-                        <h3>Warnings</h3>
-                        <ul>${evaluation.warnings.map((warning) => `<li>${warning}</li>`).join("")}</ul>
-                        <h3>Routes</h3>
-                        <pre>${JSON.stringify(routeChecks, null, 2)}</pre>
-                        <h3>Services</h3>
-                        <pre>${JSON.stringify(serviceChecks, null, 2)}</pre>
-                        `
-                    );
+            if (!ownerEmail) {
+                console.error("[system-smoke] Critical alert skipped: missing OWNER_EMAIL and SMTP_USER");
+                await insertSystemActivity(supabase, "system_smoke_alert_not_configured", "error", {
+                    reason: "Missing OWNER_EMAIL and SMTP_USER",
+                    evaluation,
+                });
+            } else {
+                const canAlert = await shouldSendCriticalAlert(supabase);
 
-                    await insertSystemActivity(
-                        supabase,
-                        ALERT_ACTION,
-                        emailResult.success ? "ok" : "warning",
-                        {
+                if (canAlert) {
+                    try {
+                        const emailResult = await sendEmail(
                             ownerEmail,
-                            emailResult,
+                            "System Smoke Check CRITICAL",
+                            `
+                            <h2>Workers United Smoke Check Alert</h2>
+                            <p><strong>Status:</strong> ${evaluation.status.toUpperCase()}</p>
+                            <p><strong>Duration:</strong> ${durationMs}ms</p>
+                            <h3>Critical Issues</h3>
+                            <ul>${evaluation.criticalIssues.map((issue) => `<li>${issue}</li>`).join("")}</ul>
+                            <h3>Warnings</h3>
+                            <ul>${evaluation.warnings.map((warning) => `<li>${warning}</li>`).join("")}</ul>
+                            <h3>Routes</h3>
+                            <pre>${JSON.stringify(routeChecks, null, 2)}</pre>
+                            <h3>Services</h3>
+                            <pre>${JSON.stringify(serviceChecks, null, 2)}</pre>
+                            `
+                        );
+
+                        await insertSystemActivity(
+                            supabase,
+                            ALERT_ACTION,
+                            emailResult.success ? "ok" : "warning",
+                            {
+                                ownerEmail,
+                                emailResult,
+                                evaluation,
+                            }
+                        );
+                    } catch (emailErr) {
+                        await insertSystemActivity(supabase, ALERT_ACTION, "error", {
+                            ownerEmail,
+                            error: emailErr instanceof Error ? emailErr.message : "Unknown email error",
                             evaluation,
-                        }
-                    );
-                } catch (emailErr) {
-                    await insertSystemActivity(supabase, ALERT_ACTION, "error", {
-                        ownerEmail,
-                        error: emailErr instanceof Error ? emailErr.message : "Unknown email error",
+                        });
+                    }
+                } else {
+                    await insertSystemActivity(supabase, "system_smoke_alert_suppressed", "warning", {
+                        reason: `Cooldown active (${CRITICAL_ALERT_COOLDOWN_HOURS}h)`,
                         evaluation,
                     });
                 }
-            } else {
-                await insertSystemActivity(supabase, "system_smoke_alert_suppressed", "warning", {
-                    reason: `Cooldown active (${CRITICAL_ALERT_COOLDOWN_HOURS}h)`,
-                    evaluation,
-                });
             }
         }
 

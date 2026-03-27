@@ -14,10 +14,20 @@ interface WorkerStatus {
     isReady: boolean;
 }
 
+interface BulkGenerationError {
+    worker: string;
+    error: string;
+}
+
+interface BulkGenerationResult {
+    message: string;
+    errors?: BulkGenerationError[];
+}
+
 export default function BulkDocumentActions() {
     const [generating, setGenerating] = useState(false);
     const [downloading, setDownloading] = useState(false);
-    const [genResult, setGenResult] = useState<any>(null);
+    const [genResult, setGenResult] = useState<BulkGenerationResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [workers, setWorkers] = useState<WorkerStatus[]>([]);
     const [loadingWorkers, setLoadingWorkers] = useState(false);
@@ -155,11 +165,11 @@ export default function BulkDocumentActions() {
             {genResult && (
                 <div className="mb-3 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                     <div className="font-bold">✅ {genResult.message}</div>
-                    {genResult.errors?.length > 0 && (
+                    {!!genResult.errors?.length && (
                         <ul className="mt-1 text-xs list-disc pl-4">
-                            {genResult.errors.map((e: any, i: number) => (
-                                <li key={i} className="text-amber-700">
-                                    {e.worker}: {e.error}
+                            {genResult.errors?.map((errorEntry) => (
+                                <li key={`${errorEntry.worker}-${errorEntry.error}`} className="text-amber-700">
+                                    {errorEntry.worker}: {errorEntry.error}
                                 </li>
                             ))}
                         </ul>

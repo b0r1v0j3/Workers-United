@@ -631,7 +631,11 @@ export async function getAdminExceptionSnapshot() {
 
     paymentQuality.recentIssues = paymentQualityRecentIssues
         .sort((left, right) => right._sortTime - left._sortTime)
-        .map(({ _sortTime: _unusedSortTime, ...entry }) => entry);
+        .map((issue) => {
+            const { _sortTime, ...entry } = issue;
+            void _sortTime;
+            return entry;
+        });
 
     const manualReviewProfiles: ManualReviewException[] = Array.from(docsByUser.entries())
         .map(([profileId, documentsForUser]) => {

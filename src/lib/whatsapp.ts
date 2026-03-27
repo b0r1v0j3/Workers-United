@@ -73,7 +73,7 @@ interface SendResult {
 }
 
 interface SendAttemptResult extends SendResult {
-    errorData?: any;
+    errorData?: unknown;
 }
 
 export interface RecentRecipientSideBlockRecord {

@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import type { Json } from "@/lib/database.types";
 import { isGodModeUser } from "@/lib/godmode";
 import { queueEmail } from "@/lib/email-templates";
 import { buildContractDataForMatch } from "@/lib/contract-data";
@@ -16,17 +16,18 @@ import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
 import DocumentPreview from "@/components/admin/DocumentPreview";
 import DocumentViewerModal from "./DocumentViewerModal";
 import { AlertTriangle, ArrowLeft, Brain, Check, Clock, ExternalLink, ListOrdered, Mail, Paperclip, StickyNote, Trash2 } from "lucide-react";
-import { loadCanonicalWorkerRecord, normalizeWorkerPhone } from "@/lib/workers";
+import { loadCanonicalWorkerRecord, normalizeWorkerPhone, type WorkerRecordSnapshot } from "@/lib/workers";
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import {
     assertManualAdminWorkerStatusWriteSucceeded,
     getAllowedManualAdminWorkerStatuses,
     isPostEntryFeeWorkerStatus,
     resolveManualAdminWorkerStatusUpdate,
+    type ManualAdminWorkerStatus,
 } from "@/lib/worker-status";
 import { buildDocumentAiSummary, buildDocumentRequestReason, humanizeDocumentType } from "@/lib/document-review";
 import { getRestorableDocumentBackupPath } from "@/lib/document-image-processing";
-import { applyWorkerApprovalAction, loadWorkerApprovalGuardState, syncWorkerReviewStatus } from "@/lib/worker-review";
+import { applyWorkerApprovalAction, loadWorkerApprovalGuardState } from "@/lib/worker-review";
 import { resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { getAgencyWorkerEmail } from "@/lib/agencies";
 import { buildAdminEmailPreviewHref } from "@/lib/admin-email-preview";
@@ -43,6 +44,82 @@ import {
 interface PageProps {
     params: Promise<{ id: string }>;
     searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+interface WorkerSpouseData {
+    first_name?: string | null;
+    last_name?: string | null;
+    dob?: string | null;
+    birth_country?: string | null;
+    birth_city?: string | null;
+}
+
+interface WorkerChildData {
+    first_name?: string | null;
+    last_name?: string | null;
+    dob?: string | null;
+}
+
+interface WorkerFamilyData {
+    spouse?: WorkerSpouseData | null;
+    children?: WorkerChildData[] | null;
+}
+
+interface WorkerDetailRecord extends WorkerRecordSnapshot {
+    admin_approved_at?: string | null;
+    agency_id?: string | null;
+    application_data?: Json | null;
+    birth_city?: string | null;
+    birth_country?: string | null;
+    citizenship?: string | null;
+    created_at?: string | null;
+    date_of_birth?: string | null;
+    family_data?: WorkerFamilyData | null;
+    gender?: string | null;
+    id: string;
+    lives_abroad?: boolean | null;
+    marital_status?: string | null;
+    passport_expiry_date?: string | null;
+    passport_issue_date?: string | null;
+    passport_issued_by?: string | null;
+    previous_visas?: string | boolean | null;
+    profile_id?: string | null;
+    submitted_email?: string | null;
+}
+
+interface WorkerPaymentRow {
+    id: string;
+    amount?: number | string | null;
+    amount_cents?: number | null;
+    created_at?: string | null;
+    paid_at?: string | null;
+    refund_status?: string | null;
+    status?: string | null;
+    type?: string | null;
+}
+
+interface WorkerDocumentRow {
+    id: string;
+    created_at?: string | null;
+    document_type?: string | null;
+    ocr_json?: Json | null;
+    reject_reason?: string | null;
+    status?: string | null;
+    storage_path?: string | null;
+}
+
+interface WorkerSignatureRow {
+    created_at?: string | null;
+    document_type?: string | null;
+    ip_address?: string | null;
+    signature_data?: string | null;
+}
+
+interface WorkerAgencyRow {
+    id: string;
+    display_name?: string | null;
+    legal_name?: string | null;
+    profile_id?: string | null;
 }
 
 function getSingleSearchParam(value: string | string[] | undefined) {
@@ -110,25 +187,25 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     let adminClient;
     try {
         adminClient = createAdminClient();
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.warn("Service role key not configured, falling back to user client:", err);
         adminClient = supabase;
     }
 
-    const { data: directWorkerRecord } = await adminClient
+    const { data: directWorkerRecordResult } = await adminClient
         .from("worker_onboarding")
         .select("*")
         .eq("id", id)
         .maybeSingle();
+    const directWorkerRecord = (directWorkerRecordResult as WorkerDetailRecord | null) || null;
 
-    const resolvedWorkerRecord = directWorkerRecord?.profile_id
-        ? (await loadCanonicalWorkerRecord<any>(adminClient, directWorkerRecord.profile_id, "*").then((result) => result.data)) || directWorkerRecord
+    const resolvedWorkerRecord: WorkerDetailRecord | null = directWorkerRecord?.profile_id
+        ? (await loadCanonicalWorkerRecord<WorkerDetailRecord>(adminClient, directWorkerRecord.profile_id, "*").then((result) => result.data)) || directWorkerRecord
         : directWorkerRecord
-            || (await loadCanonicalWorkerRecord<any>(adminClient, id, "*").then((result) => result.data));
+            || (await loadCanonicalWorkerRecord<WorkerDetailRecord>(adminClient, id, "*").then((result) => result.data));
 
     const profileId = resolvedWorkerRecord?.profile_id || (!directWorkerRecord ? id : null);
     const documentOwnerId = (resolvedWorkerRecord ? resolveAgencyWorkerDocumentOwnerId(resolvedWorkerRecord) : null) || profileId;
-    const notificationUserId = profileId || documentOwnerId || resolvedWorkerRecord?.id || id;
     const isAgencyDraft = !!resolvedWorkerRecord?.agency_id && !resolvedWorkerRecord?.profile_id;
     const isAgencyManagedCase = !!resolvedWorkerRecord?.agency_id;
     const phoneOptional = isAgencyManagedCase;
@@ -195,20 +272,22 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         notFound();
     }
 
-    const documents = documentsResult.data || [];
-    const dedupedPayments = new Map<string, any>();
-    for (const payment of [...(directPaymentsResult.data || []), ...(targetPaymentsResult.data || [])]) {
+    const documents = Array.isArray(documentsResult.data) ? (documentsResult.data as WorkerDocumentRow[]) : [];
+    const directPayments = Array.isArray(directPaymentsResult.data) ? (directPaymentsResult.data as WorkerPaymentRow[]) : [];
+    const targetPayments = Array.isArray(targetPaymentsResult.data) ? (targetPaymentsResult.data as WorkerPaymentRow[]) : [];
+    const dedupedPayments = new Map<string, WorkerPaymentRow>();
+    for (const payment of [...directPayments, ...targetPayments]) {
         if (payment?.id) {
             dedupedPayments.set(payment.id, payment);
         }
     }
-    const payments = Array.from(dedupedPayments.values()).sort((a: any, b: any) => {
-        const aTime = a?.paid_at ? new Date(a.paid_at).getTime() : 0;
-        const bTime = b?.paid_at ? new Date(b.paid_at).getTime() : 0;
-        return bTime - aTime;
+    const payments = Array.from(dedupedPayments.values()).sort((left, right) => {
+        const leftTime = left.paid_at ? new Date(left.paid_at).getTime() : 0;
+        const rightTime = right.paid_at ? new Date(right.paid_at).getTime() : 0;
+        return rightTime - leftTime;
     });
-    const signatures = signaturesResult.data || [];
-    const agencyRecord = agencyResult.data || null;
+    const signatures = Array.isArray(signaturesResult.data) ? (signaturesResult.data as WorkerSignatureRow[]) : [];
+    const agencyRecord = (agencyResult.data as WorkerAgencyRow | null) || null;
 
     // Fetch contract data to allow manual editing for PDF generation
     let contractData = null;
@@ -252,11 +331,13 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     const canApproveWorker = !!approvalGuardState?.canApprove;
     const canRevokeApproval = !!approvalGuardState?.canRevoke;
     const documentProgress = getWorkerDocumentProgress(documents || []);
+    const familyChildren = workerRecord?.family_data?.children ?? [];
+    const workerRecordId = workerRecord?.id || id;
     const verifiedDocumentsCount = documentProgress.verifiedCount;
     const pendingDocumentsCount = documentProgress.pendingCount;
     const rejectedDocumentsCount = documentProgress.rejectedCount;
-    const completedPaymentsCount = (payments || []).filter((payment: any) => ["completed", "paid"].includes(payment.status || "")).length;
-    const pendingPaymentsCount = (payments || []).filter((payment: any) => payment.status === "pending").length;
+    const completedPaymentsCount = payments.filter((payment) => ["completed", "paid"].includes(payment.status || "")).length;
+    const pendingPaymentsCount = payments.filter((payment) => payment.status === "pending").length;
     const latestSignature = signatures?.[0] || null;
     const workerStatus = approvalGuardState?.worker.status || workerRecord?.status || "NEW";
     const hasPaidEntryFee = approvalGuardState?.hasPaidEntryFee ?? !!workerRecord?.entry_fee_paid;
@@ -268,7 +349,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         adminApproved: isAdminApproved,
     });
     const manualStatusOverrideLocked = manualStatusOptions.length === 0;
-    const manualStatusDefault = manualStatusOptions.includes(workerStatus as any) ? workerStatus : (manualStatusOptions[0] ?? "NEW");
+    const manualStatusDefault: ManualAdminWorkerStatus = manualStatusOptions.find((statusOption) => statusOption === workerStatus) ?? (manualStatusOptions[0] ?? "NEW");
     const manualStatusLockedByLifecycle = hasPaidEntryFee || jobSearchActive || workerStatus === "REFUND_FLAGGED" || isPostEntryFeeWorkerStatus(workerStatus);
     const manualStatusLockCopy = manualStatusLockedByLifecycle
         ? "Manual status override is locked because queue, offer, visa, and refund states are system-managed after Job Finder checkout starts."
@@ -285,82 +366,6 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
             ? `/profile/worker/documents?inspect=${profileId}`
             : null;
     const queueInspectHref = profileId ? `/profile/worker/queue?inspect=${profileId}` : null;
-
-    async function updateDocumentStatus(formData: FormData) {
-        "use server";
-        const docId = formData.get("doc_id") as string;
-        const newStatus = formData.get("status") as string;
-        const feedback = formData.get("feedback") as string;
-        const userEmail = formData.get("user_email") as string;
-        const userName = formData.get("user_name") as string;
-        const docType = formData.get("doc_type") as string;
-
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Unauthorized");
-
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("user_type")
-            .eq("id", user.id)
-            .single();
-
-        if (profile?.user_type !== 'admin') {
-            throw new Error("Forbidden: Admin access only");
-        }
-
-        const adminClient = createAdminClient();
-        if (!workerRecord?.id) {
-            throw new Error("Worker record not found");
-        }
-
-        const rejectReason = newStatus === "rejected"
-            ? (feedback?.trim() || buildDocumentRequestReason(docType, null, null))
-            : null;
-
-        const { error: updateError } = await adminClient
-            .from("worker_documents")
-            .update({
-                status: newStatus,
-                reject_reason: rejectReason,
-                verified_at: newStatus === "verified" ? new Date().toISOString() : null,
-                updated_at: new Date().toISOString(),
-            })
-            .eq("id", docId);
-        if (updateError) {
-            throw new Error(updateError.message);
-        }
-
-        await syncWorkerReviewStatus({
-            adminClient,
-            profileId,
-            workerId: workerRecord.id,
-            documentOwnerId,
-            phoneOptional,
-            fullNameFallback: workerNameFallback,
-            notifyOnPendingApproval: true,
-        });
-
-        if ((newStatus === "verified" || newStatus === "rejected") && userEmail && notificationUserId) {
-            const approved = newStatus === "verified";
-            after(async () => {
-                await queueEmail(
-                    adminClient,
-                    notificationUserId,
-                    "document_review_result",
-                    userEmail,
-                    userName || "there",
-                    {
-                        approved,
-                        docType: humanizeDocumentType(docType),
-                        feedback: approved ? null : rejectReason,
-                    }
-                );
-            });
-        }
-
-        revalidatePath(`/admin/workers/${id}`);
-    }
 
     async function approveWorker(formData: FormData) {
         "use server";
@@ -746,7 +751,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                     <InfoRow label="Birth City" value={workerRecord?.birth_city} />
                                     <InfoRow label="Marital Status" value={workerRecord?.marital_status} />
                                     <InfoRow label="Lives Abroad" value={formatBoolean(workerRecord?.lives_abroad)} />
-                                    <InfoRow label="Previous Visas" value={formatBoolean(workerRecord?.previous_visas)} />
+                                    <InfoRow label="Previous Visas" value={workerRecord?.previous_visas} />
                                 </FieldGroup>
 
                                 <FieldGroup title="Passport" description="Primary identity document values used in generated forms.">
@@ -779,13 +784,13 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                             </div>
                                         )}
 
-                                        {workerRecord?.family_data?.children?.length > 0 ? (
+                                        {familyChildren.length > 0 ? (
                                             <div className="sm:col-span-2 rounded-2xl border border-[#ece8dd] bg-white px-4 py-4">
                                                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
-                                                    Children ({workerRecord.family_data.children.length})
+                                                    Children ({familyChildren.length})
                                                 </div>
                                                 <div className="mt-3 space-y-3">
-                                                    {workerRecord.family_data.children.map((child: any, index: number) => (
+                                                    {familyChildren.map((child, index) => (
                                                         <div
                                                             key={index}
                                                             className="grid gap-3 border-l-2 border-[#ece8dd] pl-4 sm:grid-cols-3"
@@ -972,7 +977,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
 
                                     {payments && payments.length > 0 ? (
                                         <div className="space-y-3">
-                                            {payments.map((payment: any) => (
+                                            {payments.map((payment) => (
                                                 <div
                                                     key={payment.id}
                                                     className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-[#ece8dd] bg-[#fcfbf8] px-4 py-4"
@@ -1016,7 +1021,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                     <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-4">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
-                                            src={latestSignature.signature_data}
+                                            src={latestSignature.signature_data || ""}
                                             alt="Worker signature"
                                             className="max-h-[120px] w-full rounded-xl border border-[#e7e5e4] bg-white object-contain"
                                         />
@@ -1032,7 +1037,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                             )}
                         </OpsPanelCard>
 
-                        {workerRecord ? <ManualMatchButton workerRecordId={workerRecord.id} /> : null}
+                        {workerRecord ? <ManualMatchButton workerRecordId={workerRecordId} /> : null}
 
                         {profileId ? (
                             <SingleWorkerDownload
@@ -1056,12 +1061,14 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
 
                             {documents && documents.length > 0 ? (
                                 <div className="mt-5 space-y-4">
-                                    {documents.map((doc: any) => (
+                                    {documents.map((doc) => (
                                         (() => {
+                                            const documentType = doc.document_type || "document";
+                                            const documentStatus = doc.status || "pending";
                                             const previewUrl = `/api/admin/documents/${doc.id}/preview`;
-                                            const aiSummary = buildDocumentAiSummary(doc.document_type, doc.ocr_json, doc.reject_reason);
-                                            const requestReason = buildDocumentRequestReason(doc.document_type, doc.ocr_json, doc.reject_reason);
-                                            const humanizedDocumentType = humanizeDocumentType(doc.document_type);
+                                            const aiSummary = buildDocumentAiSummary(documentType, doc.ocr_json, doc.reject_reason);
+                                            const requestReason = buildDocumentRequestReason(documentType, doc.ocr_json, doc.reject_reason);
+                                            const humanizedDocumentType = humanizeDocumentType(documentType);
                                             const isPdf = typeof doc.storage_path === "string" && doc.storage_path.toLowerCase().endsWith(".pdf");
                                             const ocrJsonRecord = !!doc.ocr_json
                                                 && typeof doc.ocr_json === "object"
@@ -1101,14 +1108,14 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                 <div>
                                                     <div className="inline-flex items-center gap-2 rounded-full border border-[#ded8ca] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b675d]">
                                                         <Paperclip size={14} />
-                                                        {toDisplayLabel(doc.document_type)}
+                                                        {toDisplayLabel(documentType)}
                                                     </div>
                                                     <p className="mt-3 text-sm text-[#71717a]">
                                                         Uploaded {formatDateTime(doc.created_at) || "Unknown time"}
                                                     </p>
                                                 </div>
-                                                <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(doc.status)}`}>
-                                                    {toDisplayLabel(doc.status)}
+                                                <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getStatusColor(documentStatus)}`}>
+                                                    {toDisplayLabel(documentStatus)}
                                                 </span>
                                             </div>
 
@@ -1124,8 +1131,8 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                 <DocumentViewerModal
                                                     url={previewUrl}
                                                     documentId={doc.id}
-                                                    documentType={doc.document_type}
-                                                    status={doc.status}
+                                                    documentType={documentType}
+                                                    status={documentStatus}
                                                     isPdf={isPdf}
                                                     hasRestorableOriginal={hasRestorableOriginal}
                                                 >
@@ -1174,17 +1181,17 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
 
                                                     <form action="/api/admin/admin-review" method="post" className="rounded-[22px] border border-[#e6e6e1] bg-[#faf8f3] p-4">
                                                         <input type="hidden" name="mode" value="update_status" />
-                                                        <input type="hidden" name="worker_id" value={workerRecord.id} />
+                                                        <input type="hidden" name="worker_id" value={workerRecordId} />
                                                         <input type="hidden" name="redirect_to" value={`/admin/workers/${id}`} />
                                                         <input type="hidden" name="doc_id" value={doc.id} />
-                                                        <input type="hidden" name="doc_type" value={doc.document_type} />
+                                                        <input type="hidden" name="doc_type" value={documentType} />
                                                         <div className="mb-4">
                                                             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8479]">
                                                                 Admin decision
                                                             </label>
                                                             <AdaptiveSelect
                                                                 name="status"
-                                                                defaultValue={doc.status}
+                                                                defaultValue={documentStatus}
                                                                 className="w-full rounded-xl border border-[#ddd8cb] bg-white px-3 py-3 text-sm text-[#18181b] outline-none transition focus:border-[#a8a29e] focus:ring-2 focus:ring-[#efece3]"
                                                                 desktopSearchThreshold={999}
                                                             >
@@ -1229,10 +1236,10 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                             </summary>
                                                             <form action="/api/admin/admin-review" method="post" className="space-y-3 border-t border-orange-200 px-4 py-4">
                                                                 <input type="hidden" name="mode" value="request_new_document" />
-                                                                <input type="hidden" name="worker_id" value={workerRecord.id} />
+                                                                <input type="hidden" name="worker_id" value={workerRecordId} />
                                                                 <input type="hidden" name="redirect_to" value={`/admin/workers/${id}`} />
                                                                 <input type="hidden" name="doc_id" value={doc.id} />
-                                                                <input type="hidden" name="doc_type" value={doc.document_type} />
+                                                                <input type="hidden" name="doc_type" value={documentType} />
                                                                 <p className="text-xs leading-relaxed text-orange-900">
                                                                     This deletes the current file and emails the worker with a request to upload a new version.
                                                                 </p>
@@ -1265,10 +1272,10 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                             </summary>
                                                             <form action="/api/admin/admin-review" method="post" className="space-y-3 border-t border-red-200 px-4 py-4">
                                                                 <input type="hidden" name="mode" value="delete_document" />
-                                                                <input type="hidden" name="worker_id" value={workerRecord.id} />
+                                                                <input type="hidden" name="worker_id" value={workerRecordId} />
                                                                 <input type="hidden" name="redirect_to" value={`/admin/workers/${id}`} />
                                                                 <input type="hidden" name="doc_id" value={doc.id} />
-                                                                <input type="hidden" name="doc_type" value={doc.document_type} />
+                                                                <input type="hidden" name="doc_type" value={documentType} />
                                                                 <p className="text-xs leading-relaxed text-red-900">
                                                                     This removes the document without notifying the worker.
                                                                 </p>
@@ -1436,7 +1443,7 @@ function EmptyAdminState({ copy }: { copy: string }) {
     );
 }
 
-function InfoRow({ label, value }: { label: string; value: any }) {
+function InfoRow({ label, value }: { label: string; value: unknown }) {
     const isEmpty = value === null || value === undefined || value === '';
     return (
         <div className="rounded-[18px] border border-[#ece8dd] bg-white px-4 py-3">
@@ -1495,7 +1502,7 @@ function toDisplayLabel(value?: string | null) {
         .join(" ");
 }
 
-function formatPaymentAmount(payment: any) {
+function formatPaymentAmount(payment: WorkerPaymentRow) {
     const amount = Number(payment?.amount ?? (Number(payment?.amount_cents || 0) / 100));
     return Number.isFinite(amount) ? `$${amount.toFixed(2)}` : "—";
 }

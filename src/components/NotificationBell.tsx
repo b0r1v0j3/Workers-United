@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface NotificationBellProps {
@@ -38,19 +38,19 @@ export default function NotificationBell({
         opacity: isDrawerVisible ? 1 : 0,
     };
 
-    const clearCloseTimer = () => {
+    const clearCloseTimer = useCallback(() => {
         if (typeof window === "undefined" || closeTimerRef.current === null) return;
         window.clearTimeout(closeTimerRef.current);
         closeTimerRef.current = null;
-    };
+    }, []);
 
-    const clearOpenFrame = () => {
+    const clearOpenFrame = useCallback(() => {
         if (typeof window === "undefined" || openFrameRef.current === null) return;
         window.cancelAnimationFrame(openFrameRef.current);
         openFrameRef.current = null;
-    };
+    }, []);
 
-    const closeDrawer = useEffectEvent(() => {
+    const closeDrawer = useCallback(() => {
         if (typeof window === "undefined") {
             setIsDrawerVisible(false);
             setIsDrawerMounted(false);
@@ -64,13 +64,13 @@ export default function NotificationBell({
             setIsDrawerMounted(false);
             closeTimerRef.current = null;
         }, DRAWER_ANIMATION_MS);
-    });
+    }, [clearCloseTimer, clearOpenFrame]);
 
-    const openDrawer = () => {
+    const openDrawer = useCallback(() => {
         clearCloseTimer();
         clearOpenFrame();
         setIsDrawerMounted(true);
-    };
+    }, [clearCloseTimer, clearOpenFrame]);
 
     useEffect(() => {
         if (!isDrawerMounted) return;
@@ -92,7 +92,7 @@ export default function NotificationBell({
             window.cancelAnimationFrame(firstFrame);
             clearOpenFrame();
         };
-    }, [isDrawerMounted]);
+    }, [clearOpenFrame, isDrawerMounted]);
 
     useEffect(() => {
         if (!isDrawerMounted) return;
@@ -111,7 +111,7 @@ export default function NotificationBell({
             document.body.style.overflow = previousOverflow;
             document.removeEventListener("keydown", handleEscape);
         };
-    }, [isDrawerMounted]);
+    }, [closeDrawer, isDrawerMounted]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -122,14 +122,14 @@ export default function NotificationBell({
 
         window.addEventListener("workersunited:close-notifications", handleCloseNotifications);
         return () => window.removeEventListener("workersunited:close-notifications", handleCloseNotifications);
-    }, []);
+    }, [closeDrawer]);
 
     useEffect(() => {
         return () => {
             clearCloseTimer();
             clearOpenFrame();
         };
-    }, []);
+    }, [clearCloseTimer, clearOpenFrame]);
 
     // Load unread count on mount
     useEffect(() => {

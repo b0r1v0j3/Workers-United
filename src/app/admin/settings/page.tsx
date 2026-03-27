@@ -24,7 +24,7 @@ async function checkSupabase(): Promise<ServiceCheck> {
             return { name: "Supabase", description: "Database & Authentication", status: "degraded", responseTime, details: error.message };
         }
         return { name: "Supabase", description: "Database & Authentication", status: "operational", responseTime, details: `Query OK (${responseTime}ms)` };
-    } catch (err) {
+    } catch {
         return { name: "Supabase", description: "Database & Authentication", status: "down", responseTime: Date.now() - start, details: "Connection failed" };
     }
 }

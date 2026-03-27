@@ -60,15 +60,20 @@ interface PendingOffer {
     id: string;
 }
 
+interface DashboardViewer {
+    user_metadata?: {
+        full_name?: string | null;
+    } | null;
+}
+
 interface DashboardClientProps {
-    user: any;
+    user: DashboardViewer;
     profile: WorkerProfile | null;
     worker: WorkerRecord | null;
     documents: WorkerDocument[];
     pendingOffers: PendingOffer[];
     profileCompletion: number;
     missingFields: string[];
-    isReady: boolean;
     inQueue: boolean;
     hasPaidEntryFee: boolean;
     readOnlyPreview?: boolean;
@@ -84,7 +89,6 @@ export default function DashboardClient({
     pendingOffers = [],
     profileCompletion,
     missingFields = [],
-    isReady,
     inQueue,
     hasPaidEntryFee,
     readOnlyPreview = false,

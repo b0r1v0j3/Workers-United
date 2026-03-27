@@ -12,6 +12,15 @@ interface EnsureWorkerRecordResult {
     workerCreated: boolean;
 }
 
+type WorkerRecordQueryResult = PromiseLike<{
+    data?: unknown[] | null;
+    error?: { message: string } | null;
+}>;
+
+export type WorkerRecordQueryClient = {
+    from: (table: string) => unknown;
+};
+
 export interface WorkerRecordSnapshot {
     id?: string | null;
     updated_at?: string | null;
@@ -62,7 +71,7 @@ export function pickCanonicalWorkerRecord<T extends WorkerRecordSnapshot>(
 }
 
 export async function loadCanonicalWorkerRecord<T extends WorkerRecordSnapshot = WorkerRecordSnapshot>(
-    supabase: any,
+    supabase: WorkerRecordQueryClient,
     profileId: string,
     columns = "*",
     limit = 25
@@ -72,8 +81,17 @@ export async function loadCanonicalWorkerRecord<T extends WorkerRecordSnapshot =
     duplicates: number;
     error: { message: string } | null;
 }> {
-    const { data, error } = await supabase
-        .from(WORKER_DOMAIN.table)
+    const workerTable = supabase.from(WORKER_DOMAIN.table) as {
+        select: (selectedColumns: string) => {
+            eq: (column: string, value: string) => {
+                order: (orderColumn: string, options: { ascending: boolean }) => {
+                    limit: (count: number) => WorkerRecordQueryResult;
+                };
+            };
+        };
+    };
+
+    const { data, error } = await workerTable
         .select(columns)
         .eq("profile_id", profileId)
         .order("updated_at", { ascending: false })
@@ -83,7 +101,7 @@ export async function loadCanonicalWorkerRecord<T extends WorkerRecordSnapshot =
         return { data: null, rows: [], duplicates: 0, error };
     }
 
-    const rows = Array.isArray(data) ? (data as T[]) : [];
+    const rows = Array.isArray(data) ? (data as unknown as T[]) : [];
     return {
         data: pickCanonicalWorkerRecord(rows),
         rows,

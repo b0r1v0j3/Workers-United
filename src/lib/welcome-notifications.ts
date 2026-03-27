@@ -1,7 +1,9 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 const WELCOME_EMAIL_ACTIVE_STATUSES = ["pending", "sent"] as const;
 
 export async function hasQueuedOrSentWelcomeEmail(
-    supabase: any,
+    supabase: SupabaseClient,
     userId: string
 ) {
     const { data, error } = await supabase

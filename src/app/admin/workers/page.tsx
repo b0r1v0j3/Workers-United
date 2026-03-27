@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
@@ -8,17 +9,79 @@ import { BadgeCheck, Hourglass, ListOrdered, Users } from "lucide-react";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import WorkersTableClient, { WorkerTableRow } from "./WorkersTableClient";
-import { pickCanonicalWorkerRecord } from "@/lib/workers";
+import { pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import { getAgencyDraftDocumentOwnerId, resolveAgencyWorkerDocumentOwnerId } from "@/lib/agency-draft-documents";
 import { getAgencyWorkerEmail, getAgencyWorkerName } from "@/lib/agencies";
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
+import type { Json } from "@/lib/database.types";
 import {
     getProfileRetentionState,
     PROFILE_INACTIVITY_UI_ALERT_DAYS,
     PROFILE_RETENTION_ACTIVITY_CATEGORIES,
     PROFILE_RETENTION_CASE_EMAIL_TYPES,
 } from "@/lib/profile-retention";
+
+interface AdminWorkerRegistryRow extends WorkerRecordSnapshot {
+    id: string;
+    profile_id: string | null;
+    agency_id?: string | null;
+    application_data?: Json | null;
+    submitted_full_name?: string | null;
+    submitted_email?: string | null;
+    phone?: string | null;
+    nationality?: string | null;
+    preferred_job?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+    admin_approved?: boolean | null;
+}
+
+interface AdminWorkerProfileRow {
+    id: string;
+    full_name?: string | null;
+    email?: string | null;
+    avatar_url?: string | null;
+    created_at?: string | null;
+    user_type?: string | null;
+}
+
+interface AdminWorkerDocumentRow {
+    user_id: string | null;
+    document_type: string;
+    status?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+}
+
+interface AdminEmployerProfileLinkRow {
+    profile_id: string | null;
+}
+
+interface AdminAgencyRow {
+    id: string;
+    profile_id?: string | null;
+    display_name?: string | null;
+    legal_name?: string | null;
+}
+
+interface AdminSignatureRow {
+    user_id: string | null;
+    created_at: string | null;
+}
+
+interface AdminRetentionEmailRow {
+    user_id: string | null;
+    email_type?: string | null;
+    created_at: string | null;
+    sent_at: string | null;
+}
+
+interface AdminUserActivityRow {
+    user_id: string | null;
+    category?: string | null;
+    created_at: string | null;
+}
 
 export default async function WorkersPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const params = await searchParams;
@@ -68,10 +131,18 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
             .select("user_id, category, created_at")
             .in("category", [...PROFILE_RETENTION_ACTIVITY_CATEGORIES]),
     ]);
+    const typedWorkerRows = Array.isArray(workerRows) ? (workerRows as AdminWorkerRegistryRow[]) : [];
+    const profileRows = Array.isArray(profiles) ? (profiles as AdminWorkerProfileRow[]) : [];
+    const documentRows = Array.isArray(allDocs) ? (allDocs as AdminWorkerDocumentRow[]) : [];
+    const typedEmployerRows = Array.isArray(employerRows) ? (employerRows as AdminEmployerProfileLinkRow[]) : [];
+    const typedAgencies = Array.isArray(agencies) ? (agencies as AdminAgencyRow[]) : [];
+    const typedSignatures = Array.isArray(signatures) ? (signatures as AdminSignatureRow[]) : [];
+    const typedRetentionEmails = Array.isArray(retentionEmails) ? (retentionEmails as AdminRetentionEmailRow[]) : [];
+    const typedUserActivity = Array.isArray(userActivity) ? (userActivity as AdminUserActivityRow[]) : [];
 
-    const workerGroups = new Map<string, any[]>();
+    const workerGroups = new Map<string, AdminWorkerRegistryRow[]>();
     const hiddenDraftOwnerIds = new Set<string>();
-    for (const workerRow of workerRows || []) {
+    for (const workerRow of typedWorkerRows) {
         const draftOwnerId = getAgencyDraftDocumentOwnerId(workerRow?.application_data);
         if (draftOwnerId) {
             hiddenDraftOwnerIds.add(draftOwnerId);
@@ -86,19 +157,19 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
     const workerMap = new Map(
         Array.from(workerGroups.entries())
             .map(([profileId, rows]) => [profileId, pickCanonicalWorkerRecord(rows)])
-            .filter((entry): entry is [string, any] => !!entry[1])
+            .filter((entry): entry is [string, AdminWorkerRegistryRow] => !!entry[1])
     );
-    const profileMap = new Map(profiles?.map((profileRow: any) => [profileRow.id, profileRow]) || []);
-    const agencyMap = new Map(agencies?.map((agency: any) => [agency.id, agency]) || []);
-    const documentsByOwnerId = new Map<string, any[]>();
-    for (const doc of allDocs || []) {
+    const profileMap = new Map(profileRows.map((profileRow) => [profileRow.id, profileRow] as const));
+    const agencyMap = new Map(typedAgencies.map((agency) => [agency.id, agency] as const));
+    const documentsByOwnerId = new Map<string, AdminWorkerDocumentRow[]>();
+    for (const doc of documentRows) {
         if (!doc?.user_id) continue;
         const current = documentsByOwnerId.get(doc.user_id) || [];
         current.push(doc);
         documentsByOwnerId.set(doc.user_id, current);
     }
     const latestSignatureByUser = new Map<string, string>();
-    for (const signature of signatures || []) {
+    for (const signature of typedSignatures) {
         if (!signature?.user_id || !signature.created_at) continue;
         const previous = latestSignatureByUser.get(signature.user_id);
         if (!previous || new Date(signature.created_at).getTime() > new Date(previous).getTime()) {
@@ -106,7 +177,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         }
     }
     const latestCaseEmailByUser = new Map<string, string>();
-    for (const email of retentionEmails || []) {
+    for (const email of typedRetentionEmails) {
         if (!email?.user_id) continue;
         const candidate = email.sent_at || email.created_at;
         if (!candidate) continue;
@@ -116,7 +187,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         }
     }
     const latestActivityByUser = new Map<string, string>();
-    for (const activity of userActivity || []) {
+    for (const activity of typedUserActivity) {
         if (!activity?.user_id || !activity.created_at) continue;
         const previous = latestActivityByUser.get(activity.user_id);
         if (!previous || new Date(activity.created_at).getTime() > new Date(previous).getTime()) {
@@ -126,24 +197,24 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
 
     // Exclude non-worker auth users and hidden agency draft document-owner accounts.
     const excludedProfileIds = new Set<string>();
-    (profiles || [])
-        .filter((profileRow: any) => ["employer", "admin", "agency"].includes(profileRow.user_type))
-        .forEach((profileRow: any) => excludedProfileIds.add(profileRow.id));
-    (employerRows || []).forEach((employerRow: any) => {
+    profileRows
+        .filter((profileRow) => ["employer", "admin", "agency"].includes(String(profileRow.user_type || "")))
+        .forEach((profileRow) => excludedProfileIds.add(profileRow.id));
+    typedEmployerRows.forEach((employerRow) => {
         if (employerRow.profile_id) {
             excludedProfileIds.add(employerRow.profile_id);
         }
     });
     allAuthUsers
-        .filter((authUser: any) => ["employer", "admin", "agency"].includes(authUser.user_metadata?.user_type))
-        .forEach((authUser: any) => excludedProfileIds.add(authUser.id));
+        .filter((authUser: SupabaseAuthUser) => ["employer", "admin", "agency"].includes(String(authUser.user_metadata?.user_type || "")))
+        .forEach((authUser) => excludedProfileIds.add(authUser.id));
     allAuthUsers
-        .filter((authUser: any) => authUser.user_metadata?.hidden_draft_owner)
-        .forEach((authUser: any) => hiddenDraftOwnerIds.add(authUser.id));
+        .filter((authUser: SupabaseAuthUser) => Boolean(authUser.user_metadata?.hidden_draft_owner))
+        .forEach((authUser) => hiddenDraftOwnerIds.add(authUser.id));
 
     const claimedRegistryRows: WorkerTableRow[] = allAuthUsers
-        .filter((authUser: any) => !excludedProfileIds.has(authUser.id) && !hiddenDraftOwnerIds.has(authUser.id))
-        .map((authUser: any) => {
+        .filter((authUser) => !excludedProfileIds.has(authUser.id) && !hiddenDraftOwnerIds.has(authUser.id))
+        .map((authUser) => {
             const workerRecord = workerMap.get(authUser.id);
             const profileRecord = profileMap.get(authUser.id);
             const workerDocs = documentsByOwnerId.get(authUser.id) || [];
@@ -210,7 +281,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                     : null,
                 authProvider: authUser.app_metadata?.provider || "email",
                 paymentState,
-                hasVerifyingDocs: workerDocs.some((doc: any) => doc.status === "verifying"),
+                hasVerifyingDocs: workerDocs.some((doc) => doc.status === "verifying"),
                 sourceLabel: agencyRecord
                     ? `Agency worker · ${agencyRecord.display_name || agencyRecord.legal_name || "Unknown agency"}`
                     : null,
@@ -222,10 +293,10 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
             } satisfies WorkerTableRow;
         });
 
-    const draftRegistryRows: WorkerTableRow[] = (workerRows || [])
-        .filter((workerRow: any) => workerRow.agency_id && !workerRow.profile_id)
-        .map((workerRow: any) => {
-            const agencyRecord = agencyMap.get(workerRow.agency_id) || null;
+    const draftRegistryRows: WorkerTableRow[] = typedWorkerRows
+        .filter((workerRow) => workerRow.agency_id && !workerRow.profile_id)
+        .map((workerRow) => {
+            const agencyRecord = workerRow.agency_id ? agencyMap.get(workerRow.agency_id) || null : null;
             const documentOwnerId = resolveAgencyWorkerDocumentOwnerId(workerRow);
             const workerDocs = documentOwnerId ? documentsByOwnerId.get(documentOwnerId) || [] : [];
             const documentProgress = getWorkerDocumentProgress(workerDocs);
@@ -265,7 +336,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
                 daysUntilDeletion: null,
                 authProvider: "email",
                 paymentState,
-                hasVerifyingDocs: workerDocs.some((doc: any) => doc.status === "verifying"),
+                hasVerifyingDocs: workerDocs.some((doc) => doc.status === "verifying"),
                 sourceLabel: `Agency draft · ${agencyRecord?.display_name || agencyRecord?.legal_name || "Unknown agency"}`,
                 workspaceHref: agencyRecord?.profile_id
                     ? `/profile/agency/workers/${workerRow.id}?inspect=${agencyRecord.profile_id}`

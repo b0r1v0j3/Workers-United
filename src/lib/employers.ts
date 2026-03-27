@@ -5,6 +5,15 @@ import { isInternalOrTestEmail } from "@/lib/reporting";
 
 type EmployerProfileRow = Pick<Tables<"profiles">, "id" | "email" | "full_name" | "user_type">;
 
+type EmployerRecordQueryResult = PromiseLike<{
+    data?: unknown[] | null;
+    error?: { message: string } | null;
+}>;
+
+type EmployerRecordQueryClient = {
+    from: (table: string) => unknown;
+};
+
 interface EnsureEmployerRecordInput {
     userId: string;
     email?: string | null;
@@ -89,7 +98,7 @@ export function pickCanonicalEmployerRecord<T extends EmployerRecordSnapshot>(
 }
 
 export async function loadCanonicalEmployerRecord<T extends EmployerRecordSnapshot = Tables<"employers">>(
-    supabase: any,
+    supabase: EmployerRecordQueryClient,
     profileId: string,
     columns = "*",
     limit = 25
@@ -99,8 +108,17 @@ export async function loadCanonicalEmployerRecord<T extends EmployerRecordSnapsh
     duplicates: number;
     error: { message: string } | null;
 }> {
-    const { data, error } = await supabase
-        .from("employers")
+    const employerTable = supabase.from("employers") as {
+        select: (selectedColumns: string) => {
+            eq: (column: string, value: string) => {
+                order: (orderColumn: string, options: { ascending: boolean }) => {
+                    limit: (count: number) => EmployerRecordQueryResult;
+                };
+            };
+        };
+    };
+
+    const { data, error } = await employerTable
         .select(columns)
         .eq("profile_id", profileId)
         .order("updated_at", { ascending: false })

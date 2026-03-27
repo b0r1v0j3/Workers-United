@@ -4,7 +4,7 @@ import { DEFAULT_PLATFORM_SUPPORT_EMAIL, DEFAULT_PLATFORM_WEBSITE_URL } from "@/
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 import Footer from "@/components/Footer";
 import {
-    FileText, Info, User, DollarSign, Fingerprint, ShieldCheck, Cookie, Copyright, Ban, AlertCircle, Shield, Link as LinkIcon, RefreshCcw, AlertTriangle, UserX, Scale, RefreshCw
+    FileText, Info, User, DollarSign, Fingerprint, ShieldCheck, Cookie, Copyright, Ban, AlertCircle, Shield, Link as LinkIcon, RefreshCcw, AlertTriangle, UserX, Scale, RefreshCw, type LucideIcon
 } from 'lucide-react';
 
 export const metadata = {
@@ -211,7 +211,7 @@ export default async function TermsPage() {
     );
 }
 
-function TermsSection({ title, icon: Icon, colorClass, children }: { title: string; icon: any; colorClass: string; children: React.ReactNode }) {
+function TermsSection({ title, icon: Icon, colorClass, children }: { title: string; icon: LucideIcon; colorClass: string; children: React.ReactNode }) {
     return (
         <section className="flex flex-col md:flex-row gap-4 md:gap-6">
             <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${colorClass}`}>
