@@ -427,6 +427,39 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
+                // ─── Coalesce rapid-fire text messages from the same phone ──────
+                // When a user sends "hi" then "Good evening" within seconds, Meta
+                // delivers both in one webhook batch.  Without coalescing the bot
+                // would generate a separate greeting for each, appearing duplicated.
+                // We still record every message individually (for history), but only
+                // the LAST text-like message in a burst gets an AI reply — earlier
+                // ones in the same burst are marked as "coalesced" and skipped.
+                const coalescedWamids = new Set<string>();
+                {
+                    const textMsgsByPhone = new Map<string, string[]>();
+                    for (const msg of value.messages) {
+                        const phone = normalizeWhatsAppPhone(msg.from || "");
+                        const type = msg.type || "unknown";
+                        const id = msg.id;
+                        if (phone && id && isTextLikeWhatsAppMessage(type)) {
+                            let phoneWamids = textMsgsByPhone.get(phone);
+                            if (!phoneWamids) {
+                                phoneWamids = [];
+                                textMsgsByPhone.set(phone, phoneWamids);
+                            }
+                            phoneWamids.push(id);
+                        }
+                    }
+                    for (const [, wamids] of textMsgsByPhone) {
+                        if (wamids.length > 1) {
+                            // Mark all but the last text message as coalesced (no AI reply)
+                            for (let i = 0; i < wamids.length - 1; i++) {
+                                coalescedWamids.add(wamids[i]);
+                            }
+                        }
+                    }
+                }
+
                 for (const message of value.messages) {
                     const phoneNumber = message.from;
                     const messageType = message.type;
@@ -542,6 +575,29 @@ export async function POST(request: NextRequest) {
                         if (isDuplicateInboundMessage) {
                             console.log(`[Webhook] Duplicate wamid ${wamid} — skipping reply`);
                             continue;
+                        }
+
+                        // Skip coalesced messages — they were recorded above but only
+                        // the last text message in a same-phone burst gets an AI reply.
+                        if (coalescedWamids.has(wamid)) {
+                            console.log(`[Webhook] Coalesced wamid ${wamid} from ${normalizedPhone} — skipping reply (batched with later message)`);
+                            continue;
+                        }
+
+                        // If this is the surviving message in a coalesced burst,
+                        // prepend the earlier messages so the AI sees full context.
+                        if (coalescedWamids.size > 0 && isTextLikeWhatsAppMessage(messageType)) {
+                            const earlierTexts: string[] = [];
+                            for (const msg of value.messages) {
+                                const msgPhone = normalizeWhatsAppPhone(msg.from || "");
+                                if (msgPhone === normalizedPhone && msg.id !== wamid && coalescedWamids.has(msg.id)) {
+                                    const msgContent = extractWhatsAppMessageContent(msg);
+                                    if (msgContent) earlierTexts.push(msgContent);
+                                }
+                            }
+                            if (earlierTexts.length > 0) {
+                                content = [...earlierTexts, content].join("\n");
+                            }
                         }
 
                         // Reactions (emoji on messages) don't need a reply — skip silently
