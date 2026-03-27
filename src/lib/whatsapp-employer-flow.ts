@@ -110,11 +110,15 @@ export async function resolveEmployerWhatsAppLead(params: {
 
     const explicitlyLooksLikeEmployer = looksLikeEmployerWhatsAppLead(params.content);
     const explicitlyLooksLikeWorker = looksLikeWorkerWhatsAppLead(params.content);
-    const isLikelyEmployer = isEuropeanPhone(params.normalizedPhone)
-        && !params.hasRegisteredWorker
+    // Agencies/partnerships can contact from anywhere — skip the European
+    // phone check when the message explicitly mentions agency/partnership.
+    const AGENCY_LEAD_PATTERN = /\b(agency|staffing|partnership|partner|recruitment agency|placement|manpower|agencija|partnerstvo|kadrovska)\b/i;
+    const looksLikeAgencyLead = AGENCY_LEAD_PATTERN.test(params.content);
+    const isLikelyEmployer = !params.hasRegisteredWorker
         && !params.isAdmin
         && explicitlyLooksLikeEmployer
-        && !explicitlyLooksLikeWorker;
+        && !explicitlyLooksLikeWorker
+        && (isEuropeanPhone(params.normalizedPhone) || looksLikeAgencyLead);
 
     const employerRecord = rawEmployerRecord
         ? {
