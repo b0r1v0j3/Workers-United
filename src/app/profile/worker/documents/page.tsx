@@ -33,7 +33,6 @@ export default async function DocumentsPage({
             <DocumentsClient
                 adminTestMode
                 workerProfileId={session.activePersona.id}
-                email={workspace.worker?.email || session.ownerProfile?.email || user.email || ""}
                 documents={workspace.documents.map((document) => ({
                     document_type: document.document_type,
                     status: document.status,
@@ -61,7 +60,7 @@ export default async function DocumentsPage({
 
     const { data: profile } = await dataClient
         .from("profiles")
-        .select("email")
+        .select("id")
         .eq("id", targetProfileId)
         .maybeSingle();
 
@@ -78,7 +77,6 @@ export default async function DocumentsPage({
     return (
         <DocumentsClient
             workerProfileId={targetProfileId}
-            email={profile?.email || user.email || ""}
             documents={documents || []}
             readOnlyPreview={isAdminPreview}
         />

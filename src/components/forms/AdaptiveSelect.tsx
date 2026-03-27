@@ -87,18 +87,32 @@ export default function AdaptiveSelect({
     const searchRef = useRef<HTMLInputElement>(null);
     const options = useMemo(() => parseOptions(children), [children]);
     const isControlled = value !== undefined;
+    const normalizedDefaultValue = typeof defaultValue === "string" || typeof defaultValue === "number"
+        ? String(defaultValue)
+        : "";
     const [internalValue, setInternalValue] = useState(() => {
-        if (typeof defaultValue === "string" || typeof defaultValue === "number") {
-            return String(defaultValue);
+        return normalizedDefaultValue;
+    });
+    const resolvedUncontrolledValue = useMemo(() => {
+        if (options.some((option) => option.value === internalValue)) {
+            return internalValue;
         }
 
-        return "";
-    });
+        if (internalValue === "" && options.some((option) => option.value === "")) {
+            return "";
+        }
+
+        if (normalizedDefaultValue && options.some((option) => option.value === normalizedDefaultValue)) {
+            return normalizedDefaultValue;
+        }
+
+        return options.find((option) => !option.disabled)?.value ?? "";
+    }, [internalValue, normalizedDefaultValue, options]);
     const resolvedValue = isControlled
         ? typeof value === "string" || typeof value === "number"
             ? String(value)
             : ""
-        : internalValue;
+        : resolvedUncontrolledValue;
     const placeholderOption = useMemo(() => options.find((option) => option.value === ""), [options]);
     const selectedOption = useMemo(
         () => options.find((option) => option.value === resolvedValue) || null,
@@ -195,21 +209,6 @@ export default function AdaptiveSelect({
 
         searchRef.current?.focus();
     }, [isOpen, isSearchable]);
-
-    useEffect(() => {
-        if (!isControlled && (typeof defaultValue === "string" || typeof defaultValue === "number")) {
-            setInternalValue(String(defaultValue));
-        }
-    }, [defaultValue, isControlled]);
-
-    useEffect(() => {
-        if (!isControlled && !resolvedValue && options.length > 0 && !options.some((option) => option.value === resolvedValue)) {
-            const firstEnabledOption = options.find((option) => !option.disabled);
-            if (firstEnabledOption) {
-                setInternalValue(firstEnabledOption.value);
-            }
-        }
-    }, [isControlled, options, resolvedValue]);
 
     function emitChange(nextValue: string) {
         if (!isControlled) {

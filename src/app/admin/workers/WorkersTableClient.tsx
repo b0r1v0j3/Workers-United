@@ -185,6 +185,8 @@ export default function WorkersTableClient({ data, currentFilter }: { data: Work
                                                 /* Google user — show Google profile pic with G badge */
                                                 <div className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden bg-white flex items-center justify-center">
                                                     {worker.avatar_url && !worker.avatar_url.includes('ui-avatars.com') ? (
+                                                        /* Admin avatar URLs come from auth providers, so a raw img avoids extra remote loader plumbing here. */
+                                                        /* eslint-disable-next-line @next/next/no-img-element */
                                                         <img
                                                             src={worker.avatar_url}
                                                             alt=""

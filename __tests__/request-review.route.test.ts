@@ -36,8 +36,8 @@ vi.mock("@/lib/supabase/admin", () => ({
             if (table === "worker_documents") {
                 return {
                     select: () => ({
-                        eq: (_column: string, _value: string) => ({
-                            eq: (_nestedColumn: string, _nestedValue: string) => ({
+                        eq: () => ({
+                            eq: () => ({
                                 maybeSingle: documentMaybeSingle,
                             }),
                         }),

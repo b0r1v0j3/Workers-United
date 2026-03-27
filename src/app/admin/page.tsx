@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import {
     AlertTriangle, Building2, CheckCircle2, Clock,
     Mail,
@@ -8,11 +9,82 @@ import {
 import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
 import { normalizeUserType } from "@/lib/domain";
-import { pickCanonicalEmployerRecord, shouldHideEmployerFromBusinessViews } from "@/lib/employers";
+import { pickCanonicalEmployerRecord, shouldHideEmployerFromBusinessViews, type EmployerRecordSnapshot } from "@/lib/employers";
 import { isReportablePaymentProfile } from "@/lib/reporting";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { pickCanonicalWorkerRecord } from "@/lib/workers";
+import { pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
+
+interface AdminDashboardWorkerRow extends WorkerRecordSnapshot {
+    profile_id: string | null;
+    status?: string | null;
+    queue_joined_at?: string | null;
+    admin_approved?: boolean | null;
+    created_at?: string | null;
+    entry_fee_paid?: boolean | null;
+    agency_id?: string | null;
+}
+
+interface AdminDashboardProfileRow {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    user_type: string | null;
+}
+
+interface AdminDashboardEmployerRow extends EmployerRecordSnapshot {
+    profile_id: string | null;
+    company_name?: string | null;
+    status?: string | null;
+    created_at?: string | null;
+}
+
+interface AdminDashboardAgencyRow {
+    id: string;
+    profile_id?: string | null;
+    display_name?: string | null;
+    legal_name?: string | null;
+    status?: string | null;
+    created_at?: string | null;
+}
+
+interface AdminDashboardDocumentRow {
+    user_id: string | null;
+    document_type: string;
+    status: string | null;
+}
+
+interface AdminDashboardPaymentRow {
+    id: string;
+    amount?: number | string | null;
+    amount_cents?: number | string | null;
+    status?: string | null;
+    payment_type?: string | null;
+    paid_at?: string | null;
+    profile_id?: string | null;
+    created_at?: string | null;
+}
+
+interface AdminDashboardConversationRow {
+    id: string;
+    status?: string | null;
+    type?: string | null;
+    last_message_at?: string | null;
+    created_at?: string | null;
+}
+
+interface AdminQueueRiskRow extends AdminDashboardWorkerRow {
+    profile_id: string;
+    queue_joined_at: string;
+    daysRemaining: number;
+}
+
+function resolvePaymentAmount(payment: AdminDashboardPaymentRow) {
+    const amount = payment.amount != null
+        ? Number(payment.amount)
+        : Number(payment.amount_cents || 0) / 100;
+    return Number.isFinite(amount) ? amount : 0;
+}
 
 export default async function AdminDashboard() {
     const supabase = await createClient();
@@ -56,10 +128,17 @@ export default async function AdminDashboard() {
         admin.from("payments").select("id, amount, amount_cents, status, payment_type, paid_at, profile_id, created_at"),
         admin.from("conversations").select("id, status, type, last_message_at, created_at").eq("type", "support"),
     ]);
+    const workerRows = Array.isArray(workersRaw) ? (workersRaw as AdminDashboardWorkerRow[]) : [];
+    const profileRows = Array.isArray(profiles) ? (profiles as AdminDashboardProfileRow[]) : [];
+    const employerRows = Array.isArray(employers) ? (employers as AdminDashboardEmployerRow[]) : [];
+    const agencyRows = Array.isArray(agencies) ? (agencies as AdminDashboardAgencyRow[]) : [];
+    const documentRows = Array.isArray(documents) ? (documents as AdminDashboardDocumentRow[]) : [];
+    const paymentRows = Array.isArray(payments) ? (payments as AdminDashboardPaymentRow[]) : [];
+    const supportRows = Array.isArray(supportConversations) ? (supportConversations as AdminDashboardConversationRow[]) : [];
 
     // Worker grouping
-    const workerGroups = new Map<string, any[]>();
-    for (const workerRow of workersRaw || []) {
+    const workerGroups = new Map<string, AdminDashboardWorkerRow[]>();
+    for (const workerRow of workerRows) {
         if (!workerRow?.profile_id) continue;
         const current = workerGroups.get(workerRow.profile_id) || [];
         current.push(workerRow);
@@ -67,10 +146,10 @@ export default async function AdminDashboard() {
     }
     const workers = Array.from(workerGroups.values())
         .map((rows) => pickCanonicalWorkerRecord(rows))
-        .filter(Boolean) as any[];
-    const profileMap = new Map((profiles || []).map((entry: any) => [entry.id, entry]));
-    const employerGroups = new Map<string, any[]>();
-    for (const employer of employers || []) {
+        .filter((worker): worker is AdminDashboardWorkerRow => !!worker);
+    const profileMap = new Map(profileRows.map((entry) => [entry.id, entry] as const));
+    const employerGroups = new Map<string, AdminDashboardEmployerRow[]>();
+    for (const employer of employerRows) {
         if (!employer?.profile_id) continue;
         const current = employerGroups.get(employer.profile_id) || [];
         current.push(employer);
@@ -84,71 +163,75 @@ export default async function AdminDashboard() {
             }
 
             const profile = profileMap.get(profileId) || null;
-            if (shouldHideEmployerFromBusinessViews({ employer, profile })) {
+            const businessProfile = profile
+                ? {
+                    id: profile.id,
+                    email: profile.email || "",
+                    full_name: profile.full_name || null,
+                    user_type: profile.user_type || null,
+                }
+                : null;
+            if (shouldHideEmployerFromBusinessViews({ employer, profile: businessProfile })) {
                 return null;
             }
 
             return employer;
         })
-        .filter(Boolean) as any[];
-    const docsByUser = new Map<string, Array<{ user_id: string; document_type: string; status: string | null }>>();
-    for (const doc of documents || []) {
+        .filter((employer): employer is AdminDashboardEmployerRow => !!employer);
+    const docsByUser = new Map<string, AdminDashboardDocumentRow[]>();
+    for (const doc of documentRows) {
+        if (!doc.user_id) continue;
         const current = docsByUser.get(doc.user_id) || [];
         current.push(doc);
         docsByUser.set(doc.user_id, current);
     }
 
     // Totals
-    const workerAuthUsers = allAuthUsers.filter((entry: any) => !["employer", "admin", "agency"].includes(entry.user_metadata?.user_type));
+    const workerAuthUsers = allAuthUsers.filter((entry: SupabaseAuthUser) => !["employer", "admin", "agency"].includes(String(entry.user_metadata?.user_type || "")));
     const totalWorkers = workerAuthUsers.length || workers.length;
     const totalEmployers = canonicalEmployers.length;
-    const totalAgencies = agencies?.length || 0;
+    const totalAgencies = agencyRows.length;
 
     // Today activity
-    const newWorkersToday = workerAuthUsers.filter((entry: any) => new Date(entry.created_at) >= todayStart).length;
-    const newWorkersThisWeek = workerAuthUsers.filter((entry: any) => new Date(entry.created_at) >= weekAgo).length;
-    const newEmployersThisWeek = canonicalEmployers.filter((entry: any) => new Date(entry.created_at) >= weekAgo).length;
-    const newAgenciesThisWeek = (agencies || []).filter((entry: any) => new Date(entry.created_at) >= weekAgo).length;
+    const newWorkersToday = workerAuthUsers.filter((entry) => new Date(entry.created_at) >= todayStart).length;
+    const newWorkersThisWeek = workerAuthUsers.filter((entry) => new Date(entry.created_at) >= weekAgo).length;
+    const newEmployersThisWeek = canonicalEmployers.filter((entry) => entry.created_at && new Date(entry.created_at) >= weekAgo).length;
+    const newAgenciesThisWeek = agencyRows.filter((entry) => entry.created_at && new Date(entry.created_at) >= weekAgo).length;
 
     // Payments
-    const reportablePayments = (payments || []).filter((payment: any) =>
+    const reportablePayments = paymentRows.filter((payment) =>
         isReportablePaymentProfile(payment.profile_id ? profileMap.get(payment.profile_id) || null : null)
     );
-    const successfulPayments = reportablePayments.filter((payment: any) => ["completed", "paid"].includes(payment.status || ""));
-    const totalRevenue = successfulPayments.reduce((sum: number, payment: any) => {
-        const amount = payment.amount != null ? Number(payment.amount) : Number(payment.amount_cents || 0) / 100;
-        return sum + (Number.isFinite(amount) ? amount : 0);
-    }, 0);
+    const successfulPayments = reportablePayments.filter((payment) => ["completed", "paid"].includes(payment.status || ""));
+    const totalRevenue = successfulPayments.reduce((sum, payment) => sum + resolvePaymentAmount(payment), 0);
     const revenueThisMonth = successfulPayments
-        .filter((payment: any) => payment.paid_at && new Date(payment.paid_at) >= monthStart)
-        .reduce((sum: number, payment: any) => {
-            const amount = payment.amount != null ? Number(payment.amount) : Number(payment.amount_cents || 0) / 100;
-            return sum + (Number.isFinite(amount) ? amount : 0);
-        }, 0);
+        .filter((payment) => payment.paid_at && new Date(payment.paid_at) >= monthStart)
+        .reduce((sum, payment) => sum + resolvePaymentAmount(payment), 0);
     const revenueToday = successfulPayments
-        .filter((payment: any) => payment.paid_at && new Date(payment.paid_at) >= todayStart)
-        .reduce((sum: number, payment: any) => {
-            const amount = payment.amount != null ? Number(payment.amount) : Number(payment.amount_cents || 0) / 100;
-            return sum + (Number.isFinite(amount) ? amount : 0);
-        }, 0);
+        .filter((payment) => payment.paid_at && new Date(payment.paid_at) >= todayStart)
+        .reduce((sum, payment) => sum + resolvePaymentAmount(payment), 0);
 
     // Agency workers added this week
-    const agencyWorkerIdsThisWeek = (workersRaw || []).filter((w: any) =>
-        w.agency_id && new Date(w.created_at) >= weekAgo
+    const agencyWorkerIdsThisWeek = workerRows.filter((workerRow) =>
+        workerRow.agency_id && workerRow.created_at && new Date(workerRow.created_at) >= weekAgo
     ).length;
 
     // Action items (things that need attention)
-    const workersReadyForApproval = workers.filter((worker: any) =>
+    const workersReadyForApproval = workers.filter((worker) =>
         (worker.status === "PROFILE_COMPLETE" || worker.status === "PENDING_APPROVAL") && !worker.admin_approved
     ).length;
-    const pendingEmployers = canonicalEmployers.filter((employer: any) => employer.status === "PENDING").length;
-    const manualReviewDocs = (documents || []).filter((document: any) => document.status === "manual_review").length;
-    const waitingOnSupportThreads = (supportConversations || []).filter((c: any) => c.status === "waiting_on_support").length;
+    const pendingEmployers = canonicalEmployers.filter((employer) => employer.status === "PENDING").length;
+    const manualReviewDocs = documentRows.filter((document) => document.status === "manual_review").length;
+    const waitingOnSupportThreads = supportRows.filter((conversation) => conversation.status === "waiting_on_support").length;
 
     // Queue risk
-    const urgentQueueWorkers = workers
-        .filter((worker: any) => worker.status === "IN_QUEUE" && worker.queue_joined_at)
-        .map((worker: any) => {
+    const urgentQueueWorkers: AdminQueueRiskRow[] = workers
+        .filter((worker): worker is AdminDashboardWorkerRow & { profile_id: string; queue_joined_at: string } =>
+            worker.status === "IN_QUEUE"
+            && typeof worker.profile_id === "string"
+            && typeof worker.queue_joined_at === "string"
+        )
+        .map((worker) => {
             const daysInQueue = Math.floor((now.getTime() - new Date(worker.queue_joined_at).getTime()) / (1000 * 60 * 60 * 24));
             return { ...worker, daysRemaining: 90 - daysInQueue };
         })
@@ -157,20 +240,20 @@ export default async function AdminDashboard() {
 
     // Recent payments (last 5)
     const recentPayments = successfulPayments
-        .filter((p: any) => p.paid_at)
-        .sort((a: any, b: any) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime())
+        .filter((payment) => payment.paid_at)
+        .sort((left, right) => new Date(right.paid_at || "").getTime() - new Date(left.paid_at || "").getTime())
         .slice(0, 5)
-        .map((p: any) => ({
-            name: profileMap.get(p.profile_id)?.full_name || "Unknown",
-            amount: p.amount != null ? Number(p.amount) : Number(p.amount_cents || 0) / 100,
-            date: new Date(p.paid_at).toLocaleDateString("en-GB"),
+        .map((payment) => ({
+            name: (payment.profile_id ? profileMap.get(payment.profile_id)?.full_name : null) || "Unknown",
+            amount: resolvePaymentAmount(payment),
+            date: new Date(payment.paid_at || "").toLocaleDateString("en-GB"),
         }));
 
     // Recent registrations (last 5)
-    const recentRegistrations = workerAuthUsers
-        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    const recentRegistrations = [...workerAuthUsers]
+        .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
         .slice(0, 5)
-        .map((entry: any) => ({
+        .map((entry) => ({
             id: entry.id,
             name: profileMap.get(entry.id)?.full_name || entry.user_metadata?.full_name || "Unknown",
             date: new Date(entry.created_at).toLocaleDateString("en-GB"),
@@ -368,7 +451,7 @@ export default async function AdminDashboard() {
                             <Link href="/admin/queue" className="text-xs font-semibold text-[#57534e] hover:text-[#18181b]">View all</Link>
                         </div>
                         <div className="space-y-2">
-                            {urgentQueueWorkers.slice(0, 5).map((worker: any) => (
+                            {urgentQueueWorkers.slice(0, 5).map((worker) => (
                                 <Link key={worker.profile_id} href={`/admin/workers/${worker.profile_id}`} className="flex items-center justify-between rounded-xl border border-[#f0ede6] bg-[#faf8f3] px-4 py-3 transition hover:border-[#e0dbd2] hover:bg-white">
                                     <span className="text-sm font-medium text-[#18181b]">{profileMap.get(worker.profile_id)?.full_name || "Unknown"}</span>
                                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${worker.daysRemaining <= 14 ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>

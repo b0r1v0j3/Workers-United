@@ -1,12 +1,31 @@
 "use client";
 
 import DocumentWizard from "@/components/DocumentWizard";
+import type { LucideIcon } from "lucide-react";
 import { CheckCircle2, AlertCircle, Loader2, Upload, Clock, FileText } from "lucide-react";
+
+type WorkerDocumentStatus = string | null;
+
+interface WorkerDocumentSummary {
+    document_type: string;
+    status: WorkerDocumentStatus;
+    reject_reason?: string | null;
+}
+
+type DocumentTone = "gray" | "emerald" | "amber" | "red" | "blue";
+
+interface DocumentRowStatus {
+    status: NonNullable<WorkerDocumentStatus> | "missing";
+    label: string;
+    color: DocumentTone;
+    icon: LucideIcon;
+}
+
+const REQUIRED_DOCUMENT_TYPES = ["passport", "biometric_photo", "diploma"] as const;
 
 interface DocumentsClientProps {
     workerProfileId: string;
-    email: string;
-    documents: any[];
+    documents: WorkerDocumentSummary[];
     readOnlyPreview?: boolean;
     adminTestMode?: boolean;
 }
@@ -14,9 +33,9 @@ interface DocumentsClientProps {
 const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-xl sm:border sm:border-gray-200 sm:bg-white sm:p-8 sm:shadow-sm sm:before:hidden";
 const previewSurfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 text-sm text-blue-900 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#dbeafe] sm:rounded-xl sm:border sm:border-blue-200 sm:bg-blue-50 sm:p-6 sm:before:hidden";
 
-export default function DocumentsClient({ workerProfileId, email, documents, readOnlyPreview = false, adminTestMode = false }: DocumentsClientProps) {
+export default function DocumentsClient({ workerProfileId, documents, readOnlyPreview = false, adminTestMode = false }: DocumentsClientProps) {
 
-    const getDocStatus = (type: string) => {
+    const getDocStatus = (type: string): DocumentRowStatus => {
         const doc = documents.find(d => d.document_type === type);
         if (!doc) return { status: "missing", label: "Not uploaded", color: "gray", icon: Upload };
         if (doc.status === "verified") return { status: "verified", label: "Verified", color: "emerald", icon: CheckCircle2 };
@@ -26,7 +45,10 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
         return { status: "uploaded", label: "Uploaded", color: "blue", icon: Clock };
     };
 
-    const hasAllDocs = documents.length >= 3;
+    const shouldShowUploadWizard = REQUIRED_DOCUMENT_TYPES.some((documentType) => {
+        const status = getDocStatus(documentType).status;
+        return status === "missing" || status === "rejected";
+    });
 
     return (
         <div className="w-full space-y-6">
@@ -34,7 +56,7 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
                 <div className={previewSurfaceClass}>
                     Admin preview is read-only. Document upload is disabled here.
                 </div>
-            ) : !hasAllDocs && (
+            ) : shouldShowUploadWizard && (
                 <div className={surfaceClass}>
                     <div className="mb-6">
                         <h3 className="font-semibold text-gray-900 text-xl">Upload Documents</h3>
@@ -44,7 +66,7 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
                                 : "Please ensure all documents are clear and readable."}
                         </p>
                     </div>
-                    <DocumentWizard workerProfileId={workerProfileId} email={email} adminTestMode={adminTestMode} />
+                    <DocumentWizard workerProfileId={workerProfileId} adminTestMode={adminTestMode} />
                 </div>
             )}
 
@@ -60,7 +82,7 @@ export default function DocumentsClient({ workerProfileId, email, documents, rea
     );
 }
 
-function DocumentRow({ label, type, status }: { label: string, type: string, status: any }) {
+function DocumentRow({ label, type, status }: { label: string, type: string, status: DocumentRowStatus }) {
     const IconComponent = status.icon;
     const colorMap: Record<string, string> = {
         emerald: "text-emerald-700 bg-emerald-50 border-emerald-100",

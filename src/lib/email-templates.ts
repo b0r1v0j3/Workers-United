@@ -1,6 +1,13 @@
 // Email templates for Workers United
 import { normalizeUserType, type CanonicalUserType } from "@/lib/domain";
-import { attachEmailQueueMeta, isEmailDeliveryAccepted, processQueuedEmailRecord, type EmailQueueDeliveryResult } from "@/lib/email-queue";
+import {
+    attachEmailQueueMeta,
+    emailQueueTable,
+    isEmailDeliveryAccepted,
+    processQueuedEmailRecord,
+    type EmailQueueClient,
+    type EmailQueueDeliveryResult,
+} from "@/lib/email-queue";
 import { buildPlatformUrl, buildPlatformWhatsAppUrl, normalizePlatformWebsiteUrl } from "@/lib/platform-contact";
 import { escapeHtml } from "@/lib/sanitize";
 
@@ -298,17 +305,6 @@ function renderIconHero(variant: HeroVariant, title: string, subtitle: string) {
             <img src="${getHeroIconUrl(variant)}" width="80" height="80" alt="" style="display:block; margin:0 auto 20px;">
             <h1 style="color:#1D1D1F; font-size: 26px; font-weight: 700; margin: 0 0 10px;">${title}</h1>
             <p style="font-size: 16px; color: #515154; margin-top: 5px;">${subtitle}</p>
-        </div>
-    `;
-}
-
-function renderDarkPanel(title: string, bodyHtml: string) {
-    return `
-        <div style="background:#F5F5F7; border-radius:16px; padding:30px; margin:32px 0; border:1px solid #E5E5EA; text-align:center;">
-            <h3 style="margin:0 0 15px; font-size:12px; color:#86868B; text-transform:uppercase; letter-spacing:1px; font-weight:700;">${escapeHtml(title)}</h3>
-            <div style="margin:0; font-size:15px; color:#1D1D1F; line-height:1.7;">
-                ${bodyHtml}
-            </div>
         </div>
     `;
 }
@@ -1454,7 +1450,7 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
 // Helper function to queue an email and send it immediately via SMTP
 // Optionally also sends a WhatsApp template message if recipientPhone is provided
 export async function queueEmail(
-    supabase: any,
+    supabase: EmailQueueClient,
     userId: string | null,
     emailType: EmailType,
     recipientEmail: string,
@@ -1471,15 +1467,18 @@ export async function queueEmail(
         { attempts: 0, maxAttempts: 3 }
     );
 
-    const { data, error } = await supabase.from("email_queue").insert({
-        user_id: userId || null,
-        email_type: emailType,
-        recipient_email: recipientEmail,
-        recipient_name: recipientName,
-        subject: template.subject,
-        template_data: queueTemplateData,
-        scheduled_for: scheduledFor?.toISOString() || new Date().toISOString()
-    }).select().single();
+    const { data, error } = await emailQueueTable<{ id: string; scheduled_for?: string | null }>(supabase, "email_queue")
+        .insert({
+            user_id: userId || null,
+            email_type: emailType,
+            recipient_email: recipientEmail,
+            recipient_name: recipientName,
+            subject: template.subject,
+            template_data: queueTemplateData,
+            scheduled_for: scheduledFor?.toISOString() || new Date().toISOString(),
+        })
+        .select()
+        .single();
 
     if (error || !data?.id) {
         const queueError = error?.message || "Email queue insert returned no row";

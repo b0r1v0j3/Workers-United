@@ -26,34 +26,66 @@ vi.mock("@/lib/workers", () => ({
 }));
 
 import { queueEmail } from "@/lib/email-templates";
+import type { ProfileCompletionResult } from "@/lib/profile-completion";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { applyWorkerApprovalAction, loadWorkerApprovalGuardState } from "@/lib/worker-review";
+
+type WorkerApprovalTestWorker = {
+    id: string;
+    profile_id: string | null;
+    submitted_full_name: string;
+    status: string;
+    admin_approved: boolean;
+    entry_fee_paid: boolean;
+    job_search_active: boolean;
+    phone: string | null;
+};
+
+type WorkerApprovalTestDocument = {
+    document_type: string | null;
+    status?: string | null;
+};
+
+type WorkerApprovalAdminClient = Parameters<typeof loadWorkerApprovalGuardState>[0]["adminClient"];
+
+type WorkerDocumentsQueryResult = {
+    data: WorkerApprovalTestDocument[];
+    error: null;
+};
+
+type WorkerDocumentsQueryChain = PromiseLike<WorkerDocumentsQueryResult> & {
+    eq: () => WorkerDocumentsQueryChain;
+    in: () => WorkerDocumentsQueryChain;
+    order: () => WorkerDocumentsQueryChain;
+    limit: () => WorkerDocumentsQueryChain;
+    maybeSingle: () => Promise<{ data: null; error: null }>;
+};
 
 function createAdminClientMock({
     worker,
     documents,
     updateResult,
 }: {
-    worker: Record<string, any>;
-    documents: Array<{ document_type: string | null; status?: string | null }>;
+    worker: WorkerApprovalTestWorker;
+    documents: WorkerApprovalTestDocument[];
     updateResult?: { data: { id: string } | null; error: { message: string } | null };
 }) {
-    const updates: Array<Record<string, any>> = [];
+    const updates: Array<Record<string, unknown>> = [];
     const workerUpdateMaybeSingle = vi.fn().mockResolvedValue(updateResult ?? {
         data: { id: worker.id },
         error: null,
     });
 
     const workerDocumentsQuery = () => {
-        const chain: any = {
+        const chain = {
             eq: () => chain,
             in: () => chain,
             order: () => chain,
             limit: () => chain,
             maybeSingle: async () => ({ data: null, error: null }),
-            then: (onFulfilled: (value: { data: typeof documents; error: null }) => unknown, onRejected?: (reason: unknown) => unknown) =>
+            then: (onFulfilled, onRejected) =>
                 Promise.resolve({ data: documents, error: null }).then(onFulfilled, onRejected),
-        };
+        } as WorkerDocumentsQueryChain;
         return chain;
     };
 
@@ -71,7 +103,7 @@ function createAdminClientMock({
                             maybeSingle: async () => ({ data: worker, error: null }),
                         }),
                     }),
-                    update: (payload: Record<string, any>) => {
+                    update: (payload: Record<string, unknown>) => {
                         updates.push(payload);
                         return {
                             eq: () => ({
@@ -104,24 +136,34 @@ function createAdminClientMock({
         },
     };
 
-    return { adminClient, updates, workerUpdateMaybeSingle };
+    return {
+        adminClient: adminClient as unknown as WorkerApprovalAdminClient,
+        updates,
+        workerUpdateMaybeSingle,
+    };
 }
 
 describe("worker approval actions", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(queueEmail).mockResolvedValue({ id: "email-1", sent: true, queued: false, status: "sent", error: null });
-        vi.mocked(getWorkerCompletion).mockReturnValue({
+        const completeProfile: ProfileCompletionResult = {
             completion: 100,
             missingFields: [],
-        } as any);
+            totalFields: 1,
+            completedFields: 1,
+        };
+        vi.mocked(getWorkerCompletion).mockReturnValue(completeProfile);
     });
 
     it("keeps approval locked until all three documents are verified", async () => {
-        vi.mocked(getWorkerCompletion).mockReturnValueOnce({
+        const incompleteProfile: ProfileCompletionResult = {
             completion: 100,
             missingFields: ["diploma"],
-        } as any);
+            totalFields: 1,
+            completedFields: 1,
+        };
+        vi.mocked(getWorkerCompletion).mockReturnValueOnce(incompleteProfile);
 
         const worker = {
             id: "worker-1",
@@ -142,7 +184,7 @@ describe("worker approval actions", () => {
         });
 
         const result = await loadWorkerApprovalGuardState({
-            adminClient: adminClient as any,
+            adminClient,
             workerId: worker.id,
             documentOwnerId: worker.id,
             phoneOptional: true,
@@ -175,7 +217,7 @@ describe("worker approval actions", () => {
         });
 
         const result = await applyWorkerApprovalAction({
-            adminClient: adminClient as any,
+            adminClient,
             actorUserId: "admin-1",
             action: "approve",
             workerId: worker.id,
@@ -236,7 +278,7 @@ describe("worker approval actions", () => {
         });
 
         await expect(applyWorkerApprovalAction({
-            adminClient: adminClient as any,
+            adminClient,
             actorUserId: "admin-1",
             action: "revoke",
             workerId: worker.id,
@@ -269,7 +311,7 @@ describe("worker approval actions", () => {
         });
 
         const result = await applyWorkerApprovalAction({
-            adminClient: adminClient as any,
+            adminClient,
             actorUserId: "admin-1",
             action: "approve",
             workerId: worker.id,
@@ -326,7 +368,7 @@ describe("worker approval actions", () => {
         });
 
         const result = await applyWorkerApprovalAction({
-            adminClient: adminClient as any,
+            adminClient,
             actorUserId: "admin-1",
             action: "approve",
             workerId: worker.id,
@@ -371,7 +413,7 @@ describe("worker approval actions", () => {
         });
 
         await expect(applyWorkerApprovalAction({
-            adminClient: adminClient as any,
+            adminClient,
             actorUserId: "admin-1",
             action: "approve",
             workerId: worker.id,

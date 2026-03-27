@@ -5,10 +5,38 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import AppShell from "@/components/AppShell";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
-import { pickCanonicalEmployerRecord, shouldHideEmployerFromBusinessViews } from "@/lib/employers";
+import { pickCanonicalEmployerRecord, shouldHideEmployerFromBusinessViews, type EmployerRecordSnapshot } from "@/lib/employers";
 import { getEmployerCompletion } from "@/lib/profile-completion";
 import { Building2, Briefcase, Globe, MapPin, Phone, Users } from "lucide-react";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
+
+interface EmployerAdminProfileRow {
+    id: string;
+    email: string;
+    full_name: string | null;
+    user_type: string | null;
+}
+
+interface EmployerAdminRow extends EmployerRecordSnapshot {
+    id: string;
+    profile_id: string | null;
+    company_name?: string | null;
+    company_registration_number?: string | null;
+    contact_phone?: string | null;
+    website?: string | null;
+    company_size?: string | null;
+    city?: string | null;
+    country?: string | null;
+    status?: string | null;
+}
+
+interface EmployerJobCountRow {
+    employer_id: string | null;
+}
+
+interface EmployerListRow extends EmployerAdminRow {
+    profiles: EmployerAdminProfileRow;
+}
 
 export default async function EmployersPage() {
     const supabase = await createClient();
@@ -35,11 +63,13 @@ export default async function EmployersPage() {
 
     const { data: allProfiles } = await adminClient
         .from("profiles")
-        .select("id, email, full_name");
+        .select("id, email, full_name, user_type");
 
-    const profileLookup = new Map(allProfiles?.map((p: any) => [p.id, p]) || []);
-    const employerGroups = new Map<string, any[]>();
-    for (const employer of rawEmployers || []) {
+    const profileRows = Array.isArray(allProfiles) ? (allProfiles as EmployerAdminProfileRow[]) : [];
+    const employerRows = Array.isArray(rawEmployers) ? (rawEmployers as EmployerAdminRow[]) : [];
+    const profileLookup = new Map(profileRows.map((profileRow) => [profileRow.id, profileRow] as const));
+    const employerGroups = new Map<string, EmployerAdminRow[]>();
+    for (const employer of employerRows) {
         const profileId = employer?.profile_id;
         if (!profileId) continue;
         const current = employerGroups.get(profileId) || [];
@@ -61,24 +91,26 @@ export default async function EmployersPage() {
 
             return {
                 ...employer,
-                profiles: employerProfile || { email: "Unknown", full_name: "Unknown" },
+                profiles: employerProfile || { email: "Unknown", full_name: "Unknown", id: profileId, user_type: null },
             };
         })
-        .filter(Boolean) as any[];
+        .filter((employer): employer is EmployerListRow => !!employer);
 
     // Count jobs per employer
     const { data: jobCounts } = await adminClient
         .from("job_requests")
         .select("employer_id");
+    const jobCountRows = Array.isArray(jobCounts) ? (jobCounts as EmployerJobCountRow[]) : [];
 
     const jobCountMap = new Map<string, number>();
-    jobCounts?.forEach((j: any) => {
-        jobCountMap.set(j.employer_id, (jobCountMap.get(j.employer_id) || 0) + 1);
+    jobCountRows.forEach((jobCountRow) => {
+        if (!jobCountRow.employer_id) return;
+        jobCountMap.set(jobCountRow.employer_id, (jobCountMap.get(jobCountRow.employer_id) || 0) + 1);
     });
-    const completedProfiles = employers.filter((employer: any) => getEmployerCompletion({ employer }).completion === 100).length;
-    const pendingEmployers = employers.filter((employer: any) => (employer.status || "").toUpperCase() === "PENDING").length;
+    const completedProfiles = employers.filter((employer) => getEmployerCompletion({ employer }).completion === 100).length;
+    const pendingEmployers = employers.filter((employer) => (employer.status || "").toUpperCase() === "PENDING").length;
     const activeJobs = Array.from(jobCountMap.values()).reduce((sum, count) => sum + count, 0);
-    const serbiaCompanies = employers.filter((employer: any) => employer.country?.trim().toLowerCase() === "serbia").length;
+    const serbiaCompanies = employers.filter((employer) => employer.country?.trim().toLowerCase() === "serbia").length;
 
     return (
         <AppShell user={user} variant="admin">
@@ -124,7 +156,7 @@ export default async function EmployersPage() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4">
-                    {employers?.map((employer: any) => (
+                    {employers.map((employer) => (
                         <div key={employer.id} className="rounded-[24px] border border-[#e6e6e1] bg-[#fcfcfb] p-5 transition hover:border-[#d7d0c6] hover:bg-white">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                 <div className="flex-1 min-w-0">
@@ -165,18 +197,20 @@ export default async function EmployersPage() {
                                     </div>
                                     <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
                                         <Link
-                                            href={`/profile/employer?tab=jobs&inspect=${employer.profile_id}`}
+                                            href={employer.profile_id ? `/profile/employer?tab=jobs&inspect=${employer.profile_id}` : "/admin/employers"}
                                             className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
                                         >
                                             Open jobs tab
                                         </Link>
                                         <Link
-                                            href={`/profile/employer?inspect=${employer.profile_id}`}
+                                            href={employer.profile_id ? `/profile/employer?inspect=${employer.profile_id}` : "/admin/employers"}
                                             className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
                                         >
                                             Inspect workspace
                                         </Link>
-                                        <DeleteUserButton userId={employer.profile_id} userName={employer.company_name || "this employer"} />
+                                        {employer.profile_id ? (
+                                            <DeleteUserButton userId={employer.profile_id} userName={employer.company_name || "this employer"} />
+                                        ) : null}
                                     </div>
                                 </div>
                             </div>

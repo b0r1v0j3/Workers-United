@@ -26,7 +26,7 @@ function createStatusAdminClient() {
                         return {
                             eq(column: string, value: string) {
                                 return {
-                                    select: async (_columns: string) => {
+                                    select: async () => {
                                         updates.push({ payload, column, value });
                                         if (nextError) {
                                             const error = nextError;

@@ -7,6 +7,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 //
 // Auth: CRON_SECRET bearer token
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function getStringValue(value: unknown): string | null {
+    return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : "Unknown error";
+}
+
 export async function POST(request: NextRequest) {
     const authHeader = request.headers.get("authorization");
     const expectedToken = process.env.CRON_SECRET;
@@ -17,7 +29,7 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text();
     console.log("[Brain Act] Raw request body:", rawBody.substring(0, 500));
 
-    let body: any;
+    let body: unknown;
     try {
         body = JSON.parse(rawBody);
     } catch {
@@ -35,10 +47,15 @@ export async function POST(request: NextRequest) {
     // Flexible parsing: try many possible formats the caller might send
     // Could be: { action, params }, { action, phone, message }, [{ action, params }], etc.
     const item = Array.isArray(body) ? body[0] : body;
-    const inner = item?.json || item; // unwrap potential { json: {} } wrapper
+    const innerCandidate = isRecord(item) && isRecord(item.json) ? item.json : item;
+    const inner = isRecord(innerCandidate) ? innerCandidate : {};
 
-    const action = inner?.action || inner?.type || inner?.command || "log_observation";
-    const params = inner?.params || inner?.parameters || inner || {};
+    const actionCandidate = inner.action ?? inner.type ?? inner.command;
+    const action = typeof actionCandidate === "string" && actionCandidate.trim()
+        ? actionCandidate
+        : "log_observation";
+    const paramsCandidate = inner.params ?? inner.parameters ?? inner;
+    const params = isRecord(paramsCandidate) ? paramsCandidate : {};
 
     console.log("[Brain Act] Parsed action:", action, "params keys:", Object.keys(params));
 
@@ -48,7 +65,8 @@ export async function POST(request: NextRequest) {
         switch (action) {
             // ─── Send WhatsApp Message ─────────────────────────────────
             case "send_whatsapp": {
-                const { phone, message } = params;
+                const phone = getStringValue(params.phone);
+                const message = getStringValue(params.message);
                 if (!phone || !message) {
                     return NextResponse.json({ error: "phone and message required" }, { status: 400 });
                 }
@@ -93,8 +111,8 @@ export async function POST(request: NextRequest) {
 
             // ─── Retry Failed Email ────────────────────────────────────
             case "retry_email": {
-                const { email_id } = params;
-                if (!email_id) {
+                const emailId = getStringValue(params.email_id);
+                if (!emailId) {
                     return NextResponse.json({ error: "email_id required" }, { status: 400 });
                 }
 
@@ -102,12 +120,12 @@ export async function POST(request: NextRequest) {
                 const { error } = await supabase
                     .from("email_queue")
                     .update({ status: "pending", error_message: null })
-                    .eq("id", email_id);
+                    .eq("id", emailId);
 
                 await supabase.from("brain_actions").insert({
                     action_type: "retry_email",
-                    description: `Retried failed email ${email_id}`,
-                    metadata: { email_id },
+                    description: `Retried failed email ${emailId}`,
+                    metadata: { email_id: emailId },
                     result: error ? "failed" : "completed",
                     error_message: error?.message,
                 });
@@ -117,20 +135,21 @@ export async function POST(request: NextRequest) {
 
             // ─── Update User Status ────────────────────────────────────
             case "update_worker_status": {
-                const { profile_id, status } = params;
-                if (!profile_id || !status) {
+                const profileId = getStringValue(params.profile_id);
+                const status = getStringValue(params.status);
+                if (!profileId || !status) {
                     return NextResponse.json({ error: "profile_id and status required" }, { status: 400 });
                 }
 
                 const { error } = await supabase
                     .from("worker_onboarding")
                     .update({ status })
-                    .eq("profile_id", profile_id);
+                    .eq("profile_id", profileId);
 
                 await supabase.from("brain_actions").insert({
                     action_type: "status_update",
-                        description: `Updated worker ${profile_id} status to ${status}`,
-                    target_user_id: profile_id,
+                    description: `Updated worker ${profileId} status to ${status}`,
+                    target_user_id: profileId,
                     metadata: { status },
                     result: error ? "failed" : "completed",
                     error_message: error?.message,
@@ -141,7 +160,8 @@ export async function POST(request: NextRequest) {
 
             // ─── Log Observation ───────────────────────────────────────
             case "log_observation": {
-                const { description, metadata: obsMetadata } = params;
+                const description = getStringValue(params.description) || "Brain logged observation";
+                const obsMetadata = isRecord(params.metadata) ? params.metadata : {};
 
                 await supabase.from("brain_actions").insert({
                     action_type: "observation",
@@ -156,17 +176,18 @@ export async function POST(request: NextRequest) {
             default:
                 return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
         }
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = getErrorMessage(error);
         console.error("[Brain Act] Error executing action:", error);
 
         await supabase.from("brain_actions").insert({
             action_type: action,
             description: `Failed to execute: ${action}`,
-            metadata: { params, error: error.message },
+            metadata: { params, error: errorMessage },
             result: "failed",
-            error_message: error.message,
+            error_message: errorMessage,
         });
 
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

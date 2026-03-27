@@ -4,6 +4,19 @@ import {
 } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
+export interface AuthUsersClient {
+    auth: {
+        admin: {
+            listUsers: (params: { page: number; perPage: number }) => PromiseLike<{
+                data?: {
+                    users?: SupabaseAuthUser[] | null;
+                } | null;
+                error?: unknown;
+            }>;
+        };
+    };
+}
+
 /**
  * Creates a Supabase admin client with Service Role key
  * This bypasses ALL Row Level Security policies
@@ -52,7 +65,7 @@ export function createTypedAdminClient() {
  * Use this instead of adminClient.auth.admin.listUsers() everywhere.
  */
 export async function getAllAuthUsers(
-    adminClient?: ReturnType<typeof createAdminClient> | ReturnType<typeof createTypedAdminClient>
+    adminClient?: AuthUsersClient
 ): Promise<SupabaseAuthUser[]> {
     const client = adminClient || createAdminClient();
     const allUsers: SupabaseAuthUser[] = [];

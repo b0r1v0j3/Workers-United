@@ -22,6 +22,8 @@ interface WorkerPageProps {
     searchParams: Promise<{ inspect?: string }>;
 }
 
+type StrictAgencyWorkerCompletionWorker = NonNullable<Parameters<typeof getWorkerCompletion>[0]["worker"]>;
+
 function getStrictAgencyWorkerCompletionState({
     fullName,
     worker,
@@ -29,7 +31,7 @@ function getStrictAgencyWorkerCompletionState({
     phoneOptional = true,
 }: {
     fullName: string;
-    worker: any;
+    worker: StrictAgencyWorkerCompletionWorker;
     documents: Array<{ document_type: string | null; status?: string | null }>;
     phoneOptional?: boolean;
 }) {

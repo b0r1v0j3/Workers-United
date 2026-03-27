@@ -10,7 +10,7 @@ import { DeleteUserButton } from "@/components/DeleteUserButton";
 
 type AgencySummary = {
     id: string;
-    profile_id: string;
+    profile_id: string | null;
     display_name: string | null;
     legal_name: string | null;
     contact_email: string | null;
@@ -26,6 +26,29 @@ type AgencySummary = {
     claimedWorkers: number;
     draftWorkers: number;
 };
+
+interface AgencyProfileRow {
+    id: string;
+    email: string | null;
+    full_name: string | null;
+}
+
+interface AgencyWorkerCountRow {
+    agency_id: string | null;
+    profile_id: string | null;
+}
+
+interface AgencyRow {
+    id: string;
+    profile_id: string | null;
+    display_name: string | null;
+    legal_name: string | null;
+    contact_email: string | null;
+    country: string | null;
+    city: string | null;
+    status: string | null;
+    created_at: string;
+}
 
 export default async function AgenciesPage() {
     const supabase = await createClient();
@@ -48,11 +71,14 @@ export default async function AgenciesPage() {
         admin.from("profiles").select("id, email, full_name"),
         admin.from("worker_onboarding").select("agency_id, profile_id"),
     ]);
+    const agencyRows = Array.isArray(rawAgencies) ? (rawAgencies as AgencyRow[]) : [];
+    const profileRows = Array.isArray(profiles) ? (profiles as AgencyProfileRow[]) : [];
+    const workerRows = Array.isArray(workers) ? (workers as AgencyWorkerCountRow[]) : [];
 
-    const profileLookup = new Map((profiles || []).map((entry: any) => [entry.id, entry]));
+    const profileLookup = new Map(profileRows.map((entry) => [entry.id, entry] as const));
     const workerCounts = new Map<string, { total: number; claimed: number; draft: number }>();
 
-    for (const worker of workers || []) {
+    for (const worker of workerRows) {
         if (!worker.agency_id) continue;
         const current = workerCounts.get(worker.agency_id) || { total: 0, claimed: 0, draft: 0 };
         current.total += 1;
@@ -64,11 +90,11 @@ export default async function AgenciesPage() {
         workerCounts.set(worker.agency_id, current);
     }
 
-    const agencies: AgencySummary[] = (rawAgencies || []).map((agency: any) => {
+    const agencies: AgencySummary[] = agencyRows.map((agency) => {
         const counts = workerCounts.get(agency.id) || { total: 0, claimed: 0, draft: 0 };
         return {
             ...agency,
-            profile: profileLookup.get(agency.profile_id),
+            profile: agency.profile_id ? profileLookup.get(agency.profile_id) : undefined,
             workersTotal: counts.total,
             claimedWorkers: counts.claimed,
             draftWorkers: counts.draft,
@@ -177,12 +203,14 @@ export default async function AgenciesPage() {
                                             </span>
                                             <div className="flex items-center gap-2">
                                                 <Link
-                                                    href={`/profile/agency?inspect=${agency.profile_id}`}
+                                                    href={agency.profile_id ? `/profile/agency?inspect=${agency.profile_id}` : "/admin/agencies"}
                                                     className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
                                                 >
                                                     Inspect workspace
                                                 </Link>
-                                                <DeleteUserButton userId={agency.profile_id} userName={agency.display_name || agency.legal_name || "this agency"} />
+                                                {agency.profile_id ? (
+                                                    <DeleteUserButton userId={agency.profile_id} userName={agency.display_name || agency.legal_name || "this agency"} />
+                                                ) : null}
                                             </div>
                                         </div>
                                     </div>

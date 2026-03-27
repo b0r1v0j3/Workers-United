@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient, getAllAuthUsers } from '@/lib/supabase/admin';
 import { isGodModeUser } from '@/lib/godmode';
 import { classifyEntryFeePaymentQuality, readPaymentQualityMarketSignals } from '@/lib/payment-quality';
 import { getWorkerCompletion } from '@/lib/profile-completion';
 import { isReportablePaymentProfile } from '@/lib/reporting';
-import { pickCanonicalWorkerRecord } from '@/lib/workers';
+import { pickCanonicalWorkerRecord, type WorkerRecordSnapshot } from '@/lib/workers';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,48 @@ interface PaymentActivityRow {
     action: string;
     created_at: string | null;
     details: unknown;
+}
+
+interface ProfileRow {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+}
+
+interface WorkerMetricsRow extends WorkerRecordSnapshot {
+    profile_id: string | null;
+    gender?: string | null;
+    date_of_birth?: string | null;
+    birth_country?: string | null;
+    birth_city?: string | null;
+    citizenship?: string | null;
+    marital_status?: string | null;
+    lives_abroad?: string | boolean | null;
+    previous_visas?: string | boolean | null;
+}
+
+interface WorkerDocumentMetricRow {
+    user_id: string;
+    document_type: string | null;
+    status: string | null;
+}
+
+interface JobMatchEmailRow {
+    recipient_email: string;
+}
+
+interface QueueWorkerRow {
+    preferred_job: string | null;
+}
+
+interface OpenJobRow {
+    industry: string | null;
+    positions_count: number | null;
+    positions_filled: number | null;
+}
+
+interface EmployerCreatedRow {
+    created_at: string | null;
 }
 
 function requireRows<T>(
@@ -137,6 +180,10 @@ function getPaymentLastEventAt(payment: PaymentRow, activities: PaymentActivityR
         || getCheckoutCreatedAt(payment, activities);
 }
 
+function isWorkerAuthUser(user: SupabaseAuthUser) {
+    return user.user_metadata?.user_type !== 'employer' && user.user_metadata?.user_type !== 'admin';
+}
+
 export async function GET(request: Request) {
     try {
         // Auth check: only admins can access funnel metrics
@@ -172,16 +219,14 @@ export async function GET(request: Request) {
 
         // 1. Total Registered Workers (from auth — paginated to get ALL users)
         const allAuthUsers = await getAllAuthUsers(supabase);
-        let workerUsers = allAuthUsers.filter((u: any) =>
-            u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin'
-        );
+        let workerUsers = allAuthUsers.filter(isWorkerAuthUser);
 
         // Filter by date range if provided
-        if (fromDate) {
-            workerUsers = workerUsers.filter((u: any) => new Date(u.created_at) >= fromBoundary!);
+        if (fromBoundary) {
+            workerUsers = workerUsers.filter((authUser) => new Date(authUser.created_at) >= fromBoundary);
         }
-        if (toDate) {
-            workerUsers = workerUsers.filter((u: any) => new Date(u.created_at) <= toBoundary!);
+        if (toBoundary) {
+            workerUsers = workerUsers.filter((authUser) => new Date(authUser.created_at) <= toBoundary);
         }
 
         const totalWorkers = workerUsers.length;
@@ -207,20 +252,22 @@ export async function GET(request: Request) {
                 .from('worker_documents')
                 .select('user_id, document_type, status'),
             'Failed to load worker documents for funnel metrics'
-        );
+        ) as WorkerDocumentMetricRow[];
 
-        const profileMap = new Map(allProfiles.map(p => [p.id, p]));
-        const workerGroups = new Map<string, any[]>();
-        for (const workerRow of allWorkerRecords) {
+        const typedProfiles = allProfiles as ProfileRow[];
+        const typedWorkerRecords = allWorkerRecords as WorkerMetricsRow[];
+        const profileMap = new Map(typedProfiles.map((profileEntry) => [profileEntry.id, profileEntry]));
+        const workerGroups = new Map<string, WorkerMetricsRow[]>();
+        for (const workerRow of typedWorkerRecords) {
             if (!workerRow?.profile_id) continue;
             const current = workerGroups.get(workerRow.profile_id) || [];
             current.push(workerRow);
             workerGroups.set(workerRow.profile_id, current);
         }
-        const workerMap = new Map(
+        const workerMap = new Map<string, WorkerMetricsRow>(
             Array.from(workerGroups.entries())
                 .map(([profileId, rows]) => [profileId, pickCanonicalWorkerRecord(rows)])
-                .filter((entry): entry is [string, any] => !!entry[1])
+                .filter((entry): entry is [string, WorkerMetricsRow] => !!entry[1])
         );
 
         // Count using shared 16-field getWorkerCompletion() — single source of truth
@@ -228,7 +275,9 @@ export async function GET(request: Request) {
         for (const wu of workerUsers) {
             const p = profileMap.get(wu.id);
             const worker = workerMap.get(wu.id);
-            const docs = allDocs.filter(d => d.user_id === wu.id) as { document_type: string }[];
+            const docs = allDocs
+                .filter((documentEntry) => documentEntry.user_id === wu.id && !!documentEntry.document_type)
+                .map((documentEntry) => ({ document_type: documentEntry.document_type as string }));
 
             const result = getWorkerCompletion({
                 profile: p || null,
@@ -239,7 +288,7 @@ export async function GET(request: Request) {
         }
 
         // 3. Uploaded Documents — distinct WORKER users with at least one doc
-        const workerIds = new Set(workerUsers.map((u: any) => u.id));
+        const workerIds = new Set(workerUsers.map((authUser) => authUser.id));
         const workerDocs = allDocs.filter(d => workerIds.has(d.user_id));
         const distinctUploaded = new Set(workerDocs.map(d => d.user_id)).size;
 
@@ -255,18 +304,18 @@ export async function GET(request: Request) {
                 .eq('email_type', 'job_match')
                 .eq('status', 'sent'),
             'Failed to load job match emails for funnel metrics'
-        );
+        ) as JobMatchEmailRow[];
         const distinctMatched = new Set(jobMatches.map(m => m.recipient_email)).size;
 
         // 6. Supply vs Demand (IN_QUEUE workers vs open job positions)
         const queueWorkerRows = requireRows(
             await supabase.from('worker_onboarding').select('preferred_job').eq('status', 'IN_QUEUE'),
             'Failed to load queue workers for funnel metrics'
-        );
+        ) as QueueWorkerRow[];
         const openJobs = requireRows(
             await supabase.from('job_requests').select('industry, positions_count, positions_filled').in('status', ['open', 'matching']),
             'Failed to load open job requests for funnel metrics'
-        );
+        ) as OpenJobRow[];
 
         const sdMap = new Map<string, { industry: string, supply: number, demand: number }>();
 
@@ -304,9 +353,9 @@ export async function GET(request: Request) {
         });
 
         // Populate worker signups
-        allAuthUsers.forEach((u: any) => {
-            if (u.user_metadata?.user_type !== 'employer' && u.user_metadata?.user_type !== 'admin') {
-                const dateKey = new Date(u.created_at).toISOString().split('T')[0];
+        allAuthUsers.forEach((authUser) => {
+            if (isWorkerAuthUser(authUser)) {
+                const dateKey = new Date(authUser.created_at).toISOString().split('T')[0];
                 if (timeSeriesMap.has(dateKey)) {
                     timeSeriesMap.get(dateKey)!.workers += 1;
                 }
@@ -317,9 +366,9 @@ export async function GET(request: Request) {
         const allEmployers = requireRows(
             await supabase.from('employers').select('created_at'),
             'Failed to load employers for funnel metrics'
-        );
-        allEmployers.forEach((e: any) => {
-            const dateKey = new Date(e.created_at).toISOString().split('T')[0];
+        ) as EmployerCreatedRow[];
+        allEmployers.forEach((employerEntry) => {
+            const dateKey = new Date(employerEntry.created_at || 0).toISOString().split('T')[0];
             if (timeSeriesMap.has(dateKey)) {
                 timeSeriesMap.get(dateKey)!.employers += 1;
             }

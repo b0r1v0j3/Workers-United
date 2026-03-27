@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { processBiometricPhoto, fixImageOrientation, stitchImages, compressImage } from "@/lib/imageUtils";
 import { toast } from "sonner";
@@ -16,33 +17,100 @@ interface FileUpload {
     message: string;
 }
 
+type UploadDocumentType = "passport" | "biometric_photo" | "diploma";
+type UploadState = Record<UploadDocumentType, FileUpload>;
+
 interface ExistingDocumentStatus {
     document_type: string;
     status: FileUpload["status"] | null;
+    reject_reason?: string | null;
+}
+
+const REQUIRED_DOCUMENT_TYPES: UploadDocumentType[] = ["passport", "biometric_photo", "diploma"];
+
+function createEmptyUploads(): UploadState {
+    return {
+        passport: { file: null, status: "missing", message: "" },
+        biometric_photo: { file: null, status: "missing", message: "" },
+        diploma: { file: null, status: "missing", message: "" },
+    };
+}
+
+function isUploadDocumentType(value: string): value is UploadDocumentType {
+    return REQUIRED_DOCUMENT_TYPES.includes(value as UploadDocumentType);
+}
+
+function buildExistingUploadState(docs: ExistingDocumentStatus[]): UploadState {
+    const nextUploads = createEmptyUploads();
+
+    docs.forEach((doc) => {
+        if (!isUploadDocumentType(doc.document_type) || !doc.status) {
+            return;
+        }
+
+        if (doc.status === "verified") {
+            nextUploads[doc.document_type] = {
+                file: null,
+                status: "verified",
+                message: "✓ Verified",
+            };
+            return;
+        }
+
+        if (doc.status === "manual_review") {
+            nextUploads[doc.document_type] = {
+                file: null,
+                status: "manual_review",
+                message: "Awaiting admin approval",
+            };
+            return;
+        }
+
+        if (doc.status === "uploaded" || doc.status === "verifying") {
+            nextUploads[doc.document_type] = {
+                file: null,
+                status: doc.status,
+                message: doc.status === "verifying" ? "Verifying..." : "Uploaded",
+            };
+            return;
+        }
+
+        if (doc.status === "rejected") {
+            nextUploads[doc.document_type] = {
+                file: null,
+                status: "rejected",
+                message: doc.reject_reason?.trim() || "This document needs a new upload.",
+            };
+        }
+    });
+
+    return nextUploads;
 }
 
 interface DocumentWizardProps {
     workerProfileId: string;
-    email: string;
-    onComplete?: () => void;
     adminTestMode?: boolean;
 }
 
-export default function DocumentWizard({ workerProfileId, email, onComplete, adminTestMode = false }: DocumentWizardProps) {
-    const supabase = createClient();
-    const [uploads, setUploads] = useState<Record<string, FileUpload>>({
-        passport: { file: null, status: "missing", message: "" },
-        biometric_photo: { file: null, status: "missing", message: "" },
-        diploma: { file: null, status: "missing", message: "" }
-    });
-    const [isComplete, setIsComplete] = useState(false);
+export default function DocumentWizard({ workerProfileId, adminTestMode = false }: DocumentWizardProps) {
+    const router = useRouter();
+    const supabase = useMemo(() => createClient(), []);
+    const [uploads, setUploads] = useState<UploadState>(() => createEmptyUploads());
 
     const passportInputRef = useRef<HTMLInputElement>(null);
     const photoInputRef = useRef<HTMLInputElement>(null);
     const diplomaInputRef = useRef<HTMLInputElement>(null);
 
+    const refreshDocuments = useCallback(() => {
+        startTransition(() => {
+            router.refresh();
+        });
+    }, [router]);
+
     // Load existing document statuses on mount
     useEffect(() => {
+        let isActive = true;
+
         async function loadExistingDocs() {
             const docs: ExistingDocumentStatus[] = adminTestMode
                 ? await fetch("/api/admin/test-personas/worker", { cache: "no-store" })
@@ -55,55 +123,26 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                     })
                 : await supabase
                     .from("worker_documents")
-                    .select("document_type, status")
+                    .select("document_type, status, reject_reason")
                     .eq("user_id", workerProfileId)
                     .then((result) => (result.data as ExistingDocumentStatus[] | null) || []);
 
-            if (docs && docs.length > 0) {
-                const updates: Record<string, FileUpload> = { ...uploads };
-                let allVerified = true;
-
-                docs.forEach((doc: ExistingDocumentStatus) => {
-                    if (doc.status === 'verified') {
-                        updates[doc.document_type] = {
-                            file: null,
-                            status: 'verified',
-                            message: '✓ Verified'
-                        };
-                    } else if (doc.status === 'manual_review') {
-                        updates[doc.document_type] = {
-                            file: null,
-                            status: 'manual_review',
-                            message: 'Awaiting admin approval'
-                        };
-                        allVerified = false;
-                    } else if (doc.status === 'uploaded' || doc.status === 'verifying') {
-                        updates[doc.document_type] = {
-                            file: null,
-                            status: doc.status,
-                            message: doc.status === 'verifying' ? 'Verifying...' : 'Uploaded'
-                        };
-                        allVerified = false;
-                    } else {
-                        allVerified = false;
-                    }
-                });
-
-                setUploads(updates);
-
-                // Check if ALL required docs are verified (passport, biometric_photo, AND diploma)
-                if (updates.passport?.status === 'verified' &&
-                    updates.biometric_photo?.status === 'verified' &&
-                    updates.diploma?.status === 'verified') {
-                    setIsComplete(true);
-                }
+            if (!isActive) {
+                return;
             }
+
+            setUploads(buildExistingUploadState(docs));
         }
-        loadExistingDocs();
-    }, [adminTestMode, workerProfileId]);
+
+        void loadExistingDocs();
+
+        return () => {
+            isActive = false;
+        };
+    }, [adminTestMode, supabase, workerProfileId]);
 
     // Update status helper
-    const updateStatus = (type: string, status: FileUpload["status"], message: string, file: File | null = null) => {
+    const updateStatus = (type: UploadDocumentType, status: FileUpload["status"], message: string, file: File | null = null) => {
         setUploads(prev => ({
             ...prev,
             [type]: { file, status, message }
@@ -111,7 +150,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
     };
 
     // Handle multi-file select for passport/diploma (stitch 2 photos into 1)
-    async function handleMultiFileSelect(type: string, files: FileList | null) {
+    async function handleMultiFileSelect(type: UploadDocumentType, files: FileList | null) {
         if (!files || files.length === 0) return;
         const selectedFiles = Array.from(files);
 
@@ -154,7 +193,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
         handleFileSelect(type, file);
     }
 
-    async function handleFileSelect(type: string, file: File | null) {
+    async function handleFileSelect(type: UploadDocumentType, file: File | null) {
         if (!file) return;
 
         // Double check size (redundant but safe)
@@ -201,32 +240,20 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
 
                 logActivity("document_verified", "documents", { doc_type: type, status: "verified", sandbox: true });
                 toast.success(`${type.replace('_', ' ')} verified in sandbox.`);
-                setUploads(prev => {
-                    const newUploads = {
-                        ...prev,
-                        [type]: {
-                            file: uploadFile,
-                            status: "verified" as FileUpload["status"],
-                            message: "✓ Verified"
-                        }
-                    };
-
-                    if (newUploads.passport?.status === 'verified' &&
-                        newUploads.biometric_photo?.status === 'verified' &&
-                        newUploads.diploma?.status === 'verified') {
-                        setIsComplete(true);
-                        toast.success("All sandbox documents verified.");
-
-                        // Check if full profile is now 100% and send notifications
-                        try {
-                            fetch("/api/check-profile-completion", { method: "POST" });
-                        } catch {
-                            // Non-critical
-                        }
+                setUploads(prev => ({
+                    ...prev,
+                    [type]: {
+                        file: uploadFile,
+                        status: "verified",
+                        message: "✓ Verified"
                     }
+                }));
 
-                    return newUploads;
-                });
+                const completionResponse = await fetch("/api/check-profile-completion", { method: "POST" });
+                if (!completionResponse.ok) {
+                    console.warn("[Upload] Failed to sync sandbox profile completion state");
+                }
+                refreshDocuments();
             } else {
                 const fileName = `${Date.now()}_${sanitizeStorageFileName(uploadFile.name, type)}`;
                 const storagePath = `${workerProfileId}/${type}/${fileName}`;
@@ -277,36 +304,26 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
                         ? `${type.replace('_', ' ')} uploaded successfully. Our team will review it before approval.`
                         : `${type.replace('_', ' ')} verified successfully!`;
                     toast.success(successMessage);
-                    setUploads(prev => {
-                        const newUploads = {
-                            ...prev,
-                            [type]: {
-                                file: uploadFile,
-                                status: result.status,
-                                message: result.status === 'verified'
-                                    ? '✓ Verified'
-                                    : result.status === 'manual_review'
-                                        ? 'Awaiting admin approval'
-                                        : 'Uploaded'
-                            }
-                        };
-
-                        // Check if ALL required docs are verified
-                        if (newUploads.passport?.status === 'verified' &&
-                            newUploads.biometric_photo?.status === 'verified' &&
-                            newUploads.diploma?.status === 'verified') {
-                            setIsComplete(true);
-                            toast.success("All documents verified! You're ready to proceed.");
+                    setUploads(prev => ({
+                        ...prev,
+                        [type]: {
+                            file: uploadFile,
+                            status: result.status,
+                            message: result.status === 'verified'
+                                ? '✓ Verified'
+                                : result.status === 'manual_review'
+                                    ? 'Awaiting admin approval'
+                                    : 'Uploaded'
                         }
-
-                        return newUploads;
-                    });
+                    }));
+                    refreshDocuments();
                 } else {
                     // Show specific AI feedback to the user
                     const rejectionMessage = result.message || result.error || "Verification failed";
                     logActivity("document_rejected", "documents", { doc_type: type, reason: rejectionMessage, quality_issues: result.qualityIssues }, "warning");
                     toast.error(rejectionMessage);
                     updateStatus(type, "rejected", rejectionMessage);
+                    refreshDocuments();
                 }
             }
 
@@ -330,7 +347,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
         }
     }
 
-    function removeFile(type: string) {
+    function removeFile(type: UploadDocumentType) {
         updateStatus(type, "missing", "");
     }
 
@@ -358,7 +375,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
         }
     }
 
-    async function requestManualReview(type: string) {
+    async function requestManualReview(type: UploadDocumentType) {
         if (adminTestMode) {
             toast.info("Sandbox documents are already auto-verified.");
             return;
@@ -372,6 +389,7 @@ export default function DocumentWizard({ workerProfileId, email, onComplete, adm
             if (res.ok) {
                 toast.success('Sent for admin review! We\'ll notify you by email.');
                 updateStatus(type, 'manual_review' as FileUpload['status'], 'Awaiting admin approval');
+                refreshDocuments();
             } else {
                 toast.error('Could not request review. Please try again.');
             }

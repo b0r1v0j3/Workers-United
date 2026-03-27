@@ -12,7 +12,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const OPS_MONITOR_MODEL = "ops-first-monitor";
-const OPS_MONITOR_EMAILS_ENABLED = false;
 const CRITICAL_ROUTES = ["/login", "/signup", "/auth/callback", "/api/health"];
 
 interface RouteHealthEntry {

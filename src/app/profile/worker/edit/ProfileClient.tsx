@@ -47,13 +47,32 @@ interface WorkerRecord {
     mother_name: string;
     marital_status: string;
     gender: string;
-    family_data: any;
+    family_data: WorkerFamilyData | null;
     passport_number: string;
     passport_issued_by: string;
     passport_issue_date: string;
     passport_expiry_date: string;
     lives_abroad: string;
     previous_visas: string;
+}
+
+interface WorkerFamilySpouse {
+    first_name?: string | null;
+    last_name?: string | null;
+    dob?: string | null;
+    birth_country?: string | null;
+    birth_city?: string | null;
+}
+
+interface WorkerFamilyChild {
+    first_name?: string | null;
+    last_name?: string | null;
+    dob?: string | null;
+}
+
+interface WorkerFamilyData {
+    spouse?: WorkerFamilySpouse | null;
+    children?: WorkerFamilyChild[] | null;
 }
 
 interface WorkerRecordLookupRow {
@@ -305,9 +324,9 @@ export default function ProfilePage({
                     birth_city: sp.birth_city || "",
                 });
             }
-            if (fd.children && fd.children.length > 0) {
+            if (Array.isArray(fd.children) && fd.children.length > 0) {
                 setHasChildren(true);
-                setChildren(fd.children.map((c: any) => {
+                setChildren(fd.children.map((c) => {
                     const cp = c.dob ? parseDateToComponents(c.dob, "dob") : { dobDay: "", dobMonth: "", dobYear: "" };
                     return {
                         first_name: c.first_name || "",
@@ -393,7 +412,7 @@ export default function ProfilePage({
             }
 
             // Build family_data JSON
-            const familyData: any = {};
+            const familyData: WorkerFamilyData = {};
             if (hasSpouse) {
                 let spouseDob: string | null = null;
                 if (spouseData.dobDay && spouseData.dobMonth && spouseData.dobYear) {

@@ -370,7 +370,7 @@ describe("GET /api/cron/check-expiry", () => {
                             eq: (field: string, value: string | boolean) => {
                                 if (field === "status" && value === "IN_QUEUE") {
                                     return {
-                                        eq: vi.fn((_entryFeeField: string, _entryFeeValue: boolean) => ({
+                                        eq: vi.fn(() => ({
                                             gt: vi.fn(() => ({
                                                 order: vi.fn(() => ({
                                                     limit: vi.fn(() => ({

@@ -7,6 +7,13 @@ const deleteUserData = vi.fn();
 
 type QueryResult = { data: unknown; error: { message: string } | null };
 
+type BatchQueryChain = PromiseLike<QueryResult> & {
+    in: () => BatchQueryChain;
+    eq: () => BatchQueryChain;
+    order: () => BatchQueryChain;
+    limit: () => BatchQueryChain;
+};
+
 vi.mock("@/lib/cron-auth", () => ({
     hasValidCronBearerToken,
 }));
@@ -63,14 +70,14 @@ vi.mock("@/lib/workers", () => ({
 }));
 
 function createBatchQuery(result: QueryResult) {
-    const chain: any = {
+    const chain = {
         in: () => chain,
         eq: () => chain,
         order: () => chain,
         limit: () => chain,
         then: (onFulfilled: (value: QueryResult) => unknown, onRejected?: (reason: unknown) => unknown) =>
             Promise.resolve(result).then(onFulfilled, onRejected),
-    };
+    } as BatchQueryChain;
     return chain;
 }
 
@@ -121,7 +128,7 @@ describe("GET /api/cron/profile-reminders", () => {
                     data: null,
                     error: { message: "email queue read failed" },
                 },
-            }) as any
+            }) as never
         );
 
         const { GET } = await import("@/app/api/cron/profile-reminders/route");
@@ -146,7 +153,7 @@ describe("GET /api/cron/profile-reminders", () => {
                     data: null,
                     error: { message: "activity read failed" },
                 },
-            }) as any
+            }) as never
         );
 
         const { GET } = await import("@/app/api/cron/profile-reminders/route");
@@ -165,7 +172,7 @@ describe("GET /api/cron/profile-reminders", () => {
 
     it("fails closed when auth pagination fails", async () => {
         const { createAdminClient } = await import("@/lib/supabase/admin");
-        vi.mocked(createAdminClient).mockReturnValue(createAdminClientMock() as any);
+        vi.mocked(createAdminClient).mockReturnValue(createAdminClientMock() as never);
         getAllAuthUsers.mockRejectedValueOnce(new Error("auth pagination failed"));
 
         const { GET } = await import("@/app/api/cron/profile-reminders/route");

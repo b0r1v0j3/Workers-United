@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-contact";
 import UnifiedNavbar from "@/components/UnifiedNavbar";
 import Footer from "@/components/Footer";
 import {
-    Users, FileText, CheckCircle, Eye, Globe, Map, Clock, Sliders, Shield, Cookie, Baby, Laptop, Link as LinkIcon, Edit, Flag
+    Users, FileText, CheckCircle, Eye, Globe, Map, Clock, Sliders, Shield, Cookie, Baby, Laptop, Link as LinkIcon, Edit, Flag, type LucideIcon
 } from 'lucide-react';
 
 export const metadata = {
@@ -248,7 +247,7 @@ export default async function PrivacyPolicyPage() {
     );
 }
 
-function PolicySection({ title, icon: Icon, colorClass, children }: { title: string; icon: any; colorClass: string; children: React.ReactNode }) {
+function PolicySection({ title, icon: Icon, colorClass, children }: { title: string; icon: LucideIcon; colorClass: string; children: React.ReactNode }) {
     return (
         <section className="flex flex-col md:flex-row gap-4 md:gap-6">
             <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${colorClass}`}>

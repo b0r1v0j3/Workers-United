@@ -1,6 +1,5 @@
 import {
     buildCanonicalWhatsAppFacts,
-    buildWorkerWhatsAppRules,
     resolveWhatsAppLanguageName,
 } from "@/lib/whatsapp-brain";
 import type { WhatsAppBrainMemoryEntry } from "@/lib/whatsapp-brain";
@@ -201,7 +200,6 @@ export async function generateWorkerWhatsAppReply({
     callResponseText,
     model,
     message,
-    normalizedPhone,
     workerRecord,
     profile,
     isAdmin,
@@ -280,7 +278,7 @@ Reason: ${routerDecision.reason}
 
 ## Key rules for specific situations
 - Price questions: Job Finder costs $9. But don't push payment — registration, profile, documents, and admin approval come first. Payment starts from the dashboard, not WhatsApp.
-- Document questions: Required docs are passport, biometric photo, and a final diploma (school/university/vocational). Uploads happen in the dashboard — WhatsApp attachments don't link to profiles.
+- Document questions: Use only the canonical document facts above. Don't invent alternative IDs, file formats, or upload paths. Uploads happen in the dashboard — WhatsApp attachments still don't link to profiles.
 - Status questions: Use ONLY the profile snapshot above. Never invent status info.
 - Job questions: Don't imply there's a job board. Workers United does guided matching after the profile is complete and payment is done. Don't mention the 90-day service period unless the person specifically asks about timelines or how long the search lasts — it's too much detail for a first conversation.
 - Support: Be helpful. If it's beyond what you can do, point to dashboard support inbox (if they have access) or ${supportEmail || "support email"}.

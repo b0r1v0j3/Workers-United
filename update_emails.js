@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
 const p = 'src/lib/email-templates.ts';
 let code = fs.readFileSync(p, 'utf8');

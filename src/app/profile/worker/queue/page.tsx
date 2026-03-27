@@ -11,11 +11,18 @@ import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import { getWorkerCompletion } from "@/lib/profile-completion";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { getWorkerQueueStage } from "@/lib/worker-workspace-state";
-import { loadCanonicalWorkerRecord } from "@/lib/workers";
+import { loadCanonicalWorkerRecord, type WorkerRecordSnapshot } from "@/lib/workers";
 import QueueClientEffects, { PayToJoinButton } from "./QueueClientEffects";
 
 export const dynamic = "force-dynamic";
 const queueSurfaceClass = "relative mb-6 rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-xl sm:border sm:border-[#dddfe2] sm:bg-white sm:p-6 sm:shadow-sm sm:before:hidden";
+
+interface QueueWorkerRecord extends WorkerRecordSnapshot {
+    id: string;
+    full_name?: string | null;
+    email?: string | null;
+    job_search_active?: boolean | null;
+}
 
 export default async function QueuePage({
     searchParams,
@@ -218,7 +225,7 @@ export default async function QueuePage({
         .maybeSingle();
 
     // Get canonical worker record with queue info
-    const { data: workerRecord } = await loadCanonicalWorkerRecord<any>(
+    const { data: workerRecord } = await loadCanonicalWorkerRecord<QueueWorkerRecord>(
         dataClient,
         targetProfileId,
         "*"

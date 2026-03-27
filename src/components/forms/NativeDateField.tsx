@@ -141,6 +141,9 @@ export default function NativeDateField({
     const [isOpen, setIsOpen] = useState(false);
     const [displayMonth, setDisplayMonth] = useState(() => clampMonth(selectedDate || maxDate || new Date(), minDate, maxDate));
     const [popoverStyle, setPopoverStyle] = useState<{ top: number; left: number; width: number } | null>(null);
+    const activeDisplayMonth = isOpen
+        ? displayMonth
+        : clampMonth(selectedDate || displayMonth || maxDate || new Date(), minDate, maxDate);
 
     const yearOptions = useMemo(() => {
         const startYear = minDate?.getFullYear() ?? (new Date().getFullYear() - 120);
@@ -149,8 +152,8 @@ export default function NativeDateField({
     }, [maxDate, minDate]);
 
     const calendarCells = useMemo(
-        () => buildCalendarCells(displayMonth, minDate, maxDate),
-        [displayMonth, maxDate, minDate]
+        () => buildCalendarCells(activeDisplayMonth, minDate, maxDate),
+        [activeDisplayMonth, maxDate, minDate]
     );
 
     useEffect(() => {
@@ -171,16 +174,6 @@ export default function NativeDateField({
         mediaQuery.addListener(sync);
         return () => mediaQuery.removeListener(sync);
     }, []);
-
-    useEffect(() => {
-        setDisplayMonth((current) => {
-            if (isOpen) {
-                return current;
-            }
-
-            return clampMonth(selectedDate || current || maxDate || new Date(), minDate, maxDate);
-        });
-    }, [isOpen, maxDate, minDate, selectedDate]);
 
     useEffect(() => {
         if (!isOpen || useNativePicker || typeof window === "undefined") {
@@ -303,8 +296,8 @@ export default function NativeDateField({
         ));
     }
 
-    const canGoPrev = !minDate || displayMonth > startOfMonth(minDate);
-    const canGoNext = !maxDate || displayMonth < startOfMonth(maxDate);
+    const canGoPrev = !minDate || activeDisplayMonth > startOfMonth(minDate);
+    const canGoNext = !maxDate || activeDisplayMonth < startOfMonth(maxDate);
 
     return (
         <div className="relative w-full min-w-0 max-w-full">
@@ -364,7 +357,7 @@ export default function NativeDateField({
 
                                     <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_110px] gap-2">
                                         <AdaptiveSelect
-                                            value={displayMonth.getMonth()}
+                                            value={activeDisplayMonth.getMonth()}
                                             onChange={(event) => updateMonth(Number(event.target.value))}
                                             className="h-10 min-w-0 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111111]"
                                             desktopSearchThreshold={999}
@@ -377,7 +370,7 @@ export default function NativeDateField({
                                         </AdaptiveSelect>
 
                                         <AdaptiveSelect
-                                            value={displayMonth.getFullYear()}
+                                            value={activeDisplayMonth.getFullYear()}
                                             onChange={(event) => updateYear(Number(event.target.value))}
                                             className="h-10 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111111]"
                                             desktopSearchThreshold={999}

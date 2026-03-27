@@ -53,6 +53,33 @@ interface PostgresLikeError {
     code?: string;
 }
 
+type WhatsAppInboundQueryError = PostgresLikeError & {
+    message?: string | null;
+};
+
+type WhatsAppInboundQueryResponse<TData = unknown> = {
+    data?: TData | null;
+    error?: WhatsAppInboundQueryError | null;
+};
+
+type WhatsAppInboundQueryChain<TData = unknown> = PromiseLike<WhatsAppInboundQueryResponse<TData>> & {
+    select: (...args: unknown[]) => WhatsAppInboundQueryChain<TData>;
+    eq: (...args: unknown[]) => WhatsAppInboundQueryChain<TData>;
+    is: (...args: unknown[]) => WhatsAppInboundQueryChain<TData>;
+    limit: (...args: unknown[]) => WhatsAppInboundQueryChain<TData>;
+    insert: (payload: unknown) => WhatsAppInboundQueryChain<TData>;
+    update: (payload: unknown) => WhatsAppInboundQueryChain<TData>;
+    single: () => PromiseLike<WhatsAppInboundQueryResponse<TData>>;
+};
+
+type WhatsAppInboundAdminClient = {
+    from: (table: string) => unknown;
+};
+
+function whatsappInboundTable<TData = unknown>(admin: WhatsAppInboundAdminClient, table: string) {
+    return admin.from(table) as WhatsAppInboundQueryChain<TData>;
+}
+
 interface ExistingInboundWhatsAppMessageRow {
     id?: string | null;
     user_id?: string | null;
@@ -140,11 +167,10 @@ export function looksLikeAutomatedWhatsAppAutoReply(messageType: string, content
 }
 
 async function findInboundWhatsAppMessageByWamid(
-    admin: any,
+    admin: WhatsAppInboundAdminClient,
     wamid: string
 ): Promise<ExistingInboundWhatsAppMessageRow | null> {
-    const { data, error } = await admin
-        .from("whatsapp_messages")
+    const { data, error } = await whatsappInboundTable<ExistingInboundWhatsAppMessageRow[]>(admin, "whatsapp_messages")
         .select("id, user_id")
         .eq("wamid", wamid)
         .eq("direction", "inbound")
@@ -162,7 +188,7 @@ async function findInboundWhatsAppMessageByWamid(
 }
 
 export async function recordInboundWhatsAppMessage(
-    admin: any,
+    admin: WhatsAppInboundAdminClient,
     params: {
         userId: string | null;
         normalizedPhone: string;
@@ -189,8 +215,7 @@ export async function recordInboundWhatsAppMessage(
         };
     }
 
-    const { data, error } = await admin
-        .from("whatsapp_messages")
+    const { data, error } = await whatsappInboundTable<{ id?: string | null }>(admin, "whatsapp_messages")
         .insert(payload)
         .select("id")
         .single();
@@ -203,7 +228,7 @@ export async function recordInboundWhatsAppMessage(
         };
     }
 
-    if ((error as PostgresLikeError)?.code === "23505") {
+    if (error?.code === "23505") {
         const duplicateMessage = await findInboundWhatsAppMessageByWamid(admin, params.wamid);
         return {
             id: duplicateMessage?.id || null,
@@ -216,7 +241,7 @@ export async function recordInboundWhatsAppMessage(
 }
 
 export async function attachInboundWhatsAppMessageUser(
-    admin: any,
+    admin: WhatsAppInboundAdminClient,
     params: {
         wamid: string;
         userId: string;
@@ -230,8 +255,7 @@ export async function attachInboundWhatsAppMessageUser(
         };
     }
 
-    const { data: attachedRows, error: attachError } = await admin
-        .from("whatsapp_messages")
+    const { data: attachedRows, error: attachError } = await whatsappInboundTable<{ id?: string | null }[]>(admin, "whatsapp_messages")
         .update({ user_id: params.userId })
         .select("id")
         .eq("wamid", params.wamid)

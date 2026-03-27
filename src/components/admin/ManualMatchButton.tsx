@@ -123,7 +123,7 @@ export default function ManualMatchButton({ workerRecordId }: { workerRecordId: 
                                 <div className="min-w-0 flex-1">
                                     <div className="font-semibold text-[#18181b] text-sm truncate">{job.title}</div>
                                     <div className="text-[11px] text-[#71717a] flex gap-2 flex-wrap">
-                                        <span>{(job.employer as any)?.company_name || "—"}</span>
+                                        <span>{job.employer?.company_name || "—"}</span>
                                         <span>•</span>
                                         <span>{job.industry}</span>
                                         <span>•</span>

@@ -39,6 +39,8 @@ describe("whatsapp-brain guards", () => {
         expect(facts).toContain("There is no live public vacancy feed");
         expect(facts).toContain("payment unlocks only after the worker profile is fully complete, the required documents are finished, and admin approval is done");
         expect(facts).toContain("Document uploads and screenshots are not processed as WhatsApp attachments yet");
+        expect(facts).toContain("A valid passport is required for international employment and work-permit processing");
+        expect(facts).toContain("encrypted cloud storage");
     });
 
     it("normalizes bare website values before composing WhatsApp facts and rules", () => {

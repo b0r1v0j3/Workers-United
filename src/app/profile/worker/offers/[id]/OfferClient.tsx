@@ -12,9 +12,34 @@ import {
 } from "@/lib/offer-checkout-copy";
 import { createClient } from "@/lib/supabase/client";
 
+interface OfferClientWorkerRecord {
+    id: string;
+    signature_url?: string | null;
+}
+
+interface OfferClientJobRequest {
+    title?: string | null;
+    description?: string | null;
+    destination_country?: string | null;
+    industry?: string | null;
+    salary_rsd?: number | null;
+    salary_min?: number | null;
+    salary_max?: number | null;
+    salary_currency?: string | null;
+    employers?: {
+        company_name?: string | null;
+    } | null;
+}
+
+interface OfferClientOffer {
+    id: string;
+    status: string;
+    job_requests?: OfferClientJobRequest | null;
+}
+
 interface OfferClientProps {
-    offer: any;
-    workerRecord: any;
+    offer: OfferClientOffer;
+    workerRecord: OfferClientWorkerRecord;
     isExpired: boolean;
     expiresAt: string;
 }

@@ -8,6 +8,47 @@ import { getWorkerDocumentPublicUrl } from "@/lib/worker-documents";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
+type ContractMatchRow = {
+    id?: string;
+    worker_id: string | null;
+    employer_id?: string | null;
+};
+
+type ContractRow = {
+    generated_documents: unknown;
+    matches: ContractMatchRow | ContractMatchRow[] | null;
+};
+
+type WorkerRecordRow = {
+    id: string;
+    profile_id: string;
+};
+
+type ProfileRow = {
+    id: string;
+    full_name: string | null;
+};
+
+type WorkerDocumentRow = {
+    user_id: string;
+    document_type: string | null;
+    storage_path: string | null;
+};
+
+function getContractMatch(matches: ContractRow["matches"]) {
+    return Array.isArray(matches) ? (matches[0] ?? null) : matches;
+}
+
+function getGeneratedDocumentsMap(value: unknown): Record<string, string> {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return {};
+    }
+
+    return Object.fromEntries(
+        Object.entries(value).filter((entry) => typeof entry[1] === "string" && entry[1].length > 0)
+    );
+}
+
 // POST: Download all documents for matched workers as a ZIP
 export async function POST(request: NextRequest) {
     try {
@@ -47,14 +88,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: fetchError.message }, { status: 500 });
         }
 
-        if (!contracts || contracts.length === 0) {
+        const contractRows = (contracts || []) as ContractRow[];
+
+        if (contractRows.length === 0) {
             return NextResponse.json({ error: "No generated documents found" }, { status: 404 });
         }
 
         // Get worker record IDs from matches
-        const workerRecordIds = contracts
-            .map((c: any) => c.matches?.worker_id)
-            .filter(Boolean);
+        const workerRecordIds = contractRows
+            .map((contract) => getContractMatch(contract.matches)?.worker_id)
+            .filter((workerId): workerId is string => typeof workerId === "string" && workerId.length > 0);
 
         // Fetch worker records
         const { data: workerRecords } = await admin
@@ -62,7 +105,8 @@ export async function POST(request: NextRequest) {
             .select("id, profile_id")
             .in("id", workerRecordIds.length > 0 ? workerRecordIds : ["__none__"]);
 
-        const workerProfileIds = (workerRecords || []).map((workerRecord) => workerRecord.profile_id);
+        const workerRecordRows = (workerRecords || []) as WorkerRecordRow[];
+        const workerProfileIds = workerRecordRows.map((workerRecord) => workerRecord.profile_id);
 
         // Fetch profiles for names
         const { data: profiles } = await admin
@@ -70,8 +114,9 @@ export async function POST(request: NextRequest) {
             .select("id, full_name")
             .in("id", workerProfileIds.length > 0 ? workerProfileIds : ["__none__"]);
 
-        const profileMap = new Map((profiles || []).map(p => [p.id, p]));
-        const workerRecordMap = new Map((workerRecords || []).map((workerRecord) => [workerRecord.id, workerRecord]));
+        const profileRows = (profiles || []) as ProfileRow[];
+        const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]));
+        const workerRecordMap = new Map(workerRecordRows.map((workerRecord) => [workerRecord.id, workerRecord]));
 
         // Fetch worker uploaded documents (passport, photo, diploma)
         const { data: workerDocs } = await admin
@@ -80,8 +125,9 @@ export async function POST(request: NextRequest) {
             .in("user_id", workerProfileIds.length > 0 ? workerProfileIds : ["__none__"])
             .in("document_type", ["passport", "biometric_photo", "diploma"]);
 
-        const docsByUser = new Map<string, any[]>();
-        for (const doc of workerDocs || []) {
+        const workerDocumentRows = (workerDocs || []) as WorkerDocumentRow[];
+        const docsByUser = new Map<string, WorkerDocumentRow[]>();
+        for (const doc of workerDocumentRows) {
             const existing = docsByUser.get(doc.user_id) || [];
             existing.push(doc);
             docsByUser.set(doc.user_id, existing);
@@ -90,8 +136,9 @@ export async function POST(request: NextRequest) {
         // Build ZIP
         const zip = new JSZip();
 
-        for (const contract of contracts) {
-            const workerRecordId = contract.matches?.worker_id;
+        for (const contract of contractRows) {
+            const workerRecordId = getContractMatch(contract.matches)?.worker_id;
+            if (!workerRecordId) continue;
             const workerRecord = workerRecordMap.get(workerRecordId);
             if (!workerRecord) continue;
 
@@ -106,11 +153,11 @@ export async function POST(request: NextRequest) {
                 .replace(/[^\p{L}\p{N}\s]/gu, "")
                 .trim();
 
-            const folder = zip.folder(folderName);
+            const folder = zip.folder(folderName || "Unknown");
             if (!folder) continue;
 
             // 1. Fetch all generated PDF documents in parallel
-            const generatedDocs = contract.generated_documents || {};
+            const generatedDocs = getGeneratedDocumentsMap(contract.generated_documents);
             const docFileNames: Record<string, string> = {
                 UGOVOR: "UGOVOR_O_RADU.pdf",
                 IZJAVA: "IZJAVA_O_SAGLASNOSTI.pdf",
@@ -136,7 +183,7 @@ export async function POST(request: NextRequest) {
             const userDocs = docsByUser.get(workerRecord.profile_id) || [];
 
             const uploadedFetches = userDocs
-                .filter(doc => doc.storage_path)
+                .filter((doc): doc is WorkerDocumentRow & { storage_path: string } => typeof doc.storage_path === "string" && doc.storage_path.length > 0)
                 .map(async (doc) => {
                     try {
                         const fileUrl = getWorkerDocumentPublicUrl(doc.storage_path);
@@ -145,14 +192,15 @@ export async function POST(request: NextRequest) {
                         if (response.ok) {
                             const buffer = await response.arrayBuffer();
                             const ext = doc.storage_path.split(".").pop()?.toLowerCase() || "pdf";
-                            let fileName = `${doc.document_type}.${ext}`;
-                            if (doc.document_type === "biometric_photo") fileName = `Photo.${ext}`;
-                            else if (doc.document_type === "passport") fileName = `Passport.${ext}`;
-                            else if (doc.document_type === "diploma") fileName = `Diploma.${ext}`;
+                            const documentType = doc.document_type || "document";
+                            let fileName = `${documentType}.${ext}`;
+                            if (documentType === "biometric_photo") fileName = `Photo.${ext}`;
+                            else if (documentType === "passport") fileName = `Passport.${ext}`;
+                            else if (documentType === "diploma") fileName = `Diploma.${ext}`;
                             folder.file(fileName, buffer);
                         }
                     } catch (err) {
-                        console.warn(`[Download All] Failed to fetch ${doc.document_type} for ${folderName}:`, err);
+                        console.warn(`[Download All] Failed to fetch ${doc.document_type || "document"} for ${folderName || "Unknown"}:`, err);
                     }
                 });
 

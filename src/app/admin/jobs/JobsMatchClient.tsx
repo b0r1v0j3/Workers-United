@@ -6,7 +6,35 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { getManualMatchFailureFeedback } from "@/lib/manual-match-feedback";
 
-export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: any[] }) {
+type JobMatchJob = {
+    id: string;
+    title: string;
+    industry: string | null;
+    destination_country: string | null;
+    positions_filled: number;
+    positions_count: number;
+    status: string;
+    employer?: {
+        company_name?: string | null;
+        profiles?: {
+            email?: string | null;
+        } | null;
+    } | null;
+};
+
+type JobMatchWorker = {
+    id: string;
+    profile_id: string | null;
+    preferred_job: string | null;
+    queue_joined_at: string | null;
+    nationality: string | null;
+    profiles?: {
+        full_name?: string | null;
+        email?: string | null;
+    } | null;
+};
+
+export default function JobsMatchClient({ jobs, queue }: { jobs: JobMatchJob[]; queue: JobMatchWorker[] }) {
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
     const [isMatching, setIsMatching] = useState(false);
 
@@ -189,6 +217,8 @@ export default function JobsMatchClient({ jobs, queue }: { jobs: any[], queue: a
                                                 <div className="text-xs font-bold text-blue-600">#{idx + 1}</div>
                                                 <div className="text-[10px] text-slate-400 font-bold">{match.score}pts</div>
                                             </div>
+                                            {/* Admin uses external avatar URLs here, so the raw img keeps dynamic previews simple. */}
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img src={`https://ui-avatars.com/api/?name=${match.profiles?.full_name?.replace(' ', '+') || "Worker"}&background=random`} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
                                             <div>
                                                 <h4 className="font-bold text-slate-900 text-sm leading-tight">

@@ -36,6 +36,49 @@ export interface AdminTestSession {
     activePersona: AdminTestPersonaRecord | null;
 }
 
+type AdminTestQueryError = { message?: string | null } | null;
+
+type AdminTestQueryResponse<TData = unknown> = {
+    data?: TData | null;
+    error?: AdminTestQueryError;
+};
+
+type AdminTestQueryChain<TData = unknown> = PromiseLike<AdminTestQueryResponse<TData>> & {
+    select: (...args: unknown[]) => AdminTestQueryChain<TData>;
+    eq: (...args: unknown[]) => AdminTestQueryChain<TData>;
+    single: () => PromiseLike<AdminTestQueryResponse<TData>>;
+    maybeSingle: () => PromiseLike<AdminTestQueryResponse<TData>>;
+};
+
+type AdminTestSessionStorageClient = {
+    from: (bucket: string) => {
+        upload: (
+            path: string,
+            file: File,
+            options: { contentType?: string; upsert: boolean }
+        ) => PromiseLike<{ error?: AdminTestQueryError }>;
+    };
+};
+
+type AdminTestSessionAdminClient = {
+    from: (table: string) => unknown;
+    storage: AdminTestSessionStorageClient;
+};
+
+type AdminTestSessionSupabaseClient = {
+    auth: {
+        getUser: () => PromiseLike<{
+            data: {
+                user: SupabaseUser | null;
+            };
+        }>;
+    };
+};
+
+function adminTestTable<TData = unknown>(admin: AdminTestSessionAdminClient, table: string) {
+    return admin.from(table) as AdminTestQueryChain<TData>;
+}
+
 const ROLE_ORDER: Record<AdminTestRole, number> = {
     worker: 0,
     employer: 1,
@@ -119,11 +162,10 @@ export async function getActiveAdminTestPersonaCookie(): Promise<string | null> 
 }
 
 async function fetchOwnerProfile(
-    admin: any,
+    admin: AdminTestSessionAdminClient,
     userId: string
 ): Promise<AdminTestOwnerProfile | null> {
-    const { data, error } = await admin
-        .from("profiles")
+    const { data, error } = await adminTestTable<AdminTestOwnerProfile>(admin, "profiles")
         .select("id, email, full_name, user_type")
         .eq("id", userId)
         .maybeSingle();
@@ -136,8 +178,8 @@ async function fetchOwnerProfile(
 }
 
 export async function getAdminTestSession(input: {
-    supabase: any;
-    admin: any;
+    supabase: AdminTestSessionSupabaseClient;
+    admin: AdminTestSessionAdminClient;
     ensurePersonas?: boolean;
 }): Promise<AdminTestSession> {
     const { supabase, admin, ensurePersonas = false } = input;

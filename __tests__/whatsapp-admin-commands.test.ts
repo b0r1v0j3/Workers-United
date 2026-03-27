@@ -30,7 +30,7 @@ function createAdminClient(overrides?: {
             return {
                 select() {
                     return {
-                        ilike(_column: string, _pattern: string) {
+                        ilike() {
                             return {
                                 limit: async () => ({
                                     data: overrides?.selectData?.ilikeLimit ?? [],

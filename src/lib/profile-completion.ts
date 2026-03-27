@@ -203,7 +203,7 @@ export function getEmployerCompletion(data: EmployerData): ProfileCompletionResu
     const { employer } = data;
 
     // Required fields are country-neutral. Extra company metadata is optional.
-    const baseFields: Record<string, any> = {
+    const baseFields: Record<string, unknown> = {
         company_name: employer?.company_name,
         contact_phone: employer?.contact_phone,
         country: employer?.country,

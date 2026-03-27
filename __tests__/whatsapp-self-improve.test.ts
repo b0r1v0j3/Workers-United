@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
     loadRecentConversations,
     analyzeConversations,
-    type ConversationThread,
 } from "@/lib/whatsapp-self-improve";
 
 // ─── Mock DB client ──────────────────────────────────────────────────────────
 
-function createMockAdmin(rows: any[] = [], error: any = null) {
+type LoadRecentConversationsAdmin = Parameters<typeof loadRecentConversations>[0];
+
+function createMockAdmin(rows: unknown[] | null = [], error: { message: string } | null = null) {
     return {
         from: () => ({
             select: () => ({
@@ -22,7 +23,7 @@ function createMockAdmin(rows: any[] = [], error: any = null) {
                 }),
             }),
         }),
-    };
+    } as LoadRecentConversationsAdmin;
 }
 
 // ─── loadRecentConversations ─────────────────────────────────────────────────
@@ -35,7 +36,7 @@ describe("loadRecentConversations", () => {
             { phone_number: "+222", direction: "inbound", content: "Need help", created_at: "2026-03-23T10:01:00Z" },
         ];
 
-        const threads = await loadRecentConversations(createMockAdmin(rows) as any);
+        const threads = await loadRecentConversations(createMockAdmin(rows));
         expect(threads).toHaveLength(2);
         expect(threads[0].phone).toBe("+111");
         expect(threads[0].messages).toHaveLength(2);
@@ -49,7 +50,7 @@ describe("loadRecentConversations", () => {
             { phone_number: "+111", direction: "outbound", content: "[Template: status_update] Your profile...", created_at: "2026-03-23T10:00:05Z" },
         ];
 
-        const threads = await loadRecentConversations(createMockAdmin(rows) as any);
+        const threads = await loadRecentConversations(createMockAdmin(rows));
         expect(threads).toHaveLength(1);
         expect(threads[0].messages).toHaveLength(1);
         expect(threads[0].messages[0].content).toBe("Hi");
@@ -60,18 +61,18 @@ describe("loadRecentConversations", () => {
             { phone_number: "+111", direction: "outbound", content: "Proactive nudge", created_at: "2026-03-23T10:00:00Z" },
         ];
 
-        const threads = await loadRecentConversations(createMockAdmin(rows) as any);
+        const threads = await loadRecentConversations(createMockAdmin(rows));
         expect(threads).toHaveLength(0);
     });
 
     it("returns empty array when no data", async () => {
-        const threads = await loadRecentConversations(createMockAdmin([]) as any);
+        const threads = await loadRecentConversations(createMockAdmin([]));
         expect(threads).toHaveLength(0);
     });
 
     it("throws on DB error", async () => {
         await expect(
-            loadRecentConversations(createMockAdmin(null, { message: "DB down" }) as any)
+            loadRecentConversations(createMockAdmin(null, { message: "DB down" }))
         ).rejects.toThrow("Failed to load conversations: DB down");
     });
 });
