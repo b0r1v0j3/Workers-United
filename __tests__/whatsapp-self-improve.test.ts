@@ -1,12 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { callClaudeResponseText } from "@/lib/claude-response-text";
 import {
     loadRecentConversations,
     analyzeConversations,
 } from "@/lib/whatsapp-self-improve";
 
+vi.mock("@/lib/claude-response-text", () => ({
+    callClaudeResponseText: vi.fn(),
+}));
+
 // ─── Mock DB client ──────────────────────────────────────────────────────────
 
 type LoadRecentConversationsAdmin = Parameters<typeof loadRecentConversations>[0];
+const mockedCallClaudeResponseText = vi.mocked(callClaudeResponseText);
 
 function createMockAdmin(rows: unknown[] | null = [], error: { message: string } | null = null) {
     return {
@@ -25,6 +31,10 @@ function createMockAdmin(rows: unknown[] | null = [], error: { message: string }
         }),
     } as LoadRecentConversationsAdmin;
 }
+
+beforeEach(() => {
+    mockedCallClaudeResponseText.mockReset();
+});
 
 // ─── loadRecentConversations ─────────────────────────────────────────────────
 
@@ -85,5 +95,60 @@ describe("analyzeConversations", () => {
         expect(report.analyzed_threads).toBe(0);
         expect(report.insights).toHaveLength(0);
         expect(report.summary).toBe("No conversations to analyze.");
+    });
+
+    it("parses Claude responses wrapped in a fenced json block", async () => {
+        mockedCallClaudeResponseText.mockResolvedValue(`\`\`\`json
+{
+  "insights": [
+    {
+      "type": "common_question",
+      "category": "pricing",
+      "content": "Users often ask whether the $9 Job Finder checkout is the final step before queue entry.",
+      "confidence": 0.84,
+      "evidence": "Multiple threads ask what happens after payment."
+    }
+  ],
+  "summary": "Pricing questions center on what unlocks the queue."
+}
+\`\`\``);
+
+        const report = await analyzeConversations("fake-key", [
+            {
+                phone: "+111",
+                messages: [
+                    {
+                        direction: "inbound",
+                        content: "When do I pay the $9?",
+                        created_at: "2026-03-23T10:00:00Z",
+                    },
+                ],
+            },
+        ], []);
+
+        expect(report.insights).toHaveLength(1);
+        expect(report.insights[0]?.type).toBe("common_question");
+        expect(report.insights[0]?.category).toBe("pricing");
+        expect(report.summary).toBe("Pricing questions center on what unlocks the queue.");
+    });
+
+    it("falls back cleanly when Claude returns non-JSON text", async () => {
+        mockedCallClaudeResponseText.mockResolvedValue("I could not find any reusable insight.");
+
+        const report = await analyzeConversations("fake-key", [
+            {
+                phone: "+111",
+                messages: [
+                    {
+                        direction: "inbound",
+                        content: "Hello",
+                        created_at: "2026-03-23T10:00:00Z",
+                    },
+                ],
+            },
+        ], []);
+
+        expect(report.insights).toHaveLength(0);
+        expect(report.summary).toContain("unparseable response");
     });
 });
