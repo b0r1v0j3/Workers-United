@@ -132,8 +132,8 @@ describe('getEmailTemplate', () => {
         expect(subject).toContain('expired');
         expect(html).toContain('fresh checkout');
         expect(html).toContain('$9');
-        expect(html).toContain('required documents');
-        expect(html).toContain('admin review');
+        expect(html).toContain('Required Documents Stay Attached');
+        expect(html).toContain('Approval Progress Stays In Place');
     });
 
     it('checkout_recovery step 2 keeps payment as the final post-approval step', () => {
@@ -143,8 +143,8 @@ describe('getEmailTemplate', () => {
             recoveryStep: 2,
         });
         expect(subject).toContain('still waiting');
-        expect(html).toContain('required documents');
-        expect(html).toContain('admin review');
+        expect(html).toContain('Required Documents Stay Attached');
+        expect(html).toContain('Approval Progress Stays In Place');
         expect(html).toContain('active queue');
         expect(html).not.toContain('support unlocks');
         expect(html).not.toContain('support inbox');
@@ -224,14 +224,14 @@ describe('getEmailTemplate', () => {
         const stepOneMessage = getCheckoutRecoveryStatusMessage(undefined, '$9');
         const stepTwoMessage = getCheckoutRecoveryStatusMessage(2, '$9');
 
-        expect(stepOneMessage).toContain('required documents');
-        expect(stepOneMessage).toContain('admin review');
+        expect(stepOneMessage).toContain('already unlocked');
+        expect(stepOneMessage).toContain('Workers United dashboard');
         expect(stepOneMessage).toContain('enter the active queue');
         expect(stepOneMessage).not.toContain('support inbox');
         expect(stepOneMessage).not.toContain('activate job search');
 
-        expect(stepTwoMessage).toContain('required documents');
-        expect(stepTwoMessage).toContain('admin review');
+        expect(stepTwoMessage).toContain('still waiting');
+        expect(stepTwoMessage).toContain('already unlocked');
         expect(stepTwoMessage).not.toContain('support inbox');
         expect(stepTwoMessage).not.toContain('activate job search and unlock support');
     });

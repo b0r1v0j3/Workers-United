@@ -136,6 +136,41 @@ function formatThreadsForAnalysis(threads: ConversationThread[]): string {
         .join("\n\n");
 }
 
+function parseSelfImprovementModelResponse(raw: string): {
+    insights?: unknown;
+    summary?: unknown;
+} | null {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const candidates = new Set<string>([trimmed]);
+    const fencedBlock = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fencedBlock?.[1]?.trim()) {
+        candidates.add(fencedBlock[1].trim());
+    }
+
+    const firstBraceIndex = trimmed.indexOf("{");
+    const lastBraceIndex = trimmed.lastIndexOf("}");
+    if (firstBraceIndex >= 0 && lastBraceIndex > firstBraceIndex) {
+        candidates.add(trimmed.slice(firstBraceIndex, lastBraceIndex + 1).trim());
+    }
+
+    for (const candidate of candidates) {
+        try {
+            const parsed = JSON.parse(candidate);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                return parsed as { insights?: unknown; summary?: unknown };
+            }
+        } catch {
+            // Try the next candidate shape.
+        }
+    }
+
+    return null;
+}
+
 export async function analyzeConversations(
     apiKey: string,
     threads: ConversationThread[],
@@ -205,7 +240,10 @@ ${existingFactsList}
     });
 
     try {
-        const parsed = JSON.parse(raw);
+        const parsed = parseSelfImprovementModelResponse(raw);
+        if (!parsed) {
+            throw new Error("Model response is not valid JSON");
+        }
         const insights: SelfImprovementInsight[] = [];
 
         if (Array.isArray(parsed.insights)) {
