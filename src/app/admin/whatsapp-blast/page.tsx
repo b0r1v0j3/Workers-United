@@ -75,7 +75,7 @@ export default async function WhatsAppBlastPage({
     const justSent = params.sent !== undefined;
     const isPreview = params.preview === "true";
 
-    const defaultMessage = `Hi {name}! Your profile has been approved and Job Finder checkout is now unlocked in your dashboard. Open your dashboard to complete the $9 Job Finder checkout and we'll match you with employers in Europe. 90-day money-back guarantee. Dashboard: {link}`;
+    const defaultMessage = `Hi {name}! Job Finder checkout is now unlocked in your dashboard. Open your dashboard to complete the $9 Job Finder checkout and we'll match you with employers in Europe. 90-day money-back guarantee. Dashboard: {link}`;
 
     return (
         <AppShell user={user} variant="admin">

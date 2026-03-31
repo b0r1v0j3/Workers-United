@@ -310,10 +310,6 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         submitted_email: workerRecord?.submitted_email,
         profiles: workerProfile ? [workerProfile] : null,
     }) || authUser?.email || null;
-    const approvalEmailPreviewHref = buildAdminEmailPreviewHref("admin_update", {
-        name: displayName,
-        ...buildWorkerPaymentUnlockedEmailData(),
-    });
     const workerNameFallback = workerProfile?.full_name || authUser?.user_metadata?.full_name || workerRecord?.submitted_full_name || null;
     const approvalGuardState = workerRecord
         ? await loadWorkerApprovalGuardState({
@@ -326,6 +322,11 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         })
         : null;
     const profileCompletion = approvalGuardState?.completion ?? 0;
+    const approvalMissingFields = approvalGuardState?.missingFields ?? [];
+    const approvalEmailPreviewHref = buildAdminEmailPreviewHref("admin_update", {
+        name: displayName,
+        ...buildWorkerPaymentUnlockedEmailData({ manualOverride: profileCompletion < 100 }),
+    });
     const canSendApprovalNotification = !!(approvalGuardState?.notificationRecipient && approvalGuardState?.notificationUserId);
     const isAdminApproved = !!(approvalGuardState?.worker.admin_approved ?? workerRecord?.admin_approved);
     const canApproveWorker = !!approvalGuardState?.canApprove;
@@ -676,10 +677,12 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                     <CaseHintCard
                         title="Current case signal"
                         copy={isAdminApproved
-                            ? "This worker is already admin-approved. Keep focus on queue, offers, payments, and document validity."
+                            ? profileCompletion < 100
+                                ? "Job Finder is already unlocked by admin override. This case still has missing profile requirements."
+                                : "This worker is already admin-approved. Keep focus on queue, offers, payments, and document validity."
                             : canApproveWorker
                                 ? "This worker is complete and is now waiting for your approval before payment unlocks."
-                                : "This worker still needs profile completion before approval can happen."}
+                                : "This worker still has missing profile requirements, but you can manually unlock payment here if needed."}
                         tone="amber"
                     />
                 </div>
@@ -823,10 +826,12 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                                 <div className="text-sm font-semibold text-[#18181b]">Approval state</div>
                                                 <div className="mt-1 text-sm text-[#57534e]">
                                                     {isAdminApproved
-                                                        ? "Worker is unlocked for payment and downstream queue operations."
+                                                        ? profileCompletion < 100
+                                                            ? "Job Finder is unlocked for payment by admin override. This case still has missing profile requirements."
+                                                            : "Worker is unlocked for payment and downstream queue operations."
                                                         : canApproveWorker
                                                             ? "This worker is complete and ready for your approval."
-                                                            : "Approval stays locked until the worker profile and required documents are complete."}
+                                                            : "Profile requirements are still missing, but you can manually unlock payment here whenever needed."}
                                                 </div>
                                             </div>
                                             <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isAdminApproved
@@ -846,7 +851,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                             <input type="hidden" name="action" value={isAdminApproved ? "revoke" : "approve"} />
                                             <button
                                                 type="submit"
-                                                disabled={isAdminApproved ? !canRevokeApproval : !canApproveWorker}
+                                                disabled={isAdminApproved ? !canRevokeApproval : false}
                                                 className={`w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${isAdminApproved
                                                     ? "bg-red-500 hover:bg-red-600"
                                                     : "bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
@@ -857,7 +862,11 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                         </form>
                                         {!isAdminApproved && !canApproveWorker ? (
                                             <p className="mt-3 text-xs font-medium text-amber-800">
-                                                This button unlocks after the worker profile and required documents are complete.
+                                                Manual admin override is available even before profile completion. Use it only when you intentionally want to unlock checkout early.
+                                            </p>
+                                        ) : isAdminApproved && profileCompletion < 100 ? (
+                                            <p className="mt-3 text-xs font-medium text-amber-800">
+                                                Payment is unlocked, but this case still has {approvalMissingFields.length} outstanding profile or document requirement{approvalMissingFields.length === 1 ? "" : "s"}.
                                             </p>
                                         ) : isAdminApproved && !canRevokeApproval ? (
                                             <p className="mt-3 text-xs font-medium text-amber-800">

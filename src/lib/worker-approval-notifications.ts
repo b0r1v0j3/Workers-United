@@ -18,11 +18,15 @@ interface ResolveWorkerApprovalNotificationRecipientInput {
     displayName?: string | null;
 }
 
-export function buildWorkerPaymentUnlockedEmailData(): TemplateData {
+export function buildWorkerPaymentUnlockedEmailData({ manualOverride = false }: {
+    manualOverride?: boolean;
+} = {}): TemplateData {
     return {
-        subject: "Job Finder Is Now Unlocked",
-        title: "Profile Approved",
-        message: "Your profile has been approved by our team. Job Finder checkout is now unlocked in your dashboard, so you can complete the $9 Job Finder checkout whenever you are ready.",
+        subject: manualOverride ? "Job Finder Is Now Available" : "Job Finder Is Now Unlocked",
+        title: manualOverride ? "Job Finder Unlocked" : "Profile Approved",
+        message: manualOverride
+            ? "Our team unlocked Job Finder checkout for your case in the dashboard. You can complete the $9 Job Finder checkout whenever you are ready, and any remaining profile or document details can still be updated from the same workspace."
+            : "Your profile has been approved by our team. Job Finder checkout is now unlocked in your dashboard, so you can complete the $9 Job Finder checkout whenever you are ready.",
         actionText: "Open Job Finder",
         actionLink: buildPlatformUrl(BASE_URL, "/profile/worker"),
     };

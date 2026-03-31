@@ -14,6 +14,16 @@ describe("worker-approval-notifications", () => {
         expect(payload.actionLink).toContain("/profile/worker");
     });
 
+    it("builds a neutral unlock email payload for manual admin overrides", () => {
+        const payload = buildWorkerPaymentUnlockedEmailData({ manualOverride: true });
+
+        expect(payload.subject).toBe("Job Finder Is Now Available");
+        expect(payload.title).toBe("Job Finder Unlocked");
+        expect(payload.message).toContain("unlocked Job Finder checkout for your case");
+        expect(payload.message).toContain("remaining profile or document details");
+        expect(payload.message).not.toContain("Your profile has been approved");
+    });
+
     it("normalizes bare NEXT_PUBLIC_BASE_URL in the unlock CTA", async () => {
         const originalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
