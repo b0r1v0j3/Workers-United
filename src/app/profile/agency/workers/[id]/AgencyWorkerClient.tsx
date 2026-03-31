@@ -223,6 +223,7 @@ export default function AgencyWorkerClient({
         profile_completion: initialWorker.completion,
         admin_approved: initialWorker.adminApproved,
     }), [initialWorker.adminApproved, initialWorker.completion, initialWorker.paymentState]);
+    const manualPaymentOverride = entryFeeUnlockState.manualOverride === true;
     const canStartEntryPayment = !readOnlyPreview && initialWorker.paymentState === "not_paid" && entryFeeUnlockState.allowed;
     const pendingAdminReview = entryFeeUnlockState.reason === "pending_admin_review";
     const needsCompletion = entryFeeUnlockState.reason === "needs_completion";
@@ -407,11 +408,6 @@ export default function AgencyWorkerClient({
 
     async function handleAdminApproval(action: "approve" | "revoke") {
         if (!adminApprovalAccess) {
-            return;
-        }
-
-        if (action === "approve" && initialWorker.completion < 100) {
-            toast.info("This profile must be 100% complete before approval.");
             return;
         }
 
@@ -776,7 +772,9 @@ export default function AgencyWorkerClient({
                                     ? "The profile and required documents are complete and waiting for admin approval before Job Finder payment unlocks."
                                     : needsCompletion
                                         ? "Complete all required worker fields and documents to send this profile for admin review."
-                                        : "Use this to start the $9 Job Finder checkout for this worker."}
+                                        : manualPaymentOverride
+                                            ? "Admin already unlocked the $9 Job Finder checkout for this worker. Remaining profile details can still be finished later."
+                                            : "Use this to start the $9 Job Finder checkout for this worker."}
                             </p>
                         </div>
                         {!readOnlyPreview && canStartEntryPayment && (
@@ -815,16 +813,18 @@ export default function AgencyWorkerClient({
                                         : "border-amber-200 bg-amber-50 text-amber-900"
                             }`}>
                                 {initialWorker.adminApproved
-                                    ? "This worker is already approved for payment."
+                                    ? manualPaymentOverride
+                                        ? "Payment was unlocked manually by admin before this profile was fully complete."
+                                        : "This worker is already approved for payment."
                                     : initialWorker.completion === 100
                                         ? "This profile is ready for your approval."
-                                        : "Approval stays locked until the worker profile and required documents are complete."}
+                                        : "Profile requirements are still missing, but admin can still unlock payment manually."}
                             </div>
                             <div className="mt-4 flex flex-col gap-3">
                                 <button
                                     type="button"
                                     onClick={() => void handleAdminApproval(initialWorker.adminApproved ? "revoke" : "approve")}
-                                    disabled={approvalAction !== null || (!initialWorker.adminApproved && initialWorker.completion < 100)}
+                                    disabled={approvalAction !== null}
                                     className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
                                         initialWorker.adminApproved
                                             ? "bg-[#b91c1c] hover:bg-[#991b1b]"
@@ -834,6 +834,11 @@ export default function AgencyWorkerClient({
                                     {approvalAction ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                                     {initialWorker.adminApproved ? "Revoke approval" : "Approve for payment"}
                                 </button>
+                                {!initialWorker.adminApproved && initialWorker.completion < 100 ? (
+                                    <p className="text-xs font-medium text-amber-900">
+                                        Manual admin override can unlock checkout even before this profile reaches 100%.
+                                    </p>
+                                ) : null}
                             </div>
                         </aside>
                     ) : null}

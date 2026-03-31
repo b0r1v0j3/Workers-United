@@ -90,6 +90,7 @@ export type EntryFeeUnlockReason =
 export interface EntryFeeUnlockState {
     allowed: boolean;
     reason: EntryFeeUnlockReason;
+    manualOverride: boolean;
     status?: number;
     error?: string;
 }
@@ -129,32 +130,40 @@ export function resolveEntryFeeEligibilityForWorker(params: {
 
 export function getEntryFeeUnlockState(worker: EntryFeeWorkerState | null): EntryFeeUnlockState {
     if (!worker) {
-        return { allowed: false, reason: "needs_completion", status: 404, error: "Worker profile not found" };
+        return { allowed: false, reason: "needs_completion", manualOverride: false, status: 404, error: "Worker profile not found" };
     }
 
     if (worker.entry_fee_paid) {
-        return { allowed: false, reason: "already_paid", status: 400, error: "Entry fee already paid" };
+        return { allowed: false, reason: "already_paid", manualOverride: false, status: 400, error: "Entry fee already paid" };
     }
 
-    if (typeof worker.profile_completion === "number" && worker.profile_completion < 100) {
+    const profileComplete = typeof worker.profile_completion === "number" && worker.profile_completion >= 100;
+
+    if (worker.admin_approved === true) {
+        return {
+            allowed: true,
+            reason: "ready",
+            manualOverride: !profileComplete,
+        };
+    }
+
+    if (!profileComplete) {
         return {
             allowed: false,
             reason: "needs_completion",
+            manualOverride: false,
             status: 400,
             error: "Complete your profile and required documents before unlocking Job Finder payment",
         };
     }
 
-    if (worker.admin_approved === false) {
-        return {
-            allowed: false,
-            reason: "pending_admin_review",
-            status: 400,
-            error: "Your profile and required documents are complete and waiting for admin review before Job Finder payment unlocks",
-        };
-    }
-
-    return { allowed: true, reason: "ready" };
+    return {
+        allowed: false,
+        reason: "pending_admin_review",
+        manualOverride: false,
+        status: 400,
+        error: "Your profile and required documents are complete and waiting for admin review before Job Finder payment unlocks",
+    };
 }
 
 export function getEntryFeeEligibility(worker: EntryFeeWorkerState | null): EntryFeeEligibility {

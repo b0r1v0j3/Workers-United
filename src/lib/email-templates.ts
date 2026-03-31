@@ -491,11 +491,11 @@ export function getCheckoutRecoveryStatusMessage(step: number | undefined, amoun
 
     switch (step) {
         case 2:
-            return `Your ${safeAmount} Job Finder payment is still waiting. Your profile, required documents, and admin review already unlocked this final checkout step. Return to your Workers United dashboard to finish payment and enter the active queue.`;
+            return `Your ${safeAmount} Job Finder payment is still waiting. Your Workers United dashboard already unlocked this checkout step for your case. Return there to finish payment and enter the active queue.`;
         case 3:
-            return `Your previous ${safeAmount} Job Finder checkout expired. Your profile, required documents, and admin review are still in place, so open your Workers United dashboard to start a fresh checkout and continue where you left off.`;
+            return `Your previous ${safeAmount} Job Finder checkout expired. Your case is still unlocked for checkout, so open your Workers United dashboard to start a fresh session and continue where you left off.`;
         default:
-            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Your profile, required documents, and admin review already unlocked this final payment step. Return to your Workers United dashboard to finish payment and enter the active queue.`;
+            return `You opened the ${safeAmount} Job Finder checkout but did not finish it yet. Your case is already unlocked for this payment step, so return to your Workers United dashboard to finish payment and enter the active queue.`;
     }
 }
 
@@ -788,9 +788,9 @@ export function getEmailTemplate(type: EmailType, data: TemplateData): EmailTemp
             };
 
             const recoveryBodyMap: Record<1 | 2 | 3, string> = {
-                1: `You opened the ${amount} Job Finder checkout but did not finish the payment yet. Your profile, required documents, and admin review already unlocked this final step, so return to your dashboard and continue when you're ready.`,
-                2: `Your profile, required documents, and admin review already unlocked the ${amount} Job Finder checkout. Once that final payment is confirmed, your worker profile enters the active queue and your dashboard continues the next active step from there.`,
-                3: `Your earlier ${amount} checkout is no longer active. Your profile, required documents, and admin review are still in place, so open your dashboard to start a fresh checkout and continue exactly where you left off.`,
+                1: `You opened the ${amount} Job Finder checkout but did not finish the payment yet. This checkout step is already unlocked for your case, so return to your dashboard and continue when you're ready.`,
+                2: `Your case is already unlocked for the ${amount} Job Finder checkout. Once that final payment is confirmed, your worker profile enters the active queue and your dashboard continues the next active step from there.`,
+                3: `Your earlier ${amount} checkout is no longer active. Your case is still unlocked for checkout, so open your dashboard to start a fresh session and continue exactly where you left off.`,
             };
 
             const recoveryNoteMap: Record<1 | 2 | 3, string> = {

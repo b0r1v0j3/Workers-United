@@ -103,8 +103,9 @@ export default function DashboardClient({
         profile_completion: profileCompletion,
         admin_approved: !!worker?.admin_approved,
     });
+    const manualPaymentOverride = entryFeeUnlockState.manualOverride === true;
     const canStartPayment = !readOnlyPreview && !hasPaidEntryFee && !inQueue && entryFeeUnlockState.allowed;
-    const profileIncomplete = !readOnlyPreview && !hasPaidEntryFee && !inQueue && profileCompletion < 100;
+    const profileIncomplete = !readOnlyPreview && !hasPaidEntryFee && !inQueue && entryFeeUnlockState.reason === "needs_completion";
     const approvalPending = !readOnlyPreview && !hasPaidEntryFee && !inQueue && entryFeeUnlockState.reason === "pending_admin_review";
     const queueStage = getWorkerQueueStage({
         activeOfferCount,
@@ -125,6 +126,8 @@ export default function DashboardClient({
                     ? "Case active"
                 : hasPaidEntryFee
                     ? "Paid"
+                    : canStartPayment
+                        ? "Ready"
                     : approvalPending
                         ? "Pending review"
                         : profileCompletion === 100
@@ -271,7 +274,9 @@ export default function DashboardClient({
                                         Open Job Finder checkout
                                     </h3>
                                     <p className="mt-2 max-w-md text-sm leading-relaxed text-[#52525b]">
-                                        Your profile and required documents are approved. Complete the one-time $9 Job Finder checkout to activate personalized European job matching with visa guidance, interview prep, and a 90-day money-back guarantee.
+                                        {manualPaymentOverride
+                                            ? "Job Finder checkout has been unlocked for your case. Complete the one-time $9 Job Finder checkout whenever you are ready, and you can still return later to finish any remaining profile or document details from this workspace."
+                                            : "Your profile and required documents are approved. Complete the one-time $9 Job Finder checkout to activate personalized European job matching with visa guidance, interview prep, and a 90-day money-back guarantee."}
                                     </p>
                                 </div>
 

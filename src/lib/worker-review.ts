@@ -644,10 +644,6 @@ export async function applyWorkerApprovalAction({
         throw new Error("Worker record not found");
     }
 
-    if (action === "approve" && !approvalState.canApprove) {
-        throw new Error("Worker profile must be 100% complete before approval.");
-    }
-
     if (action === "revoke" && !approvalState.canRevoke) {
         throw new Error("Cannot revoke approval after Job Finder is active.");
     }
@@ -691,13 +687,14 @@ export async function applyWorkerApprovalAction({
         },
     };
     if (approved && approvalState.notificationRecipient && approvalState.notificationUserId) {
+        const manualApprovalOverride = approvalState.completion < 100;
         const notificationResult = await queueEmail(
             adminClient,
             approvalState.notificationUserId,
             "admin_update",
             approvalState.notificationRecipient.email,
             approvalState.notificationRecipient.name,
-            buildWorkerPaymentUnlockedEmailData(),
+            buildWorkerPaymentUnlockedEmailData({ manualOverride: manualApprovalOverride }),
             undefined,
             normalizeWorkerPhone(approvalState.worker.phone) || undefined
         );

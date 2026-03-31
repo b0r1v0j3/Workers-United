@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
     getEntryFeeEligibility,
+    getEntryFeeUnlockState,
     resolveEntryFeeEligibilityForWorker,
     WORKER_ENTRY_FEE_READINESS_COLUMNS,
 } from "@/lib/payment-eligibility";
@@ -73,6 +74,18 @@ describe("getEntryFeeEligibility", () => {
         const result = getEntryFeeEligibility(candidate);
 
         expect(result.allowed).toBe(true);
+    });
+
+    it("allows payment when admin manually approves before the profile reaches 100%", () => {
+        const unlockState = getEntryFeeUnlockState({
+            entry_fee_paid: false,
+            profile_completion: 72,
+            admin_approved: true,
+        });
+
+        expect(unlockState.allowed).toBe(true);
+        expect(unlockState.reason).toBe("ready");
+        expect(unlockState.manualOverride).toBe(true);
     });
 
     it("resolves checkout eligibility from the full worker/profile/document snapshot", () => {

@@ -28,6 +28,7 @@ vi.mock("@/lib/workers", () => ({
 import { queueEmail } from "@/lib/email-templates";
 import type { ProfileCompletionResult } from "@/lib/profile-completion";
 import { getWorkerCompletion } from "@/lib/profile-completion";
+import { buildWorkerPaymentUnlockedEmailData } from "@/lib/worker-approval-notifications";
 import { applyWorkerApprovalAction, loadWorkerApprovalGuardState } from "@/lib/worker-review";
 
 type WorkerApprovalTestWorker = {
@@ -255,6 +256,58 @@ describe("worker approval actions", () => {
             undefined,
             "+381600000001",
         );
+    });
+
+    it("allows admin approval before 100% completion and uses override notification copy", async () => {
+        const incompleteProfile: ProfileCompletionResult = {
+            completion: 72,
+            missingFields: ["passport", "diploma"],
+            totalFields: 10,
+            completedFields: 7,
+        };
+        vi.mocked(getWorkerCompletion).mockReturnValueOnce(incompleteProfile);
+
+        const worker = {
+            id: "worker-override",
+            profile_id: null,
+            submitted_full_name: "Agency Worker",
+            status: "NEW",
+            admin_approved: false,
+            entry_fee_paid: false,
+            job_search_active: false,
+            phone: "+381600000009",
+        };
+        const { adminClient, updates } = createAdminClientMock({
+            worker,
+            documents: [
+                { document_type: "passport", status: "manual_review" },
+                { document_type: "biometric_photo", status: "verified" },
+            ],
+        });
+
+        const result = await applyWorkerApprovalAction({
+            adminClient,
+            actorUserId: "admin-1",
+            action: "approve",
+            workerId: worker.id,
+            documentOwnerId: worker.id,
+            phoneOptional: true,
+            fullNameFallback: worker.submitted_full_name,
+        });
+
+        expect(result).toMatchObject({
+            approved: true,
+            status: "APPROVED",
+            completion: 72,
+            notificationQueued: true,
+            workerId: worker.id,
+        });
+        expect(updates).toHaveLength(1);
+        expect(updates[0]).toMatchObject({
+            admin_approved: true,
+            status: "APPROVED",
+        });
+        expect(buildWorkerPaymentUnlockedEmailData).toHaveBeenCalledWith({ manualOverride: true });
     });
 
     it("blocks approval revocation once Job Finder is already active", async () => {
