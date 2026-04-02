@@ -77,6 +77,7 @@ function createSupabaseAdmin({
     workerRowsError = null,
     recentNudgesError = null,
     recentFailedNudgesError = null,
+    recentFailedNudgesData = [],
     profilesError = null,
 }: {
     workerRows?: MockWorkerRow[];
@@ -84,6 +85,12 @@ function createSupabaseAdmin({
     workerRowsError?: { message: string } | null;
     recentNudgesError?: { message: string } | null;
     recentFailedNudgesError?: { message: string } | null;
+    recentFailedNudgesData?: Array<{
+        phone_number: string;
+        status: string;
+        error_message: string | null;
+        created_at: string;
+    }>;
     profilesError?: { message: string } | null;
 } = {}) {
     const insert = vi.fn().mockResolvedValue({ error: null });
@@ -120,7 +127,7 @@ function createSupabaseAdmin({
                                                 eq() {
                                                     return {
                                                         gte: async () => ({
-                                                            data: recentFailedNudgesError ? null : [],
+                                                            data: recentFailedNudgesError ? null : recentFailedNudgesData,
                                                             error: recentFailedNudgesError,
                                                         }),
                                                     };
@@ -231,6 +238,58 @@ describe("GET /api/cron/whatsapp-nudge", () => {
             status: "success",
             found: 2,
             nudged: 1,
+            skipped: 1,
+        });
+    });
+
+    it("skips retrying the same profile_incomplete nudge for 7 days after any recent failed attempt", async () => {
+        collectRecentRecipientSideBlockedPhones.mockReturnValue(new Set<string>());
+        canSendWorkerDirectNotifications.mockReturnValue(true);
+
+        const { client } = createSupabaseAdmin({
+            workerRows: [
+                {
+                    id: "worker_1",
+                    profile_id: "profile_1",
+                    agency_id: null,
+                    submitted_email: null,
+                    phone: "+381600000001",
+                    status: "NEW",
+                    admin_approved: false,
+                    entry_fee_paid: false,
+                    queue_joined_at: null,
+                    job_search_active: false,
+                    updated_at: "2026-03-19T10:00:00.000Z",
+                },
+            ],
+            profileRows: [
+                {
+                    id: "profile_1",
+                    full_name: "Worker One",
+                    email: "worker1@example.com",
+                },
+            ],
+            recentFailedNudgesData: [{
+                phone_number: "+381600000001",
+                status: "failed",
+                error_message: "131042: Business eligibility payment issue",
+                created_at: new Date().toISOString(),
+            }],
+        });
+
+        createAdminClient.mockReturnValue(client);
+
+        const { GET } = await import("@/app/api/cron/whatsapp-nudge/route");
+        const response = await GET(new Request("http://localhost/api/cron/whatsapp-nudge", {
+            headers: { authorization: "Bearer secret" },
+        }));
+        const payload = await response.json();
+
+        expect(sendProfileIncomplete).not.toHaveBeenCalled();
+        expect(payload).toMatchObject({
+            status: "success",
+            found: 1,
+            nudged: 0,
             skipped: 1,
         });
     });

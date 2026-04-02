@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 const PROFILE_INCOMPLETE_STATUS_PARAM = "finish your profile";
 const PROFILE_INCOMPLETE_NEXT_STEP_PARAM = "finish your profile and required documents so we can review your case";
+const RECENT_FAILED_NUDGE_SUPPRESSION_DAYS = 7;
 
 interface NudgeWorkerRecord extends WorkerRecordSnapshot {
     id: string;
@@ -139,6 +140,21 @@ export async function GET(request: Request) {
         }
 
         const blockedRecipientPhones = collectRecentRecipientSideBlockedPhones(recentFailedNudges || []);
+        const recentFailedNudgeSince = new Date(
+            now.getTime() - RECENT_FAILED_NUDGE_SUPPRESSION_DAYS * 24 * 60 * 60 * 1000
+        ).toISOString();
+        const recentFailedNudgePhones = new Set(
+            (recentFailedNudges || [])
+                .filter((message: { created_at?: string | null }) => {
+                    if (!message.created_at) {
+                        return false;
+                    }
+
+                    return message.created_at >= recentFailedNudgeSince;
+                })
+                .map((message: { phone_number?: string | null }) => normalizeWorkerPhone(message.phone_number || null))
+                .filter((phone): phone is string => !!phone)
+        );
 
         // Get profile names
         const profileIds = canonicalWorkerRows.map(workerRecord => workerRecord.profile_id).filter((value): value is string => !!value);
@@ -179,6 +195,11 @@ export async function GET(request: Request) {
             }
 
             if (blockedRecipientPhones.has(phone)) {
+                results.skipped++;
+                continue;
+            }
+
+            if (recentFailedNudgePhones.has(phone)) {
                 results.skipped++;
                 continue;
             }

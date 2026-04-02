@@ -93,5 +93,39 @@ describe("whatsapp-worker-ai", () => {
         expect(callResponseText).toHaveBeenCalledWith(expect.objectContaining({
             instructions: expect.stringContaining("PENDING_APPROVAL"),
         }));
+        expect(callResponseText).toHaveBeenCalledWith(expect.objectContaining({
+            instructions: expect.stringContaining("If someone sounds scared, distressed, is crying, or may have been scammed, stay calm and serious."),
+        }));
+    });
+
+    it("keeps anonymous status instructions explicit when the WhatsApp number is not linked", async () => {
+        const callResponseText = vi.fn().mockResolvedValue("Worker reply");
+        const routerDecision: WhatsAppRouterDecision = {
+            intent: "status",
+            language: "English",
+            confidence: "high",
+            reason: "Asked about profile completion",
+        };
+
+        await generateWorkerWhatsAppReply({
+            callResponseText,
+            model: "gpt-5.4-mini",
+            message: "I completed my profile already",
+            normalizedPhone: "+923174913131",
+            workerRecord: null,
+            profile: null,
+            isAdmin: false,
+            businessFacts: "",
+            brainMemory: [],
+            historyMessages: [
+                { direction: "inbound", content: "I completed my profile already" },
+            ],
+            routerDecision,
+            referenceDraft: "I do not see a Workers United account linked to this WhatsApp number yet. If you already signed up, check which number is saved on your profile.",
+        });
+
+        expect(callResponseText).toHaveBeenCalledWith(expect.objectContaining({
+            instructions: expect.stringContaining("Do not turn it into a vague dashboard-only status issue"),
+        }));
     });
 });
