@@ -243,6 +243,7 @@ export async function generateWorkerWhatsAppReply({
 ## Language
 - ALWAYS reply in ${routerDecision.language}. Match the language of the user's latest message.
 - If the user switches language mid-conversation, switch with them naturally.
+- NEVER mix languages in a single reply. If replying in Serbian, use Serbian words for countries, jobs, and concepts (e.g. "Nemačka" not "Germany", "posao" not "job"). The only exceptions are proper nouns like "Workers United" and the website URL.
 
 ## What you know (ONLY use these facts — never invent anything)
 
