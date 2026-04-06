@@ -59,7 +59,6 @@ ALTER TABLE contract_data
   ADD COLUMN IF NOT EXISTS generated_documents JSONB DEFAULT '{}',
   ADD COLUMN IF NOT EXISTS employer_city TEXT,
   ADD COLUMN IF NOT EXISTS employer_founding_date TEXT,
-  ADD COLUMN IF NOT EXISTS employer_apr_number TEXT,
   ADD COLUMN IF NOT EXISTS signing_city TEXT;
 
 -- ================================================================
@@ -207,10 +206,13 @@ ALTER TABLE employers ADD COLUMN IF NOT EXISTS website TEXT;
 ALTER TABLE employers ADD COLUMN IF NOT EXISTS founded_year TEXT;
 ALTER TABLE employers ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE employers ADD COLUMN IF NOT EXISTS postal_code TEXT;
-ALTER TABLE employers ADD COLUMN IF NOT EXISTS business_registry_number TEXT;
 ALTER TABLE employers ADD COLUMN IF NOT EXISTS founding_date TEXT;
 ALTER TABLE employers ADD COLUMN IF NOT EXISTS contact_email TEXT;
 ALTER TABLE employers ADD COLUMN IF NOT EXISTS mb VARCHAR(8);
+
+ALTER TABLE IF EXISTS contract_data DROP COLUMN IF EXISTS employer_apr_number;
+ALTER TABLE IF EXISTS employers DROP COLUMN IF EXISTS business_registry_number;
+ALTER TABLE IF EXISTS admin_test_employers DROP COLUMN IF EXISTS business_registry_number;
 
 -- ================================================================
 -- 8. EMPLOYERS — ADMIN APPROVAL + STATUS (from 007 + 006)

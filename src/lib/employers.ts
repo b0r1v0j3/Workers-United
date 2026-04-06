@@ -42,7 +42,6 @@ export interface EmployerRecordSnapshot {
     company_address?: string | null;
     city?: string | null;
     postal_code?: string | null;
-    business_registry_number?: string | null;
     website?: string | null;
     description?: string | null;
     status?: string | null;
@@ -63,7 +62,6 @@ function scoreEmployerRecord(record: EmployerRecordSnapshot): number {
     if (record.company_address?.trim()) score += 18;
     if (record.city?.trim()) score += 10;
     if (record.postal_code?.trim()) score += 8;
-    if (record.business_registry_number?.trim()) score += 18;
     if (record.website?.trim()) score += 10;
     if (record.description?.trim()) score += 10;
     if (record.status && record.status !== "PENDING") score += 80;

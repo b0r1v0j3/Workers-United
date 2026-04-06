@@ -956,7 +956,6 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                         <div className="grid gap-3 sm:grid-cols-2">
                                             <InfoRow label="Employer Company Name" value={contractData.employer_company_name} />
                                             <InfoRow label="Employer City" value={contractData.employer_city} />
-                                            <InfoRow label="APR Number" value={contractData.employer_apr_number} />
                                             <InfoRow label="Founding Date" value={contractData.employer_founding_date} />
                                             <InfoRow label="Signing City" value={contractData.signing_city} />
                                             <InfoRow label="PIB" value={contractData.employer_pib} />

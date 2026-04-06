@@ -227,7 +227,6 @@ CREATE TABLE contract_data (
     employer_city TEXT,
     employer_director TEXT,
     employer_founding_date TEXT,
-    employer_apr_number TEXT,
     -- Job data
     job_title TEXT,
     job_description_sr TEXT,

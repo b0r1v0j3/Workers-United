@@ -55,7 +55,6 @@ const SECTIONS: { title: string; icon: string; keys: string[] }[] = [
             "EMPLOYER_MB",
             "EMPLOYER_DIRECTOR",
             "EMPLOYER_FOUNDING_DATE",
-            "EMPLOYER_APR_NUMBER",
         ],
     },
     {
@@ -117,7 +116,6 @@ const LABELS: Record<string, string> = {
     EMPLOYER_MB: "Matični broj",
     EMPLOYER_DIRECTOR: "Direktor",
     EMPLOYER_FOUNDING_DATE: "Datum osnivanja",
-    EMPLOYER_APR_NUMBER: "APR broj",
     JOB_TITLE_SR: "Naziv posla (SR)",
     JOB_TITLE_EN: "Job Title (EN)",
     JOB_DESC_SR_1: "Opis (SR) 1",

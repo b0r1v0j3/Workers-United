@@ -197,7 +197,6 @@ export type Database = {
         Row: {
           contact_email: string | null
           contact_phone: string | null
-          employer_apr_number: string | null
           employer_city: string | null
           employer_director: string | null
           employer_founding_date: string | null
@@ -219,7 +218,6 @@ export type Database = {
         Insert: {
           contact_email?: string | null
           contact_phone?: string | null
-          employer_apr_number?: string | null
           employer_city?: string | null
           employer_director?: string | null
           employer_founding_date?: string | null
@@ -241,7 +239,6 @@ export type Database = {
         Update: {
           contact_email?: string | null
           contact_phone?: string | null
-          employer_apr_number?: string | null
           employer_city?: string | null
           employer_director?: string | null
           employer_founding_date?: string | null
@@ -615,7 +612,6 @@ export type Database = {
           admin_approved: boolean | null
           admin_approved_at: string | null
           admin_approved_by: string | null
-          business_registry_number: string | null
           city: string | null
           company_address: string | null
           company_name: string | null
@@ -643,7 +639,6 @@ export type Database = {
           admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
-          business_registry_number?: string | null
           city?: string | null
           company_address?: string | null
           company_name?: string | null
@@ -671,7 +666,6 @@ export type Database = {
           admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
-          business_registry_number?: string | null
           city?: string | null
           company_address?: string | null
           company_name?: string | null

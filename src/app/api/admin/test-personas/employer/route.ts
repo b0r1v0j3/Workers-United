@@ -72,7 +72,6 @@ export async function PUT(request: NextRequest) {
             country: normalizeText(body.country),
             city: normalizeText(body.city),
             postal_code: normalizeText(body.postal_code),
-            business_registry_number: normalizeText(body.business_registry_number),
             founding_date: normalizeText(body.founding_date),
         });
 
