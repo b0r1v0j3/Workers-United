@@ -50,12 +50,14 @@ export interface ContractDataForDocs {
     employer_representative_name: string;
     employer_mb?: string | null;
     employer_city?: string | null;
+    work_city_sr?: string | null;
+    work_city_en?: string | null;
     employer_director?: string | null;
     employer_founding_date?: string | null;
-    employer_apr_number?: string | null;
 
     // Job
     job_title: string;
+    job_title_en?: string | null;
     job_description_sr?: string | null;
     job_description_en?: string | null;
     salary_rsd: number;
@@ -66,6 +68,7 @@ export interface ContractDataForDocs {
     signing_date?: string | null;
 
     // Contact
+    contact_person_name?: string | null;
     contact_email?: string | null;
     contact_phone?: string | null;
 
@@ -247,15 +250,16 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
         ].filter(Boolean).join(", "),
         EMPLOYER_ADDRESS: data.employer_address || "___________",
         EMPLOYER_CITY: data.employer_city || "___________",
+        WORK_CITY_SR: data.work_city_sr || data.employer_city || "___________",
+        WORK_CITY_EN: data.work_city_en || data.employer_city || "___________",
         EMPLOYER_PIB: data.employer_pib || "___________",
         EMPLOYER_MB: data.employer_mb || "___________",
         EMPLOYER_DIRECTOR: data.employer_director || data.employer_representative_name || "___________",
         EMPLOYER_FOUNDING_DATE: data.employer_founding_date || "___________",
-        EMPLOYER_APR_NUMBER: data.employer_apr_number || "___________",
 
         // Job data
         JOB_TITLE_SR: data.job_title || "___________",
-        JOB_TITLE_EN: data.job_title || "___________",
+        JOB_TITLE_EN: data.job_title_en || data.job_title || "___________",
         JOB_DESC_SR_1: descSr1,
         JOB_DESC_SR_2: descSr2,
         JOB_DESC_SR_3: descSr3,
@@ -273,6 +277,7 @@ export function buildPlaceholderData(data: ContractDataForDocs): Record<string, 
         SIGNING_DATE_EN: formatDateEN(data.signing_date),
 
         // Contact
+        CONTACT_PERSON_NAME: data.contact_person_name || data.employer_director || data.employer_representative_name || "___________",
         CONTACT_EMAIL: normalizePlatformSupportEmail(data.contact_email),
         CONTACT_PHONE: data.contact_phone || "",
 

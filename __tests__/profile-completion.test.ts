@@ -185,7 +185,6 @@ describe('getEmployerCompletion', () => {
                 city: '',
                 postal_code: '',
                 description: '',
-                business_registry_number: '',
                 founding_date: '',
             },
         });

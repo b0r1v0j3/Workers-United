@@ -48,7 +48,6 @@ export default async function EmployerProfilePage({
                     country: workspace.employer.country || null,
                     city: workspace.employer.city || null,
                     postal_code: workspace.employer.postal_code || null,
-                    business_registry_number: workspace.employer.business_registry_number || null,
                     founding_date: workspace.employer.founding_date || null,
                 }
                 : null,

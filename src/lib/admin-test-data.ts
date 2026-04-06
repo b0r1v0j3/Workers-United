@@ -119,7 +119,6 @@ export interface AdminTestEmployerRow {
     country: string | null;
     city: string | null;
     postal_code: string | null;
-    business_registry_number: string | null;
     founding_date: string | null;
     created_at: string;
     updated_at: string;

@@ -38,11 +38,11 @@ function createMockSupabase() {
         profile_id: "employer-profile-1",
         company_name: "Workers United d.o.o.",
         tax_id: "12345678",
+        company_registration_number: "12345678",
         company_address: "Company Street 10",
         city: "Belgrade",
         postal_code: "11000",
         founding_date: "2020-01-01",
-        business_registry_number: "BRN-1",
         contact_phone: "+381641234567",
     };
 

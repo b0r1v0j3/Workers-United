@@ -37,7 +37,6 @@ const EMPLOYER_FIELD_LABELS: Record<string, string> = {
     postal_code: "Postal Code",
     industry: "Industry",
     description: "Company Description",
-    business_registry_number: "Business Registry Number",
     founding_date: "Company Founding Date",
 };
 
@@ -113,7 +112,6 @@ interface EmployerData {
         postal_code?: string | null;
         industry?: string | null;
         description?: string | null;
-        business_registry_number?: string | null;
         founding_date?: string | null;
     } | null;
 }

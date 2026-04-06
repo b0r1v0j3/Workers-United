@@ -107,7 +107,7 @@ function getWorkerAddress(worker: WorkerRecord): string {
 }
 
 function getEmployerMb(employer: Employer): string {
-    return employer.company_registration_number || employer.mb || employer.business_registry_number || "";
+    return employer.company_registration_number || employer.mb || "";
 }
 
 function getEmployerCity(employer: Employer): string {
@@ -203,9 +203,6 @@ function buildPersistedContractDataPayload(
         employer_founding_date: asText(
             build.storedContractData?.employer_founding_date || build.employer.founding_date
         ),
-        employer_apr_number: asText(
-            build.storedContractData?.employer_apr_number || build.employer.business_registry_number
-        ),
     };
 }
 
@@ -256,9 +253,6 @@ function buildContractDocumentPayload(build: Omit<ContractBuildResult, "contract
         ),
         employer_founding_date: asText(
             build.storedContractData?.employer_founding_date || build.employer.founding_date
-        ),
-        employer_apr_number: asText(
-            build.storedContractData?.employer_apr_number || build.employer.business_registry_number
         ),
         job_title: build.jobRequest.title || "",
         job_description_sr: asText(

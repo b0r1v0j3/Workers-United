@@ -33,7 +33,6 @@ interface EmployerProfile {
     country: string | null;
     city: string | null;
     postal_code: string | null;
-    business_registry_number: string | null;
     founding_date: string | null;
 }
 
@@ -80,7 +79,6 @@ interface CompanyForm {
     company_size: string;
     founded_year: string;
     description: string;
-    business_registry_number: string;
     founding_date: string;
 }
 
@@ -99,7 +97,6 @@ function createCompanyFormFromEmployer(employer: EmployerProfile | null): Compan
         company_size: employer?.company_size || "",
         founded_year: employer?.founded_year || "",
         description: employer?.description || "",
-        business_registry_number: employer?.business_registry_number || "",
         founding_date: employer?.founding_date || "",
     };
 }
@@ -153,7 +150,7 @@ export default function EmployerProfilePage({
         company_name: "", tax_id: "", company_registration_number: "",
         company_address: "", contact_phone: "", country: "", city: "", postal_code: "",
         website: "", industry: "", company_size: "", founded_year: "", description: "",
-        business_registry_number: "", founding_date: "",
+        founding_date: "",
     });
 
     // ─ Job posting state
@@ -284,7 +281,6 @@ export default function EmployerProfilePage({
                 postal_code: companyForm.postal_code || null,
                 company_size: companyForm.company_size || null,
                 founded_year: companyForm.founded_year || null,
-                business_registry_number: companyForm.business_registry_number || null,
                 founding_date: companyForm.founding_date || null,
                 description: companyForm.description || null,
             };
@@ -670,10 +666,6 @@ export default function EmployerProfilePage({
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <label className={labelClass}>Business Registry Number (Optional)</label>
-                                                    <input type="text" name="business_registry_number" value={companyForm.business_registry_number} onChange={handleCompanyChange} className={inputClass} placeholder="Official registry reference" />
-                                                </div>
-                                                <div>
                                                     <label className={labelClass}>Company Founding Date (Optional)</label>
                                                     <input type="text" name="founding_date" value={companyForm.founding_date} onChange={handleCompanyChange} className={inputClass} placeholder="DD/MM/YYYY" />
                                                 </div>
@@ -737,7 +729,6 @@ export default function EmployerProfilePage({
                                             <InfoRow icon={<Globe size={18} />} label="Website" value={companyForm.website} />
                                             {companyForm.founded_year && <InfoRow icon={<Calendar size={18} />} label="Founded" value={companyForm.founded_year} />}
                                             {companyForm.postal_code && <InfoRow icon={<MapPin size={18} />} label="Postal Code" value={companyForm.postal_code} />}
-                                            {companyForm.business_registry_number && <InfoRow icon={<FileText size={18} />} label="Business Registry No." value={companyForm.business_registry_number} />}
                                             {companyForm.founding_date && <InfoRow icon={<Calendar size={18} />} label="Founding Date" value={companyForm.founding_date} />}
                                             {companyForm.company_address && <InfoRow icon={<MapPin size={18} />} label="Address" value={companyForm.company_address} />}
                                             {companyForm.description && <InfoRow icon={<FileText size={18} />} label="Description" value={companyForm.description} />}

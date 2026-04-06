@@ -82,14 +82,14 @@ export default function Ovlascenje({ data }: OvlascenjeProps) {
                     {/* ─── SERBIAN COLUMN ─── */}
                     <View style={s.colLeft}>
                         <Text style={s.paragraph}>
-                            Ja, <Text style={s.bold}>{data.WORKER_FULL_NAME}</Text>, iz {data.NATIONALITY_EN}, sa pašošem broj {data.PASSPORT_NUMBER}, i mestom prebivališta {data.WORKER_ADDRESS}, dajem ovlašćenje i ovlašćujem kompaniju &quot;{data.EMPLOYER_NAME}&quot;, iz Republike Srbije, {data.EMPLOYER_CITY}, {data.EMPLOYER_ADDRESS}, PIB {data.EMPLOYER_PIB}, Matični broj {data.EMPLOYER_MB}, osnovana {data.EMPLOYER_FOUNDING_DATE} godine, rešenjem iz Agencije za Privredne registre {data.EMPLOYER_APR_NUMBER}, da može u moje ime i za moj račun da aplicira za vizu D, radi mog dolaska u Republiku Srbiju i zasnivanja radnog odnosa sa kompanijom &quot;{data.EMPLOYER_NAME}&quot;.
+                            Ja, <Text style={s.bold}>{data.WORKER_FULL_NAME}</Text>, iz {data.NATIONALITY_EN}, sa pašošem broj {data.PASSPORT_NUMBER}, i mestom prebivališta {data.WORKER_ADDRESS}, dajem ovlašćenje i ovlašćujem kompaniju &quot;{data.EMPLOYER_NAME}&quot;, iz Republike Srbije, {data.EMPLOYER_CITY}, {data.EMPLOYER_ADDRESS}, PIB {data.EMPLOYER_PIB}, Matični broj {data.EMPLOYER_MB}, osnovana {data.EMPLOYER_FOUNDING_DATE} godine, da može u moje ime i za moj račun da aplicira za vizu D, radi mog dolaska u Republiku Srbiju i zasnivanja radnog odnosa sa kompanijom &quot;{data.EMPLOYER_NAME}&quot;.
                         </Text>
                     </View>
 
                     {/* ─── ENGLISH COLUMN ─── */}
                     <View style={s.colRight}>
                         <Text style={s.paragraph}>
-                            I, <Text style={s.bold}>{data.WORKER_FULL_NAME}</Text>, from {data.NATIONALITY_EN}, holder of passport No. {data.PASSPORT_NUMBER}, residing at {data.WORKER_ADDRESS}, hereby authorize the company &quot;{data.EMPLOYER_NAME}&quot;, Republic of Serbia, {data.EMPLOYER_CITY}, {data.EMPLOYER_ADDRESS}, Tax ID: {data.EMPLOYER_PIB}, Registration No: {data.EMPLOYER_MB}, founded on {data.EMPLOYER_FOUNDING_DATE}, by decision of the Serbian Business Registers Agency No. {data.EMPLOYER_APR_NUMBER}, to apply on my behalf and for my account for a D visa, for the purpose of my arrival in the Republic of Serbia and establishment of an employment relationship with the company &quot;{data.EMPLOYER_NAME}&quot;.
+                            I, <Text style={s.bold}>{data.WORKER_FULL_NAME}</Text>, from {data.NATIONALITY_EN}, holder of passport No. {data.PASSPORT_NUMBER}, residing at {data.WORKER_ADDRESS}, hereby authorize the company &quot;{data.EMPLOYER_NAME}&quot;, Republic of Serbia, {data.EMPLOYER_CITY}, {data.EMPLOYER_ADDRESS}, Tax ID: {data.EMPLOYER_PIB}, Registration No: {data.EMPLOYER_MB}, founded on {data.EMPLOYER_FOUNDING_DATE}, to apply on my behalf and for my account for a D visa, for the purpose of my arrival in the Republic of Serbia and establishment of an employment relationship with the company &quot;{data.EMPLOYER_NAME}&quot;.
                         </Text>
                     </View>
                 </View>
